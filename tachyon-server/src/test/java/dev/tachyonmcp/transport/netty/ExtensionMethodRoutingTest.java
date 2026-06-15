@@ -1,0 +1,128 @@
+/*
+ * Copyright (c) 2026 Konstantin Pavlov.
+ */
+
+package dev.tachyonmcp.transport.netty;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ClientCapabilities;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
+import dev.tachyonmcp.server.McpDispatcher;
+import dev.tachyonmcp.server.McpMethodHandler;
+import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.extensions.McpExtension;
+import dev.tachyonmcp.server.session.DefaultMcpContext;
+import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.server.session.McpSession;
+import dev.tachyonmcp.server.session.SseConnection;
+import dev.tachyonmcp.server.session.SseEvent;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.Set;
+import org.jspecify.annotations.NonNull;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import tools.jackson.databind.node.JsonNodeFactory;
+
+class ExtensionMethodRoutingTest {
+
+    private McpServer server;
+    private McpSession session;
+    private McpDispatcher dispatcher;
+
+    @BeforeEach
+    void setUp() {
+        server = TachyonMcpServer.builder().extension(new TestExtension()).build();
+        session = server.createSession("sess_routing");
+        dispatcher = new McpDispatcher(server, server.executor());
+    }
+
+    @Test
+    void rejectsExtensionMethodWhenNotNegotiated() {
+        session.activate();
+        var result = (McpDispatcher.DispatchResult.Response) dispatcher
+                .dispatchRequestAsync(1, "test/ext-method", null, "sess_routing")
+                .join();
+        var body = result.responseBody().toString(StandardCharsets.UTF_8);
+        assertThat(body).contains("error");
+        assertThat(body).contains("-32601");
+    }
+
+    @Test
+    void dispatchesExtensionMethodWhenNegotiatedAndMetaPresent() throws Exception {
+        negotiateExtension();
+        session.activate();
+        var params = Map.of("_meta", Map.of("com.test/ext", JsonNodeFactory.instance.objectNode()));
+        var result = (McpDispatcher.DispatchResult.Response) dispatcher
+                .dispatchRequestAsync(1, "test/ext-method", params, "sess_routing")
+                .join();
+        var body = result.responseBody().toString(StandardCharsets.UTF_8);
+        assertThat(body).contains("result");
+    }
+
+    @Test
+    void tasksMethodsAreNotGated() {
+        assertThat(server.extensionForMethod("tasks/get")).isNull();
+        assertThat(server.extensionForMethod("tasks/list")).isNull();
+        assertThat(server.extensionForMethod("tasks/result")).isNull();
+    }
+
+    private void negotiateExtension() throws Exception {
+        var handler = server.getHandler("initialize");
+        var caps = ClientCapabilities.builder()
+                .extensions(Map.of("com.test/ext", JsonNodeFactory.instance.objectNode()))
+                .build();
+        var params = InitializeRequestParams.builder()
+                .protocolVersion("2025-11-25")
+                .capabilities(caps)
+                .build();
+        var context = new DefaultMcpContext(session, server);
+        handler.handle(context, params);
+    }
+
+    private static class TestExtension implements McpExtension {
+
+        @Override
+        public String extensionId() {
+            return "com.test/ext";
+        }
+
+        @Override
+        public Set<String> methods() {
+            return Set.of("test/ext-method");
+        }
+
+        @Override
+        public boolean requiresMetaEnvelope() {
+            return true;
+        }
+
+        @Override
+        public void bootstrap(McpServer server) {
+            server.registerHandler("test/ext-method", new McpMethodHandler() {
+                @Override
+                public String method() {
+                    return "test/ext-method";
+                }
+
+                @Override
+                public Object handle(McpContext context, Object params) {
+                    return Map.of("status", "ok");
+                }
+            });
+        }
+    }
+
+    private static class TestConnection implements SseConnection {
+
+        @Override
+        public boolean isWritable() {
+            return true;
+        }
+
+        @Override
+        public void send(@NonNull SseEvent event) {}
+    }
+}

@@ -1,0 +1,445 @@
+/*
+ * Copyright (c) 2026 Konstantin Pavlov.
+ */
+
+package dev.tachyonmcp.server;
+
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Implementation;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.LoggingLevel;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ServerCapabilities;
+import dev.tachyonmcp.runtime.SessionState;
+import dev.tachyonmcp.server.extensions.McpExtension;
+import dev.tachyonmcp.server.features.prompts.PromptRegistry;
+import dev.tachyonmcp.server.features.resources.ResourceRegistry;
+import dev.tachyonmcp.server.features.tasks.TaskRegistry;
+import dev.tachyonmcp.server.features.tools.*;
+import dev.tachyonmcp.server.handlers.CompletionHandlers;
+import dev.tachyonmcp.server.handlers.InitializeHandler;
+import dev.tachyonmcp.server.handlers.LoggingHandlers;
+import dev.tachyonmcp.server.handlers.PingHandler;
+import dev.tachyonmcp.server.session.*;
+import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
+import java.io.Closeable;
+import java.io.IOException;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Central orchestrator for MCP server logic: manages sessions, tool/prompt/resource registries,
+ * method handler dispatch, event log, and virtual-thread executor for handler execution.
+ */
+public class McpServer implements Closeable {
+
+    private static final Logger logger = LoggerFactory.getLogger(McpServer.class);
+
+    private final ServerConfig config;
+    private final SessionLogRouter router;
+    private final SessionManager sessionManager;
+    private final MessageRouter messageRouter = new OutboundSseStreamMessageRouter();
+    private final AtomicLong eventIdCounter = new AtomicLong(0);
+    private final JsonSchemaValidator validator;
+    private final ToolRegistry toolRegistry;
+    private final ResourceRegistry resourceRegistry;
+    private final TaskRegistry taskRegistry;
+    private final PromptRegistry promptRegistry;
+    private final Map<String, McpMethodHandler> methodHandlers = new ConcurrentHashMap<>();
+    final Map<String, LoggingLevel> loggingLevels = new ConcurrentHashMap<>();
+    final ConcurrentHashMap<Object, CompletableFuture<String>> pendingRequests = new ConcurrentHashMap<>();
+    private final ExecutorService virtualThreadExecutor = Executors.newThreadPerTaskExecutor(
+            Thread.ofVirtual().name("mcp-handler-vt-", 0).factory());
+    final Implementation serverInfo;
+    final ServerCapabilities capabilities;
+    private final List<McpExtension> extensions;
+    private final Map<String, String> extensionMethodOwners = new ConcurrentHashMap<>();
+    private final Map<String, McpExtension> extensionsById = new ConcurrentHashMap<>();
+
+    public Implementation serverInfo() {
+        return serverInfo;
+    }
+
+    public ServerCapabilities capabilities() {
+        return capabilities;
+    }
+
+    public boolean isStateless() {
+        return config.stateless();
+    }
+
+    public ExecutorService executor() {
+        return virtualThreadExecutor;
+    }
+
+    public void setLoggingLevel(String sessionId, LoggingLevel level) {
+        loggingLevels.put(sessionId, level);
+    }
+
+    public LoggingLevel getLoggingLevel(String sessionId) {
+        return loggingLevels.get(sessionId);
+    }
+
+    public void log(McpSession session, LoggingLevel requested, String logger, Object data) {
+        var configured = loggingLevels.get(session.id());
+        if (configured == null) return;
+        if (!isLevelEnabled(requested, configured)) return;
+        var params = Map.of("level", requested.getValue(), "logger", logger, "data", data);
+        sendNotification(session, "notifications/message", params);
+    }
+
+    private static boolean isLevelEnabled(LoggingLevel requested, LoggingLevel configured) {
+        return requested.ordinal() >= configured.ordinal();
+    }
+
+    public McpServer() {
+        this(
+                new InMemorySessionLogRouter(),
+                new InMemorySessionStore(),
+                null,
+                null,
+                ServerConfig.DEFAULT,
+                JsonSchemaValidator.noop(),
+                List.of());
+    }
+
+    public McpServer(SessionLogRouter router, SessionStore sessionStore, JsonSchemaValidator validator) {
+        this(router, sessionStore, null, null, ServerConfig.DEFAULT, validator, List.of());
+    }
+
+    public McpServer(
+            SessionLogRouter router,
+            SessionStore sessionStore,
+            Implementation serverInfo,
+            ServerCapabilities capabilities,
+            ServerConfig config,
+            @Nullable JsonSchemaValidator validator,
+            @Nullable List<McpExtension> extensions) {
+        this.config = Objects.requireNonNull(config, "config cannot be null");
+        this.router = Objects.requireNonNull(router, "router cannot be null");
+        this.serverInfo = Objects.requireNonNull(serverInfo, "serverInfo cannot be null");
+        this.capabilities = Objects.requireNonNull(capabilities, "capabilities cannot be null");
+        this.extensions = extensions != null ? extensions : List.of();
+        this.sessionManager = new SessionManager(sessionStore);
+        this.validator = validator != null ? validator : JsonSchemaValidator.noop();
+        this.toolRegistry = new ToolRegistry(this.validator);
+        this.resourceRegistry = new ResourceRegistry(this);
+        this.taskRegistry = new TaskRegistry(this);
+        this.promptRegistry = new PromptRegistry(this.validator);
+        registerDefaults();
+        bootstrapExtensions();
+        setupChangeListeners();
+        if (!config.stateless()) {
+            sessionManager.startJanitor(config.sessionTtl());
+        }
+    }
+
+    private void setupChangeListeners() {
+        toolRegistry.onChange(() -> broadcastNotification("notifications/tools/list_changed"));
+        resourceRegistry.onChange(() -> broadcastNotification("notifications/resources/list_changed"));
+        promptRegistry.onChange(() -> broadcastNotification("notifications/prompts/list_changed"));
+        taskRegistry.onChange(() -> broadcastNotification("notifications/tasks/list_changed"));
+        taskRegistry.startTtlJanitor();
+    }
+
+    void broadcastNotification(String method) {
+        broadcastNotification(method, java.util.Map.of());
+    }
+
+    public void broadcastNotification(String method, Object params) {
+        for (var entry : sessionManager.allSessions()) {
+            if (entry.state() == SessionState.ACTIVE) {
+                sendNotification(entry, method, params);
+            }
+        }
+    }
+
+    private void registerDefaults() {
+        methodHandlers.put(
+                "initialize",
+                new InitializeHandler(
+                        toolRegistry, resourceRegistry, promptRegistry, serverInfo, capabilities, extensions));
+        methodHandlers.put("ping", new PingHandler());
+        toolRegistry.registerHandlers(methodHandlers);
+        resourceRegistry.registerHandlers(methodHandlers);
+        taskRegistry.registerHandlers(methodHandlers);
+        promptRegistry.registerHandlers(methodHandlers);
+        LoggingHandlers.register(methodHandlers);
+        CompletionHandlers.register(methodHandlers, validator);
+    }
+
+    public void registerHandler(McpMethodHandler handler) {
+        methodHandlers.put(handler.method(), handler);
+        logger.info("Handler registered: {}", handler.method());
+    }
+
+    public void registerHandler(String method, McpMethodHandler handler) {
+        methodHandlers.put(method, handler);
+        logger.info("Handler registered: {}", method);
+    }
+
+    @Nullable
+    public McpMethodHandler getHandler(String method) {
+        return methodHandlers.get(method);
+    }
+
+    private void bootstrapExtensions() {
+        for (var ext : extensions) {
+            for (var method : ext.methods()) {
+                extensionMethodOwners.put(method, ext.extensionId());
+            }
+            extensionsById.put(ext.extensionId(), ext);
+            ext.bootstrap(this);
+        }
+    }
+
+    private void shutdownExtensions() {
+        for (var ext : extensions) {
+            try {
+                ext.shutdown();
+            } catch (Exception e) {
+                logger.warn("Extension shutdown error: {}", ext.extensionId(), e);
+            }
+        }
+    }
+
+    public List<McpExtension> extensions() {
+        return Collections.unmodifiableList(extensions);
+    }
+
+    public @Nullable String extensionForMethod(String method) {
+        return extensionMethodOwners.get(method);
+    }
+
+    public boolean extensionRequiresMeta(String extensionId) {
+        var ext = extensionsById.get(extensionId);
+        return ext != null && ext.requiresMetaEnvelope();
+    }
+
+    public void registerTool(SyncToolHandler<?, ?> handler) {
+        toolRegistry.register(handler);
+        logger.info("Tool registered: {}", handler.name());
+    }
+
+    public void registerTool(AsyncToolHandler<?, ?> handler) {
+        toolRegistry.register(handler);
+        logger.info("Tool registered: {}", handler.name());
+    }
+
+    public void registerTool(ToolHandler handler) {
+        toolRegistry.register(handler);
+        logger.info("Tool registered: {}", handler.descriptor().name());
+    }
+
+    public @Nullable ToolDescriptor getTool(String name) {
+        return toolRegistry.getDescriptor(name);
+    }
+
+    public ResourceRegistry resources() {
+        return resourceRegistry;
+    }
+
+    public PromptRegistry prompts() {
+        return promptRegistry;
+    }
+
+    public TaskRegistry tasks() {
+        return taskRegistry;
+    }
+
+    public McpSession createSession(String sessionId) {
+        return sessionManager.createSession(sessionId);
+    }
+
+    public Optional<McpSession> getSession(String sessionId) {
+        return sessionManager.getSession(sessionId);
+    }
+
+    public void removeSession(String sessionId) {
+        sessionManager.removeSession(sessionId);
+    }
+
+    SseEvent appendResponse(McpSession session, SessionEvent.ResponseEvent event) {
+        var sseEventId = nextEventId();
+        var enriched = new SessionEvent.ResponseEvent(
+                event.sessionId(), event.requestId(), event.resultJson(), event.timestamp(), sseEventId);
+        router.append(enriched);
+
+        var sseEvent = new SseEvent(String.valueOf(sseEventId), "message", event.resultJson());
+
+        session.send(sseEvent);
+        return sseEvent;
+    }
+
+    public void sendNotification(McpSession session, String method, Object params) {
+        if (session.state() == SessionState.CLOSED) {
+            return; // fast path: avoid log append for dead sessions
+        }
+        var paramsStr =
+                switch (params) {
+                    case String s -> s;
+                    case Map<?, ?> m -> JsonRpcCodec.writeValueAsString(m);
+                    case List<?> l -> JsonRpcCodec.writeValueAsString(l);
+                    case null -> "{}";
+                    default -> JsonRpcCodec.writeValueAsString(params);
+                };
+        var notificationJson = JsonRpcCodec.serializeNotificationAsString(method, paramsStr);
+
+        var sseEventId = nextEventId();
+        var notificationEvent = new SessionEvent.NotificationEvent(
+                session.id(), method, paramsStr, System.currentTimeMillis(), sseEventId);
+        router.append(notificationEvent);
+
+        var sseEvent = new SseEvent(String.valueOf(sseEventId), "message", notificationJson);
+
+        if (!messageRouter.tryRoute(session, sseEvent)) {
+            session.send(sseEvent);
+        }
+    }
+
+    static final Duration PENDING_REQUEST_TIMEOUT = Duration.ofSeconds(60);
+
+    public CompletableFuture<String> sendRequest(McpSession session, String method, Object params) {
+        var paramsStr = params instanceof Map || params instanceof List
+                ? JsonRpcCodec.writeValueAsString(params)
+                : (String) params;
+        var requestId = UUID.randomUUID().toString();
+        var future = new CompletableFuture<String>();
+        registerPendingRequest(requestId, future);
+
+        var requestJson = JsonRpcCodec.serializeRequestAsString(requestId, method, paramsStr);
+        var sseEventId = nextEventId();
+
+        var outboundEvent = new SessionEvent.OutboundRequestEvent(
+                session.id(), requestId, method, paramsStr, System.currentTimeMillis(), sseEventId);
+        router.append(outboundEvent);
+
+        var sseEvent = new SseEvent(String.valueOf(sseEventId), "message", requestJson);
+
+        if (!messageRouter.tryRoute(session, sseEvent)) {
+            session.send(sseEvent);
+        }
+
+        logger.debug("Sent request to client: id={}, method={}", requestId, method);
+        return future;
+    }
+
+    public boolean completePendingRequest(Object requestId, String resultJson) {
+        var future = pendingRequests.remove(requestId);
+        if (future != null) {
+            future.complete(resultJson);
+            return true;
+        }
+        return false;
+    }
+
+    public boolean failPendingRequest(Object requestId, String message) {
+        var future = pendingRequests.remove(requestId);
+        if (future != null) {
+            future.completeExceptionally(new RuntimeException(message));
+            return true;
+        }
+        return false;
+    }
+
+    public void registerPendingRequest(Object requestId, CompletableFuture<String> future) {
+        pendingRequests.put(requestId, future);
+        future.orTimeout(PENDING_REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+        future.whenComplete((_, ex) -> {
+            if (ex instanceof TimeoutException) {
+                var removed = pendingRequests.remove(requestId);
+                if (removed != null) {
+                    logger.warn(
+                            "Pending request timed out after {}s: id={}, pendingCount={}\n{}",
+                            PENDING_REQUEST_TIMEOUT.toSeconds(),
+                            requestId,
+                            pendingRequests.size(),
+                            threadDump());
+                }
+            }
+        });
+    }
+
+    private static String threadDump() {
+        var sb = new StringBuilder("Thread dump:\n");
+        Thread.getAllStackTraces().forEach((t, frames) -> {
+            sb.append("  ")
+                    .append(t.getName())
+                    .append(" [")
+                    .append(t.getState())
+                    .append("]");
+            if (t.isVirtual()) sb.append(" (virtual)");
+            sb.append('\n');
+            for (var frame : frames) {
+                sb.append("    at ").append(frame).append('\n');
+            }
+        });
+        return sb.toString();
+    }
+
+    public void appendEvent(SessionEvent event) {
+        router.append(event);
+    }
+
+    public List<SessionEvent> replay(String sessionId, long lastSeq) {
+        return router.replay(sessionId, lastSeq);
+    }
+
+    public long nextEventId() {
+        return eventIdCounter.incrementAndGet();
+    }
+
+    void pumpChronicle(McpSession session) {
+        if (!session.connection().isWritable()) {
+            return;
+        }
+
+        var cursor = session.cursor();
+        var lastIndex = router.pump(session.id(), cursor, event -> {
+            if (!session.connection().isWritable()) {
+                return false;
+            }
+            var sseEvent = toSseEvent(event);
+            if (sseEvent == null) return true;
+            return session.send(sseEvent); // false = session closed, stop pump
+        });
+        session.cursor(lastIndex);
+    }
+
+    Backpressure backpressure(McpSession session) {
+        return session.computeBackpressure();
+    }
+
+    public static @Nullable SseEvent toSseEvent(SessionEvent event) {
+        return switch (event) {
+            case SessionEvent.ResponseEvent r ->
+                new SseEvent(String.valueOf(r.sseEventId()), "message", r.resultJson());
+            case SessionEvent.NotificationEvent n -> {
+                var json = JsonRpcCodec.serializeNotificationAsString(n.method(), n.paramsJson());
+                yield new SseEvent(String.valueOf(n.sseEventId()), "message", json);
+            }
+            case SessionEvent.OutboundRequestEvent o -> {
+                var json = JsonRpcCodec.serializeRequestAsString(o.requestId(), o.method(), o.paramsJson());
+                yield new SseEvent(String.valueOf(o.sseEventId()), "message", json);
+            }
+            case SessionEvent.RequestEvent ignored -> null;
+            case SessionEvent.CancelEvent ignored -> null;
+        };
+    }
+
+    @Override
+    public void close() {
+        try {
+            logger.info("Shutting down TachyonMcpServer");
+            shutdownExtensions();
+            virtualThreadExecutor.shutdown();
+            taskRegistry.stopTtlJanitor();
+            sessionManager.close();
+            router.close();
+        } catch (IOException e) {
+            logger.debug("Error while shutting down", e);
+        }
+    }
+}

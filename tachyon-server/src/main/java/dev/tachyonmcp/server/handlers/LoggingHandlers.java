@@ -1,0 +1,51 @@
+/*
+ * Copyright (c) 2026 Konstantin Pavlov.
+ */
+
+package dev.tachyonmcp.server.handlers;
+
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.SetLevelRequestParams;
+import dev.tachyonmcp.server.McpMethodHandler;
+import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
+import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
+import java.util.Map;
+
+public final class LoggingHandlers {
+
+    private LoggingHandlers() {}
+
+    public static void register(Map<String, McpMethodHandler> registry) {
+        registry.put("logging/setLevel", new SetLevelHandler());
+    }
+
+    private static class SetLevelHandler implements McpMethodHandler {
+
+        @Override
+        public String method() {
+            return "logging/setLevel";
+        }
+
+        @Override
+        public Object handle(McpContext context, Object params) {
+            SetLevelRequestParams typed;
+            if (params instanceof SetLevelRequestParams p) {
+                typed = p;
+            } else if (params instanceof Map<?, ?> map) {
+                var json = JsonRpcCodec.writeValueAsString(map);
+                typed = JsonRpcCodec.decodeWithCodec(json, SetLevelRequestParams.class);
+            } else {
+                return JsonRpcErrors.invalidRequest("Invalid params for logging/setLevel");
+            }
+
+            var level = typed.level();
+            if (level == null) {
+                return JsonRpcErrors.invalidRequest("Missing level parameter");
+            }
+
+            context.server().setLoggingLevel(level);
+
+            return new dev.tachyonmcp.protocol.mcp.v2025_11_25.models.EmptyResult(null, null);
+        }
+    }
+}

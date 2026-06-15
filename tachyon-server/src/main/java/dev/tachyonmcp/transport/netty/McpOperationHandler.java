@@ -1,0 +1,340 @@
+/*
+ * Copyright (c) 2026 Konstantin Pavlov.
+ */
+
+package dev.tachyonmcp.transport.netty;
+
+import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendAccepted;
+import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendPlainText;
+import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendResponse;
+import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendInternalError;
+import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendJsonResponse;
+import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendOptions;
+import static io.netty.channel.ChannelFutureListener.CLOSE;
+
+import dev.tachyonmcp.runtime.InteractionEvent;
+import dev.tachyonmcp.runtime.McpHeaderNames;
+import dev.tachyonmcp.server.McpDispatcher;
+import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.session.DefaultMcpContext;
+import dev.tachyonmcp.server.session.McpSession;
+import dev.tachyonmcp.server.session.SessionEvent;
+import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
+import dev.tachyonmcp.transport.netty.sse.PostSseStream;
+import dev.tachyonmcp.transport.netty.sse.SseManager;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.timeout.IdleStateEvent;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Handles MCP requests during the OPERATION lifecycle phase: all JSON-RPC methods
+ * after the initial {@code initialize} handshake. Added to the pipeline either
+ * directly (stateless mode) or dynamically by {@link McpInitializationHandler}
+ * after a successful initialize.
+ *
+ * <p>{@code @Sharable} — this handler is stateless. Per-connection state lives in
+ * {@link InteractionHandler}'s channel attribute.
+ */
+@ChannelHandler.Sharable
+public class McpOperationHandler extends ChannelInboundHandlerAdapter {
+
+    private static final Logger logger = LoggerFactory.getLogger(McpOperationHandler.class);
+
+    private final McpServer server;
+    private final McpDispatcher dispatcher;
+    private final Executor executor;
+    private final SseManager sseManager;
+
+    public McpOperationHandler(McpServer server, McpDispatcher dispatcher, Executor executor) {
+        this.server = server;
+        this.dispatcher = dispatcher;
+        this.executor = executor;
+        this.sseManager = new SseManager(server);
+    }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        if (msg instanceof FullHttpRequest req) {
+            try {
+                handleRequest(ctx, req);
+            } finally {
+                if (req.refCnt() > 0) {
+                    req.release();
+                }
+            }
+        } else {
+            ctx.fireChannelRead(msg);
+        }
+    }
+
+    void handleRequest(ChannelHandlerContext ctx, FullHttpRequest req) {
+        var origin = req.headers().get(HttpHeaderNames.ORIGIN);
+        logger.debug("MCP request: {} {}", req.method(), req.uri());
+
+        HttpMethod method = req.method();
+        if (method == HttpMethod.OPTIONS) {
+            sendOptions(ctx, origin);
+        } else if (method == HttpMethod.POST) {
+            handlePost(ctx, req, origin);
+        } else if (method == HttpMethod.GET) {
+            handleGet(ctx, req, origin);
+        } else if (method == HttpMethod.DELETE) {
+            handleDelete(ctx, req, origin);
+        } else {
+            sendResponse(
+                            ctx,
+                            HttpResponseStatus.METHOD_NOT_ALLOWED,
+                            "text/plain",
+                            ctx.alloc().buffer(0),
+                            origin)
+                    .addListener(CLOSE);
+        }
+    }
+
+    private void handlePost(ChannelHandlerContext ctx, FullHttpRequest req, @Nullable String origin) {
+        var sessionId = req.headers().get(McpHeaderNames.MCP_SESSION_ID);
+        if (sessionId != null) {
+            server.getSession(sessionId).ifPresent(McpSession::touch);
+        }
+        var body = req.content().retain();
+        CompletableFuture.runAsync(
+                        () -> {
+                            final JsonRpcMessage message;
+                            try {
+                                message = dispatcher.parseMessage(body);
+                            } finally {
+                                body.release();
+                            }
+                            dispatchPostMessage(ctx, sessionId, message, origin);
+                        },
+                        executor)
+                .exceptionally(ex -> {
+                    logger.error("Failed to parse POST body", ex);
+                    ctx.executor()
+                            .execute(() -> sendResponse(
+                                            ctx,
+                                            HttpResponseStatus.BAD_REQUEST,
+                                            "application/json",
+                                            dispatcher.parseError(),
+                                            origin)
+                                    .addListener(CLOSE));
+                    return null;
+                });
+    }
+
+    private void dispatchPostMessage(
+            ChannelHandlerContext ctx,
+            @Nullable String sessionId,
+            @Nullable JsonRpcMessage message,
+            @Nullable String origin) {
+        if (message == null) {
+            sendResponse(ctx, HttpResponseStatus.BAD_REQUEST, "application/json", dispatcher.parseError(), origin)
+                    .addListener(CLOSE);
+            return;
+        }
+        switch (message) {
+            case JsonRpcMessage.Request reqMsg -> handlePostRequest(ctx, sessionId, reqMsg, origin);
+            case JsonRpcMessage.Response resp -> handlePostResponse(ctx, resp, origin);
+            case JsonRpcMessage.Error err -> handlePostError(ctx, err, origin);
+            case JsonRpcMessage.Notification not -> {
+                sendAccepted(ctx, origin);
+                CompletableFuture.runAsync(
+                        () -> dispatcher.dispatchNotification(not.method(), not.params(), sessionId), executor);
+            }
+            default -> {
+                logger.warn("Unexpected message type: {}", message);
+                sendAccepted(ctx, origin);
+            }
+        }
+    }
+
+    private void handlePostResponse(ChannelHandlerContext ctx, JsonRpcMessage.Response resp, @Nullable String origin) {
+        sendAccepted(ctx, origin);
+        executor.execute(() -> {
+            if (!server.completePendingRequest(resp.id(), resp.resultJson())) {
+                logger.warn("No pending request for response id: {}", resp.id());
+            }
+        });
+    }
+
+    private void handlePostError(ChannelHandlerContext ctx, JsonRpcMessage.Error err, @Nullable String origin) {
+        sendAccepted(ctx, origin);
+        executor.execute(() -> {
+            if (!server.failPendingRequest(err.id(), err.code() + ": " + err.message())) {
+                logger.warn("No pending request for error id: {}", err.id());
+            }
+        });
+    }
+
+    private void handlePostRequest(
+            ChannelHandlerContext ctx,
+            @Nullable String sessionId,
+            JsonRpcMessage.Request req,
+            @Nullable String origin) {
+        var postStream = new PostSseStream(ctx.channel(), origin, server::nextEventId);
+        final var requestId = req.id();
+        final var method = req.method();
+        final var startNs = System.nanoTime();
+        final var ic = ChannelHandlerUtils.interactionContext(ctx);
+        logger.debug("POST request start: id={}, method={}, session={}", requestId, method, sessionId);
+        dispatcher
+                .dispatchRequestAsync(requestId, method, req.params(), sessionId, postStream, ic)
+                .whenComplete((result, ex) -> ctx.executor().execute(() -> {
+                    var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
+                    if (ex != null) {
+                        logger.error(
+                                "Dispatch failed: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs, ex);
+                        if (postStream.started()) {
+                            postStream.close();
+                        } else {
+                            sendInternalError(ctx, requestId, origin).addListener(CLOSE);
+                        }
+                        return;
+                    }
+                    if (postStream.started()) {
+                        finalizePostSseResponse(requestId, sessionId, postStream, result);
+                        if (elapsedMs > 500) {
+                            logger.warn(
+                                    "Slow POST-SSE response: id={}, method={}, elapsed={}ms",
+                                    requestId,
+                                    method,
+                                    elapsedMs);
+                        } else {
+                            logger.debug(
+                                    "POST-SSE response: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);
+                        }
+                        return;
+                    }
+                    if (result instanceof McpDispatcher.DispatchResult.Accepted) {
+                        sendAccepted(ctx, origin);
+                        return;
+                    }
+                    if (elapsedMs > 500) {
+                        logger.warn("Slow POST response: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);
+                    } else {
+                        logger.debug("POST response: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);
+                    }
+                    var response = (McpDispatcher.DispatchResult.Response) result;
+                    sendJsonResponse(ctx, response.responseBody(), response.sessionId(), origin);
+                }));
+    }
+
+    private void finalizePostSseResponse(
+            Object requestId,
+            @Nullable String sessionId,
+            PostSseStream postStream,
+            McpDispatcher.DispatchResult result) {
+        if (!(result instanceof McpDispatcher.DispatchResult.Response response)) {
+            postStream.close();
+            return;
+        }
+        var responseBody = response.responseBody();
+        try {
+            var sseEventId = server.nextEventId();
+            if (!server.isStateless()) {
+                var resultJson = responseBody.toString(StandardCharsets.UTF_8);
+                server.appendEvent(new SessionEvent.ResponseEvent(
+                        sessionId, requestId, resultJson, System.currentTimeMillis(), sseEventId));
+            }
+            postStream.writeEvent(sseEventId, responseBody);
+            responseBody = null;
+        } catch (RuntimeException e) {
+            logger.error("Failed to write final response on POST-SSE stream", e);
+        } finally {
+            if (responseBody != null) {
+                responseBody.release();
+            }
+            postStream.close();
+        }
+    }
+
+    private void handleGet(ChannelHandlerContext ctx, FullHttpRequest req, @Nullable String origin) {
+        if (server.isStateless()) {
+            sseManager.openStatelessStream(ctx, origin);
+            return;
+        }
+        var sessionId = req.headers().get(McpHeaderNames.MCP_SESSION_ID);
+        if (sessionId == null || sessionId.isEmpty()) {
+            sendPlainText(ctx, HttpResponseStatus.BAD_REQUEST, "Missing MCP-Session-Id header", origin)
+                    .addListener(CLOSE);
+            return;
+        }
+        var sessionOpt = server.getSession(sessionId);
+        if (sessionOpt.isEmpty()) {
+            sendPlainText(ctx, HttpResponseStatus.BAD_REQUEST, "Unknown session", origin)
+                    .addListener(CLOSE);
+            return;
+        }
+        sseManager.openStream(ctx, sessionOpt.get(), req.headers().get(McpHeaderNames.LAST_EVENT_ID), origin);
+    }
+
+    private void handleDelete(ChannelHandlerContext ctx, FullHttpRequest req, @Nullable String origin) {
+        var sessionId = req.headers().get(McpHeaderNames.MCP_SESSION_ID);
+        if (sessionId == null || sessionId.isEmpty()) {
+            sendPlainText(ctx, HttpResponseStatus.BAD_REQUEST, "Missing MCP-Session-Id header", origin)
+                    .addListener(CLOSE);
+            return;
+        }
+        // Fire ShutdownStarted before sending the response so the session is removed
+        // before the client receives the OK (eliminates race on server.session()).
+        ctx.pipeline().fireUserEventTriggered(new InteractionEvent.ShutdownStarted(sessionId));
+        sendPlainText(ctx, HttpResponseStatus.OK, "", origin).addListener(CLOSE);
+        logger.info("Session terminated via DELETE: {}", sessionId);
+    }
+
+    @Override
+    public void channelWritabilityChanged(ChannelHandlerContext ctx) {
+        var writable = ctx.channel().isWritable();
+        ctx.channel().config().setAutoRead(writable);
+        ctx.fireChannelWritabilityChanged();
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) {
+        var ic = ctx.channel().attr(InteractionHandler.INTERACTION_CONTEXT_KEY).get();
+        if (ic != null && ic.session() instanceof McpSession mcpSession) {
+            var mcpContext = new DefaultMcpContext(mcpSession, server, ic);
+            for (var ext : server.extensions()) {
+                if (ic.isExtensionEnabled(ext.extensionId())) {
+                    try {
+                        ext.onConnectionClose(mcpContext);
+                    } catch (Exception e) {
+                        logger.warn("Extension onConnectionClose error: {}", ext.extensionId(), e);
+                    }
+                }
+            }
+        }
+        ctx.fireChannelInactive();
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        if (evt instanceof IdleStateEvent) {
+            logger.debug("Idle timeout, closing channel: {}", ctx.channel().remoteAddress());
+            ctx.close();
+        } else {
+            ctx.fireUserEventTriggered(evt);
+        }
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        if (cause instanceof java.net.SocketException) {
+            logger.debug("Connection reset on MCP endpoint", cause);
+        } else {
+            logger.error("MCP endpoint error", cause);
+        }
+        ctx.close();
+    }
+}
