@@ -4,10 +4,8 @@
 
 package dev.tachyonmcp.server.features.resources;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ReadResourceRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Resource;
 import dev.tachyonmcp.server.domain.*;
-import dev.tachyonmcp.server.domain.Icon;
 import java.util.List;
 
 final class McpResourceMapper {
@@ -59,10 +57,5 @@ final class McpResourceMapper {
                 new dev.tachyonmcp.protocol.mcp.v2025_11_25.models.BlobResourceContents(
                         b.blob(), b.uri(), b.mimeType(), null);
         };
-    }
-
-    static ReadResourceRequestParams toProtocolReadResourceRequest(ReadResourceRequest domain) {
-        if (domain == null) return null;
-        return new ReadResourceRequestParams(null, domain.uri());
     }
 }

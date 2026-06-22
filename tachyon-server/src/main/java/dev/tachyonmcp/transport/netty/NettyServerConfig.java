@@ -18,6 +18,7 @@ public record NettyServerConfig(
         String endpointPath,
         Duration readerIdleTimeout,
         Duration writerIdleTimeout,
+        int maxContentLength,
         @Nullable CorsConfig corsConfig,
         @Nullable Consumer<ChannelPipeline> pipelineCustomizer) {
 
@@ -48,6 +49,7 @@ public record NettyServerConfig(
                 "/mcp",
                 Duration.ofSeconds(60),
                 Duration.ofMinutes(5),
+                McpChannelInitializer.DEFAULT_MAX_CONTENT_LENGTH,
                 buildCorsConfig(null, false, false, null),
                 null);
     }
@@ -59,6 +61,7 @@ public record NettyServerConfig(
                 "/mcp",
                 Duration.ofSeconds(60),
                 Duration.ofMinutes(5),
+                McpChannelInitializer.DEFAULT_MAX_CONTENT_LENGTH,
                 buildCorsConfig(null, false, false, null),
                 null);
     }

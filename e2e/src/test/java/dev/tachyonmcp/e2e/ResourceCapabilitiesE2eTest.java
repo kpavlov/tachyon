@@ -153,12 +153,7 @@ class ResourceCapabilitiesE2eTest extends AbstractMcpE2eTest {
 
     // ---- Tool handler implementations ----
 
-    private static class NotifyListChangedToolHandler implements SyncToolHandler<Object, Object> {
-        private final String action;
-
-        NotifyListChangedToolHandler(String action) {
-            this.action = action;
-        }
+    private record NotifyListChangedToolHandler(String action) implements SyncToolHandler<Object, Object> {
 
         @Override
         public String name() {

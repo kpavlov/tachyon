@@ -22,6 +22,7 @@ import dev.tachyonmcp.server.session.InMemorySessionLogRouter;
 import dev.tachyonmcp.server.session.InMemorySessionStore;
 import dev.tachyonmcp.server.session.SessionLogRouter;
 import dev.tachyonmcp.server.session.SessionStore;
+import dev.tachyonmcp.transport.netty.McpChannelInitializer;
 import dev.tachyonmcp.transport.netty.NettyServer;
 import dev.tachyonmcp.transport.netty.NettyServerConfig;
 import io.netty.channel.ChannelPipeline;
@@ -95,6 +96,7 @@ final class BuilderState {
     String endpointPath = "/mcp";
     Duration readerIdleTimeout = Duration.ofSeconds(60);
     Duration writerIdleTimeout = Duration.ofMinutes(5);
+    int maxContentLength = McpChannelInitializer.DEFAULT_MAX_CONTENT_LENGTH;
 
     @Nullable
     List<String> allowedOrigins;
@@ -146,6 +148,7 @@ final class BuilderState {
                 endpointPath,
                 readerIdleTimeout,
                 writerIdleTimeout,
+                maxContentLength,
                 NettyServerConfig.buildCorsConfig(
                         allowedOrigins, allowNullOrigin, allowPrivateNetworks, allowedHeaders),
                 pipelineCustomizer);

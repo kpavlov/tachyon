@@ -47,6 +47,18 @@ public final class NetworksStep {
     }
 
     /**
+     * Sets the maximum aggregated HTTP request body size in bytes. Requests exceeding this
+     * limit are rejected with {@code 413 Request Entity Too Large}. Default: 1 MB.
+     */
+    public NetworksStep maxContentLength(int bytes) {
+        if (bytes <= 0) {
+            throw new IllegalArgumentException("maxContentLength must be positive");
+        }
+        state.maxContentLength = bytes;
+        return this;
+    }
+
+    /**
      * Binds to the given host name or IP address. Default: {@code 127.0.0.1}.
      * Cannot be combined with {@link #address(SocketAddress)}.
      */
