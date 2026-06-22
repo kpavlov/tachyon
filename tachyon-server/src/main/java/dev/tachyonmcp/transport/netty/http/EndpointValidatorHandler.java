@@ -4,8 +4,7 @@
 
 package dev.tachyonmcp.transport.netty.http;
 
-import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendPlainText;
-import static io.netty.channel.ChannelFutureListener.CLOSE;
+import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendPlainTextAndClose;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -37,7 +36,7 @@ public class EndpointValidatorHandler extends ChannelInboundHandlerAdapter {
 
             if (!uri.startsWith(mcpEndpoint)) {
                 LOGGER.warn("Unknown endpoint: {}", uri);
-                sendPlainText(ctx, HttpResponseStatus.NOT_FOUND, "Not Found").addListener(CLOSE);
+                sendPlainTextAndClose(ctx, HttpResponseStatus.NOT_FOUND, "Not Found");
                 return;
             }
         }

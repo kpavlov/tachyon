@@ -6,10 +6,9 @@ package dev.tachyonmcp.transport.netty;
 
 import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.interactionContext;
 import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendAccepted;
-import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendResponse;
+import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendResponseAndClose;
 import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendJsonResponse;
 import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendOptions;
-import static io.netty.channel.ChannelFutureListener.CLOSE;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.InteractionEvent;
@@ -120,8 +119,8 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                     logger.error("Failed to parse POST body during initialization", ex);
                     ctx.executor().execute(() -> {
                         var errorBytes = dispatcher.parseError();
-                        sendResponse(ctx, HttpResponseStatus.BAD_REQUEST, "application/json", errorBytes, origin)
-                                .addListener(CLOSE);
+                        sendResponseAndClose(
+                                ctx, HttpResponseStatus.BAD_REQUEST, "application/json", errorBytes, origin);
                     });
                     return null;
                 });
@@ -132,8 +131,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
         switch (message) {
             case null -> {
                 var errorBytes = dispatcher.parseError();
-                sendResponse(ctx, HttpResponseStatus.BAD_REQUEST, "application/json", errorBytes, origin)
-                        .addListener(CLOSE);
+                sendResponseAndClose(ctx, HttpResponseStatus.BAD_REQUEST, "application/json", errorBytes, origin);
             }
             case JsonRpcMessage.Request req
             when METHOD_INITIALIZE.equals(req.method()) -> handleInitialize(ctx, req.id(), req.params(), origin);
@@ -160,13 +158,12 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                 .whenComplete((result, ex) -> ctx.executor().execute(() -> {
                     if (ex != null) {
                         logger.error("Dispatch failed for pre-session request: method={}", req.method(), ex);
-                        sendResponse(
-                                        ctx,
-                                        HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                                        "application/json",
-                                        dispatcher.parseError(),
-                                        origin)
-                                .addListener(CLOSE);
+                        sendResponseAndClose(
+                                ctx,
+                                HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                                "application/json",
+                                dispatcher.parseError(),
+                                origin);
                         return;
                     }
                     if (result instanceof McpDispatcher.DispatchResult.Accepted) {
@@ -189,13 +186,12 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                     var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
                     if (ex != null) {
                         logger.error("Initialize dispatch failed: id={}, elapsed={}ms", id, elapsedMs, ex);
-                        sendResponse(
-                                        ctx,
-                                        HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                                        "application/json",
-                                        dispatcher.parseError(),
-                                        origin)
-                                .addListener(CLOSE);
+                        sendResponseAndClose(
+                                ctx,
+                                HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                                "application/json",
+                                dispatcher.parseError(),
+                                origin);
                         return;
                     }
                     logger.debug("Initialize response: id={}, elapsed={}ms", id, elapsedMs);

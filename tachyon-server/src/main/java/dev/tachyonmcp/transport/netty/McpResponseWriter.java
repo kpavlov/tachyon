@@ -8,7 +8,6 @@ import dev.tachyonmcp.runtime.McpHeaderNames;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -21,8 +20,7 @@ public final class McpResponseWriter {
 
     public static void sendOptions(ChannelHandlerContext ctx, @Nullable String origin) {
         if (origin == null || origin.isEmpty()) {
-            sendPlainText(ctx, HttpResponseStatus.FORBIDDEN, "Origin Required")
-                    .addListener(ChannelFutureListener.CLOSE);
+            ChannelHandlerUtils.sendPlainTextAndClose(ctx, HttpResponseStatus.FORBIDDEN, "Origin Required");
             return;
         }
         var response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NO_CONTENT);
@@ -39,6 +37,8 @@ public final class McpResponseWriter {
                                 HttpHeaderNames.CONTENT_TYPE.toString(),
                                 HttpHeaderNames.ORIGIN.toString()))
                 .set(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, "86400");
+        // Signal close so the client does not pool this socket; we close it right after the write.
+        HttpUtil.setKeepAlive(response, false);
         ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
 
@@ -76,14 +76,5 @@ public final class McpResponseWriter {
     public static ChannelFuture sendInternalError(ChannelHandlerContext ctx, Object id, @Nullable String origin) {
         var body = JsonRpcCodec.serializeError(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error", null);
         return sendJsonResponse(ctx, body, true, null, origin);
-    }
-
-    private static ChannelFuture sendPlainText(ChannelHandlerContext ctx, HttpResponseStatus status, String message) {
-        var response =
-                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, ByteBufUtil.writeUtf8(ctx.alloc(), message));
-        response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
-        response.headers()
-                .set(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
-        return ctx.writeAndFlush(response);
     }
 }

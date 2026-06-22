@@ -65,6 +65,19 @@ public record TestMcpClient(int serverPort, HttpClient httpClient) implements Cl
         return post(null, body);
     }
 
+    /**
+     * POSTs an MCP request carrying an {@code Origin} header. Used to exercise the
+     * DNS-rebinding protection, which validates {@code Origin} before {@code Host}.
+     */
+    public HttpResponse<String> postWithOrigin(String origin, String body) throws Exception {
+        return httpClient.send(
+                baseRequest()
+                        .header("Origin", origin)
+                        .POST(HttpRequest.BodyPublishers.ofString(body))
+                        .build(),
+                HttpResponse.BodyHandlers.ofString());
+    }
+
     public HttpResponse<String> post(@Nullable String sessionId, String body) throws Exception {
         var builder = baseRequest();
         if (sessionId != null) {

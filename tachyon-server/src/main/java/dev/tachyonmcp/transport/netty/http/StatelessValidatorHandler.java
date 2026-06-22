@@ -4,8 +4,7 @@
 
 package dev.tachyonmcp.transport.netty.http;
 
-import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendPlainText;
-import static io.netty.channel.ChannelFutureListener.CLOSE;
+import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendPlainTextAndClose;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -27,17 +26,15 @@ public class StatelessValidatorHandler extends ChannelInboundHandlerAdapter {
             var sessionId = req.headers().get("MCP-Session-Id");
             var lastEventId = req.headers().get("Last-Event-ID");
             if (sessionId != null || lastEventId != null) {
-                sendPlainText(ctx, HttpResponseStatus.NOT_FOUND, "Stateless server does not support sessions")
-                        .addListener(CLOSE);
+                sendPlainTextAndClose(ctx, HttpResponseStatus.NOT_FOUND, "Stateless server does not support sessions");
                 return;
             }
 
             if (req.method() == HttpMethod.DELETE) {
-                sendPlainText(
-                                ctx,
-                                HttpResponseStatus.METHOD_NOT_ALLOWED,
-                                "Session management not available in stateless mode")
-                        .addListener(CLOSE);
+                sendPlainTextAndClose(
+                        ctx,
+                        HttpResponseStatus.METHOD_NOT_ALLOWED,
+                        "Session management not available in stateless mode");
                 return;
             }
         }
