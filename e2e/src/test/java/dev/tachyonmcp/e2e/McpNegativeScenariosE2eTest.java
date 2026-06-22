@@ -1,0 +1,97 @@
+/*
+ * Copyright (c) 2026 Konstantin Pavlov.
+ */
+
+package dev.tachyonmcp.e2e;
+
+import static io.modelcontextprotocol.spec.McpSchema.CallToolRequest;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import io.modelcontextprotocol.client.McpClient;
+import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+@TestInstance(Lifecycle.PER_CLASS)
+class McpNegativeScenariosE2eTest extends AbstractMcpE2eTest {
+
+    @Test
+    void shouldRejectUnknownTool() {
+        var transport = HttpClientStreamableHttpTransport.builder("http://localhost:" + port)
+                .build();
+        try (var client = McpClient.sync(transport).build()) {
+            client.initialize();
+
+            var callRequest = CallToolRequest.builder("nonexistent-tool")
+                    .arguments(Map.of())
+                    .build();
+            try {
+                var result = client.callTool(callRequest);
+                assertThat(result.isError()).isTrue();
+            } catch (Exception e) {
+                // expected — SDK may throw for unknown tool
+            }
+        }
+    }
+
+    @Test
+    void shouldReturnDefaultToolsOnList() {
+        var transport = HttpClientStreamableHttpTransport.builder("http://localhost:" + port)
+                .build();
+        try (var client = McpClient.sync(transport).build()) {
+            client.initialize();
+
+            var toolsResult = client.listTools();
+            assertThat(toolsResult.tools()).isNotEmpty();
+        }
+    }
+
+    @Test
+    void shouldHandlePingSuccessfully() {
+        var transport = HttpClientStreamableHttpTransport.builder("http://localhost:" + port)
+                .build();
+        try (var client = McpClient.sync(transport).build()) {
+            client.initialize();
+
+            var result = client.ping();
+            assertThat(result).isNotNull();
+        }
+    }
+
+    @Test
+    void shouldListPromptsWhenNoPromptsRegistered() {
+        var transport = HttpClientStreamableHttpTransport.builder("http://localhost:" + port)
+                .build();
+        try (var client = McpClient.sync(transport).build()) {
+            client.initialize();
+
+            var result = client.listPrompts();
+            assertThat(result).isNotNull();
+            assertThat(result.prompts()).isEmpty();
+        }
+    }
+
+    @ParameterizedTest(name = "[{index}] {0}")
+    @ValueSource(strings = {"listResources", "listResourceTemplates"})
+    void shouldThrowWhenResourceCapabilityMissing(String method) {
+        var transport = HttpClientStreamableHttpTransport.builder("http://localhost:" + port)
+                .build();
+        try (var client = McpClient.sync(transport).build()) {
+            client.initialize();
+
+            assertThatThrownBy(() -> {
+                        if ("listResources".equals(method)) {
+                            client.listResources();
+                        } else {
+                            client.listResourceTemplates();
+                        }
+                    })
+                    .isInstanceOf(Exception.class);
+        }
+    }
+}

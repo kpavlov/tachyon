@@ -1,0 +1,80 @@
+/*
+ * Copyright (c) 2026 Konstantin Pavlov.
+ */
+
+package dev.tachyonmcp.conformance;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+class ConformanceRunner {
+
+    private static final String CONFORMANCE_PACKAGE = "@modelcontextprotocol/conformance";
+
+    private final String serverUrl;
+
+    private final String conformanceVersion;
+
+    public ConformanceRunner(String serverUrl, String conformanceVersion) {
+        this.serverUrl = serverUrl;
+        this.conformanceVersion = conformanceVersion;
+    }
+
+    public static boolean isNpxAvailable() {
+        try {
+            var process =
+                    new ProcessBuilder("which", "npx").redirectErrorStream(true).start();
+            return process.waitFor(5, TimeUnit.SECONDS) && process.exitValue() == 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public ConformanceResult runSuite(boolean verbose, String suiteName) throws IOException, InterruptedException {
+        return run(verbose, "--suite", suiteName);
+    }
+
+    public ConformanceResult runScenario(boolean verbose, String scenario) throws IOException, InterruptedException {
+        return run(verbose, "--scenario", scenario);
+    }
+
+    private ConformanceResult run(boolean verbose, String... extraArgs) throws IOException, InterruptedException {
+        var args = new ArrayList<>(List.of(
+                "npx",
+                "--yes",
+                CONFORMANCE_PACKAGE + "@" + conformanceVersion,
+                "server",
+                "--url",
+                serverUrl,
+                //            "--verbose",
+                //            String.valueOf(verbose),
+                "--expected-failures",
+                "./conformance-baseline.yml",
+                "--output-dir",
+                "target/failsafe-reports/conformance-results"));
+        args.addAll(List.of(extraArgs));
+
+        var process = new ProcessBuilder(args).redirectErrorStream(true).start();
+
+        var outputLines = new ArrayList<String>();
+        try (var reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                outputLines.add(line);
+            }
+        }
+
+        var finished = process.waitFor(3, TimeUnit.MINUTES);
+        return new ConformanceResult(finished, process.exitValue(), outputLines);
+    }
+
+    public record ConformanceResult(boolean finished, int exitCode, List<String> outputLines) {
+        public boolean passed() {
+            return finished && exitCode == 0;
+        }
+    }
+}

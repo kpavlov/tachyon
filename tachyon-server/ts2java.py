@@ -1,0 +1,2539 @@
+#!/usr/bin/env python3
+"""
+Generate Java records + Jackson Streaming codecs from TypeScript spec.
+Output: <BASE>/java/<PACKAGE_PATH>/ (models/, codecs/, protocol/)
+"""
+
+#  Copyright (c) 2026 Konstantin Pavlov.
+
+import argparse
+import json
+import os
+import re
+from collections import OrderedDict
+
+DEFAULT_TS = "protocol/mcp-2025-11-25.ts"
+DEFAULT_BASE = "target/generated-sources/ts2java"
+DEFAULT_PKG = "com.example.tsimport"
+DEFAULT_PKG_MODELS = f"{DEFAULT_PKG}.models"
+DEFAULT_PKG_CODECS = f"{DEFAULT_PKG}.codecs"
+DEFAULT_PKG_PROTOCOL = f"{DEFAULT_PKG}.protocol"
+VERBOSE = False
+
+PRIMITIVE_MAP = {
+    "string": "String",
+    "boolean": "boolean",
+    "number": "double",
+    "integer": "long",
+}
+
+UNKNOWN_TYPE_MAP = {
+    "JsonNode": "tools.jackson.databind.JsonNode",
+    "TokenBuffer": "tools.jackson.databind.util.TokenBuffer",
+    "byte[]": "byte[]",
+}
+
+UNKNOWN_SIMPLE_MAP = {
+    "tools.jackson.databind.JsonNode": "JsonNode",
+    "tools.jackson.databind.util.TokenBuffer": "TokenBuffer",
+    "byte[]": "byte[]",
+}
+
+STRING_NUMBER_UNIONS = {"ProgressToken", "RequestId"}
+
+# Module-level globals — populated by Generator.init_from_ts()
+ALL_REQUEST_NAMES = set()
+ALL_RESULT_NAMES = set()
+ALL_NOTIF_NAMES = set()
+ALL_DISCRIMINATED_UNIONS = OrderedDict()
+ALL_VARIANT_NAMES = set()
+ALL_STRUCTURAL_UNIONS = OrderedDict()
+ALL_INTERFACE_EXTENDS = (
+    OrderedDict()
+)  # child -> parent for vertical interface hierarchies
+METHOD_MAP = OrderedDict()
+NOTIFICATIONS = []
+
+
+# --- TS Parser ---
+
+
+def parse_ts(filepath):
+    with open(filepath) as f:
+        text = f.read()
+    text = re.sub(r"//[^\n]*", "", text)
+    text = re.sub(r"/\*[^*].*?\*/", "", text, flags=re.DOTALL)
+    exports = []
+    i = 0
+    jsdoc = ""
+    while i < len(text):
+        m = re.match(r"/\*\*[\s\S]*?\*/", text[i:])
+        if m:
+            jsdoc = m.group(0)
+            i += m.end()
+            continue
+        m = re.match(
+            r"export\s+interface\s+(\w+)(?:\s+extends\s+([^{]+))?\s*\{", text[i:]
+        )
+        if m:
+            name = m.group(1)
+            raw_extends = m.group(2)
+            parts = []
+            if raw_extends:
+                raw_extends = raw_extends.strip()
+                depth = 0
+                part = ""
+                for ch in raw_extends:
+                    if ch in "<(":
+                        depth += 1
+                        part += ch
+                    elif ch in ">)":
+                        depth -= 1
+                        part += ch
+                    elif ch == "," and depth == 0:
+                        parts.append(part.strip())
+                        part = ""
+                    else:
+                        part += ch
+                if part.strip():
+                    parts.append(part.strip())
+                resolved = []
+                for p in parts:
+                    p = p.rstrip(",").strip()
+                    if p.startswith("Omit<"):
+                        inner = p[5:-1]
+                        idx = inner.rfind(",")
+                        ot = inner[:idx].strip()
+                        ok = inner[idx + 1 :].strip()
+                        resolved.append(("omit", ot, ok))
+                    else:
+                        resolved.append(("extends", p))
+                parts = resolved
+            brace_start = i + m.end()
+            body, end_idx = extract_balanced(text, brace_start)
+            fields = parse_fields(body)
+            exports.append(
+                {
+                    "kind": "interface",
+                    "name": name,
+                    "extends": parts,
+                    "fields": fields,
+                    "jsdoc": jsdoc,
+                }
+            )
+            i = end_idx + 1
+            jsdoc = ""
+            continue
+        m = re.match(r"export\s+type\s+(\w+)\s*=\s*(.+?);\s*", text[i:], re.DOTALL)
+        if m:
+            name = m.group(1)
+            rhs = re.sub(r"//.*", "", m.group(2)).strip()
+            exports.append(
+                {"kind": "type_alias", "name": name, "rhs": rhs, "jsdoc": jsdoc}
+            )
+            i += m.end()
+            jsdoc = ""
+            continue
+        m = re.match(r"export\s+(const|function|class|enum)\s", text[i:])
+        if m:
+            end = text.find(";", i)
+            i = (end + 1) if end != -1 else len(text)
+            jsdoc = ""
+            continue
+        i += 1
+    return exports
+
+
+def extract_balanced(text, start):
+    depth = 1
+    i = start
+    while i < len(text) and depth > 0:
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+        i += 1
+    return text[start : i - 1], i - 1
+
+
+def parse_fields(body):
+    fields = []
+    i = 0
+    jsdoc = ""
+    while i < len(body):
+        if body[i] in " \t\n\r":
+            i += 1
+            continue
+        m = re.match(r"/\*\*[\s\S]*?\*/", body[i:])
+        if m:
+            jsdoc = m.group(0)
+            i += m.end()
+            continue
+        m = re.match(r"//[^\n]*", body[i:])
+        if m:
+            i += m.end()
+            continue
+        m = re.match(r"/\*[^*].*?\*/", body[i:], re.DOTALL)
+        if m:
+            i += m.end()
+            continue
+        if body[i] == "}":
+            break
+        m = re.match(r"\[\s*(\w+)\s*:\s*(\w+)\s*\]\s*:\s*(.+?);", body[i:])
+        if m:
+            fields.append(
+                {
+                    "kind": "index",
+                    "key_name": m.group(1),
+                    "key_type": m.group(2),
+                    "value_type": m.group(3).strip(),
+                    "jsdoc": jsdoc,
+                }
+            )
+            i += m.end()
+            jsdoc = ""
+            continue
+        m = re.match(r"(\w+)(\??)\s*:\s*", body[i:])
+        if m:
+            name = m.group(1)
+            optional = m.group(2) == "?"
+            after_colon = i + m.end()
+            type_str, end_idx = parse_type(body, after_colon)
+            semicolon = body.find(";", end_idx)
+            if semicolon == -1:
+                break
+            raw_type = body[after_colon:semicolon].strip()
+            fields.append(
+                {
+                    "kind": "field",
+                    "name": name,
+                    "optional": optional,
+                    "type_str": type_str,
+                    "raw_type": raw_type,
+                    "jsdoc": jsdoc,
+                }
+            )
+            i = semicolon + 1
+            jsdoc = ""
+            continue
+        i += 1
+    return fields
+
+
+def parse_type(text, start):
+    i = start
+    depth = 0
+    depth_paren = 0
+    depth_angle = 0
+    while i < len(text):
+        ch = text[i]
+        if ch == "(" and depth == 0:
+            depth_paren += 1
+        elif ch == ")" and depth == 0:
+            depth_paren -= 1
+        elif ch == "<":
+            depth_angle += 1
+        elif ch == ">":
+            depth_angle -= 1
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+        if depth < 0:
+            break
+        if depth == 0 and depth_paren == 0 and depth_angle == 0:
+            if ch in ";,:":
+                if ch in ";," or ch == ":":
+                    break
+        i += 1
+    return text[start:i].strip(), i
+
+
+def format_jsdoc(jsdoc_raw):
+    if not jsdoc_raw:
+        return ""
+    lines = jsdoc_raw.split("\n")
+    desc_lines = []
+    for line in lines:
+        s = line.strip()
+        if s.startswith("/**"):
+            continue
+        if s.endswith("*/"):
+            s = s[:-2].strip()
+        if s.startswith("*"):
+            s = s[1:].strip()
+        if s.startswith("@") or s == "":
+            continue
+        desc_lines.append(s)
+    return " ".join(desc_lines).strip()
+
+
+def make_javadoc(desc, param_docs=None, indent=""):
+    """Render a Javadoc block; returns empty string if there is nothing to say."""
+    has_params = any(d for _, d in (param_docs or []))
+    if not desc and not has_params:
+        return ""
+    lines = [f"{indent}/**\n"]
+    if desc:
+        lines.append(f"{indent} * {desc}\n")
+    if has_params:
+        if desc:
+            lines.append(f"{indent} *\n")
+        for pname, pdoc in (param_docs or []):
+            if pdoc:
+                lines.append(f"{indent} * @param {pname} {pdoc}\n")
+    lines.append(f"{indent} */\n")
+    return "".join(lines)
+
+
+def resolve_type(
+    type_str,
+    known_types,
+    all_interfaces,
+    anon_registry,
+    all_type_aliases=None,
+    owning_type=None,
+    field_name=None,
+    type_mappings=None,
+):
+    type_str = type_str.strip()
+    if type_str.startswith("typeof "):
+        return "String"
+    if type_str.startswith('"') and type_str.endswith('"'):
+        return "String"
+    if type_str == "null":
+        return "Void"
+    if type_str in PRIMITIVE_MAP:
+        return PRIMITIVE_MAP[type_str]
+    if type_mappings and type_str in type_mappings:
+        return type_mappings[type_str]
+    if all_type_aliases and type_str in all_type_aliases:
+        alias_rhs = all_type_aliases[type_str]["rhs"]
+        alias_parts = [p.strip() for p in alias_rhs.split("|") if p.strip()]
+        alias_non_null = [p for p in alias_parts if p != "null"]
+        alias_non_literals = [
+            p for p in alias_non_null
+            if not (p.startswith('"') and p.endswith('"'))
+        ]
+        alias_literals = [
+            p for p in alias_non_null
+            if p.startswith('"') and p.endswith('"')
+        ]
+        if alias_literals and not alias_non_literals:
+            return type_str
+        if len(alias_non_literals) == 1:
+            only = alias_non_literals[0]
+            if only in PRIMITIVE_MAP:
+                return PRIMITIVE_MAP[only]
+            if only.startswith("{"):
+                return resolve_inline_object(only, anon_registry, owning_type, field_name)
+            arr_match = re.match(r"(.+?)\s*\[\]$", only)
+            if arr_match and "|" not in arr_match.group(1):
+                inner = resolve_type(
+                    arr_match.group(1), known_types, all_interfaces, anon_registry,
+                    all_type_aliases, owning_type, field_name, type_mappings
+                )
+                return "java.util.List<" + inner + ">"
+            rec_match = re.match(r"Record<(\w+),\s*(\w+)>", only)
+            if rec_match:
+                key_t = PRIMITIVE_MAP.get(rec_match.group(1), rec_match.group(1))
+                val_t = rec_match.group(2)
+                val_t = PRIMITIVE_MAP.get(val_t, val_t)
+                if val_t == "unknown":
+                    val_t = UNKNOWN_TYPE_MAP.get("unknown", "tools.jackson.databind.JsonNode")
+                jk = "String" if key_t == "String" else key_t
+                return f"java.util.Map<{jk}, {val_t}>"
+            if only in known_types:
+                return resolve_type(
+                    only, known_types, all_interfaces, anon_registry,
+                    all_type_aliases, owning_type, field_name, type_mappings
+                )
+        if alias_literals and "string" in alias_non_literals:
+            return "String"
+        if len(alias_non_literals) > 1:
+            if type_str in ALL_DISCRIMINATED_UNIONS or type_str in ALL_STRUCTURAL_UNIONS:
+                return type_str
+            return resolve_union_type(
+                alias_rhs, known_types, all_interfaces, anon_registry,
+                all_type_aliases, owning_type, field_name, type_mappings
+            )
+    if "&" in type_str:
+        parts = [p.strip() for p in type_str.split("&")]
+        named = [p for p in parts if not p.startswith("{") and p in known_types]
+        if named:
+            return named[0]
+        inline = [p for p in parts if p.startswith("{")]
+        if inline:
+            return resolve_inline_object(
+                " & ".join(inline), anon_registry, owning_type, field_name
+            )
+        return "Object"
+    if type_str.startswith("{"):
+        return resolve_inline_object(type_str, anon_registry, owning_type, field_name)
+    arr_match = re.match(r"\((.+)\)\s*\[\]", type_str)
+    if arr_match:
+        inner = resolve_union_type(
+            arr_match.group(1),
+            known_types,
+            all_interfaces,
+            anon_registry,
+            all_type_aliases,
+            owning_type,
+            field_name,
+            type_mappings,
+        )
+        return "java.util.List<" + inner + ">"
+    arr_match = re.match(r"(.+?)\s*\[\]", type_str)
+    if arr_match and "|" not in arr_match.group(1):
+        inner = resolve_type(
+            arr_match.group(1),
+            known_types,
+            all_interfaces,
+            anon_registry,
+            all_type_aliases,
+            owning_type,
+            field_name,
+            type_mappings,
+        )
+        return "java.util.List<" + inner + ">"
+    if "|" in type_str:
+        return resolve_union_type(
+            type_str,
+            known_types,
+            all_interfaces,
+            anon_registry,
+            all_type_aliases,
+            owning_type,
+            field_name,
+            type_mappings,
+        )
+    arr_gen = re.match(r"Array<(.+)>", type_str, re.DOTALL)
+    if arr_gen:
+        inner = arr_gen.group(1).strip()
+        if inner.startswith("{"):
+            return "java.util.List<tools.jackson.databind.JsonNode>"
+        return "java.util.List<" + inner + ">"
+    if type_str in STRING_NUMBER_UNIONS:
+        return "Object"
+    if type_str in known_types:
+        return type_str
+    return type_str
+
+
+def resolve_union_type(
+    type_str,
+    known_types,
+    all_interfaces,
+    anon_registry,
+    all_type_aliases=None,
+    owning_type=None,
+    field_name=None,
+    type_mappings=None,
+):
+    parts = [p.strip() for p in type_str.split("|")]
+    non_null = [p for p in parts if p != "null"]
+    if "string" in non_null and "number" in non_null:
+        return "Object"
+    if "string" in non_null and "integer" in non_null:
+        return "Object"
+    all_literals = all(p.startswith('"') and p.endswith('"') for p in non_null)
+    if all_literals:
+        return "String"
+    if len(non_null) == 1:
+        return resolve_type(
+            non_null[0],
+            known_types,
+            all_interfaces,
+            anon_registry,
+            all_type_aliases,
+            owning_type,
+            field_name,
+            type_mappings,
+        )
+    if len(non_null) >= 2:
+        for union_name, variants in ALL_STRUCTURAL_UNIONS.items():
+            if set(non_null) == set(variants):
+                return union_name
+        for parent, children in ALL_INTERFACE_EXTENDS.items():
+            if set(non_null).issubset(set(children)):
+                return parent
+    for p in non_null:
+        if p in known_types:
+            return p
+    return "Object"
+
+
+def resolve_inline_object(type_str, anon_registry, owning_type=None, field_name=None):
+    if re.search(r"\[\s*\w+\s*:\s*\w+\s*\]\s*:", type_str):
+        return "java.util.Map<String, tools.jackson.databind.JsonNode>"
+    body_match = re.match(r"\{(.+)\}", type_str, re.DOTALL)
+    if not body_match:
+        return "java.util.Map<String, tools.jackson.databind.JsonNode>"
+    body = body_match.group(1).strip()
+    for key, val in anon_registry.items():
+        if isinstance(val, tuple) and val[0] == body:
+            _, existing_owner = val
+            if owning_type and existing_owner == owning_type:
+                return key[1]
+            if not owning_type:
+                return key[1]
+        elif isinstance(val, str) and val == body:
+            return key[1] if isinstance(key, tuple) else key
+    if field_name:
+        name = field_name[0].upper() + field_name[1:] if field_name else "Anon"
+    else:
+        name = "Anon_" + str(len(anon_registry) + 1)
+    base_name = name
+    counter = 1
+    while any(
+        k[1] == name
+        for k, v in anon_registry.items()
+        if isinstance(k, tuple) and v[1] == owning_type
+    ):
+        counter += 1
+        name = f"{base_name}{counter}"
+    key = (owning_type, name) if owning_type else name
+    anon_registry[key] = (body, owning_type)
+    return name
+    anon_registry[name] = (body, owning_type)
+    return name
+
+
+# --- Generator ---
+
+
+class Generator:
+    def __init__(
+        self,
+        ts_path=None,
+        base_dir=None,
+        pkg_models=None,
+        pkg_codecs=None,
+        pkg_protocol=None,
+        unknown_type="JsonNode",
+        type_mappings=None,
+        additional_properties=None,
+        ignore_properties=None,
+    ):
+        self.ts_path = ts_path or DEFAULT_TS
+        self.base_dir = base_dir or DEFAULT_BASE
+        self.pkg_models = pkg_models or DEFAULT_PKG_MODELS
+        self.pkg_codecs = pkg_codecs
+        self.pkg_protocol = pkg_protocol
+        self.skip_codecs = not self.pkg_codecs
+        self.skip_protocol = not self.pkg_protocol
+        self.unknown_type = unknown_type
+        self.unknown_java_type = UNKNOWN_TYPE_MAP[unknown_type]
+        self.unknown_simple = UNKNOWN_SIMPLE_MAP.get(
+            self.unknown_java_type, unknown_type
+        )
+        raw_mappings = type_mappings or {}
+        self.type_mappings = {k: v for k, v in raw_mappings.items() if "." not in k}
+        self.field_type_mappings = {k: v for k, v in raw_mappings.items() if "." in k}
+        self.additional_props = additional_properties or {}
+        self.ignore_props = ignore_properties or {}
+        self.dir_models = f"{self.base_dir}/java/{self.pkg_models.replace('.', '/')}"
+        self.dir_codecs = (
+            f"{self.base_dir}/java/{self.pkg_codecs.replace('.', '/')}"
+            if self.pkg_codecs
+            else None
+        )
+        self.dir_protocol = (
+            f"{self.base_dir}/java/{self.pkg_protocol.replace('.', '/')}"
+            if self.pkg_protocol
+            else None
+        )
+
+        # Override PRIMITIVE_MAP for unknown/object types
+        PRIMITIVE_MAP["unknown"] = self.unknown_java_type
+        PRIMITIVE_MAP["object"] = self.unknown_java_type
+
+        self.ts_text = open(self.ts_path).read()
+        self.exports = parse_ts(self.ts_path)
+        self.all_interfaces = {}
+        self.all_type_aliases = {}
+        self.anon_registry = OrderedDict()
+        self.known_type_names = set()
+        self.inner_models = set()
+        self.inner_types = set()
+        self.inner_model_owners = {}
+        self.processed_inner = set()
+
+        for exp in self.exports:
+            self.known_type_names.add(exp["name"])
+            if exp["kind"] == "interface":
+                self.all_interfaces[exp["name"]] = exp
+            elif exp["kind"] == "type_alias":
+                self.all_type_aliases[exp["name"]] = exp
+
+        # Storage for generated outputs
+        self.model_files = OrderedDict()
+        self.model_components = (
+            OrderedDict()
+        )  # name -> [(type, field, optional, jsdoc), ...]
+        self.codec_files = OrderedDict()
+        self.protocol_files = OrderedDict()
+
+        self.init_from_ts()
+
+    def is_enum_type(self, name):
+        exp = self.all_type_aliases.get(name)
+        if not exp:
+            return False
+        rhs = exp["rhs"]
+        parts = [p.strip() for p in rhs.split("|") if p.strip()]
+        non_null = [p for p in parts if p != "null"]
+        return len(non_null) > 0 and all(
+            p.startswith('"') and p.endswith('"') for p in non_null
+        )
+
+    def init_from_ts(self):
+        global ALL_REQUEST_NAMES, ALL_RESULT_NAMES, ALL_NOTIF_NAMES
+        global ALL_DISCRIMINATED_UNIONS, ALL_VARIANT_NAMES, ALL_STRUCTURAL_UNIONS
+        global ALL_INTERFACE_EXTENDS
+        global METHOD_MAP, NOTIFICATIONS
+        ALL_REQUEST_NAMES.clear()
+        ALL_RESULT_NAMES.clear()
+        ALL_NOTIF_NAMES.clear()
+        ALL_DISCRIMINATED_UNIONS.clear()
+        ALL_VARIANT_NAMES.clear()
+        ALL_STRUCTURAL_UNIONS.clear()
+        ALL_INTERFACE_EXTENDS.clear()
+        METHOD_MAP.clear()
+        NOTIFICATIONS[:] = []
+
+        text = self.ts_text
+
+        def extract_body(text, idx):
+            brace = text.find("{", idx)
+            if brace < 0:
+                return ""
+            depth = 1
+            i = brace + 1
+            while i < len(text) and depth > 0:
+                if text[i] == "{":
+                    depth += 1
+                elif text[i] == "}":
+                    depth -= 1
+                i += 1
+            return text[brace + 1 : i - 1]
+
+        def parse_union(name):
+            m = re.search(r"export type " + name + r"\s*=\s*(.*?);", text, re.DOTALL)
+            if not m:
+                return set()
+            rhs = m.group(1).strip()
+            parts = [p.strip() for p in rhs.split("|") if p.strip()]
+            return {
+                p
+                for p in parts
+                if re.match(r"^[A-Z]", p) and '"' not in p and p != "never"
+            }
+
+        # 1. Message hierarchy from type union aliases
+        for uname in [
+            "ClientRequest",
+            "ServerRequest",
+            "ClientResult",
+            "ServerResult",
+            "ClientNotification",
+            "ServerNotification",
+        ]:
+            parts = parse_union(uname)
+            if uname.endswith("Request"):
+                ALL_REQUEST_NAMES.update(parts)
+            elif uname.endswith("Result"):
+                ALL_RESULT_NAMES.update(parts)
+            elif uname.endswith("Notification"):
+                ALL_NOTIF_NAMES.update(parts)
+
+        # 2. Detect discriminated unions
+        seen_unions = {
+            "ClientRequest",
+            "ServerRequest",
+            "ClientResult",
+            "ServerResult",
+            "ClientNotification",
+            "ServerNotification",
+        }
+        for m in re.finditer(r"export type (\w+)\s*=\s*(.*?);", text, re.DOTALL):
+            name = m.group(1)
+            if name in seen_unions:
+                continue
+            rhs = m.group(2).strip()
+            parts = [p.strip() for p in rhs.split("|") if p.strip()]
+            variants = [p for p in parts if re.match(r"^[A-Z]", p) and '"' not in p]
+            if len(variants) < 2:
+                continue
+
+            fbv = {}
+            for v in variants:
+                idx = text.find(f"export interface {v}")
+                if idx < 0:
+                    idx = text.find(f"export type {v}")
+                if idx < 0:
+                    break
+                body = extract_body(text, idx)
+                if not body:
+                    break
+                fnames = re.findall(r"(\w+)\??\s*:", body)
+                fbv[v] = (fnames, body)
+            else:
+                if not fbv:
+                    continue
+                common = set.intersection(
+                    *[set(fnames) for (fnames, _) in fbv.values()]
+                )
+                disc = None
+                for cf in sorted(common):
+                    ok = True
+                    vals = set()
+                    for v, (_, body) in fbv.items():
+                        tm = re.search(rf'{re.escape(cf)}\??:\s*"([^"]+)"', body)
+                        if not tm:
+                            ok = False
+                            break
+                        vals.add(tm.group(1))
+                    if ok and len(vals) == len(variants):
+                        disc = cf
+                        break
+                if disc:
+                    items = []
+                    for v in variants:
+                        sub = re.search(
+                            rf'{re.escape(disc)}\??:\s*"([^"]+)"', fbv[v][1]
+                        )
+                        if sub:
+                            items.append((v, sub.group(1)))
+                    ALL_DISCRIMINATED_UNIONS[name] = (disc, items)
+                    ALL_VARIANT_NAMES.update(variants)
+
+        # 3. Structural unions
+        seen_unions |= set(ALL_DISCRIMINATED_UNIONS.keys())
+        for m in re.finditer(r"export type (\w+)\s*=\s*(.*?);", text, re.DOTALL):
+            name = m.group(1)
+            if name in seen_unions:
+                continue
+            if "|" not in m.group(2):
+                continue
+            rhs = m.group(2).strip()
+            parts = [p.strip() for p in rhs.split("|") if p.strip()]
+            struct = [
+                p
+                for p in parts
+                if re.match(r"^[A-Z]", p) and '"' not in p and p != "never"
+            ]
+            if len(struct) >= 2:
+                ALL_STRUCTURAL_UNIONS[name] = struct
+
+        # 4. Build METHOD_MAP
+        meth_map = {}
+        for m in re.finditer(
+            r'export interface (\w+)\b[^}]*?method:\s*"([^"]+)"', text, re.DOTALL
+        ):
+            iface = m.group(1)
+            meth = m.group(2)
+            meth_map[iface] = meth
+
+        for req in sorted(ALL_REQUEST_NAMES):
+            if req not in meth_map:
+                continue
+            meth = meth_map[req]
+            base = req[: -len("Request")] if req.endswith("Request") else req
+            res = base + "Result"
+            if res not in ALL_RESULT_NAMES:
+                res = "EmptyResult"
+            METHOD_MAP[meth] = (req, res)
+            ALL_RESULT_NAMES.add(res)
+
+        # 5. Build NOTIFICATIONS
+        for notif in sorted(ALL_NOTIF_NAMES):
+            if notif not in meth_map:
+                continue
+            meth = meth_map[notif]
+            idx = text.find(f"export interface {notif}")
+            body = ""
+            if idx >= 0:
+                body = extract_body(text, idx)
+            pm = re.search(r"params:\s*(\w+)", body) if body else None
+            pt = pm.group(1) if pm else None
+            NOTIFICATIONS.append((meth, notif, pt))
+
+        # 6. Interface extends hierarchy (child -> parent for vertical sealed interfaces)
+        # Count how many interfaces extend each parent
+        parent_children = OrderedDict()
+        for exp in self.exports:
+            if exp["kind"] != "interface":
+                continue
+            name = exp["name"]
+            for kind, *args in exp.get("extends", []):
+                if kind == "extends":
+                    parent_name = args[0].strip().rstrip(",").strip()
+                    if parent_name not in parent_children:
+                        parent_children[parent_name] = []
+                    parent_children[parent_name].append(name)
+        for parent_name, children in parent_children.items():
+            if len(children) >= 2:
+                ALL_INTERFACE_EXTENDS[parent_name] = children
+
+    def cap(self, s):
+        return s[0].upper() + s[1:] if s else ""
+
+    def pkg(self, pkg):
+        return f"package {pkg};\n"
+
+    @staticmethod
+    def escape_name(name):
+        JAVA_KEYWORDS = {
+            "abstract",
+            "assert",
+            "boolean",
+            "break",
+            "byte",
+            "case",
+            "catch",
+            "char",
+            "class",
+            "const",
+            "continue",
+            "default",
+            "do",
+            "double",
+            "else",
+            "enum",
+            "extends",
+            "final",
+            "finally",
+            "float",
+            "for",
+            "goto",
+            "if",
+            "implements",
+            "import",
+            "instanceof",
+            "int",
+            "interface",
+            "long",
+            "native",
+            "new",
+            "package",
+            "private",
+            "protected",
+            "public",
+            "return",
+            "short",
+            "static",
+            "strictfp",
+            "super",
+            "switch",
+            "synchronized",
+            "this",
+            "throw",
+            "throws",
+            "transient",
+            "try",
+            "void",
+            "volatile",
+            "while",
+            "true",
+            "false",
+            "null",
+            "var",
+            "record",
+            "sealed",
+            "permits",
+            "yield",
+        }
+        if name in JAVA_KEYWORDS:
+            return name + "_"
+        return name
+
+    @staticmethod
+    def resolve_array_ts(type_str):
+        """Handle Array<T> syntax in addition to T[]."""
+        m = re.match(r"Array<(.+)>", type_str)
+        if m:
+            inner = m.group(1).strip()
+            # If inner type is an inline object, fall back to JsonNode
+            if inner.startswith("{"):
+                return "java.util.List<tools.jackson.databind.JsonNode>"
+            return "java.util.List<" + inner + ">"
+        return None
+
+    def write_file(self, path, content):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as f:
+            f.write(content)
+
+    def get_parent_properties(self, exp, visited=None):
+        if visited is None:
+            visited = set()
+        props = {}
+        jsdocs = {}
+        for kind, *args in exp.get("extends", []):
+            if kind == "extends":
+                parent_name = args[0].strip().rstrip(",").strip()
+                if parent_name in visited or parent_name not in self.all_interfaces:
+                    continue
+                visited.add(parent_name)
+                parent = self.all_interfaces[parent_name]
+                pp, pj = self.get_parent_properties(parent, visited)
+                props.update(pp)
+                jsdocs.update(pj)
+                for f in parent.get("fields", []):
+                    if f["kind"] == "field" and f["name"] not in props:
+                        props[f["name"]] = f
+                        jsdocs[f["name"]] = f.get("jsdoc", "")
+                    elif f["kind"] == "index":
+                        props["__index__"] = f
+            elif kind == "omit":
+                omit_type = args[0].strip()
+                omit_keys_raw = args[1].strip()
+                omit_keys = set(re.findall(r'"([^"]+)"', omit_keys_raw))
+                if omit_type in visited or omit_type not in self.all_interfaces:
+                    continue
+                visited.add(omit_type)
+                parent = self.all_interfaces[omit_type]
+                pp, pj = self.get_parent_properties(parent, visited)
+                for k, v in pp.items():
+                    if k == "__index__" or k not in omit_keys:
+                        if k not in props:
+                            props[k] = v
+                            jsdocs[k] = pj.get(k, "")
+        return props, jsdocs
+
+    def collect_all_fields(self, exp):
+        collected = list(exp.get("fields", []))
+        parent_props, parent_jsdocs = self.get_parent_properties(exp)
+        has_index = "__index__" in parent_props
+        for key in list(parent_props.keys()):
+            if key == "__index__":
+                continue
+            if not any(ef["name"] == key for ef in collected if ef["kind"] == "field"):
+                f_copy = dict(parent_props[key])
+                collected.append(f_copy)
+        # If any parent has an index signature, propagate it
+        if has_index and not any(f["kind"] == "index" for f in collected):
+            collected.append({"kind": "index"})
+        return collected, has_index
+
+    def _parse_extra_field(self, field_str, class_name):
+        m = re.match(r"(\w+)(\??)\s*:\s*(.+);\s*$", field_str.strip())
+        if not m:
+            return None
+        name = m.group(1)
+        optional = bool(m.group(2))
+        raw_type = m.group(3).strip()
+        java_type = resolve_type(
+            raw_type,
+            self.known_type_names,
+            self.all_interfaces,
+            self.anon_registry,
+            self.all_type_aliases,
+            owning_type=class_name,
+            field_name=name,
+            type_mappings=self.type_mappings,
+        )
+        if optional and java_type in ("boolean", "long", "double"):
+            java_type = (
+                java_type.replace("boolean", "Boolean")
+                .replace("long", "Long")
+                .replace("double", "Double")
+            )
+        return (java_type, name, optional, "", name)
+
+    def _is_ignored(self, field_name, class_name):
+        ignored = self.ignore_props.get(class_name, [])
+        return field_name in ignored
+
+    def get_components(self, fields, class_name, has_index_inherited=False):
+        components = []
+        has_additional = has_index_inherited
+        for f in fields:
+            if f["kind"] == "index":
+                has_additional = True
+                continue
+            ftm_key = f"{class_name}.{f['name']}"
+            if ftm_key in self.field_type_mappings:
+                field_type = self.field_type_mappings[ftm_key]
+            else:
+                field_type = resolve_type(
+                    f["type_str"],
+                    self.known_type_names,
+                    self.all_interfaces,
+                    self.anon_registry,
+                    self.all_type_aliases,
+                    owning_type=class_name,
+                    field_name=f["name"],
+                    type_mappings=self.type_mappings,
+                )
+            # Box optional primitives
+            if f.get("optional", False) and field_type in ("boolean", "long", "double"):
+                field_type = (
+                    field_type.replace("boolean", "Boolean")
+                    .replace("long", "Long")
+                    .replace("double", "Double")
+                )
+            if self._is_ignored(f["name"], class_name):
+                continue
+            fname = self.escape_name(f["name"])
+            json_name = f["name"]
+            components.append(
+                (
+                    field_type,
+                    fname,
+                    f.get("optional", False),
+                    format_jsdoc(f.get("jsdoc", "")),
+                    json_name,
+                )
+            )
+        extra_fields = self.additional_props.get(class_name, [])
+        for field_str in extra_fields:
+            comp = self._parse_extra_field(field_str, class_name)
+            if comp and not any(c[1] == comp[1] for c in components):
+                components.append(comp)
+        if has_additional:
+            components.append(
+                (
+                    "java.util.Map<String, tools.jackson.databind.JsonNode>",
+                    "additionalProperties",
+                    True,
+                    "",
+                    "additionalProperties",
+                )
+            )
+        return components, has_additional
+
+    def simplify_type(self, typ):
+        known_prefixes = [
+            "java.util.",
+            "tools.jackson.databind.",
+            "tools.jackson.core.util.",
+        ]
+        for p in known_prefixes:
+            typ = typ.replace(p, "")
+        return typ
+
+    def _collect_imports(self, components, imports):
+        for c in components:
+            t = c[0]
+            if "java.util.List" in t:
+                imports.add("java.util.List")
+            if "java.util.Map" in t:
+                imports.add("java.util.Map")
+            if "tools.jackson.databind.JsonNode" in t:
+                imports.add("tools.jackson.databind.JsonNode")
+            if "tools.jackson.databind.util.TokenBuffer" in t:
+                imports.add("tools.jackson.databind.util.TokenBuffer")
+            if c[2]:
+                imports.add("org.jspecify.annotations.Nullable")
+
+    def _collect_inner_imports(self, parent_name, imports):
+        children = [
+            (k, v)
+            for k, v in self.anon_registry.items()
+            if isinstance(k, tuple)
+            and isinstance(v, tuple)
+            and v[1] == parent_name
+            and k not in self.processed_inner
+        ]
+        for key, (body, _) in children:
+            anon_name = key[1]
+            qualified_name = f"{parent_name}.{anon_name}"
+            fields = parse_fields("{" + body + "}")
+            comps, _ = self.get_components(fields, qualified_name)
+            self._collect_imports(comps, imports)
+            self._collect_inner_imports(qualified_name, imports)
+
+    def add_model(self, name, components, interfaces=None, jsdoc=None):
+        if name in self.model_files:
+            return
+        self.model_components[name] = components
+
+        imports = set()
+        imports.add("javax.annotation.processing.Generated")
+        imports.add("com.fasterxml.jackson.annotation.JsonIgnoreProperties")
+        imports.add("com.fasterxml.jackson.annotation.JsonProperty")
+        self._collect_imports(components, imports)
+        # Also collect imports from inner record components
+        self._collect_inner_imports(name, imports)
+
+        imp_str = "\n".join(f"import {i};" for i in sorted(imports))
+        if imp_str:
+            imp_str += "\n"
+
+        iface_str = ""
+        if interfaces:
+            iface_str = " implements " + ", ".join(interfaces)
+
+        params = []
+        for c in components:
+            typ, fname, optional, _, json_name = c
+            nullable = "@Nullable " if optional else ""
+            simple_typ = self.simplify_type(typ)
+            params.append(
+                f'    @JsonProperty("{json_name}") {nullable}{simple_typ} {fname}'
+            )
+
+        class_desc = format_jsdoc(jsdoc) if jsdoc else ""
+        param_docs = [(fname, jd) for _, fname, _, jd, _ in components if jd]
+
+        out = []
+        out.append(self.pkg(self.pkg_models))
+        out.append("\n")
+        out.append(imp_str)
+        out.append("\n")
+        jd_block = make_javadoc(class_desc, param_docs or None)
+        if jd_block:
+            out.append(jd_block)
+        out.append('@JsonIgnoreProperties(ignoreUnknown = true)\n')
+        out.append('@Generated("ts2java")\n')
+        out.append(f"public record {name}(\n")
+        out.append(",\n".join(params))
+        out.append(f"\n) {iface_str.strip()}{{\n")
+        self.append_inner_classes(name, out)
+        self.append_factory_methods(name, out, components)
+        self.append_builder(name, out, components, depth=0)
+        out.append("}\n")
+        self.model_files[name] = "".join(out)
+
+    def append_inner_classes(self, parent_name, out, depth=1):
+        children = [
+            (k, v)
+            for k, v in self.anon_registry.items()
+            if isinstance(k, tuple)
+            and isinstance(v, tuple)
+            and v[1] == parent_name
+            and k not in self.processed_inner
+        ]
+        indent = "    " * depth
+        for key, (body, _) in children:
+            anon_name = key[1]
+            qualified_name = f"{parent_name}.{anon_name}"
+            self.processed_inner.add(key)
+            self.inner_types.add(qualified_name)
+            self.inner_model_owners[qualified_name] = parent_name
+            self.model_files[qualified_name] = ""
+            fields = parse_fields("{" + body + "}")
+            comps, _ = self.get_components(fields, qualified_name)
+            self.model_components[qualified_name] = comps
+            out.append(f'{indent}@JsonIgnoreProperties(ignoreUnknown = true)\n')
+            out.append(f'{indent}@Generated("ts2java")\n')
+            params = []
+            for c in comps:
+                typ, fname, optional, _, json_name = c
+                nullable = "@Nullable " if optional else ""
+                simple_typ = self.simplify_type(typ)
+                params.append(
+                    f'{indent}    @JsonProperty("{json_name}") {nullable}{simple_typ} {fname}'
+                )
+            out.append(f"{indent}public record {anon_name}(\n")
+            out.append(",\n".join(params))
+            out.append(f"\n{indent}) {{\n")
+            self.append_inner_classes(qualified_name, out, depth + 1)
+            self.append_builder(qualified_name, out, comps, depth)
+            out.append(f"{indent}}}\n\n")
+
+    def add_interface(self, name, permits=None, super_iface=None, jsdoc=None):
+        if name in self.model_files:
+            return
+        out = []
+        out.append(self.pkg(self.pkg_models))
+        out.append("\n")
+        out.append("import javax.annotation.processing.Generated;\n")
+        out.append("\n")
+        class_desc = format_jsdoc(jsdoc) if jsdoc else ""
+        jd_block = make_javadoc(class_desc)
+        if jd_block:
+            out.append(jd_block)
+        ext = f" extends {super_iface}" if super_iface else ""
+        perm = f" permits {', '.join(permits)}" if permits else ""
+        out.append('@Generated("ts2java")\n')
+        out.append(f"public sealed interface {name}{ext}{perm} {{\n")
+        out.append("}\n")
+        self.model_files[name] = "".join(out)
+
+    def add_discriminated_interface(self, name, discriminator, variants, jsdoc=None):
+        if name in self.model_files:
+            return
+        out = []
+        out.append(self.pkg(self.pkg_models))
+        out.append("\n")
+        out.append("import javax.annotation.processing.Generated;\n")
+        out.append("import com.fasterxml.jackson.annotation.JsonSubTypes;\n")
+        out.append("import com.fasterxml.jackson.annotation.JsonTypeInfo;\n")
+        out.append("\n")
+        class_desc = format_jsdoc(jsdoc) if jsdoc else ""
+        jd_block = make_javadoc(class_desc)
+        if jd_block:
+            out.append(jd_block)
+        entries = [
+            f'        @JsonSubTypes.Type(value = {vn}.class, name = "{lit}")'
+            for vn, lit in variants
+        ]
+        out.append("@JsonTypeInfo(\n")
+        out.append("    use = JsonTypeInfo.Id.NAME,\n")
+        out.append("    include = JsonTypeInfo.As.EXISTING_PROPERTY,\n")
+        out.append(f'    property = "{discriminator}"\n')
+        out.append(")\n")
+        out.append("@JsonSubTypes({\n")
+        out.append(",\n".join(entries))
+        out.append("\n})\n")
+        permit_list = ", ".join(v[0] for v in variants)
+        out.append(f"public sealed interface {name} permits {permit_list} {{\n")
+        out.append("}\n")
+        self.model_files[name] = "".join(out)
+
+    def add_sealed_interface_from_extends(self, name, children, jsdoc=None):
+        if name in self.model_files:
+            return
+        exp = self.all_interfaces.get(name)
+        comps = []
+        if exp:
+            fields, _ = self.collect_all_fields(exp)
+            comps, _ = self.get_components(fields, name)
+
+        imports = set()
+        imports.add("javax.annotation.processing.Generated")
+        imports.add("com.fasterxml.jackson.annotation.JsonSubTypes")
+        imports.add("com.fasterxml.jackson.annotation.JsonTypeInfo")
+        self._collect_imports(comps, imports)
+        imp_str = "\n".join(f"import {i};" for i in sorted(imports))
+        if imp_str:
+            imp_str += "\n"
+
+        out = []
+        out.append(self.pkg(self.pkg_models))
+        out.append("\n")
+        out.append(imp_str)
+        out.append("\n")
+        class_desc = format_jsdoc(jsdoc) if jsdoc else ""
+        jd_block = make_javadoc(class_desc)
+        if jd_block:
+            out.append(jd_block)
+        entries = [
+            f"        @JsonSubTypes.Type(value = {v}.class)"
+            for v in children
+            if v in self.all_interfaces
+        ]
+        out.append("@JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION)\n")
+        out.append("@JsonSubTypes({\n")
+        out.append(",\n".join(entries))
+        out.append("\n})\n")
+        out.append('@Generated("ts2java")\n')
+        # Determine extends clause — if this sealed interface is also a child of another
+        parent_ext = ""
+        for pn, pc in ALL_INTERFACE_EXTENDS.items():
+            if (
+                name in pc
+                and pn not in ALL_DISCRIMINATED_UNIONS
+                and pn not in ALL_STRUCTURAL_UNIONS
+            ):
+                parent_ext = f" extends {pn}"
+                break
+        out.append(
+            f"public sealed interface {name}{parent_ext} permits {', '.join(children)} {{\n"
+        )
+        for typ, fname, optional, _, _ in comps:
+            simple_typ = self.simplify_type(typ)
+            nul = "@Nullable " if optional else ""
+            out.append(f"    {nul}{simple_typ} {fname}();\n")
+        out.append("}\n")
+        self.model_files[name] = "".join(out)
+
+    def add_structural_union(self, name, variants, super_iface=None, jsdoc=None):
+        if name in self.model_files:
+            return
+        out = []
+        out.append(self.pkg(self.pkg_models))
+        out.append("\n")
+        out.append("import javax.annotation.processing.Generated;\n")
+        out.append("import com.fasterxml.jackson.annotation.JsonSubTypes;\n")
+        out.append("import com.fasterxml.jackson.annotation.JsonTypeInfo;\n")
+        out.append("\n")
+        class_desc = format_jsdoc(jsdoc) if jsdoc else ""
+        jd_block = make_javadoc(class_desc)
+        if jd_block:
+            out.append(jd_block)
+        entries = [
+            f"        @JsonSubTypes.Type(value = {v}.class)"
+            for v in variants
+            if v in self.all_interfaces
+        ]
+        out.append("@JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION)\n")
+        out.append("@JsonSubTypes({\n")
+        out.append(",\n".join(entries))
+        out.append("\n})\n")
+        out.append('@Generated("ts2java")\n')
+        ext = f" extends {super_iface}" if super_iface else ""
+        out.append(
+            f"public sealed interface {name}{ext} permits {', '.join(variants)} {{\n"
+        )
+        out.append("}\n")
+        self.model_files[name] = "".join(out)
+
+    def add_enum(self, name, values, jsdoc=None):
+        if name in self.model_files:
+            return
+        out = []
+        out.append(self.pkg(self.pkg_models))
+        out.append("\nimport javax.annotation.processing.Generated;\n")
+        out.append("import com.fasterxml.jackson.annotation.JsonValue;\n\n")
+        class_desc = format_jsdoc(jsdoc) if jsdoc else ""
+        jd_block = make_javadoc(class_desc)
+        if jd_block:
+            out.append(jd_block)
+        out.append('@Generated("ts2java")\n')
+        out.append(f"public enum {name} {{\n")
+        lines = []
+        for v in values:
+            cn = v.upper().replace("-", "_").replace(" ", "_").replace("/", "_")
+            if cn[0].isdigit():
+                cn = "_" + cn
+            lines.append(f'    {cn}("{v}")')
+        out.append(",\n".join(lines))
+        out.append(";\n\n")
+        out.append("    private final String value;\n\n")
+        out.append(f"    {name}(String value) {{ this.value = value; }}\n\n")
+        out.append("    @JsonValue\n")
+        out.append("    public String getValue() { return value; }\n\n")
+        out.append("    public static " + name + " fromValue(String value) {\n")
+        out.append("        for (" + name + " v : values()) {\n")
+        out.append("            if (v.value.equals(value)) return v;\n")
+        out.append("        }\n")
+        out.append('        throw new IllegalArgumentException("Unexpected value: " + value);\n')
+        out.append("    }\n")
+        out.append("}\n")
+        self.model_files[name] = "".join(out)
+
+    def type_ref(self, name, context=None):
+        if context:
+            candidate = f"{context}.{name}"
+            if candidate in self.inner_types:
+                return candidate
+            parts = context.split(".")
+            for i in range(len(parts) - 1, 0, -1):
+                parent = ".".join(parts[:i])
+                candidate = f"{parent}.{name}"
+                if candidate in self.inner_types:
+                    return candidate
+        if name in self.inner_types:
+            return name
+        return name
+
+    def ref_for_type(self, typ, context=None):
+        if "<" in typ:
+            base = typ.split("<")[0]
+            inner = typ.split("<")[1].rsplit(">", 1)[0]
+            inner_ref = self.ref_for_type(inner, context)
+            if inner_ref != inner:
+                return f"{base}<{inner_ref}>"
+            return typ
+        q = self.type_ref(typ, context)
+        return q
+
+    def append_factory_methods(self, name, out, components, depth=0):
+        indent = "    " * depth
+        factory_methods = {
+            "TextContent": [
+                ("of", ["String text"], "return new TextContent(\"text\", text, null, null);"),
+            ],
+            "CallToolResult": [
+                ("ofText", ["String text"], "return new CallToolResult(List.of(TextContent.of(text)), null, null, null, null);"),
+                ("ofError", ["String message"], "return new CallToolResult(List.of(TextContent.of(message)), null, true, null, null);"),
+                ("of", ["ContentBlock... content"], "return new CallToolResult(List.of(content), null, null, null, null);"),
+            ],
+            "PromptMessage": [
+                ("of", ["Role role", "ContentBlock content"], "return new PromptMessage(role, content);"),
+                ("user", ["ContentBlock content"], "return new PromptMessage(Role.USER, content);"),
+                ("user", ["String text"], "return new PromptMessage(Role.USER, TextContent.of(text));"),
+            ],
+            "ImageContent": [
+                ("of", ["String data", "String mimeType"], "return new ImageContent(\"image\", data, mimeType, null, null);"),
+            ],
+            "AudioContent": [
+                ("of", ["String data", "String mimeType"], "return new AudioContent(\"audio\", data, mimeType, null, null);"),
+            ],
+            "TextResourceContents": [
+                ("of", ["String text", "String uri", "String mimeType"], "return new TextResourceContents(text, uri, mimeType, null);"),
+            ],
+            "EmbeddedResource": [
+                ("of", ["ResourceContents resource"], "return new EmbeddedResource(\"resource\", resource, null, null);"),
+            ],
+        }
+        if name not in factory_methods:
+            return
+        out.append("\n")
+        for method_name, params, body in factory_methods[name]:
+            out.append(f"{indent}    public static {name} {method_name}({', '.join(params)}) {{\n")
+            out.append(f"{indent}        {body}\n")
+            out.append(f"{indent}    }}\n\n")
+
+    def append_builder(self, name, out, components, depth=0):
+        indent = "    " * depth
+
+        out.append(f"{indent}    public static Builder builder() {{\n")
+        out.append(f"{indent}        return new Builder();\n")
+        out.append(f"{indent}    }}\n\n")
+
+        out.append(f"{indent}    public static final class Builder {{\n")
+
+        for typ, fname, optional, _, _ in components:
+            simple_typ = self.simplify_type(typ)
+            out.append(f"{indent}        private {simple_typ} {fname};\n")
+        out.append("\n")
+
+        for typ, fname, optional, _, _ in components:
+            simple_typ = self.simplify_type(typ)
+            out.append(
+                f"{indent}        public Builder {fname}({simple_typ} {fname}) {{\n"
+            )
+            out.append(f"{indent}            this.{fname} = {fname};\n")
+            out.append(f"{indent}            return this;\n")
+            out.append(f"{indent}        }}\n")
+        out.append("\n")
+
+        args = [c[1] for c in components]
+        out.append(f"{indent}        public {name} build() {{\n")
+        out.append(f"{indent}            return new {name}(\n")
+        for i, a in enumerate(args):
+            out.append(
+                f"{indent}                {a}{',' if i < len(args) - 1 else ''}\n"
+            )
+        out.append(f"{indent}            );\n")
+        out.append(f"{indent}        }}\n")
+
+        out.append(f"{indent}    }}\n")
+
+    def top_owner(self, qualified_name):
+        while qualified_name in self.inner_model_owners:
+            qualified_name = self.inner_model_owners[qualified_name]
+        return qualified_name
+
+    def codec_class_name(self, qualified_name):
+        if qualified_name in self.inner_types:
+            return qualified_name.replace(".", "_") + "Codec"
+        return f"{qualified_name}Codec"
+
+    def codec_ref(self, typ, context_owner):
+        base = typ.split("<")[0].split(".")[-1]
+        q = self.type_ref(base, context_owner)
+        if q != base:
+            return q.replace(".", "_") + "Codec"
+        return f"{base}Codec"
+
+    def registry_ref(self, typ, context_owner):
+        base = typ.split("<")[0].split(".")[-1]
+        q = self.type_ref(base, context_owner)
+        return q
+
+    # --- Codec generation ---
+
+    def add_codec(self, model_name):
+        codec_name = self.codec_class_name(model_name)
+        if codec_name in self.codec_files:
+            return
+        if model_name not in self.model_components:
+            return
+
+        is_inner = model_name in self.inner_types
+        qname = self.type_ref(model_name, model_name)
+
+        components = self.model_components[model_name]
+        has_additional = any(c[1] == "additionalProperties" for c in components)
+        regular = [c for c in components if c[1] != "additionalProperties"]
+
+        out = []
+        out.append(self.pkg(self.pkg_codecs))
+        out.append("\n")
+        out.append("import tools.jackson.core.JsonGenerator;\n")
+        out.append("import tools.jackson.core.JsonParser;\n")
+        out.append("import tools.jackson.core.JsonToken;\n")
+        out.append("import tools.jackson.databind.JsonNode;\n")
+        if self.unknown_type == "TokenBuffer":
+            out.append("import tools.jackson.databind.util.TokenBuffer;\n")
+        if self.unknown_type == "byte[]":
+            out.append("import tools.jackson.databind.util.TokenBuffer;\n")
+            out.append("import java.io.ByteArrayOutputStream;\n")
+            out.append("import java.io.ByteArrayInputStream;\n")
+            out.append("import tools.jackson.core.ObjectReadContext;\n")
+            out.append("import tools.jackson.core.ObjectWriteContext;\n")
+            out.append("import tools.jackson.core.json.JsonFactory;\n")
+        if any("java.util.List" in c[0] for c in components):
+            out.append("import java.util.ArrayList;\n")
+            out.append("import java.util.List;\n")
+        if has_additional or any("java.util.Map" in c[0] for c in components):
+            out.append("import java.util.LinkedHashMap;\n")
+            out.append("import java.util.Map;\n")
+        out.append("import java.io.IOException;\n")
+        out.append("import javax.annotation.processing.Generated;\n")
+        out.append("\n")
+        if is_inner:
+            owner = self.top_owner(model_name)
+            out.append(f"import {self.pkg_models}.{owner};\n")
+        else:
+            owner = model_name
+            out.append(f"import {self.pkg_models}.{model_name};\n")
+
+        # Imports for referenced model types
+        refs = set()
+        for typ, _, _, _, _ in regular:
+            parts = typ.replace("<", " ").replace(">", " ").replace(",", " ").split()
+            for p in parts:
+                base = p.split(".")[-1]
+                if base in (
+                    "ArrayList",
+                    "List",
+                    "LinkedHashMap",
+                    "Map",
+                    "String",
+                    "Boolean",
+                    "Long",
+                    "Double",
+                    "Integer",
+                    "JsonNode",
+                    "Object",
+                    self.unknown_simple,
+                ):
+                    continue
+                if base == model_name:
+                    continue
+                q = self.type_ref(base, model_name)
+                if q != base:
+                    refs.add(self.top_owner(q))
+                elif base in self.model_files:
+                    refs.add(base)
+        refs.discard(owner)
+        for r in sorted(refs):
+            out.append(f"import {self.pkg_models}.{r};\n")
+
+        out.append("\n")
+        out.append('@Generated("ts2java")\n')
+        out.append(f"public class {codec_name} implements Codec<{qname}> {{\n\n")
+
+        # --- DECODE ---
+        out.append(
+            f"    public {qname} decode(JsonParser parser) throws IOException {{\n"
+        )
+        for typ, fname, optional, _, _ in regular:
+            if "java.util.List" in typ:
+                item = typ.split("<")[1][:-1]
+                item_ref = self.ref_for_type(item, model_name)
+                out.append(f"        List<{item_ref}> {fname}List = null;\n")
+            elif "java.util.Map" in typ:
+                out.append(f"        Map<String, JsonNode> {fname}Map = null;\n")
+            else:
+                default = "null"
+                if typ == "boolean":
+                    default = "false"
+                elif typ == "long":
+                    default = "0L"
+                elif typ == "double":
+                    default = "0.0"
+                typ_ref = self.ref_for_type(typ, model_name)
+                out.append(f"        {typ_ref} {fname} = {default};\n")
+        if has_additional:
+            out.append("        Map<String, JsonNode> additionalProperties = null;\n")
+
+        out.append("\n        while (parser.nextToken() != JsonToken.END_OBJECT) {\n")
+        out.append("            String fieldName = parser.currentName();\n")
+        out.append("            parser.nextToken();\n")
+        out.append("            switch (fieldName) {\n")
+
+        for typ, fname, optional, _, json_name in regular:
+            out.append(f'                case "{json_name}" -> {{\n')
+            if typ == "String":
+                out.append(f"                    {fname} = parser.getString();\n")
+            elif typ in ("boolean", "Boolean"):
+                out.append(f"                    {fname} = parser.getBooleanValue();\n")
+            elif typ in ("long", "Long"):
+                out.append(f"                    {fname} = parser.getLongValue();\n")
+            elif typ in ("double", "Double"):
+                out.append(f"                    {fname} = parser.getDoubleValue();\n")
+            elif "java.util.List" in typ:
+                item = typ.split("<")[1][:-1]
+                item_ref = self.ref_for_type(item, model_name)
+                out.append(
+                    f"                    if (parser.currentToken() == JsonToken.START_ARRAY) {{\n"
+                )
+                out.append(
+                    f"                        var list = new ArrayList<{item_ref}>();\n"
+                )
+                out.append(
+                    f"                        while (parser.nextToken() != JsonToken.END_ARRAY) {{\n"
+                )
+                if item_ref in (
+                        "String", "boolean", "Boolean", "long", "Long", "double", "Double",
+                        "tools.jackson.databind.JsonNode"):
+                    out.append(
+                        f"                            list.add(decodeValue(parser, {item_ref}.class));\n"
+                    )
+                else:
+                    out.append(
+                        f"                            list.add(CodecRegistry.<{item_ref}>codecFor({item_ref}.class).decode(parser));\n"
+                    )
+                out.append(f"                        }}\n")
+                out.append(f"                        {fname}List = list;\n")
+                out.append(f"                    }}\n")
+            elif typ == self.unknown_java_type:
+                out.append(
+                    f"                    {fname} = decodeValue(parser, {typ}.class);\n"
+                )
+            elif "java.util.Map" in typ:
+                vt = typ.split("<")[1].split(">")[0].split(",")[-1].strip()
+                out.append(
+                    f"                    if (parser.currentToken() == JsonToken.START_OBJECT) {{\n"
+                )
+                out.append(
+                    f"                        var map = new LinkedHashMap<String, {vt}>();\n"
+                )
+                out.append(
+                    f"                        while (parser.nextToken() != JsonToken.END_OBJECT) {{\n"
+                )
+                out.append(
+                    f"                            String key = parser.currentName();\n"
+                )
+                out.append(f"                            parser.nextToken();\n")
+                out.append(
+                    f"                            map.put(key, parser.readValueAsTree());\n"
+                )
+                out.append(f"                        }}\n")
+                out.append(f"                        {fname}Map = map;\n")
+                out.append(f"                    }}\n")
+            else:
+                base_type = self.registry_ref(typ, model_name)
+                if self.is_enum_type(typ):
+                    out.append(
+                        f"                    {fname} = {base_type}.fromValue(parser.getString());\n"
+                    )
+                else:
+                    out.append(
+                        f"                    if (parser.currentToken() == JsonToken.START_OBJECT) {{\n"
+                    )
+                    out.append(
+                        f"                        {fname} = CodecRegistry.<{base_type}>codecFor({base_type}.class).decode(parser);\n"
+                    )
+                    out.append(f"                    }} else {{\n")
+                    out.append(f"                        parser.skipChildren();\n")
+                    out.append(f"                    }}\n")
+            out.append("                }\n")
+
+        if has_additional:
+            out.append("                default -> {\n")
+            out.append(
+                "                    if (additionalProperties == null) additionalProperties = new LinkedHashMap<>();\n"
+            )
+            out.append(
+                "                    additionalProperties.put(fieldName, parser.readValueAsTree());\n"
+            )
+            out.append("                }\n")
+        else:
+            out.append("                default -> parser.skipChildren();\n")
+        out.append("            }\n")
+        out.append("        }\n\n")
+
+        args = []
+        for typ, fname, optional, _, _ in regular:
+            if "java.util.List" in typ:
+                args.append(f"{fname}List")
+            elif "java.util.Map" in typ:
+                args.append(f"{fname}Map")
+            else:
+                args.append(fname)
+        if has_additional:
+            args.append("additionalProperties")
+
+        out.append(f"        return new {qname}(\n")
+        for i, a in enumerate(args):
+            out.append(f"            {a}{',' if i < len(args) - 1 else ''}\n")
+        out.append("        );\n")
+        out.append("    }\n\n")
+
+        # --- ENCODE ---
+        out.append(
+            f"    public void encode(JsonGenerator gen, {qname} value) throws IOException {{\n"
+        )
+        out.append("        gen.writeStartObject();\n")
+        for typ, fname, optional, _, json_name in regular:
+            acc = f"value.{fname}()"
+            is_primitive = typ in ("boolean", "long", "double")
+            if optional and not is_primitive:
+                out.append(f"        if ({acc} != null) {{\n")
+                ind = "            "
+            elif optional:
+                out.append(f"        if ({acc} != null) {{\n")
+                ind = "            "
+            else:
+                ind = "        "
+            if typ == "String":
+                out.append(f'{ind}gen.writeStringProperty("{json_name}", {acc});\n')
+            elif typ in ("boolean", "Boolean"):
+                out.append(f'{ind}gen.writeBooleanProperty("{json_name}", {acc});\n')
+            elif typ in ("long", "Long"):
+                out.append(f'{ind}gen.writeNumberProperty("{json_name}", {acc});\n')
+            elif typ in ("double", "Double"):
+                out.append(f'{ind}gen.writeNumberProperty("{json_name}", {acc});\n')
+            elif "java.util.List" in typ:
+                out.append(f'{ind}gen.writeArrayPropertyStart("{json_name}");\n')
+                out.append(f"{ind}for (var item : {acc}) {{\n")
+                item = typ.split("<")[1][:-1]
+                item_ref = self.ref_for_type(item, model_name)
+                if item_ref in (
+                        "String", "boolean", "Boolean", "long", "Long", "double", "Double",
+                        "tools.jackson.databind.JsonNode"):
+                    out.append(f"{ind}    encodeValue(gen, item);\n")
+                else:
+                    out.append(
+                        f"{ind}    CodecRegistry.<{item_ref}>codecFor({item_ref}.class).encode(gen, item);\n"
+                    )
+                out.append(f"{ind}}}\n")
+                out.append(f"{ind}gen.writeEndArray();\n")
+            elif typ == self.unknown_java_type:
+                out.append(f'{ind}gen.writeName("{json_name}");\n')
+                out.append(f"{ind}encodeValue(gen, {acc});\n")
+            elif "java.util.Map" in typ:
+                out.append(f'{ind}gen.writeObjectPropertyStart("{json_name}");\n')
+                out.append(f"{ind}for (var entry : {acc}.entrySet()) {{\n")
+                out.append(f"{ind}    gen.writeName(entry.getKey());\n")
+                out.append(f"{ind}    gen.writeRawValue(entry.getValue().toString());\n")
+                out.append(f"{ind}}}\n")
+                out.append(f"{ind}gen.writeEndObject();\n")
+            else:
+                base_type = self.registry_ref(typ, model_name)
+                if self.is_enum_type(typ):
+                    out.append(
+                        f'{ind}gen.writeStringProperty("{json_name}", {acc}.getValue());\n'
+                    )
+                else:
+                    out.append(
+                        f'{ind}gen.writeName("{json_name}");\n'
+                    )
+                    out.append(
+                        f"{ind}CodecRegistry.<{base_type}>codecFor({base_type}.class).encode(gen, {acc});\n"
+                    )
+            if optional:
+                out.append("        }\n")
+
+        if has_additional:
+            out.append("        if (value.additionalProperties() != null) {\n")
+            out.append(
+                "            for (var entry : value.additionalProperties().entrySet()) {\n"
+            )
+            out.append("                gen.writeName(entry.getKey());\n")
+            out.append("                gen.writeRawValue(entry.getValue().toString());\n")
+            out.append("            }\n")
+            out.append("        }\n")
+
+        out.append("        gen.writeEndObject();\n")
+        out.append("    }\n")
+
+        # decodeValue helper
+        out.append('\n    @SuppressWarnings("unchecked")\n')
+        out.append(
+            "    private static <T> T decodeValue(JsonParser parser, Class<T> type) throws IOException {\n"
+        )
+        out.append("        if (type == String.class) return (T) parser.getString();\n")
+        out.append(
+            "        if (type == Boolean.class || type == boolean.class) return (T) Boolean.valueOf(parser.getBooleanValue());\n"
+        )
+        out.append(
+            "        if (type == Long.class || type == long.class) return (T) Long.valueOf(parser.getLongValue());\n"
+        )
+        out.append(
+            "        if (type == Double.class || type == double.class) return (T) Double.valueOf(parser.getDoubleValue());\n"
+        )
+        out.append(
+            "        if (type == JsonNode.class) return (T) parser.readValueAsTree();\n"
+        )
+        if self.unknown_type == "TokenBuffer":
+            out.append("        if (type == TokenBuffer.class) {\n")
+            out.append("            TokenBuffer buf = TokenBuffer.forBuffering(parser, parser.objectReadContext());\n")
+            out.append("            buf.copyCurrentStructure(parser);\n")
+            out.append("            return (T) buf;\n")
+            out.append("        }\n")
+        if self.unknown_type == "byte[]":
+            out.append("        if (type == byte[].class) {\n")
+            out.append("            TokenBuffer buf = TokenBuffer.forBuffering(parser, parser.objectReadContext());\n")
+            out.append("            buf.copyCurrentStructure(parser);\n")
+            out.append(
+                "            ByteArrayOutputStream baos = new ByteArrayOutputStream();\n"
+            )
+            out.append(
+                "            try (JsonGenerator tmpGen = new JsonFactory().createGenerator(ObjectWriteContext.empty(), baos)) {\n"
+            )
+            out.append("                buf.serialize(tmpGen);\n")
+            out.append("            }\n")
+            out.append("            return (T) baos.toByteArray();\n")
+            out.append("        }\n")
+        out.append("        return (T) parser.readValueAsTree();\n")
+        out.append("    }\n")
+        out.append('\n    @SuppressWarnings("unchecked")\n')
+        out.append(
+            "    protected static <T> void encodeValue(JsonGenerator gen, T value) throws IOException {\n"
+        )
+        out.append("        if (value == null) { gen.writeNull(); return; }\n")
+        out.append(
+            "        if (value instanceof String s) { gen.writeString(s); return; }\n"
+        )
+        out.append(
+            "        if (value instanceof Boolean b) { gen.writeBoolean(b); return; }\n"
+        )
+        out.append(
+            "        if (value instanceof Long l) { gen.writeNumber(l); return; }\n"
+        )
+        out.append(
+            "        if (value instanceof Double d) { gen.writeNumber(d); return; }\n"
+        )
+        out.append(
+            "        if (value instanceof JsonNode n) { gen.writeRawValue(n.toString()); return; }\n"
+        )
+        if self.unknown_type == "TokenBuffer":
+            out.append(
+                "        if (value instanceof TokenBuffer tb) { tb.serialize(gen); return; }\n"
+            )
+        if self.unknown_type == "byte[]":
+            out.append("        if (value instanceof byte[] b) {\n")
+            out.append(
+                "            JsonParser subParser = new JsonFactory().createParser(ObjectReadContext.empty(), new ByteArrayInputStream(b));\n"
+            )
+            out.append(
+                "            while (subParser.nextToken() != null) { gen.copyCurrentEvent(subParser); }\n"
+            )
+            out.append("            return;\n")
+            out.append("        }\n")
+        out.append("        gen.writeString(value.toString());\n")
+        out.append("    }\n")
+        out.append("}\n")
+        self.codec_files[codec_name] = "".join(out)
+
+    # --- Protocol registries ---
+
+    def add_protocol_version(self):
+        name = "McpProtocolVersion"
+        if name in self.protocol_files:
+            return
+        out = [self.pkg(self.pkg_protocol), "\n"]
+        out.append("import javax.annotation.processing.Generated;\n\n")
+        out.append('@Generated("ts2java")\n')
+        out.append(f"public final class {name} {{\n")
+        out.append('    public static final String VERSION = "2025-11-25";\n')
+        out.append("    private McpProtocolVersion() {}\n")
+        out.append("}\n")
+        self.protocol_files[name] = "".join(out)
+
+    def add_method_registry(self):
+        name = "McpMethodRegistry"
+        if name in self.protocol_files:
+            return
+        out = [self.pkg(self.pkg_protocol), "\n"]
+        out.append("import javax.annotation.processing.Generated;\n\n")
+        out.append('@Generated("ts2java")\n')
+        out.append(f"public final class {name} {{\n")
+        for method, _ in METHOD_MAP.items():
+            cn = method.upper().replace("/", "_")
+            out.append(f'    public static final String {cn} = "{method}";\n')
+        out.append(f"    private {name}() {{}}\n")
+        out.append("}\n")
+        self.protocol_files[name] = "".join(out)
+
+    def add_descriptors(self):
+        if "MethodDescriptor" not in self.protocol_files:
+            out = [self.pkg(self.pkg_protocol), "\n"]
+            out.append("import javax.annotation.processing.Generated;\n\n")
+            out.append('@Generated("ts2java")\n')
+            out.append("public record MethodDescriptor(\n")
+            out.append("    String method,\n")
+            out.append("    Class<?> requestType,\n")
+            out.append("    Class<?> resultType\n")
+            out.append(") {}\n")
+            self.protocol_files["MethodDescriptor"] = "".join(out)
+
+        name = "McpMethodDispatch"
+        if name in self.protocol_files:
+            return
+        out = [self.pkg(self.pkg_protocol), "\n"]
+        model_refs = set()
+        for _, (req, res) in METHOD_MAP.items():
+            model_refs.add(req)
+            model_refs.add(res)
+        model_refs.add("UnknownRequest")
+        for r in sorted(model_refs):
+            out.append(f"import {self.pkg_models}.{r};\n")
+        out.append("import java.util.Collections;\n")
+        out.append("import java.util.LinkedHashMap;\n")
+        out.append("import java.util.Map;\n")
+        out.append("import java.util.Set;\n\n")
+        out.append(f"public final class {name} {{\n")
+        out.append(
+            "    private static final Map<String, MethodDescriptor> METHODS = buildMethods();\n\n"
+        )
+        out.append(
+            "    private static Map<String, MethodDescriptor> buildMethods() {\n"
+        )
+        out.append("        var map = new LinkedHashMap<String, MethodDescriptor>();\n")
+        for method, (req, res) in METHOD_MAP.items():
+            out.append(
+                f'        map.put("{method}", new MethodDescriptor("{method}", {req}.class, {res}.class));\n'
+            )
+        out.append("        return Collections.unmodifiableMap(map);\n")
+        out.append("    }\n\n")
+        out.append(
+            "    public static MethodDescriptor get(String method) { return METHODS.get(method); }\n"
+        )
+        out.append(
+            "    public static Set<String> knownMethods() { return METHODS.keySet(); }\n"
+        )
+        out.append("    public static Class<?> requestType(String method) {\n")
+        out.append("        var d = METHODS.get(method);\n")
+        out.append(
+            "        return d != null ? d.requestType() : UnknownRequest.class;\n"
+        )
+        out.append("    }\n")
+        out.append("    public static Class<?> resultType(String method) {\n")
+        out.append("        var d = METHODS.get(method);\n")
+        out.append("        return d != null ? d.resultType() : null;\n")
+        out.append("    }\n")
+        out.append("}\n")
+        self.protocol_files[name] = "".join(out)
+
+    def add_discriminated_codec(self, union_name, discriminator, variants):
+        codec_name = self.codec_class_name(union_name)
+        if codec_name in self.codec_files:
+            return
+        out = [self.pkg(self.pkg_codecs), "\n"]
+        out.append("import tools.jackson.core.JsonGenerator;\n")
+        out.append("import tools.jackson.core.JsonParser;\n")
+        out.append("import tools.jackson.core.JsonToken;\n")
+        out.append("import tools.jackson.databind.util.TokenBuffer;\n")
+        out.append("import java.io.IOException;\n")
+        out.append("import javax.annotation.processing.Generated;\n\n")
+        out.append(f"import {self.pkg_models}.{union_name};\n")
+        seen = set()
+        for vn, _ in variants:
+            if vn not in seen:
+                out.append(f"import {self.pkg_models}.{vn};\n")
+                seen.add(vn)
+        out.append("\n")
+        out.append('@Generated("ts2java")\n')
+        out.append(f"public class {codec_name} implements Codec<{union_name}> {{\n\n")
+
+        # --- DECODE ---
+        out.append(f"    public {union_name} decode(JsonParser parser) throws IOException {{\n")
+        out.append("        var tb = TokenBuffer.forBuffering(parser, parser.objectReadContext());\n")
+        out.append("        tb.copyCurrentStructure(parser);\n\n")
+        out.append("        String type = null;\n")
+        out.append("        try (JsonParser tp = tb.asParser()) {\n")
+        out.append("            while (tp.nextToken() != JsonToken.END_OBJECT) {\n")
+        out.append("                String fn = tp.currentName();\n")
+        out.append("                tp.nextToken();\n")
+        out.append(f'                if ("{discriminator}".equals(fn)) {{\n')
+        out.append("                    type = tp.getString();\n")
+        out.append("                    break;\n")
+        out.append("                }\n")
+        out.append("                tp.skipChildren();\n")
+        out.append("            }\n")
+        out.append("        }\n")
+        out.append("        if (type == null) {\n")
+        out.append(f'            throw new IOException("Missing {discriminator} discriminator");\n')
+        out.append("        }\n")
+        out.append("        try (JsonParser dp = tb.asParser()) {\n")
+        out.append("            dp.nextToken();\n")
+        out.append("            return switch (type) {\n")
+        for vn, lit in variants:
+            out.append(f'                case "{lit}" -> CodecRegistry.<{vn}>codecFor({vn}.class).decode(dp);\n')
+        out.append('                default -> throw new IOException("Unknown ' + union_name + ' type: " + type);\n')
+        out.append("            };\n")
+        out.append("        }\n")
+        out.append("    }\n\n")
+
+        # --- ENCODE ---
+        out.append(f"    public void encode(JsonGenerator gen, {union_name} value) throws IOException {{\n")
+        first = True
+        for vn, _ in variants:
+            prefix = "if" if first else "} else if"
+            out.append(f"        {prefix} (value instanceof {vn} v) {{\n")
+            out.append(f"            CodecRegistry.<{vn}>codecFor({vn}.class).encode(gen, v);\n")
+            first = False
+        out.append("        }\n")
+        out.append("    }\n")
+        out.append("}\n")
+        self.codec_files[codec_name] = "".join(out)
+
+    def add_deduction_codec(self, union_name, variant_field_map):
+        codec_name = self.codec_class_name(union_name)
+        if codec_name in self.codec_files:
+            return
+        out = [self.pkg(self.pkg_codecs), "\n"]
+        out.append("import tools.jackson.core.JsonGenerator;\n")
+        out.append("import tools.jackson.core.JsonParser;\n")
+        out.append("import tools.jackson.core.JsonToken;\n")
+        out.append("import tools.jackson.databind.util.TokenBuffer;\n")
+        out.append("import java.io.IOException;\n")
+        out.append("import javax.annotation.processing.Generated;\n\n")
+        out.append(f"import {self.pkg_models}.{union_name};\n")
+        seen = set()
+        for vn in variant_field_map:
+            if vn not in seen:
+                out.append(f"import {self.pkg_models}.{vn};\n")
+                seen.add(vn)
+        out.append('@Generated("ts2java")\n')
+        out.append(f"public class {codec_name} implements Codec<{union_name}> {{\n\n")
+
+        out.append(f"    public {union_name} decode(JsonParser parser) throws IOException {{\n")
+        out.append("        var tb = TokenBuffer.forBuffering(parser, parser.objectReadContext());\n")
+        out.append("        tb.copyCurrentStructure(parser);\n\n")
+        for vn, field in variant_field_map.items():
+            out.append(f"        boolean has{field} = false;\n")
+        out.append("        try (JsonParser tp = tb.asParser()) {\n")
+        out.append("            while (tp.nextToken() != JsonToken.END_OBJECT) {\n")
+        out.append("                String fn = tp.currentName();\n")
+        out.append("                tp.nextToken();\n")
+        for vn, field in variant_field_map.items():
+            out.append(f'                if ("{field}".equals(fn)) {{ has{field} = true; }}\n')
+        out.append("                tp.skipChildren();\n")
+        out.append("            }\n")
+        out.append("        }\n")
+        out.append("        try (JsonParser dp = tb.asParser()) {\n")
+        out.append("            dp.nextToken();\n")
+        items = list(variant_field_map.items())
+        for i, (vn, field) in enumerate(items):
+            if i == 0:
+                out.append(f"            if (has{field}) {{\n")
+            else:
+                out.append(f"            }} else if (has{field}) {{\n")
+            out.append(f"                return CodecRegistry.<{vn}>codecFor({vn}.class).decode(dp);\n")
+        out.append("            } else {\n")
+        out.append(f'                throw new IOException("Cannot determine {union_name} variant");\n')
+        out.append("            }\n")
+        out.append("        }\n")
+        out.append("    }\n\n")
+
+        out.append(f"    public void encode(JsonGenerator gen, {union_name} value) throws IOException {{\n")
+        first = True
+        for vn in variant_field_map:
+            prefix = "if" if first else "} else if"
+            out.append(f"        {prefix} (value instanceof {vn} v) {{\n")
+            out.append(f"            CodecRegistry.<{vn}>codecFor({vn}.class).encode(gen, v);\n")
+            first = False
+        out.append("        }\n")
+        out.append("    }\n")
+        out.append("}\n")
+        self.codec_files[codec_name] = "".join(out)
+
+    def add_codec_interface(self):
+        name = "Codec"
+        if name in self.codec_files:
+            return
+        out = [self.pkg(self.pkg_codecs), "\n"]
+        out.append("import tools.jackson.core.JsonGenerator;\n")
+        out.append("import tools.jackson.core.JsonParser;\n")
+        out.append("import tools.jackson.core.JsonToken;\n")
+        out.append("import tools.jackson.core.ObjectReadContext;\n")
+        out.append("import tools.jackson.core.ObjectWriteContext;\n")
+        out.append("import tools.jackson.core.json.JsonFactory;\n")
+        out.append("import java.io.ByteArrayOutputStream;\n")
+        out.append("import java.io.IOException;\n")
+        out.append("import java.io.UncheckedIOException;\n")
+        out.append("import javax.annotation.processing.Generated;\n\n")
+        out.append('@Generated("ts2java")\n')
+        out.append("public interface Codec<T> {\n")
+        out.append("    JsonFactory FACTORY = new JsonFactory();\n\n")
+        out.append("    T decode(JsonParser parser) throws IOException;\n")
+        out.append("    void encode(JsonGenerator gen, T value) throws IOException;\n\n")
+        out.append("    default byte[] encodeToBytes(T value) {\n")
+        out.append("        try (var baos = new ByteArrayOutputStream(256);\n")
+        out.append("                var gen = FACTORY.createGenerator(ObjectWriteContext.empty(), baos)) {\n")
+        out.append("            encode(gen, value);\n")
+        out.append("            gen.flush();\n")
+        out.append("            return baos.toByteArray();\n")
+        out.append("        } catch (IOException e) {\n")
+        out.append("            throw new UncheckedIOException(\"Failed to encode\", e);\n")
+        out.append("        }\n")
+        out.append("    }\n\n")
+        out.append("    default T decodeFromBytes(byte[] data) throws IOException {\n")
+        out.append("        try (var parser = FACTORY.createParser(ObjectReadContext.empty(), data)) {\n")
+        out.append("            if (parser.nextToken() != JsonToken.START_OBJECT) {\n")
+        out.append("                throw new IllegalArgumentException(\"Expected JSON object\");\n")
+        out.append("            }\n")
+        out.append("            return decode(parser);\n")
+        out.append("        }\n")
+        out.append("    }\n")
+        out.append("}\n")
+        self.codec_files[name] = "".join(out)
+
+    def add_codec_registry(self):
+        name = "CodecRegistry"
+        if name in self.codec_files:
+            return
+        out = [self.pkg(self.pkg_codecs), "\n"]
+        # Collect model class references for imports
+        model_imports = set()
+        for codec_name in self.codec_files:
+            if codec_name in ("Codec", "CodecRegistry"):
+                continue
+            model_part = codec_name[:-5]
+            if "_" in model_part:
+                owner = model_part.split("_")[0]
+                model_imports.add(owner)
+            else:
+                model_imports.add(model_part)
+        for req, _ in METHOD_MAP.values():
+            model_imports.add(req)
+        for _, notif, _ in NOTIFICATIONS:
+            model_imports.add(notif)
+        for ref in sorted(model_imports):
+            out.append(f"import {self.pkg_models}.{ref};\n")
+        out.append("import java.util.Collections;\n")
+        out.append("import java.util.LinkedHashMap;\n")
+        out.append("import java.util.Map;\n")
+        out.append("import javax.annotation.processing.Generated;\n\n")
+        out.append('@Generated("ts2java")\n')
+        out.append(f"public class {name} {{\n")
+        # Static codec map
+        out.append(
+            "    private static final Map<Class<?>, Codec<?>> CODECS = new LinkedHashMap<>();\n\n"
+        )
+        out.append(
+            "    private static final Map<Class<?>, Codec<?>> OVERRIDES = new LinkedHashMap<>();\n\n"
+        )
+        out.append("    static {\n")
+        for codec_name in self.codec_files:
+            if codec_name in ("Codec", "CodecRegistry"):
+                continue
+            model_part = codec_name[:-5]
+            model_class = model_part.replace("_", ".")
+            out.append(
+                f"        CODECS.put({model_class}.class, new {codec_name}());\n"
+            )
+        out.append("    }\n\n")
+        out.append('    @SuppressWarnings("unchecked")\n')
+        out.append("    public static <T> Codec<T> codecFor(Class<T> modelClass) {\n")
+        out.append("        var override = (Codec<T>) OVERRIDES.get(modelClass);\n")
+        out.append("        if (override != null) return override;\n")
+        out.append("        return (Codec<T>) CODECS.get(modelClass);\n")
+        out.append("    }\n\n")
+        out.append('    @SuppressWarnings("unchecked")\n')
+        out.append("    public static <T> void registerOverride(Class<T> modelClass, Codec<T> codec) {\n")
+        out.append("        OVERRIDES.put(modelClass, codec);\n")
+        out.append("    }\n\n")
+        # Instance-based method lookup (for dispatcher)
+        out.append("    private final Map<String, Object> codecs;\n\n")
+        out.append(f"    private {name}(Builder b) {{\n")
+        out.append("        this.codecs = Collections.unmodifiableMap(b.codecs);\n")
+        out.append("    }\n\n")
+        out.append('    @SuppressWarnings("unchecked")\n')
+        out.append(
+            '    public <T> T requestCodec(String method) { return (T) codecs.get("request:" + method); }\n'
+        )
+        out.append('    @SuppressWarnings("unchecked")\n')
+        out.append(
+            '    public <T> T notificationCodec(String method) { return (T) codecs.get("notification:" + method); }\n'
+        )
+        out.append('    @SuppressWarnings("unchecked")\n')
+        out.append(
+            '    public <T> T resultCodec(Class<?> c) { return (T) codecs.get("result:" + c.getSimpleName()); }\n\n'
+        )
+        out.append("    public static Builder builder() { return new Builder(); }\n\n")
+        out.append("    public static class Builder {\n")
+        out.append(
+            "        private final Map<String, Object> codecs = new LinkedHashMap<>();\n\n"
+        )
+        for method, (req, res) in METHOD_MAP.items():
+            out.append(f"        public Builder register{req}() {{\n")
+            out.append(
+                f'            codecs.put("request:{method}", new {req}Codec());\n'
+            )
+            out.append(f'            codecs.put("result:{res}", new {res}Codec());\n')
+            out.append("            return this;\n")
+            out.append("        }\n")
+        for method, notif, _ in NOTIFICATIONS:
+            out.append(f"        public Builder register{notif}() {{\n")
+            out.append(
+                f'            codecs.put("notification:{method}", new {notif}Codec());\n'
+            )
+            out.append("            return this;\n")
+            out.append("        }\n")
+        out.append(
+            f"        public CodecRegistry build() {{ return new CodecRegistry(this); }}\n"
+        )
+        out.append("    }\n")
+        out.append("}\n")
+        self.codec_files[name] = "".join(out)
+
+    # --- Main generation ---
+
+    def generate(self):
+        # 1. Enums from pure string literal unions
+        for exp in self.exports:
+            if exp["kind"] != "type_alias":
+                continue
+            name = exp["name"]
+            if name in self.type_mappings:
+                continue
+            if self.is_enum_type(name):
+                rhs = exp["rhs"]
+                parts = [p.strip() for p in rhs.split("|") if p.strip()]
+                values = [p[1:-1] for p in parts if p.startswith('"')]
+                if values:
+                    self.add_enum(name, values, jsdoc=exp.get("jsdoc"))
+                continue
+
+        # 2. Discriminated union interfaces + variants
+        variant_interfaces = {}
+        for union_name, (disc, variants) in ALL_DISCRIMINATED_UNIONS.items():
+            for vn, _ in variants:
+                if vn not in variant_interfaces:
+                    variant_interfaces[vn] = []
+                variant_interfaces[vn].append(union_name)
+        processed_union_variants = set()
+        for union_name, (disc, variants) in ALL_DISCRIMINATED_UNIONS.items():
+            for vn, _ in variants:
+                if vn in processed_union_variants:
+                    continue
+                processed_union_variants.add(vn)
+                if vn in self.all_interfaces:
+                    exp = self.all_interfaces[vn]
+                    fields, has_idx = self.collect_all_fields(exp)
+                    comps, _ = self.get_components(fields, vn, has_idx)
+                    self.add_model(vn, comps, variant_interfaces.get(vn), jsdoc=exp.get("jsdoc"))
+            union_exp = self.all_type_aliases.get(union_name)
+            self.add_discriminated_interface(union_name, disc, variants,
+                                             jsdoc=union_exp.get("jsdoc") if union_exp else None)
+
+        # 3. Structural unions — collect variant->parent mapping first
+        structural_variant_parents = {}
+        for un, variants in ALL_STRUCTURAL_UNIONS.items():
+            for v in variants:
+                if v not in structural_variant_parents:
+                    structural_variant_parents[v] = []
+                structural_variant_parents[v].append(un)
+        for un, variants in ALL_STRUCTURAL_UNIONS.items():
+            if un in self.type_mappings:
+                continue
+            parents = structural_variant_parents.get(un)
+            super_iface = parents[0] if parents else None
+            union_exp = self.all_type_aliases.get(un)
+            self.add_structural_union(un, variants, super_iface,
+                                      jsdoc=union_exp.get("jsdoc") if union_exp else None)
+
+        # 4. Sealed interface parents (pure extends-based hierarchies)
+        # Only ResourceContents needs a sealed interface for polymorphic
+        # deserialization — other extends-parents have field type conflicts
+        # with their grandparent types when implemented as interfaces.
+        if "ResourceContents" in ALL_INTERFACE_EXTENDS:
+            rc_children = ALL_INTERFACE_EXTENDS["ResourceContents"]
+            rc_exp = self.all_interfaces.get("ResourceContents")
+            self.add_sealed_interface_from_extends("ResourceContents", rc_children,
+                                                   jsdoc=rc_exp.get("jsdoc") if rc_exp else None)
+
+        # 4.5. All other interfaces as records
+        for exp in self.exports:
+            if exp["kind"] != "interface":
+                continue
+            name = exp["name"]
+            if name in self.model_files:
+                continue
+            if name in self.all_type_aliases:
+                continue
+            if name in ALL_VARIANT_NAMES:
+                continue
+            if name in ALL_STRUCTURAL_UNIONS:
+                continue
+            if name in ALL_DISCRIMINATED_UNIONS:
+                continue
+
+            fields, has_idx = self.collect_all_fields(exp)
+            comps, _ = self.get_components(fields, name, has_idx)
+
+            ifaces = []
+            if name in ALL_REQUEST_NAMES:
+                ifaces.append("McpRequest")
+            if name in ALL_NOTIF_NAMES:
+                ifaces.append("McpNotification")
+            if name in ALL_RESULT_NAMES:
+                ifaces.append("McpResponse")
+            if name in structural_variant_parents:
+                ifaces.extend(structural_variant_parents[name])
+            # Add extends parents for child interfaces (only when parent
+            # is a sealed interface; flat records don't support implements)
+            for pn, children in ALL_INTERFACE_EXTENDS.items():
+                if name in children and pn in self.model_files:
+                    fname = self.model_files[pn]
+                    if "sealed interface" in fname:
+                        ifaces.append(pn)
+            self.add_model(name, comps, ifaces if ifaces else None, jsdoc=exp.get("jsdoc"))
+
+        # 4.5. Type aliases that need concrete model files
+        for exp in self.exports:
+            if exp["kind"] != "type_alias":
+                continue
+            name = exp["name"]
+            if name in self.model_files:
+                continue
+            if name in self.type_mappings:
+                continue
+            rhs = exp["rhs"]
+
+            # Skip enum types (already generated in step 1)
+            if self.is_enum_type(name):
+                continue
+
+            # Analyze alias structure
+            parts = [p.strip() for p in rhs.split("|") if p.strip()]
+            non_null = [p for p in parts if p != "null"]
+            non_literals = [
+                p for p in non_null
+                if not (p.startswith('"') and p.endswith('"'))
+            ]
+            literals = [p for p in non_null if p.startswith('"') and p.endswith('"')]
+
+            if len(non_null) == 1 and len(non_literals) == 1:
+                only = non_literals[0]
+                # Simple primitive alias (Cursor = string) → no model needed
+                if only in PRIMITIVE_MAP:
+                    continue
+                # Alias to another model (EmptyResult = Result, ClientResult = EmptyResult)
+                comps_raw = None
+                if only in self.model_components:
+                    comps_raw = self.model_components[only]
+                elif only in self.all_interfaces:
+                    fields, _ = self.collect_all_fields(self.all_interfaces[only])
+                    comps_raw, _ = self.get_components(fields, only)
+                if comps_raw is not None:
+                    comps = []
+                    for c in comps_raw:
+                        typ, fname, optional, field_jsdoc, json_name = c
+                        if typ in self.inner_models:
+                            typ = self.type_ref(typ)
+                        comps.append((typ, fname, optional, field_jsdoc, json_name))
+                    if name in ALL_RESULT_NAMES:
+                        self.add_model(name, comps, ["McpResponse"], jsdoc=exp.get("jsdoc"))
+                    else:
+                        self.add_model(name, comps, jsdoc=exp.get("jsdoc"))
+                    continue
+
+            # String literals + | string → no model needed (resolve_type returns String)
+            if literals and "string" in non_literals:
+                continue
+
+            # Intersection types (GetTaskResult = Result & Task)
+            if "&" in rhs:
+                parts = [p.strip() for p in rhs.split("&")]
+                all_fields = {}
+                has_idx = False
+                for p in parts:
+                    if p in self.all_interfaces:
+                        exp2 = self.all_interfaces[p]
+                        fields, idx = self.collect_all_fields(exp2)
+                        has_idx = has_idx or idx
+                        for f in fields:
+                            if f["kind"] != "field":
+                                continue
+                            fname = f["name"]
+                            if fname not in all_fields:
+                                all_fields[fname] = f
+                if all_fields:
+                    merged = list(all_fields.values())
+                    comps, _ = self.get_components(merged, name, has_idx)
+                    ifaces = []
+                    if name in ALL_REQUEST_NAMES:
+                        ifaces.append("McpRequest")
+                    if name in ALL_NOTIF_NAMES:
+                        ifaces.append("McpNotification")
+                    if name in ALL_RESULT_NAMES:
+                        ifaces.append("McpResponse")
+                    self.add_model(name, comps, ifaces if ifaces else None, jsdoc=exp.get("jsdoc"))
+
+        # 5. Anonymous types (handled as inner classes by append_inner_classes during add_model)
+        # Safety net: handle any orphaned anon types (without owning_type)
+        while True:
+            pending = [
+                (k, v)
+                for k, v in self.anon_registry.items()
+                if not isinstance(k, tuple) and k not in self.model_files
+            ]
+            if not pending:
+                break
+            for anon_name, val in pending:
+                if isinstance(val, tuple):
+                    body, owning_type = val
+                    if owning_type is None:
+                        fields = parse_fields("{" + body + "}")
+                        comps, _ = self.get_components(fields, anon_name)
+                        self.add_model(anon_name, comps)
+                else:
+                    fields = parse_fields("{" + val + "}")
+                    comps, _ = self.get_components(fields, anon_name)
+                    self.add_model(anon_name, comps)
+
+        # 6. UnknownRequest
+        self.add_model(
+            "UnknownRequest",
+            [
+                ("Object", "id", True, "", "id"),
+                ("String", "method", False, "", "method"),
+                (
+                    "tools.jackson.databind.JsonNode",
+                    "params",
+                    True,
+                    "",
+                    "params",
+                ),
+            ],
+            ["McpRequest"],
+        )
+
+        # 7. Message hierarchy interfaces
+        hierarchy = [
+            ("McpMessage", None, ["McpRequest", "McpNotification", "McpResponse"]),
+            ("McpRequest", "McpMessage", list(ALL_REQUEST_NAMES) + ["UnknownRequest"]),
+            ("McpNotification", "McpMessage", list(ALL_NOTIF_NAMES)),
+            ("McpResponse", "McpMessage", list(ALL_RESULT_NAMES)),
+        ]
+        for cls, super_iface, permits in hierarchy:
+            self.add_interface(cls, permits if permits else None, super_iface)
+
+        # 8. Codec interface + codecs for all models
+        if not self.skip_codecs:
+            self.add_codec_interface()
+            for model_name in list(self.model_files.keys()):
+                if model_name in self.type_mappings:
+                    continue
+                if model_name in ALL_STRUCTURAL_UNIONS:
+                    continue
+                if model_name in ALL_DISCRIMINATED_UNIONS:
+                    disc, variants = ALL_DISCRIMINATED_UNIONS[model_name]
+                    self.add_discriminated_codec(model_name, disc, variants)
+                    continue
+                if model_name in ALL_INTERFACE_EXTENDS:
+                    # Only generate deduction codecs for polymorphic extends parents
+                    # that are actually referenced as field types (e.g., ResourceContents).
+                    # Others (BaseMetadata, Icons) are not used polymorphically.
+                    if model_name == "ResourceContents":
+                        children = ALL_INTERFACE_EXTENDS[model_name]
+                        variant_field_map = OrderedDict()
+                        parent_exp = self.all_interfaces.get(model_name)
+                        parent_field_set = set()
+                        if parent_exp:
+                            for f in parent_exp.get("fields", []):
+                                if f["kind"] == "field":
+                                    parent_field_set.add(f["name"])
+                        for child_name in children:
+                            child_exp = self.all_interfaces.get(child_name)
+                            if child_exp:
+                                for f in child_exp.get("fields", []):
+                                    if f["kind"] == "field" and f["name"] not in parent_field_set:
+                                        variant_field_map[child_name] = f["name"]
+                                        break
+                        if variant_field_map:
+                            self.add_deduction_codec(model_name, variant_field_map)
+                    continue
+                if model_name in (
+                    "McpMessage",
+                    "McpRequest",
+                    "McpNotification",
+                    "McpResponse",
+                ):
+                    continue
+                if model_name in self.codec_files:
+                    continue
+                self.add_codec(model_name)
+
+        # 9. Protocol registries
+        if not self.skip_protocol:
+            self.add_protocol_version()
+            self.add_method_registry()
+            self.add_descriptors()
+            self.add_codec_registry()
+
+        # 10. Write files
+        for name, content in self.model_files.items():
+            if not content:
+                continue
+            path = os.path.join(self.dir_models, f"{name}.java")
+            self.write_file(path, content)
+            if VERBOSE:
+                print(f"  MODEL  {name}.java")
+        for name, content in self.codec_files.items():
+            path = os.path.join(self.dir_codecs, f"{name}.java")
+            self.write_file(path, content)
+            if VERBOSE:
+                print(f"  CODEC  {name}.java")
+        for name, content in self.protocol_files.items():
+            path = os.path.join(self.dir_protocol, f"{name}.java")
+            self.write_file(path, content)
+            if VERBOSE:
+                print(f"  PROTO  {name}.java")
+        print(
+            f"\nGenerated {len(self.model_files)} models, {len(self.codec_files)} codecs, {len(self.protocol_files)} protocol files"
+        )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Generate Java models + codecs from TS spec"
+    )
+    parser.add_argument("--ts", default=DEFAULT_TS, help="Path to TypeScript spec file")
+    parser.add_argument(
+        "--base-dir",
+        default=DEFAULT_BASE,
+        help=f"Base output directory (default: {DEFAULT_BASE})",
+    )
+    parser.add_argument(
+        "--pkg-default",
+        default=DEFAULT_PKG,
+        help="Default package (appended with .models/.codecs/.protocol)",
+    )
+    parser.add_argument(
+        "--pkg-models",
+        default=None,
+        help="Package for generated models (overrides --pkg-default)",
+    )
+    parser.add_argument(
+        "--pkg-codecs",
+        default=None,
+        help="Package for generated codecs (empty to skip)",
+    )
+    parser.add_argument(
+        "--pkg-protocol",
+        default=None,
+        help="Package for generated protocol files (empty to skip)",
+    )
+    parser.add_argument(
+        "--unknown-type",
+        default="JsonNode",
+        choices=["JsonNode", "TokenBuffer", "byte[]"],
+        help="Java type for TS 'unknown' / 'object' (default: JsonNode)",
+    )
+    parser.add_argument(
+        "--config",
+        default=None,
+        help="Path to JSON config file with typeMappings and additionalProperties",
+    )
+    args = parser.parse_args()
+
+    pkg = args.pkg_default
+
+    config = {}
+    if args.config:
+        with open(args.config) as f:
+            config = json.load(f)
+
+    type_mappings = config.get("typeMappings")
+    additional_properties = config.get("additionalProperties", {})
+    ignore_properties = config.get("ignoreProperties", {})
+
+    gen = Generator(
+        ts_path=args.ts,
+        base_dir=args.base_dir,
+        pkg_models=args.pkg_models or f"{pkg}.models",
+        pkg_codecs=args.pkg_codecs if args.pkg_codecs is not None else f"{pkg}.codecs",
+        pkg_protocol=(
+            args.pkg_protocol if args.pkg_protocol is not None else f"{pkg}.protocol"
+        ),
+        unknown_type=args.unknown_type,
+        type_mappings=type_mappings,
+        additional_properties=additional_properties,
+        ignore_properties=ignore_properties,
+    )
+    gen.generate()

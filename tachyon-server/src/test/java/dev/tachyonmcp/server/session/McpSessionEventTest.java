@@ -1,0 +1,68 @@
+/*
+ * Copyright (c) 2026 Konstantin Pavlov.
+ */
+
+package dev.tachyonmcp.server.session;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
+
+class McpSessionEventTest {
+
+    @Test
+    void requestEvent() {
+        var event = new SessionEvent.RequestEvent("sess_1", 1, "tools/list", "{}", 1000L);
+
+        assertThat(event.sessionId()).isEqualTo("sess_1");
+        assertThat(event.requestId()).isEqualTo(1);
+        assertThat(event.method()).isEqualTo("tools/list");
+        assertThat(event.paramsJson()).isEqualTo("{}");
+        assertThat(event.timestamp()).isEqualTo(1000L);
+    }
+
+    @Test
+    void responseEvent() {
+        var event = new SessionEvent.ResponseEvent("sess_1", 1, "{\"result\":\"ok\"}", 2000L);
+
+        assertThat(event.sessionId()).isEqualTo("sess_1");
+        assertThat(event.requestId()).isEqualTo(1);
+        assertThat(event.resultJson()).isEqualTo("{\"result\":\"ok\"}");
+        assertThat(event.timestamp()).isEqualTo(2000L);
+    }
+
+    @Test
+    void cancelEvent() {
+        var event = new SessionEvent.CancelEvent("sess_1", 42, 3000L);
+
+        assertThat(event.sessionId()).isEqualTo("sess_1");
+        assertThat(event.requestId()).isEqualTo(42);
+        assertThat(event.timestamp()).isEqualTo(3000L);
+    }
+
+    @Test
+    void outboundRequestEvent() {
+        var event = new SessionEvent.OutboundRequestEvent(
+                "sess_1", "uuid-123", "sampling/createMessage", "{\"prompt\":\"hi\"}", 5000L, 42L);
+
+        assertThat(event.sessionId()).isEqualTo("sess_1");
+        assertThat(event.requestId()).isEqualTo("uuid-123");
+        assertThat(event.method()).isEqualTo("sampling/createMessage");
+        assertThat(event.paramsJson()).isEqualTo("{\"prompt\":\"hi\"}");
+        assertThat(event.timestamp()).isEqualTo(5000L);
+        assertThat(event.sseEventId()).isEqualTo(42L);
+    }
+
+    @Test
+    void allEventsAreSealed() {
+        var request = new SessionEvent.RequestEvent("a", 1, "m", "{}", 1L);
+        var response = new SessionEvent.ResponseEvent("a", 2, "{}", 2L);
+        var cancel = new SessionEvent.CancelEvent("a", 3, 3L);
+        var outbound = new SessionEvent.OutboundRequestEvent("a", 5, "m", "{}", 5L, 5L);
+
+        assertThat(request).isInstanceOf(SessionEvent.class);
+        assertThat(response).isInstanceOf(SessionEvent.class);
+        assertThat(cancel).isInstanceOf(SessionEvent.class);
+        assertThat(outbound).isInstanceOf(SessionEvent.class);
+    }
+}

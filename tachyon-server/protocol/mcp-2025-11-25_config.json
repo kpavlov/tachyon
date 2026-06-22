@@ -1,0 +1,20 @@
+{
+  "typeMappings": {
+    "ProgressToken": "String",
+    "RequestId": "String",
+    "Tool.inputSchema": "tools.jackson.databind.JsonNode",
+    "Tool.outputSchema": "tools.jackson.databind.JsonNode"
+  },
+  "additionalProperties": {
+    "ClientCapabilities": [
+      "extensions?: { [key: string]: object };"
+    ],
+    "ServerCapabilities": [
+      "extensions?: { [key: string]: object };"
+    ]
+  },
+  "ignoreProperties": {
+    "ClientCapabilities": [],
+    "ServerCapabilities": []
+  }
+}

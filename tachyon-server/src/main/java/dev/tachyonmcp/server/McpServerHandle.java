@@ -1,0 +1,44 @@
+/*
+ * Copyright (c) 2026 Konstantin Pavlov.
+ */
+
+package dev.tachyonmcp.server;
+
+import java.io.Closeable;
+import java.io.IOException;
+
+/**
+ * Handle returned by the server builder's {@code bind()} method.
+ * Combines the logical {@link McpServer} and the bound transport.
+ * Call {@link #close()} to shut down both.
+ */
+public final class McpServerHandle implements Closeable {
+
+    private final McpServer server;
+    private final int port;
+    private final Closeable transport;
+
+    public McpServerHandle(McpServer server, int port, Closeable transport) {
+        this.server = server;
+        this.port = port;
+        this.transport = transport;
+    }
+
+    public int port() {
+        return port;
+    }
+
+    public McpServer server() {
+        return server;
+    }
+
+    @Override
+    public void close() {
+        try {
+            transport.close();
+        } catch (IOException e) {
+            // transport close errors are non-fatal; server close follows
+        }
+        server.close();
+    }
+}

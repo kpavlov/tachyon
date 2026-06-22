@@ -1,0 +1,123 @@
+/*
+ * Copyright (c) 2026 Konstantin Pavlov.
+ */
+
+package dev.tachyonmcp.server.session;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import dev.tachyonmcp.runtime.SessionState;
+import org.jspecify.annotations.NonNull;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+class McpSessionTest {
+
+    private McpSession session;
+    private TestConnection connection;
+
+    @BeforeEach
+    void setUp() {
+        connection = new TestConnection();
+        session = new McpSession("sess_1", connection);
+    }
+
+    @Test
+    void initialSessionState() {
+        assertThat(session.id()).isEqualTo("sess_1");
+        assertThat(session.state()).isEqualTo(SessionState.INITIALIZING);
+        assertThat(session.backpressure()).isEqualTo(Backpressure.HOT);
+        assertThat(session.cursor()).isEqualTo(-1L);
+    }
+
+    @Test
+    void activate() {
+        assertThat(session.activate()).isTrue();
+        assertThat(session.state()).isEqualTo(SessionState.ACTIVE);
+    }
+
+    @Test
+    void closeSession() {
+        session.activate();
+        assertThat(session.close()).isTrue();
+        assertThat(session.state()).isEqualTo(SessionState.CLOSED);
+        // E12 fix: connection must become NOOP after close to prevent write-after-remove
+        assertThat(session.connection()).isSameAs(SseConnection.NOOP);
+        assertThat(session.connection().isWritable()).isFalse();
+    }
+
+    @Test
+    void closeFromInitializingStateSetsNoop() {
+        // session starts INITIALIZING — close() must still set NOOP connection
+        assertThat(session.state()).isEqualTo(SessionState.INITIALIZING);
+        assertThat(session.close()).isTrue();
+        assertThat(session.state()).isEqualTo(SessionState.CLOSED);
+        assertThat(session.connection()).isSameAs(SseConnection.NOOP);
+    }
+
+    @Test
+    void closeIsIdempotentForConnection() {
+        session.activate();
+        session.close();
+        session.close(); // second close must not throw and connection stays NOOP
+        assertThat(session.connection()).isSameAs(SseConnection.NOOP);
+        assertThat(session.state()).isEqualTo(SessionState.CLOSED);
+    }
+
+    @Test
+    void backpressureHotWhenWritableAndEmpty() {
+        connection.writable = true;
+        assertThat(session.computeBackpressure()).isEqualTo(Backpressure.HOT);
+    }
+
+    @Test
+    void backpressureColdWhenNotWritable() {
+        connection.writable = false;
+        assertThat(session.computeBackpressure()).isEqualTo(Backpressure.COLD);
+    }
+
+    @Test
+    void cursor() {
+        session.cursor(12345L);
+        assertThat(session.cursor()).isEqualTo(12345L);
+    }
+
+    @Test
+    void shouldThrottleWhenNotWritable() {
+        connection.writable = true;
+        assertThat(session.shouldThrottle()).isFalse();
+
+        connection.writable = false;
+        assertThat(session.shouldThrottle()).isTrue();
+    }
+
+    @Test
+    void throwsOnNullId() {
+        assertThatThrownBy(() -> new McpSession(null, connection)).isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    void throwsOnNullConnection() {
+        assertThatThrownBy(() -> new McpSession("id", null)).isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    void activateIsIdempotent() {
+        assertThat(session.activate()).isTrue();
+        assertThat(session.activate()).isFalse();
+    }
+
+    private static class TestConnection implements SseConnection {
+
+        volatile boolean writable = true;
+
+        @Override
+        public boolean isWritable() {
+            return writable;
+        }
+
+        @Override
+        public void send(@NonNull SseEvent event) {}
+    }
+}
