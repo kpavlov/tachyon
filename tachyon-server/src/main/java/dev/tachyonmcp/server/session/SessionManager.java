@@ -89,7 +89,7 @@ public class SessionManager implements AutoCloseable {
             janitor.shutdownNow();
             store.values().forEach(McpSession::close);
             store.close();
-            logger.info("SessionManager closed");
+            logger.debug("SessionManager closed");
         } catch (Exception e) {
             logger.warn("Error while closing SessionManager", e);
         }
