@@ -45,7 +45,7 @@ public class McpDispatcher {
 
     private static final String METHOD_INITIALIZE = "initialize";
     private static final String METHOD_PING = "ping";
-    private static final String NOTIFICATIONS_INITIALIZED = "notifications/initialized";
+    public static final String NOTIFICATIONS_INITIALIZED = "notifications/initialized";
     private static final String NOTIFICATIONS_CANCELLED = "notifications/cancelled";
     private static final String NOTIFICATIONS_TASKS_STATUS = "notifications/tasks/status";
 

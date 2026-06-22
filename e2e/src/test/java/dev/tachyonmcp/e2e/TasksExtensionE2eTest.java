@@ -85,6 +85,31 @@ class TasksExtensionE2eTest extends AbstractMcpE2eTest {
     }
 
     @Test
+    void rejectsToolCallWhileSessionNotYetActive() throws Exception {
+        // Deterministic counterpart to the createTaskViaTool flake: initialize a session but
+        // deliberately skip notifications/initialized, so it stays INITIALIZING and the
+        // activation gate (McpDispatcher) rejects the tools/call with a JSON-RPC error.
+        // This is the exact response shape the flake produced when activation had not yet
+        // completed — and it falsifies the diagnosis if initialize secretly activates.
+        try (var client = createTestClient()) {
+            var initBody = """
+                    {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/tasks":{}}},"clientInfo":{"name":"test","version":"1.0"}}}
+                    """;
+            var initResponse = client.post(null, initBody);
+            var sessionId = initResponse.headers().firstValue("MCP-Session-Id").orElseThrow();
+
+            var response = client.post(sessionId, """
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create_task","arguments":{"name":"my-task"}}}
+                    """);
+
+            assertThat(response.statusCode()).isEqualTo(200);
+            assertThat(response.headers().firstValue("content-type").orElse("")).startsWith("application/json");
+            assertThat(response.body()).contains("not yet active");
+            assertThatJson(response.body()).inPath("$.error").isObject();
+        }
+    }
+
+    @Test
     void createCompletePollAndGetResult() throws Exception {
         try (var client = createTestClient()) {
             var sessionId = initializeWithExtension(client);

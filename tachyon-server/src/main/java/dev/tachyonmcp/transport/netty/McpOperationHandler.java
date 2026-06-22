@@ -143,9 +143,21 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             case JsonRpcMessage.Response resp -> handlePostResponse(ctx, resp, origin);
             case JsonRpcMessage.Error err -> handlePostError(ctx, err, origin);
             case JsonRpcMessage.Notification not -> {
-                sendAccepted(ctx, origin);
-                CompletableFuture.runAsync(
-                        () -> dispatcher.dispatchNotification(not.method(), not.params(), sessionId), executor);
+                if (McpDispatcher.NOTIFICATIONS_INITIALIZED.equals(not.method())) {
+                    // Activate the session synchronously before acking so a client that waits
+                    // for this 202 observes an ACTIVE session on its next request, closing the
+                    // INITIALIZING race. Guarded so a handler failure still produces the ack.
+                    try {
+                        dispatcher.dispatchNotification(not.method(), not.params(), sessionId);
+                    } catch (RuntimeException e) {
+                        logger.warn("Failed to process {} notification", not.method(), e);
+                    }
+                    sendAccepted(ctx, origin);
+                } else {
+                    sendAccepted(ctx, origin);
+                    CompletableFuture.runAsync(
+                            () -> dispatcher.dispatchNotification(not.method(), not.params(), sessionId), executor);
+                }
             }
             default -> {
                 logger.warn("Unexpected message type: {}", message);
