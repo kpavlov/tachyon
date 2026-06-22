@@ -4,17 +4,16 @@
 
 package dev.tachyonmcp.transport.netty.http;
 
+import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendResponseAndClose;
+
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
 import java.nio.charset.StandardCharsets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,13 +73,8 @@ public final class AcceptValidationHandler extends ChannelInboundHandlerAdapter 
                 String.join(", ", requiredTypes));
         var msg = "Accept header must include " + String.join(" or ", requiredTypes) + " on " + method;
         var body = Unpooled.copiedBuffer(msg, StandardCharsets.UTF_8);
-        var response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_ACCEPTABLE, body);
-        response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
         var origin = req.headers().get(HttpHeaderNames.ORIGIN);
-        if (origin != null) {
-            response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
-        }
         req.release();
-        ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+        sendResponseAndClose(ctx, HttpResponseStatus.NOT_ACCEPTABLE, "text/plain", body, origin);
     }
 }

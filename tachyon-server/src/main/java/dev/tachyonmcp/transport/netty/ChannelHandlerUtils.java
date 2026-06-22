@@ -39,6 +39,36 @@ public final class ChannelHandlerUtils {
         return sendPlainText(ctx, status, message, null);
     }
 
+    /**
+     * Writes a {@code text/plain} response and closes the connection. The response carries
+     * {@code Connection: close} so the client does not return the socket to its keep-alive pool
+     * (reusing a socket the server is about to close causes intermittent "other side closed"
+     * errors, e.g. with undici on Linux). Prefer this over {@code sendPlainText(...).addListener(CLOSE)}.
+     */
+    public static ChannelFuture sendPlainTextAndClose(
+            ChannelHandlerContext ctx, HttpResponseStatus status, String message) {
+        return sendPlainTextAndClose(ctx, status, message, null);
+    }
+
+    /** {@link #sendPlainTextAndClose(ChannelHandlerContext, HttpResponseStatus, String)} echoing {@code origin}. */
+    public static ChannelFuture sendPlainTextAndClose(
+            ChannelHandlerContext ctx, HttpResponseStatus status, String message, @Nullable String origin) {
+        return sendResponse(ctx, status, "text/plain", ByteBufUtil.writeUtf8(ctx.alloc(), message), true, origin);
+    }
+
+    /**
+     * Writes a response with the given content type and body, then closes the connection with a
+     * {@code Connection: close} header. See {@link #sendPlainTextAndClose} for why the header matters.
+     */
+    public static ChannelFuture sendResponseAndClose(
+            ChannelHandlerContext ctx,
+            HttpResponseStatus status,
+            String contentType,
+            ByteBuf body,
+            @Nullable String origin) {
+        return sendResponse(ctx, status, contentType, body, true, origin);
+    }
+
     public static ChannelFuture sendPlainText(
             ChannelHandlerContext ctx, HttpResponseStatus status, String message, @Nullable String origin) {
         return sendResponse(ctx, status, "text/plain", ByteBufUtil.writeUtf8(ctx.alloc(), message), false, origin);

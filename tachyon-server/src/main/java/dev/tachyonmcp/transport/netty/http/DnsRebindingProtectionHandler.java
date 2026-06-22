@@ -4,8 +4,7 @@
 
 package dev.tachyonmcp.transport.netty.http;
 
-import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendPlainText;
-import static io.netty.channel.ChannelFutureListener.CLOSE;
+import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendPlainTextAndClose;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -29,12 +28,12 @@ public class DnsRebindingProtectionHandler extends ChannelInboundHandlerAdapter 
         if (msg instanceof HttpRequest req) {
             var origin = req.headers().getAsString(HttpHeaderNames.ORIGIN);
             if (origin != null && !origin.isEmpty() && !isLocalhostOrigin(origin)) {
-                sendPlainText(ctx, HttpResponseStatus.FORBIDDEN, "Forbidden").addListener(CLOSE);
+                sendPlainTextAndClose(ctx, HttpResponseStatus.FORBIDDEN, "Forbidden");
                 return;
             }
             var host = req.headers().getAsString(HttpHeaderNames.HOST);
             if (host != null && !host.isEmpty() && !isLocalhostAuthority(host)) {
-                sendPlainText(ctx, HttpResponseStatus.FORBIDDEN, "Forbidden").addListener(CLOSE);
+                sendPlainTextAndClose(ctx, HttpResponseStatus.FORBIDDEN, "Forbidden");
                 return;
             }
         }

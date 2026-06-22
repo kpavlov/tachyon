@@ -4,10 +4,11 @@
 
 package dev.tachyonmcp.transport.netty;
 
+import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendResponseAndClose;
+
 import dev.tachyonmcp.runtime.McpHeaderNames;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -39,13 +40,8 @@ public class ProtocolVersionHandler extends ChannelInboundHandlerAdapter {
             if (protoVersion != null && !SUPPORTED_VERSIONS.contains(protoVersion)) {
                 var err = JsonRpcErrors.invalidRequest("Unsupported protocol version");
                 var body = JsonRpcCodec.serializeError(-1, err.code(), err.message(), null);
-                var response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST, body);
-                response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json");
                 var origin = req.headers().get(HttpHeaderNames.ORIGIN);
-                if (origin != null) {
-                    response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
-                }
-                ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+                sendResponseAndClose(ctx, HttpResponseStatus.BAD_REQUEST, "application/json", body, origin);
                 return;
             }
         }
