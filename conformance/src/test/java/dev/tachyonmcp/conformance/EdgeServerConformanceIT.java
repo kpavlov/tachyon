@@ -6,12 +6,10 @@ package dev.tachyonmcp.conformance;
 
 import dev.tachyonmcp.server.McpServer;
 import dev.tachyonmcp.server.TachyonMcpServer;
-import org.junit.jupiter.api.Disabled;
 
 /**
  * Test against the latest edge version of MCP conformance tests
  */
-@Disabled("Run it manually")
 class EdgeServerConformanceIT extends AbstractServerConformanceIT {
 
     EdgeServerConformanceIT() {
