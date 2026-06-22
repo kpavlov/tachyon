@@ -4,13 +4,8 @@
 
 package dev.tachyonmcp.transport.netty;
 
-import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendAccepted;
-import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendPlainText;
-import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendResponse;
-import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendInternalError;
-import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendJsonResponse;
-import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendOptions;
-import static io.netty.channel.ChannelFutureListener.CLOSE;
+import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.*;
+import static dev.tachyonmcp.transport.netty.McpResponseWriter.*;
 
 import dev.tachyonmcp.runtime.InteractionEvent;
 import dev.tachyonmcp.runtime.McpHeaderNames;
@@ -93,12 +88,12 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             handleDelete(ctx, req, origin);
         } else {
             sendResponse(
-                            ctx,
-                            HttpResponseStatus.METHOD_NOT_ALLOWED,
-                            "text/plain",
-                            ctx.alloc().buffer(0),
-                            origin)
-                    .addListener(CLOSE);
+                    ctx,
+                    HttpResponseStatus.METHOD_NOT_ALLOWED,
+                    "text/plain",
+                    ctx.alloc().buffer(0),
+                    true,
+                    origin);
         }
     }
 
@@ -123,12 +118,12 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                     logger.error("Failed to parse POST body", ex);
                     ctx.executor()
                             .execute(() -> sendResponse(
-                                            ctx,
-                                            HttpResponseStatus.BAD_REQUEST,
-                                            "application/json",
-                                            dispatcher.parseError(),
-                                            origin)
-                                    .addListener(CLOSE));
+                                    ctx,
+                                    HttpResponseStatus.BAD_REQUEST,
+                                    "application/json",
+                                    dispatcher.parseError(),
+                                    true,
+                                    origin));
                     return null;
                 });
     }
@@ -139,8 +134,8 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             @Nullable JsonRpcMessage message,
             @Nullable String origin) {
         if (message == null) {
-            sendResponse(ctx, HttpResponseStatus.BAD_REQUEST, "application/json", dispatcher.parseError(), origin)
-                    .addListener(CLOSE);
+            sendResponse(
+                    ctx, HttpResponseStatus.BAD_REQUEST, "application/json", dispatcher.parseError(), true, origin);
             return;
         }
         switch (message) {
@@ -198,7 +193,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                         if (postStream.started()) {
                             postStream.close();
                         } else {
-                            sendInternalError(ctx, requestId, origin).addListener(CLOSE);
+                            sendInternalError(ctx, requestId, origin);
                         }
                         return;
                     }
@@ -266,14 +261,12 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         }
         var sessionId = req.headers().get(McpHeaderNames.MCP_SESSION_ID);
         if (sessionId == null || sessionId.isEmpty()) {
-            sendPlainText(ctx, HttpResponseStatus.BAD_REQUEST, "Missing MCP-Session-Id header", origin)
-                    .addListener(CLOSE);
+            sendPlainText(ctx, HttpResponseStatus.BAD_REQUEST, "Missing MCP-Session-Id header", true, origin);
             return;
         }
         var sessionOpt = server.getSession(sessionId);
         if (sessionOpt.isEmpty()) {
-            sendPlainText(ctx, HttpResponseStatus.BAD_REQUEST, "Unknown session", origin)
-                    .addListener(CLOSE);
+            sendPlainText(ctx, HttpResponseStatus.BAD_REQUEST, "Unknown session", true, origin);
             return;
         }
         sseManager.openStream(ctx, sessionOpt.get(), req.headers().get(McpHeaderNames.LAST_EVENT_ID), origin);
@@ -282,14 +275,13 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
     private void handleDelete(ChannelHandlerContext ctx, FullHttpRequest req, @Nullable String origin) {
         var sessionId = req.headers().get(McpHeaderNames.MCP_SESSION_ID);
         if (sessionId == null || sessionId.isEmpty()) {
-            sendPlainText(ctx, HttpResponseStatus.BAD_REQUEST, "Missing MCP-Session-Id header", origin)
-                    .addListener(CLOSE);
+            sendPlainText(ctx, HttpResponseStatus.BAD_REQUEST, "Missing MCP-Session-Id header", true, origin);
             return;
         }
         // Fire ShutdownStarted before sending the response so the session is removed
         // before the client receives the OK (eliminates race on server.session()).
         ctx.pipeline().fireUserEventTriggered(new InteractionEvent.ShutdownStarted(sessionId));
-        sendPlainText(ctx, HttpResponseStatus.OK, "", origin).addListener(CLOSE);
+        sendPlainText(ctx, HttpResponseStatus.OK, "", true, origin);
         logger.info("Session terminated via DELETE: {}", sessionId);
     }
 

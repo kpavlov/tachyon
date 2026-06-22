@@ -5,16 +5,14 @@
 package dev.tachyonmcp.transport.netty;
 
 import static dev.tachyonmcp.transport.netty.InteractionHandler.INTERACTION_CONTEXT_KEY;
+import static io.netty.channel.ChannelFutureListener.CLOSE;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.*;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
@@ -43,7 +41,16 @@ public final class ChannelHandlerUtils {
 
     public static ChannelFuture sendPlainText(
             ChannelHandlerContext ctx, HttpResponseStatus status, String message, @Nullable String origin) {
-        return sendResponse(ctx, status, "text/plain", ByteBufUtil.writeUtf8(ctx.alloc(), message), origin);
+        return sendResponse(ctx, status, "text/plain", ByteBufUtil.writeUtf8(ctx.alloc(), message), false, origin);
+    }
+
+    public static ChannelFuture sendPlainText(
+            ChannelHandlerContext ctx,
+            HttpResponseStatus status,
+            String message,
+            boolean close,
+            @Nullable String origin) {
+        return sendResponse(ctx, status, "text/plain", ByteBufUtil.writeUtf8(ctx.alloc(), message), close, origin);
     }
 
     public static ChannelFuture sendResponse(
@@ -57,12 +64,31 @@ public final class ChannelHandlerUtils {
             String contentType,
             ByteBuf body,
             @Nullable String origin) {
+        return sendResponse(ctx, status, contentType, body, false, origin);
+    }
+
+    public static ChannelFuture sendResponse(
+            ChannelHandlerContext ctx,
+            HttpResponseStatus status,
+            String contentType,
+            ByteBuf body,
+            boolean close,
+            @Nullable String origin) {
         var response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, body);
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, contentType);
         response.headers().set(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
+        if (close) {
+            response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+        }
         if (origin != null) {
             response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
         }
-        return ctx.writeAndFlush(response);
+
+        ChannelFuture channelFuture = ctx.writeAndFlush(response);
+        if (close) {
+            return channelFuture.addListener(CLOSE);
+        } else {
+            return channelFuture;
+        }
     }
 }

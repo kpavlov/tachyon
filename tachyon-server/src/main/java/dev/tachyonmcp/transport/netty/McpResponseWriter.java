@@ -12,10 +12,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.*;
 import org.jspecify.annotations.Nullable;
 
 public final class McpResponseWriter {
@@ -47,21 +44,38 @@ public final class McpResponseWriter {
 
     public static ChannelFuture sendJsonResponse(
             ChannelHandlerContext ctx, ByteBuf body, @Nullable String sessionId, @Nullable String origin) {
+        return sendJsonResponse(ctx, body, false, sessionId, origin);
+    }
+
+    public static ChannelFuture sendJsonResponse(
+            ChannelHandlerContext ctx,
+            ByteBuf body,
+            boolean close,
+            @Nullable String sessionId,
+            @Nullable String origin) {
         var response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, body);
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json");
         response.headers().set(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
+        if (close) {
+            response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+        }
         if (sessionId != null) {
             response.headers().set(McpHeaderNames.MCP_SESSION_ID, sessionId);
         }
         if (origin != null) {
             response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
         }
-        return ctx.writeAndFlush(response);
+        final ChannelFuture channelFuture = ctx.writeAndFlush(response);
+        if (close) {
+            return channelFuture.addListener(ChannelFutureListener.CLOSE);
+        } else {
+            return channelFuture;
+        }
     }
 
     public static ChannelFuture sendInternalError(ChannelHandlerContext ctx, Object id, @Nullable String origin) {
         var body = JsonRpcCodec.serializeError(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error", null);
-        return sendJsonResponse(ctx, body, null, origin);
+        return sendJsonResponse(ctx, body, true, null, origin);
     }
 
     private static ChannelFuture sendPlainText(ChannelHandlerContext ctx, HttpResponseStatus status, String message) {
