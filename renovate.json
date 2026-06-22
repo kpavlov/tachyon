@@ -10,7 +10,7 @@
   "packageRules": [
     {
       "matchPackageNames": [
-        "me.kpavlov.tachyon.mcp"
+        "dev.tachyonmcp"
       ],
       "enabled": false
     },
