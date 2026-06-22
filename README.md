@@ -1,7 +1,8 @@
 
+
+[![Maven Central](https://img.shields.io/maven-central/v/dev.tachyonmcp/tachyon-server)](https://repo1.maven.org/maven2/dev/tachyonmcp/tachyon-server/)
 [![Build](https://github.com/kpavlov/tachyon/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/kpavlov/tachyon/actions/workflows/build.yml)
 [![Conformance 46 of 46](https://img.shields.io/badge/Conformance-Server:%2046%20%2F%2046%0A-green?logo=modelcontextprotocol)](https://github.com/modelcontextprotocol/conformance)
-
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/kpavlov/tachyon)
 
 **Tachyon MCP** — A Java 25 [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server built on [Netty 4.2](https://netty.io).
