@@ -184,11 +184,6 @@ class ExtensionsE2eTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public boolean requiresMetaEnvelope() {
-            return true;
-        }
-
-        @Override
         public void bootstrap(McpServer server) {
             server.registerHandler("test/ext-call", new McpMethodHandler() {
                 @Override

@@ -186,7 +186,7 @@ class TasksExtensionE2eTest extends AbstractMcpE2eTest {
                     .path("content")
                     .get(0)
                     .path("text")
-                    .asText();
+                    .asString();
         } catch (Exception e) {
             throw new RuntimeException("Failed to extract $.result.content[0].text from: " + json, e);
         }

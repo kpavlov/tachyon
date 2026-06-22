@@ -7,11 +7,6 @@ package dev.tachyonmcp.server.features.prompts;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Prompt;
 import dev.tachyonmcp.server.domain.*;
 import dev.tachyonmcp.server.domain.EmbeddedResource;
-import dev.tachyonmcp.server.domain.Icon;
-import dev.tachyonmcp.server.domain.ImageContent;
-import dev.tachyonmcp.server.domain.PromptArgument;
-import dev.tachyonmcp.server.domain.ResourceLink;
-import dev.tachyonmcp.server.domain.TextContent;
 import java.util.List;
 
 final class McpPromptMapper {

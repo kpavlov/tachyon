@@ -78,6 +78,7 @@ public final class NettyServer implements Closeable {
                         server,
                         config.readerIdleTimeout(),
                         config.writerIdleTimeout(),
+                        config.maxContentLength(),
                         config.corsConfig(),
                         config.pipelineCustomizer()));
 

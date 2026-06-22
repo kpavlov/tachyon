@@ -16,6 +16,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.HttpServerExpectContinueHandler;
 import io.netty.handler.codec.http.cors.CorsConfig;
 import io.netty.handler.codec.http.cors.CorsHandler;
 import io.netty.handler.flush.FlushConsolidationHandler;
@@ -40,7 +41,7 @@ import org.jspecify.annotations.Nullable;
 public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
 
     /** Default max aggregated request body. 64 KB was too small for schemas + tool results. */
-    static final int DEFAULT_MAX_CONTENT_LENGTH = 1024 * 1024; // 1 MB
+    public static final int DEFAULT_MAX_CONTENT_LENGTH = 1024 * 1024; // 1 MB
 
     private static final LoggingHandler CHANNEL_LOGGER =
             new LoggingHandler("me.kpavlov.tachyon.transport.netty.channel", LogLevel.DEBUG);
@@ -48,6 +49,7 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
 
     private final Duration readerIdleTimeout;
     private final Duration writerIdleTimeout;
+    private final int maxContentLength;
     private final ProtocolVersionHandler protocolVersionHandler;
     private final AcceptValidationHandler acceptHeaderValidator;
     private final boolean stateless;
@@ -72,12 +74,14 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
             McpServer server,
             Duration readerIdleTimeout,
             Duration writerIdleTimeout,
+            int maxContentLength,
             @Nullable CorsConfig corsConfig,
             @Nullable Consumer<ChannelPipeline> pipelineCustomizer) {
         this.stateless = stateless;
         this.server = server;
         this.readerIdleTimeout = readerIdleTimeout;
         this.writerIdleTimeout = writerIdleTimeout;
+        this.maxContentLength = maxContentLength;
         this.corsConfig = corsConfig;
         this.pipelineCustomizer = pipelineCustomizer;
         this.dispatcher = new McpDispatcher(server, server.executor());
@@ -106,7 +110,10 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
         }
         p.addLast("interaction", interactionHandler);
 
-        p.addLast("http-aggregator", new HttpObjectAggregator(DEFAULT_MAX_CONTENT_LENGTH));
+        // Reject oversized bodies announced via `Expect: 100-continue` before they are
+        // transferred, instead of buffering and then failing in the aggregator.
+        p.addLast("expect-continue", new HttpServerExpectContinueHandler());
+        p.addLast("http-aggregator", new HttpObjectAggregator(maxContentLength));
         if (!readerIdleTimeout.isZero() || !writerIdleTimeout.isZero()) {
             p.addLast(
                     "idle",
