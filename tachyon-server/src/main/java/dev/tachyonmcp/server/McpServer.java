@@ -351,7 +351,7 @@ public class McpServer implements Closeable {
             if (ex instanceof TimeoutException) {
                 var removed = pendingRequests.remove(requestId);
                 if (removed != null) {
-                    logger.warn(
+                    logger.debug(
                             "Pending request timed out after {}s: id={}, pendingCount={}\n{}",
                             PENDING_REQUEST_TIMEOUT.toSeconds(),
                             requestId,

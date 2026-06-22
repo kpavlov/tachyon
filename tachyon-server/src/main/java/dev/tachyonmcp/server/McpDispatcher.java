@@ -189,7 +189,7 @@ public class McpDispatcher {
                             var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
                             watchdog.cancel(false);
                             if (elapsedMs > SLOW_HANDLER_MS) {
-                                logger.warn(
+                                logger.debug(
                                         "Handler completed (was slow): method={}, id={}, elapsed={}ms,"
                                                 + " thread={}#{} virtual={}",
                                         method,
@@ -202,14 +202,14 @@ public class McpDispatcher {
                                 logger.debug("Handler done: method={}, id={}, elapsed={}ms", method, id, elapsedMs);
                             }
                             if (resultValue instanceof JsonRpcError error) {
-                                logger.warn("Handler error for {}: {}", method, error.message());
+                                logger.debug("Handler error for {}: {}", method, error.message());
                                 return errorResult(id, error.code(), error.message());
                             }
                             return new DispatchResult.Response(encodeResponse(id, resultValue), null);
                         } catch (Exception e) {
                             var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
                             watchdog.cancel(false);
-                            logger.error(
+                            logger.warn(
                                     "Handler exception: method={}, id={}, elapsed={}ms,"
                                             + " thread={}#{} virtual={}: {}",
                                     method,
@@ -252,7 +252,7 @@ public class McpDispatcher {
                         }
                         return new DispatchResult.Response(encodeResponse(id, result), null);
                     } catch (Exception e) {
-                        logger.error("Stateless handler exception: method={}", method, e);
+                        logger.warn("Stateless handler exception: method={}", method, e);
                         return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
                     }
                 },
@@ -301,7 +301,7 @@ public class McpDispatcher {
             rawReason = r instanceof String s ? s : null;
         }
         if (rawRequestId == null) {
-            logger.warn("Cancellation notification missing requestId");
+            logger.debug("Cancellation notification missing requestId");
             return;
         }
         if (sessionId == null) {
@@ -340,12 +340,12 @@ public class McpDispatcher {
             return;
         }
         if (!(params instanceof Map<?, ?> map)) {
-            logger.warn("Task status notification missing params");
+            logger.debug("Task status notification missing params");
             return;
         }
         var rawTaskId = map.get("taskId");
         if (!(rawTaskId instanceof String taskId)) {
-            logger.warn("Task status notification missing taskId");
+            logger.debug("Task status notification missing taskId");
             return;
         }
         // version-specific (MCP 2025-11-25): task status enum — moves behind McpDialect
@@ -355,7 +355,7 @@ public class McpDispatcher {
             try {
                 taskStatus = TaskStatus.fromValue(s);
             } catch (IllegalArgumentException e) {
-                logger.warn("Unknown task status: {}", s);
+                logger.debug("Unknown task status: {}", s);
             }
         } else if (rawStatus instanceof TaskStatus ts) {
             taskStatus = ts;
@@ -384,12 +384,12 @@ public class McpDispatcher {
                         try {
                             var result = handler.handle(DefaultMcpContext.stateless(server), typedParams);
                             if (result instanceof JsonRpcError error) {
-                                logger.warn("Initialize handler error (stateless): {}", error.message());
+                                logger.debug("Initialize handler error (stateless): {}", error.message());
                                 return errorResult(id, error.code(), error.message());
                             }
                             return new DispatchResult.Response(encodeResponse(id, result), null);
                         } catch (Exception e) {
-                            logger.error("Initialize handler exception (stateless)", e);
+                            logger.warn("Initialize handler exception (stateless)", e);
                             return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
                         }
                     }
@@ -399,12 +399,12 @@ public class McpDispatcher {
                         var context = new DefaultMcpContext(session, server, ic);
                         var result = handler.handle(context, typedParams);
                         if (result instanceof JsonRpcError error) {
-                            logger.warn("Initialize handler error: {}", error.message());
+                            logger.debug("Initialize handler error: {}", error.message());
                             return errorResult(id, error.code(), error.message());
                         }
                         return new DispatchResult.Response(encodeResponse(id, result), sessionId);
                     } catch (Exception e) {
-                        logger.error("Initialize handler exception", e);
+                        logger.warn("Initialize handler exception", e);
                         return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
                     }
                 },
