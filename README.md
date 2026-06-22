@@ -19,12 +19,9 @@ TachyonMcpServer.builder()
 - ✅ Lifecycle — initialize → initialized → ACTIVE
 - ✅ Pagination — cursor-based across all list methods
 - ✅ Session state machine — INITIALIZING → ACTIVE → CLOSED
-- ✅ Backpressure — HOT/WARM/COLD with channel writability
 - ✅ CORS & origin validation
 - ✅ DNS rebinding protection
 - ✅ Accept header strict validation (406)
-- ✅ Protocol version negotiation
-- ✅ Max request body 1 MB
 - ✅ Pending request timeout (60s)
 - ✅ SSE resumability via Last-Event-ID
 
@@ -37,7 +34,6 @@ TachyonMcpServer.builder()
 - ✅ `execution.taskSupport` (forbidden/optional/required)
 - ✅ Synchronous & asynchronous handler interfaces
 - ✅ Name validation (1–128 chars)
-- ✅ Unknown tool → -32601
 - ✅ `notifications/tools/list_changed` on add/remove
 - ✅ Inline notifications + logging during tool call
 
@@ -49,23 +45,20 @@ TachyonMcpServer.builder()
 - ✅ `resources/subscribe` / `unsubscribe`
 - ✅ `notifications/resources/list_changed`
 - ✅ `notifications/resources/updated` to subscribers
-- ✅ Not found → -32002
 - ✅ Dynamic content via `ResourceHandler` interface
 
 ### ✅ Prompts
 
 - ✅ `prompts/list` — paginated with `nextCursor`
 - ✅ `prompts/get` — invokes prompt resolver
-- ✅ `title` and `arguments` in listing
 - ✅ `notifications/prompts/list_changed`
-- ✅ Invalid name → error
 
 ### ✅ Tasks
 
 - ✅ `tasks/list`, `tasks/get`, `tasks/cancel`, `tasks/result`
 - ✅ State machine enforcement — SUBMITTED → WORKING → COMPLETED/FAILED/CANCELLED
 - ✅ `notifications/tasks/status` broadcast on every transition
-- ✅ TTL janitor for stale tasks
+- ✅ Task Janitor for stale tasks
 - ✅ `execution.taskSupport` per tool (forbidden/optional/required)
 - ✅ `TasksExtension` — negotiable extension exposing `create_task` tool + `task://{id}` resource template
 - ✅ Extension-gated tool visibility (hidden from un-negotiated clients)
@@ -74,32 +67,31 @@ TachyonMcpServer.builder()
 
 - ✅ `logging/setLevel` per session
 - ✅ `notifications/message` emitted above threshold
-- ✅ Progress notifications (0, 50, 100)
+- ✅ Progress notifications
 
 ### ✅ Client Communication
 
 - ✅ `sampling/createMessage` — server → client request
-- ✅ Elicitation — form mode (SEP-1034, SEP-1330)
+- ✅ Elicitation — form mode
 - ✅ `notifications/cancelled` — bidirectional
 - ✅ `notifications/tasks/status` from client
 
 ### ✅ Transport & I/O
 
-- ✅ Netty 4.2 — `ServerBootstrap` with pooled allocator
+- ✅ Netty 4.2
 - ✅ io_uring / epoll / kqueue / nio auto-detection
 - ✅ Platform-thread event loops + virtual-thread handlers
-- ✅ Write buffer watermarks (32 KB / 128 KB)
 - ✅ TCP_NODELAY, SO_KEEPALIVE
 - ✅ Channel writability backpressure (`setAutoRead`)
 - ✅ Configurable idle timeouts (reader/writer)
 
 ### ✅ Session Management
 
+- ✅ **Stateless mode** — skip sessions for serverless
 - ✅ IN_MEMORY session store (ConcurrentHashMap)
-- ✅ Session janitor — 5s sweep, 30s TTL
+- ✅ Session Janitor — 5s sweep, 30s TTL
 - ✅ SSE disconnect ≠ session removal (supports reconnect)
 - ✅ Event log replay on reconnection
-- ✅ **Stateless mode** — skip sessions for serverless
 
 ---
 
@@ -111,8 +103,8 @@ TachyonMcpServer.builder()
 ```xml
 <dependency>
     <groupId>dev.tachyonmcp</groupId>
-    <artifactId>tachyon-mcp-server</artifactId>
-    <version>1.0.0</version>
+    <artifactId>tachyon-server</artifactId>
+    <version>1.0.0-alpha.1</version>
 </dependency>
 ```
 
