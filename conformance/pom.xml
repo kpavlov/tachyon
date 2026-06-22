@@ -19,6 +19,10 @@
     <name>Tachyon MCP Conformance Tests</name>
     <description>MCP protocol conformance tests against the official conformance framework</description>
 
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>dev.tachyonmcp</groupId>

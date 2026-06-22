@@ -17,7 +17,11 @@
     <artifactId>e2e</artifactId>
 
     <name>Tachyon MCP :: E2E</name>
-    <description>End-to-end tests for Tachyon MCP</description>
+    <description>End-to-end tests</description>
+
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
 
     <dependencies>
         <dependency>
