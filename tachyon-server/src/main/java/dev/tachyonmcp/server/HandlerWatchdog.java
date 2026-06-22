@@ -17,8 +17,8 @@ import org.slf4j.LoggerFactory;
  * <p>Log level is chosen by the handler thread's state at the moment the watchdog fires:
  *
  * <ul>
- *   <li>{@code BLOCKED} → ERROR (waiting on a monitor — lock contention or deadlock)
- *   <li>{@code RUNNABLE} → WARN (long computation or hidden blocking)
+ *   <li>{@code BLOCKED} → WARN (waiting on a monitor — lock contention or deadlock)
+ *   <li>{@code RUNNABLE} → DEBUG (long computation or hidden blocking)
  *   <li>{@code WAITING} / {@code TIMED_WAITING} → DEBUG (virtual thread parked — expected for
  *       async I/O)
  * </ul>
@@ -56,10 +56,10 @@ public final class HandlerWatchdog {
         for (var f : frames) sb.append("\n    at ").append(f);
         switch (state) {
             case BLOCKED ->
-                logger.error(
+                logger.warn(
                         MSG, method, id, elapsedMs, state, thread.getName(), thread.threadId(), thread.isVirtual(), sb);
             case RUNNABLE ->
-                logger.warn(
+                logger.debug(
                         MSG, method, id, elapsedMs, state, thread.getName(), thread.threadId(), thread.isVirtual(), sb);
             default ->
                 logger.debug(

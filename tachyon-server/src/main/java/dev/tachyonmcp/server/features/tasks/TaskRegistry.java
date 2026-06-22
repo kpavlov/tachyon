@@ -128,12 +128,12 @@ public class TaskRegistry extends Registry<TaskEntry> {
             String taskId, TaskStatus wireStatus, @Nullable String statusMessage) {
         var entry = byId.get(taskId);
         if (entry == null) {
-            logger.warn("Task not found for client notification: {}", taskId);
+            logger.debug("Task not found for client notification: {}", taskId);
             return false;
         }
         var internalStatus = TaskBindings.toInternalStatus(wireStatus);
         if (!entry.transitionTo(internalStatus)) {
-            logger.warn("Invalid status transition from {} to {} for task {}", entry.status(), internalStatus, taskId);
+            logger.debug("Invalid status transition from {} to {} for task {}", entry.status(), internalStatus, taskId);
             return false;
         }
         if (statusMessage != null) {
@@ -317,7 +317,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
                 additionalProps.put("result", resultNode);
                 return new GetTaskPayloadResult(null, additionalProps);
             } catch (Exception e) {
-                logger.warn("Failed to parse task result JSON: {}", e.getMessage());
+                logger.debug("Failed to parse task result JSON: {}", e.getMessage());
                 return JsonRpcErrors.invalidRequest("Failed to parse task result");
             }
         }

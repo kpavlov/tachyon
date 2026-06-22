@@ -39,7 +39,7 @@ public class SessionManager implements AutoCloseable {
         var session = new McpSession(sessionId, connection);
         var previous = store.put(sessionId, session);
         if (previous != null) {
-            logger.warn("Replaced existing session: {}", sessionId);
+            logger.debug("Replaced existing session: {}", sessionId);
             previous.close();
         }
         logger.info("Session created: {}", sessionId);
@@ -91,7 +91,7 @@ public class SessionManager implements AutoCloseable {
             store.close();
             logger.info("SessionManager closed");
         } catch (Exception e) {
-            logger.error("Error while closing SessionManager", e);
+            logger.warn("Error while closing SessionManager", e);
         }
     }
 }
