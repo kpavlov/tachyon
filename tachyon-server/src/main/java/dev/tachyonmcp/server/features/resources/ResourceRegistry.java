@@ -4,6 +4,8 @@
 
 package dev.tachyonmcp.server.features.resources;
 
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ContentBlockMappers;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.McpResourceMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.EmptyResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListResourceTemplatesResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListResourcesResult;
@@ -130,7 +132,7 @@ public class ResourceRegistry {
                 nextCursor = lastItem.name();
             }
         }
-        return new PaginatedResult<>(result, nextCursor);
+        return PaginatedResult.of(result, nextCursor);
     }
 
     ResourceEntry getByUri(String uri) {
@@ -256,21 +258,22 @@ public class ResourceRegistry {
                     if (re.matches()) {
                         var content = template.resolver().apply(re.group(1));
                         return new ReadResourceResult(
-                                List.of(McpResourceMapper.toProtocolResourceContents(content)), null, null);
+                                List.of(ContentBlockMappers.toProtocolResourceContents(content)), null, null);
                     }
                 }
                 return JsonRpcErrors.resourceNotFound("Resource not found");
             }
             var contents = entry.handler().read(context, readParams);
-            return new ReadResourceResult(List.of(McpResourceMapper.toProtocolResourceContents(contents)), null, null);
+            return new ReadResourceResult(
+                    List.of(ContentBlockMappers.toProtocolResourceContents(contents)), null, null);
         }
 
         private static @Nullable ReadResourceRequest toReadParams(Object params) {
             if (params instanceof ReadResourceRequestParams p) {
-                return new ReadResourceRequest(p.uri(), null);
+                return ReadResourceRequest.of(p.uri(), null);
             }
             if (params instanceof Map<?, ?> map && map.get("uri") instanceof String uri) {
-                return new ReadResourceRequest(uri, null);
+                return ReadResourceRequest.of(uri, null);
             }
             return null;
         }

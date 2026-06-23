@@ -70,7 +70,7 @@ class ToolNotificationsE2eTest extends AbstractMcpE2eTest {
             context.notifications().send("notifications/tool/test", Map.of("message", text));
             context.notifications().info("tool.notifier", Map.of("message", text));
 
-            var textContent = new TextContent("text", text, null, null);
+            var textContent = TextContent.of(text);
             var content = List.<ContentBlock>of(textContent);
             return new CallToolResult(content, null, null, null, null);
         }

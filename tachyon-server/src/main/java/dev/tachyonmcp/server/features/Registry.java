@@ -91,7 +91,7 @@ public abstract class Registry<R extends McpResourceType> {
                 nextCursor = lastItem.name();
             }
         }
-        return new PaginatedResult<>(result, nextCursor);
+        return PaginatedResult.of(result, nextCursor);
     }
 
     public abstract void registerHandlers(java.util.Map<String, McpMethodHandler> registry);

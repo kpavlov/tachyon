@@ -99,7 +99,7 @@ class McpSdkE2eTest extends AbstractMcpE2eTest {
         server.prompts()
                 .add(
                         PromptDescriptor.of("greeting", "A greeting prompt"),
-                        List.of(new PromptMessage(Role.USER, new TextContent("Hello", null))));
+                        List.of(PromptMessage.of(Role.USER, TextContent.of("Hello"))));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();

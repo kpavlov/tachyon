@@ -212,7 +212,7 @@ class ToolCapabilitiesE2eTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldRegisterWithFullDescriptor() throws Exception {
-        var annotations = new ToolAnnotations(true, false, null, null);
+        var annotations = ToolAnnotations.of(null, true, false, null, null);
         server = TachyonMcpServer.builder().build();
         server.registerTool(new SyncToolHandler<>() {
             @Override

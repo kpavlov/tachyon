@@ -7,6 +7,7 @@ package dev.tachyonmcp.server.features.tools;
 import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidRequest;
 import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.methodNotFound;
 
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.McpToolMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.*;
 import dev.tachyonmcp.server.JsonSchemaValidator;
 import dev.tachyonmcp.server.McpMethodHandler;
@@ -117,7 +118,7 @@ public class ToolRegistry {
                 nextCursor = lastItem.name();
             }
         }
-        return new PaginatedResult<>(result, nextCursor);
+        return PaginatedResult.of(result, nextCursor);
     }
 
     public void registerHandlers(Map<String, McpMethodHandler> registry) {
@@ -188,7 +189,7 @@ public class ToolRegistry {
             sendLoggingIfEnabled(context, parsed.name(), "started");
 
             var progressToken = parseProgressToken(parsed.meta());
-            var request = new ToolRequest(parsed.name(), parsed.args(), parsed.meta(), progressToken, null);
+            var request = ToolRequest.of(parsed.name(), parsed.args(), parsed.meta(), progressToken, null);
 
             try {
                 var toolResult =

@@ -232,9 +232,9 @@ public final class JsonRpcCodec {
 
         if (method != null) {
             if (id != null) {
-                return new JsonRpcMessage.Request(id, method, paramsObj);
+                return new JsonRpcMessage.Request<>(id, method, paramsObj);
             }
-            return new JsonRpcMessage.Notification(method, paramsObj);
+            return new JsonRpcMessage.Notification<>(method, paramsObj);
         }
 
         throw new IllegalArgumentException("Invalid JSON-RPC message: no method, result, or error");
@@ -345,7 +345,8 @@ public final class JsonRpcCodec {
         return list;
     }
 
-    public static String writeValueAsString(Object value) {
+    @Nullable
+    public static String writeValueAsString(@Nullable Object value) {
         if (value != null) {
             var codec = CodecRegistry.codecFor(value.getClass());
             if (codec != null) {

@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.features.tools;
 
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.McpToolMapper;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.session.McpContext;

@@ -69,8 +69,8 @@ class ResourceRegistryTest {
 
     @Test
     void shouldReadResourceContentByUri() throws Exception {
-        var descriptor = new ResourceDescriptor("test-resource", "test://resource/1", "Test resource", "text/plain");
-        registry.add(descriptor, (ctx, req) -> new TextResourceContents("test://resource/1", "text/plain", "content"));
+        var descriptor = ResourceDescriptor.of("test-resource", "test://resource/1", "Test resource", "text/plain");
+        registry.add(descriptor, (ctx, req) -> TextResourceContents.of("test://resource/1", "text/plain", "content"));
 
         var result = handlers.get("resources/read")
                 .handle(DefaultMcpContext.noop(), Map.<String, Object>of("uri", "test://resource/1"));
@@ -127,8 +127,8 @@ class ResourceRegistryTest {
         handlers.get("resources/subscribe")
                 .handle(new DefaultMcpContext(sess, server), Map.of("uri", "test://resource/1"));
         registry.add(
-                new ResourceDescriptor("test-resource", "test://resource/1", "Test resource", "text/plain"),
-                (ctx, req) -> new TextResourceContents("test://resource/1", "text/plain", ""));
+                ResourceDescriptor.of("test-resource", "test://resource/1", "Test resource", "text/plain"),
+                (ctx, req) -> TextResourceContents.of("test://resource/1", "text/plain", ""));
 
         registry.notifyResourceUpdated("test://resource/1");
 
@@ -144,8 +144,8 @@ class ResourceRegistryTest {
         registry.onChange(callCount::incrementAndGet);
 
         registry.add(
-                new ResourceDescriptor("r1", "test://r1", null, null),
-                (ctx, req) -> new TextResourceContents("test://r1", "text/plain", ""));
+                ResourceDescriptor.of("r1", "test://r1", null, null),
+                (ctx, req) -> TextResourceContents.of("test://r1", "text/plain", ""));
 
         assertThat(callCount).hasValue(1);
     }
@@ -153,8 +153,8 @@ class ResourceRegistryTest {
     @Test
     void shouldFireOnChangeWhenExistingResourceRemoved() {
         registry.add(
-                new ResourceDescriptor("r1", "test://r1", null, null),
-                (ctx, req) -> new TextResourceContents("test://r1", "text/plain", ""));
+                ResourceDescriptor.of("r1", "test://r1", null, null),
+                (ctx, req) -> TextResourceContents.of("test://r1", "text/plain", ""));
 
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
@@ -177,15 +177,15 @@ class ResourceRegistryTest {
     @Test
     void shouldReplaceHandlerAndFireOnChangeWhenAddedWithSameName() {
         registry.add(
-                new ResourceDescriptor("doc", "resource://doc-v1", null, "text/plain"),
-                (ctx, req) -> new TextResourceContents("resource://doc-v1", "text/plain", "v1"));
+                ResourceDescriptor.of("doc", "resource://doc-v1", null, "text/plain"),
+                (ctx, req) -> TextResourceContents.of("resource://doc-v1", "text/plain", "v1"));
 
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
         registry.add(
-                new ResourceDescriptor("doc", "resource://doc-v1", null, "text/plain"),
-                (ctx, req) -> new TextResourceContents("resource://doc-v1", "text/plain", "v2"));
+                ResourceDescriptor.of("doc", "resource://doc-v1", null, "text/plain"),
+                (ctx, req) -> TextResourceContents.of("resource://doc-v1", "text/plain", "v2"));
 
         assertThat(callCount).hasValue(1);
         assertThat(registry.get("doc")).isNotNull();
@@ -195,12 +195,12 @@ class ResourceRegistryTest {
     @Test
     void shouldEvictOldUriWhenResourceUpdatedWithNewUri() throws Exception {
         registry.add(
-                new ResourceDescriptor("doc", "resource://doc-v1", null, "text/plain"),
-                (ctx, req) -> new TextResourceContents("resource://doc-v1", "text/plain", "v1"));
+                ResourceDescriptor.of("doc", "resource://doc-v1", null, "text/plain"),
+                (ctx, req) -> TextResourceContents.of("resource://doc-v1", "text/plain", "v1"));
 
         registry.add(
-                new ResourceDescriptor("doc", "resource://doc-v2", null, "text/plain"),
-                (ctx, req) -> new TextResourceContents("resource://doc-v2", "text/plain", "v2"));
+                ResourceDescriptor.of("doc", "resource://doc-v2", null, "text/plain"),
+                (ctx, req) -> TextResourceContents.of("resource://doc-v2", "text/plain", "v2"));
 
         // old URI must no longer resolve
         var oldUriResult = handlers.get("resources/read")
@@ -217,24 +217,24 @@ class ResourceRegistryTest {
     @Test
     void shouldFireOnChangeWhenResourceUriUpdated() {
         registry.add(
-                new ResourceDescriptor("doc", "resource://doc-v1", null, "text/plain"),
-                (ctx, req) -> new TextResourceContents("resource://doc-v1", "text/plain", "v1"));
+                ResourceDescriptor.of("doc", "resource://doc-v1", null, "text/plain"),
+                (ctx, req) -> TextResourceContents.of("resource://doc-v1", "text/plain", "v1"));
 
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
         registry.add(
-                new ResourceDescriptor("doc", "resource://doc-v2", null, "text/plain"),
-                (ctx, req) -> new TextResourceContents("resource://doc-v2", "text/plain", "v2"));
+                ResourceDescriptor.of("doc", "resource://doc-v2", null, "text/plain"),
+                (ctx, req) -> TextResourceContents.of("resource://doc-v2", "text/plain", "v2"));
 
         assertThat(callCount).hasValue(1);
     }
 
     @Test
     void shouldMapAllResourceDescriptorFieldsToProtocolModel() throws Exception {
-        var annotations = new Annotations(List.of(Role.USER), 0.9, "2026-01-01T00:00:00Z");
-        var icon = new Icon("https://example.com/icon.png", "image/png", null, null);
-        var descriptor = new ResourceDescriptor(
+        var annotations = Annotations.of(List.of(Role.USER), 0.9, "2026-01-01T00:00:00Z");
+        var icon = Icon.of("https://example.com/icon.png", "image/png", null, null);
+        var descriptor = ResourceDescriptor.of(
                 "full-resource",
                 "test://full",
                 "Full description",
@@ -243,7 +243,7 @@ class ResourceRegistryTest {
                 annotations,
                 1024.0,
                 List.of(icon));
-        registry.add(descriptor, (ctx, req) -> new TextResourceContents("test://full", "text/plain", "content"));
+        registry.add(descriptor, (ctx, req) -> TextResourceContents.of("test://full", "text/plain", "content"));
 
         var result = (ListResourcesResult) handlers.get("resources/list").handle(DefaultMcpContext.noop(), null);
 
@@ -266,9 +266,9 @@ class ResourceRegistryTest {
 
     @Test
     void shouldMapAllResourceTemplateFieldsToProtocolModel() throws Exception {
-        var annotations = new Annotations(null, 0.5, null);
-        var icon = new Icon("https://example.com/tmpl.png", null, null, null);
-        var entry = new ResourceTemplateEntry(
+        var annotations = Annotations.of(null, 0.5, null);
+        var icon = Icon.of("https://example.com/tmpl.png", null, null, null);
+        var entry = ResourceTemplateEntry.of(
                 "tmpl",
                 "test://tmpl/{id}",
                 "Template desc",
@@ -276,7 +276,7 @@ class ResourceRegistryTest {
                 "Template Title",
                 annotations,
                 List.of(icon),
-                id -> new TextResourceContents("test://tmpl/" + id, "text/plain", "content-" + id));
+                id -> TextResourceContents.of("test://tmpl/" + id, "text/plain", "content-" + id));
         registry.addTemplate(entry);
 
         var result = (ListResourceTemplatesResult)
@@ -298,12 +298,12 @@ class ResourceRegistryTest {
     @Test
     void shouldReportResourceSizeWithoutLoadingContent() throws Exception {
         // size is declared upfront; content is loaded lazily via handler only on resources/read
-        var descriptor = new ResourceDescriptor(
+        var descriptor = ResourceDescriptor.of(
                 "sized-resource", "test://sized", "A resource", "application/octet-stream", null, null, 4096.0, null);
         var contentLoaded = new java.util.concurrent.atomic.AtomicBoolean(false);
         registry.add(descriptor, (ctx, req) -> {
             contentLoaded.set(true);
-            return new TextResourceContents("test://sized", "application/octet-stream", "data");
+            return TextResourceContents.of("test://sized", "application/octet-stream", "data");
         });
 
         // resources/list returns size WITHOUT loading content

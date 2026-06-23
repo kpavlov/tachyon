@@ -39,8 +39,7 @@
         <connection>scm:git:git://github.com/kpavlov/tachyon.git</connection>
         <developerConnection>scm:git:ssh://github.com/kpavlov/tachyon.git</developerConnection>
         <url>https://github.com/kpavlov/tachyon</url>
-      <tag>v1.0.0-aplha.1</tag>
-  </scm>
+    </scm>
 
     <issueManagement>
         <system>github</system>

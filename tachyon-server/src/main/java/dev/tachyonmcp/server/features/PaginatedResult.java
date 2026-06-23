@@ -7,9 +7,16 @@ package dev.tachyonmcp.server.features;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-public record PaginatedResult<R>(List<R> items, @Nullable String nextCursor) {
+public interface PaginatedResult<R> {
 
-    public boolean hasMore() {
-        return nextCursor != null;
+    List<R> items();
+
+    @Nullable
+    String nextCursor();
+
+    boolean hasMore();
+
+    static <R> PaginatedResult<R> of(List<R> items, @Nullable String nextCursor) {
+        return new DefaultPaginatedResult<>(items, nextCursor);
     }
 }

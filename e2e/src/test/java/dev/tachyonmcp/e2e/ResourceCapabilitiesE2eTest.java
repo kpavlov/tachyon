@@ -27,11 +27,11 @@ class ResourceCapabilitiesE2eTest extends AbstractMcpE2eTest {
         startEmptyServer();
         server.resources()
                 .add(
-                        new ResourceDescriptor("doc", "resource://doc", "A document", "text/plain"),
-                        (_, _) -> new TextResourceContents("resource://doc", "text/plain", "Hello"))
+                        ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
+                        (_, _) -> TextResourceContents.of("resource://doc", "text/plain", "Hello"))
                 .add(
-                        new ResourceDescriptor("code", "resource://code", "Source code", "text/x-java"),
-                        (_, _) -> new TextResourceContents("resource://code", "text/x-java", "package com.example;"));
+                        ResourceDescriptor.of("code", "resource://code", "Source code", "text/x-java"),
+                        (_, _) -> TextResourceContents.of("resource://code", "text/x-java", "package com.example;"));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -53,10 +53,10 @@ class ResourceCapabilitiesE2eTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldReadTextResource() throws Exception {
-        var descriptor = new ResourceDescriptor("doc", "resource://doc", "A document", "text/plain");
+        var descriptor = ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain");
         server = TachyonMcpServer.builder().build();
         server.resources()
-                .add(descriptor, (ctx, req) -> new TextResourceContents("resource://doc", "text/plain", "Hello world"));
+                .add(descriptor, (ctx, req) -> TextResourceContents.of("resource://doc", "text/plain", "Hello world"));
         startServer(server);
 
         var client = createTestClient();
@@ -115,7 +115,7 @@ class ResourceCapabilitiesE2eTest extends AbstractMcpE2eTest {
     void shouldNotifyListChanged(String toolName, String action) throws Exception {
         var builder = TachyonMcpServer.builder().tool(new NotifyListChangedToolHandler(action));
         if ("remove".equals(action)) {
-            builder.resource(new ResourceDescriptor("doc", "resource://doc", "A document", "text/plain"));
+            builder.resource(ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"));
         }
         startServer(builder.build());
 
@@ -131,7 +131,7 @@ class ResourceCapabilitiesE2eTest extends AbstractMcpE2eTest {
     @Test
     void shouldNotifyResourceUpdated() throws Exception {
         startServer(TachyonMcpServer.builder()
-                .resource(new ResourceDescriptor("doc", "resource://doc", "A document", "text/plain"))
+                .resource(ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"))
                 .tool(new NotifyUpdatedToolHandler())
                 .build());
 
@@ -170,12 +170,12 @@ class ResourceCapabilitiesE2eTest extends AbstractMcpE2eTest {
             var resources = context.server().mcpServer().resources();
             if ("add".equals(action)) {
                 resources.add(
-                        new ResourceDescriptor("added-resource", "resource://added", "Added by handler", "text/plain"),
-                        (ctx, params) -> new TextResourceContents("resource://added", "text/plain", "content"));
+                        ResourceDescriptor.of("added-resource", "resource://added", "Added by handler", "text/plain"),
+                        (ctx, params) -> TextResourceContents.of("resource://added", "text/plain", "content"));
             } else {
                 resources.remove("doc");
             }
-            return ToolResult.of(List.of(new TextContent("done", null)));
+            return ToolResult.of(List.of(TextContent.of("done")));
         }
     }
 
@@ -193,7 +193,7 @@ class ResourceCapabilitiesE2eTest extends AbstractMcpE2eTest {
         @Override
         public Object handle(McpContext context, Object arguments) {
             context.server().mcpServer().resources().notifyResourceUpdated("resource://doc");
-            return ToolResult.of(List.of(new TextContent("notified", null)));
+            return ToolResult.of(List.of(TextContent.of("notified")));
         }
     }
 }

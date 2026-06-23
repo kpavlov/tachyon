@@ -124,10 +124,10 @@ class PromptRegistryTest {
 
     @Test
     void shouldMapAllDescriptorFieldsToProtocolModel() throws Exception {
-        var icon = new Icon("https://example.com/prompt-icon.svg", "image/svg+xml", null, null);
-        var arg = new PromptArgument("topic", null, "The topic", true);
-        var descriptor = new PromptDescriptor(
-                "full-prompt", "Full description", "Full Title", List.of(arg), null, List.of(icon));
+        var icon = Icon.of("https://example.com/prompt-icon.svg", "image/svg+xml", null, null);
+        var arg = PromptArgument.of("topic", null, "The topic", true);
+        var descriptor =
+                PromptDescriptor.of("full-prompt", "Full description", "Full Title", List.of(arg), null, List.of(icon));
         registry.add(descriptor, List.of(PromptMessage.user("Hello")));
 
         var result = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListPromptsResult)

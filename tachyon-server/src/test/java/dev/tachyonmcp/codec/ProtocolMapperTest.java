@@ -36,7 +36,7 @@ class ProtocolMapperTest {
 
     @Test
     void serializeToolResultContent() {
-        var text = new TextContent("text", "hello", null, null);
+        var text = TextContent.of("hello");
         var content = List.<ContentBlock>of(text);
         var result = new CallToolResult(content, null, null, null, null);
 

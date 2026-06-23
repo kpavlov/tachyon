@@ -13,4 +13,14 @@ import org.jspecify.annotations.Nullable;
  * <p>Carries the target {@code uri} and optional request-level {@code meta} that may be
  * forwarded to the resource handler for additional context.
  */
-public record ReadResourceRequest(String uri, @Nullable Map<String, Object> meta) {}
+public interface ReadResourceRequest {
+
+    String uri();
+
+    @Nullable
+    Map<String, Object> meta();
+
+    static ReadResourceRequest of(String uri, @Nullable Map<String, Object> meta) {
+        return new DefaultReadResourceRequest(uri, meta);
+    }
+}

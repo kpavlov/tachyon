@@ -99,36 +99,30 @@ abstract class AbstractServerConformanceIT {
                 "test_image_content",
                 "Returns image content",
                 INPUT_SCHEMA_NO_ARGS,
-                (_, _) -> ToolResult.of(List.of(new ImageContent(MINI_PNG_BASE64, "image/png", null)))));
+                (_, _) -> ToolResult.of(List.of(ImageContent.of(MINI_PNG_BASE64, "image/png")))));
 
         server.registerTool(SyncToolHandler.of(
                 "test_audio_content",
                 "Returns audio content",
                 INPUT_SCHEMA_NO_ARGS,
-                (_, _) -> ToolResult.of(List.of(new AudioContent(MINI_WAV_BASE64, "audio/wav", null)))));
+                (_, _) -> ToolResult.of(List.of(AudioContent.of(MINI_WAV_BASE64, "audio/wav")))));
 
         server.registerTool(SyncToolHandler.of(
-                "test_embedded_resource",
-                "Returns embedded resource",
-                INPUT_SCHEMA_NO_ARGS,
-                (_, _) -> ToolResult.of(List.of(new EmbeddedResource(
-                        new TextResourceContents(
-                                "test://embedded-resource", "text/plain", "This is an embedded resource content."),
-                        null)))));
+                "test_embedded_resource", "Returns embedded resource", INPUT_SCHEMA_NO_ARGS, (_, _) -> {
+                    var res = TextResourceContents.of(
+                            "test://embedded-resource", "text/plain", "This is an embedded resource content.");
+                    return ToolResult.of(List.of(EmbeddedResource.of(res)));
+                }));
 
         server.registerTool(SyncToolHandler.of(
-                "test_multiple_content_types",
-                "Returns multiple content types",
-                INPUT_SCHEMA_NO_ARGS,
-                (_, _) -> ToolResult.of(List.of(
-                        new TextContent("Multiple content types test:", null),
-                        new ImageContent(MINI_PNG_BASE64, "image/png", null),
-                        new EmbeddedResource(
-                                new TextResourceContents(
-                                        "test://mixed-content-resource",
-                                        "application/json",
-                                        "{\"test\":\"data\",\"value\":123}"),
-                                null)))));
+                "test_multiple_content_types", "Returns multiple content types", INPUT_SCHEMA_NO_ARGS, (_, _) -> {
+                    var mixed = TextResourceContents.of(
+                            "test://mixed-content-resource", "application/json", "{\"test\":\"data\",\"value\":123}");
+                    return ToolResult.of(
+                            TextContent.of("Multiple content types test:"),
+                            ImageContent.of(MINI_PNG_BASE64, "image/png"),
+                            EmbeddedResource.of(mixed));
+                }));
 
         server.registerTool(SyncToolHandler.of(
                 "test_error_handling",
@@ -196,7 +190,7 @@ abstract class AbstractServerConformanceIT {
                             var responseJson = ctx.server()
                                     .sendRequest("sampling/createMessage", JsonRpcCodec.writeValueAsString(paramsMap))
                                     .get(2, TimeUnit.SECONDS);
-                            var responseObj = (Map<String, Object>) JsonRpcCodec.readValue(responseJson);
+                            var responseObj = (Map<String, JsonNode>) JsonRpcCodec.readValue(responseJson);
                             var content = responseObj.get("content");
                             var text = content instanceof Map<?, ?> cm && "text".equals(cm.get("type"))
                                     ? (String) cm.get("text")
@@ -427,29 +421,29 @@ abstract class AbstractServerConformanceIT {
     private void registerResources() {
         server.resources()
                 .add(
-                        new ResourceDescriptor("hello", "hello://world", "Hello resource", "text/plain"),
-                        (_, _) -> new TextResourceContents("hello://world", "text/plain", "Hello, World!"));
+                        ResourceDescriptor.of("hello", "hello://world", "Hello resource", "text/plain"),
+                        (_, _) -> TextResourceContents.of("hello://world", "text/plain", "Hello, World!"));
 
         server.resources()
                 .add(
-                        new ResourceDescriptor(
+                        ResourceDescriptor.of(
                                 "static-text", "test://static-text", "Static text resource", "text/plain"),
-                        (_, _) -> new TextResourceContents(
+                        (_, _) -> TextResourceContents.of(
                                 "test://static-text", "text/plain", "This is static text content for testing."));
 
         server.resources()
                 .add(
-                        new ResourceDescriptor(
+                        ResourceDescriptor.of(
                                 "static-binary", "test://static-binary", "Static binary resource", "image/png"),
-                        (_, _) -> new BlobResourceContents("test://static-binary", "image/png", MINI_PNG_BASE64));
+                        (_, _) -> BlobResourceContents.of("test://static-binary", "image/png", MINI_PNG_BASE64));
 
         server.resources()
-                .addTemplate(new ResourceTemplateEntry(
+                .addTemplate(ResourceTemplateEntry.of(
                         "test-template",
                         "test://template/{id}/data",
                         "Test template",
                         "text/plain",
-                        id -> new TextResourceContents(
+                        id -> TextResourceContents.of(
                                 "test://template/" + id + "/data", "text/plain", "Resource content for id: " + id)));
     }
 
@@ -470,17 +464,15 @@ abstract class AbstractServerConformanceIT {
         server.prompts()
                 .add(
                         PromptDescriptor.of("test_prompt_with_embedded_resource", "Prompt with embedded resource"),
-                        List.of(PromptMessage.user(new EmbeddedResource(
-                                new TextResourceContents(
-                                        "test://embedded-resource-content",
-                                        "text/plain",
-                                        "Embedded resource content for testing."),
-                                null))));
+                        List.of(PromptMessage.user(EmbeddedResource.of(TextResourceContents.of(
+                                "test://embedded-resource-content",
+                                "text/plain",
+                                "Embedded resource content for testing.")))));
 
         server.prompts()
                 .add(
                         PromptDescriptor.of("test_prompt_with_image", "Prompt with image"),
-                        List.of(PromptMessage.user(new ImageContent(MINI_PNG_BASE64, "image/png", null))));
+                        List.of(PromptMessage.user(ImageContent.of(MINI_PNG_BASE64, "image/png"))));
     }
 
     @Test
