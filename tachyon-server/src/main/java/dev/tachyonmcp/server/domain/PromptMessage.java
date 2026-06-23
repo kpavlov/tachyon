@@ -10,15 +10,23 @@ package dev.tachyonmcp.server.domain;
  * <p>Use the {@link #user(String)} or {@link #user(ContentBlock)} factories to quickly
  * construct a user-role message without specifying the role explicitly.
  */
-public record PromptMessage(Role role, ContentBlock content) {
+public interface PromptMessage {
+
+    Role role();
+
+    ContentBlock content();
+
+    static PromptMessage of(Role role, ContentBlock content) {
+        return new DefaultPromptMessage(role, content);
+    }
 
     /** Creates a user-role message wrapping the given content block. */
-    public static PromptMessage user(ContentBlock content) {
-        return new PromptMessage(Role.USER, content);
+    static PromptMessage user(ContentBlock content) {
+        return new DefaultPromptMessage(Role.USER, content);
     }
 
     /** Creates a user-role message whose content is plain text (no annotations). */
-    public static PromptMessage user(String text) {
-        return new PromptMessage(Role.USER, new TextContent(text, null));
+    static PromptMessage user(String text) {
+        return new DefaultPromptMessage(Role.USER, TextContent.of(text));
     }
 }

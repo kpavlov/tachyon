@@ -13,35 +13,50 @@ import java.util.List;
 import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 
-public record ResourceTemplateEntry(
-        String name,
-        String uriTemplate,
-        @Nullable String description,
-        @Nullable String mimeType,
-        @Nullable String title,
-        @Nullable Annotations annotations,
-        @Nullable List<Icon> icons,
-        Function<String, TextResourceContents> resolver)
-        implements McpResourceType {
+public interface ResourceTemplateEntry extends McpResourceType {
 
-    public ResourceTemplateEntry(
+    String name();
+
+    String uriTemplate();
+
+    @Nullable
+    String description();
+
+    @Nullable
+    String mimeType();
+
+    @Nullable
+    String title();
+
+    @Nullable
+    Annotations annotations();
+
+    @Nullable
+    List<Icon> icons();
+
+    Function<String, TextResourceContents> resolver();
+
+    ResourceTemplate toModel();
+
+    static ResourceTemplateEntry of(
             String name,
             String uriTemplate,
             @Nullable String description,
             @Nullable String mimeType,
             Function<String, TextResourceContents> resolver) {
-        this(name, uriTemplate, description, mimeType, null, null, null, resolver);
+        return new DefaultResourceTemplateEntry(name, uriTemplate, description, mimeType, null, null, null, resolver);
     }
 
-    public ResourceTemplate toModel() {
-        return new ResourceTemplate(
-                uriTemplate,
-                description,
-                mimeType,
-                McpResourceMapper.toProtocolAnnotations(annotations),
-                null,
-                name,
-                title,
-                McpResourceMapper.toProtocolIcons(icons));
+    static ResourceTemplateEntry of(
+            String name,
+            String uriTemplate,
+            @Nullable String description,
+            @Nullable String mimeType,
+            @Nullable String title,
+            @Nullable Annotations annotations,
+            @Nullable List<Icon> icons,
+            Function<String, TextResourceContents> resolver) {
+        return new DefaultResourceTemplateEntry(
+                name, uriTemplate, description, mimeType, title, annotations, icons, resolver);
     }
 }

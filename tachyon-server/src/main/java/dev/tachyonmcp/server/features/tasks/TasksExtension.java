@@ -51,11 +51,11 @@ public final class TasksExtension implements McpExtension {
         server.registerTool(new CreateTaskHandler(descriptor, server));
 
         server.resources()
-                .addTemplate(new ResourceTemplateEntry(
+                .addTemplate(ResourceTemplateEntry.of(
                         "task-status", "task://{id}", "Current status of a task", "text/plain", id -> {
                             var entry = server.tasks().getById(id);
                             var text = entry != null ? entry.status().name() : "not_found";
-                            return new TextResourceContents("task://" + id, "text/plain", text);
+                            return TextResourceContents.of("task://" + id, "text/plain", text, null);
                         }));
     }
 

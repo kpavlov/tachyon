@@ -11,21 +11,32 @@ import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
-public record ToolResult(
-        List<ContentBlock> content,
-        @Nullable Boolean isError,
-        @Nullable Map<String, JsonNode> structuredContent,
-        @Nullable Map<String, JsonNode> meta) {
+public interface ToolResult {
 
-    public static ToolResult text(String text) {
-        return new ToolResult(List.of(new TextContent(text, null)), null, null, null);
+    List<ContentBlock> content();
+
+    @Nullable
+    Boolean isError();
+
+    @Nullable
+    Map<String, JsonNode> structuredContent();
+
+    @Nullable
+    Map<String, JsonNode> meta();
+
+    static ToolResult text(String text) {
+        return new DefaultToolResult(List.of(TextContent.of(text)), null, null, null);
     }
 
-    public static ToolResult error(String message) {
-        return new ToolResult(List.of(new TextContent(message, null)), true, null, null);
+    static ToolResult error(String message) {
+        return new DefaultToolResult(List.of(TextContent.of(message)), true, null, null);
     }
 
-    public static ToolResult of(List<ContentBlock> content) {
-        return new ToolResult(content, null, null, null);
+    static ToolResult of(List<ContentBlock> content) {
+        return new DefaultToolResult(content, null, null, null);
+    }
+
+    static ToolResult of(ContentBlock... content) {
+        return new DefaultToolResult(List.of(content), null, null, null);
     }
 }

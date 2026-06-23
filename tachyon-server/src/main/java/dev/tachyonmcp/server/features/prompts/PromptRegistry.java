@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.features.prompts;
 
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.McpPromptMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetPromptRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetPromptResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListPromptsResult;

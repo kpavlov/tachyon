@@ -9,18 +9,33 @@ import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
-public record ToolRequest(
-        String name,
-        @Nullable Map<String, JsonNode> arguments,
-        @Nullable Map<String, JsonNode> meta,
-        @Nullable Object progressToken,
-        @Nullable Cancellation cancellation) {
+public interface ToolRequest {
 
-    public ToolRequest(String name, @Nullable Map<String, JsonNode> arguments, @Nullable Map<String, JsonNode> meta) {
-        this(name, arguments, meta, null, null);
+    String name();
+
+    @Nullable
+    Map<String, JsonNode> arguments();
+
+    @Nullable
+    Map<String, JsonNode> meta();
+
+    @Nullable
+    Object progressToken();
+
+    @Nullable
+    Cancellation cancellation();
+
+    static ToolRequest of(
+            String name,
+            @Nullable Map<String, JsonNode> arguments,
+            @Nullable Map<String, JsonNode> meta,
+            @Nullable Object progressToken,
+            @Nullable Cancellation cancellation) {
+        return new DefaultToolRequest(name, arguments, meta, progressToken, cancellation);
     }
 
-    public ToolRequest {
-        if (name == null) throw new NullPointerException("name");
+    static ToolRequest of(
+            String name, @Nullable Map<String, JsonNode> arguments, @Nullable Map<String, JsonNode> meta) {
+        return new DefaultToolRequest(name, arguments, meta, null, null);
     }
 }

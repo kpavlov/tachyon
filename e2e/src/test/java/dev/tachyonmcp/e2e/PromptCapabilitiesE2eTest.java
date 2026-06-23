@@ -4,11 +4,11 @@
 
 package dev.tachyonmcp.e2e;
 
+import static dev.tachyonmcp.server.domain.PromptMessage.of;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.TachyonMcpServer;
 import dev.tachyonmcp.server.domain.PromptArgument;
-import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.Role;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
@@ -36,8 +36,8 @@ class PromptCapabilitiesE2eTest extends AbstractMcpE2eTest {
         if (hasTitle) {
             server.prompts()
                     .add(
-                            new PromptDescriptor(promptName, "A " + promptName + " prompt", title, null, null),
-                            List.of(new PromptMessage(Role.USER, new TextContent("Hello", null))));
+                            PromptDescriptor.of(promptName, "A " + promptName + " prompt", title, null, null),
+                            List.of(of(Role.USER, TextContent.of("Hello"))));
         } else {
             server.prompts().add(PromptDescriptor.of(promptName, "A " + promptName + " prompt"), List.of());
         }
@@ -74,8 +74,8 @@ class PromptCapabilitiesE2eTest extends AbstractMcpE2eTest {
             var args = List.of(parseArgument(arg0), parseArgument(arg1));
             server.prompts()
                     .add(
-                            new PromptDescriptor(promptName, "A " + promptName + " prompt", null, args, null),
-                            List.of(new PromptMessage(Role.USER, new TextContent("generate", null))));
+                            PromptDescriptor.of(promptName, "A " + promptName + " prompt", null, args, null),
+                            List.of(of(Role.USER, TextContent.of("generate"))));
         } else {
             server.prompts().add(PromptDescriptor.of(promptName, "A " + promptName + " prompt"), List.of());
         }
@@ -106,12 +106,12 @@ class PromptCapabilitiesE2eTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldIncludeTitleAndArgumentsOnSamePrompt() throws Exception {
-        var args = List.of(new PromptArgument("name", null, "Your name", null));
+        var args = List.of(PromptArgument.of("name", null, "Your name", null));
         server.prompts()
                 .add(
-                        new PromptDescriptor(
+                        PromptDescriptor.of(
                                 "personalized", "Personalized greeting", "Personalized Greeting", args, null),
-                        List.of(new PromptMessage(Role.USER, new TextContent("Hello", null))));
+                        List.of(of(Role.USER, TextContent.of("Hello"))));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -146,6 +146,6 @@ class PromptCapabilitiesE2eTest extends AbstractMcpE2eTest {
         var name = parts[0];
         var description = parts.length > 1 && !parts[1].isEmpty() ? parts[1] : null;
         var required = parts.length > 2 && !parts[2].isEmpty() ? Boolean.parseBoolean(parts[2]) : null;
-        return new PromptArgument(name, null, description, required);
+        return PromptArgument.of(name, null, description, required);
     }
 }

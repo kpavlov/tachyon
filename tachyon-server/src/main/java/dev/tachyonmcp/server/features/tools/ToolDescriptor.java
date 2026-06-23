@@ -11,22 +11,39 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
-public record ToolDescriptor(
-        String name,
-        @Nullable String title,
-        @Nullable String description,
-        @Nullable JsonNode inputSchema,
-        @Nullable JsonNode outputSchema,
-        @Nullable TaskSupport taskSupport,
-        @Nullable ToolAnnotations annotations,
-        @Nullable List<Icon> icons,
-        @Nullable String extensionId) {
+public interface ToolDescriptor {
 
-    public static Builder builder(String name) {
+    String name();
+
+    @Nullable
+    String title();
+
+    @Nullable
+    String description();
+
+    @Nullable
+    JsonNode inputSchema();
+
+    @Nullable
+    JsonNode outputSchema();
+
+    @Nullable
+    TaskSupport taskSupport();
+
+    @Nullable
+    ToolAnnotations annotations();
+
+    @Nullable
+    List<Icon> icons();
+
+    @Nullable
+    String extensionId();
+
+    static Builder builder(String name) {
         return new Builder(name);
     }
 
-    public static final class Builder {
+    final class Builder {
         private final String name;
         private String title;
         private String description;
@@ -82,7 +99,7 @@ public record ToolDescriptor(
         }
 
         public ToolDescriptor build() {
-            return new ToolDescriptor(
+            return new DefaultToolDescriptor(
                     name, title, description, inputSchema, outputSchema, taskSupport, annotations, icons, extensionId);
         }
     }

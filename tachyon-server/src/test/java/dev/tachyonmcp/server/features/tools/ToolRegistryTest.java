@@ -61,7 +61,7 @@ class ToolRegistryTest {
         var outputSchema = parseJson("""
             {"type":"object","properties":{"result":{"type":"string"}}}
             """);
-        var annotations = new ToolAnnotations(true, false, true, false);
+        var annotations = ToolAnnotations.of(null, true, false, true, false);
         registry.register(
                 new AbstractSyncToolHandler(ToolDescriptor.builder("full-tool")
                         .title("Full Tool")
@@ -252,7 +252,7 @@ class ToolRegistryTest {
     void shouldMapIconsFromDescriptorToProtocolModel() throws Exception {
         var handlers = new HashMap<String, McpMethodHandler>();
         registry.registerHandlers(handlers);
-        var icon = new Icon("https://example.com/tool-icon.png", "image/png", null, null);
+        var icon = Icon.of("https://example.com/tool-icon.png", "image/png", null, null);
         registry.register(
                 new AbstractSyncToolHandler(ToolDescriptor.builder("icon-tool")
                         .description("Tool with icon")

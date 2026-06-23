@@ -10,23 +10,38 @@ import dev.tachyonmcp.server.domain.Icon;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-public record ResourceDescriptor(
-        String name,
-        String uri,
-        @Nullable String description,
-        @Nullable String mimeType,
-        @Nullable String title,
-        @Nullable Annotations annotations,
-        @Nullable Double size,
-        @Nullable List<Icon> icons,
-        @Nullable String extensionId)
-        implements McpResourceType {
+public interface ResourceDescriptor extends McpResourceType {
 
-    public ResourceDescriptor(String name, String uri, @Nullable String description, @Nullable String mimeType) {
-        this(name, uri, description, mimeType, null, null, null, null, null);
+    String name();
+
+    String uri();
+
+    @Nullable
+    String description();
+
+    @Nullable
+    String mimeType();
+
+    @Nullable
+    String title();
+
+    @Nullable
+    Annotations annotations();
+
+    @Nullable
+    Double size();
+
+    @Nullable
+    List<Icon> icons();
+
+    @Nullable
+    String extensionId();
+
+    static ResourceDescriptor of(String name, String uri, @Nullable String description, @Nullable String mimeType) {
+        return new DefaultResourceDescriptor(name, uri, description, mimeType, null, null, null, null, null);
     }
 
-    public ResourceDescriptor(
+    static ResourceDescriptor of(
             String name,
             String uri,
             @Nullable String description,
@@ -35,6 +50,6 @@ public record ResourceDescriptor(
             @Nullable Annotations annotations,
             @Nullable Double size,
             @Nullable List<Icon> icons) {
-        this(name, uri, description, mimeType, title, annotations, size, icons, null);
+        return new DefaultResourceDescriptor(name, uri, description, mimeType, title, annotations, size, icons, null);
     }
 }

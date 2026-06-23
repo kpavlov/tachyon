@@ -11,36 +11,48 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
-public record PromptDescriptor(
-        String name,
-        @Nullable String description,
-        @Nullable String title,
-        @Nullable List<PromptArgument> arguments,
-        @Nullable JsonNode inputSchema,
-        @Nullable List<Icon> icons,
-        @Nullable String extensionId)
-        implements McpResourceType {
+public interface PromptDescriptor extends McpResourceType {
 
-    public PromptDescriptor(
+    String name();
+
+    @Nullable
+    String description();
+
+    @Nullable
+    String title();
+
+    @Nullable
+    List<PromptArgument> arguments();
+
+    @Nullable
+    JsonNode inputSchema();
+
+    @Nullable
+    List<Icon> icons();
+
+    @Nullable
+    String extensionId();
+
+    static PromptDescriptor of(
             String name,
             @Nullable String description,
             @Nullable String title,
             @Nullable List<PromptArgument> arguments,
             @Nullable JsonNode inputSchema) {
-        this(name, description, title, arguments, inputSchema, null, null);
+        return new DefaultPromptDescriptor(name, description, title, arguments, inputSchema, null, null);
     }
 
-    public PromptDescriptor(
+    static PromptDescriptor of(
             String name,
             @Nullable String description,
             @Nullable String title,
             @Nullable List<PromptArgument> arguments,
             @Nullable JsonNode inputSchema,
             @Nullable List<Icon> icons) {
-        this(name, description, title, arguments, inputSchema, icons, null);
+        return new DefaultPromptDescriptor(name, description, title, arguments, inputSchema, icons, null);
     }
 
-    public static PromptDescriptor of(String name, String description) {
-        return new PromptDescriptor(name, description, null, null, null, null, null);
+    static PromptDescriptor of(String name, String description) {
+        return new DefaultPromptDescriptor(name, description, null, null, null, null, null);
     }
 }

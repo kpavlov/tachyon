@@ -15,7 +15,18 @@ import org.jspecify.annotations.Nullable;
  * All fields are {@code null} when absent — omit the annotation block entirely rather than
  * sending empty values.
  */
-public record Annotations(
-        @Nullable List<Role> audience,
-        @Nullable Double priority,
-        @Nullable String lastModified) {}
+public interface Annotations {
+
+    @Nullable
+    List<Role> audience();
+
+    @Nullable
+    Double priority();
+
+    @Nullable
+    String lastModified();
+
+    static Annotations of(@Nullable List<Role> audience, @Nullable Double priority, @Nullable String lastModified) {
+        return new DefaultAnnotations(audience, priority, lastModified);
+    }
+}

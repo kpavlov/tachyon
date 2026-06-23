@@ -12,12 +12,7 @@ import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.tools.SyncToolHandler;
-import dev.tachyonmcp.server.session.Backpressure;
-import dev.tachyonmcp.server.session.McpContext;
-import dev.tachyonmcp.server.session.McpSession;
-import dev.tachyonmcp.server.session.SessionEvent;
-import dev.tachyonmcp.server.session.SseConnection;
-import dev.tachyonmcp.server.session.SseEvent;
+import dev.tachyonmcp.server.session.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -262,8 +257,8 @@ class ServerTest {
 
             server.resources()
                     .add(
-                            new ResourceDescriptor("dyn", "test://dyn", "Dyn resource", "text/plain"),
-                            (ctx, req) -> new TextResourceContents("test://dyn", "text/plain", ""));
+                            ResourceDescriptor.of("dyn", "test://dyn", "Dyn resource", "text/plain"),
+                            (_, _) -> TextResourceContents.of("test://dyn", "text/plain", ""));
 
             var listChanged = conn.sent.stream()
                     .filter(e -> e.data().contains("notifications/resources/list_changed"))

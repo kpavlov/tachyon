@@ -256,7 +256,6 @@ server.resources().add(
     (ctx, req) -> new TextResourceContents("content", req.uri(), "text/plain", null));
 ```
 
----
 
 ## License
 

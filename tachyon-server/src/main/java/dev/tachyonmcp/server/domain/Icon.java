@@ -14,8 +14,20 @@ import org.jspecify.annotations.Nullable;
  * (e.g. {@code "16x16"}, {@code "32x32"}), and {@code theme} distinguishes light
  * vs. dark variants.
  */
-public record Icon(
-        String src,
-        @Nullable String mimeType,
-        @Nullable List<String> sizes,
-        @Nullable String theme) {}
+public interface Icon {
+
+    String src();
+
+    @Nullable
+    String mimeType();
+
+    @Nullable
+    List<String> sizes();
+
+    @Nullable
+    String theme();
+
+    static Icon of(String src, @Nullable String mimeType, @Nullable List<String> sizes, @Nullable String theme) {
+        return new DefaultIcon(src, mimeType, sizes, theme);
+    }
+}

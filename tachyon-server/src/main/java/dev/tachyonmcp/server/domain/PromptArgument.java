@@ -13,8 +13,21 @@ import org.jspecify.annotations.Nullable;
  * whether the argument must be provided; when absent or {@code null}, the argument is
  * considered optional.
  */
-public record PromptArgument(
-        String name,
-        @Nullable String title,
-        @Nullable String description,
-        @Nullable Boolean required) {}
+public interface PromptArgument {
+
+    String name();
+
+    @Nullable
+    String title();
+
+    @Nullable
+    String description();
+
+    @Nullable
+    Boolean required();
+
+    static PromptArgument of(
+            String name, @Nullable String title, @Nullable String description, @Nullable Boolean required) {
+        return new DefaultPromptArgument(name, title, description, required);
+    }
+}
