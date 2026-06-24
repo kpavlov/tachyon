@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-class LoggingE2eTest extends AbstractMcpE2eTest {
+class LoggingTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldReceiveLoggingNotificationAfterToolCall() throws Exception {

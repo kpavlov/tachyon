@@ -4,14 +4,15 @@
 
 package dev.tachyonmcp.server;
 
+import java.util.List;
 import tools.jackson.databind.JsonNode;
 
 @FunctionalInterface
 public interface JsonSchemaValidator {
 
-    void validate(JsonNode schema, JsonNode arguments) throws RuntimeException;
+    List<SchemaValidationError> validate(JsonNode schema, JsonNode arguments);
 
     static JsonSchemaValidator noop() {
-        return (schema, arguments) -> {};
+        return (schema, arguments) -> List.of();
     }
 }

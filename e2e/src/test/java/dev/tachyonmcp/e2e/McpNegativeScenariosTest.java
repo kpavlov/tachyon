@@ -18,7 +18,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 @TestInstance(Lifecycle.PER_CLASS)
-class McpNegativeScenariosE2eTest extends AbstractMcpE2eTest {
+class McpNegativeScenariosTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldRejectUnknownTool() {

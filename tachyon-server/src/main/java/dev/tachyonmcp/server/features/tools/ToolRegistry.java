@@ -13,21 +13,28 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListToolsResult;
 import dev.tachyonmcp.server.JsonSchemaValidator;
 import dev.tachyonmcp.server.McpMethodHandler;
+import dev.tachyonmcp.server.SchemaValidationError;
 import dev.tachyonmcp.server.features.PaginatedResult;
 import dev.tachyonmcp.server.session.McpContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
 public class ToolRegistry {
+
+    private static final Logger logger = LoggerFactory.getLogger(ToolRegistry.class);
 
     private final ConcurrentHashMap<String, ToolHandler> handlers = new ConcurrentHashMap<>();
     private final JsonSchemaValidator validator;
@@ -250,23 +257,23 @@ public class ToolRegistry {
             if (args != null) {
                 argumentsNode.setAll(args);
             }
-            try {
-                validator.validate(schema, argumentsNode);
-                return null;
-            } catch (RuntimeException e) {
-                return e.getMessage();
-            }
+            var errors = validator.validate(schema, argumentsNode);
+            if (errors.isEmpty()) return null;
+            return joinMessages(errors);
         }
 
         private void validateOutput(@Nullable JsonNode schema, CallToolResult result) {
             if (schema == null || result.structuredContent() == null) return;
             var contentNode = JsonNodeFactory.instance.objectNode();
             contentNode.setAll(result.structuredContent());
-            try {
-                validator.validate(schema, contentNode);
-            } catch (RuntimeException ignored) {
-                // advisory only
+            var errors = validator.validate(schema, contentNode);
+            if (!errors.isEmpty()) {
+                logger.debug("Tool output failed schema validation (advisory only): {}", joinMessages(errors));
             }
+        }
+
+        private static String joinMessages(List<SchemaValidationError> errors) {
+            return errors.stream().map(SchemaValidationError::message).collect(Collectors.joining("; "));
         }
 
         private void sendLoggingIfEnabled(McpContext context, String toolName, String status) {

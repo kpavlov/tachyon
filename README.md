@@ -44,99 +44,101 @@ void main() {
 
 ## Features
 
-### ✅ Core Protocol (46/46 conformance tests passing)
+### Core Protocol (46/46 conformance tests passing)
 
-- [x] JSON-RPC 2.0 — request/response/error/notification
-- [x] Streamable HTTP — POST, GET (SSE), DELETE, OPTIONS
-- [x] Lifecycle — initialize → initialized → ACTIVE
-- [x] Pagination — cursor-based across all list methods
-- [x] Session state machine — INITIALIZING → ACTIVE → CLOSED
-- [x] CORS & origin validation
-- [x] DNS rebinding protection
-- [x] Accept header strict validation (406)
-- [x] Pending request timeout (60s)
-- [x] SSE resumability via Last-Event-ID
+- JSON-RPC 2.0 — request/response/error/notification
+- Streamable HTTP — POST, GET (SSE), DELETE, OPTIONS
+- Lifecycle — initialize → initialized → ACTIVE
+- Pagination — cursor-based across all list methods
+- Session state machine — INITIALIZING → ACTIVE → CLOSED
+- CORS & origin validation
+- DNS rebinding protection
+- Accept header strict validation (406)
+- Pending request timeout (60s)
+- SSE resumability via Last-Event-ID
 
-### ✅ Tools
+### Tools
 
-- [x] `tools/list` — paginated with `nextCursor`
-- [x] `tools/call` — returns `CallToolResult` with `isError`
-- [x] `outputSchema` in listing
-- [x] `annotations` field
-- [x] `execution.taskSupport` (forbidden/optional/required)
-- [x] Synchronous & asynchronous handler interfaces
-- [x] Name validation (1–128 chars)
-- [x] `notifications/tools/list_changed` on add/remove
-- [x] Inline notifications + logging during tool call
+- `tools/list` — paginated with `nextCursor`
+- `tools/call` — returns `CallToolResult` with `isError`
+- `outputSchema` in listing
+- `annotations` field
+- `execution.taskSupport` (forbidden/optional/required)
+- Synchronous & asynchronous handler interfaces
+- Name validation (1–128 chars)
+- `notifications/tools/list_changed` on add/remove
+- Inline notifications + logging during tool call
+- Input schema validation
 
-### ✅ Resources
+### Resources
 
-- [x] `resources/list` — paginated
-- [x] `resources/read` — text & blob content
-- [x] `resources/templates/list` — URI templates
-- [x] `resources/subscribe` / `unsubscribe`
-- [x] `notifications/resources/list_changed`
-- [x] `notifications/resources/updated` to subscribers
-- [x] Dynamic content via `ResourceHandler` interface
+- `resources/list` — paginated
+- `resources/read` — text & blob content
+- `resources/templates/list` — URI templates
+- `resources/subscribe` / `unsubscribe`
+- `notifications/resources/list_changed`
+- `notifications/resources/updated` to subscribers
+- Dynamic content via `ResourceHandler` interface
 
-### ✅ Prompts
+### Prompts
 
-- [x] `prompts/list` — paginated with `nextCursor`
-- [x] `prompts/get` — invokes prompt resolver
-- [x] `notifications/prompts/list_changed`
+- `prompts/list` — paginated with `nextCursor`
+- `prompts/get` — invokes prompt resolver
+- `notifications/prompts/list_changed`
 
-### ✅ Tasks
+### Tasks
 
-- [x] `tasks/list`, `tasks/get`, `tasks/cancel`, `tasks/result`
-- [x] State machine enforcement — SUBMITTED → WORKING → COMPLETED/FAILED/CANCELLED
-- [x] `notifications/tasks/status` broadcast on every transition
-- [x] Task Janitor for stale tasks
-- [x] `execution.taskSupport` per tool (forbidden/optional/required)
-- [x] `TasksExtension` — negotiable extension exposing `create_task` tool + `task://{id}` resource template
-- [x] Extension-gated tool visibility (hidden from un-negotiated clients)
+- `tasks/list`, `tasks/get`, `tasks/cancel`, `tasks/result`
+- State machine enforcement — SUBMITTED → WORKING → COMPLETED/FAILED/CANCELLED
+- `notifications/tasks/status` broadcast on every transition
+- Task Janitor for stale tasks
+- `execution.taskSupport` per tool (forbidden/optional/required)
+- `TasksExtension` ([SEP-1686](https://modelcontextprotocol.io/seps/1686-tasks)) — negotiable extension exposing `create_task` tool + `task://{id}` resource template
+- Extension-gated tool visibility (hidden from un-negotiated clients)
 
-### ✅ Logging & Observability
+### Logging & Observability
 
-- [x] `logging/setLevel` per session
-- [x] `notifications/message` emitted above threshold
-- [x] Progress notifications
+- `logging/setLevel` per session
+- `notifications/message` emitted above threshold
+- Progress notifications
 
-### ✅ Client Communication
+### Client Communication
 
-- [x] `sampling/createMessage` — server → client request
-- [x] Elicitation — form mode
-- [x] `notifications/cancelled` — bidirectional
-- [x] `notifications/tasks/status` from client
+- `sampling/createMessage` — server → client request
+- Elicitation — ✅ form mode; ❌ url mode
+- `notifications/cancelled` — bidirectional
+- `notifications/tasks/status` from client
 
-### ✅ Transport & I/O
+### Transport & I/O
 
-- [x] Netty 4.2
-- [x] io_uring / epoll / kqueue / nio auto-detection
-- [x] Platform-thread event loops + virtual-thread handlers
-- [x] TCP_NODELAY, SO_KEEPALIVE
-- [x] Channel writability backpressure (`setAutoRead`)
-- [x] Configurable idle timeouts (reader/writer)
+- Netty 4.2
+- io_uring / epoll / kqueue / nio auto-detection
+- Platform-thread event loops + virtual-thread handlers
+- TCP_NODELAY, SO_KEEPALIVE
+- Channel writability backpressure (`setAutoRead`)
+- Configurable idle timeouts (reader/writer)
 
-### ✅ Session Management
+### Session Management
 
-- [x] **Stateless mode** — skip sessions for serverless
-- [x] IN_MEMORY session store (ConcurrentHashMap)
-- [x] Session Janitor — 5s sweep, 30s TTL
-- [x] SSE disconnect ≠ session removal (supports reconnect)
-- [x] Event log replay on reconnection
+- **Stateless mode** — skip sessions for serverless
+- IN_MEMORY session store (ConcurrentHashMap)
+- Session Janitor — 5s sweep, 30s TTL
+- SSE disconnect ≠ session removal (supports reconnect)
+- Event log replay on reconnection
 
 ---
 
 ## Installation
 
-**Requirements**: JDK 25+
+**Requirements**: JDK 21+
 
 ### Maven
+
 ```xml
 <dependency>
     <groupId>dev.tachyonmcp</groupId>
     <artifactId>tachyon-server</artifactId>
-    <version>1.0.0-alpha.1</version>
+    <version>1.0.0-alpha.2</version>
 </dependency>
 ```
 
@@ -150,6 +152,7 @@ mvn install -pl tachyon-mcp-server -DskipTests
 ## Quick Start
 
 ### Minimal server with tool
+
 ```java
 import dev.tachyonmcp.server.TachyonMcpServer;
 import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
@@ -181,7 +184,8 @@ void main() {
 }
 ```
 
-### With TasksExtension (negotiable)
+### With TasksExtension (negotiable) - [SEP-1686](https://modelcontextprotocol.io/seps/1686-tasks)
+
 ```java
 var handle = TachyonMcpServer.builder()
     .extension(new TasksExtension())   // exposes create_task tool + task://{id} resource
@@ -210,10 +214,10 @@ handler implementations are unaffected. Domain types track the 2026-07-28 spec s
 
 ## Gaps & Limitations
 
-- [ ] **Rate limiting** (Medium) — Not yet implemented
-- [ ] **URL elicitation mode / -32042 error** (Medium) — Form mode works, URL mode missing
-- [ ] **2026-07-28 draft protocol version** (Low) — Not negotiable; version-gated features ready
-- [ ] **Stale session on re-initialize** (Low) — 30s TTL lingering, affects reconnect only
+- [ ] **Rate limiting** — Not yet implemented
+- [ ] **URL elicitation mode / -32042 error**  — Form mode works, URL mode missing
+- [ ] **2026-07-28 draft protocol version** — Not negotiable; version-gated features ready
+- [ ] **Stale session on re-initialize** — 30s TTL lingering, affects reconnect only
 
 ---
 

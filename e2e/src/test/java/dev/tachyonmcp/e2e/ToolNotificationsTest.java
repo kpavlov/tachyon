@@ -18,7 +18,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 
-class ToolNotificationsE2eTest extends AbstractMcpE2eTest {
+class ToolNotificationsTest extends AbstractMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {

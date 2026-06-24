@@ -19,7 +19,11 @@ import java.util.concurrent.CompletionStage;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 
-class TasksExtensionE2eTest extends AbstractMcpE2eTest {
+/**
+ * <a href="https://modelcontextprotocol.io/seps/1686-tasks">SEP-1686 Tasks</a> —
+ * negotiable extension exposed only when client opts in via {@code initialize} capabilities.
+ */
+class TasksExtensionTest extends AbstractMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {

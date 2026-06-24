@@ -24,7 +24,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.JsonNodeFactory;
 
-class ToolCapabilitiesE2eTest extends AbstractMcpE2eTest {
+class ToolCapabilitiesTest extends AbstractMcpE2eTest {
 
     // region: Output Schema Tests
 

@@ -86,6 +86,10 @@ public final class ServerBuilder {
         return this;
     }
 
+    /**
+     * @deprecated Use {@link #info(Consumer)} builder
+     */
+    @Deprecated(forRemoval = true)
     public ServerBuilder websiteUrl(String websiteUrl) {
         identityBuilder.websiteUrl(websiteUrl);
         return this;
@@ -312,7 +316,7 @@ public final class ServerBuilder {
         final List<McpExtension> extensions = new ArrayList<>();
         final List<TaskEntry> tasks = new ArrayList<>();
 
-        JsonSchemaValidator jsonSchemaValidator = JsonSchemaValidator.noop();
+        JsonSchemaValidator jsonSchemaValidator = new NetworkntJsonSchemaValidator();
 
         record PromptRegistration(PromptDescriptor descriptor, PromptHandler handler) {}
 

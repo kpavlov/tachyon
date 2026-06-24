@@ -157,7 +157,7 @@ public class McpServer implements Closeable {
         this.serverInfo = buildServerInfo(config.identity());
         this.extensions = extensions != null ? extensions : List.of();
         this.sessionManager = new SessionManager(sessionStore);
-        this.validator = validator != null ? validator : JsonSchemaValidator.noop();
+        this.validator = validator != null ? validator : new NetworkntJsonSchemaValidator();
         this.toolRegistry = new ToolRegistry(this.validator);
         this.resourceRegistry = new ResourceRegistry(this);
         this.taskRegistry = new TaskRegistry(this);

@@ -20,7 +20,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-class PromptCapabilitiesE2eTest extends AbstractMcpE2eTest {
+class PromptCapabilitiesTest extends AbstractMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
