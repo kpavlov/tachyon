@@ -30,7 +30,7 @@ public interface InteractionContext<S extends Session> {
     @Nullable
     S session();
 
-    void setSession(S session);
+    void setSession(@Nullable S session);
 
     void enableExtension(String extensionId);
 

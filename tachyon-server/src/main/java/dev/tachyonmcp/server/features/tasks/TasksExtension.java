@@ -5,6 +5,7 @@
 package dev.tachyonmcp.server.features.tasks;
 
 import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.OutboundSseStreamMessageRouter;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.extensions.McpExtension;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
@@ -14,6 +15,7 @@ import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.McpContext;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import tools.jackson.databind.JsonNode;
@@ -72,16 +74,24 @@ public final class TasksExtension implements McpExtension {
 
         @Override
         public CompletionStage<Object> handleAsync(McpContext context, Object arguments) {
+            var sessionId = OutboundSseStreamMessageRouter.currentSessionId();
+            var outboundStream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
             return CompletableFuture.supplyAsync(
                     () -> {
-                        String name = "unnamed";
-                        String description = null;
-                        if (arguments instanceof Map<?, ?> map) {
-                            if (map.get("name") instanceof String s) name = s;
-                            if (map.get("description") instanceof String s) description = s;
+                        try {
+                            return OutboundSseStreamMessageRouter.withDispatchContext(sessionId, outboundStream, () -> {
+                                String name = "unnamed";
+                                String description = null;
+                                if (arguments instanceof Map<?, ?> map) {
+                                    if (map.get("name") instanceof String s) name = s;
+                                    if (map.get("description") instanceof String s) description = s;
+                                }
+                                return ToolResult.text(
+                                        tasks.createTask(name, description).id());
+                            });
+                        } catch (Exception e) {
+                            throw new CompletionException(e);
                         }
-                        return ToolResult.text(
-                                tasks.createTask(name, description).id());
                     },
                     executor);
         }

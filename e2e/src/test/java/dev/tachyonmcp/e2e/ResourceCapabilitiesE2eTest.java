@@ -28,10 +28,11 @@ class ResourceCapabilitiesE2eTest extends AbstractMcpE2eTest {
         server.resources()
                 .add(
                         ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
-                        (_, _) -> TextResourceContents.of("resource://doc", "text/plain", "Hello"))
+                        (ctx, req) -> TextResourceContents.of("resource://doc", "text/plain", "Hello"))
                 .add(
                         ResourceDescriptor.of("code", "resource://code", "Source code", "text/x-java"),
-                        (_, _) -> TextResourceContents.of("resource://code", "text/x-java", "package com.example;"));
+                        (ctx, req) ->
+                                TextResourceContents.of("resource://code", "text/x-java", "package com.example;"));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();

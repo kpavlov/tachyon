@@ -347,7 +347,7 @@ public class McpServer implements Closeable {
     public void registerPendingRequest(Object requestId, CompletableFuture<String> future) {
         pendingRequests.put(requestId, future);
         future.orTimeout(PENDING_REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
-        future.whenComplete((_, ex) -> {
+        future.whenComplete((res, ex) -> {
             if (ex instanceof TimeoutException) {
                 var removed = pendingRequests.remove(requestId);
                 if (removed != null) {

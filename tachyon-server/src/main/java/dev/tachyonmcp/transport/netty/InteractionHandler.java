@@ -8,11 +8,11 @@ import dev.tachyonmcp.runtime.DefaultInteractionContext;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.InteractionContext.Lifecycle;
 import dev.tachyonmcp.runtime.InteractionEvent;
+import dev.tachyonmcp.runtime.Session;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 public class InteractionHandler extends ChannelDuplexHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(InteractionHandler.class);
-    public static final AttributeKey<@Nullable InteractionContext> INTERACTION_CONTEXT_KEY =
+    public static final AttributeKey<@Nullable InteractionContext<Session>> INTERACTION_CONTEXT_KEY =
             AttributeKey.valueOf("interactionContext");
 
     private final String protocol;
@@ -37,9 +37,8 @@ public class InteractionHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    @SuppressWarnings("NullableProblems")
     public void channelActive(ChannelHandlerContext ctx) {
-        Attribute<InteractionContext> attr = ctx.channel().attr(INTERACTION_CONTEXT_KEY);
+        final var attr = ctx.channel().attr(INTERACTION_CONTEXT_KEY);
         if (attr.compareAndSet(null, new DefaultInteractionContext<>(protocol))) {
             logger.debug("Interaction started: protocol={}", protocol);
         }
@@ -58,15 +57,14 @@ public class InteractionHandler extends ChannelDuplexHandler {
                 ic.setLifecycle(Lifecycle.OPERATION);
                 logger.debug("Interaction: INITIALIZATION → OPERATION");
             }
-            case InteractionEvent.ShutdownStarted ss -> {
+            case InteractionEvent.ShutdownStarted ignored -> {
                 var ic = ctx.channel().attr(INTERACTION_CONTEXT_KEY).get();
                 if (ic == null) break;
                 ic.setLifecycle(Lifecycle.SHUTDOWN);
                 logger.debug("Interaction: OPERATION → SHUTDOWN");
             }
-            case InteractionEvent.ShutdownComplete() -> {
+            case InteractionEvent.ShutdownComplete() ->
                 ctx.channel().attr(INTERACTION_CONTEXT_KEY).set(null);
-            }
             default -> {}
         }
         ctx.fireUserEventTriggered(evt);
@@ -79,7 +77,7 @@ public class InteractionHandler extends ChannelDuplexHandler {
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
-        ctx.fireUserEventTriggered(new InteractionEvent.ShutdownComplete());
+        ctx.fireUserEventTriggered(InteractionEvent.ShutdownComplete.INSTANCE);
         ctx.close(promise);
     }
 }

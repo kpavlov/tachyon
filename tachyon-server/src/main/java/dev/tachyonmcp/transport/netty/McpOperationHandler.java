@@ -11,7 +11,6 @@ import dev.tachyonmcp.runtime.InteractionEvent;
 import dev.tachyonmcp.runtime.McpHeaderNames;
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.McpServer;
-import dev.tachyonmcp.server.session.DefaultMcpContext;
 import dev.tachyonmcp.server.session.McpSession;
 import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
@@ -139,10 +138,10 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             return;
         }
         switch (message) {
-            case JsonRpcMessage.Request reqMsg -> handlePostRequest(ctx, sessionId, reqMsg, origin);
+            case JsonRpcMessage.Request<?> reqMsg -> handlePostRequest(ctx, sessionId, reqMsg, origin);
             case JsonRpcMessage.Response resp -> handlePostResponse(ctx, resp, origin);
             case JsonRpcMessage.Error err -> handlePostError(ctx, err, origin);
-            case JsonRpcMessage.Notification not -> {
+            case JsonRpcMessage.Notification<?> not -> {
                 if (McpDispatcher.NOTIFICATIONS_INITIALIZED.equals(not.method())) {
                     // Activate the session synchronously before acking so a client that waits
                     // for this 202 observes an ACTIVE session on its next request, closing the
@@ -306,19 +305,6 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        var ic = ctx.channel().attr(InteractionHandler.INTERACTION_CONTEXT_KEY).get();
-        if (ic != null && ic.session() instanceof McpSession mcpSession) {
-            var mcpContext = new DefaultMcpContext(mcpSession, server, ic);
-            for (var ext : server.extensions()) {
-                if (ic.isExtensionEnabled(ext.extensionId())) {
-                    try {
-                        ext.onConnectionClose(mcpContext);
-                    } catch (Exception e) {
-                        logger.warn("Extension onConnectionClose error: {}", ext.extensionId(), e);
-                    }
-                }
-            }
-        }
         ctx.fireChannelInactive();
     }
 

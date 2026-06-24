@@ -9,6 +9,7 @@ import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.McpServer;
 import dev.tachyonmcp.server.Notifications;
 import dev.tachyonmcp.server.ServerContext;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import org.jspecify.annotations.Nullable;
@@ -126,7 +127,7 @@ public class DefaultMcpContext implements McpContext {
     @SuppressWarnings("unchecked")
     public <T> @Nullable T getAttribute(String name) {
         if (interactionContext != null) {
-            return (T) interactionContext.getAttribute(name);
+            return interactionContext.getAttribute(name);
         }
         return null;
     }
@@ -176,15 +177,7 @@ public class DefaultMcpContext implements McpContext {
         }
     }
 
-    private class NotificationsImpl implements Notifications {
-
-        private final McpSession session;
-        private final McpServer server;
-
-        NotificationsImpl(McpSession session, McpServer server) {
-            this.session = session;
-            this.server = server;
-        }
+    private record NotificationsImpl(McpSession session, McpServer server) implements Notifications {
 
         @Override
         public void send(String method, Object params) {
@@ -194,7 +187,7 @@ public class DefaultMcpContext implements McpContext {
         @Override
         public void progress(@Nullable Object progressToken, double progress, double total, String message) {
             if (progressToken == null) return;
-            var paramsMap = new java.util.LinkedHashMap<String, Object>();
+            var paramsMap = new LinkedHashMap<String, Object>();
             paramsMap.put("progressToken", progressToken);
             paramsMap.put("progress", progress);
             paramsMap.put("total", total);

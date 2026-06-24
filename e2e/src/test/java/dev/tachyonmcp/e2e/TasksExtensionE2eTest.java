@@ -159,7 +159,7 @@ class TasksExtensionE2eTest extends AbstractMcpE2eTest {
     @Test
     void shouldNotifyTaskStatusOnCreate() throws Exception {
         // The extension's create_task tool is async, so notifications don't route
-        // through POST-SSE (ScopedValue not inherited by ForkJoin threads).
+        // through POST-SSE (ThreadLocal not inherited by ForkJoin threads).
         // This test uses a synchronous tool to verify notification delivery.
         startServer(TachyonMcpServer.builder()
                 .tool(new ToolHandler() {

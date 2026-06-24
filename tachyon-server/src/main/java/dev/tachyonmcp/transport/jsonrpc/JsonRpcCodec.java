@@ -301,7 +301,7 @@ public final class JsonRpcCodec {
 
     public static <T> T decodeWithCodec(String json, Class<T> targetType) {
         try {
-            var codec = CodecRegistry.<T>codecFor(targetType);
+            var codec = CodecRegistry.codecFor(targetType);
             try (var p = Codec.FACTORY.createParser(TREE_READ_CONTEXT, json.getBytes(StandardCharsets.UTF_8))) {
                 if (p.nextToken() != JsonToken.START_OBJECT) {
                     throw new IOException("Expected JSON object");

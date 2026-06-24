@@ -225,7 +225,7 @@ class NotificationDeliveryTest {
     private static class CollectingConnection implements SseConnection {
 
         final ArrayList<SseEvent> sent = new ArrayList<>();
-        volatile boolean writable = true;
+        final boolean writable = true;
 
         @Override
         public boolean isWritable() {

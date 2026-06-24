@@ -58,10 +58,6 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
     private final McpDispatcher dispatcher;
     private final Executor executor;
 
-    public McpInitializationHandler(McpServer server, McpDispatcher dispatcher) {
-        this(server, dispatcher, server.executor());
-    }
-
     public McpInitializationHandler(McpServer server, McpDispatcher dispatcher, Executor executor) {
         this.server = server;
         this.dispatcher = dispatcher;
