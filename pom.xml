@@ -54,15 +54,17 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.install.skip>true</maven.install.skip>
 
         <!-- Java -->
         <java.version>21</java.version>
 
         <!-- Dependencies -->
         <assertj.version>3.27.7</assertj.version>
+        <immutables.version>2.12.2</immutables.version>
         <jackson.version>3.2.0</jackson.version>
-        <json-schema-validator.version>3.0.5</json-schema-validator.version>
         <java-mcp-sdk.version>2.0.0</java-mcp-sdk.version>
+        <json-schema-validator.version>3.0.5</json-schema-validator.version>
         <json-unit.version>5.1.2</json-unit.version>
         <jspecify.version>1.0.0</jspecify.version>
         <junit.pioneer.version>2.3.0</junit.pioneer.version>
@@ -120,9 +122,17 @@
             </dependency>
 
             <dependency>
+                <groupId>org.immutables</groupId>
+                <artifactId>bom</artifactId>
+                <version>${immutables.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+
+            <dependency>
                 <groupId>tools.jackson</groupId>
                 <artifactId>jackson-bom</artifactId>
-                <version>3.2.0</version>
+                <version>${jackson.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -348,7 +358,7 @@
                             <file>${project.basedir}/pom.xml</file>
                             <groupId>${project.groupId}</groupId>
                             <artifactId>${project.artifactId}</artifactId>
-                            <version>1-SNAPSHOT</version>
+                            <version>1.0.0-SNAPSHOT</version>
                             <packaging>pom</packaging>
                             <localRepositoryPath>${project.build.directory}/local-repo</localRepositoryPath>
                         </configuration>

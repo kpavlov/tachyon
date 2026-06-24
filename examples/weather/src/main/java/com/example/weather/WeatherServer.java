@@ -15,7 +15,7 @@ public final class WeatherServer {
 
     private static final Logger log = LoggerFactory.getLogger(WeatherServer.class);
 
-    static void main() {
+    public static void main(String... args) {
         final var handle = createServer(8080);
         final var port = handle.port();
         log.info("Connect your MCP client to http://localhost:{}/mcp", port);
@@ -23,11 +23,14 @@ public final class WeatherServer {
 
     static McpServerHandle createServer(int port) {
         return TachyonMcpServer.builder()
-            .name("weather-server")
-            .description("Weather MCP server")
-            .version("1.0")
-            .toolsEnabled(false)
-            .resourcesEnabled(false, false)
+            .info(it -> it
+                .name("weather-server")
+                .title("Weather Server")
+                .description("Weather MCP server")
+                .websiteUrl("http://localhost:8080/mcp")
+                .instructions("Test instructions")
+                .version("1.0")
+            )
             .tool(new GetWeatherTool())
             .resource(
                 ResourceDescriptor.of(

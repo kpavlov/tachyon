@@ -54,6 +54,11 @@
             <groupId>com.networknt</groupId>
             <artifactId>json-schema-validator</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.immutables</groupId>
+            <artifactId>value-annotations</artifactId>
+            <scope>provided</scope> <!-- compile only -->
+        </dependency>
 
         <!-- Test -->
         <dependency>
@@ -90,6 +95,19 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.immutables</groupId>
+                            <artifactId>value</artifactId>
+                            <version>${immutables.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
@@ -158,7 +176,7 @@
                             <file>${project.build.directory}/${project.build.finalName}.jar</file>
                             <groupId>${project.groupId}</groupId>
                             <artifactId>${project.artifactId}</artifactId>
-                            <version>1-SNAPSHOT</version>
+                            <version>1.0.0-SNAPSHOT</version>
                             <packaging>jar</packaging>
                             <localRepositoryPath>${project.basedir}/../target/local-repo</localRepositoryPath>
                             <pomFile>${project.basedir}/pom.xml</pomFile>

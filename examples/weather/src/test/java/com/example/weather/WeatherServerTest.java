@@ -50,14 +50,16 @@ class WeatherServerTest {
     void shouldServerInfo() {
         assertThat(initResult.serverInfo()).isEqualTo(
             McpSchema.Implementation.builder("weather-server", "1.0")
+                .title("Weather Server")
+                .websiteUrl("http://localhost:8080/mcp")
                 .description("Weather MCP server")
-                .build());
+                .build()
+        );
         assertThat(initResult.protocolVersion()).isEqualTo("2025-11-25");
+        assertThat(initResult.instructions()).isEqualTo("Test instructions");
         assertThat(initResult.capabilities()).isEqualTo(McpSchema.ServerCapabilities.builder()
-            .tools(false)
-            .completions()
-            .logging()
-            .resources(false, false)
+            .tools(null)
+            .resources(null, null)
             .build()
         );
     }

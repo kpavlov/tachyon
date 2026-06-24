@@ -4,45 +4,27 @@
 
 package dev.tachyonmcp.server.handlers;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Implementation;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ServerInfoMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeResult;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ServerCapabilities;
 import dev.tachyonmcp.runtime.Extension;
 import dev.tachyonmcp.server.McpMethodHandler;
+import dev.tachyonmcp.server.McpServer;
 import dev.tachyonmcp.server.extensions.McpExtension;
-import dev.tachyonmcp.server.features.prompts.PromptRegistry;
-import dev.tachyonmcp.server.features.resources.ResourceRegistry;
-import dev.tachyonmcp.server.features.tools.ToolRegistry;
 import dev.tachyonmcp.server.session.McpContext;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 public final class InitializeHandler implements McpMethodHandler {
 
-    private final ToolRegistry toolRegistry;
-    private final ResourceRegistry resourceRegistry;
-    private final PromptRegistry promptRegistry;
-    private final Implementation serverInfo;
-    private final ServerCapabilities capabilities;
+    private final McpServer mcpServer;
     private final List<McpExtension> extensions;
 
-    public InitializeHandler(
-            ToolRegistry toolRegistry,
-            ResourceRegistry resourceRegistry,
-            PromptRegistry promptRegistry,
-            Implementation serverInfo,
-            ServerCapabilities capabilities,
-            List<McpExtension> extensions) {
-        this.toolRegistry = toolRegistry;
-        this.resourceRegistry = resourceRegistry;
-        this.promptRegistry = promptRegistry;
-        this.serverInfo = serverInfo;
-        this.capabilities = capabilities;
+    public InitializeHandler(McpServer mcpServer, List<McpExtension> extensions) {
+        this.mcpServer = mcpServer;
         this.extensions = extensions;
     }
 
@@ -56,36 +38,27 @@ public final class InitializeHandler implements McpMethodHandler {
         var negotiatedVersion = "2025-11-25";
         context.session().protocolVersion(negotiatedVersion);
 
-        // Build capabilities from registries, augmented by pre-configured overrides
-        var toolsCap = capabilities.tools();
-        if (toolsCap == null && !toolRegistry.isEmpty()) {
-            toolsCap = new ServerCapabilities.Tools(true);
-        }
-        var resourcesCap = capabilities.resources();
-        if (resourcesCap == null && !resourceRegistry.getAll().isEmpty()) {
-            resourcesCap = new ServerCapabilities.Resources(true, true);
-        }
-        var promptsCap = capabilities.prompts();
-        if (promptsCap == null && !promptRegistry.getAll().isEmpty()) {
-            promptsCap = new ServerCapabilities.Prompts(true);
-        }
-        var tasksCap = capabilities.tasks();
-        if (tasksCap == null) {
-            tasksCap = new ServerCapabilities.Tasks(
-                    JsonNodeFactory.instance.objectNode(), JsonNodeFactory.instance.objectNode(), null);
-        }
-        var emptyCap = JsonNodeFactory.instance.objectNode();
-        var resultCapabilities =
-                new ServerCapabilities(null, emptyCap, emptyCap, promptsCap, resourcesCap, toolsCap, tasksCap, null);
+        var capabilities = mcpServer.resolveCapabilities();
+
+        var resultCapabilitiesBuilder = ServerInfoMapper.toServerCapabilities(capabilities);
 
         negotiateExtensions(context, params);
         var negotiatedExtensions = buildNegotiatedExtensions(context);
         if (!negotiatedExtensions.isEmpty()) {
-            resultCapabilities = new ServerCapabilities(
-                    null, emptyCap, emptyCap, promptsCap, resourcesCap, toolsCap, tasksCap, negotiatedExtensions);
+            resultCapabilitiesBuilder.extensions(negotiatedExtensions);
         }
 
-        return new InitializeResult(negotiatedVersion, resultCapabilities, serverInfo, null, null, null);
+        final var serverConfig = mcpServer.config();
+
+        final var implementation = ServerInfoMapper.toImplementation(serverConfig.identity());
+
+        return new InitializeResult(
+                negotiatedVersion,
+                resultCapabilitiesBuilder.build(),
+                implementation,
+                serverConfig.identity().instructions(),
+                null,
+                null);
     }
 
     private void negotiateExtensions(McpContext context, Object params) {

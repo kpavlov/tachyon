@@ -8,7 +8,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.McpToolMapper;
 import dev.tachyonmcp.server.domain.*;
-import dev.tachyonmcp.server.domain.Icon;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;

@@ -5,6 +5,7 @@
 package dev.tachyonmcp.server.domain;
 
 import java.util.List;
+import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -15,6 +16,8 @@ import org.jspecify.annotations.Nullable;
  * All fields are {@code null} when absent — omit the annotation block entirely rather than
  * sending empty values.
  */
+@Value.Immutable
+@Value.Style(visibility = Value.Style.ImplementationVisibility.PACKAGE, typeImmutable = "Default*")
 public interface Annotations {
 
     @Nullable
@@ -26,7 +29,15 @@ public interface Annotations {
     @Nullable
     String lastModified();
 
+    static DefaultAnnotations.Builder builder() {
+        return DefaultAnnotations.builder();
+    }
+
     static Annotations of(@Nullable List<Role> audience, @Nullable Double priority, @Nullable String lastModified) {
-        return new DefaultAnnotations(audience, priority, lastModified);
+        return DefaultAnnotations.builder()
+                .audience(audience)
+                .priority(priority)
+                .lastModified(lastModified)
+                .build();
     }
 }

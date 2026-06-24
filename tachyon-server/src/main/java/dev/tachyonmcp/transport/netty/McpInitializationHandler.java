@@ -4,9 +4,7 @@
 
 package dev.tachyonmcp.transport.netty;
 
-import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.interactionContext;
-import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendAccepted;
-import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendResponseAndClose;
+import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.*;
 import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendJsonResponse;
 import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendOptions;
 
@@ -113,7 +111,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                         executor)
                 .exceptionally(ex -> {
                     logger.error("Failed to parse POST body during initialization", ex);
-                    ctx.executor().execute(() -> {
+                    executor.execute(() -> {
                         var errorBytes = dispatcher.parseError();
                         sendResponseAndClose(
                                 ctx, HttpResponseStatus.BAD_REQUEST, "application/json", errorBytes, origin);
@@ -151,7 +149,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
         var postStream = new PostSseStream(ctx.channel(), origin, server::nextEventId);
         dispatcher
                 .dispatchRequestAsync(req.id(), req.method(), req.params(), null, postStream, null)
-                .whenComplete((result, ex) -> ctx.executor().execute(() -> {
+                .whenComplete((result, ex) -> executor.execute(() -> {
                     if (ex != null) {
                         logger.error("Dispatch failed for pre-session request: method={}", req.method(), ex);
                         sendResponseAndClose(
@@ -178,7 +176,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
 
         dispatcher
                 .dispatchRequestAsync(id, METHOD_INITIALIZE, params, null, postStream, interactionContext(ctx))
-                .whenComplete((result, ex) -> ctx.executor().execute(() -> {
+                .whenComplete((result, ex) -> executor.execute(() -> {
                     var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
                     if (ex != null) {
                         logger.error("Initialize dispatch failed: id={}, elapsed={}ms", id, elapsedMs, ex);

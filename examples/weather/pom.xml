@@ -18,7 +18,7 @@
         <jackson.version>3.2.0</jackson.version>
         <junit.version>6.1.0</junit.version>
         <tachyon-server.version>1.0.0-alpha.2</tachyon-server.version>
-<!--        <tachyon-server.version>1-SNAPSHOT</tachyon-server.version>-->
+<!--        <tachyon-server.version>1.0.0-SNAPSHOT</tachyon-server.version>-->
         <assertj.version>3.27.7</assertj.version>
     </properties>
 

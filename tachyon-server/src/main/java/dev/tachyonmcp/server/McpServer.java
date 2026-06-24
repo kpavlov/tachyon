@@ -6,8 +6,10 @@ package dev.tachyonmcp.server;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Implementation;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.LoggingLevel;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ServerCapabilities;
 import dev.tachyonmcp.runtime.SessionState;
+import dev.tachyonmcp.server.config.CapabilitiesConfig;
+import dev.tachyonmcp.server.config.ServerConfig;
+import dev.tachyonmcp.server.config.ServerIdentity;
 import dev.tachyonmcp.server.extensions.McpExtension;
 import dev.tachyonmcp.server.features.prompts.PromptRegistry;
 import dev.tachyonmcp.server.features.resources.ResourceRegistry;
@@ -29,10 +31,6 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Central orchestrator for MCP server logic: manages sessions, tool/prompt/resource registries,
- * method handler dispatch, event log, and virtual-thread executor for handler execution.
- */
 public class McpServer implements Closeable {
 
     private static final Logger logger = LoggerFactory.getLogger(McpServer.class);
@@ -53,21 +51,16 @@ public class McpServer implements Closeable {
     private final ExecutorService virtualThreadExecutor = Executors.newThreadPerTaskExecutor(
             Thread.ofVirtual().name("mcp-handler-vt-", 0).factory());
     final Implementation serverInfo;
-    final ServerCapabilities capabilities;
     private final List<McpExtension> extensions;
     private final Map<String, String> extensionMethodOwners = new ConcurrentHashMap<>();
     private final Map<String, McpExtension> extensionsById = new ConcurrentHashMap<>();
 
-    public Implementation serverInfo() {
-        return serverInfo;
-    }
-
-    public ServerCapabilities capabilities() {
-        return capabilities;
+    public ServerConfig config() {
+        return config;
     }
 
     public boolean isStateless() {
-        return config.stateless();
+        return config.session().stateless();
     }
 
     public ExecutorService executor() {
@@ -94,33 +87,74 @@ public class McpServer implements Closeable {
         return requested.ordinal() >= configured.ordinal();
     }
 
+    public ServerCapabilities resolveCapabilities() {
+        final var resultBuilder = ServerCapabilities.builder();
+
+        CapabilitiesConfig capabilitiesConfig = config.capabilities();
+
+        resultBuilder.logging(capabilitiesConfig.logging());
+        resultBuilder.completions(capabilitiesConfig.completions());
+
+        if (capabilitiesConfig.tasksList() || capabilitiesConfig.tasksRequests()) {
+            resultBuilder.tasks(new ServerCapabilities.Tasks(
+                    capabilitiesConfig.tasksList(),
+                    capabilitiesConfig.tasksCancel(),
+                    capabilitiesConfig.tasksRequests()));
+        }
+
+        switch (capabilitiesConfig.toolsMode()) {
+            case ON -> resultBuilder.tools(new ServerCapabilities.Tools(capabilitiesConfig.toolsListChanged()));
+            case OFF -> {}
+            case AUTO -> {
+                if (!toolRegistry.isEmpty()) {
+                    resultBuilder.tools(new ServerCapabilities.Tools(capabilitiesConfig.toolsListChanged()));
+                }
+            }
+        }
+
+        switch (capabilitiesConfig.resourcesMode()) {
+            case ON ->
+                resultBuilder.resources(new ServerCapabilities.Resources(
+                        capabilitiesConfig.resourcesSubscribe(), capabilitiesConfig.resourcesListChanged()));
+            case OFF -> {}
+            case AUTO -> {
+                if (!resourceRegistry.getAll().isEmpty()) {
+                    resultBuilder.resources(new ServerCapabilities.Resources(
+                            capabilitiesConfig.resourcesSubscribe(), capabilitiesConfig.resourcesListChanged()));
+                }
+            }
+        }
+
+        switch (capabilitiesConfig.promptsMode()) {
+            case ON -> resultBuilder.prompts(new ServerCapabilities.Prompts(capabilitiesConfig.promptsListChanged()));
+            case OFF -> {}
+            case AUTO -> {
+                if (!promptRegistry.getAll().isEmpty()) {
+                    resultBuilder.prompts(new ServerCapabilities.Prompts(capabilitiesConfig.promptsListChanged()));
+                }
+            }
+        }
+
+        return resultBuilder.build();
+    }
+
     public McpServer() {
-        this(
-                new InMemorySessionLogRouter(),
-                new InMemorySessionStore(),
-                null,
-                null,
-                ServerConfig.DEFAULT,
-                JsonSchemaValidator.noop(),
-                List.of());
+        this(new InMemorySessionLogRouter(), new InMemorySessionStore(), ServerConfig.DEFAULT, null, List.of());
     }
 
     public McpServer(SessionLogRouter router, SessionStore sessionStore, JsonSchemaValidator validator) {
-        this(router, sessionStore, null, null, ServerConfig.DEFAULT, validator, List.of());
+        this(router, sessionStore, ServerConfig.DEFAULT, validator, List.of());
     }
 
     public McpServer(
             SessionLogRouter router,
             SessionStore sessionStore,
-            Implementation serverInfo,
-            ServerCapabilities capabilities,
             ServerConfig config,
             @Nullable JsonSchemaValidator validator,
             @Nullable List<McpExtension> extensions) {
         this.config = Objects.requireNonNull(config, "config cannot be null");
         this.router = Objects.requireNonNull(router, "router cannot be null");
-        this.serverInfo = Objects.requireNonNull(serverInfo, "serverInfo cannot be null");
-        this.capabilities = Objects.requireNonNull(capabilities, "capabilities cannot be null");
+        this.serverInfo = buildServerInfo(config.identity());
         this.extensions = extensions != null ? extensions : List.of();
         this.sessionManager = new SessionManager(sessionStore);
         this.validator = validator != null ? validator : JsonSchemaValidator.noop();
@@ -131,9 +165,18 @@ public class McpServer implements Closeable {
         registerDefaults();
         bootstrapExtensions();
         setupChangeListeners();
-        if (!config.stateless()) {
-            sessionManager.startJanitor(config.sessionTtl());
+        if (!config.session().stateless()) {
+            sessionManager.startJanitor(config.session().sessionTtl());
         }
+    }
+
+    private static Implementation buildServerInfo(ServerIdentity identity) {
+        return Implementation.builder()
+                .name(identity.name())
+                .version(identity.version())
+                .description(identity.description())
+                .websiteUrl(identity.websiteUrl())
+                .build();
     }
 
     private void setupChangeListeners() {
@@ -157,10 +200,7 @@ public class McpServer implements Closeable {
     }
 
     private void registerDefaults() {
-        methodHandlers.put(
-                "initialize",
-                new InitializeHandler(
-                        toolRegistry, resourceRegistry, promptRegistry, serverInfo, capabilities, extensions));
+        methodHandlers.put("initialize", new InitializeHandler(this, extensions));
         methodHandlers.put("ping", new PingHandler());
         toolRegistry.registerHandlers(methodHandlers);
         resourceRegistry.registerHandlers(methodHandlers);
@@ -275,7 +315,7 @@ public class McpServer implements Closeable {
 
     public void sendNotification(McpSession session, String method, Object params) {
         if (session.state() == SessionState.CLOSED) {
-            return; // fast path: avoid log append for dead sessions
+            return;
         }
         var paramsStr =
                 switch (params) {
@@ -403,7 +443,7 @@ public class McpServer implements Closeable {
             }
             var sseEvent = toSseEvent(event);
             if (sseEvent == null) return true;
-            return session.send(sseEvent); // false = session closed, stop pump
+            return session.send(sseEvent);
         });
         session.cursor(lastIndex);
     }
