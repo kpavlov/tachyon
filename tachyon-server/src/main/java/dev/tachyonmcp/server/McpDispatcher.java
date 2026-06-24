@@ -373,7 +373,7 @@ public class McpDispatcher {
             Object id, Object rawParams, @Nullable InteractionContext ic) {
         return CompletableFuture.supplyAsync(
                 () -> {
-                    logger.info("Client initialize: id={} stateless={}", id, server.isStateless());
+                    logger.debug("Client initialize: id={} stateless={}", id, server.isStateless());
                     var handler = server.getHandler("initialize");
                     // version-specific (MCP 2025-11-25): handshake params shape — moves behind McpDialect
                     var typedParams = convertParams(rawParams, InitializeRequestParams.class);

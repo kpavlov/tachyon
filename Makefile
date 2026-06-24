@@ -18,7 +18,7 @@ package:
 
 example: package
 	@echo "🌤️ Building and testing weather example..."
-	@mvn verify -f examples/weather/pom.xml -Dtachyon-server.version=1-SNAPSHOT
+	@mvn verify -f examples/weather/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT
 
 conformance: package
 	@echo "🔄 Running MCP conformance suite..."

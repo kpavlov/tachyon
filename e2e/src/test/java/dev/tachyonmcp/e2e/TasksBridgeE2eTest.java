@@ -22,7 +22,7 @@ class TasksBridgeE2eTest extends AbstractMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServer(TachyonMcpServer.builder().build());
+        startServer(TachyonMcpServer.builder().capabilities(c -> c.tasks()).build());
     }
 
     @Test
@@ -51,7 +51,10 @@ class TasksBridgeE2eTest extends AbstractMcpE2eTest {
 
     @Test
     void tasksExtensionAdvertisedWhenNegotiated() throws Exception {
-        startServer(TachyonMcpServer.builder().extension(new TasksExtension()).build());
+        startServer(TachyonMcpServer.builder()
+                .capabilities(c -> c.tasks())
+                .extension(new TasksExtension())
+                .build());
 
         try (var client = createTestClient()) {
             var initBody =

@@ -20,7 +20,11 @@ final class SharedE2eServer {
         if (started.get()) {
             return handle;
         }
-        handle = TachyonMcpServer.builder().tool(new EchoToolHandler()).port(0).bind();
+        handle = TachyonMcpServer.builder()
+                .capabilities(c -> c.tools())
+                .tool(new EchoToolHandler())
+                .port(0)
+                .bind();
         started.set(true);
         Runtime.getRuntime().addShutdownHook(new Thread(handle::close));
         logger.info("Shared E2E server started on port {}", handle.port());

@@ -90,7 +90,7 @@ jobs:
 
 
       - name: Verify examples
-        run: mvn verify -f examples/${{ matrix.example }}/pom.xml -Dtachyon-server.version=1-SNAPSHOT --no-transfer-progress
+        run: mvn verify -f examples/${{ matrix.example }}/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
 
       - name: Publish test results
         uses: mikepenz/action-junit-report@v6

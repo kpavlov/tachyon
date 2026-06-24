@@ -356,7 +356,7 @@ public final class JsonRpcCodec {
         return writeGenericValueAsString(value);
     }
 
-    public static String writeValueAsString(Codec<?> codec, Object value) {
+    public static <T> String writeValueAsString(Codec<T> codec, Object value) {
         try (var out = new ByteArrayOutputStream(256)) {
             try (var gen = FACTORY.createGenerator(ObjectWriteContext.empty(), out, JsonEncoding.UTF8)) {
                 ((Codec<Object>) codec).encode(gen, value);

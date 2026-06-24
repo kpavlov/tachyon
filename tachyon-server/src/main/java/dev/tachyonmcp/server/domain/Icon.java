@@ -5,6 +5,7 @@
 package dev.tachyonmcp.server.domain;
 
 import java.util.List;
+import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -14,6 +15,11 @@ import org.jspecify.annotations.Nullable;
  * (e.g. {@code "16x16"}, {@code "32x32"}), and {@code theme} distinguishes light
  * vs. dark variants.
  */
+@Value.Immutable
+@Value.Style(
+        allParameters = true,
+        visibility = Value.Style.ImplementationVisibility.PACKAGE,
+        typeImmutable = "Default*")
 public interface Icon {
 
     String src();
@@ -28,6 +34,6 @@ public interface Icon {
     String theme();
 
     static Icon of(String src, @Nullable String mimeType, @Nullable List<String> sizes, @Nullable String theme) {
-        return new DefaultIcon(src, mimeType, sizes, theme);
+        return DefaultIcon.of(src, mimeType, sizes, theme);
     }
 }

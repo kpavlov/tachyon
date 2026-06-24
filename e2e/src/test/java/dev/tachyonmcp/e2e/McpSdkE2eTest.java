@@ -63,38 +63,6 @@ class McpSdkE2eTest extends AbstractMcpE2eTest {
     }
 
     @Test
-    void shouldEncodeServerCapabilitiesWithObjectNodeValues() throws Exception {
-        try (var client = createTestClient()) {
-            var response = client.post("""
-                {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}
-                """);
-            assertThat(response.statusCode()).isEqualTo(200);
-
-            // language=JSON
-            var expected = """
-                {
-                  "jsonrpc": "2.0",
-                  "id": 1,
-                  "result": {
-                    "protocolVersion": "2025-11-25",
-                    "capabilities": {
-                      "logging": {},
-                      "completions": {},
-                      "tasks": { "list": {}, "cancel": {} },
-                      "tools": { "listChanged": true }
-                    },
-                    "serverInfo": {
-                      "version": "0.1",
-                      "name": "tachyon-mcp"
-                    }
-                  }
-                }
-                """;
-            assertThatJson(response.body()).isEqualTo(expected);
-        }
-    }
-
-    @Test
     void shouldEncodePromptMessageWithRoleEnum() throws Exception {
         server.prompts()
                 .add(

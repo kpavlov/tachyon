@@ -5,7 +5,9 @@
 package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Prompt;
-import dev.tachyonmcp.server.domain.*;
+import dev.tachyonmcp.server.domain.PromptArgument;
+import dev.tachyonmcp.server.domain.PromptMessage;
+import dev.tachyonmcp.server.domain.Role;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import java.util.List;
 
