@@ -82,7 +82,7 @@ public final class CapabilitiesStep {
     }
 
     public FeatureStep prompt(PromptDescriptor descriptor, List<PromptMessage> messages) {
-        state.prompts.add(new BuilderState.PromptRegistration(descriptor, _ -> messages));
+        state.prompts.add(new BuilderState.PromptRegistration(descriptor, args -> messages));
         return new FeatureStep(state);
     }
 

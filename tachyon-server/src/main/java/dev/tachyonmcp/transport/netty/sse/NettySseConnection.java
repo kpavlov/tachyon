@@ -25,7 +25,7 @@ public final class NettySseConnection implements SseConnection {
 
     public NettySseConnection(Channel channel, final Runnable onCloseAction) {
         this.channel = Objects.requireNonNull(channel, "channel");
-        channel.closeFuture().addListener(_ -> onCloseAction.run());
+        channel.closeFuture().addListener(ignored -> onCloseAction.run());
     }
 
     public Channel channel() {

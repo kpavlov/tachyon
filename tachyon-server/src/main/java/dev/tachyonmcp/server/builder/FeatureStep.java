@@ -66,7 +66,7 @@ public final class FeatureStep {
     }
 
     public FeatureStep prompt(PromptDescriptor descriptor, List<PromptMessage> messages) {
-        state.prompts.add(new BuilderState.PromptRegistration(descriptor, _ -> messages));
+        state.prompts.add(new BuilderState.PromptRegistration(descriptor, args -> messages));
         return this;
     }
 

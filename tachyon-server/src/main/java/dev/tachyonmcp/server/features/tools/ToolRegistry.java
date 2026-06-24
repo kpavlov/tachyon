@@ -8,7 +8,9 @@ import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidRequest;
 import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.methodNotFound;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.McpToolMapper;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.*;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolRequestParams;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListToolsResult;
 import dev.tachyonmcp.server.JsonSchemaValidator;
 import dev.tachyonmcp.server.McpMethodHandler;
 import dev.tachyonmcp.server.features.PaginatedResult;
@@ -77,7 +79,7 @@ public class ToolRegistry {
     }
 
     public PaginatedResult<ToolDescriptor> list(int limit, @Nullable String cursor) {
-        return list(limit, cursor, DEFAULT_PAGE_SIZE, _ -> true);
+        return list(limit, cursor, DEFAULT_PAGE_SIZE, descriptor -> true);
     }
 
     public PaginatedResult<ToolDescriptor> list(int limit, @Nullable String cursor, Predicate<ToolDescriptor> filter) {
@@ -85,7 +87,7 @@ public class ToolRegistry {
     }
 
     public PaginatedResult<ToolDescriptor> list(int limit, @Nullable String cursor, int defaultLimit) {
-        return list(limit, cursor, defaultLimit, _ -> true);
+        return list(limit, cursor, defaultLimit, descriptor -> true);
     }
 
     public PaginatedResult<ToolDescriptor> list(

@@ -10,8 +10,6 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.EmptyResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListResourceTemplatesResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListResourcesResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ReadResourceResult;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Resource;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ResourceTemplate;
 import dev.tachyonmcp.server.McpMethodHandler;
 import dev.tachyonmcp.server.McpServer;
 import dev.tachyonmcp.server.TachyonMcpServer;
@@ -248,7 +246,7 @@ class ResourceRegistryTest {
         var result = (ListResourcesResult) handlers.get("resources/list").handle(DefaultMcpContext.noop(), null);
 
         assertThat(result.resources()).hasSize(1);
-        var resource = (Resource) result.resources().getFirst();
+        var resource = result.resources().getFirst();
         assertThat(resource.name()).isEqualTo("full-resource");
         assertThat(resource.uri()).isEqualTo("test://full");
         assertThat(resource.description()).isEqualTo("Full description");
@@ -283,7 +281,7 @@ class ResourceRegistryTest {
                 handlers.get("resources/templates/list").handle(DefaultMcpContext.noop(), null);
 
         assertThat(result.resourceTemplates()).hasSize(1);
-        var tmpl = (ResourceTemplate) result.resourceTemplates().getFirst();
+        var tmpl = result.resourceTemplates().getFirst();
         assertThat(tmpl.name()).isEqualTo("tmpl");
         assertThat(tmpl.uriTemplate()).isEqualTo("test://tmpl/{id}");
         assertThat(tmpl.description()).isEqualTo("Template desc");
@@ -308,7 +306,7 @@ class ResourceRegistryTest {
 
         // resources/list returns size WITHOUT loading content
         var listResult = (ListResourcesResult) handlers.get("resources/list").handle(DefaultMcpContext.noop(), null);
-        assertThat(((Resource) listResult.resources().getFirst()).size()).isEqualTo(4096.0);
+        assertThat(listResult.resources().getFirst().size()).isEqualTo(4096.0);
         assertThat(contentLoaded).isFalse();
 
         // resources/read triggers lazy content load
@@ -318,7 +316,7 @@ class ResourceRegistryTest {
 
     private static class CollectingConnection implements SseConnection {
         final java.util.ArrayList<SseEvent> sent = new java.util.ArrayList<>();
-        volatile boolean writable = true;
+        final boolean writable = true;
 
         @Override
         public boolean isWritable() {

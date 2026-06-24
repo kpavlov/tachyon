@@ -88,7 +88,7 @@ public class ResourceRegistry {
     }
 
     public PaginatedResult<ResourceDescriptor> list(int limit, @Nullable String cursor) {
-        return list(limit, cursor, DEFAULT_PAGE_SIZE, _ -> true);
+        return list(limit, cursor, DEFAULT_PAGE_SIZE, descriptor -> true);
     }
 
     public PaginatedResult<ResourceDescriptor> list(
@@ -97,7 +97,7 @@ public class ResourceRegistry {
     }
 
     public PaginatedResult<ResourceDescriptor> list(int limit, @Nullable String cursor, int defaultLimit) {
-        return list(limit, cursor, defaultLimit, _ -> true);
+        return list(limit, cursor, defaultLimit, descriptor -> true);
     }
 
     public PaginatedResult<ResourceDescriptor> list(
@@ -135,6 +135,7 @@ public class ResourceRegistry {
         return PaginatedResult.of(result, nextCursor);
     }
 
+    @Nullable
     ResourceEntry getByUri(String uri) {
         return byUri.get(uri);
     }

@@ -54,16 +54,11 @@ public final class HandlerWatchdog {
         var frames = thread.getStackTrace();
         var sb = new StringBuilder();
         for (var f : frames) sb.append("\n    at ").append(f);
-        switch (state) {
-            case BLOCKED ->
-                logger.warn(
-                        MSG, method, id, elapsedMs, state, thread.getName(), thread.threadId(), thread.isVirtual(), sb);
-            case RUNNABLE ->
-                logger.debug(
-                        MSG, method, id, elapsedMs, state, thread.getName(), thread.threadId(), thread.isVirtual(), sb);
-            default ->
-                logger.debug(
-                        MSG, method, id, elapsedMs, state, thread.getName(), thread.threadId(), thread.isVirtual(), sb);
+        if (state == Thread.State.BLOCKED) {
+            logger.warn(MSG, method, id, elapsedMs, state, thread.getName(), thread.threadId(), thread.isVirtual(), sb);
+        } else {
+            logger.debug(
+                    MSG, method, id, elapsedMs, state, thread.getName(), thread.threadId(), thread.isVirtual(), sb);
         }
     }
 }

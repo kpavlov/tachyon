@@ -24,7 +24,9 @@ jobs:
       fail-fast: false
       matrix:
         java:
+          - 21
           - 25
+          - 26
     runs-on: ubuntu-latest
     timeout-minutes: 7
 
@@ -67,7 +69,7 @@ jobs:
       fail-fast: false
       matrix:
         java:
-          - 25
+          - 21
         example:
           - weather
     runs-on: ubuntu-latest

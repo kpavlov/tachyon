@@ -1,9 +1,9 @@
 .PHONY: build test package conformance e2e clean format all inspector example
 
-all: clean format build
+all: clean format build example
 
 build:
-	@echo "🏗️  Building..."
+	@echo "🏗️ Building..."
 	@mvn -version
 	@mvn verify -q
 
@@ -40,4 +40,4 @@ format:
 .PHONY: inspector
 inspector:
 	@echo "🧐 MCP Inspector"
-	@npx -y @modelcontextprotocol/inspector
+	@npx -y @modelcontextprotocol/inspector --config mcp-inspector.json

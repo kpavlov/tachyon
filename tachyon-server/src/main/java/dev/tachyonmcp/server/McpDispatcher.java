@@ -312,7 +312,7 @@ public class McpDispatcher {
         var finalReason = rawReason;
         server.getSession(sessionId)
                 .ifPresentOrElse(
-                        _ -> {
+                        session -> {
                             var reasonMsg = finalReason != null ? ": " + finalReason : "";
                             var cancelled = server.failPendingRequest(finalRequestId, "Cancelled" + reasonMsg);
                             if (cancelled) {

@@ -93,29 +93,29 @@ abstract class AbstractServerConformanceIT {
                 "test_simple_text",
                 "Returns simple text",
                 INPUT_SCHEMA_NO_ARGS,
-                (_, _) -> ToolResult.text("This is a simple text response for testing.")));
+                (ctx, args) -> ToolResult.text("This is a simple text response for testing.")));
 
         server.registerTool(SyncToolHandler.of(
                 "test_image_content",
                 "Returns image content",
                 INPUT_SCHEMA_NO_ARGS,
-                (_, _) -> ToolResult.of(List.of(ImageContent.of(MINI_PNG_BASE64, "image/png")))));
+                (ctx, args) -> ToolResult.of(List.of(ImageContent.of(MINI_PNG_BASE64, "image/png")))));
 
         server.registerTool(SyncToolHandler.of(
                 "test_audio_content",
                 "Returns audio content",
                 INPUT_SCHEMA_NO_ARGS,
-                (_, _) -> ToolResult.of(List.of(AudioContent.of(MINI_WAV_BASE64, "audio/wav")))));
+                (ctx, args) -> ToolResult.of(List.of(AudioContent.of(MINI_WAV_BASE64, "audio/wav")))));
 
         server.registerTool(SyncToolHandler.of(
-                "test_embedded_resource", "Returns embedded resource", INPUT_SCHEMA_NO_ARGS, (_, _) -> {
+                "test_embedded_resource", "Returns embedded resource", INPUT_SCHEMA_NO_ARGS, (ctx, args) -> {
                     var res = TextResourceContents.of(
                             "test://embedded-resource", "text/plain", "This is an embedded resource content.");
                     return ToolResult.of(List.of(EmbeddedResource.of(res)));
                 }));
 
         server.registerTool(SyncToolHandler.of(
-                "test_multiple_content_types", "Returns multiple content types", INPUT_SCHEMA_NO_ARGS, (_, _) -> {
+                "test_multiple_content_types", "Returns multiple content types", INPUT_SCHEMA_NO_ARGS, (ctx, args) -> {
                     var mixed = TextResourceContents.of(
                             "test://mixed-content-resource", "application/json", "{\"test\":\"data\",\"value\":123}");
                     return ToolResult.of(
@@ -128,7 +128,7 @@ abstract class AbstractServerConformanceIT {
                 "test_error_handling",
                 "Always returns error",
                 INPUT_SCHEMA_NO_ARGS,
-                (_, _) -> ToolResult.error("This tool intentionally returns an error for testing")));
+                (ctx, args) -> ToolResult.error("This tool intentionally returns an error for testing")));
 
         server.registerTool(new ToolHandler() {
             @Override
@@ -236,7 +236,7 @@ abstract class AbstractServerConformanceIT {
                 }));
 
         server.registerTool(SyncToolHandler.of(
-                "test_elicitation_sep1034_defaults", "Elicitation with defaults", INPUT_SCHEMA_NO_ARGS, (ctx, _) -> {
+                "test_elicitation_sep1034_defaults", "Elicitation with defaults", INPUT_SCHEMA_NO_ARGS, (ctx, args) -> {
                     try {
                         var paramsMap = Map.of(
                                 "mode", "form",
@@ -274,7 +274,7 @@ abstract class AbstractServerConformanceIT {
                 }));
 
         server.registerTool(SyncToolHandler.of(
-                "test_elicitation_sep1330_enums", "Elicitation with enums", INPUT_SCHEMA_NO_ARGS, (ctx, _) -> {
+                "test_elicitation_sep1330_enums", "Elicitation with enums", INPUT_SCHEMA_NO_ARGS, (ctx, args) -> {
                     try {
                         var props = new LinkedHashMap<String, Object>();
                         props.put(
@@ -352,7 +352,7 @@ abstract class AbstractServerConformanceIT {
                 "test_reconnection",
                 "A tool that triggers SSE stream closure to test client reconnection behavior",
                 INPUT_SCHEMA_NO_ARGS,
-                (_, _) -> {
+                (ctx, args) -> {
                     var stream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
                     if (stream != null) {
                         stream.start();
@@ -422,20 +422,20 @@ abstract class AbstractServerConformanceIT {
         server.resources()
                 .add(
                         ResourceDescriptor.of("hello", "hello://world", "Hello resource", "text/plain"),
-                        (_, _) -> TextResourceContents.of("hello://world", "text/plain", "Hello, World!"));
+                        (ctx, req) -> TextResourceContents.of("hello://world", "text/plain", "Hello, World!"));
 
         server.resources()
                 .add(
                         ResourceDescriptor.of(
                                 "static-text", "test://static-text", "Static text resource", "text/plain"),
-                        (_, _) -> TextResourceContents.of(
+                        (ctx, req) -> TextResourceContents.of(
                                 "test://static-text", "text/plain", "This is static text content for testing."));
 
         server.resources()
                 .add(
                         ResourceDescriptor.of(
                                 "static-binary", "test://static-binary", "Static binary resource", "image/png"),
-                        (_, _) -> BlobResourceContents.of("test://static-binary", "image/png", MINI_PNG_BASE64));
+                        (ctx, req) -> BlobResourceContents.of("test://static-binary", "image/png", MINI_PNG_BASE64));
 
         server.resources()
                 .addTemplate(ResourceTemplateEntry.of(

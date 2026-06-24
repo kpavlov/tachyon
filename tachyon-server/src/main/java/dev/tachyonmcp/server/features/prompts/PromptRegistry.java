@@ -31,7 +31,7 @@ public class PromptRegistry extends Registry<PromptEntry> {
     }
 
     public void add(PromptDescriptor descriptor, List<PromptMessage> messages) {
-        super.add(new PromptEntry(descriptor, _ -> messages));
+        super.add(new PromptEntry(descriptor, args -> messages));
     }
 
     public void add(PromptDescriptor descriptor, PromptHandler handler) {

@@ -130,7 +130,7 @@ final class BuilderState {
                             d,
                             r.handler() != null
                                     ? r.handler()
-                                    : (_, _) -> TextResourceContents.of(d.uri(), d.mimeType(), "", null));
+                                    : (ctx, req) -> TextResourceContents.of(d.uri(), d.mimeType(), "", null));
         });
         prompts.forEach(p -> server.prompts().add(p.descriptor(), p.handler()));
         tasks.forEach(t -> server.tasks().add(t));

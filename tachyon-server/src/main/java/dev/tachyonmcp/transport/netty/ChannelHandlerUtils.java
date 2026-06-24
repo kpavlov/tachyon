@@ -20,7 +20,7 @@ public final class ChannelHandlerUtils {
 
     private ChannelHandlerUtils() {}
 
-    public static InteractionContext interactionContext(ChannelHandlerContext ctx) {
+    public static InteractionContext<?> interactionContext(ChannelHandlerContext ctx) {
         return Objects.requireNonNull(
                 ctx.channel().attr(INTERACTION_CONTEXT_KEY).get(),
                 "InteractionContext is null. Check if InteractionHandler is configured correctly.");
@@ -33,10 +33,6 @@ public final class ChannelHandlerUtils {
             response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
         }
         ctx.writeAndFlush(response);
-    }
-
-    public static ChannelFuture sendPlainText(ChannelHandlerContext ctx, HttpResponseStatus status, String message) {
-        return sendPlainText(ctx, status, message, null);
     }
 
     /**
@@ -69,32 +65,13 @@ public final class ChannelHandlerUtils {
         return sendResponse(ctx, status, contentType, body, true, origin);
     }
 
-    public static ChannelFuture sendPlainText(
-            ChannelHandlerContext ctx, HttpResponseStatus status, String message, @Nullable String origin) {
-        return sendResponse(ctx, status, "text/plain", ByteBufUtil.writeUtf8(ctx.alloc(), message), false, origin);
-    }
-
-    public static ChannelFuture sendPlainText(
+    public static void sendPlainText(
             ChannelHandlerContext ctx,
             HttpResponseStatus status,
             String message,
             boolean close,
             @Nullable String origin) {
-        return sendResponse(ctx, status, "text/plain", ByteBufUtil.writeUtf8(ctx.alloc(), message), close, origin);
-    }
-
-    public static ChannelFuture sendResponse(
-            ChannelHandlerContext ctx, HttpResponseStatus status, String contentType, ByteBuf body) {
-        return sendResponse(ctx, status, contentType, body, null);
-    }
-
-    public static ChannelFuture sendResponse(
-            ChannelHandlerContext ctx,
-            HttpResponseStatus status,
-            String contentType,
-            ByteBuf body,
-            @Nullable String origin) {
-        return sendResponse(ctx, status, contentType, body, false, origin);
+        sendResponse(ctx, status, "text/plain", ByteBufUtil.writeUtf8(ctx.alloc(), message), close, origin);
     }
 
     public static ChannelFuture sendResponse(
