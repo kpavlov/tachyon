@@ -61,3 +61,53 @@ jobs:
         with:
           name: reports-jdk-${{ matrix.java }}
           path: '**/target/*-reports/**'
+
+  examples:
+    strategy:
+      fail-fast: false
+      matrix:
+        java:
+          - 25
+        example:
+          - weather
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: temurin
+          cache: maven
+
+      - name: Install jar
+        run: mvn install -pl tachyon-server -am -DskipTests --no-transfer-progress
+
+
+      - name: Verify examples
+        run: mvn verify -f examples/${{ matrix.example }}/pom.xml -Dtachyon-server.version=1-SNAPSHOT --no-transfer-progress
+
+      - name: Publish test results
+        uses: mikepenz/action-junit-report@v6
+        if: always()
+        with:
+          report_paths: 'examples/${{ matrix.example }}/target/*-reports/TEST-*.xml'
+          check_name: 'Test Report: ${{ matrix.example }} (JDK ${{ matrix.java }})'
+          detailed_summary: true
+          flaky_summary: true
+          include_passed: false
+          fail_on_failure: true
+          require_tests: true
+          comment: true
+          job_summary: true
+
+      - name: Upload reports as artifacts
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: reports-jdk-${{ matrix.java }}
+          path: '**/target/*-reports/**'
+

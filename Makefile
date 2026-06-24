@@ -1,4 +1,4 @@
-.PHONY: build test package conformance e2e clean format all
+.PHONY: build test package conformance e2e clean format all inspector example
 
 all: clean format build
 
@@ -12,8 +12,13 @@ test:
 	@mvn test
 
 package:
-	@echo "📦 Packaging tachyon-mcp SNAPSHOT..."
-	@mvn package -pl tachyon-mcp -DskipTests -q
+	@echo "📦 Packaging and installing tachyon-server to local repository..."
+	@rm -rf target/local-repo
+	@mvn install -pl tachyon-server -am -DskipTests -q
+
+example: package
+	@echo "🌤️ Building and testing weather example..."
+	@mvn verify -f examples/weather/pom.xml -Dtachyon-server.version=1-SNAPSHOT
 
 conformance: package
 	@echo "🔄 Running MCP conformance suite..."
@@ -31,7 +36,6 @@ clean:
 format:
 	@echo "🎨 Formatting code with Spotless (Palantir)..."
 	@mvn spotless:apply -q
-	@echo "✅ Done"
 
 .PHONY: inspector
 inspector:

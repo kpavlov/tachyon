@@ -1,0 +1,85 @@
+/*
+ * Copyright (c) 2026 Konstantin Pavlov.
+ */
+package com.example.weather;
+
+import dev.tachyonmcp.server.features.tools.SyncToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.session.McpContext;
+import org.jspecify.annotations.Nullable;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+
+import java.util.List;
+import java.util.Map;
+import java.util.random.RandomGenerator;
+
+class GetWeatherTool implements SyncToolHandler<Map<String, JsonNode>, ToolResult> {
+    private static final RandomGenerator RANDOM = RandomGenerator.getDefault();
+    // language=json
+    private final JsonNode INPUT_SCHEMA = new ObjectMapper().readTree("""
+        {
+          "type": "object",
+          "properties": {
+            "city": {
+              "type": "string",
+              "description": "City name (e.g., London, Tokyo, New York)"
+            },
+            "units": {
+              "type": "string",
+              "enum": ["celsius", "fahrenheit"],
+              "description": "Temperature unit (default: celsius)"
+            }
+          },
+          "required": ["city"]
+        }
+        """);
+
+    @Override
+    public String name() {
+        return "get-weather";
+    }
+
+    @Override
+    public @Nullable String title() {
+        return "Current Weather";
+    }
+
+    @Override
+    public String description() {
+        return "Get current weather for a city";
+    }
+
+    @Override
+    public JsonNode inputSchema() {
+        return INPUT_SCHEMA;
+    }
+
+    @Override
+    public ToolResult handle(McpContext context, Map<String, JsonNode> args) {
+        var city = args.containsKey("city") ? args.get("city").asString() : "";
+        var units = args.containsKey("units") ? args.get("units").asString() : "celsius";
+        if (!city.isBlank()) {
+            var weather = generateWeather(city, units);
+            return ToolResult.text(weather);
+        } else {
+            return ToolResult.error("Parameter `city` is required");
+        }
+    }
+
+    private static String generateWeather(String city, String units) {
+        var tempCelsius = -5 + RANDOM.nextInt(35);
+        var tempDisplay = "celsius".equals(units) ? tempCelsius + "°C" : (tempCelsius * 9 / 5 + 32) + "°F";
+        var conditions = List.of("Sunny", "Cloudy", "Rainy", "Windy", "Foggy", "Partly cloudy", "Thunderstorms");
+        var condition = conditions.get(RANDOM.nextInt(conditions.size()));
+        var humidity = 30 + RANDOM.nextInt(60);
+        var windSpeed = 5 + RANDOM.nextInt(40);
+        return """
+            Weather in %s:
+              Condition: %s
+              Temperature: %s
+              Humidity: %d%%
+              Wind: %d km/h
+            """.formatted(city, condition, tempDisplay, humidity, windSpeed);
+    }
+}
