@@ -6,6 +6,7 @@ package dev.tachyonmcp.server.domain;
 
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
+import tools.jackson.databind.JsonNode;
 
 /**
  * A request from the dispatcher to read a resource by URI.
@@ -18,9 +19,9 @@ public interface ReadResourceRequest {
     String uri();
 
     @Nullable
-    Map<String, Object> meta();
+    Map<String, JsonNode> meta();
 
-    static ReadResourceRequest of(String uri, @Nullable Map<String, Object> meta) {
+    static ReadResourceRequest of(String uri, @Nullable Map<String, JsonNode> meta) {
         return new DefaultReadResourceRequest(uri, meta);
     }
 }
