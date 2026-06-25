@@ -17,12 +17,17 @@ import dev.tachyonmcp.server.session.McpContext;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junit.jupiter.api.parallel.Isolated;
 import tools.jackson.databind.ObjectMapper;
 
 /**
  * <a href="https://modelcontextprotocol.io/seps/1686-tasks">SEP-1686 Tasks</a> —
  * negotiable extension exposed only when client opts in via {@code initialize} capabilities.
  */
+@Isolated
+@Execution(ExecutionMode.SAME_THREAD) // to fix shouldNotifyTaskStatusOnCreate flakiness
 class TasksExtensionTest extends AbstractMcpE2eTest {
 
     @Override
