@@ -20,7 +20,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import tools.jackson.databind.ObjectMapper;
 
-class ResourceCapabilitiesE2eTest extends AbstractMcpE2eTest {
+class ResourceCapabilitiesTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldListRegisteredResources() throws Exception {

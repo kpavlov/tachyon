@@ -18,7 +18,7 @@ import java.util.concurrent.CompletionStage;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 
-class TaskLifecycleE2eTest extends AbstractMcpE2eTest {
+class TaskLifecycleTest extends AbstractMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {

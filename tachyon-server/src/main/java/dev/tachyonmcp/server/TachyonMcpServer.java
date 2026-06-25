@@ -26,8 +26,7 @@ public final class TachyonMcpServer {
         var store = config.session().sessionStore() != null
                 ? config.session().sessionStore()
                 : new dev.tachyonmcp.server.session.InMemorySessionStore();
-        var server = new McpServer(
-                router, store, config, dev.tachyonmcp.server.JsonSchemaValidator.noop(), java.util.List.of());
+        var server = new McpServer(router, store, config, new NetworkntJsonSchemaValidator(), java.util.List.of());
         var nettyConfig = new NettyServerConfig(
                 config.network().host(),
                 config.network().port(),

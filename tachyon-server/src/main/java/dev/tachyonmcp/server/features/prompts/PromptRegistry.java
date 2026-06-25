@@ -10,14 +10,17 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetPromptResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListPromptsResult;
 import dev.tachyonmcp.server.JsonSchemaValidator;
 import dev.tachyonmcp.server.McpMethodHandler;
+import dev.tachyonmcp.server.SchemaValidationError;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.features.Registry;
 import dev.tachyonmcp.server.features.tools.ToolRegistry;
 import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -91,14 +94,19 @@ public class PromptRegistry extends Registry<PromptEntry> {
             var inputSchema = entry.descriptor().inputSchema();
             if (inputSchema != null) {
                 var argsNode = JsonNodeFactory.instance.objectNode();
-                var argsMap = extractArgumentsMap(params);
+                Map<String, JsonNode> argsMap;
+                try {
+                    argsMap = extractArgumentsMap(params);
+                } catch (RuntimeException e) {
+                    return JsonRpcErrors.invalidParams("Invalid arguments");
+                }
                 if (argsMap != null) {
                     argsMap.forEach(argsNode::set);
                 }
-                try {
-                    validator.validate(inputSchema, argsNode);
-                } catch (RuntimeException e) {
-                    return JsonRpcErrors.invalidParams(e.getMessage());
+                var errors = validator.validate(inputSchema, argsNode);
+                if (!errors.isEmpty()) {
+                    return JsonRpcErrors.invalidParams(
+                            errors.stream().map(SchemaValidationError::message).collect(Collectors.joining("; ")));
                 }
             }
             java.util.List<PromptMessage> domainMessages;
@@ -118,21 +126,22 @@ public class PromptRegistry extends Registry<PromptEntry> {
 
         private static String extractArguments(Object params) {
             if (params instanceof GetPromptRequestParams p && p.arguments() != null) {
-                return p.arguments().toString();
+                return JsonRpcCodec.writeValueAsString(p.arguments());
             }
             if (params instanceof Map<?, ?> map && map.get("arguments") instanceof Map<?, ?> args) {
-                return args.toString();
+                return JsonRpcCodec.writeValueAsString(args);
             }
             return "";
         }
 
-        @SuppressWarnings("unchecked")
         private static @Nullable Map<String, JsonNode> extractArgumentsMap(Object params) {
             if (params instanceof GetPromptRequestParams p && p.arguments() != null) {
                 return p.arguments();
             }
-            if (params instanceof Map<?, ?> map && map.get("arguments") instanceof Map<?, ?> args) {
-                return (Map<String, JsonNode>) args;
+            if (params instanceof Map<?, ?> map) {
+                var json = JsonRpcCodec.writeValueAsString(map);
+                var typed = JsonRpcCodec.decodeWithCodec(json, GetPromptRequestParams.class);
+                return typed.arguments();
             }
             return null;
         }

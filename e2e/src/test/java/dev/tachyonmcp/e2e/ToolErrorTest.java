@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
-class ToolErrorE2eTest extends AbstractMcpE2eTest {
+class ToolErrorTest extends AbstractMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {

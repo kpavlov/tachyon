@@ -11,7 +11,7 @@ import dev.tachyonmcp.server.session.McpSession;
 import java.net.http.HttpResponse;
 import org.junit.jupiter.api.Test;
 
-class SessionLifecycleE2eTest extends AbstractMcpE2eTest {
+class SessionLifecycleTest extends AbstractMcpE2eTest {
 
     @Test
     void disconnectOneClientDoesNotAffectOther() throws Exception {

@@ -23,7 +23,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class StatelessServerE2eTest {
+class StatelessServerTest {
 
     private McpServerHandle serverHandle;
     private int port;

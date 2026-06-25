@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-class McpSdkE2eTest extends AbstractMcpE2eTest {
+class McpSdkTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldConnectInitializeAndPing() {

@@ -18,7 +18,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.JsonNodeFactory;
 
-class TasksBridgeE2eTest extends AbstractMcpE2eTest {
+class TasksBridgeTest extends AbstractMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {

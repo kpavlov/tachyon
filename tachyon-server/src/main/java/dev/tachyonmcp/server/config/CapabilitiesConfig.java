@@ -74,7 +74,6 @@ public abstract class CapabilitiesConfig {
         return ImmutableCapabilitiesConfig.builder();
     }
 
-    @Value.Builder
     public interface Builder {
 
         Builder toolsMode(Mode mode);

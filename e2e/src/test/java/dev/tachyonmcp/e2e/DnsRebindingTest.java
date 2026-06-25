@@ -20,7 +20,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
  * Signalling {@code Connection: close} stops the client from reusing the socket.
  */
 @TestInstance(Lifecycle.PER_CLASS)
-class DnsRebindingE2eTest extends AbstractMcpE2eTest {
+class DnsRebindingTest extends AbstractMcpE2eTest {
 
     // language=JSON
     private static final String INIT_BODY = """
