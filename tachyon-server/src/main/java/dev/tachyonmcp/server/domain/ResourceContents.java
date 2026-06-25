@@ -4,9 +4,7 @@
 
 package dev.tachyonmcp.server.domain;
 
-import java.util.Map;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
 /**
  * The actual content of a resource, either text or binary.
@@ -14,13 +12,10 @@ import tools.jackson.databind.JsonNode;
  * <p>Both variants share a {@code uri}, {@code mimeType}, and {@code meta}. The sealed
  * hierarchy lets resource registries and mappers handle each variant explicitly.
  */
-public sealed interface ResourceContents permits TextResourceContents, BlobResourceContents {
+public sealed interface ResourceContents extends HasMeta permits TextResourceContents, BlobResourceContents {
 
     String uri();
 
     @Nullable
     String mimeType();
-
-    @Nullable
-    Map<String, JsonNode> meta();
 }

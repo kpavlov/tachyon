@@ -11,7 +11,6 @@ import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,18 +69,6 @@ public final class JsonRpcCodec {
             } else {
                 gen.writeNullProperty(RESULT);
             }
-            gen.writeEndObject();
-        });
-    }
-
-    @SuppressWarnings("unchecked")
-    public static ByteBuf serializeResponse(Object id, Codec<?> codec, Object value) {
-        return serialize(gen -> {
-            gen.writeStartObject();
-            gen.writeStringProperty(JSONRPC, JSONRPC_VERSION);
-            writeId(gen, id);
-            gen.writeName(RESULT);
-            ((Codec<Object>) codec).encode(gen, value);
             gen.writeEndObject();
         });
     }
@@ -299,20 +286,6 @@ public final class JsonRpcCodec {
         }
     }
 
-    public static <T> T decodeWithCodec(String json, Class<T> targetType) {
-        try {
-            var codec = CodecRegistry.codecFor(targetType);
-            try (var p = Codec.FACTORY.createParser(TREE_READ_CONTEXT, json.getBytes(StandardCharsets.UTF_8))) {
-                if (p.nextToken() != JsonToken.START_OBJECT) {
-                    throw new IOException("Expected JSON object");
-                }
-                return codec.decode(p);
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to decode " + targetType.getSimpleName(), e);
-        }
-    }
-
     public static @Nullable Object readGenericValue(JsonParser p) throws IOException {
         return switch (p.currentToken()) {
             case START_OBJECT -> readObject(p);
@@ -346,66 +319,34 @@ public final class JsonRpcCodec {
     }
 
     @Nullable
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public static String writeValueAsString(@Nullable Object value) {
-        if (value != null) {
-            var codec = CodecRegistry.codecFor(value.getClass());
-            if (codec != null) {
-                return writeValueAsString(codec, value);
-            }
+        if (value == null) {
+            return "null";
         }
-        return writeGenericValueAsString(value);
-    }
-
-    public static <T> String writeValueAsString(Codec<T> codec, Object value) {
-        try (var out = new ByteArrayOutputStream(256)) {
-            try (var gen = FACTORY.createGenerator(ObjectWriteContext.empty(), out, JsonEncoding.UTF8)) {
-                ((Codec<Object>) codec).encode(gen, value);
+        if (value instanceof String
+                || value instanceof Number
+                || value instanceof Boolean
+                || value instanceof List
+                || value instanceof Map) {
+            return ValueSerializer.writeValueAsString(value);
+        }
+        var codec = CodecRegistry.codecFor(value.getClass());
+        if (codec != null) {
+            try (var out = new ByteArrayOutputStream(256);
+                    var gen = FACTORY.createGenerator(ObjectWriteContext.empty(), out, JsonEncoding.UTF8)) {
+                ((Codec) codec).encode(gen, value);
                 gen.flush();
                 return out.toString();
+            } catch (IOException e) {
+                throw new UncheckedIOException("Failed to write value via codec for " + value.getClass(), e);
             }
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to write JSON value using codec", e);
         }
-    }
-
-    private static String writeGenericValueAsString(Object value) {
-        try (var out = new ByteArrayOutputStream(256)) {
-            try (var gen = FACTORY.createGenerator(ObjectWriteContext.empty(), out, JsonEncoding.UTF8)) {
-                writeJsonValue(gen, value);
-                gen.flush();
-                return out.toString();
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to write JSON value", e);
-        }
+        return ValueSerializer.writeValueAsString(value);
     }
 
     public static void writeJsonValue(JsonGenerator gen, @Nullable Object value) {
-        switch (value) {
-            case null -> gen.writeNull();
-            case Map<?, ?> map -> {
-                gen.writeStartObject();
-                for (var entry : map.entrySet()) {
-                    gen.writeName(entry.getKey().toString());
-                    writeJsonValue(gen, entry.getValue());
-                }
-                gen.writeEndObject();
-            }
-            case List<?> list -> {
-                gen.writeStartArray();
-                for (var item : list) {
-                    writeJsonValue(gen, item);
-                }
-                gen.writeEndArray();
-            }
-            case String s -> gen.writeString(s);
-            case Long l -> gen.writeNumber(l);
-            case Integer i -> gen.writeNumber(i);
-            case Double d -> gen.writeNumber(d);
-            case Float f -> gen.writeNumber(f);
-            case Boolean b -> gen.writeBoolean(b);
-            default -> gen.writeString(value.toString());
-        }
+        ValueSerializer.writeJsonValue(gen, value);
     }
 
     private static ByteBuf serialize(JsonWriter writer) {

@@ -39,4 +39,10 @@ public interface ToolResult {
     static ToolResult of(ContentBlock... content) {
         return new DefaultToolResult(List.of(content), null, null, null);
     }
+
+    static ToolResult from(Object result) {
+        if (result instanceof ToolResult r) return r;
+        var text = TextContent.of(result != null ? result.toString() : "");
+        return new DefaultToolResult(List.of(text), null, null, null);
+    }
 }

@@ -21,11 +21,17 @@ import java.util.concurrent.Executor;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
-public final class TasksExtension implements McpExtension {
+public class TasksExtension implements McpExtension {
 
     public static final String ID = "io.modelcontextprotocol/tasks";
 
     private static final JsonNode CREATE_TASK_SCHEMA = buildSchema();
+
+    private static final TasksExtension INSTANCE = new TasksExtension();
+
+    public static TasksExtension instance() {
+        return INSTANCE;
+    }
 
     private static JsonNode buildSchema() {
         var schema = JsonNodeFactory.instance.objectNode();

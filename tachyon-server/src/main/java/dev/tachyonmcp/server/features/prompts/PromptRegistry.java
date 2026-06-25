@@ -4,10 +4,8 @@
 
 package dev.tachyonmcp.server.features.prompts;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.McpPromptMapper;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetPromptRequestParams;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetPromptResult;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListPromptsResult;
 import dev.tachyonmcp.server.JsonSchemaValidator;
 import dev.tachyonmcp.server.McpMethodHandler;
 import dev.tachyonmcp.server.SchemaValidationError;
@@ -17,7 +15,6 @@ import dev.tachyonmcp.server.features.tools.ToolRegistry;
 import dev.tachyonmcp.server.session.McpContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -62,10 +59,9 @@ public class PromptRegistry extends Registry<PromptEntry> {
                 return extId == null || context.isExtensionEnabled(extId);
             });
 
-            var prompts = paginated.items().stream()
-                    .map(e -> McpPromptMapper.toPrompt(e.descriptor()))
-                    .toList();
-            return new ListPromptsResult(prompts, null, paginated.nextCursor(), null);
+            var descriptors =
+                    paginated.items().stream().map(PromptEntry::descriptor).toList();
+            return context.responseMapper().listPromptsResult(descriptors, paginated.nextCursor());
         }
     }
 
@@ -116,12 +112,9 @@ public class PromptRegistry extends Registry<PromptEntry> {
                 return JsonRpcErrors.internalError(e.getMessage());
             }
             if (domainMessages == null) {
-                domainMessages = Collections.emptyList();
+                domainMessages = List.of();
             }
-            var protocolMessages = domainMessages.stream()
-                    .map(McpPromptMapper::toProtocolMessage)
-                    .toList();
-            return new GetPromptResult(entry.descriptor().description(), protocolMessages, null, null);
+            return context.responseMapper().getPromptResult(entry.descriptor().description(), domainMessages);
         }
 
         private static String extractArguments(Object params) {
@@ -140,7 +133,7 @@ public class PromptRegistry extends Registry<PromptEntry> {
             }
             if (params instanceof Map<?, ?> map) {
                 var json = JsonRpcCodec.writeValueAsString(map);
-                var typed = JsonRpcCodec.decodeWithCodec(json, GetPromptRequestParams.class);
+                var typed = ProtocolCodecUtil.decodeWithCodec(json, GetPromptRequestParams.class);
                 return typed.arguments();
             }
             return null;

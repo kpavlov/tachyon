@@ -7,10 +7,8 @@ package dev.tachyonmcp.server.features.tools;
 import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidRequest;
 import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.methodNotFound;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.McpToolMapper;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolRequestParams;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListToolsResult;
 import dev.tachyonmcp.server.JsonSchemaValidator;
 import dev.tachyonmcp.server.McpMethodHandler;
 import dev.tachyonmcp.server.SchemaValidationError;
@@ -168,8 +166,7 @@ public class ToolRegistry {
                 var extId = d.extensionId();
                 return extId == null || context.isExtensionEnabled(extId);
             });
-            var tools = paginated.items().stream().map(McpToolMapper::toTool).toList();
-            return new ListToolsResult(tools, null, paginated.nextCursor(), null);
+            return context.responseMapper().listToolsResult(paginated.items(), paginated.nextCursor());
         }
     }
 
@@ -204,9 +201,8 @@ public class ToolRegistry {
                 var toolResult =
                         handler.handle(request, context).toCompletableFuture().join();
                 sendLoggingIfEnabled(context, parsed.name(), "completed");
-                var wireResult = toWireResult(toolResult);
-                validateOutput(handler.descriptor().outputSchema(), wireResult);
-                return wireResult;
+                validateOutput(handler.descriptor().outputSchema(), toolResult);
+                return context.responseMapper().callToolResult(toolResult);
             } catch (CompletionException e) {
                 var cause = e.getCause();
                 if (cause instanceof Exception ex) throw ex;
@@ -222,14 +218,6 @@ public class ToolRegistry {
             return ptNode.asString();
         }
 
-        private static CallToolResult toWireResult(ToolResult result) {
-            var protocolContent = result.content().stream()
-                    .map(McpToolMapper::toProtocolContentBlock)
-                    .toList();
-            return new CallToolResult(
-                    protocolContent, result.structuredContent(), result.isError(), result.meta(), null);
-        }
-
         private record CallParams(
                 String name,
                 @Nullable Map<String, JsonNode> args,
@@ -243,7 +231,7 @@ public class ToolRegistry {
             }
             if (params instanceof Map<?, ?> map) {
                 var json = JsonRpcCodec.writeValueAsString(map);
-                var typed = JsonRpcCodec.decodeWithCodec(json, CallToolRequestParams.class);
+                var typed = ProtocolCodecUtil.decodeWithCodec(json, CallToolRequestParams.class);
                 var name = typed.name();
                 if (name == null) return null;
                 return new CallParams(name, typed.arguments(), typed._meta());
@@ -262,7 +250,7 @@ public class ToolRegistry {
             return joinMessages(errors);
         }
 
-        private void validateOutput(@Nullable JsonNode schema, CallToolResult result) {
+        private void validateOutput(@Nullable JsonNode schema, ToolResult result) {
             if (schema == null || result.structuredContent() == null) return;
             var contentNode = JsonNodeFactory.instance.objectNode();
             contentNode.setAll(result.structuredContent());

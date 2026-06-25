@@ -7,7 +7,6 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.TachyonMcpServer;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
@@ -55,57 +54,64 @@ class ResourceCapabilitiesTest extends AbstractMcpE2eTest {
     @Test
     void shouldReadTextResource() throws Exception {
         var descriptor = ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain");
-        server = TachyonMcpServer.builder().build();
+        startEmptyServer();
         server.resources()
                 .add(descriptor, (ctx, req) -> TextResourceContents.of("resource://doc", "text/plain", "Hello world"));
-        startServer(server);
 
-        var client = createTestClient();
-        var sessionId = client.initialize();
-        var response = client.sendRequest(sessionId, """
-            {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://doc"}}
-            """);
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+            var response = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://doc"}}
+                """);
 
-        assertThatJson(response.body()).inPath("$.result.contents[0].uri").isEqualTo("resource://doc");
-        assertThatJson(response.body()).inPath("$.result.contents[0].text").isEqualTo("Hello world");
-        assertThatJson(response.body()).inPath("$.result.contents[0].mimeType").isEqualTo("text/plain");
+            assertThatJson(response.body()).inPath("$.result.contents[0].uri").isEqualTo("resource://doc");
+            assertThatJson(response.body()).inPath("$.result.contents[0].text").isEqualTo("Hello world");
+            assertThatJson(response.body())
+                    .inPath("$.result.contents[0].mimeType")
+                    .isEqualTo("text/plain");
+        }
     }
 
     @Test
     void shouldReturnErrorForUnknownResource() throws Exception {
         startEmptyServer();
 
-        var client = createTestClient();
-        var sessionId = client.initialize();
-        var response = client.sendRequest(sessionId, """
-            {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://unknown"}}
-            """);
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+            var response = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://unknown"}}
+                """);
 
-        // language=JSON
-        var expected = """
-            {
-              "jsonrpc": "2.0",
-              "id": 2,
-              "error": {
-                "code": -32002,
-                "message": "Resource not found"
-              }
-            }
-            """;
-        assertThatJson(response.body()).isEqualTo(expected);
+            // language=JSON
+            var expected = """
+                {
+                  "jsonrpc": "2.0",
+                  "id": 2,
+                  "error": {
+                    "code": -32002,
+                    "message": "Resource not found"
+                  }
+                }
+                """;
+            assertThatJson(response.body()).isEqualTo(expected);
+        }
     }
 
     @Test
     void shouldReturnEmptyListWhenNoResources() throws Exception {
         startEmptyServer();
 
-        var client = createTestClient();
-        var sessionId = client.initialize();
-        var response = client.sendRequest(sessionId, """
-            {"jsonrpc":"2.0","id":2,"method":"resources/list"}
-            """);
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+            var response = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"resources/list"}
+                """);
 
-        assertThatJson(response.body()).inPath("$.result.resources").isArray().isEmpty();
+            assertThatJson(response.body())
+                    .inPath("$.result.resources")
+                    .isArray()
+                    .isEmpty();
+        }
     }
 
     @ParameterizedTest(name = "[{index}] {0}")
@@ -114,42 +120,43 @@ class ResourceCapabilitiesTest extends AbstractMcpE2eTest {
         remove-resource | remove
         """)
     void shouldNotifyListChanged(String toolName, String action) throws Exception {
-        var builder = TachyonMcpServer.builder().tool(new NotifyListChangedToolHandler(action));
-        if ("remove".equals(action)) {
-            builder.resource(ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"));
+        startServer(builder -> {
+            builder.capabilities(c -> c.resourcesListChanged(true)).tool(new NotifyListChangedToolHandler(action));
+            if ("remove".equals(action)) {
+                builder.resource(ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"));
+            }
+        });
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+            var response = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"notify-list-changed","arguments":{}}}
+                """);
+
+            assertThat(response.body()).contains("notifications/resources/list_changed");
         }
-        startServer(builder.build());
-
-        var client = createTestClient();
-        var sessionId = client.initialize();
-        var response = client.sendRequest(sessionId, """
-            {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"notify-list-changed","arguments":{}}}
-            """);
-
-        assertThat(response.body()).contains("notifications/resources/list_changed");
     }
 
     @Test
     void shouldNotifyResourceUpdated() throws Exception {
-        startServer(TachyonMcpServer.builder()
-                .resource(ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"))
-                .tool(new NotifyUpdatedToolHandler())
-                .build());
+        startServer(it -> it.resource(ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"))
+                .tool(new NotifyUpdatedToolHandler()));
 
-        var client = createTestClient();
-        var sessionId = client.initialize();
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
 
-        var subResponse = client.sendRequest(sessionId, """
-            {"jsonrpc":"2.0","id":2,"method":"resources/subscribe","params":{"uri":"resource://doc"}}
-            """);
-        assertThat(subResponse.statusCode()).isEqualTo(200);
+            var subResponse = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"resources/subscribe","params":{"uri":"resource://doc"}}
+                """);
+            assertThat(subResponse.statusCode()).isEqualTo(200);
 
-        var response = client.sendRequest(sessionId, """
-            {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"notify-update","arguments":{}}}
-            """);
+            var response = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"notify-update","arguments":{}}}
+                """);
 
-        assertThat(response.body()).contains("notifications/resources/updated");
-        assertThat(response.body()).contains("resource://doc");
+            assertThat(response.body()).contains("notifications/resources/updated");
+            assertThat(response.body()).contains("resource://doc");
+        }
     }
 
     // ---- Tool handler implementations ----

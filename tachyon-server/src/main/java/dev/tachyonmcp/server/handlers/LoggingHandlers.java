@@ -4,6 +4,8 @@
 
 package dev.tachyonmcp.server.handlers;
 
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.LoggingLevelMapper;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.SetLevelRequestParams;
 import dev.tachyonmcp.server.McpMethodHandler;
 import dev.tachyonmcp.server.session.McpContext;
@@ -33,19 +35,19 @@ public final class LoggingHandlers {
                 typed = p;
             } else if (params instanceof Map<?, ?> map) {
                 var json = JsonRpcCodec.writeValueAsString(map);
-                typed = JsonRpcCodec.decodeWithCodec(json, SetLevelRequestParams.class);
+                typed = ProtocolCodecUtil.decodeWithCodec(json, SetLevelRequestParams.class);
             } else {
                 return JsonRpcErrors.invalidRequest("Invalid params for logging/setLevel");
             }
 
-            var level = typed.level();
-            if (level == null) {
+            var protocolLevel = typed.level();
+            if (protocolLevel == null) {
                 return JsonRpcErrors.invalidRequest("Missing level parameter");
             }
 
-            context.server().setLoggingLevel(level);
+            context.server().setLoggingLevel(LoggingLevelMapper.toDomain(protocolLevel));
 
-            return new dev.tachyonmcp.protocol.mcp.v2025_11_25.models.EmptyResult(null, null);
+            return context.responseMapper().emptyResult();
         }
     }
 }

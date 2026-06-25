@@ -142,16 +142,16 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void dispatchPreSessionRequest(ChannelHandlerContext ctx, JsonRpcMessage message, @Nullable String origin) {
-        if (!(message instanceof JsonRpcMessage.Request req)) {
+        if (!(message instanceof JsonRpcMessage.Request(Object id, String method, Object params))) {
             sendAccepted(ctx, origin);
             return;
         }
         var postStream = new PostSseStream(ctx.channel(), origin, server::nextEventId);
         dispatcher
-                .dispatchRequestAsync(req.id(), req.method(), req.params(), null, postStream, null)
+                .dispatchRequestAsync(id, method, params, null, postStream, null)
                 .whenComplete((result, ex) -> executor.execute(() -> {
                     if (ex != null) {
-                        logger.error("Dispatch failed for pre-session request: method={}", req.method(), ex);
+                        logger.error("Dispatch failed for pre-session request: method={}", method, ex);
                         sendResponseAndClose(
                                 ctx,
                                 HttpResponseStatus.INTERNAL_SERVER_ERROR,

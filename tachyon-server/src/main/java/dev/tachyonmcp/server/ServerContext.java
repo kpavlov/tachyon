@@ -4,7 +4,7 @@
 
 package dev.tachyonmcp.server;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.LoggingLevel;
+import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.session.McpSession;
 import java.util.concurrent.CompletableFuture;
 import org.jspecify.annotations.Nullable;

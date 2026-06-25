@@ -18,6 +18,7 @@ import org.jspecify.annotations.Nullable;
 public class DefaultInteractionContext<S extends Session> implements InteractionContext<S> {
 
     private final String protocol;
+    private volatile @Nullable String protocolVersion;
 
     private final Map<String, Object> attributes = new ConcurrentHashMap<>(3);
     private final Set<String> enabledExtensions = ConcurrentHashMap.newKeySet();
@@ -33,6 +34,16 @@ public class DefaultInteractionContext<S extends Session> implements Interaction
     @Override
     public String getProtocol() {
         return protocol;
+    }
+
+    @Override
+    public @Nullable String getProtocolVersion() {
+        return protocolVersion;
+    }
+
+    @Override
+    public void setProtocolVersion(@Nullable String protocolVersion) {
+        this.protocolVersion = protocolVersion;
     }
 
     @Override
@@ -79,7 +90,8 @@ public class DefaultInteractionContext<S extends Session> implements Interaction
     }
 
     @Override
-    public <T> T getAttribute(String name) {
+    @SuppressWarnings("unchecked")
+    public <T> @Nullable T getAttribute(String name) {
         return (T) attributes.get(name);
     }
 }

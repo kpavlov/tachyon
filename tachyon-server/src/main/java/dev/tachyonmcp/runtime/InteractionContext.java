@@ -18,8 +18,15 @@ public interface InteractionContext<S extends Session> {
         SHUTDOWN
     }
 
+    @Nullable
     String getProtocol();
 
+    @Nullable
+    String getProtocolVersion();
+
+    void setProtocolVersion(@Nullable String protocolVersion);
+
+    @Nullable
     Lifecycle getLifecycle();
 
     void setLifecycle(Lifecycle lifecycle);

@@ -7,7 +7,6 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.TachyonMcpServer;
 import dev.tachyonmcp.server.features.tasks.TasksExtension;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
@@ -32,7 +31,7 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServer(TachyonMcpServer.builder().extension(new TasksExtension()).build());
+        startServer(it -> it.extension(TasksExtension.instance()));
     }
 
     @Test
@@ -170,8 +169,7 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
         // The extension's create_task tool is async, so notifications don't route
         // through POST-SSE (ThreadLocal not inherited by ForkJoin threads).
         // This test uses a synchronous tool to verify notification delivery.
-        startServer(TachyonMcpServer.builder()
-                .tool(new ToolHandler() {
+        startServer(it -> it.tool(new ToolHandler() {
                     private final ToolDescriptor d =
                             ToolDescriptor.builder("create-sync").build();
 
@@ -186,7 +184,7 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
                         return CompletableFuture.completedFuture(ToolResult.text("ok"));
                     }
                 })
-                .extension(new TasksExtension())
+                .extension(TasksExtension.instance())
                 .build());
 
         try (var client = createTestClient()) {

@@ -23,12 +23,11 @@ class McpInitializationHandlerTest {
 
     private McpServer server;
     private EmbeddedChannel channel;
-    private McpDispatcher dispatcher;
 
     @BeforeEach
     void setUp() {
         server = TachyonMcpServer.builder().build();
-        dispatcher = new McpDispatcher(server, Runnable::run);
+        McpDispatcher dispatcher = new McpDispatcher(server, Runnable::run);
         channel = new EmbeddedChannel(new InteractionHandler("mcp"));
         channel.pipeline()
                 .addLast(

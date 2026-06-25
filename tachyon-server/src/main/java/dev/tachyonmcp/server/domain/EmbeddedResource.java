@@ -15,12 +15,9 @@ import tools.jackson.databind.JsonNode;
  * ({@link TextResourceContents} or {@link BlobResourceContents}), allowing the
  * server to attach resource data directly without requiring a separate read round-trip.
  */
-public non-sealed interface EmbeddedResource extends ContentBlock {
+public non-sealed interface EmbeddedResource extends ContentBlock, HasMeta {
 
     ResourceContents resource();
-
-    @Nullable
-    Map<String, JsonNode> meta();
 
     @Nullable
     Annotations annotations();

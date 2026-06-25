@@ -9,7 +9,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ContentBlock;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextContent;
-import dev.tachyonmcp.server.TachyonMcpServer;
 import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.session.McpContext;
@@ -22,10 +21,7 @@ class ToolNotificationsTest extends AbstractMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServer(TachyonMcpServer.builder()
-                .tool(new EchoToolHandler())
-                .tool(new NotifyingToolHandler())
-                .build());
+        startServer(it -> it.tool(new EchoToolHandler()).tool(new NotifyingToolHandler()));
     }
 
     @Test

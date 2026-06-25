@@ -6,6 +6,10 @@ package dev.tachyonmcp.transport.jsonrpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextContent;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class JsonRpcCodecTest {
@@ -64,5 +68,18 @@ class JsonRpcCodecTest {
         var json = JsonRpcCodec.serializeRequestAsString(99L, "ping", "{}");
 
         assertThat(json).contains("\"id\":99");
+    }
+
+    @Test
+    void writeValueAsStringWithProtocolModelReturnsJsonNotToString() {
+        var content = new TextContent("ok", null, null, Map.of());
+        var result = new CallToolResult(List.of(content), null, null, null, null);
+
+        var json = JsonRpcCodec.writeValueAsString(result);
+
+        assertThat(json).isNotEqualTo(result.toString());
+        assertThat(json).doesNotStartWith("\"");
+        assertThat(json).contains("\"content\"");
+        assertThat(json).contains("\"type\":\"ok\"");
     }
 }

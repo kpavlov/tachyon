@@ -6,6 +6,7 @@ package dev.tachyonmcp.server.session;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.Notifications;
+import dev.tachyonmcp.server.ProtocolResponseMapper;
 import dev.tachyonmcp.server.ServerContext;
 import org.jspecify.annotations.Nullable;
 
@@ -19,7 +20,11 @@ public interface McpContext extends InteractionContext<McpSession> {
     @Nullable
     McpSession session();
 
-    default void enableExtension(String extensionId) {}
+    default ProtocolResponseMapper responseMapper() {
+        return server().mcpServer().responseMapper();
+    }
+
+    void enableExtension(String extensionId);
 
     default boolean isExtensionEnabled(String extensionId) {
         var s = session();

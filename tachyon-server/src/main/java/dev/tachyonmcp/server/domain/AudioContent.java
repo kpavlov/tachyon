@@ -14,14 +14,11 @@ import tools.jackson.databind.JsonNode;
  * <p>The audio data is base64-encoded in {@code data}, with the corresponding
  * {@code mimeType} describing the encoding (e.g. {@code audio/mp3}).
  */
-public non-sealed interface AudioContent extends ContentBlock {
+public non-sealed interface AudioContent extends ContentBlock, HasMeta {
 
     String data();
 
     String mimeType();
-
-    @Nullable
-    Map<String, JsonNode> meta();
 
     @Nullable
     Annotations annotations();

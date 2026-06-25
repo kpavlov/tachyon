@@ -2,15 +2,21 @@
  * Copyright (c) 2026 Konstantin Pavlov.
  */
 
-package dev.tachyonmcp.server.features.tasks;
+package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CancelTaskResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetTaskResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Task;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatus;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams;
+import dev.tachyonmcp.server.features.tasks.TaskEntry;
+import dev.tachyonmcp.server.features.tasks.TaskState;
 import org.jspecify.annotations.Nullable;
 
-public class TaskBindings {
+public final class McpTaskMapper {
+
+    private McpTaskMapper() {}
+
     @Nullable
     public static TaskStatus toWireStatus(TaskState status) {
         return switch (status) {
@@ -61,6 +67,18 @@ public class TaskBindings {
 
     public static CancelTaskResult toCancelTaskResult(TaskEntry entry) {
         return new CancelTaskResult(
+                null,
+                entry.id(),
+                toWireStatus(entry.status()),
+                null,
+                entry.createdAtIso(),
+                entry.lastUpdatedAtIso(),
+                entry.ttl(),
+                null);
+    }
+
+    public static TaskStatusNotificationParams toStatusNotification(TaskEntry entry) {
+        return new TaskStatusNotificationParams(
                 null,
                 entry.id(),
                 toWireStatus(entry.status()),

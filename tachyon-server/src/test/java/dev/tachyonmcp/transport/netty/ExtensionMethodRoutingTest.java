@@ -17,7 +17,6 @@ import dev.tachyonmcp.server.session.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Set;
-import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -109,16 +108,5 @@ class ExtensionMethodRoutingTest {
                 }
             });
         }
-    }
-
-    private static class TestConnection implements SseConnection {
-
-        @Override
-        public boolean isWritable() {
-            return true;
-        }
-
-        @Override
-        public void send(@NonNull SseEvent event) {}
     }
 }

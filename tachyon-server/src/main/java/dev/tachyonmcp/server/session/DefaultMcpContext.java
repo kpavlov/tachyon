@@ -4,17 +4,39 @@
 
 package dev.tachyonmcp.server.session;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.LoggingLevel;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.McpServer;
 import dev.tachyonmcp.server.Notifications;
+import dev.tachyonmcp.server.ProtocolResponseMapper;
 import dev.tachyonmcp.server.ServerContext;
+import dev.tachyonmcp.server.domain.LoggingLevel;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import org.jspecify.annotations.Nullable;
 
 public class DefaultMcpContext implements McpContext {
+
+    private static final ProtocolResponseMapper NOOP_MAPPER;
+
+    static {
+        var mapper = loadResponseMapper();
+        NOOP_MAPPER = mapper != null ? mapper : ProtocolResponseMapper.NOOP;
+    }
+
+    @Nullable
+    private static ProtocolResponseMapper loadResponseMapper() {
+        var mappers = new ArrayList<ProtocolResponseMapper>();
+        ServiceLoader.load(ProtocolResponseMapper.class).forEach(mappers::add);
+        for (var mapper : mappers) {
+            if (mapper.supports("mcp", "2025-11-25")) {
+                return mapper;
+            }
+        }
+        return null;
+    }
 
     private static final McpContext NOOP_CONTEXT = new DefaultMcpContext() {
         @Override
@@ -30,6 +52,21 @@ public class DefaultMcpContext implements McpContext {
         @Override
         public @Nullable McpSession session() {
             return null;
+        }
+
+        @Override
+        public @Nullable String getProtocol() {
+            throw new UnsupportedOperationException("No protocol available");
+        }
+
+        @Override
+        public @Nullable Lifecycle getLifecycle() {
+            throw new UnsupportedOperationException("No lifecycle available");
+        }
+
+        @Override
+        public ProtocolResponseMapper responseMapper() {
+            return NOOP_MAPPER;
         }
     };
 
@@ -94,12 +131,32 @@ public class DefaultMcpContext implements McpContext {
     }
 
     @Override
-    public String getProtocol() {
+    public @Nullable String getProtocol() {
         return interactionContext != null ? interactionContext.getProtocol() : null;
     }
 
     @Override
-    public Lifecycle getLifecycle() {
+    public @Nullable String getProtocolVersion() {
+        return session != null ? session.protocolVersion() : null;
+    }
+
+    @Override
+    public void setProtocolVersion(@Nullable String protocolVersion) {
+        if (session != null) {
+            session.protocolVersion(protocolVersion);
+        }
+    }
+
+    @Override
+    public ProtocolResponseMapper responseMapper() {
+        if (server != null) {
+            return server.mcpServer().responseMapper();
+        }
+        return ProtocolResponseMapper.NOOP;
+    }
+
+    @Override
+    public @Nullable Lifecycle getLifecycle() {
         return interactionContext != null ? interactionContext.getLifecycle() : null;
     }
 

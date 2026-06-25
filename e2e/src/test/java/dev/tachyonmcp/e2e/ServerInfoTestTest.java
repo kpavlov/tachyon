@@ -6,22 +6,19 @@ package dev.tachyonmcp.e2e;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
-import dev.tachyonmcp.server.TachyonMcpServer;
 import org.junit.jupiter.api.Test;
 
 class ServerInfoTestTest extends AbstractMcpE2eTest {
 
     @Test
     void allCapabilitiesEnabled() throws Exception {
-        startServer(TachyonMcpServer.builder()
-                .capabilities(it -> it.completions()
-                        .logging()
-                        .prompts(true)
-                        .tools(true)
-                        .resources(true, true)
-                        .prompts(true)
-                        .tasks(true, true, true))
-                .build());
+        startServer(it -> it.capabilities(c -> c.completions()
+                .logging()
+                .prompts(true)
+                .tools(true)
+                .resources(true, true)
+                .prompts(true)
+                .tasks(true, true, true)));
 
         try (var client = createTestClient()) {
             // language=json
@@ -70,9 +67,7 @@ class ServerInfoTestTest extends AbstractMcpE2eTest {
 
     @Test
     void minimalisticServer() throws Exception {
-        startServer(TachyonMcpServer.builder()
-                .capabilities(it -> it.noTools().noResources().noPrompts())
-                .build());
+        startServer(it -> it.capabilities(c -> c.noTools().noResources().noPrompts()));
 
         try (var client = createTestClient()) {
             // language=json

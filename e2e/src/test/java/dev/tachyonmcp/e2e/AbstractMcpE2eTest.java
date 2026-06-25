@@ -7,12 +7,14 @@ package dev.tachyonmcp.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.ServerBuilder;
 import dev.tachyonmcp.server.TachyonMcpServer;
 import dev.tachyonmcp.transport.netty.NettyServer;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
@@ -55,15 +57,17 @@ abstract class AbstractMcpE2eTest {
     }
 
     protected void startEmptyServer() {
-        startServer(TachyonMcpServer.builder().build());
+        startServer((b) -> {});
     }
 
-    protected void startServer(McpServer newServer) {
+    protected void startServer(Consumer<ServerBuilder> configurer) {
         if (nettyServer != null && usingCustomServer) {
             nettyServer.close();
         }
-        this.server = newServer;
-        this.nettyServer = new NettyServer(0, newServer);
+        ServerBuilder serverBuilder = TachyonMcpServer.builder();
+        configurer.accept(serverBuilder);
+        this.server = serverBuilder.build();
+        this.nettyServer = new NettyServer(0, server);
         this.port = nettyServer.port();
         this.usingCustomServer = true;
     }

@@ -4,8 +4,6 @@
 
 package dev.tachyonmcp.server.features.resources;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ContentBlockMappers;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ResourceTemplate;
 import dev.tachyonmcp.server.domain.Annotations;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.TextResourceContents;
@@ -22,18 +20,4 @@ record DefaultResourceTemplateEntry(
         @Nullable Annotations annotations,
         @Nullable List<Icon> icons,
         Function<String, TextResourceContents> resolver)
-        implements ResourceTemplateEntry {
-
-    @Override
-    public ResourceTemplate toModel() {
-        return new ResourceTemplate(
-                uriTemplate,
-                description,
-                mimeType,
-                ContentBlockMappers.toProtocolAnnotations(annotations),
-                null,
-                name,
-                title,
-                ContentBlockMappers.toProtocolIcons(icons));
-    }
-}
+        implements ResourceTemplateEntry {}

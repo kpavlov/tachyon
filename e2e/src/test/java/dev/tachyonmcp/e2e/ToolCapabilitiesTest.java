@@ -7,7 +7,6 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.TachyonMcpServer;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.features.tools.SyncToolHandler;
@@ -40,7 +39,7 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
         } else {
             handler = new SimpleToolHandler(toolName, "A " + toolName + " tool");
         }
-        startServer(TachyonMcpServer.builder().tool(handler).build());
+        startServer(it -> it.tool(handler));
 
         try (var client = createTestClient()) {
 
@@ -109,11 +108,9 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldIncludeMultipleToolsWithMixedOutputSchemas() throws Exception {
-        startServer(TachyonMcpServer.builder()
-                .tool(new SimpleToolHandler("tool-a", "Tool A"))
+        startServer(it -> it.tool(new SimpleToolHandler("tool-a", "Tool A"))
                 .tool(new OutputSchemaToolHandler(OUTPUT_SCHEMA))
-                .tool(new SimpleToolHandler("tool-b", "Tool B"))
-                .build());
+                .tool(new SimpleToolHandler("tool-b", "Tool B")));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -148,7 +145,7 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
     @MethodSource
     void shouldIncludeExecutionTaskSupport(String toolName, boolean hasExecution, ToolHandler handler)
             throws Exception {
-        startServer(TachyonMcpServer.builder().tool(handler).build());
+        startServer(it -> it.tool(handler));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -182,7 +179,7 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldRegisterWithMinimalDescriptor() throws Exception {
-        server = TachyonMcpServer.builder().build();
+        startEmptyServer();
         server.registerTool(new SyncToolHandler<>() {
             @Override
             public String name() {
@@ -194,7 +191,6 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
                 return ToolResult.text("ok");
             }
         });
-        startServer(server);
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -213,7 +209,7 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
     @Test
     void shouldRegisterWithFullDescriptor() throws Exception {
         var annotations = ToolAnnotations.of(null, true, false, null, null);
-        server = TachyonMcpServer.builder().build();
+        startEmptyServer();
         server.registerTool(new SyncToolHandler<>() {
             @Override
             public String name() {
@@ -255,7 +251,6 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
                 return ToolResult.text("ok");
             }
         });
-        startServer(server);
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();

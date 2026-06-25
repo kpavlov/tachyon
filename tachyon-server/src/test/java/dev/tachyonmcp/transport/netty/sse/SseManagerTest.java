@@ -11,7 +11,6 @@ import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.server.session.SseConnection;
 import dev.tachyonmcp.server.session.SseEvent;
 import java.util.ArrayList;
-import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
 class SseManagerTest {
@@ -120,7 +119,7 @@ class SseManagerTest {
         }
 
         @Override
-        public void send(@NonNull SseEvent event) {
+        public void send(SseEvent event) {
             sent.add(event);
         }
     }

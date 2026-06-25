@@ -7,6 +7,7 @@ package dev.tachyonmcp.codec;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.CodecRegistry;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.*;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.nio.charset.StandardCharsets;
@@ -74,7 +75,7 @@ class ProtocolMapperTest {
         var map = Map.of("name", "my-tool", "arguments", Map.of("key", "value"));
 
         var json = JsonRpcCodec.writeValueAsString(map);
-        var params = JsonRpcCodec.decodeWithCodec(json, CallToolRequestParams.class);
+        var params = ProtocolCodecUtil.decodeWithCodec(json, CallToolRequestParams.class);
         assertThat(params.name()).isEqualTo("my-tool");
         assertThat(params.arguments()).containsKey("key");
     }
@@ -85,7 +86,7 @@ class ProtocolMapperTest {
                 Map.of("protocolVersion", "2025-11-25", "clientInfo", Map.of("name", "test-client", "version", "1.0"));
 
         var json = JsonRpcCodec.writeValueAsString(map);
-        var params = JsonRpcCodec.decodeWithCodec(json, InitializeRequestParams.class);
+        var params = ProtocolCodecUtil.decodeWithCodec(json, InitializeRequestParams.class);
         assertThat(params.protocolVersion()).isEqualTo("2025-11-25");
         assertThat(params.clientInfo()).isNotNull();
         assertThat(params.clientInfo().name()).isEqualTo("test-client");
@@ -97,7 +98,7 @@ class ProtocolMapperTest {
                 "name", "tool",
                 "unknownField", "shouldBeIgnored");
         var json = JsonRpcCodec.writeValueAsString(map);
-        var params = JsonRpcCodec.decodeWithCodec(json, CallToolRequestParams.class);
+        var params = ProtocolCodecUtil.decodeWithCodec(json, CallToolRequestParams.class);
         assertThat(params.name()).isEqualTo("tool");
     }
 

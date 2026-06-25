@@ -4,9 +4,9 @@
 
 package dev.tachyonmcp.server.features.resources;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ContentBlockMappers;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.McpResourceMapper;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.*;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ReadResourceRequestParams;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.SubscribeRequestParams;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.UnsubscribeRequestParams;
 import dev.tachyonmcp.server.McpMethodHandler;
 import dev.tachyonmcp.server.McpServer;
 import dev.tachyonmcp.server.domain.ReadResourceRequest;
@@ -194,10 +194,7 @@ public class ResourceRegistry {
                 return extId == null || context.isExtensionEnabled(extId);
             });
 
-            var resources = paginated.items().stream()
-                    .map(McpResourceMapper::toResource)
-                    .toList();
-            return new ListResourcesResult(resources, null, paginated.nextCursor(), null);
+            return context.responseMapper().listResourcesResult(paginated.items(), paginated.nextCursor());
         }
     }
 
@@ -210,10 +207,8 @@ public class ResourceRegistry {
 
         @Override
         public Object handle(McpContext context, Object params) {
-            var models = registry.templates.values().stream()
-                    .map(ResourceTemplateEntry::toModel)
-                    .toList();
-            return new ListResourceTemplatesResult(models, null, null, null);
+            var templates = registry.templates.values().stream().toList();
+            return context.responseMapper().listResourceTemplatesResult(templates, null);
         }
     }
 
@@ -246,15 +241,13 @@ public class ResourceRegistry {
                             .matcher(uri);
                     if (re.matches()) {
                         var content = template.resolver().apply(re.group(1));
-                        return new ReadResourceResult(
-                                List.of(ContentBlockMappers.toProtocolResourceContents(content)), null, null);
+                        return context.responseMapper().readResourceResult(List.of(content));
                     }
                 }
                 return JsonRpcErrors.resourceNotFound("Resource not found");
             }
             var contents = entry.handler().read(context, readParams);
-            return new ReadResourceResult(
-                    List.of(ContentBlockMappers.toProtocolResourceContents(contents)), null, null);
+            return context.responseMapper().readResourceResult(List.of(contents));
         }
 
         private static @Nullable ReadResourceRequest toReadParams(Object params) {
@@ -284,7 +277,7 @@ public class ResourceRegistry {
             registry.subscriptions
                     .computeIfAbsent(uri, k -> new CopyOnWriteArraySet<>())
                     .add(context.session().id());
-            return new EmptyResult(null, null);
+            return context.responseMapper().emptyResult();
         }
 
         private static @Nullable String extractUri(Object params) {
@@ -321,7 +314,7 @@ public class ResourceRegistry {
                     registry.subscriptions.remove(uri);
                 }
             }
-            return new EmptyResult(null, null);
+            return context.responseMapper().emptyResult();
         }
 
         private static @Nullable String extractUri(Object params) {

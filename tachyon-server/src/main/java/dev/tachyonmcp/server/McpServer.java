@@ -4,12 +4,9 @@
 
 package dev.tachyonmcp.server;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Implementation;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.LoggingLevel;
 import dev.tachyonmcp.runtime.SessionState;
-import dev.tachyonmcp.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.server.config.ServerConfig;
-import dev.tachyonmcp.server.config.ServerIdentity;
+import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.extensions.McpExtension;
 import dev.tachyonmcp.server.features.prompts.PromptRegistry;
 import dev.tachyonmcp.server.features.resources.ResourceRegistry;
@@ -50,10 +47,26 @@ public class McpServer implements Closeable {
     final ConcurrentHashMap<Object, CompletableFuture<String>> pendingRequests = new ConcurrentHashMap<>();
     private final ExecutorService virtualThreadExecutor = Executors.newThreadPerTaskExecutor(
             Thread.ofVirtual().name("mcp-handler-vt-", 0).factory());
-    final Implementation serverInfo;
     private final List<McpExtension> extensions;
     private final Map<String, String> extensionMethodOwners = new ConcurrentHashMap<>();
     private final Map<String, McpExtension> extensionsById = new ConcurrentHashMap<>();
+
+    private static final List<ProtocolResponseMapper> RESPONSE_MAPPERS;
+
+    static {
+        var mappers = new ArrayList<ProtocolResponseMapper>();
+        ServiceLoader.load(ProtocolResponseMapper.class).forEach(mappers::add);
+        RESPONSE_MAPPERS = List.copyOf(mappers);
+    }
+
+    public ProtocolResponseMapper responseMapper() {
+        for (var mapper : RESPONSE_MAPPERS) {
+            if (mapper.supports("mcp", "2025-11-25")) {
+                return mapper;
+            }
+        }
+        return ProtocolResponseMapper.NOOP;
+    }
 
     public ServerConfig config() {
         return config;
@@ -88,54 +101,54 @@ public class McpServer implements Closeable {
     }
 
     public ServerCapabilities resolveCapabilities() {
-        final var resultBuilder = ServerCapabilities.builder();
+        final var builder = ServerCapabilities.builder();
 
-        CapabilitiesConfig capabilitiesConfig = config.capabilities();
+        final var capabilitiesConfig = config.capabilities();
 
-        resultBuilder.logging(capabilitiesConfig.logging());
-        resultBuilder.completions(capabilitiesConfig.completions());
+        builder.logging(capabilitiesConfig.logging());
+        builder.completions(capabilitiesConfig.completions());
 
         if (capabilitiesConfig.tasksList() || capabilitiesConfig.tasksRequests()) {
-            resultBuilder.tasks(new ServerCapabilities.Tasks(
+            builder.tasks(new ServerCapabilities.Tasks(
                     capabilitiesConfig.tasksList(),
                     capabilitiesConfig.tasksCancel(),
                     capabilitiesConfig.tasksRequests()));
         }
 
         switch (capabilitiesConfig.toolsMode()) {
-            case ON -> resultBuilder.tools(new ServerCapabilities.Tools(capabilitiesConfig.toolsListChanged()));
+            case ON -> builder.tools(new ServerCapabilities.Tools(capabilitiesConfig.toolsListChanged()));
             case OFF -> {}
             case AUTO -> {
                 if (!toolRegistry.isEmpty()) {
-                    resultBuilder.tools(new ServerCapabilities.Tools(capabilitiesConfig.toolsListChanged()));
+                    builder.tools(new ServerCapabilities.Tools(capabilitiesConfig.toolsListChanged()));
                 }
             }
         }
 
         switch (capabilitiesConfig.resourcesMode()) {
             case ON ->
-                resultBuilder.resources(new ServerCapabilities.Resources(
+                builder.resources(new ServerCapabilities.Resources(
                         capabilitiesConfig.resourcesSubscribe(), capabilitiesConfig.resourcesListChanged()));
             case OFF -> {}
             case AUTO -> {
                 if (!resourceRegistry.getAll().isEmpty()) {
-                    resultBuilder.resources(new ServerCapabilities.Resources(
+                    builder.resources(new ServerCapabilities.Resources(
                             capabilitiesConfig.resourcesSubscribe(), capabilitiesConfig.resourcesListChanged()));
                 }
             }
         }
 
         switch (capabilitiesConfig.promptsMode()) {
-            case ON -> resultBuilder.prompts(new ServerCapabilities.Prompts(capabilitiesConfig.promptsListChanged()));
+            case ON -> builder.prompts(new ServerCapabilities.Prompts(capabilitiesConfig.promptsListChanged()));
             case OFF -> {}
             case AUTO -> {
                 if (!promptRegistry.getAll().isEmpty()) {
-                    resultBuilder.prompts(new ServerCapabilities.Prompts(capabilitiesConfig.promptsListChanged()));
+                    builder.prompts(new ServerCapabilities.Prompts(capabilitiesConfig.promptsListChanged()));
                 }
             }
         }
 
-        return resultBuilder.build();
+        return builder.build();
     }
 
     public McpServer() {
@@ -154,7 +167,6 @@ public class McpServer implements Closeable {
             @Nullable List<McpExtension> extensions) {
         this.config = Objects.requireNonNull(config, "config cannot be null");
         this.router = Objects.requireNonNull(router, "router cannot be null");
-        this.serverInfo = buildServerInfo(config.identity());
         this.extensions = extensions != null ? extensions : List.of();
         this.sessionManager = new SessionManager(sessionStore);
         this.validator = validator != null ? validator : new NetworkntJsonSchemaValidator();
@@ -164,26 +176,25 @@ public class McpServer implements Closeable {
         this.promptRegistry = new PromptRegistry(this.validator);
         registerDefaults();
         bootstrapExtensions();
-        setupChangeListeners();
+        setupChangeListeners(config);
         if (!config.session().stateless()) {
             sessionManager.startJanitor(config.session().sessionTtl());
         }
     }
 
-    private static Implementation buildServerInfo(ServerIdentity identity) {
-        return Implementation.builder()
-                .name(identity.name())
-                .version(identity.version())
-                .description(identity.description())
-                .websiteUrl(identity.websiteUrl())
-                .build();
-    }
-
-    private void setupChangeListeners() {
-        toolRegistry.onChange(() -> broadcastNotification("notifications/tools/list_changed"));
-        resourceRegistry.onChange(() -> broadcastNotification("notifications/resources/list_changed"));
-        promptRegistry.onChange(() -> broadcastNotification("notifications/prompts/list_changed"));
-        taskRegistry.onChange(() -> broadcastNotification("notifications/tasks/list_changed"));
+    private void setupChangeListeners(ServerConfig config) {
+        if (config.capabilities().toolsListChanged()) {
+            toolRegistry.onChange(() -> broadcastNotification("notifications/tools/list_changed"));
+        }
+        if (config.capabilities().resourcesListChanged()) {
+            resourceRegistry.onChange(() -> broadcastNotification("notifications/resources/list_changed"));
+        }
+        if (config.capabilities().promptsListChanged()) {
+            promptRegistry.onChange(() -> broadcastNotification("notifications/prompts/list_changed"));
+        }
+        if (config.capabilities().tasksList()) {
+            taskRegistry.onChange(() -> broadcastNotification("notifications/tasks/list_changed"));
+        }
         taskRegistry.startTtlJanitor();
     }
 

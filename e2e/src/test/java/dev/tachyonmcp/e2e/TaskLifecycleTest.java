@@ -7,7 +7,6 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.TachyonMcpServer;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
@@ -22,7 +21,7 @@ class TaskLifecycleTest extends AbstractMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServer(TachyonMcpServer.builder().tool(new EchoToolHandler()).build());
+        startServer(it -> it.tool(new EchoToolHandler()));
     }
 
     @Test
@@ -129,10 +128,7 @@ class TaskLifecycleTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldNotifyTaskStatusViaSyncTool() throws Exception {
-        startServer(TachyonMcpServer.builder()
-                .tool(new EchoToolHandler())
-                .tool(new SyncTaskCreatorTool())
-                .build());
+        startServer(it -> it.tool(new EchoToolHandler()).tool(new SyncTaskCreatorTool()));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();

@@ -4,7 +4,6 @@
 
 package dev.tachyonmcp.server.features.tools;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.McpToolMapper;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.session.McpContext;
@@ -65,7 +64,7 @@ public interface SyncToolHandler<I, O> extends ToolHandler {
     @SuppressWarnings("unchecked")
     default CompletionStage<ToolResult> handle(ToolRequest request, McpContext context) throws Exception {
         var result = handle(context, (I) request.arguments());
-        return CompletableFuture.completedFuture(McpToolMapper.toDomainResult(result));
+        return CompletableFuture.completedFuture(ToolResult.from(result));
     }
 
     static SyncToolHandler<Object, Object> of(

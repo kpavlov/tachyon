@@ -14,12 +14,9 @@ import tools.jackson.databind.JsonNode;
  * <p>Carries the target {@code uri} and optional request-level {@code meta} that may be
  * forwarded to the resource handler for additional context.
  */
-public interface ReadResourceRequest {
+public interface ReadResourceRequest extends HasMeta {
 
     String uri();
-
-    @Nullable
-    Map<String, JsonNode> meta();
 
     static ReadResourceRequest of(String uri, @Nullable Map<String, JsonNode> meta) {
         return new DefaultReadResourceRequest(uri, meta);

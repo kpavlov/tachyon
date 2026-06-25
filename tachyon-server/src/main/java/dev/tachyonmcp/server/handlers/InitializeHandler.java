@@ -4,12 +4,11 @@
 
 package dev.tachyonmcp.server.handlers;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ServerInfoMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeResult;
 import dev.tachyonmcp.runtime.Extension;
 import dev.tachyonmcp.server.McpMethodHandler;
 import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.domain.InitializeResponse;
 import dev.tachyonmcp.server.extensions.McpExtension;
 import dev.tachyonmcp.server.session.McpContext;
 import java.util.LinkedHashMap;
@@ -17,8 +16,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 public final class InitializeHandler implements McpMethodHandler {
+
+    private static final String MCP_VERSION = "2025-11-25";
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final McpServer mcpServer;
     private final List<McpExtension> extensions;
@@ -35,30 +38,23 @@ public final class InitializeHandler implements McpMethodHandler {
 
     @Override
     public Object handle(McpContext context, Object params) {
-        var negotiatedVersion = "2025-11-25";
-        context.session().protocolVersion(negotiatedVersion);
+        context.setProtocolVersion(MCP_VERSION);
 
         var capabilities = mcpServer.resolveCapabilities();
 
-        var resultCapabilitiesBuilder = ServerInfoMapper.toServerCapabilities(capabilities);
-
         negotiateExtensions(context, params);
         var negotiatedExtensions = buildNegotiatedExtensions(context);
-        if (!negotiatedExtensions.isEmpty()) {
-            resultCapabilitiesBuilder.extensions(negotiatedExtensions);
-        }
 
         final var serverConfig = mcpServer.config();
 
-        final var implementation = ServerInfoMapper.toImplementation(serverConfig.identity());
-
-        return new InitializeResult(
-                negotiatedVersion,
-                resultCapabilitiesBuilder.build(),
-                implementation,
+        var domainResponse = new InitializeResponse(
+                MCP_VERSION,
+                capabilities,
+                serverConfig.identity(),
                 serverConfig.identity().instructions(),
-                null,
-                null);
+                negotiatedExtensions.isEmpty() ? null : negotiatedExtensions);
+
+        return context.responseMapper().initializeResult(domainResponse);
     }
 
     private void negotiateExtensions(McpContext context, Object params) {
@@ -78,15 +74,29 @@ public final class InitializeHandler implements McpMethodHandler {
                 .collect(Collectors.toMap(Extension::extensionId, McpExtension::serverSettings));
     }
 
+    @SuppressWarnings("unchecked")
     private static Map<String, JsonNode> extractClientExtensions(Object params) {
-        if (!(params instanceof InitializeRequestParams initParams)) {
-            return Map.of();
+        if (params instanceof InitializeRequestParams initParams) {
+            if (initParams.capabilities() == null) {
+                return Map.of();
+            }
+            var clientExtensions = initParams.capabilities().extensions();
+            return clientExtensions != null ? clientExtensions : Map.of();
         }
-        if (initParams.capabilities() == null) {
-            return Map.of();
+        if (params instanceof Map<?, ?> map) {
+            var caps = map.get("capabilities");
+            if (caps instanceof Map<?, ?> capsMap) {
+                var exts = capsMap.get("extensions");
+                if (exts instanceof Map<?, ?> extMap) {
+                    var result = new LinkedHashMap<String, JsonNode>();
+                    for (var entry : extMap.entrySet()) {
+                        result.put(entry.getKey().toString(), MAPPER.valueToTree(entry.getValue()));
+                    }
+                    return result;
+                }
+            }
         }
-        var clientExtensions = initParams.capabilities().extensions();
-        return clientExtensions != null ? clientExtensions : Map.of();
+        return Map.of();
     }
 
     private static Map<String, JsonNode> asMap(JsonNode node) {

@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,10 +30,8 @@ class NotificationDeliveryTest {
 
     private static final ToolDescriptor TOOL_DESCRIPTOR = ToolDescriptor.builder("test_tool")
             .description("Test tool")
-            .inputSchema(JsonNodeFactory.instance
-                    .objectNode()
-                    .put("type", "object")
-                    .<tools.jackson.databind.node.ObjectNode>putObject("properties"))
+            .inputSchema(
+                    JsonNodeFactory.instance.objectNode().put("type", "object").putObject("properties"))
             .build();
 
     /** Emits 3 progress events and 3 log events per invocation (plus 2 automatic lifecycle logs from ToolsCallHandler). */
@@ -233,7 +230,7 @@ class NotificationDeliveryTest {
         }
 
         @Override
-        public void send(@NonNull SseEvent event) {
+        public void send(SseEvent event) {
             sent.add(event);
         }
     }

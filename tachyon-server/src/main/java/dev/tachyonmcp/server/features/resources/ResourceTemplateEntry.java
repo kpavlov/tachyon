@@ -4,7 +4,6 @@
 
 package dev.tachyonmcp.server.features.resources;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ResourceTemplate;
 import dev.tachyonmcp.server.McpResourceType;
 import dev.tachyonmcp.server.domain.Annotations;
 import dev.tachyonmcp.server.domain.Icon;
@@ -35,8 +34,6 @@ public interface ResourceTemplateEntry extends McpResourceType {
     List<Icon> icons();
 
     Function<String, TextResourceContents> resolver();
-
-    ResourceTemplate toModel();
 
     static ResourceTemplateEntry of(
             String name,
