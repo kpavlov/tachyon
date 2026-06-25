@@ -8,8 +8,14 @@ import dev.tachyonmcp.server.McpResourceType;
 import dev.tachyonmcp.server.domain.Annotations;
 import dev.tachyonmcp.server.domain.Icon;
 import java.util.List;
+import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
+@Value.Immutable
+@Value.Style(
+        allParameters = true,
+        visibility = Value.Style.ImplementationVisibility.PACKAGE,
+        typeImmutable = "Default*")
 public interface ResourceDescriptor extends McpResourceType {
 
     String name();
@@ -38,7 +44,7 @@ public interface ResourceDescriptor extends McpResourceType {
     String extensionId();
 
     static ResourceDescriptor of(String name, String uri, @Nullable String description, @Nullable String mimeType) {
-        return new DefaultResourceDescriptor(name, uri, description, mimeType, null, null, null, null, null);
+        return DefaultResourceDescriptor.of(name, uri, description, mimeType, null, null, null, null, null);
     }
 
     static ResourceDescriptor of(
@@ -50,6 +56,6 @@ public interface ResourceDescriptor extends McpResourceType {
             @Nullable Annotations annotations,
             @Nullable Double size,
             @Nullable List<Icon> icons) {
-        return new DefaultResourceDescriptor(name, uri, description, mimeType, title, annotations, size, icons, null);
+        return DefaultResourceDescriptor.of(name, uri, description, mimeType, title, annotations, size, icons, null);
     }
 }
