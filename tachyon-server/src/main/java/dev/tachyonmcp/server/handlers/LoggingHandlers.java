@@ -34,8 +34,12 @@ public final class LoggingHandlers {
             if (params instanceof SetLevelRequestParams p) {
                 typed = p;
             } else if (params instanceof Map<?, ?> map) {
-                var json = JsonRpcCodec.writeValueAsString(map);
-                typed = ProtocolCodecUtil.decodeWithCodec(json, SetLevelRequestParams.class);
+                try {
+                    var json = JsonRpcCodec.writeValueAsString(map);
+                    typed = ProtocolCodecUtil.decodeWithCodec(json, SetLevelRequestParams.class);
+                } catch (RuntimeException e) {
+                    return JsonRpcErrors.invalidParams("Failed to decode params for logging/setLevel");
+                }
             } else {
                 return JsonRpcErrors.invalidRequest("Invalid params for logging/setLevel");
             }
