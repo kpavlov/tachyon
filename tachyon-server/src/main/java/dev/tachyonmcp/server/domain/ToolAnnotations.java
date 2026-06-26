@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.domain;
 
+import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -15,6 +16,12 @@ import org.jspecify.annotations.Nullable;
  * changes, {@code idempotentHint} indicates safe retries, and {@code openWorldHint}
  * signals that the tool may reach outside the MCP ecosystem.
  */
+@Value.Immutable
+@Value.Builder
+@Value.Style(
+        allParameters = true,
+        visibility = Value.Style.ImplementationVisibility.PACKAGE,
+        typeImmutable = "Default*")
 public interface ToolAnnotations {
 
     @Nullable
@@ -32,12 +39,16 @@ public interface ToolAnnotations {
     @Nullable
     Boolean openWorldHint();
 
+    static DefaultToolAnnotations.Builder builder() {
+        return DefaultToolAnnotations.builder();
+    }
+
     static ToolAnnotations of(
             @Nullable String title,
             @Nullable Boolean readOnlyHint,
             @Nullable Boolean destructiveHint,
             @Nullable Boolean idempotentHint,
             @Nullable Boolean openWorldHint) {
-        return new DefaultToolAnnotations(title, readOnlyHint, destructiveHint, idempotentHint, openWorldHint);
+        return DefaultToolAnnotations.of(title, readOnlyHint, destructiveHint, idempotentHint, openWorldHint);
     }
 }

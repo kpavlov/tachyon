@@ -11,11 +11,11 @@ import dev.tachyonmcp.server.domain.Role;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import java.util.List;
 
-public final class McpPromptMapper {
+final class McpPromptMapper {
 
     private McpPromptMapper() {}
 
-    public static Prompt toPrompt(PromptDescriptor d) {
+    static Prompt toPrompt(PromptDescriptor d) {
         return new Prompt(
                 d.description(),
                 toProtocolPromptArguments(d.arguments()),
@@ -34,13 +34,13 @@ public final class McpPromptMapper {
                 .toList();
     }
 
-    public static dev.tachyonmcp.protocol.mcp.v2025_11_25.models.PromptMessage toProtocolMessage(PromptMessage domain) {
+    static dev.tachyonmcp.protocol.mcp.v2025_11_25.models.PromptMessage toProtocolMessage(PromptMessage domain) {
         if (domain == null) return null;
         return new dev.tachyonmcp.protocol.mcp.v2025_11_25.models.PromptMessage(
                 toProtocolRole(domain.role()), ContentBlockMappers.toProtocolContentBlock(domain.content()));
     }
 
-    public static dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Role toProtocolRole(Role domain) {
+    static dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Role toProtocolRole(Role domain) {
         if (domain == null) return null;
         return switch (domain) {
             case USER -> dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Role.USER;

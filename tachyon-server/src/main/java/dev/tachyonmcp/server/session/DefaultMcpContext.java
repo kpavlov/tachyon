@@ -4,13 +4,14 @@
 
 package dev.tachyonmcp.server.session;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.LoggingLevel;
+import dev.tachyonmcp.protocol.ProtocolMappers;
+import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.McpServer;
 import dev.tachyonmcp.server.Notifications;
 import dev.tachyonmcp.server.ServerContext;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import dev.tachyonmcp.server.domain.LoggingLevel;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import org.jspecify.annotations.Nullable;
 
@@ -30,6 +31,21 @@ public class DefaultMcpContext implements McpContext {
         @Override
         public @Nullable McpSession session() {
             return null;
+        }
+
+        @Override
+        public @Nullable String getProtocol() {
+            throw new UnsupportedOperationException("No protocol available");
+        }
+
+        @Override
+        public @Nullable Lifecycle getLifecycle() {
+            throw new UnsupportedOperationException("No lifecycle available");
+        }
+
+        @Override
+        public ProtocolResponseMapper responseMapper() {
+            return Objects.requireNonNull(ProtocolMappers.getMapper("mcp", "2025-11-25"));
         }
     };
 
@@ -94,12 +110,29 @@ public class DefaultMcpContext implements McpContext {
     }
 
     @Override
-    public String getProtocol() {
+    public @Nullable String getProtocol() {
         return interactionContext != null ? interactionContext.getProtocol() : null;
     }
 
     @Override
-    public Lifecycle getLifecycle() {
+    public @Nullable String getProtocolVersion() {
+        return session != null ? session.protocolVersion() : null;
+    }
+
+    @Override
+    public void setProtocolVersion(@Nullable String protocolVersion) {
+        if (session != null) {
+            session.protocolVersion(protocolVersion);
+        }
+    }
+
+    @Override
+    public ProtocolResponseMapper responseMapper() {
+        return server.mcpServer().responseMapper();
+    }
+
+    @Override
+    public @Nullable Lifecycle getLifecycle() {
         return interactionContext != null ? interactionContext.getLifecycle() : null;
     }
 

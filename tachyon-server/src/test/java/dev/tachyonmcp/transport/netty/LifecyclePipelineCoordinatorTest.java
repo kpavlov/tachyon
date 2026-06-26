@@ -11,7 +11,7 @@ import dev.tachyonmcp.runtime.InteractionContext.Lifecycle;
 import dev.tachyonmcp.runtime.InteractionEvent;
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.McpServer;
-import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.session.McpSession;
 import dev.tachyonmcp.server.session.SseConnection;
 import io.netty.buffer.Unpooled;
@@ -29,7 +29,7 @@ class LifecyclePipelineCoordinatorTest {
 
     @BeforeEach
     void setUp() {
-        server = TachyonMcpServer.builder().build();
+        server = TachyonServer.builder().build();
         final var dispatcher = new McpDispatcher(server, Runnable::run);
         channel = new EmbeddedChannel(new InteractionHandler("mcp"));
         channel.pipeline()

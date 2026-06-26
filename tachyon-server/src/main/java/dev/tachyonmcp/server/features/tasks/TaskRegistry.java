@@ -4,18 +4,17 @@
 
 package dev.tachyonmcp.server.features.tasks;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.Codec;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.*;
+import dev.tachyonmcp.protocol.ProtocolMappers;
+import dev.tachyonmcp.protocol.ProtocolResponseMapper;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.server.McpMethodHandler;
 import dev.tachyonmcp.server.McpServer;
 import dev.tachyonmcp.server.features.Registry;
 import dev.tachyonmcp.server.features.tools.ToolRegistry;
 import dev.tachyonmcp.server.session.McpContext;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -25,12 +24,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tools.jackson.databind.JsonNode;
 
 public class TaskRegistry extends Registry<TaskEntry> {
 
     private static final Logger logger = LoggerFactory.getLogger(TaskRegistry.class);
     private static final long TTL_JANITOR_INTERVAL_SECONDS = 30;
+
+    private static final ProtocolResponseMapper mapper =
+            Objects.requireNonNull(ProtocolMappers.getMapper("mcp", "2025-11-25"));
 
     private final ConcurrentHashMap<String, TaskEntry> byId = new ConcurrentHashMap<>();
     private final McpServer server;
@@ -125,15 +126,18 @@ public class TaskRegistry extends Registry<TaskEntry> {
     }
 
     public boolean updateStatusFromClientNotification(
-            String taskId, TaskStatus wireStatus, @Nullable String statusMessage) {
+            String taskId, @Nullable TaskState newStatus, @Nullable String statusMessage) {
         var entry = byId.get(taskId);
         if (entry == null) {
             logger.debug("Task not found for client notification: {}", taskId);
             return false;
         }
-        var internalStatus = TaskBindings.toInternalStatus(wireStatus);
-        if (!entry.transitionTo(internalStatus)) {
-            logger.debug("Invalid status transition from {} to {} for task {}", entry.status(), internalStatus, taskId);
+        if (newStatus == null) {
+            logger.debug("No status provided for task {}", taskId);
+            return false;
+        }
+        if (!entry.transitionTo(newStatus)) {
+            logger.debug("Invalid status transition from {} to {} for task {}", entry.status(), newStatus, taskId);
             return false;
         }
         if (statusMessage != null) {
@@ -150,7 +154,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
             return;
         }
         var executor = Executors.newSingleThreadScheduledExecutor(r -> {
-            var t = new Thread(r, "task-ttl-janitor");
+            var t = new Thread(r, "task-janitor");
             t.setDaemon(true);
             return t;
         });
@@ -181,16 +185,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
     }
 
     private void fireStatusNotification(TaskEntry entry) {
-        var params = new TaskStatusNotificationParams(
-                null,
-                entry.id(),
-                TaskBindings.toWireStatus(entry.status()),
-                null,
-                entry.createdAtIso(),
-                entry.lastUpdatedAtIso(),
-                entry.ttl(),
-                null);
-        server.broadcastNotification("notifications/tasks/status", params);
+        server.broadcastNotification("notifications/tasks/status", mapper.taskStatusNotificationParams(entry));
     }
 
     public void registerHandlers(Map<String, McpMethodHandler> registry) {
@@ -213,11 +208,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
             var cursor = ToolRegistry.parseCursor(params);
             var paginated = registry.list(limit, cursor);
 
-            var tasks = new ArrayList<Task>();
-            for (var entry : paginated.items()) {
-                tasks.add(TaskBindings.toTaskProto(entry));
-            }
-            return new ListTasksResult(tasks, null, paginated.nextCursor(), null);
+            return context.responseMapper().listTasksResult(paginated.items(), paginated.nextCursor());
         }
     }
 
@@ -238,7 +229,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
             if (entry == null) {
                 return JsonRpcErrors.invalidRequest("Task not found");
             }
-            return TaskBindings.toGetTaskResult(entry);
+            return context.responseMapper().getTaskResult(entry);
         }
 
         private static @Nullable String extractParamId(Object params) {
@@ -278,7 +269,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
                 return JsonRpcErrors.invalidRequest("Task cannot be cancelled in current state: " + entry.status());
             }
             var entry = registry.getById(taskId);
-            return TaskBindings.toCancelTaskResult(entry);
+            return context.responseMapper().cancelTaskResult(entry);
         }
     }
 
@@ -310,12 +301,9 @@ public class TaskRegistry extends Registry<TaskEntry> {
             if (resultJson == null) {
                 return JsonRpcErrors.invalidRequest("Task result not available");
             }
-            try (var p = Codec.FACTORY.createParser(JsonRpcCodec.TREE_READ_CONTEXT, resultJson)) {
-                p.nextToken();
-                var resultNode = JsonRpcCodec.readTreeValue(p);
-                var additionalProps = new LinkedHashMap<String, JsonNode>();
-                additionalProps.put("result", resultNode);
-                return new GetTaskPayloadResult(null, additionalProps);
+            try {
+                var resultNode = ProtocolCodecUtil.parseJsonNode(resultJson);
+                return context.responseMapper().getTaskPayloadResult(resultNode);
             } catch (Exception e) {
                 logger.debug("Failed to parse task result JSON: {}", e.getMessage());
                 return JsonRpcErrors.invalidRequest("Failed to parse task result");

@@ -8,4 +8,4 @@ import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
-record DefaultReadResourceRequest(String uri, @Nullable Map<String, JsonNode> meta) implements ReadResourceRequest {}
+public record EmptyResult(@Nullable Map<String, JsonNode> meta) implements HasMeta {}

@@ -9,7 +9,7 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Implementation;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
-import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.server.features.tasks.TaskDescriptor;
 import dev.tachyonmcp.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.server.features.tasks.TaskState;
@@ -22,7 +22,7 @@ class TasksBridgeTest extends AbstractMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServer(TachyonMcpServer.builder().capabilities(c -> c.tasks()).build());
+        startServer(it -> it.capabilities(CapabilitiesConfig.Builder::tasks));
     }
 
     @Test
@@ -51,10 +51,7 @@ class TasksBridgeTest extends AbstractMcpE2eTest {
 
     @Test
     void tasksExtensionAdvertisedWhenNegotiated() throws Exception {
-        startServer(TachyonMcpServer.builder()
-                .capabilities(c -> c.tasks())
-                .extension(new TasksExtension())
-                .build());
+        startServer(it -> it.capabilities(CapabilitiesConfig.Builder::tasks).extension(TasksExtension.instance()));
 
         try (var client = createTestClient()) {
             var initBody =
@@ -82,7 +79,7 @@ class TasksBridgeTest extends AbstractMcpE2eTest {
 
     @Test
     void singleRegistryBacksBothPaths() throws Exception {
-        startServer(TachyonMcpServer.builder().extension(new TasksExtension()).build());
+        startServer(it -> it.extension(TasksExtension.instance()));
 
         // Add a task directly to the registry
         var taskEntry =

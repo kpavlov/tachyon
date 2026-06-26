@@ -4,11 +4,10 @@
 
 package dev.tachyonmcp.server;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.CodecRegistry;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatus;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.SessionState;
+import dev.tachyonmcp.server.features.tasks.TaskState;
 import dev.tachyonmcp.server.session.DefaultMcpContext;
 import dev.tachyonmcp.server.session.McpSession;
 import dev.tachyonmcp.server.session.SessionEvent;
@@ -363,10 +362,18 @@ public class McpDispatcher {
         if (taskStatus == null) {
             taskStatus = TaskStatus.WORKING;
         }
+        var newStatus =
+                switch (taskStatus) {
+                    case WORKING -> TaskState.WORKING;
+                    case INPUT_REQUIRED -> TaskState.INPUT_REQUIRED;
+                    case COMPLETED -> TaskState.COMPLETED;
+                    case FAILED -> TaskState.FAILED;
+                    case CANCELLED -> TaskState.CANCELLED;
+                };
         var rawStatusMessage = map.get("statusMessage");
         var statusMessage = rawStatusMessage instanceof String s ? s : null;
         var taskRegistry = server.tasks();
-        taskRegistry.updateStatusFromClientNotification(taskId, taskStatus, statusMessage);
+        taskRegistry.updateStatusFromClientNotification(taskId, newStatus, statusMessage);
     }
 
     private CompletableFuture<DispatchResult> dispatchInitializeAsync(
@@ -375,14 +382,12 @@ public class McpDispatcher {
                 () -> {
                     logger.debug("Client initialize: id={} stateless={}", id, server.isStateless());
                     var handler = server.getHandler("initialize");
-                    // version-specific (MCP 2025-11-25): handshake params shape — moves behind McpDialect
-                    var typedParams = convertParams(rawParams, InitializeRequestParams.class);
                     if (handler == null) {
                         return errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found: initialize");
                     }
                     if (server.isStateless()) {
                         try {
-                            var result = handler.handle(DefaultMcpContext.stateless(server), typedParams);
+                            var result = handler.handle(DefaultMcpContext.stateless(server), rawParams);
                             if (result instanceof JsonRpcError error) {
                                 logger.debug("Initialize handler error (stateless): {}", error.message());
                                 return errorResult(id, error.code(), error.message());
@@ -397,7 +402,7 @@ public class McpDispatcher {
                     var session = server.createSession(sessionId);
                     try {
                         var context = new DefaultMcpContext(session, server, ic);
-                        var result = handler.handle(context, typedParams);
+                        var result = handler.handle(context, rawParams);
                         if (result instanceof JsonRpcError error) {
                             logger.debug("Initialize handler error: {}", error.message());
                             return errorResult(id, error.code(), error.message());
@@ -411,16 +416,6 @@ public class McpDispatcher {
                 executor);
     }
 
-    private static <T> T convertParams(Object rawParams, Class<T> targetType) {
-        if (rawParams == null) return null;
-        if (targetType.isInstance(rawParams)) return targetType.cast(rawParams);
-        if (rawParams instanceof Map<?, ?> map) {
-            var json = JsonRpcCodec.writeValueAsString(map);
-            return JsonRpcCodec.decodeWithCodec(json, targetType);
-        }
-        return null;
-    }
-
     private DispatchResult errorResult(Object id, int code, String message) {
         return new DispatchResult.Response(JsonRpcCodec.serializeError(id, code, message, null), null);
     }
@@ -428,16 +423,6 @@ public class McpDispatcher {
     private static ByteBuf encodeResponse(Object id, Object result) {
         if (result instanceof String s) {
             return JsonRpcCodec.serializeResponse(id, s);
-        }
-        // version-specific (MCP 2025-11-25): codec registry — moves behind McpDialect
-        var codec = CodecRegistry.codecFor(result.getClass());
-        if (codec != null) {
-            try {
-                return JsonRpcCodec.serializeResponse(id, codec, result);
-            } catch (Exception e) {
-                logger.error("Codec encode failed for {}: {}", result.getClass().getSimpleName(), e.getMessage(), e);
-                return JsonRpcCodec.serializeError(id, JsonRpcErrors.INTERNAL_ERROR, "Failed to encode response", null);
-            }
         }
         try {
             var resultJson = JsonRpcCodec.writeValueAsString(result);

@@ -4,7 +4,6 @@
 
 package dev.tachyonmcp.server.features.tools;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.McpToolMapper;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.session.McpContext;
@@ -65,7 +64,7 @@ public interface AsyncToolHandler<I, O> extends ToolHandler {
     @Override
     @SuppressWarnings("unchecked")
     default CompletionStage<ToolResult> handle(ToolRequest request, McpContext context) throws Exception {
-        return handleAsync(context, (I) request.arguments()).thenApply(McpToolMapper::toDomainResult);
+        return handleAsync(context, (I) request.arguments()).thenApply(ToolResult::from);
     }
 
     static <I, O> AsyncToolHandler<I, O> adapt(SyncToolHandler<I, O> sync) {

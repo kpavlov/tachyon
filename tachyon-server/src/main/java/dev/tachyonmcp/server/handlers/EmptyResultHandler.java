@@ -4,13 +4,10 @@
 
 package dev.tachyonmcp.server.handlers;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.EmptyResult;
 import dev.tachyonmcp.server.McpMethodHandler;
 import dev.tachyonmcp.server.session.McpContext;
 
 public class EmptyResultHandler implements McpMethodHandler {
-
-    private static final EmptyResult EMPTY_RESULT = new EmptyResult(null, null);
 
     private final String methodName;
 
@@ -25,6 +22,6 @@ public class EmptyResultHandler implements McpMethodHandler {
 
     @Override
     public Object handle(McpContext context, Object params) {
-        return EMPTY_RESULT;
+        return context.responseMapper().emptyResult();
     }
 }

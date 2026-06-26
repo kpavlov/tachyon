@@ -12,7 +12,8 @@ package dev.tachyonmcp.server.domain;
  * {@code type()} method derives the MCP protocol discriminator from the variant type,
  * so callers never need to supply or validate it.
  */
-public sealed interface ContentBlock permits TextContent, ImageContent, AudioContent, ResourceLink, EmbeddedResource {
+public sealed interface ContentBlock extends HasMeta
+        permits TextContent, ImageContent, AudioContent, ResourceLink, EmbeddedResource {
 
     /**
      * MCP protocol type discriminator for content block variants.

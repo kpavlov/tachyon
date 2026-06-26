@@ -4,8 +4,12 @@
 
 package dev.tachyonmcp.transport.jsonrpc;
 
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextContent;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class JsonRpcCodecTest {
@@ -14,12 +18,14 @@ class JsonRpcCodecTest {
     void serializeNotificationAsStringContainsRequiredFields() {
         var json = JsonRpcCodec.serializeNotificationAsString("notifications/tools/list_changed", "{}");
 
-        assertThat(json).contains("\"jsonrpc\":\"2.0\"");
-        assertThat(json).contains("\"method\":\"notifications/tools/list_changed\"");
-        assertThat(json).contains("\"params\":{}");
-        assertThat(json).doesNotContain("\"id\"");
-        assertThat(json).doesNotContain("\"result\"");
-        assertThat(json).doesNotContain("\"error\"");
+        // language=JSON
+        assertThatJson(json).isEqualTo("""
+            {
+              "jsonrpc":"2.0",
+              "method":"notifications/tools/list_changed",
+              "params": {}
+            }
+            """);
     }
 
     @Test
@@ -39,10 +45,15 @@ class JsonRpcCodecTest {
     void serializeRequestAsStringContainsRequiredFields() {
         var json = JsonRpcCodec.serializeRequestAsString("req-1", "sampling/createMessage", "{\"prompt\":\"hi\"}");
 
-        assertThat(json).contains("\"jsonrpc\":\"2.0\"");
-        assertThat(json).contains("\"method\":\"sampling/createMessage\"");
-        assertThat(json).contains("\"id\":\"req-1\"");
-        assertThat(json).contains("\"params\":{\"prompt\":\"hi\"}");
+        // language=JSON
+        assertThatJson(json).isEqualTo("""
+            {
+              "jsonrpc":"2.0",
+              "id":"req-1",
+              "method":"sampling/createMessage",
+              "params": {"prompt":"hi"}
+            }
+            """);
     }
 
     @Test
@@ -63,6 +74,27 @@ class JsonRpcCodecTest {
     void serializeNotificationAsStringWithNumericId() {
         var json = JsonRpcCodec.serializeRequestAsString(99L, "ping", "{}");
 
-        assertThat(json).contains("\"id\":99");
+        // language=JSON
+        assertThatJson(json).isEqualTo("""
+            {
+              "jsonrpc":"2.0",
+              "id":99,
+              "method":"ping",
+              "params": {}
+            }
+            """);
+    }
+
+    @Test
+    void writeValueAsStringWithProtocolModelReturnsJsonNotToString() {
+        var content = TextContent.of("ok");
+        var result = new CallToolResult(List.of(content), null, null, null, null);
+
+        var json = JsonRpcCodec.writeValueAsString(result);
+
+        // language=JSON
+        assertThatJson(json).isEqualTo("""
+            {"content":[{"type":"text","text":"ok"}]}
+            """);
     }
 }

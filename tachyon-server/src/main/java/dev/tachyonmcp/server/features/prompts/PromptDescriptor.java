@@ -8,9 +8,16 @@ import dev.tachyonmcp.server.McpResourceType;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.PromptArgument;
 import java.util.List;
+import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
+@Value.Immutable
+@Value.Builder
+@Value.Style(
+        allParameters = true,
+        visibility = Value.Style.ImplementationVisibility.PACKAGE,
+        typeImmutable = "Default*")
 public interface PromptDescriptor extends McpResourceType {
 
     String name();
@@ -33,13 +40,17 @@ public interface PromptDescriptor extends McpResourceType {
     @Nullable
     String extensionId();
 
+    static DefaultPromptDescriptor.Builder builder() {
+        return DefaultPromptDescriptor.builder();
+    }
+
     static PromptDescriptor of(
             String name,
             @Nullable String description,
             @Nullable String title,
             @Nullable List<PromptArgument> arguments,
             @Nullable JsonNode inputSchema) {
-        return new DefaultPromptDescriptor(name, description, title, arguments, inputSchema, null, null);
+        return DefaultPromptDescriptor.of(name, description, title, arguments, inputSchema, null, null);
     }
 
     static PromptDescriptor of(
@@ -49,10 +60,10 @@ public interface PromptDescriptor extends McpResourceType {
             @Nullable List<PromptArgument> arguments,
             @Nullable JsonNode inputSchema,
             @Nullable List<Icon> icons) {
-        return new DefaultPromptDescriptor(name, description, title, arguments, inputSchema, icons, null);
+        return DefaultPromptDescriptor.of(name, description, title, arguments, inputSchema, icons, null);
     }
 
     static PromptDescriptor of(String name, String description) {
-        return new DefaultPromptDescriptor(name, description, null, null, null, null, null);
+        return DefaultPromptDescriptor.of(name, description, null, null, null, null, null);
     }
 }

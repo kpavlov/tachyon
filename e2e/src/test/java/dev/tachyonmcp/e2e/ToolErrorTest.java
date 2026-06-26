@@ -6,7 +6,6 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.TachyonMcpServer;
 import dev.tachyonmcp.server.features.tools.SyncToolHandler;
 import dev.tachyonmcp.server.session.McpContext;
 import java.util.Map;
@@ -19,7 +18,7 @@ class ToolErrorTest extends AbstractMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServer(TachyonMcpServer.builder().tool(new ThrowingToolHandler()).build());
+        startServer(it -> it.tool(new ThrowingToolHandler()));
     }
 
     @Test

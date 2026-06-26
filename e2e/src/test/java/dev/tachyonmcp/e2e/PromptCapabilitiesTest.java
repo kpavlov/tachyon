@@ -7,7 +7,6 @@ package dev.tachyonmcp.e2e;
 import static dev.tachyonmcp.server.domain.PromptMessage.of;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.TachyonMcpServer;
 import dev.tachyonmcp.server.domain.PromptArgument;
 import dev.tachyonmcp.server.domain.Role;
 import dev.tachyonmcp.server.domain.TextContent;
@@ -24,7 +23,7 @@ class PromptCapabilitiesTest extends AbstractMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServer(TachyonMcpServer.builder().tool(new EchoToolHandler()).build());
+        startServer(it -> it.tool(new EchoToolHandler()));
     }
 
     @ParameterizedTest(name = "[{index}] {0}")

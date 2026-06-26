@@ -5,7 +5,7 @@
 package dev.tachyonmcp.e2e;
 
 import dev.tachyonmcp.server.McpServerHandle;
-import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.TachyonServer;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +20,7 @@ final class SharedE2eServer {
         if (started.get()) {
             return handle;
         }
-        handle = TachyonMcpServer.builder()
+        handle = TachyonServer.builder()
                 .capabilities(c -> c.tools())
                 .tool(new EchoToolHandler())
                 .port(0)

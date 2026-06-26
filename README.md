@@ -1,4 +1,5 @@
-
+<div>
+</div>
 
 [![Maven Central](https://img.shields.io/maven-central/v/dev.tachyonmcp/tachyon-server)](https://repo1.maven.org/maven2/dev/tachyonmcp/tachyon-server/)
 [![Build](https://github.com/kpavlov/tachyon/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/kpavlov/tachyon/actions/workflows/build.yml)
@@ -6,13 +7,13 @@
 [![JVM](https://img.shields.io/badge/JVM-21+-orange.svg?logo=jvm)](http://java.com)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/kpavlov/tachyon)
 
-**Tachyon MCP** — A Java 21 [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server built on [Netty 4.2](https://netty.io).
-Fully implements MCP spec **2025-11-25** Streamable HTTP transport, session lifecycle, native I/O transports, and a stateless mode for serverless deployments.
+**Tachyon MCP** is a Java 21 [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server built on [Netty](https://netty.io).
+Fully implements MCP spec **2025-11-25** Streamable HTTP transport with native I/O, protocol extensions, and a stateless mode for serverless deployments.
 
 **TL;DR**
 
 ```java
-import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
@@ -24,7 +25,7 @@ void main() {
     schema.put("type", "object");
     schema.putObject("properties").putObject("city").put("type", "string");
 
-    TachyonMcpServer.builder()
+    TachyonServer.builder()
         .name("weather-mcp")
         .tool(new AbstractSyncToolHandler(
             ToolDescriptor.builder("get_forecast")
@@ -55,7 +56,7 @@ void main() {
 - DNS rebinding protection
 - Accept header strict validation (406)
 - Pending request timeout (60s)
-- SSE resumability via Last-Event-ID
+- Extensions ([SEP-2133](https://modelcontextprotocol.io/seps/2133-extensions))
 
 ### Tools
 
@@ -65,10 +66,10 @@ void main() {
 - `annotations` field
 - `execution.taskSupport` (forbidden/optional/required)
 - Synchronous & asynchronous handler interfaces
-- Name validation (1–128 chars)
+- Tool name validation ([SEP-986](https://modelcontextprotocol.io/seps/986-specify-format-for-tool-names))
 - `notifications/tools/list_changed` on add/remove
 - Inline notifications + logging during tool call
-- Input schema validation
+- Input JSON Schema 2020-12 validation ([SEP-1613](https://modelcontextprotocol.io/seps/1613-establish-json-schema-2020-12-as-default-dialect-f))
 
 ### Resources
 
@@ -120,6 +121,7 @@ void main() {
 
 ### Session Management
 
+- SSE resumability via Last-Event-ID
 - **Stateless mode** — skip sessions for serverless
 - IN_MEMORY session store (ConcurrentHashMap)
 - Session Janitor — 5s sweep, 30s TTL
@@ -154,7 +156,7 @@ mvn install -pl tachyon-mcp-server -DskipTests
 ### Minimal server with tool
 
 ```java
-import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
@@ -166,7 +168,7 @@ void main() {
     schema.put("type", "object");
     schema.putObject("properties").putObject("city").put("type", "string");
 
-    TachyonMcpServer.builder()
+    TachyonServer.builder()
         .name("weather-mcp")
         .tool(new AbstractSyncToolHandler(
             ToolDescriptor.builder("get_forecast")
@@ -187,8 +189,8 @@ void main() {
 ### With TasksExtension (negotiable) - [SEP-1686](https://modelcontextprotocol.io/seps/1686-tasks)
 
 ```java
-var handle = TachyonMcpServer.builder()
-    .extension(new TasksExtension())   // exposes create_task tool + task://{id} resource
+var handle = TachyonServer.builder()
+    .extension(TasksExtension.instance())  // exposes create_task tool + task://{id} resource
     .port(8080)
     .bind();
 ```

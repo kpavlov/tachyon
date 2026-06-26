@@ -22,7 +22,7 @@ mvn spotless:apply                     # Auto-format Java, POM, and Markdown fil
 
 ## Conventions
 
-- Follow TDD and SOLID principles. Ensure MCP protocol logic is covered, TachyonMcpServer is SUT in unit tests.
+- Follow TDD and SOLID principles. Ensure MCP protocol logic is covered, TachyonServer is SUT in unit tests.
 - **Tests**: JUnit 5 + AssertJ. Unit tests use `@TempDir`; E2E bind to port 0 (MCP SDK client or raw `HttpClient`).
   Prefer higher-level E2E for longer scenarios (less fragile). No tautological tests; don't duplicate a single scenario —
   prefer multiple assertions per test.

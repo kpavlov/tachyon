@@ -5,6 +5,7 @@
 package dev.tachyonmcp.server.domain;
 
 import java.util.Map;
+import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
@@ -15,29 +16,44 @@ import tools.jackson.databind.JsonNode;
  * ({@link TextResourceContents} or {@link BlobResourceContents}), allowing the
  * server to attach resource data directly without requiring a separate read round-trip.
  */
-public non-sealed interface EmbeddedResource extends ContentBlock {
+@Value.Immutable
+@Value.Builder
+@Value.Style(
+        allParameters = true,
+        visibility = Value.Style.ImplementationVisibility.PACKAGE,
+        typeImmutable = "Default*")
+public non-sealed interface EmbeddedResource extends ContentBlock, HasMeta {
 
     ResourceContents resource();
 
     @Nullable
-    Map<String, JsonNode> meta();
+    Annotations annotations();
 
     @Nullable
-    Annotations annotations();
+    Map<String, JsonNode> meta();
+
+    @Override
+    default Type type() {
+        return Type.RESOURCE;
+    }
+
+    static DefaultEmbeddedResource.Builder builder() {
+        return DefaultEmbeddedResource.builder();
+    }
 
     /** Creates an embedded resource with no metadata or annotations. */
     static EmbeddedResource of(ResourceContents resource) {
-        return new DefaultEmbeddedResource(resource, null, null);
+        return DefaultEmbeddedResource.of(resource, null, null);
     }
 
     /** Creates an embedded resource with given annotations and no metadata. */
     static EmbeddedResource of(ResourceContents resource, @Nullable Annotations annotations) {
-        return new DefaultEmbeddedResource(resource, null, annotations);
+        return DefaultEmbeddedResource.of(resource, annotations, null);
     }
 
     /** Creates an embedded resource with metadata and optional annotations. */
     static EmbeddedResource of(
-            ResourceContents resource, @Nullable Map<String, JsonNode> meta, @Nullable Annotations annotations) {
-        return new DefaultEmbeddedResource(resource, meta, annotations);
+            ResourceContents resource, @Nullable Annotations annotations, @Nullable Map<String, JsonNode> meta) {
+        return DefaultEmbeddedResource.of(resource, annotations, meta);
     }
 }

@@ -8,7 +8,7 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.McpServerHandle;
-import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.TachyonServer;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -30,7 +30,7 @@ class StatelessServerTest {
 
     @BeforeAll
     void beforeAll() {
-        serverHandle = TachyonMcpServer.builder()
+        serverHandle = TachyonServer.builder()
                 .tool(new EchoToolHandler())
                 .stateless(true)
                 .host("localhost")

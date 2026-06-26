@@ -7,10 +7,8 @@ package dev.tachyonmcp.server.features.tools;
 import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidRequest;
 import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.methodNotFound;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.McpToolMapper;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolRequestParams;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListToolsResult;
 import dev.tachyonmcp.server.JsonSchemaValidator;
 import dev.tachyonmcp.server.McpMethodHandler;
 import dev.tachyonmcp.server.SchemaValidationError;
@@ -22,9 +20,11 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -58,9 +58,29 @@ public class ToolRegistry {
     }
 
     public void register(ToolHandler handler) {
-        handlers.put(handler.descriptor().name(), handler);
+        Objects.requireNonNull(handler, "ToolHandler must not be null");
+        var descriptor = handler.descriptor();
+        Objects.requireNonNull(descriptor, "ToolDescriptor must not be null");
+        var name = descriptor.name();
+        validateName(name);
+        handlers.put(name, handler);
         fireOnChange();
     }
+
+    static void validateName(String name) {
+        Objects.requireNonNull(name, "Tool name must not be null");
+        if (name.isBlank()) {
+            throw new IllegalArgumentException("Tool name must not be blank");
+        }
+        if (name.length() > 64) {
+            throw new IllegalArgumentException("Tool name must not exceed 64 characters (SEP-986)");
+        }
+        if (!VALID_NAME_PATTERN.matcher(name).matches()) {
+            throw new IllegalArgumentException("Tool name must match [a-zA-Z0-9_\\-./]+ per SEP-986: " + name);
+        }
+    }
+
+    private static final Pattern VALID_NAME_PATTERN = Pattern.compile("[a-zA-Z0-9_\\-./]+");
 
     public void remove(String name) {
         if (handlers.remove(name) != null) {
@@ -168,8 +188,7 @@ public class ToolRegistry {
                 var extId = d.extensionId();
                 return extId == null || context.isExtensionEnabled(extId);
             });
-            var tools = paginated.items().stream().map(McpToolMapper::toTool).toList();
-            return new ListToolsResult(tools, null, paginated.nextCursor(), null);
+            return context.responseMapper().listToolsResult(paginated.items(), paginated.nextCursor());
         }
     }
 
@@ -185,7 +204,7 @@ public class ToolRegistry {
             var parsed = parseCallParams(params);
             if (parsed == null) return invalidRequest("Invalid params");
             if (parsed.name().isBlank()) return invalidRequest("Missing tool name");
-            if (parsed.name().length() > 128) return invalidRequest("Tool name exceeds maximum length");
+            if (parsed.name().length() > 64) return invalidRequest("Tool name exceeds maximum length (SEP-986)");
 
             var handler = registry.get(parsed.name());
             if (handler == null) return methodNotFound("Method not found");
@@ -204,9 +223,8 @@ public class ToolRegistry {
                 var toolResult =
                         handler.handle(request, context).toCompletableFuture().join();
                 sendLoggingIfEnabled(context, parsed.name(), "completed");
-                var wireResult = toWireResult(toolResult);
-                validateOutput(handler.descriptor().outputSchema(), wireResult);
-                return wireResult;
+                validateOutput(handler.descriptor().outputSchema(), toolResult);
+                return context.responseMapper().callToolResult(toolResult);
             } catch (CompletionException e) {
                 var cause = e.getCause();
                 if (cause instanceof Exception ex) throw ex;
@@ -222,14 +240,6 @@ public class ToolRegistry {
             return ptNode.asString();
         }
 
-        private static CallToolResult toWireResult(ToolResult result) {
-            var protocolContent = result.content().stream()
-                    .map(McpToolMapper::toProtocolContentBlock)
-                    .toList();
-            return new CallToolResult(
-                    protocolContent, result.structuredContent(), result.isError(), result.meta(), null);
-        }
-
         private record CallParams(
                 String name,
                 @Nullable Map<String, JsonNode> args,
@@ -243,7 +253,7 @@ public class ToolRegistry {
             }
             if (params instanceof Map<?, ?> map) {
                 var json = JsonRpcCodec.writeValueAsString(map);
-                var typed = JsonRpcCodec.decodeWithCodec(json, CallToolRequestParams.class);
+                var typed = ProtocolCodecUtil.decodeWithCodec(json, CallToolRequestParams.class);
                 var name = typed.name();
                 if (name == null) return null;
                 return new CallParams(name, typed.arguments(), typed._meta());
@@ -262,7 +272,7 @@ public class ToolRegistry {
             return joinMessages(errors);
         }
 
-        private void validateOutput(@Nullable JsonNode schema, CallToolResult result) {
+        private void validateOutput(@Nullable JsonNode schema, ToolResult result) {
             if (schema == null || result.structuredContent() == null) return;
             var contentNode = JsonNodeFactory.instance.objectNode();
             contentNode.setAll(result.structuredContent());

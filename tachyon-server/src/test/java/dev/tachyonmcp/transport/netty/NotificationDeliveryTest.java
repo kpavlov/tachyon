@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.McpServer;
-import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,10 +30,8 @@ class NotificationDeliveryTest {
 
     private static final ToolDescriptor TOOL_DESCRIPTOR = ToolDescriptor.builder("test_tool")
             .description("Test tool")
-            .inputSchema(JsonNodeFactory.instance
-                    .objectNode()
-                    .put("type", "object")
-                    .<tools.jackson.databind.node.ObjectNode>putObject("properties"))
+            .inputSchema(
+                    JsonNodeFactory.instance.objectNode().put("type", "object").putObject("properties"))
             .build();
 
     /** Emits 3 progress events and 3 log events per invocation (plus 2 automatic lifecycle logs from ToolsCallHandler). */
@@ -64,7 +61,7 @@ class NotificationDeliveryTest {
 
     @BeforeEach
     void setUp() {
-        server = TachyonMcpServer.builder().tool(PROGRESS_AND_LOG_TOOL).build();
+        server = TachyonServer.builder().tool(PROGRESS_AND_LOG_TOOL).build();
         dispatcher = new McpDispatcher(server, server.executor());
         testConn = new CollectingConnection();
         McpSession session = server.createSession("sess_test");
@@ -233,7 +230,7 @@ class NotificationDeliveryTest {
         }
 
         @Override
-        public void send(@NonNull SseEvent event) {
+        public void send(SseEvent event) {
             sent.add(event);
         }
     }

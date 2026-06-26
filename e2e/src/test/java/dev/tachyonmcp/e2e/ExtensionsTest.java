@@ -11,7 +11,6 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.server.McpMethodHandler;
 import dev.tachyonmcp.server.McpServer;
-import dev.tachyonmcp.server.TachyonMcpServer;
 import dev.tachyonmcp.server.extensions.McpExtension;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
@@ -32,7 +31,7 @@ class ExtensionsTest extends AbstractMcpE2eTest {
 
     @Test
     void serverAdvertisesExtensionInCapabilities() throws Exception {
-        startServer(createServerWithExtension());
+        startServer(it -> it.extension(new TestExtension()));
 
         try (var client = createTestClient()) {
             // Send initialize with matching extension
@@ -47,7 +46,7 @@ class ExtensionsTest extends AbstractMcpE2eTest {
 
     @Test
     void extensionNotAdvertisedWhenClientDoesNotDeclare() throws Exception {
-        startServer(createServerWithExtension());
+        startServer(it -> it.extension(new TestExtension()));
 
         try (var client = createTestClient()) {
             var initBody = buildInitializeJson(Map.of());
@@ -61,7 +60,7 @@ class ExtensionsTest extends AbstractMcpE2eTest {
 
     @Test
     void extensionEnabledWhenClientDeclaresIt() throws Exception {
-        startServer(createServerWithExtension());
+        startServer(it -> it.extension(new TestExtension()));
 
         try (var client = createTestClient()) {
             var initBody = buildInitializeJson(Map.of(TEST_EXT_ID, JsonNodeFactory.instance.objectNode()));
@@ -76,7 +75,7 @@ class ExtensionsTest extends AbstractMcpE2eTest {
 
     @Test
     void extensionMethodRequiresMetaEnvelope() throws Exception {
-        startServer(createServerWithExtension());
+        startServer(it -> it.extension(new TestExtension()));
 
         try (var client = createTestClient()) {
             var initBody = buildInitializeJson(Map.of(TEST_EXT_ID, JsonNodeFactory.instance.objectNode()));
@@ -104,9 +103,7 @@ class ExtensionsTest extends AbstractMcpE2eTest {
 
     @Test
     void extensionToolInvisibleWhenNotNegotiated() throws Exception {
-        startServer(TachyonMcpServer.builder()
-                .extension(new TestExtensionWithTool())
-                .build());
+        startServer(it -> it.extension(new TestExtensionWithTool()));
 
         try (var client = createTestClient()) {
             var response = client.post(null, buildInitializeJson(Map.of()));
@@ -122,9 +119,7 @@ class ExtensionsTest extends AbstractMcpE2eTest {
 
     @Test
     void extensionToolVisibleAndCallableWhenNegotiated() throws Exception {
-        startServer(TachyonMcpServer.builder()
-                .extension(new TestExtensionWithTool())
-                .build());
+        startServer(it -> it.extension(new TestExtensionWithTool()));
 
         try (var client = createTestClient()) {
             var response =
@@ -142,10 +137,6 @@ class ExtensionsTest extends AbstractMcpE2eTest {
                     """);
             assertThatJson(callResp.body()).inPath("$.result.content[0].text").isEqualTo("ext-tool-result");
         }
-    }
-
-    private static McpServer createServerWithExtension() {
-        return TachyonMcpServer.builder().extension(new TestExtension()).build();
     }
 
     private static String buildInitializeJson(Map<String, JsonNode> extensions) {

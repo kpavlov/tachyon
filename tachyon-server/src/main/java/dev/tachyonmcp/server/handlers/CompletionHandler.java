@@ -4,7 +4,6 @@
 
 package dev.tachyonmcp.server.handlers;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CompleteResult;
 import dev.tachyonmcp.server.JsonSchemaValidator;
 import dev.tachyonmcp.server.McpMethodHandler;
 import dev.tachyonmcp.server.session.McpContext;
@@ -36,6 +35,6 @@ public final class CompletionHandler implements McpMethodHandler {
         if (argument == null) {
             return JsonRpcErrors.invalidParams("Missing argument parameter");
         }
-        return new CompleteResult(new CompleteResult.Completion(List.of(), 0.0, false), null, null);
+        return context.responseMapper().completeResult(List.of(), null, false);
     }
 }

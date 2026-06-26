@@ -15,7 +15,7 @@ import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
-public final class McpToolMapper {
+final class McpToolMapper {
 
     private static final ObjectNode DEFAULT_SCHEMA =
             JsonNodeFactory.instance.objectNode().put("type", "object");
@@ -81,9 +81,9 @@ public final class McpToolMapper {
             case dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextContent t ->
                 TextContent.of(t.text(), t._meta(), toDomainAnnotations(t.annotations()));
             case dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ImageContent i ->
-                ImageContent.of(i.data(), i.mimeType(), i._meta(), toDomainAnnotations(i.annotations()));
+                ImageContent.of(i.data(), i.mimeType(), toDomainAnnotations(i.annotations()), i._meta());
             case dev.tachyonmcp.protocol.mcp.v2025_11_25.models.AudioContent a ->
-                AudioContent.of(a.data(), a.mimeType(), a._meta(), toDomainAnnotations(a.annotations()));
+                AudioContent.of(a.data(), a.mimeType(), toDomainAnnotations(a.annotations()), a._meta());
             case dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ResourceLink r ->
                 ResourceLink.builder(r.uri(), r.name())
                         .title(r.title())
@@ -96,7 +96,7 @@ public final class McpToolMapper {
                         .build();
             case dev.tachyonmcp.protocol.mcp.v2025_11_25.models.EmbeddedResource e ->
                 EmbeddedResource.of(
-                        toDomainResourceContents(e.resource()), e._meta(), toDomainAnnotations(e.annotations()));
+                        toDomainResourceContents(e.resource()), toDomainAnnotations(e.annotations()), e._meta());
         };
     }
 

@@ -5,6 +5,7 @@
 package dev.tachyonmcp.server.domain;
 
 import java.util.Map;
+import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
@@ -14,6 +15,12 @@ import tools.jackson.databind.JsonNode;
  * <p>The image data is base64-encoded in {@code data}, with the corresponding
  * {@code mimeType} describing the format (e.g. {@code image/png}, {@code image/jpeg}).
  */
+@Value.Immutable
+@Value.Builder
+@Value.Style(
+        allParameters = true,
+        visibility = Value.Style.ImplementationVisibility.PACKAGE,
+        typeImmutable = "Default*")
 public non-sealed interface ImageContent extends ContentBlock {
 
     String data();
@@ -21,24 +28,33 @@ public non-sealed interface ImageContent extends ContentBlock {
     String mimeType();
 
     @Nullable
-    Map<String, JsonNode> meta();
+    Annotations annotations();
 
     @Nullable
-    Annotations annotations();
+    Map<String, JsonNode> meta();
+
+    @Override
+    default Type type() {
+        return Type.IMAGE;
+    }
+
+    static DefaultImageContent.Builder builder() {
+        return DefaultImageContent.builder();
+    }
 
     /** Creates an image content block with no metadata or annotations. */
     static ImageContent of(String data, String mimeType) {
-        return new DefaultImageContent(data, mimeType, null, null);
+        return DefaultImageContent.of(data, mimeType, null, null);
     }
 
     /** Creates an image content block with given annotations and no metadata. */
     static ImageContent of(String data, String mimeType, @Nullable Annotations annotations) {
-        return new DefaultImageContent(data, mimeType, null, annotations);
+        return DefaultImageContent.of(data, mimeType, annotations, null);
     }
 
     /** Creates an image content block with metadata and optional annotations. */
     static ImageContent of(
-            String data, String mimeType, @Nullable Map<String, JsonNode> meta, @Nullable Annotations annotations) {
-        return new DefaultImageContent(data, mimeType, meta, annotations);
+            String data, String mimeType, @Nullable Annotations annotations, @Nullable Map<String, JsonNode> meta) {
+        return DefaultImageContent.of(data, mimeType, annotations, meta);
     }
 }

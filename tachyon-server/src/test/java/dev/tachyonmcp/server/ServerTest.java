@@ -6,8 +6,8 @@ package dev.tachyonmcp.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.LoggingLevel;
 import dev.tachyonmcp.runtime.SessionState;
+import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
@@ -15,11 +15,11 @@ import dev.tachyonmcp.server.features.tools.SyncToolHandler;
 import dev.tachyonmcp.server.session.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -28,7 +28,7 @@ class ServerTest {
 
     @Test
     void createAndRemoveSession() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var conn = new TestConnection();
             var session = server.createSession("sess_1");
             session.connection(conn);
@@ -44,7 +44,7 @@ class ServerTest {
 
     @Test
     void appendResponsePersistsToChronicle() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var session = server.createSession("sess_1");
 
             var response = new SessionEvent.ResponseEvent("sess_1", 1, "{\"ok\":true}", 1000L);
@@ -60,7 +60,7 @@ class ServerTest {
 
     @Test
     void replayAfterReconnect() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             server.createSession("sess_1");
 
             server.appendEvent(new SessionEvent.ResponseEvent("sess_1", 1, "{\"a\":1}", 100L));
@@ -74,7 +74,7 @@ class ServerTest {
 
     @Test
     void backpressureReflectsConnectionState() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var conn = new TestConnection();
             var session = server.createSession("sess_1");
             session.connection(conn);
@@ -89,7 +89,7 @@ class ServerTest {
 
     @Test
     void pumpChronicle() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var conn = new TestConnection();
             var session = server.createSession("sess_1");
             session.connection(conn);
@@ -105,7 +105,7 @@ class ServerTest {
 
     @Test
     void replaceExistingSession() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var session1 = server.createSession("sess_1");
             var session2 = server.createSession("sess_1");
 
@@ -116,11 +116,11 @@ class ServerTest {
 
     @Test
     void sendRequestPersistsOutboundRequestEventForReplay() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var session = server.createSession("sess_out");
             session.activate();
 
-            server.sendRequest(session, "sampling/createMessage", java.util.Map.of("p", "v"));
+            server.sendRequest(session, "sampling/createMessage", Map.of("p", "v"));
 
             var events = server.replay("sess_out", -1);
             var outbound = events.stream()
@@ -177,7 +177,7 @@ class ServerTest {
     @Test
     void replayReturnsMixedEventsButToSseEventFiltersNonSse() {
         // Verifies the replay path doesn't NPE on RequestEvent/CancelEvent in the log
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             server.createSession("sess_replay");
 
             server.appendEvent(new SessionEvent.RequestEvent("sess_replay", 1, "ping", "{}", 100L));
@@ -198,10 +198,9 @@ class ServerTest {
 
     @Test
     void multipleSessions() {
-        try (var server = TachyonMcpServer.builder().build()) {
-            var sessions = new ArrayList<McpSession>();
+        try (var server = TachyonServer.builder().build()) {
             for (int i = 0; i < 10; i++) {
-                sessions.add(server.createSession("sess_" + i));
+                server.createSession("sess_" + i);
             }
 
             for (int i = 0; i < 10; i++) {
@@ -212,7 +211,9 @@ class ServerTest {
 
     @Test
     void registerToolSendsListChangedToActiveSession() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder()
+                .capabilities(c -> c.toolsListChanged(true))
+                .build()) {
             var conn = new TestConnection();
             var session = server.createSession("sess_test");
             session.connection(conn);
@@ -235,8 +236,8 @@ class ServerTest {
                 }
 
                 @Override
-                public Object handle(@NonNull McpContext context, @NonNull Object args) {
-                    return java.util.Map.of();
+                public Object handle(McpContext context, Object args) {
+                    return Map.of();
                 }
             });
 
@@ -249,7 +250,9 @@ class ServerTest {
 
     @Test
     void addResourceSendsListChangedToActiveSession() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder()
+                .capabilities(c -> c.resourcesListChanged(true))
+                .build()) {
             var conn = new TestConnection();
             var session = server.createSession("sess_test");
             session.connection(conn);
@@ -269,7 +272,9 @@ class ServerTest {
 
     @Test
     void addPromptSendsListChangedToActiveSession() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder()
+                .capabilities(c -> c.promptsListChanged(true))
+                .build()) {
             var conn = new TestConnection();
             var session = server.createSession("sess_test");
             session.connection(conn);
@@ -286,7 +291,7 @@ class ServerTest {
 
     @Test
     void logRespectsLevelThreshold() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var conn = new TestConnection();
             var session = server.createSession("sess_log");
             session.connection(conn);
@@ -323,7 +328,9 @@ class ServerTest {
 
     @Test
     void listChangedNotSentToNonActiveSession() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder()
+                .capabilities(c -> c.toolsListChanged(true))
+                .build()) {
             var conn = new TestConnection();
             var session = server.createSession("sess_init");
             session.connection(conn);
@@ -345,8 +352,8 @@ class ServerTest {
                 }
 
                 @Override
-                public Object handle(@NonNull McpContext context, @NonNull Object args) {
-                    return java.util.Map.of();
+                public Object handle(McpContext context, Object args) {
+                    return Map.of();
                 }
             });
 
@@ -377,7 +384,7 @@ class ServerTest {
             }
 
             @Override
-            public void send(@NonNull SseEvent event) {
+            public void send(SseEvent event) {
                 if (closeCalled) closedConnSendCount.incrementAndGet();
             }
 
@@ -393,7 +400,7 @@ class ServerTest {
             }
         };
 
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var session = server.createSession("sess_e12");
             session.connection(conn);
             session.activate();
@@ -405,8 +412,8 @@ class ServerTest {
             // Thread B: sendNotification while close() holds the write lock
             // Without fix: reads session.connection() = still real conn → conn.send() called after conn.close()
             // With fix: session.send() blocks on read lock → sees CLOSED after lock → returns false
-            var sender = Thread.ofVirtual()
-                    .start(() -> server.sendNotification(session, "notifications/e12", java.util.Map.of()));
+            var sender =
+                    Thread.ofVirtual().start(() -> server.sendNotification(session, "notifications/e12", Map.of()));
             Thread.sleep(20); // give sender time to reach the send call
 
             releaseClose.countDown(); // let close() complete
@@ -430,7 +437,7 @@ class ServerTest {
         }
 
         @Override
-        public void send(@NonNull SseEvent event) {
+        public void send(SseEvent event) {
             sent.add(event);
         }
     }

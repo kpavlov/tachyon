@@ -5,7 +5,7 @@
 package dev.tachyonmcp.conformance;
 
 import dev.tachyonmcp.server.McpServer;
-import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.TachyonServer;
 
 /**
  * Test against the latest stable version of MCP conformance tests
@@ -18,6 +18,6 @@ class DefaultServerConformanceIT extends AbstractServerConformanceIT {
 
     @Override
     protected McpServer createServer() {
-        return TachyonMcpServer.builder().host("localhost").build();
+        return TachyonServer.builder().host("localhost").build();
     }
 }
