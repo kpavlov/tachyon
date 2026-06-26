@@ -79,7 +79,7 @@ class TasksBridgeTest extends AbstractMcpE2eTest {
 
     @Test
     void singleRegistryBacksBothPaths() throws Exception {
-        startServer(it -> it.extension(new TasksExtension()));
+        startServer(it -> it.extension(TasksExtension.instance()));
 
         // Add a task directly to the registry
         var taskEntry =

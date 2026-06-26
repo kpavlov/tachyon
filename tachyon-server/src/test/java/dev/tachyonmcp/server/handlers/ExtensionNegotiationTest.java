@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.server.McpServer;
-import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.extensions.McpExtension;
 import dev.tachyonmcp.server.session.DefaultMcpContext;
 import dev.tachyonmcp.server.session.McpContext;
@@ -30,7 +30,7 @@ class ExtensionNegotiationTest {
     @BeforeEach
     void setUp() {
         testExtension = new TestExtension();
-        server = TachyonMcpServer.builder().extension(testExtension).build();
+        server = TachyonServer.builder().extension(testExtension).build();
         session = server.createSession("sess_ext_neg");
     }
 

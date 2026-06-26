@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server;
 
+import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.server.config.ServerConfig;
 import dev.tachyonmcp.server.domain.LoggingLevel;
@@ -65,7 +66,7 @@ public class McpServer implements Closeable {
                 return mapper;
             }
         }
-        return ProtocolResponseMapper.NOOP;
+        throw new IllegalStateException("No protocol response mapper found");
     }
 
     public ServerConfig config() {
@@ -483,7 +484,7 @@ public class McpServer implements Closeable {
     @Override
     public void close() {
         try {
-            logger.info("Shutting down TachyonMcpServer");
+            logger.info("Shutting down TachyonServer");
             shutdownExtensions();
             virtualThreadExecutor.shutdown();
             taskRegistry.stopTtlJanitor();

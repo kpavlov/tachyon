@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.McpServer;
-import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
 import dev.tachyonmcp.server.session.McpContext;
 import java.util.concurrent.Callable;
@@ -24,7 +24,7 @@ class NettyServerThreadingTest {
     void eventLoopsAreOnPlatformThreadsAndToolHandlerOnVirtualThread() throws Exception {
         var handlerThread = new CompletableFuture<Thread>();
 
-        try (McpServer server = TachyonMcpServer.builder()
+        try (McpServer server = TachyonServer.builder()
                         .tool(new AbstractSyncToolHandler("thread_probe") {
 
                             @Override

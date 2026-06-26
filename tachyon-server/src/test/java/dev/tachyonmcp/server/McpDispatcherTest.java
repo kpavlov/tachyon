@@ -19,7 +19,7 @@ class McpDispatcherTest {
 
     @Test
     void shouldAllowDifferentIdsInSameSession() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             server.createSession("sess_diff");
             var dispatcher = new McpDispatcher(server, server.executor());
 
@@ -37,7 +37,7 @@ class McpDispatcherTest {
 
     @Test
     void shouldAllowSameIdInDifferentSessions() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             server.createSession("sess_a");
             server.createSession("sess_b");
             var dispatcher = new McpDispatcher(server, server.executor());
@@ -54,7 +54,7 @@ class McpDispatcherTest {
 
     @Test
     void shouldRejectNonInitializeRequestBeforeSessionIsActive() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             server.createSession("sess_init");
             var dispatcher = new McpDispatcher(server, server.executor());
 
@@ -69,7 +69,7 @@ class McpDispatcherTest {
 
     @Test
     void shouldAcceptPingBeforeSessionIsActive() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             server.createSession("sess_ping");
             var dispatcher = new McpDispatcher(server, server.executor());
 
@@ -84,7 +84,7 @@ class McpDispatcherTest {
 
     @Test
     void shouldAcceptRequestAfterSessionIsActive() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var session = server.createSession("sess_active");
             session.activate();
             var dispatcher = new McpDispatcher(server, server.executor());
@@ -99,7 +99,7 @@ class McpDispatcherTest {
 
     @Test
     void cancelsPendingRequestWithMatchingId() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var session = server.createSession("sess_cancel-pending");
             session.activate();
             var dispatcher = new McpDispatcher(server, server.executor());
@@ -118,7 +118,7 @@ class McpDispatcherTest {
 
     @Test
     void cancelsWithoutSessionLogsAndAccepts() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var dispatcher = new McpDispatcher(server, server.executor());
 
             var params = Map.of("requestId", 1, "reason", "no-session");
@@ -129,7 +129,7 @@ class McpDispatcherTest {
 
     @Test
     void cancelsWithUnknownRequestIdIsAccepted() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var session = server.createSession("sess_cancel-unknown");
             session.activate();
             var dispatcher = new McpDispatcher(server, server.executor());
@@ -142,7 +142,7 @@ class McpDispatcherTest {
 
     @Test
     void cancelsWithEmptyParamsIsAccepted() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             server.createSession("sess_cancel-empty");
             var dispatcher = new McpDispatcher(server, server.executor());
 
@@ -153,7 +153,7 @@ class McpDispatcherTest {
 
     @Test
     void cancelsWithNullParamsIsAccepted() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             server.createSession("sess_cancel-null");
             var dispatcher = new McpDispatcher(server, server.executor());
 
@@ -164,7 +164,7 @@ class McpDispatcherTest {
 
     @Test
     void shouldRejectRequestAfterSessionIsClosed() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var session = server.createSession("sess_closed");
             session.activate();
             session.close();

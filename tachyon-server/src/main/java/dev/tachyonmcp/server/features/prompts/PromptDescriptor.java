@@ -13,6 +13,7 @@ import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
 @Value.Immutable
+@Value.Builder
 @Value.Style(
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
@@ -38,6 +39,10 @@ public interface PromptDescriptor extends McpResourceType {
 
     @Nullable
     String extensionId();
+
+    static DefaultPromptDescriptor.Builder builder() {
+        return DefaultPromptDescriptor.builder();
+    }
 
     static PromptDescriptor of(
             String name,

@@ -4,39 +4,18 @@
 
 package dev.tachyonmcp.server.session;
 
+import dev.tachyonmcp.protocol.ProtocolMappers;
+import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.McpServer;
 import dev.tachyonmcp.server.Notifications;
-import dev.tachyonmcp.server.ProtocolResponseMapper;
 import dev.tachyonmcp.server.ServerContext;
 import dev.tachyonmcp.server.domain.LoggingLevel;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.ServiceLoader;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import org.jspecify.annotations.Nullable;
 
 public class DefaultMcpContext implements McpContext {
-
-    private static final ProtocolResponseMapper NOOP_MAPPER;
-
-    static {
-        var mapper = loadResponseMapper();
-        NOOP_MAPPER = mapper != null ? mapper : ProtocolResponseMapper.NOOP;
-    }
-
-    @Nullable
-    private static ProtocolResponseMapper loadResponseMapper() {
-        var mappers = new ArrayList<ProtocolResponseMapper>();
-        ServiceLoader.load(ProtocolResponseMapper.class).forEach(mappers::add);
-        for (var mapper : mappers) {
-            if (mapper.supports("mcp", "2025-11-25")) {
-                return mapper;
-            }
-        }
-        return null;
-    }
 
     private static final McpContext NOOP_CONTEXT = new DefaultMcpContext() {
         @Override
@@ -66,7 +45,7 @@ public class DefaultMcpContext implements McpContext {
 
         @Override
         public ProtocolResponseMapper responseMapper() {
-            return NOOP_MAPPER;
+            return Objects.requireNonNull(ProtocolMappers.getMapper("mcp", "2025-11-25"));
         }
     };
 
@@ -149,10 +128,7 @@ public class DefaultMcpContext implements McpContext {
 
     @Override
     public ProtocolResponseMapper responseMapper() {
-        if (server != null) {
-            return server.mcpServer().responseMapper();
-        }
-        return ProtocolResponseMapper.NOOP;
+        return server.mcpServer().responseMapper();
     }
 
     @Override

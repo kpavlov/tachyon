@@ -5,13 +5,21 @@
 package dev.tachyonmcp.server.features.tools;
 
 import dev.tachyonmcp.server.domain.ContentBlock;
+import dev.tachyonmcp.server.domain.HasMeta;
 import dev.tachyonmcp.server.domain.TextContent;
 import java.util.List;
 import java.util.Map;
+import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
-public interface ToolResult {
+@Value.Immutable
+@Value.Style(
+        allParameters = true,
+        visibility = Value.Style.ImplementationVisibility.PACKAGE,
+        typeImmutable = "Default*")
+@Value.Builder
+public interface ToolResult extends HasMeta {
 
     List<ContentBlock> content();
 
@@ -24,25 +32,30 @@ public interface ToolResult {
     @Nullable
     Map<String, JsonNode> meta();
 
+    static DefaultToolResult.Builder builder() {
+        return DefaultToolResult.builder();
+    }
+
     static ToolResult text(String text) {
-        return new DefaultToolResult(List.of(TextContent.of(text)), null, null, null);
+        return DefaultToolResult.of(List.of(TextContent.of(text)), null, null, null);
     }
 
     static ToolResult error(String message) {
-        return new DefaultToolResult(List.of(TextContent.of(message)), true, null, null);
+        return DefaultToolResult.of(List.of(TextContent.of(message)), true, null, null);
     }
 
     static ToolResult of(List<ContentBlock> content) {
-        return new DefaultToolResult(content, null, null, null);
+        return DefaultToolResult.of(content, null, null, null);
     }
 
     static ToolResult of(ContentBlock... content) {
-        return new DefaultToolResult(List.of(content), null, null, null);
+        return DefaultToolResult.of(List.of(content), null, null, null);
     }
 
+    @Deprecated
     static ToolResult from(Object result) {
         if (result instanceof ToolResult r) return r;
         var text = TextContent.of(result != null ? result.toString() : "");
-        return new DefaultToolResult(List.of(text), null, null, null);
+        return DefaultToolResult.of(List.of(text), null, null, null);
     }
 }

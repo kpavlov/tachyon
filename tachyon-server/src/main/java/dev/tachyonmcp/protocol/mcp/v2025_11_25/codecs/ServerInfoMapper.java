@@ -11,7 +11,7 @@ import dev.tachyonmcp.server.config.ServerIdentity;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
-public class ServerInfoMapper {
+class ServerInfoMapper {
 
     private ServerInfoMapper() {}
 

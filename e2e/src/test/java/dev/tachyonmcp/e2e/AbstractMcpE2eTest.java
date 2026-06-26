@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.McpServer;
 import dev.tachyonmcp.server.ServerBuilder;
-import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.transport.netty.NettyServer;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -64,7 +64,7 @@ abstract class AbstractMcpE2eTest {
         if (nettyServer != null && usingCustomServer) {
             nettyServer.close();
         }
-        ServerBuilder serverBuilder = TachyonMcpServer.builder();
+        ServerBuilder serverBuilder = TachyonServer.builder();
         configurer.accept(serverBuilder);
         this.server = serverBuilder.build();
         this.nettyServer = new NettyServer(0, server);

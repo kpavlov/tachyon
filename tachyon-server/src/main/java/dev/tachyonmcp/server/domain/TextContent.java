@@ -5,6 +5,7 @@
 package dev.tachyonmcp.server.domain;
 
 import java.util.Map;
+import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
@@ -14,6 +15,12 @@ import tools.jackson.databind.JsonNode;
  * <p>Text is the most common content type. Optional {@link Annotations} allow the
  * server to hint at audience, priority, or modification time.
  */
+@Value.Immutable
+@Value.Builder
+@Value.Style(
+        allParameters = true,
+        visibility = Value.Style.ImplementationVisibility.PACKAGE,
+        typeImmutable = "Default*")
 public non-sealed interface TextContent extends ContentBlock {
 
     String text();
@@ -24,18 +31,26 @@ public non-sealed interface TextContent extends ContentBlock {
     @Nullable
     Annotations annotations();
 
+    default ContentBlock.Type type() {
+        return ContentBlock.Type.TEXT;
+    }
+
+    static DefaultTextContent.Builder builder() {
+        return DefaultTextContent.builder();
+    }
+
     /** Creates a text content block with no metadata or annotations. */
     static TextContent of(String text) {
-        return new DefaultTextContent(text, null, null);
+        return DefaultTextContent.of(text, null, null);
     }
 
     /** Creates a text content block with given annotations and no metadata. */
     static TextContent of(String text, @Nullable Annotations annotations) {
-        return new DefaultTextContent(text, null, annotations);
+        return DefaultTextContent.of(text, null, annotations);
     }
 
     /** Creates a text content block with metadata and optional annotations. */
     static TextContent of(String text, @Nullable Map<String, JsonNode> meta, @Nullable Annotations annotations) {
-        return new DefaultTextContent(text, meta, annotations);
+        return DefaultTextContent.of(text, meta, annotations);
     }
 }

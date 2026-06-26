@@ -17,6 +17,7 @@ import org.jspecify.annotations.Nullable;
  * signals that the tool may reach outside the MCP ecosystem.
  */
 @Value.Immutable
+@Value.Builder
 @Value.Style(
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
@@ -37,6 +38,10 @@ public interface ToolAnnotations {
 
     @Nullable
     Boolean openWorldHint();
+
+    static DefaultToolAnnotations.Builder builder() {
+        return DefaultToolAnnotations.builder();
+    }
 
     static ToolAnnotations of(
             @Nullable String title,

@@ -16,10 +16,8 @@ import org.jspecify.annotations.Nullable;
  * vs. dark variants.
  */
 @Value.Immutable
-@Value.Style(
-        allParameters = true,
-        visibility = Value.Style.ImplementationVisibility.PACKAGE,
-        typeImmutable = "Default*")
+@Value.Builder
+@Value.Style(allParameters = true, typeImmutable = "Default*")
 public interface Icon {
 
     String src();
@@ -32,6 +30,10 @@ public interface Icon {
 
     @Nullable
     String theme();
+
+    static DefaultIcon.Builder builder() {
+        return DefaultIcon.builder();
+    }
 
     static Icon of(String src, @Nullable String mimeType, @Nullable List<String> sizes, @Nullable String theme) {
         return DefaultIcon.of(src, mimeType, sizes, theme);

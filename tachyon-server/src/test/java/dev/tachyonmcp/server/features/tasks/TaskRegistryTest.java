@@ -11,7 +11,7 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetTaskPayloadResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetTaskResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListTasksResult;
 import dev.tachyonmcp.server.McpMethodHandler;
-import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.session.DefaultMcpContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 class TaskRegistryTest {
 
     private final TaskRegistry registry =
-            new TaskRegistry(TachyonMcpServer.builder().build());
+            new TaskRegistry(TachyonServer.builder().build());
     private final HashMap<String, McpMethodHandler> handlers = new HashMap<>();
 
     @BeforeEach

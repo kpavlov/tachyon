@@ -11,6 +11,7 @@ import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +35,7 @@ public final class JsonRpcCodec {
         }
     };
 
-    private static final JsonFactory FACTORY = new JsonFactory();
+    public static final JsonFactory FACTORY = new JsonFactory();
 
     private static final String JSONRPC = "jsonrpc";
     private static final String JSONRPC_VERSION = "2.0";
@@ -337,7 +338,7 @@ public final class JsonRpcCodec {
                     var gen = FACTORY.createGenerator(ObjectWriteContext.empty(), out, JsonEncoding.UTF8)) {
                 ((Codec) codec).encode(gen, value);
                 gen.flush();
-                return out.toString();
+                return out.toString(StandardCharsets.UTF_8);
             } catch (IOException e) {
                 throw new UncheckedIOException("Failed to write value via codec for " + value.getClass(), e);
             }

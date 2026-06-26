@@ -4,32 +4,15 @@
 
 package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
-import static dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec.readTreeValue;
+import static dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec.*;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import tools.jackson.core.JsonParser;
 import tools.jackson.core.JsonToken;
-import tools.jackson.core.ObjectReadContext;
-import tools.jackson.core.TreeNode;
-import tools.jackson.core.json.JsonFactory;
 import tools.jackson.databind.JsonNode;
 
 public final class ProtocolCodecUtil {
-
-    private static final JsonFactory FACTORY = new JsonFactory();
-    private static final ObjectReadContext TREE_READ_CONTEXT = new ObjectReadContext.Base() {
-        @Override
-        @SuppressWarnings("unchecked")
-        public <T extends TreeNode> T readTree(JsonParser p) {
-            try {
-                return (T) readTreeValue(p);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-        }
-    };
 
     private ProtocolCodecUtil() {}
 

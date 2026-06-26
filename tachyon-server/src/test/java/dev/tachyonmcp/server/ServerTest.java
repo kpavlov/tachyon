@@ -28,7 +28,7 @@ class ServerTest {
 
     @Test
     void createAndRemoveSession() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var conn = new TestConnection();
             var session = server.createSession("sess_1");
             session.connection(conn);
@@ -44,7 +44,7 @@ class ServerTest {
 
     @Test
     void appendResponsePersistsToChronicle() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var session = server.createSession("sess_1");
 
             var response = new SessionEvent.ResponseEvent("sess_1", 1, "{\"ok\":true}", 1000L);
@@ -60,7 +60,7 @@ class ServerTest {
 
     @Test
     void replayAfterReconnect() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             server.createSession("sess_1");
 
             server.appendEvent(new SessionEvent.ResponseEvent("sess_1", 1, "{\"a\":1}", 100L));
@@ -74,7 +74,7 @@ class ServerTest {
 
     @Test
     void backpressureReflectsConnectionState() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var conn = new TestConnection();
             var session = server.createSession("sess_1");
             session.connection(conn);
@@ -89,7 +89,7 @@ class ServerTest {
 
     @Test
     void pumpChronicle() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var conn = new TestConnection();
             var session = server.createSession("sess_1");
             session.connection(conn);
@@ -105,7 +105,7 @@ class ServerTest {
 
     @Test
     void replaceExistingSession() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var session1 = server.createSession("sess_1");
             var session2 = server.createSession("sess_1");
 
@@ -116,7 +116,7 @@ class ServerTest {
 
     @Test
     void sendRequestPersistsOutboundRequestEventForReplay() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var session = server.createSession("sess_out");
             session.activate();
 
@@ -177,7 +177,7 @@ class ServerTest {
     @Test
     void replayReturnsMixedEventsButToSseEventFiltersNonSse() {
         // Verifies the replay path doesn't NPE on RequestEvent/CancelEvent in the log
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             server.createSession("sess_replay");
 
             server.appendEvent(new SessionEvent.RequestEvent("sess_replay", 1, "ping", "{}", 100L));
@@ -198,7 +198,7 @@ class ServerTest {
 
     @Test
     void multipleSessions() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             for (int i = 0; i < 10; i++) {
                 server.createSession("sess_" + i);
             }
@@ -211,7 +211,7 @@ class ServerTest {
 
     @Test
     void registerToolSendsListChangedToActiveSession() {
-        try (var server = TachyonMcpServer.builder()
+        try (var server = TachyonServer.builder()
                 .capabilities(c -> c.toolsListChanged(true))
                 .build()) {
             var conn = new TestConnection();
@@ -250,7 +250,7 @@ class ServerTest {
 
     @Test
     void addResourceSendsListChangedToActiveSession() {
-        try (var server = TachyonMcpServer.builder()
+        try (var server = TachyonServer.builder()
                 .capabilities(c -> c.resourcesListChanged(true))
                 .build()) {
             var conn = new TestConnection();
@@ -272,7 +272,7 @@ class ServerTest {
 
     @Test
     void addPromptSendsListChangedToActiveSession() {
-        try (var server = TachyonMcpServer.builder()
+        try (var server = TachyonServer.builder()
                 .capabilities(c -> c.promptsListChanged(true))
                 .build()) {
             var conn = new TestConnection();
@@ -291,7 +291,7 @@ class ServerTest {
 
     @Test
     void logRespectsLevelThreshold() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var conn = new TestConnection();
             var session = server.createSession("sess_log");
             session.connection(conn);
@@ -328,7 +328,9 @@ class ServerTest {
 
     @Test
     void listChangedNotSentToNonActiveSession() {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder()
+                .capabilities(c -> c.toolsListChanged(true))
+                .build()) {
             var conn = new TestConnection();
             var session = server.createSession("sess_init");
             session.connection(conn);
@@ -398,7 +400,7 @@ class ServerTest {
             }
         };
 
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var session = server.createSession("sess_e12");
             session.connection(conn);
             session.activate();

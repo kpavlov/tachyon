@@ -12,7 +12,7 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListToolsResult;
 import dev.tachyonmcp.server.JsonSchemaValidator;
 import dev.tachyonmcp.server.McpMethodHandler;
-import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
@@ -24,11 +24,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jspecify.annotations.NonNull;
+import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import tools.jackson.databind.JsonNode;
 
 class ToolRegistryTest {
@@ -72,7 +74,7 @@ class ToolRegistryTest {
                         .annotations(annotations)
                         .build()) {
                     @Override
-                    public Object handle(@NonNull McpContext context, @NonNull Object arguments) {
+                    public Object handle(McpContext context, Object arguments) {
                         return ToolResult.text("ok");
                     }
                 });
@@ -152,7 +154,7 @@ class ToolRegistryTest {
 
     @Test
     void callToolReturnsResult() throws Exception {
-        try (var server = TachyonMcpServer.builder().build()) {
+        try (var server = TachyonServer.builder().build()) {
             var session = server.createSession("test");
             session.activate();
             var handlers = new HashMap<String, McpMethodHandler>();
@@ -167,16 +169,71 @@ class ToolRegistryTest {
         }
     }
 
-    @Test
-    void constructorRejectsNullName() {
-        assertThatThrownBy(() -> new TestTool(null, null, null)).isInstanceOf(NullPointerException.class);
+    /**
+     * Tool name validation follows
+     * <a href="https://modelcontextprotocol.io/seps/986-specify-format-for-tool-names">SEP-986</a>:
+     * 1-64 characters, case-sensitive, alphanumeric plus underscore, dash, dot, forward slash.
+     */
+    @ParameterizedTest
+    @MethodSource("validToolNames")
+    void shouldAcceptValidNameOnRegister(String name) {
+        registry.register(SyncToolHandler.of(name, null, null, (ctx, args) -> "ok"));
+        assertThat(registry.get(name)).isNotNull();
     }
 
-    @Test
-    void constructorAcceptsNameAt128CharBoundary() {
-        var name = "a".repeat(128);
-        var tool = new TestTool(name, null, null);
-        assertThat(tool.name()).hasSize(128);
+    @ParameterizedTest
+    @MethodSource("invalidToolNames")
+    void shouldRejectInvalidNameOnRegister(String name) {
+        assertThatThrownBy(() -> registry.register(SyncToolHandler.of(name, null, null, (ctx, args) -> "ok")))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static Stream<Arguments> validToolNames() {
+        return Stream.of(
+                Arguments.of("valid-name"),
+                Arguments.of("valid_name"),
+                Arguments.of("valid.name"),
+                Arguments.of("valid/name"),
+                Arguments.of("VALID_NAME"),
+                Arguments.of("tool123"),
+                Arguments.of("admin.tools.list"),
+                Arguments.of("user-profile/update"),
+                Arguments.of("DATA_EXPORT_v2"),
+                Arguments.of("a"),
+                Arguments.of("a" + "b".repeat(63)));
+    }
+
+    private static Stream<Arguments> invalidToolNames() {
+        return Stream.of(
+                Arguments.of(""),
+                Arguments.of("   "),
+                Arguments.of("has space"),
+                Arguments.of("has,comma"),
+                Arguments.of("has@at"),
+                Arguments.of("has#hash"),
+                Arguments.of("has!bang"),
+                Arguments.of("has%percent"),
+                Arguments.of("has^caret"),
+                Arguments.of("has&and"),
+                Arguments.of("has*star"),
+                Arguments.of("has(open"),
+                Arguments.of("has)close"),
+                Arguments.of("has[open"),
+                Arguments.of("has]close"),
+                Arguments.of("has{open"),
+                Arguments.of("has}close"),
+                Arguments.of("has;semi"),
+                Arguments.of("has'quote"),
+                Arguments.of("has\"quote"),
+                Arguments.of("has<lt"),
+                Arguments.of("has>gt"),
+                Arguments.of("has?qmark"),
+                Arguments.of("has+plus"),
+                Arguments.of("has=eq"),
+                Arguments.of("has~tilde"),
+                Arguments.of("has`backtick"),
+                Arguments.of("has\\backslash"),
+                Arguments.of("a" + "b".repeat(64)));
     }
 
     @ParameterizedTest
@@ -188,7 +245,7 @@ class ToolRegistryTest {
                 new AbstractSyncToolHandler(
                         ToolDescriptor.builder("ts-tool").taskSupport(enumValue).build()) {
                     @Override
-                    public Object handle(@NonNull McpContext context, @NonNull Object arguments) {
+                    public Object handle(McpContext context, Object arguments) {
                         return ToolResult.text("ok");
                     }
                 });
@@ -200,20 +257,6 @@ class ToolRegistryTest {
                 .orElseThrow();
         assertThat(tool.execution()).isNotNull();
         assertThat(tool.execution().taskSupport()).isEqualTo(wireValue);
-    }
-
-    @Test
-    void constructorRejectsBlankName() {
-        assertThatThrownBy(() -> new TestTool("", null, null))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("blank");
-    }
-
-    @Test
-    void constructorRejectsNameExceeding128Chars() {
-        assertThatThrownBy(() -> new TestTool("a".repeat(129), null, null))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("128");
     }
 
     @Test
@@ -259,7 +302,7 @@ class ToolRegistryTest {
                         .icons(List.of(icon))
                         .build()) {
                     @Override
-                    public Object handle(@NonNull McpContext context, @NonNull Object arguments) {
+                    public Object handle(McpContext context, Object arguments) {
                         return ToolResult.text("ok");
                     }
                 });
@@ -275,17 +318,6 @@ class ToolRegistryTest {
         assertThat(tool.icons().getFirst().mimeType()).isEqualTo("image/png");
     }
 
-    @Test
-    void callToolNameTooLong_returnsInvalidRequest() throws Exception {
-        var handlers = new HashMap<String, McpMethodHandler>();
-        registry.registerHandlers(handlers);
-
-        var longName = "a".repeat(129);
-        var result = handlers.get("tools/call").handle(DefaultMcpContext.noop(), Map.of("name", longName));
-        assertThat(result).isInstanceOf(JsonRpcError.class);
-        assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
-    }
-
     private static class TestTool extends AbstractSyncToolHandler {
 
         TestTool(String name, @Nullable String description, @Nullable JsonNode schema) {
@@ -296,7 +328,7 @@ class ToolRegistryTest {
         }
 
         @Override
-        public Object handle(@NonNull McpContext context, @NonNull Object arguments) {
+        public Object handle(McpContext context, Object arguments) {
             return ToolResult.text("ok");
         }
     }

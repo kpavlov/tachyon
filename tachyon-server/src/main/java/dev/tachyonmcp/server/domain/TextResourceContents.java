@@ -17,6 +17,7 @@ import tools.jackson.databind.JsonNode;
  * format (e.g. {@code application/json}, {@code text/markdown}).
  */
 @Value.Immutable
+@Value.Builder
 @Value.Style(
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
@@ -24,6 +25,10 @@ import tools.jackson.databind.JsonNode;
 public non-sealed interface TextResourceContents extends ResourceContents {
 
     String text();
+
+    static DefaultTextResourceContents.Builder builder() {
+        return DefaultTextResourceContents.builder();
+    }
 
     static TextResourceContents of(String uri, @Nullable String mimeType, String text) {
         return DefaultTextResourceContents.of(null, uri, mimeType, text);

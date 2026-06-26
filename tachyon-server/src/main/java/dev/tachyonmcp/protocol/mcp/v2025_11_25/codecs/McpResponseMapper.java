@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
+import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CompleteResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.EmptyResult;
@@ -16,7 +17,6 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListResourcesResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListTasksResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListToolsResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ReadResourceResult;
-import dev.tachyonmcp.server.ProtocolResponseMapper;
 import dev.tachyonmcp.server.domain.InitializeResponse;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.ResourceContents;
@@ -32,11 +32,11 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
-public final class Mcp20251125ResponseMapper implements ProtocolResponseMapper {
+public final class McpResponseMapper implements ProtocolResponseMapper {
 
     private static final Object EMPTY = new EmptyResult(null, null);
 
-    public Mcp20251125ResponseMapper() {}
+    public McpResponseMapper() {}
 
     @Override
     public boolean supports(String protocolName, String protocolVersion) {

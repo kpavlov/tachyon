@@ -10,15 +10,8 @@ public abstract class AbstractToolHandler {
 
     private final ToolDescriptor descriptor;
 
-    private static void validateName(String name) {
-        Objects.requireNonNull(name, "Tool name must not be null");
-        if (name.isBlank()) throw new IllegalArgumentException("Tool name must not be blank");
-        if (name.length() > 128) throw new IllegalArgumentException("Tool name must not exceed 128 characters");
-    }
-
     public AbstractToolHandler(ToolDescriptor descriptor) {
         Objects.requireNonNull(descriptor, "ToolDescriptor must not be null");
-        validateName(descriptor.name());
         this.descriptor = descriptor;
     }
 

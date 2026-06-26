@@ -4,16 +4,17 @@
 
 package dev.tachyonmcp.server.features.tasks;
 
+import dev.tachyonmcp.protocol.ProtocolMappers;
+import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.server.McpMethodHandler;
 import dev.tachyonmcp.server.McpServer;
-import dev.tachyonmcp.server.ProtocolResponseMapper;
 import dev.tachyonmcp.server.features.Registry;
 import dev.tachyonmcp.server.features.tools.ToolRegistry;
 import dev.tachyonmcp.server.session.McpContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.Map;
-import java.util.ServiceLoader;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -29,12 +30,8 @@ public class TaskRegistry extends Registry<TaskEntry> {
     private static final Logger logger = LoggerFactory.getLogger(TaskRegistry.class);
     private static final long TTL_JANITOR_INTERVAL_SECONDS = 30;
 
-    private static final ProtocolResponseMapper mapper = loadMapper();
-
-    private static ProtocolResponseMapper loadMapper() {
-        var loader = ServiceLoader.load(ProtocolResponseMapper.class);
-        return loader.findFirst().orElse(ProtocolResponseMapper.NOOP);
-    }
+    private static final ProtocolResponseMapper mapper =
+            Objects.requireNonNull(ProtocolMappers.getMapper("mcp", "2025-11-25"));
 
     private final ConcurrentHashMap<String, TaskEntry> byId = new ConcurrentHashMap<>();
     private final McpServer server;

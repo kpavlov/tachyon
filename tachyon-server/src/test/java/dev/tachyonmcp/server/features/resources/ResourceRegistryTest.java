@@ -12,7 +12,7 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListResourcesResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ReadResourceResult;
 import dev.tachyonmcp.server.McpMethodHandler;
 import dev.tachyonmcp.server.McpServer;
-import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.Annotations;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.Role;
@@ -32,7 +32,7 @@ import org.junit.jupiter.api.Test;
 
 class ResourceRegistryTest {
 
-    private final McpServer server = TachyonMcpServer.builder().build();
+    private final McpServer server = TachyonServer.builder().build();
     private final ResourceRegistry registry = new ResourceRegistry(server);
     private final HashMap<String, McpMethodHandler> handlers = new HashMap<>();
 

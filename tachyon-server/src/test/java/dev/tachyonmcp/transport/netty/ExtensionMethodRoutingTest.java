@@ -11,7 +11,7 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.McpMethodHandler;
 import dev.tachyonmcp.server.McpServer;
-import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.extensions.McpExtension;
 import dev.tachyonmcp.server.session.*;
 import java.nio.charset.StandardCharsets;
@@ -29,7 +29,7 @@ class ExtensionMethodRoutingTest {
 
     @BeforeEach
     void setUp() {
-        server = TachyonMcpServer.builder().extension(new TestExtension()).build();
+        server = TachyonServer.builder().extension(new TestExtension()).build();
         session = server.createSession("sess_routing");
         dispatcher = new McpDispatcher(server, server.executor());
     }

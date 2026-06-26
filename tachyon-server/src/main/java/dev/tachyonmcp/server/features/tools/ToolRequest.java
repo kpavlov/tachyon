@@ -5,11 +5,18 @@
 package dev.tachyonmcp.server.features.tools;
 
 import dev.tachyonmcp.runtime.Cancellation;
+import dev.tachyonmcp.server.domain.HasMeta;
 import java.util.Map;
+import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
-public interface ToolRequest {
+@Value.Immutable
+@Value.Style(
+        allParameters = true,
+        visibility = Value.Style.ImplementationVisibility.PACKAGE,
+        typeImmutable = "Default*")
+public interface ToolRequest extends HasMeta {
 
     String name();
 
@@ -31,11 +38,11 @@ public interface ToolRequest {
             @Nullable Map<String, JsonNode> meta,
             @Nullable Object progressToken,
             @Nullable Cancellation cancellation) {
-        return new DefaultToolRequest(name, arguments, meta, progressToken, cancellation);
+        return DefaultToolRequest.of(name, arguments, meta, progressToken, cancellation);
     }
 
     static ToolRequest of(
             String name, @Nullable Map<String, JsonNode> arguments, @Nullable Map<String, JsonNode> meta) {
-        return new DefaultToolRequest(name, arguments, meta, null, null);
+        return DefaultToolRequest.of(name, arguments, meta, null, null);
     }
 }

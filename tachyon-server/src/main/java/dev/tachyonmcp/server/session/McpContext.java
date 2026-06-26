@@ -4,9 +4,9 @@
 
 package dev.tachyonmcp.server.session;
 
+import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.Notifications;
-import dev.tachyonmcp.server.ProtocolResponseMapper;
 import dev.tachyonmcp.server.ServerContext;
 import org.jspecify.annotations.Nullable;
 

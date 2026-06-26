@@ -16,6 +16,7 @@ import org.jspecify.annotations.Nullable;
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
         typeImmutable = "Default*")
+@Value.Builder
 public interface ResourceDescriptor extends McpResourceType {
 
     String name();
@@ -42,6 +43,10 @@ public interface ResourceDescriptor extends McpResourceType {
 
     @Nullable
     String extensionId();
+
+    static DefaultResourceDescriptor.Builder builder() {
+        return DefaultResourceDescriptor.builder();
+    }
 
     static ResourceDescriptor of(String name, String uri, @Nullable String description, @Nullable String mimeType) {
         return DefaultResourceDescriptor.of(name, uri, description, mimeType, null, null, null, null, null);

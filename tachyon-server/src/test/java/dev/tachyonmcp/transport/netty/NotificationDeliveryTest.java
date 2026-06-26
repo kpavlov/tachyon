@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.McpServer;
-import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
@@ -61,7 +61,7 @@ class NotificationDeliveryTest {
 
     @BeforeEach
     void setUp() {
-        server = TachyonMcpServer.builder().tool(PROGRESS_AND_LOG_TOOL).build();
+        server = TachyonServer.builder().tool(PROGRESS_AND_LOG_TOOL).build();
         dispatcher = new McpDispatcher(server, server.executor());
         testConn = new CollectingConnection();
         McpSession session = server.createSession("sess_test");

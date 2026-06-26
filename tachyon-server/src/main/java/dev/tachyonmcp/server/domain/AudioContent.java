@@ -5,6 +5,7 @@
 package dev.tachyonmcp.server.domain;
 
 import java.util.Map;
+import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
@@ -14,6 +15,9 @@ import tools.jackson.databind.JsonNode;
  * <p>The audio data is base64-encoded in {@code data}, with the corresponding
  * {@code mimeType} describing the encoding (e.g. {@code audio/mp3}).
  */
+@Value.Immutable
+@Value.Builder
+@Value.Style(allParameters = true, typeImmutable = "Default*")
 public non-sealed interface AudioContent extends ContentBlock, HasMeta {
 
     String data();
@@ -23,19 +27,31 @@ public non-sealed interface AudioContent extends ContentBlock, HasMeta {
     @Nullable
     Annotations annotations();
 
+    @Nullable
+    Map<String, JsonNode> meta();
+
+    @Override
+    default Type type() {
+        return Type.AUDIO;
+    }
+
+    static DefaultAudioContent.Builder builder() {
+        return DefaultAudioContent.builder();
+    }
+
     /** Creates an audio content block with no metadata or annotations. */
     static AudioContent of(String data, String mimeType) {
-        return new DefaultAudioContent(data, mimeType, null, null);
+        return DefaultAudioContent.of(data, mimeType, null, null);
     }
 
     /** Creates an audio content block with given annotations and no metadata. */
     static AudioContent of(String data, String mimeType, @Nullable Annotations annotations) {
-        return new DefaultAudioContent(data, mimeType, null, annotations);
+        return DefaultAudioContent.of(data, mimeType, annotations, null);
     }
 
     /** Creates an audio content block with metadata and optional annotations. */
     static AudioContent of(
-            String data, String mimeType, @Nullable Map<String, JsonNode> meta, @Nullable Annotations annotations) {
-        return new DefaultAudioContent(data, mimeType, meta, annotations);
+            String data, String mimeType, @Nullable Annotations annotations, @Nullable Map<String, JsonNode> meta) {
+        return DefaultAudioContent.of(data, mimeType, annotations, meta);
     }
 }

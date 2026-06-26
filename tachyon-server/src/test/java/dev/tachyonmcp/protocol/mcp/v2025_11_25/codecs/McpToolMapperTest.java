@@ -2,12 +2,12 @@
  * Copyright (c) 2026 Konstantin Pavlov.
  */
 
-package dev.tachyonmcp.server.features.tools;
+package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.McpToolMapper;
 import dev.tachyonmcp.server.domain.*;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -82,7 +82,7 @@ class McpToolMapperTest {
     @Test
     void metaSurvivesImageContentRoundTrip() {
         var meta = Map.of("key", META_VALUE);
-        var domain = ImageContent.of("data", "image/png", meta, null);
+        var domain = ImageContent.of("data", "image/png", null, meta);
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ImageContent)
                 McpToolMapper.toProtocolContentBlock(domain);
         assertThat(protocol._meta()).containsEntry("key", META_VALUE);
@@ -94,7 +94,7 @@ class McpToolMapperTest {
     @Test
     void metaSurvivesAudioContentRoundTrip() {
         var meta = Map.of("key", META_VALUE);
-        var domain = AudioContent.of("data", "audio/wav", meta, null);
+        var domain = AudioContent.of("data", "audio/wav", null, meta);
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.AudioContent)
                 McpToolMapper.toProtocolContentBlock(domain);
         assertThat(protocol._meta()).containsEntry("key", META_VALUE);
@@ -121,7 +121,7 @@ class McpToolMapperTest {
     void metaSurvivesEmbeddedResourceRoundTrip() {
         var meta = Map.of("key", META_VALUE);
         var contents = TextResourceContents.of("test://embedded", "text/plain", "content");
-        var domain = EmbeddedResource.of(contents, meta, null);
+        var domain = EmbeddedResource.of(contents, null, meta);
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.EmbeddedResource)
                 McpToolMapper.toProtocolContentBlock(domain);
         assertThat(protocol._meta()).containsEntry("key", META_VALUE);
