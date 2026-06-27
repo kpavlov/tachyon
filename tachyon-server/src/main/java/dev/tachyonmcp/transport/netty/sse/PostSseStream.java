@@ -99,6 +99,7 @@ public final class PostSseStream implements OutboundSseStream {
         channel.write(response);
         channel.write(
                 new DefaultHttpContent(ByteBufUtil.writeUtf8(channel.alloc(), "retry: " + SSE_RETRY_DELAY_MS + "\n")));
+        SseHeartbeat.enable(channel);
         // Priming event: gives the client a Last-Event-ID baseline for reconnection (SEP-1699).
         var primingId = eventIdSupplier.getAsLong();
         var priming = new SseEvent(String.valueOf(primingId), "message", "");

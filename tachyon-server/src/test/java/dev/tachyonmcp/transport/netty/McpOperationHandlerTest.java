@@ -12,6 +12,7 @@ import dev.tachyonmcp.server.TachyonServer;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.*;
+import io.netty.handler.timeout.IdleStateEvent;
 import java.nio.charset.StandardCharsets;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -104,6 +105,44 @@ class McpOperationHandlerTest {
     }
 
     @Test
+    void idleOnSseStreamSendsHeartbeatAndKeepsChannelOpen() {
+        server.createSession("sess-hb").activate();
+
+        var request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/mcp");
+        request.headers()
+                .set(HttpHeaderNames.ORIGIN, "http://localhost:3000")
+                .set(HttpHeaderNames.ACCEPT, "text/event-stream")
+                .set("MCP-Session-Id", "sess-hb");
+        channel.writeInbound(request);
+        channel.runPendingTasks();
+        drainOutbound();
+
+        channel.pipeline().fireUserEventTriggered(IdleStateEvent.FIRST_READER_IDLE_STATE_EVENT);
+        channel.runPendingTasks();
+
+        assertThat(channel.isOpen()).as("SSE stream must survive an idle tick").isTrue();
+        assertThat(readComment())
+                .as("idle tick must emit an SSE comment heartbeat")
+                .isEqualTo(":\r\n");
+
+        // Reader-idle is not reset by our writes, so a second tick fires again and reschedules.
+        channel.pipeline().fireUserEventTriggered(IdleStateEvent.READER_IDLE_STATE_EVENT);
+        channel.runPendingTasks();
+        assertThat(channel.isOpen()).isTrue();
+        assertThat(readComment()).isEqualTo(":\r\n");
+    }
+
+    @Test
+    void idleOnNonSseChannelClosesChannel() {
+        channel.pipeline().fireUserEventTriggered(IdleStateEvent.FIRST_READER_IDLE_STATE_EVENT);
+        channel.runPendingTasks();
+
+        assertThat(channel.isOpen())
+                .as("plain idle keep-alive socket must close on idle")
+                .isFalse();
+    }
+
+    @Test
     void deleteWithoutSessionReturnsError() {
         var request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/mcp");
         request.headers().set(HttpHeaderNames.ORIGIN, "http://localhost:3000");
@@ -169,5 +208,23 @@ class McpOperationHandlerTest {
         var msg = channel.readOutbound();
         assertThat(msg).isInstanceOf(FullHttpResponse.class);
         return (FullHttpResponse) msg;
+    }
+
+    private void drainOutbound() {
+        Object msg;
+        while ((msg = channel.readOutbound()) != null) {
+            io.netty.util.ReferenceCountUtil.release(msg);
+        }
+    }
+
+    private String readComment() {
+        var msg = channel.readOutbound();
+        assertThat(msg).isInstanceOf(HttpContent.class);
+        var content = (HttpContent) msg;
+        try {
+            return content.content().toString(StandardCharsets.UTF_8);
+        } finally {
+            content.release();
+        }
     }
 }

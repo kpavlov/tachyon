@@ -134,6 +134,11 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
         // transferred. A separate HttpServerExpectContinueHandler would defeat that by
         // always acking 100 Continue upstream of the aggregator.
         p.addLast("http-aggregator", new HttpObjectAggregator(maxContentLength));
+        // On a plain HTTP keep-alive socket an idle tick closes the connection. On a channel carrying
+        // an open SSE stream (marked via SseHeartbeat) McpOperationHandler instead emits a comment
+        // heartbeat, so the idle interval doubles as the SSE keep-alive cadence: an SSE client only
+        // reads, so reader-idle keeps firing and drives the heartbeat. Lower readerIdleTimeout below
+        // any intermediary proxy's idle timeout (commonly 60s) to keep streams from being reaped.
         if (!readerIdleTimeout.isZero() || !writerIdleTimeout.isZero()) {
             p.addLast(
                     "idle",

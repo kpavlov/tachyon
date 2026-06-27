@@ -16,6 +16,7 @@ import dev.tachyonmcp.server.session.McpSession;
 import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
 import dev.tachyonmcp.transport.netty.sse.PostSseStream;
+import dev.tachyonmcp.transport.netty.sse.SseHeartbeat;
 import dev.tachyonmcp.transport.netty.sse.SseManager;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -316,8 +317,15 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof IdleStateEvent) {
-            logger.debug("Idle timeout, closing channel: {}", ctx.channel().remoteAddress());
-            ctx.close();
+            if (SseHeartbeat.isEnabled(ctx.channel())) {
+                // Long-lived SSE stream: a silent client is normal (it only reads), so an idle tick
+                // means "keep alive", not "dead". Emit a comment heartbeat instead of closing; a
+                // failed heartbeat write reaps a genuinely dead client.
+                SseHeartbeat.send(ctx.channel());
+            } else {
+                logger.debug("Idle timeout, closing channel: {}", ctx.channel().remoteAddress());
+                ctx.close();
+            }
         } else {
             ctx.fireUserEventTriggered(evt);
         }

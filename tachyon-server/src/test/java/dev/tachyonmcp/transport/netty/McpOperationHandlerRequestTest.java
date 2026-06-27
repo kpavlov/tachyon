@@ -153,6 +153,72 @@ class McpOperationHandlerRequestTest {
         }
     }
 
+    // Once a tool upgrades the POST response to SSE, the stream is long-lived: an idle tick must
+    // emit a comment heartbeat (":\r\n") to keep it alive instead of closing the channel.
+    @Test
+    void idleOnUpgradedPostSseStreamSendsHeartbeat() {
+        var descriptor = ToolDescriptor.builder("stalled_tool")
+                .description("upgrades to SSE then never completes")
+                .inputSchema(JsonNodeFactory.instance
+                        .objectNode()
+                        .put("type", "object")
+                        .putObject("properties"))
+                .build();
+        // Emits one progress notification (upgrading POST → SSE) then returns a future that never
+        // completes, so the stream stays open and idle when the idle event fires.
+        ToolHandler<ToolResult> stalledTool = new ToolHandler<>() {
+            @Override
+            public ToolDescriptor descriptor() {
+                return descriptor;
+            }
+
+            @Override
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+                ctx.notifications().progress(request.progressToken(), 0, 100, "working");
+                return new CompletableFuture<>();
+            }
+        };
+        var srv = TachyonServer.builder().tool(stalledTool).build();
+        var ch = new EmbeddedChannel(
+                new InteractionHandler(provider(srv)),
+                new McpOperationHandler(srv, new McpDispatcher(srv, Runnable::run), Runnable::run));
+        srv.createSession("sess-stall").activate();
+        try {
+            var request = new DefaultFullHttpRequest(
+                    HttpVersion.HTTP_1_1,
+                    HttpMethod.POST,
+                    "/mcp",
+                    Unpooled.copiedBuffer(
+                            "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{"
+                                    + "\"name\":\"stalled_tool\",\"arguments\":{},\"_meta\":{\"progressToken\":7}}}",
+                            StandardCharsets.UTF_8));
+            request.headers()
+                    .set(HttpHeaderNames.ORIGIN, "http://localhost:3000")
+                    .set("MCP-Session-Id", "sess-stall")
+                    .set(HttpHeaderNames.ACCEPT, "application/json, text/event-stream");
+            ch.writeInbound(request);
+            drain(ch).forEach(ReferenceCountUtil::release); // consume the SSE upgrade frames
+
+            ch.pipeline().fireUserEventTriggered(IdleStateEvent.FIRST_READER_IDLE_STATE_EVENT);
+            ch.runPendingTasks();
+
+            assertThat(ch.isOpen())
+                    .as("upgraded POST-SSE stream must survive an idle tick")
+                    .isTrue();
+            var heartbeat = ch.readOutbound();
+            assertThat(heartbeat).isInstanceOf(HttpContent.class);
+            var content = (HttpContent) heartbeat;
+            try {
+                assertThat(content.content().toString(StandardCharsets.UTF_8)).isEqualTo(":\r\n");
+            } finally {
+                content.release();
+            }
+        } finally {
+            ch.close();
+            srv.close();
+        }
+    }
+
     // GET with a session id that does not exist is rejected with 400.
     @Test
     void getUnknownSessionReturnsBadRequest() {
