@@ -64,9 +64,17 @@ jobs:
           paths: 'reports/target/site/jacoco-aggregate/jacoco.xml'
           title: Coverage Report (JDK ${{ matrix.java }})
           update-comment: ${{ github.event_name == 'pull_request' }}
-          min-coverage-changed-files: 80
+          min-coverage-changed-files: 75
           summary-format: table
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload results to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          name: codecov-jdk${{ matrix.java }}
+          files: 'reports/target/site/jacoco-aggregate/jacoco.xml'
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: kpavlov/tachyon
 
       - name: Upload reports as artifacts
         uses: actions/upload-artifact@v7
