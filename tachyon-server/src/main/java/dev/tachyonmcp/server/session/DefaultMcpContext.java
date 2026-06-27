@@ -113,17 +113,6 @@ public class DefaultMcpContext extends DefaultInteractionContext<McpSession> imp
         }
 
         @Override
-        @Nullable
-        public String protocolVersion() {
-            return session().protocolVersion();
-        }
-
-        @Override
-        public void protocolVersion(String version) {
-            session().protocolVersion(version);
-        }
-
-        @Override
         public void setLoggingLevel(LoggingLevel level) {
             mcpServer.setLoggingLevel(session().id(), level);
         }
@@ -140,6 +129,7 @@ public class DefaultMcpContext extends DefaultInteractionContext<McpSession> imp
         }
 
         @Override
+        @Nullable
         public McpSession session() {
             return DefaultMcpContext.this.session();
         }

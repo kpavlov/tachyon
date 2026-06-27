@@ -146,10 +146,10 @@ class SsePollingTest extends AbstractMcpE2eTest {
                 bufData.setLength(0);
                 bufId.append(line.substring("id: ".length()));
             } else if (line.startsWith("event: ")) {
-                if (bufEvent.length() > 0) bufEvent.append('\n');
+                if (!bufEvent.isEmpty()) bufEvent.append('\n');
                 bufEvent.append(line.substring("event: ".length()));
             } else if (line.startsWith("data: ")) {
-                if (bufData.length() > 0) bufData.append('\n');
+                if (!bufData.isEmpty()) bufData.append('\n');
                 bufData.append(line.substring("data: ".length()));
             }
         }

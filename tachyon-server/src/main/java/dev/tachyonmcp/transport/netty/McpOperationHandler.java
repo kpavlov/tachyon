@@ -132,8 +132,9 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             @Nullable JsonRpcMessage message,
             @Nullable String origin) {
         if (message == null) {
-            sendResponseAndClose(
-                    ctx, HttpResponseStatus.BAD_REQUEST, "application/json", dispatcher.parseError(), origin);
+            ctx.executor()
+                    .execute(() -> sendResponseAndClose(
+                            ctx, HttpResponseStatus.BAD_REQUEST, "application/json", dispatcher.parseError(), origin));
             return;
         }
         switch (message) {
@@ -150,22 +151,22 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                     } catch (RuntimeException e) {
                         logger.warn("Failed to process {} notification", not.method(), e);
                     }
-                    sendAccepted(ctx, origin);
+                    ctx.executor().execute(() -> sendAccepted(ctx, origin));
                 } else {
-                    sendAccepted(ctx, origin);
+                    ctx.executor().execute(() -> sendAccepted(ctx, origin));
                     CompletableFuture.runAsync(
                             () -> dispatcher.dispatchNotification(not.method(), not.params(), sessionId), executor);
                 }
             }
             default -> {
                 logger.warn("Unexpected message type: {}", message);
-                sendAccepted(ctx, origin);
+                ctx.executor().execute(() -> sendAccepted(ctx, origin));
             }
         }
     }
 
     private void handlePostResponse(ChannelHandlerContext ctx, JsonRpcMessage.Response resp, @Nullable String origin) {
-        sendAccepted(ctx, origin);
+        ctx.executor().execute(() -> sendAccepted(ctx, origin));
         executor.execute(() -> {
             if (!server.completePendingRequest(resp.id(), resp.resultJson())) {
                 logger.warn("No pending request for response id: {}", resp.id());
@@ -174,7 +175,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void handlePostError(ChannelHandlerContext ctx, JsonRpcMessage.Error err, @Nullable String origin) {
-        sendAccepted(ctx, origin);
+        ctx.executor().execute(() -> sendAccepted(ctx, origin));
         executor.execute(() -> {
             if (!server.failPendingRequest(err.id(), err.code() + ": " + err.message())) {
                 logger.warn("No pending request for error id: {}", err.id());

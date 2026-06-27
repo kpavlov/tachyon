@@ -3,10 +3,10 @@
  */
 package com.example.weather;
 
-import dev.tachyonmcp.server.features.tools.SyncToolHandler;
+import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.McpContext;
-import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -14,10 +14,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.random.RandomGenerator;
 
-class GetWeatherTool implements SyncToolHandler<Map<String, JsonNode>, ToolResult> {
+class GetWeatherTool extends AbstractSyncToolHandler<ToolResult> {
     private static final RandomGenerator RANDOM = RandomGenerator.getDefault();
     // language=json
-    private final JsonNode INPUT_SCHEMA = new ObjectMapper().readTree("""
+    private static final JsonNode INPUT_SCHEMA = new ObjectMapper().readTree("""
         {
           "type": "object",
           "properties": {
@@ -35,25 +35,14 @@ class GetWeatherTool implements SyncToolHandler<Map<String, JsonNode>, ToolResul
         }
         """);
 
-    @Override
-    public String name() {
-        return "get-weather";
+    public GetWeatherTool() {
+        super(ToolDescriptor.builder("get-weather")
+            .title("Current Weather")
+            .description("Get current weather for a city")
+            .inputSchema(INPUT_SCHEMA)
+            .build());
     }
 
-    @Override
-    public @Nullable String title() {
-        return "Current Weather";
-    }
-
-    @Override
-    public String description() {
-        return "Get current weather for a city";
-    }
-
-    @Override
-    public JsonNode inputSchema() {
-        return INPUT_SCHEMA;
-    }
 
     @Override
     public ToolResult handle(McpContext context, Map<String, JsonNode> args) {

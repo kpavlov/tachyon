@@ -23,7 +23,7 @@ final class SharedE2eServer {
         handle = TachyonServer.builder()
                 .capabilities(c -> c.tools())
                 .tool(new EchoToolHandler())
-                .port(0)
+                .network(n -> n.port(0))
                 .bind();
         started.set(true);
         Runtime.getRuntime().addShutdownHook(new Thread(handle::close));

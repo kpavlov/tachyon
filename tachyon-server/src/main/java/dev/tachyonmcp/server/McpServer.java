@@ -219,7 +219,7 @@ public class McpServer implements Closeable {
         taskRegistry.registerHandlers(methodHandlers);
         promptRegistry.registerHandlers(methodHandlers);
         LoggingHandlers.register(methodHandlers);
-        CompletionHandlers.register(methodHandlers, validator);
+        CompletionHandlers.register(methodHandlers);
     }
 
     public void registerHandler(McpMethodHandler handler) {
@@ -270,12 +270,12 @@ public class McpServer implements Closeable {
         return ext != null && ext.requiresMetaEnvelope();
     }
 
-    public void registerTool(SyncToolHandler<?, ?> handler) {
+    public void registerTool(SyncToolHandler handler) {
         toolRegistry.register(handler);
         logger.info("Tool registered: {}", handler.name());
     }
 
-    public void registerTool(AsyncToolHandler<?, ?> handler) {
+    public void registerTool(AsyncToolHandler handler) {
         toolRegistry.register(handler);
         logger.info("Tool registered: {}", handler.name());
     }
@@ -329,7 +329,8 @@ public class McpServer implements Closeable {
         sendNotification(session, method, params, null);
     }
 
-    public void sendNotification(McpSession session, String method, Object params, @Nullable OutboundSseStream stream) {
+    public void sendNotification(
+            McpSession session, String method, @Nullable Object params, @Nullable OutboundSseStream stream) {
         if (session.state() == SessionState.CLOSED) {
             return;
         }
@@ -508,6 +509,14 @@ public class McpServer implements Closeable {
             logger.info("Shutting down TachyonServer");
             shutdownExtensions();
             virtualThreadExecutor.shutdown();
+            try {
+                if (!virtualThreadExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
+                    virtualThreadExecutor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                virtualThreadExecutor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
             taskRegistry.stopTtlJanitor();
             sessionManager.close();
             router.close();

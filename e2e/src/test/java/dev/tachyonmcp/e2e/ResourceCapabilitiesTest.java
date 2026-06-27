@@ -14,9 +14,11 @@ import dev.tachyonmcp.server.features.tools.SyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.McpContext;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 class ResourceCapabilitiesTest extends AbstractMcpE2eTest {
@@ -161,7 +163,7 @@ class ResourceCapabilitiesTest extends AbstractMcpE2eTest {
 
     // ---- Tool handler implementations ----
 
-    private record NotifyListChangedToolHandler(String action) implements SyncToolHandler<Object, Object> {
+    private record NotifyListChangedToolHandler(String action) implements SyncToolHandler<ToolResult> {
 
         @Override
         public String name() {
@@ -174,7 +176,7 @@ class ResourceCapabilitiesTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public Object handle(McpContext context, Object arguments) {
+        public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
             var resources = context.server().mcpServer().resources();
             if ("add".equals(action)) {
                 resources.add(
@@ -187,7 +189,7 @@ class ResourceCapabilitiesTest extends AbstractMcpE2eTest {
         }
     }
 
-    private static class NotifyUpdatedToolHandler implements SyncToolHandler<Object, Object> {
+    private static class NotifyUpdatedToolHandler implements SyncToolHandler<ToolResult> {
         @Override
         public String name() {
             return "notify-update";
@@ -199,7 +201,7 @@ class ResourceCapabilitiesTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public Object handle(McpContext context, Object arguments) {
+        public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
             context.server().mcpServer().resources().notifyResourceUpdated("resource://doc");
             return ToolResult.of(List.of(TextContent.of("notified")));
         }

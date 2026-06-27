@@ -7,9 +7,9 @@ package dev.tachyonmcp.server.features.tools;
 import dev.tachyonmcp.server.session.McpContext;
 import java.util.concurrent.CompletionStage;
 
-public interface ToolHandler {
+public interface ToolHandler<R extends ToolResult> {
 
     ToolDescriptor descriptor();
 
-    CompletionStage<ToolResult> handle(ToolRequest request, McpContext context) throws Exception;
+    CompletionStage<R> handle(ToolRequest request, McpContext context) throws Exception;
 }

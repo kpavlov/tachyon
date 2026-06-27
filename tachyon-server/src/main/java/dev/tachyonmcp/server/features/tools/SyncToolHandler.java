@@ -7,12 +7,13 @@ package dev.tachyonmcp.server.features.tools;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.session.McpContext;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
-public interface SyncToolHandler<I, O> extends ToolHandler {
+public interface SyncToolHandler<R extends ToolResult> extends ToolHandler<R> {
 
     String name();
 
@@ -41,7 +42,7 @@ public interface SyncToolHandler<I, O> extends ToolHandler {
         return null;
     }
 
-    O handle(McpContext context, I input) throws Exception;
+    R handle(McpContext context, @Nullable Map<String, JsonNode> arguments) throws Exception;
 
     @Nullable
     default ToolAnnotations annotations() {
@@ -61,14 +62,12 @@ public interface SyncToolHandler<I, O> extends ToolHandler {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    default CompletionStage<ToolResult> handle(ToolRequest request, McpContext context) throws Exception {
-        var result = handle(context, (I) request.arguments());
-        return CompletableFuture.completedFuture(ToolResult.from(result));
+    default CompletionStage<R> handle(ToolRequest request, McpContext context) throws Exception {
+        return CompletableFuture.completedFuture(handle(context, request.arguments()));
     }
 
-    static SyncToolHandler<Object, Object> of(
-            String name, @Nullable String description, @Nullable JsonNode inputSchema, ToolFn fn) {
+    static <R extends ToolResult> SyncToolHandler<R> of(
+            String name, @Nullable String description, @Nullable JsonNode inputSchema, ToolFn<R> fn) {
         return new SyncToolHandler<>() {
             @Override
             public String name() {
@@ -76,17 +75,19 @@ public interface SyncToolHandler<I, O> extends ToolHandler {
             }
 
             @Override
+            @Nullable
             public String description() {
                 return description;
             }
 
             @Override
+            @Nullable
             public JsonNode inputSchema() {
                 return inputSchema;
             }
 
             @Override
-            public Object handle(McpContext ctx, Object args) throws Exception {
+            public R handle(McpContext ctx, @Nullable Map<String, JsonNode> args) throws Exception {
                 return fn.apply(ctx, args);
             }
         };

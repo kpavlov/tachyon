@@ -13,11 +13,6 @@ public interface ServerContext {
 
     String sessionId();
 
-    @Nullable
-    String protocolVersion();
-
-    void protocolVersion(String version);
-
     void setLoggingLevel(LoggingLevel level);
 
     @Nullable
@@ -25,6 +20,7 @@ public interface ServerContext {
 
     CompletableFuture<String> sendRequest(String method, Object params);
 
+    @Nullable
     McpSession session();
 
     McpServer mcpServer();

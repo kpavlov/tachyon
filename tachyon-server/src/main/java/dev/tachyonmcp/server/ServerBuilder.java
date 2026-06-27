@@ -12,21 +12,14 @@ import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptHandler;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceHandler;
-import dev.tachyonmcp.server.features.tasks.TaskDescriptor;
-import dev.tachyonmcp.server.features.tasks.TaskEntry;
-import dev.tachyonmcp.server.features.tasks.TaskState;
 import dev.tachyonmcp.server.features.tools.AsyncToolHandler;
 import dev.tachyonmcp.server.features.tools.SyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.session.InMemorySessionLogRouter;
 import dev.tachyonmcp.server.session.InMemorySessionStore;
-import dev.tachyonmcp.server.session.SessionLogRouter;
-import dev.tachyonmcp.server.session.SessionStore;
 import dev.tachyonmcp.transport.netty.NettyServer;
 import dev.tachyonmcp.transport.netty.NettyServerConfig;
 import io.netty.channel.ChannelPipeline;
-import java.net.SocketAddress;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -47,7 +40,7 @@ public final class ServerBuilder {
 
     ServerBuilder() {}
 
-    // === Lambda-section grouping ===
+    // === Configuration groups ===
 
     public ServerBuilder info(Consumer<ServerIdentityBuilder> configurer) {
         configurer.accept(identityBuilder);
@@ -69,46 +62,13 @@ public final class ServerBuilder {
         return this;
     }
 
-    // === Identity flat shortcuts ===
-
     public ServerBuilder name(String name) {
         identityBuilder.name(name);
         return this;
     }
 
-    public ServerBuilder version(String version) {
-        identityBuilder.version(version);
-        return this;
-    }
-
-    public ServerBuilder description(String description) {
-        identityBuilder.description(description);
-        return this;
-    }
-
-    /**
-     * @deprecated Use {@link #info(Consumer)} builder
-     */
-    @Deprecated(forRemoval = true)
-    public ServerBuilder websiteUrl(String websiteUrl) {
-        identityBuilder.websiteUrl(websiteUrl);
-        return this;
-    }
-
-    // === Capabilities flat shortcuts ===
-
-    public ServerBuilder toolsEnabled(boolean listChanged) {
-        capabilitiesConfig.tools(listChanged);
-        return this;
-    }
-
-    public ServerBuilder resourcesEnabled(boolean subscribe, boolean listChanged) {
-        capabilitiesConfig.resources(subscribe, listChanged);
-        return this;
-    }
-
-    public ServerBuilder promptsEnabled(boolean listChanged) {
-        capabilitiesConfig.prompts(listChanged);
+    public ServerBuilder port(int port) {
+        networkBuilder.port(port);
         return this;
     }
 
@@ -119,12 +79,12 @@ public final class ServerBuilder {
         return this;
     }
 
-    public ServerBuilder tool(SyncToolHandler<?, ?> handler) {
+    public ServerBuilder tool(SyncToolHandler handler) {
         featuresConfig.tools.add(handler);
         return this;
     }
 
-    public ServerBuilder tool(AsyncToolHandler<?, ?> handler) {
+    public ServerBuilder tool(AsyncToolHandler handler) {
         featuresConfig.tools.add(handler);
         return this;
     }
@@ -149,17 +109,6 @@ public final class ServerBuilder {
         return this;
     }
 
-    public ServerBuilder task(TaskDescriptor descriptor) {
-        var id = java.util.UUID.randomUUID().toString();
-        featuresConfig.tasks.add(new TaskEntry(descriptor, id, TaskState.WORKING, 0.0));
-        return this;
-    }
-
-    public ServerBuilder task(TaskEntry entry) {
-        featuresConfig.tasks.add(entry);
-        return this;
-    }
-
     public ServerBuilder extension(McpExtension extension) {
         featuresConfig.extensions.add(extension);
         return this;
@@ -170,84 +119,7 @@ public final class ServerBuilder {
         return this;
     }
 
-    // === Session flat shortcuts ===
-
-    public ServerBuilder stateless(boolean stateless) {
-        sessionBuilder.stateless(stateless);
-        return this;
-    }
-
-    public ServerBuilder sessionLogRouter(SessionLogRouter router) {
-        sessionBuilder.sessionLogRouter(router);
-        return this;
-    }
-
-    public ServerBuilder sessionTtl(Duration sessionTtl) {
-        sessionBuilder.sessionTtl(sessionTtl);
-        return this;
-    }
-
-    public ServerBuilder sessionStore(SessionStore sessionStore) {
-        sessionBuilder.sessionStore(sessionStore);
-        return this;
-    }
-
-    // === Network flat shortcuts ===
-
-    public ServerBuilder endpointPath(String endpointPath) {
-        networkBuilder.endpointPath(endpointPath);
-        return this;
-    }
-
-    public ServerBuilder readerIdleTimeout(Duration timeout) {
-        networkBuilder.readerIdleTimeout(timeout);
-        return this;
-    }
-
-    public ServerBuilder writerIdleTimeout(Duration timeout) {
-        networkBuilder.writerIdleTimeout(timeout);
-        return this;
-    }
-
-    public ServerBuilder maxContentLength(int bytes) {
-        networkBuilder.maxContentLength(bytes);
-        return this;
-    }
-
-    public ServerBuilder host(String host) {
-        networkBuilder.host(host);
-        return this;
-    }
-
-    public ServerBuilder port(int port) {
-        networkBuilder.port(port);
-        return this;
-    }
-
-    public ServerBuilder address(SocketAddress addr) {
-        networkBuilder.address(addr);
-        return this;
-    }
-
-    public ServerBuilder allowedOrigins(String... origins) {
-        networkBuilder.allowedOrigins(origins);
-        return this;
-    }
-
-    public ServerBuilder allowNullOrigin(boolean allow) {
-        networkBuilder.allowNullOrigin(allow);
-        return this;
-    }
-
-    public ServerBuilder allowPrivateNetworks(boolean allow) {
-        networkBuilder.allowPrivateNetworks(allow);
-        return this;
-    }
-
-    public ServerBuilder allowedHeaders(String... headers) {
-        networkBuilder.allowedHeaders(headers);
-        return this;
-    }
+    // === Transport escape hatch ===
 
     public ServerBuilder pipelineCustomizer(@Nullable Consumer<ChannelPipeline> customizer) {
         this.pipelineCustomizer = customizer;
@@ -276,7 +148,6 @@ public final class ServerBuilder {
                                     : (ctx, req) -> TextResourceContents.of(d.uri(), d.mimeType(), "", null));
         });
         featuresConfig.prompts.forEach(p -> server.prompts().add(p.descriptor(), p.handler()));
-        featuresConfig.tasks.forEach(t -> server.tasks().add(t));
         return server;
     }
 
@@ -314,7 +185,6 @@ public final class ServerBuilder {
         final List<ResourceRegistration> resources = new ArrayList<>();
         final List<PromptRegistration> prompts = new ArrayList<>();
         final List<McpExtension> extensions = new ArrayList<>();
-        final List<TaskEntry> tasks = new ArrayList<>();
 
         JsonSchemaValidator jsonSchemaValidator = new NetworkntJsonSchemaValidator();
 

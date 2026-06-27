@@ -66,7 +66,7 @@ class ToolRegistryTest {
             """);
         var annotations = ToolAnnotations.of(null, true, false, true, false);
         registry.register(
-                new AbstractSyncToolHandler(ToolDescriptor.builder("full-tool")
+                new AbstractSyncToolHandler<>(ToolDescriptor.builder("full-tool")
                         .title("Full Tool")
                         .description("Does everything")
                         .inputSchema(TEST_SCHEMA)
@@ -75,7 +75,7 @@ class ToolRegistryTest {
                         .annotations(annotations)
                         .build()) {
                     @Override
-                    public Object handle(McpContext context, Object arguments) {
+                    public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
                         return ToolResult.text("ok");
                     }
                 });
@@ -180,14 +180,15 @@ class ToolRegistryTest {
     @ParameterizedTest
     @MethodSource("validToolNames")
     void shouldAcceptValidNameOnRegister(String name) {
-        registry.register(SyncToolHandler.of(name, null, null, (ctx, args) -> "ok"));
+        registry.register(SyncToolHandler.of(name, null, null, (ctx, args) -> ToolResult.text("ok")));
         assertThat(registry.get(name)).isNotNull();
     }
 
     @ParameterizedTest
     @MethodSource("invalidToolNames")
     void shouldRejectInvalidNameOnRegister(String name) {
-        assertThatThrownBy(() -> registry.register(SyncToolHandler.of(name, null, null, (ctx, args) -> "ok")))
+        assertThatThrownBy(() ->
+                        registry.register(SyncToolHandler.of(name, null, null, (ctx, args) -> ToolResult.text("ok"))))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -245,10 +246,10 @@ class ToolRegistryTest {
         var handlers = new HashMap<String, McpMethodHandler>();
         registry.registerHandlers(handlers);
         registry.register(
-                new AbstractSyncToolHandler(
+                new AbstractSyncToolHandler<>(
                         ToolDescriptor.builder("ts-tool").taskSupport(enumValue).build()) {
                     @Override
-                    public Object handle(McpContext context, Object arguments) {
+                    public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
                         return ToolResult.text("ok");
                     }
                 });
@@ -300,12 +301,12 @@ class ToolRegistryTest {
         registry.registerHandlers(handlers);
         var icon = Icon.of("https://example.com/tool-icon.png", "image/png", null, null);
         registry.register(
-                new AbstractSyncToolHandler(ToolDescriptor.builder("icon-tool")
+                new AbstractSyncToolHandler<>(ToolDescriptor.builder("icon-tool")
                         .description("Tool with icon")
                         .icons(List.of(icon))
                         .build()) {
                     @Override
-                    public Object handle(McpContext context, Object arguments) {
+                    public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
                         return ToolResult.text("ok");
                     }
                 });
@@ -321,7 +322,7 @@ class ToolRegistryTest {
         assertThat(tool.icons().getFirst().mimeType()).isEqualTo("image/png");
     }
 
-    private static class TestTool extends AbstractSyncToolHandler {
+    private static class TestTool extends AbstractSyncToolHandler<ToolResult> {
 
         TestTool(String name, @Nullable String description, @Nullable JsonNode schema) {
             super(ToolDescriptor.builder(name)
@@ -331,7 +332,7 @@ class ToolRegistryTest {
         }
 
         @Override
-        public Object handle(McpContext context, Object arguments) {
+        public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
             return ToolResult.text("ok");
         }
     }

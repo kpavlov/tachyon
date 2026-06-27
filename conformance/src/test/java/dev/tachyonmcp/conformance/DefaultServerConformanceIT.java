@@ -20,6 +20,6 @@ class DefaultServerConformanceIT extends AbstractServerConformanceIT {
 
     @Override
     protected McpServer createServer() {
-        return TachyonServer.builder().host("localhost").build();
+        return TachyonServer.builder().network(n -> n.host("localhost")).build();
     }
 }

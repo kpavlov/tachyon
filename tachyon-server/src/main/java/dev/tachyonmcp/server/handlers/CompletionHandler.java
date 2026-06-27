@@ -4,7 +4,6 @@
 
 package dev.tachyonmcp.server.handlers;
 
-import dev.tachyonmcp.server.JsonSchemaValidator;
 import dev.tachyonmcp.server.McpMethodHandler;
 import dev.tachyonmcp.server.session.McpContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
@@ -13,11 +12,7 @@ import java.util.Map;
 
 public final class CompletionHandler implements McpMethodHandler {
 
-    private final JsonSchemaValidator validator;
-
-    public CompletionHandler(JsonSchemaValidator validator) {
-        this.validator = validator;
-    }
+    public CompletionHandler() {}
 
     @Override
     public String method() {

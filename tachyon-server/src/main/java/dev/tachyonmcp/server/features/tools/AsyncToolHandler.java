@@ -7,13 +7,14 @@ package dev.tachyonmcp.server.features.tools;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.session.McpContext;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
-public interface AsyncToolHandler<I, O> extends ToolHandler {
+public interface AsyncToolHandler<R extends ToolResult> extends ToolHandler<R> {
 
     String name();
 
@@ -42,7 +43,7 @@ public interface AsyncToolHandler<I, O> extends ToolHandler {
         return null;
     }
 
-    CompletionStage<O> handleAsync(McpContext context, I input) throws Exception;
+    CompletionStage<R> handleAsync(McpContext context, @Nullable Map<String, JsonNode> arguments) throws Exception;
 
     @Nullable
     default ToolAnnotations annotations() {
@@ -62,12 +63,11 @@ public interface AsyncToolHandler<I, O> extends ToolHandler {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    default CompletionStage<ToolResult> handle(ToolRequest request, McpContext context) throws Exception {
-        return handleAsync(context, (I) request.arguments()).thenApply(ToolResult::from);
+    default CompletionStage<R> handle(ToolRequest request, McpContext context) throws Exception {
+        return handleAsync(context, request.arguments());
     }
 
-    static <I, O> AsyncToolHandler<I, O> adapt(SyncToolHandler<I, O> sync) {
+    static <R extends ToolResult> AsyncToolHandler<R> adapt(SyncToolHandler<R> sync) {
         Objects.requireNonNull(sync, "sync");
         return new AsyncToolHandler<>() {
             @Override
@@ -81,7 +81,7 @@ public interface AsyncToolHandler<I, O> extends ToolHandler {
             }
 
             @Override
-            public CompletionStage<O> handleAsync(McpContext ctx, I input) {
+            public CompletionStage<R> handleAsync(McpContext ctx, @Nullable Map<String, JsonNode> input) {
                 try {
                     return CompletableFuture.completedFuture(sync.handle(ctx, input));
                 } catch (Exception e) {

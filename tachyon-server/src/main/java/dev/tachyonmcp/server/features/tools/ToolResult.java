@@ -51,10 +51,7 @@ public interface ToolResult extends HasMeta {
         return DefaultToolResult.of(List.of(content), null, null, null);
     }
 
-    @Deprecated
-    static ToolResult from(Object result) {
-        if (result instanceof ToolResult r) return r;
-        var text = TextContent.of(result != null ? result.toString() : "");
-        return DefaultToolResult.of(List.of(text), null, null, null);
+    static ToolResult empty() {
+        return DefaultToolResult.of(List.of(), null, null, null);
     }
 }

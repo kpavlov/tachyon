@@ -29,7 +29,7 @@ public interface ProtocolResponseMapper {
 
     Object listToolsResult(List<ToolDescriptor> tools, @Nullable String nextCursor);
 
-    Object callToolResult(ToolResult result);
+    <R extends ToolResult> Object callToolResult(R result);
 
     Object listResourcesResult(List<ResourceDescriptor> resources, @Nullable String nextCursor);
 

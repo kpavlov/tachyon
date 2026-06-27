@@ -39,7 +39,7 @@ public final class WeatherServer {
                     "Weather prediction article",
                     "text/markdown"),
                 WeatherServer::handleArticleResource)
-            .stateless(true)
+            .session(s->s.stateless(true))
             .port(port)
             .bind();
     }

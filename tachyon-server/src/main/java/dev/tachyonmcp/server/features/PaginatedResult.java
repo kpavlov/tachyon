@@ -9,7 +9,6 @@ import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
 @Value.Immutable
-@Value.Builder
 @Value.Style(
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
