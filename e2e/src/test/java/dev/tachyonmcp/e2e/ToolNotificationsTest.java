@@ -11,6 +11,7 @@ import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.McpContext;
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 
@@ -57,24 +58,19 @@ class ToolNotificationsTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
-            var text = extractMessage(arguments);
+        public ToolResult handle(McpContext context, @Nullable Map<String, JsonNode> arguments) {
+            String text = "";
+            if (arguments != null) {
+                var msg = arguments.get("message");
+                if (msg instanceof JsonNode node) {
+                    text = node.asString();
+                }
+            }
 
             context.notifications().send("notifications/tool/test", Map.of("message", text));
             context.notifications().info("tool.notifier", Map.of("message", text));
 
             return ToolResult.text(text);
-        }
-
-        private static String extractMessage(Map<String, JsonNode> arguments) {
-            var msg = ((Map<?, ?>) arguments).get("message");
-            if (msg instanceof JsonNode node) {
-                return node.asString();
-            }
-            if (msg instanceof String s) {
-                return s;
-            }
-            return "";
         }
     }
 }

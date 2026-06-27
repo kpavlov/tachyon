@@ -79,12 +79,12 @@ public final class ServerBuilder {
         return this;
     }
 
-    public ServerBuilder tool(SyncToolHandler handler) {
+    public ServerBuilder tool(SyncToolHandler<?> handler) {
         featuresConfig.tools.add(handler);
         return this;
     }
 
-    public ServerBuilder tool(AsyncToolHandler handler) {
+    public ServerBuilder tool(AsyncToolHandler<?> handler) {
         featuresConfig.tools.add(handler);
         return this;
     }

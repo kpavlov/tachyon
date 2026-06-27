@@ -27,8 +27,14 @@ public final class CompletionHandler implements McpMethodHandler {
         if (ref == null) {
             return JsonRpcErrors.invalidParams("Missing ref parameter");
         }
+        if (!(ref instanceof Map<?, ?>)) {
+            return JsonRpcErrors.invalidParams("Invalid ref parameter");
+        }
         if (argument == null) {
             return JsonRpcErrors.invalidParams("Missing argument parameter");
+        }
+        if (!(argument instanceof Map<?, ?>)) {
+            return JsonRpcErrors.invalidParams("Invalid argument parameter");
         }
         return context.responseMapper().completeResult(List.of(), null, false);
     }

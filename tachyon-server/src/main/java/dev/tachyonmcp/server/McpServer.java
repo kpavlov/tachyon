@@ -270,17 +270,17 @@ public class McpServer implements Closeable {
         return ext != null && ext.requiresMetaEnvelope();
     }
 
-    public void registerTool(SyncToolHandler handler) {
+    public void registerTool(SyncToolHandler<?> handler) {
         toolRegistry.register(handler);
         logger.info("Tool registered: {}", handler.name());
     }
 
-    public void registerTool(AsyncToolHandler handler) {
+    public void registerTool(AsyncToolHandler<?> handler) {
         toolRegistry.register(handler);
         logger.info("Tool registered: {}", handler.name());
     }
 
-    public void registerTool(ToolHandler handler) {
+    public void registerTool(ToolHandler<?> handler) {
         toolRegistry.register(handler);
         logger.info("Tool registered: {}", handler.descriptor().name());
     }

@@ -89,9 +89,11 @@ public class TasksExtension implements McpExtension {
                             return OutboundSseStreamMessageRouter.withDispatchContext(sessionId, outboundStream, () -> {
                                 String name = "unnamed";
                                 String description = null;
-                                if (arguments instanceof Map<?, ?> map) {
-                                    if (map.get("name") instanceof String s) name = s;
-                                    if (map.get("description") instanceof String s) description = s;
+                                if (arguments != null) {
+                                    var nameNode = arguments.get("name");
+                                    if (nameNode != null && nameNode.isString()) name = nameNode.asString();
+                                    var descNode = arguments.get("description");
+                                    if (descNode != null && descNode.isString()) description = descNode.asString();
                                 }
                                 return ToolResult.text(
                                         tasks.createTask(name, description).id());
