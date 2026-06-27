@@ -113,7 +113,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>generate-sources</id>
+                        <id>generate-mcp-2025-11-25</id>
                         <phase>generate-sources</phase>
                         <goals>
                             <goal>exec</goal>
@@ -131,6 +131,28 @@
                                 <argument>dev.tachyonmcp.protocol.mcp.v2025_11_25</argument>
                                 <argument>--config</argument>
                                 <argument>${project.basedir}/protocol/mcp-2025-11-25_config.json</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>generate-mcp-2026-07-28</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>true</skip>
+                            <executable>python3</executable>
+                            <arguments>
+                                <argument>${project.basedir}/ts2java.py</argument>
+                                <argument>--ts</argument>
+                                <argument>${project.basedir}/protocol/mcp-2026-07-28.ts</argument>
+                                <argument>--pkg-default</argument>
+                                <argument>dev.tachyonmcp.protocol.mcp.v2026_06_28</argument>
+                                <argument>--pkg-protocol</argument>
+                                <argument>dev.tachyonmcp.protocol.mcp.v2026_06_28</argument>
+                                <argument>--config</argument>
+                                <argument>${project.basedir}/protocol/mcp-2026-07-28_config.json</argument>
                             </arguments>
                         </configuration>
                     </execution>
