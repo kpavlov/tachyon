@@ -69,7 +69,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload results to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           name: codecov-jdk${{ matrix.java }}
           files: 'reports/target/site/jacoco-aggregate/jacoco.xml'
