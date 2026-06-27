@@ -66,6 +66,25 @@ class AcceptHeaderValidationTest extends AbstractMcpE2eTest {
     @Test
     void shouldAcceptPostWithBothMediaTypes() throws Exception {
         var response = post("application/json, text/event-stream");
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).contains("result");
+    }
+
+    @Test
+    void shouldAcceptPostWithWildcardSubtypes() throws Exception {
+        var response = post("application/*, text/*");
         assertThat(response.statusCode()).isNotEqualTo(406);
+    }
+
+    @Test
+    void shouldRejectPostWithQZeroOnRequiredType() throws Exception {
+        var response = post("application/json;q=0, text/event-stream");
+        assertThat(response.statusCode()).isEqualTo(406);
+    }
+
+    @Test
+    void shouldRejectPostWithPartialMediaTypeMatch() throws Exception {
+        var response = post("application/json-seq, text/event-stream");
+        assertThat(response.statusCode()).isEqualTo(406);
     }
 }

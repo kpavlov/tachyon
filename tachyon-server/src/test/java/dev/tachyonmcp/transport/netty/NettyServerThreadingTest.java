@@ -18,8 +18,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import tools.jackson.databind.JsonNode;
 
+@Execution(ExecutionMode.SAME_THREAD)
 class NettyServerThreadingTest {
 
     @Test
