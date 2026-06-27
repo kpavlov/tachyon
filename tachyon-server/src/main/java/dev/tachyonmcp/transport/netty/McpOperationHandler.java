@@ -192,8 +192,13 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         final var requestId = req.id();
         final var method = req.method();
         final var startNs = System.nanoTime();
-        final var ic = ChannelHandlerUtils.requireInteractionContext(ctx);
-        logger.debug("POST request start: id={}, method={}, session={}", requestId, method, sessionId);
+        final var ic = ChannelHandlerUtils.requireMcpContext(ctx);
+        logger.info(
+                "TRACE handlePostRequest: id={}, method={}, session={}, postStream={}",
+                requestId,
+                method,
+                sessionId,
+                postStream);
         dispatcher
                 .dispatchRequestAsync(requestId, method, req.params(), sessionId, postStream, ic)
                 .whenComplete((result, ex) -> ctx.executor().execute(() -> {

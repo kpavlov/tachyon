@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.protocol.mcp.v2025_11_25;
 
+import dev.tachyonmcp.protocol.ContextProvider;
 import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.McpResponseMapper;
@@ -11,6 +12,8 @@ import dev.tachyonmcp.runtime.DefaultInteractionContext;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.McpHeaderNames;
 import dev.tachyonmcp.runtime.Session;
+import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.session.DefaultMcpContext;
 import dev.tachyonmcp.server.session.McpSession;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
@@ -73,8 +76,12 @@ public final class McpProtocol implements Protocol {
 
     @Override
     @SuppressWarnings("unchecked")
-    public InteractionContext<Session> createInteractionContext() {
-        // Creates DefaultInteractionContext<McpSession>; cast is safe at runtime due to type erasure
+    public InteractionContext<Session> createInteractionContext(ContextProvider provider) {
+        var server = provider.provide(McpServer.class);
+        if (server != null) {
+            return (InteractionContext<Session>) (Object) new DefaultMcpContext(this, server);
+        }
+        // Fallback for tests or contexts where no McpServer is wired (e.g. stateless synthetic)
         return (InteractionContext<Session>) (Object) new DefaultInteractionContext<McpSession>(this);
     }
 }

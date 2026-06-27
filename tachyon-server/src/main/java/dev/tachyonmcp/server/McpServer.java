@@ -326,6 +326,10 @@ public class McpServer implements Closeable {
     }
 
     public void sendNotification(McpSession session, String method, Object params) {
+        sendNotification(session, method, params, null);
+    }
+
+    public void sendNotification(McpSession session, String method, Object params, @Nullable OutboundSseStream stream) {
         if (session.state() == SessionState.CLOSED) {
             return;
         }
@@ -346,14 +350,23 @@ public class McpServer implements Closeable {
 
         var sseEvent = new SseEvent(String.valueOf(sseEventId), "message", notificationJson);
 
-        if (!messageRouter.tryRoute(session, sseEvent)) {
+        if (stream != null) {
+            stream.start();
+            stream.writeEvent(sseEvent);
+        } else if (!messageRouter.tryRoute(session, sseEvent)) {
             session.send(sseEvent);
         }
+        logger.info("TRACE sendNotification: method={}, session={}, routed={}", method, session.id(), sseEvent);
     }
 
     static final Duration PENDING_REQUEST_TIMEOUT = Duration.ofSeconds(60);
 
     public CompletableFuture<String> sendRequest(McpSession session, String method, Object params) {
+        return sendRequest(session, method, params, null);
+    }
+
+    public CompletableFuture<String> sendRequest(
+            McpSession session, String method, Object params, @Nullable OutboundSseStream stream) {
         var paramsStr = params instanceof Map || params instanceof List
                 ? JsonRpcCodec.writeValueAsString(params)
                 : (String) params;
@@ -370,11 +383,20 @@ public class McpServer implements Closeable {
 
         var sseEvent = new SseEvent(String.valueOf(sseEventId), "message", requestJson);
 
-        if (!messageRouter.tryRoute(session, sseEvent)) {
-            session.send(sseEvent);
+        if (stream != null) {
+            stream.start();
+            stream.writeEvent(sseEvent);
+        } else {
+            var routed = messageRouter.tryRoute(session, sseEvent);
+            if (!routed) {
+                logger.info(
+                        "TRACE sendRequest fallback session.send: method={}, session={}, conn={}",
+                        method,
+                        session.id(),
+                        session.connection());
+                session.send(sseEvent);
+            }
         }
-
-        logger.debug("Sent request to client: id={}, method={}", requestId, method);
         return future;
     }
 

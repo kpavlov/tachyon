@@ -6,6 +6,7 @@ package dev.tachyonmcp.transport.netty;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.protocol.ContextProvider;
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.McpServer;
 import dev.tachyonmcp.server.TachyonServer;
@@ -28,7 +29,13 @@ class McpInitializationHandlerTest {
     void setUp() {
         server = TachyonServer.builder().build();
         McpDispatcher dispatcher = new McpDispatcher(server, Runnable::run);
-        channel = new EmbeddedChannel(new InteractionHandler());
+        channel = new EmbeddedChannel(new InteractionHandler(new ContextProvider() {
+            @Override
+            @SuppressWarnings("unchecked")
+            public <T> @Nullable T provide(Class<T> type) {
+                return type.isInstance(server) ? (T) server : null;
+            }
+        }));
         channel.pipeline()
                 .addLast(
                         McpHandlerManager.HANDLER_INIT,

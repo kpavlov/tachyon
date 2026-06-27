@@ -175,7 +175,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
         logger.debug("Initialize request: id={}", id);
 
         dispatcher
-                .dispatchRequestAsync(id, METHOD_INITIALIZE, params, null, postStream, requireInteractionContext(ctx))
+                .dispatchRequestAsync(id, METHOD_INITIALIZE, params, null, postStream, requireMcpContext(ctx))
                 .whenComplete((result, ex) -> executor.execute(() -> {
                     var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
                     if (ex != null) {

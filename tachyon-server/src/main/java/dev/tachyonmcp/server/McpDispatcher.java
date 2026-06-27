@@ -4,11 +4,12 @@
 
 package dev.tachyonmcp.server;
 
+import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatus;
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.server.features.tasks.TaskState;
 import dev.tachyonmcp.server.session.DefaultMcpContext;
+import dev.tachyonmcp.server.session.McpContext;
 import dev.tachyonmcp.server.session.McpSession;
 import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
@@ -83,7 +84,15 @@ public class McpDispatcher {
 
     public CompletableFuture<DispatchResult> dispatchRequestAsync(
             Object id, String method, Object params, @Nullable String sessionId) {
-        return dispatchRequestAsync(id, method, params, sessionId, null, null);
+        McpContext ic = null;
+        if (sessionId != null) {
+            var sessionOpt = server.getSession(sessionId);
+            if (sessionOpt.isPresent()) {
+                ic = new DefaultMcpContext(Protocols.versions().get(0), server);
+                ic.setSession(sessionOpt.get());
+            }
+        }
+        return dispatchRequestAsync(id, method, params, sessionId, null, ic);
     }
 
     public CompletableFuture<DispatchResult> dispatchRequestAsync(
@@ -92,7 +101,7 @@ public class McpDispatcher {
             Object params,
             @Nullable String sessionId,
             @Nullable OutboundSseStream outboundSseStream,
-            @Nullable InteractionContext ic) {
+            McpContext ic) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(method, "method");
 
@@ -122,6 +131,13 @@ public class McpDispatcher {
         var session = sessionOpt.get();
         session.touch();
 
+        // Always bind the current session and outbound stream to the IC per-request
+        // (keep-alive connections reuse the channel IC across multiple sessions)
+        if (ic != null) {
+            ic.setSession(session);
+            ic.setOutboundStream(outboundSseStream);
+        }
+
         var sessionState = session.state();
         if (sessionState == SessionState.CLOSED) {
             return CompletableFuture.completedFuture(
@@ -138,10 +154,7 @@ public class McpDispatcher {
 
         var owningExtensionId = server.extensionForMethod(method);
         if (owningExtensionId != null) {
-            var extEnabled = ic != null
-                    ? ic.isExtensionEnabled(owningExtensionId)
-                    : session.isExtensionEnabled(owningExtensionId);
-            if (!extEnabled) {
+            if (!ic.isExtensionEnabled(owningExtensionId)) {
                 return CompletableFuture.completedFuture(
                         errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found"));
             }
@@ -182,9 +195,14 @@ public class McpDispatcher {
 
                         try {
                             Object resultValue;
-                            var context = new DefaultMcpContext(session, server, ic);
+                            logger.info(
+                                    "TRACE dispatchRequestAsync: method={}, outboundSseStream={}, session={}, thread={}",
+                                    method,
+                                    outboundSseStream,
+                                    session.id(),
+                                    Thread.currentThread().getName());
                             resultValue = OutboundSseStreamMessageRouter.withDispatchContext(
-                                    session.id(), outboundSseStream, () -> handler.handle(context, params));
+                                    session.id(), outboundSseStream, () -> handler.handle(ic, params));
                             var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
                             watchdog.cancel(false);
                             if (elapsedMs > SLOW_HANDLER_MS) {
@@ -222,6 +240,9 @@ public class McpDispatcher {
                             return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
                         }
                     } finally {
+                        if (ic != null) {
+                            ic.setOutboundStream(null);
+                        }
                         readLock.unlock();
                     }
                 },
@@ -242,8 +263,9 @@ public class McpDispatcher {
         }
         return CompletableFuture.supplyAsync(
                 () -> {
+                    var context = DefaultMcpContext.stateless(server);
+                    context.setOutboundStream(outboundSseStream);
                     try {
-                        var context = DefaultMcpContext.stateless(server);
                         var result = OutboundSseStreamMessageRouter.withDispatchContext(
                                 null, outboundSseStream, () -> handler.handle(context, params));
                         if (result instanceof JsonRpcError error) {
@@ -253,6 +275,8 @@ public class McpDispatcher {
                     } catch (Exception e) {
                         logger.warn("Stateless handler exception: method={}", method, e);
                         return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
+                    } finally {
+                        context.setOutboundStream(null);
                     }
                 },
                 executor);
@@ -376,8 +400,7 @@ public class McpDispatcher {
         taskRegistry.updateStatusFromClientNotification(taskId, newStatus, statusMessage);
     }
 
-    private CompletableFuture<DispatchResult> dispatchInitializeAsync(
-            Object id, Object rawParams, @Nullable InteractionContext ic) {
+    private CompletableFuture<DispatchResult> dispatchInitializeAsync(Object id, Object rawParams, McpContext ic) {
         return CompletableFuture.supplyAsync(
                 () -> {
                     logger.debug("Client initialize: id={} stateless={}", id, server.isStateless());
@@ -401,8 +424,8 @@ public class McpDispatcher {
                     var sessionId = generateSessionId();
                     var session = server.createSession(sessionId);
                     try {
-                        var context = new DefaultMcpContext(session, server, ic);
-                        var result = handler.handle(context, rawParams);
+                        ic.setSession(session);
+                        var result = handler.handle(ic, rawParams);
                         if (result instanceof JsonRpcError error) {
                             logger.debug("Initialize handler error: {}", error.message());
                             return errorResult(id, error.code(), error.message());

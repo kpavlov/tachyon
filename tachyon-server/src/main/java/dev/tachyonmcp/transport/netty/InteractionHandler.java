@@ -4,8 +4,8 @@
 
 package dev.tachyonmcp.transport.netty;
 
+import dev.tachyonmcp.protocol.ContextProvider;
 import dev.tachyonmcp.protocol.Protocols;
-import dev.tachyonmcp.runtime.DefaultInteractionContext;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.InteractionContext.Lifecycle;
 import dev.tachyonmcp.runtime.InteractionEvent;
@@ -32,6 +32,12 @@ public class InteractionHandler extends ChannelDuplexHandler {
     public static final AttributeKey<@Nullable InteractionContext<Session>> INTERACTION_CONTEXT_KEY =
             AttributeKey.valueOf("interactionContext");
 
+    private final ContextProvider contextProvider;
+
+    public InteractionHandler(ContextProvider contextProvider) {
+        this.contextProvider = contextProvider;
+    }
+
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
         logger.trace("New connection from {}", ctx.channel().remoteAddress());
@@ -44,7 +50,7 @@ public class InteractionHandler extends ChannelDuplexHandler {
             case InteractionEvent.OperationStarted os -> {
                 var ic = ctx.channel().attr(INTERACTION_CONTEXT_KEY).get();
                 if (ic == null) break;
-                if (os.session() != null) {
+                if (os.session() != null && ic.session() == null) {
                     ic.setSession(os.session());
                 }
                 ic.setLifecycle(Lifecycle.OPERATION);
@@ -72,7 +78,7 @@ public class InteractionHandler extends ChannelDuplexHandler {
             var attr = ctx.channel().attr(INTERACTION_CONTEXT_KEY);
             if (attr.get() == null) {
                 Protocols.resolve(request).ifPresent(proto -> {
-                    attr.setIfAbsent(new DefaultInteractionContext<>(proto));
+                    attr.setIfAbsent(proto.createInteractionContext(contextProvider));
                     logger.debug("Protocol negotiated: {}:{}", proto.familyName(), proto.versionString());
                 });
             }

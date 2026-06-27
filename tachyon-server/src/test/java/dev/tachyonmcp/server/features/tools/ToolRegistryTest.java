@@ -8,6 +8,7 @@ import static dev.tachyonmcp.test.TestUtils.parseJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListToolsResult;
 import dev.tachyonmcp.server.JsonSchemaValidator;
@@ -164,7 +165,9 @@ class ToolRegistryTest {
             var callHandler = handlers.get("tools/call");
             var params = Map.of("name", "echo", "arguments", Map.of("message", "hello"));
 
-            var result = callHandler.handle(new DefaultMcpContext(session, server), params);
+            var ctx = new DefaultMcpContext(Protocols.versions().get(0), server);
+            ctx.setSession(session);
+            var result = callHandler.handle(ctx, params);
             assertThat(result).isInstanceOf(CallToolResult.class);
         }
     }

@@ -54,9 +54,7 @@ public class DefaultInteractionContext<S extends Session> implements Interaction
 
     @Override
     public void setSession(S session) {
-        if (!this.sessionHolder.compareAndSet(null, session)) {
-            throw new IllegalStateException("Session already set");
-        }
+        this.sessionHolder.set(session);
     }
 
     @Override

@@ -8,6 +8,7 @@ import static dev.tachyonmcp.transport.netty.InteractionHandler.INTERACTION_CONT
 import static io.netty.channel.ChannelFutureListener.CLOSE;
 
 import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.session.McpContext;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelFuture;
@@ -29,6 +30,14 @@ public final class ChannelHandlerUtils {
         return Objects.requireNonNull(
                 interactionContext(ctx),
                 "InteractionContext is null. Check if InteractionHandler is configured correctly.");
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static McpContext requireMcpContext(ChannelHandlerContext ctx) {
+        var raw =
+                (InteractionContext) ctx.channel().attr(INTERACTION_CONTEXT_KEY).get();
+        return (McpContext)
+                Objects.requireNonNull(raw, "McpContext is null. Check if InteractionHandler is configured correctly.");
     }
 
     public static void sendAccepted(ChannelHandlerContext ctx, @Nullable String origin) {
