@@ -58,7 +58,7 @@ jobs:
           job_summary: true
 
       - name: Publish coverage report
-        uses: madrapps/jacoco-report@v1.7.1
+        uses: madrapps/jacoco-report@v1.8.0
         if: always()
         with:
           paths: 'reports/target/site/jacoco-aggregate/jacoco.xml'
