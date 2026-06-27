@@ -6,19 +6,28 @@ package dev.tachyonmcp.e2e;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
+import dev.tachyonmcp.server.domain.Icon;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class ServerInfoTestTest extends AbstractMcpE2eTest {
+class ServerInfoTest extends AbstractMcpE2eTest {
 
     @Test
     void allCapabilitiesEnabled() throws Exception {
-        startServer(it -> it.capabilities(c -> c.completions()
-                .logging()
-                .prompts(true)
-                .tools(true)
-                .resources(true, true)
-                .prompts(true)
-                .tasks(true, true, true)));
+        startServer(it -> it.info(b -> b.name("test-server")
+                        .version("2.0")
+                        .description("Test server")
+                        .title("Test Server")
+                        .websiteUrl("https://example.com/mcp")
+                        .instructions("Test instructions")
+                        .addIcons(Icon.of("https://example.com/icon.png", "image/png", List.of("32x32"), "light")))
+                .capabilities(c -> c.completions()
+                        .logging()
+                        .prompts(true)
+                        .tools(true)
+                        .resources(true, true)
+                        .prompts(true)
+                        .tasks(true, true, true)));
 
         try (var client = createTestClient()) {
             // language=json
@@ -32,8 +41,21 @@ class ServerInfoTestTest extends AbstractMcpE2eTest {
                   "jsonrpc": "2.0",
                   "id": 1,
                   "result": {
-                    "protocolVersion":"2025-11-25",
-                    "serverInfo":{"name":"tachyon-mcp","version":"0.1"},
+                    "protocolVersion": "2025-11-25",
+                    "serverInfo": {
+                      "name": "test-server",
+                      "version": "2.0",
+                      "description": "Test server",
+                      "title": "Test Server",
+                      "websiteUrl": "https://example.com/mcp",
+                      "icons": [{
+                        "src": "https://example.com/icon.png",
+                        "mimeType": "image/png",
+                        "sizes": ["32x32"],
+                        "theme": "light"
+                      }]
+                    },
+                    "instructions": "Test instructions",
                     "capabilities": {
                       "logging": {},
                       "completions": {},
