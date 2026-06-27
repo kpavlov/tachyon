@@ -11,6 +11,7 @@ import io.netty.channel.*;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollIoHandler;
 import io.netty.channel.epoll.EpollServerSocketChannel;
+import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.kqueue.KQueueIoHandler;
 import io.netty.channel.kqueue.KQueueServerSocketChannel;
@@ -21,6 +22,7 @@ import io.netty.channel.uring.IoUring;
 import io.netty.channel.uring.IoUringIoHandler;
 import io.netty.channel.uring.IoUringServerSocketChannel;
 import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import java.io.Closeable;
 import java.net.InetSocketAddress;
 import org.slf4j.Logger;
@@ -38,6 +40,7 @@ public final class NettyServer implements Closeable {
 
     final MultiThreadIoEventLoopGroup eventLoopGroup;
     private final Channel serverChannel;
+    private final DefaultChannelGroup childChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
     public int port() {
         return ((InetSocketAddress) serverChannel.localAddress()).getPort();
@@ -79,6 +82,7 @@ public final class NettyServer implements Closeable {
                         config.readerIdleTimeout(),
                         config.writerIdleTimeout(),
                         config.maxContentLength(),
+                        childChannels,
                         config.corsConfig(),
                         config.pipelineCustomizer()));
 
@@ -120,7 +124,10 @@ public final class NettyServer implements Closeable {
         logger.debug("Shutting down NettyServer");
         try {
             serverChannel.close().sync();
-            eventLoopGroup.shutdownGracefully().sync();
+            childChannels.close().sync();
+            eventLoopGroup
+                    .shutdownGracefully(0, 3, java.util.concurrent.TimeUnit.SECONDS)
+                    .sync();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

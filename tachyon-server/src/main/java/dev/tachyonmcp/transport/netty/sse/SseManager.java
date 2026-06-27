@@ -74,6 +74,7 @@ public class SseManager {
         ctx.write(response);
         ctx.writeAndFlush(
                 new DefaultHttpContent(ByteBufUtil.writeUtf8(ctx.alloc(), "retry: " + SSE_RETRY_DELAY_MS + "\n")));
+        SseHeartbeat.enable(ctx.channel());
         var primeSse = new SseEvent(String.valueOf(server.nextEventId()), "message", "");
         connection.send(primeSse);
     }

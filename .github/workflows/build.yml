@@ -69,6 +69,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload results to Codecov
+        if: ${{ !cancelled() }}
         uses: codecov/codecov-action@v7
         with:
           name: codecov-jdk${{ matrix.java }}
@@ -76,9 +77,15 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: kpavlov/tachyon
 
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
       - name: Upload reports as artifacts
         uses: actions/upload-artifact@v7
-        if: always()
+        if: ${{ !cancelled() }}
         with:
           name: reports-jdk-${{ matrix.java }}
           path: |

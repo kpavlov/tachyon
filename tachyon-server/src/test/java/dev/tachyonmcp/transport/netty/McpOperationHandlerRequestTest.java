@@ -26,6 +26,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -150,6 +154,79 @@ class McpOperationHandlerRequestTest {
                     .contains("ok");
         } finally {
             outbound.forEach(ReferenceCountUtil::release);
+        }
+    }
+
+    // Once a tool upgrades the POST response to SSE, the stream is long-lived: an idle tick must
+    // emit a comment heartbeat (":\r\n") to keep it alive instead of closing the channel.
+    @Test
+    void idleOnUpgradedPostSseStreamSendsHeartbeat() throws InterruptedException {
+        var descriptor = ToolDescriptor.builder("stalled_tool")
+                .description("upgrades to SSE then never completes")
+                .inputSchema(JsonNodeFactory.instance
+                        .objectNode()
+                        .put("type", "object")
+                        .putObject("properties"))
+                .build();
+        var upgraded = new CountDownLatch(1);
+        var neverComplete = new CompletableFuture<ToolResult>();
+        ToolHandler<ToolResult> stalledTool = new ToolHandler<>() {
+            @Override
+            public ToolDescriptor descriptor() {
+                return descriptor;
+            }
+
+            @Override
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+                ctx.notifications().progress(request.progressToken(), 0, 100, "working");
+                upgraded.countDown();
+                return neverComplete;
+            }
+        };
+        var srv = TachyonServer.builder().tool(stalledTool).build();
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        var ch = new EmbeddedChannel(
+                new InteractionHandler(provider(srv)),
+                new McpOperationHandler(srv, new McpDispatcher(srv, pool::execute), Runnable::run));
+        srv.createSession("sess-stall").activate();
+        try {
+            var request = new DefaultFullHttpRequest(
+                    HttpVersion.HTTP_1_1,
+                    HttpMethod.POST,
+                    "/mcp",
+                    Unpooled.copiedBuffer(
+                            "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{"
+                                    + "\"name\":\"stalled_tool\",\"arguments\":{},\"_meta\":{\"progressToken\":7}}}",
+                            StandardCharsets.UTF_8));
+            request.headers()
+                    .set(HttpHeaderNames.ORIGIN, "http://localhost:3000")
+                    .set("MCP-Session-Id", "sess-stall")
+                    .set(HttpHeaderNames.ACCEPT, "application/json, text/event-stream");
+            ch.writeInbound(request);
+            assertThat(upgraded.await(5, TimeUnit.SECONDS))
+                    .as("tool must emit progress within 5 s")
+                    .isTrue();
+            drain(ch).forEach(ReferenceCountUtil::release);
+
+            ch.pipeline().fireUserEventTriggered(IdleStateEvent.FIRST_READER_IDLE_STATE_EVENT);
+            ch.runPendingTasks();
+
+            assertThat(ch.isOpen())
+                    .as("upgraded POST-SSE stream must survive an idle tick")
+                    .isTrue();
+            var heartbeat = ch.readOutbound();
+            assertThat(heartbeat).isInstanceOf(HttpContent.class);
+            var content = (HttpContent) heartbeat;
+            try {
+                assertThat(content.content().toString(StandardCharsets.UTF_8)).isEqualTo(":\r\n");
+            } finally {
+                content.release();
+            }
+        } finally {
+            neverComplete.cancel(true);
+            ch.close();
+            srv.close();
+            pool.shutdownNow();
         }
     }
 

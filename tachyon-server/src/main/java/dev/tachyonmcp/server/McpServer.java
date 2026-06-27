@@ -46,8 +46,7 @@ public class McpServer implements Closeable {
     private final Map<String, McpMethodHandler> methodHandlers = new ConcurrentHashMap<>();
     final Map<String, LoggingLevel> loggingLevels = new ConcurrentHashMap<>();
     final ConcurrentHashMap<Object, CompletableFuture<String>> pendingRequests = new ConcurrentHashMap<>();
-    private final ExecutorService virtualThreadExecutor = Executors.newThreadPerTaskExecutor(
-            Thread.ofVirtual().name("mcp-handler-vt-", 0).factory());
+    private final ExecutorService virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
     private final List<McpExtension> extensions;
     private final Map<String, String> extensionMethodOwners = new ConcurrentHashMap<>();
     private final Map<String, McpExtension> extensionsById = new ConcurrentHashMap<>();

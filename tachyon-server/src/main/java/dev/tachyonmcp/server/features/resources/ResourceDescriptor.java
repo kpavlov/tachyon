@@ -16,7 +16,6 @@ import org.jspecify.annotations.Nullable;
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
         typeImmutable = "Default*")
-@Value.Builder
 public interface ResourceDescriptor extends McpResourceType {
 
     String name();
