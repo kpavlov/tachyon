@@ -57,12 +57,25 @@ jobs:
           comment: true
           job_summary: true
 
+      - name: Publish coverage report
+        uses: madrapps/jacoco-report@v1.7.1
+        if: always()
+        with:
+          paths: 'reports/target/site/jacoco-aggregate/jacoco.xml'
+          title: Coverage Report (JDK ${{ matrix.java }})
+          update-comment: ${{ github.event_name == 'pull_request' }}
+          min-coverage-changed-files: 80
+          summary-format: table
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Upload reports as artifacts
         uses: actions/upload-artifact@v7
         if: always()
         with:
           name: reports-jdk-${{ matrix.java }}
-          path: '**/target/*-reports/**'
+          path: |
+            **/target/*-reports/**
+            reports/target/site/jacoco-aggregate/
 
   examples:
     strategy:

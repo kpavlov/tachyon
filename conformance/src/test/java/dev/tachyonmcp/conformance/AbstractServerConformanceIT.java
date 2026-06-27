@@ -556,7 +556,7 @@ abstract class AbstractServerConformanceIT {
         @Override
         public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
             var message = arguments.get("message");
-            return ToolResult.text(message != null ? message.toString() : "");
+            return ToolResult.text(message != null ? message.asString() : "");
         }
     }
 }
