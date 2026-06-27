@@ -12,7 +12,6 @@ import org.jspecify.annotations.Nullable;
 
 @Value.Immutable
 @Value.Style(allParameters = true, typeImmutable = "Default*")
-@Value.Builder
 public interface TaskDescriptor extends McpResourceType {
 
     String name();

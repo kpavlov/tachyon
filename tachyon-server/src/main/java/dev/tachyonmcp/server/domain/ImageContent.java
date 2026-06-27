@@ -16,7 +16,6 @@ import tools.jackson.databind.JsonNode;
  * {@code mimeType} describing the format (e.g. {@code image/png}, {@code image/jpeg}).
  */
 @Value.Immutable
-@Value.Builder
 @Value.Style(
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,

@@ -15,7 +15,6 @@ import org.jspecify.annotations.Nullable;
  * considered optional.
  */
 @Value.Immutable
-@Value.Builder
 @Value.Style(
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,

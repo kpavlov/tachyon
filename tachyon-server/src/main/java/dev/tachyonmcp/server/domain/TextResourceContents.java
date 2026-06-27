@@ -4,10 +4,11 @@
 
 package dev.tachyonmcp.server.domain;
 
-import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
+
+import java.util.Map;
 
 /**
  * Text-based resource contents returned by a resource handler.
@@ -17,7 +18,6 @@ import tools.jackson.databind.JsonNode;
  * format (e.g. {@code application/json}, {@code text/markdown}).
  */
 @Value.Immutable
-@Value.Builder
 @Value.Style(
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,

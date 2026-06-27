@@ -51,9 +51,11 @@ public interface Protocol {
      * Creates the per-channel {@link InteractionContext} for this protocol.
      *
      * <ul>
-     *   <li>MCP: {@code DefaultInteractionContext<McpSession>}
+     *   <li>MCP: {@code DefaultMcpContext}
      *   <li>Future A2A: {@code DefaultInteractionContext<A2ASession>}
      * </ul>
+     *
+     * @param provider to obtain server-level dependencies (e.g. {@code McpServer})
      */
-    InteractionContext<Session> createInteractionContext();
+    InteractionContext<Session> createInteractionContext(ContextProvider provider);
 }

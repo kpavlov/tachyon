@@ -17,7 +17,6 @@ import tools.jackson.databind.JsonNode;
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
         typeImmutable = "Default*")
-@Value.Builder
 public interface ToolDescriptor {
 
     String name();
