@@ -81,6 +81,7 @@ Temporary Items
 
 # AI assistant / IDE tool directories (user-local, not project config)
 .claude/
+!.claude/skills
 .cursor/
 .gemini/
 .junie/
