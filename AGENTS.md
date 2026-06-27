@@ -24,7 +24,7 @@ mvn spotless:apply  # auto-fix
 ## Rules
 
 - TDD + SOLID. TachyonServer is SUT in unit tests.
-- **Tests**: JUnit 5 + AssertJ. `@TempDir` for unit, port 0 for E2E. Prefer E2E for long scenarios. No tautologies. Many asserts per test.
+- **Tests**: JUnit 6 + AssertJ + Awaitlilty. `@TempDir` for unit, port 0 for E2E. Prefer E2E for long scenarios. No tautologies. Many asserts per test.
 - **Nullability**: JSpecify `@Nullable`/`@NonNull`.
 - **Copyright**: `/* Copyright (c) 2026 Konstantin Pavlov. */` everywhere.
 - **No comments** unless spec needs explain.

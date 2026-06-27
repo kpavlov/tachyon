@@ -125,7 +125,8 @@ class McpOperationHandlerTest {
                 .as("idle tick must emit an SSE comment heartbeat")
                 .isEqualTo(":\r\n");
 
-        // Reader-idle is not reset by our writes, so a second tick fires again and reschedules.
+        // A second idle event produces another heartbeat (the handler is stateless across ticks).
+        // Real-timer rescheduling is proven by SseHeartbeatE2eTest, not here.
         channel.pipeline().fireUserEventTriggered(IdleStateEvent.READER_IDLE_STATE_EVENT);
         channel.runPendingTasks();
         assertThat(channel.isOpen()).isTrue();
