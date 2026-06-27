@@ -50,6 +50,7 @@
         <module>tachyon-server</module>
         <module>e2e</module>
         <module>conformance</module>
+        <module>reports</module>
     </modules>
 
     <properties>
@@ -74,6 +75,7 @@
         <slf4j.version>2.0.18</slf4j.version>
 
         <!-- Plugins -->
+        <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
         <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
         <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
         <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
@@ -207,6 +209,9 @@
                         <useIncrementalCompilation>true</useIncrementalCompilation>
                         <debug>true</debug>
                         <showDeprecation>true</showDeprecation>
+                        <compilerArgs>
+                            <arg>-Xlint:unchecked</arg>
+                        </compilerArgs>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -268,7 +273,7 @@
                     <version>${jacoco-maven-plugin.version}</version>
                     <configuration>
                         <excludes>
-                            <exclude>me/kpavlov/tachyon/mcp/protocol/**/*</exclude>
+                            <exclude>dev/tachyonmcp/protocol/mcp/**/*</exclude>
                         </excludes>
                     </configuration>
                 </plugin>
