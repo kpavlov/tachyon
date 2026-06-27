@@ -1,37 +1,34 @@
 # Tachyon MCP — Agent Guide
 
+Me Caveman. Talk short. Use emoji.
+
 ## Project
 
-A Java 21 AI runtime server implementing MCP protocol.
+Java 21 AI server. MCP protocol.
 
-## Quick Commands
+## Fast Commands
 
 ```bash
-mvn test                               # All unit tests (core + e2e)
-mvn verify                             # Unit + e2e + conformance tests tests
-mvn spotless:check                     # Check Java/Palantir formatting
-mvn spotless:apply                     # Auto-format Java, POM, and Markdown files
+mvn test            # unit + e2e tests
+mvn verify          # + conformance
+mvn spotless:check  # format check
+mvn spotless:apply  # auto-fix
 ```
 
-## Modules
+## Parts
 
-- **`tachyon-runtime`** — Core server: Netty HTTP/SSE transport, JSON-RPC dispatch, event log, MCP
-  registries (tools/resources/prompts/tasks)
-- **`e2e`** — End-to-end tests using `io.modelcontextprotocol.sdk:mcp-core:2.0.0-RC1`
-- **`conformance`** — Conformance tests using `@modelcontextprotocol/conformance`
+- **`tachyon-runtime`** — Core: Netty HTTP/SSE, JSON-RPC, event log, MCP registries
+- **`e2e`** — E2E tests via `io.modelcontextprotocol.sdk:mcp-core:2.0.0-RC1`
+- **`conformance`** — Conformance via `@modelcontextprotocol/conformance`
 
-## Conventions
+## Rules
 
-- Follow TDD and SOLID principles. Ensure MCP protocol logic is covered, TachyonServer is SUT in unit tests.
-- **Tests**: JUnit 5 + AssertJ. Unit tests use `@TempDir`; E2E bind to port 0 (MCP SDK client or raw `HttpClient`).
-  Prefer higher-level E2E for longer scenarios (less fragile). No tautological tests; don't duplicate a single scenario —
-  prefer multiple assertions per test.
-- **Nullability**: JSpecify `@Nullable`/`@NonNull` annotations.
-- **Copyright**: `/* Copyright (c) 2026 Konstantin Pavlov. */` on every source file.
-- **No comments in code** unless explaining non-obvious spec behavior.
-- Write unit tests only for cases when E2E tests can't verify. Drop unit tests where E2E counterpart exists
-- Use `git mv` to move files to preserve git history.
-- Use provided MCP tools to work with code
-- Respond concisely with emoji.
-- **Formatting**: Spotless (Palantir Java Format) — runs `check` on `mvn verify`, auto-fix with
-  `mvn spotless:apply`.
+- TDD + SOLID. TachyonServer is SUT in unit tests.
+- **Tests**: JUnit 5 + AssertJ. `@TempDir` for unit, port 0 for E2E. Prefer E2E for long scenarios. No tautologies. Many asserts per test.
+- **Nullability**: JSpecify `@Nullable`/`@NonNull`.
+- **Copyright**: `/* Copyright (c) 2026 Konstantin Pavlov. */` everywhere.
+- **No comments** unless spec needs explain.
+- Unit tests only when E2E can't. Drop unit if E2E covers.
+- `git mv` for files.
+- Use MCP tools.
+- **Format**: Spotless (Palantir). Check on `mvn verify`, fix with `mvn spotless:apply`.
