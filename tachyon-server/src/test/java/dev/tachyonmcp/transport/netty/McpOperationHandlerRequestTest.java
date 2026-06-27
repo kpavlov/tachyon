@@ -26,6 +26,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -156,7 +160,7 @@ class McpOperationHandlerRequestTest {
     // Once a tool upgrades the POST response to SSE, the stream is long-lived: an idle tick must
     // emit a comment heartbeat (":\r\n") to keep it alive instead of closing the channel.
     @Test
-    void idleOnUpgradedPostSseStreamSendsHeartbeat() {
+    void idleOnUpgradedPostSseStreamSendsHeartbeat() throws InterruptedException {
         var descriptor = ToolDescriptor.builder("stalled_tool")
                 .description("upgrades to SSE then never completes")
                 .inputSchema(JsonNodeFactory.instance
@@ -164,8 +168,8 @@ class McpOperationHandlerRequestTest {
                         .put("type", "object")
                         .putObject("properties"))
                 .build();
-        // Emits one progress notification (upgrading POST → SSE) then returns a future that never
-        // completes, so the stream stays open and idle when the idle event fires.
+        var upgraded = new CountDownLatch(1);
+        var neverComplete = new CompletableFuture<ToolResult>();
         ToolHandler<ToolResult> stalledTool = new ToolHandler<>() {
             @Override
             public ToolDescriptor descriptor() {
@@ -175,13 +179,15 @@ class McpOperationHandlerRequestTest {
             @Override
             public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
                 ctx.notifications().progress(request.progressToken(), 0, 100, "working");
-                return new CompletableFuture<>();
+                upgraded.countDown();
+                return neverComplete;
             }
         };
         var srv = TachyonServer.builder().tool(stalledTool).build();
+        ExecutorService pool = Executors.newSingleThreadExecutor();
         var ch = new EmbeddedChannel(
                 new InteractionHandler(provider(srv)),
-                new McpOperationHandler(srv, new McpDispatcher(srv, Runnable::run), Runnable::run));
+                new McpOperationHandler(srv, new McpDispatcher(srv, pool::execute), Runnable::run));
         srv.createSession("sess-stall").activate();
         try {
             var request = new DefaultFullHttpRequest(
@@ -197,7 +203,10 @@ class McpOperationHandlerRequestTest {
                     .set("MCP-Session-Id", "sess-stall")
                     .set(HttpHeaderNames.ACCEPT, "application/json, text/event-stream");
             ch.writeInbound(request);
-            drain(ch).forEach(ReferenceCountUtil::release); // consume the SSE upgrade frames
+            assertThat(upgraded.await(5, TimeUnit.SECONDS))
+                    .as("tool must emit progress within 5 s")
+                    .isTrue();
+            drain(ch).forEach(ReferenceCountUtil::release);
 
             ch.pipeline().fireUserEventTriggered(IdleStateEvent.FIRST_READER_IDLE_STATE_EVENT);
             ch.runPendingTasks();
@@ -214,8 +223,10 @@ class McpOperationHandlerRequestTest {
                 content.release();
             }
         } finally {
+            neverComplete.cancel(true);
             ch.close();
             srv.close();
+            pool.shutdownNow();
         }
     }
 

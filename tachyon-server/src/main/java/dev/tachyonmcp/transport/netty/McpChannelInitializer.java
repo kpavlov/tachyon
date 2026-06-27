@@ -14,6 +14,7 @@ import dev.tachyonmcp.transport.netty.http.StatelessValidatorHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
@@ -72,6 +73,8 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
     @Nullable
     private final Consumer<ChannelPipeline> pipelineCustomizer;
 
+    private final ChannelGroup childChannels;
+
     public McpChannelInitializer(
             String endpointPath,
             boolean stateless,
@@ -79,6 +82,7 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
             Duration readerIdleTimeout,
             Duration writerIdleTimeout,
             int maxContentLength,
+            ChannelGroup childChannels,
             @Nullable CorsConfig corsConfig,
             @Nullable Consumer<ChannelPipeline> pipelineCustomizer) {
         this.stateless = stateless;
@@ -88,6 +92,7 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
         this.maxContentLength = maxContentLength;
         this.corsConfig = corsConfig;
         this.pipelineCustomizer = pipelineCustomizer;
+        this.childChannels = childChannels;
         this.dispatcher = new McpDispatcher(server, server.executor());
         ContextProvider provider = new ContextProvider() {
             @Override
@@ -105,6 +110,7 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
 
     @Override
     protected void initChannel(SocketChannel ch) {
+        childChannels.add(ch);
         final var p = ch.pipeline();
         p.addFirst("flush", new FlushConsolidationHandler(FLUSH_AFTER, true));
         if (CHANNEL_LOGGING_ENABLED) {
