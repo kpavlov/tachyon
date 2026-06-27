@@ -17,7 +17,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.codec.http.HttpServerExpectContinueHandler;
+import io.netty.handler.codec.http.HttpServerKeepAliveHandler;
 import io.netty.handler.codec.http.cors.CorsConfig;
 import io.netty.handler.codec.http.cors.CorsHandler;
 import io.netty.handler.flush.FlushConsolidationHandler;
@@ -25,6 +25,7 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 
@@ -44,9 +45,11 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
     /** Default max aggregated request body. 64 KB was too small for schemas + tool results. */
     public static final int DEFAULT_MAX_CONTENT_LENGTH = 1024 * 1024; // 1 MB
 
-    private static final LoggingHandler CHANNEL_LOGGER =
-            new LoggingHandler("me.kpavlov.tachyon.transport.netty.channel", LogLevel.DEBUG);
-    public static final int flushAfter = FlushConsolidationHandler.DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES;
+    private static final String CHANNEL_LOGGER_NAME = "me.kpavlov.tachyon.transport.netty.channel";
+    private static final LoggingHandler CHANNEL_LOGGER = new LoggingHandler(CHANNEL_LOGGER_NAME, LogLevel.DEBUG);
+    private static final boolean CHANNEL_LOGGING_ENABLED =
+            org.slf4j.LoggerFactory.getLogger(CHANNEL_LOGGER_NAME).isDebugEnabled();
+    private static final int FLUSH_AFTER = FlushConsolidationHandler.DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES;
 
     private final Duration readerIdleTimeout;
     private final Duration writerIdleTimeout;
@@ -103,9 +106,17 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
     @Override
     protected void initChannel(SocketChannel ch) {
         final var p = ch.pipeline();
-        p.addFirst("flush", new FlushConsolidationHandler(flushAfter, true));
-        p.addLast("logger", CHANNEL_LOGGER);
+        p.addFirst("flush", new FlushConsolidationHandler(FLUSH_AFTER, true));
+        if (CHANNEL_LOGGING_ENABLED) {
+            p.addLast("logger", CHANNEL_LOGGER);
+        }
         p.addLast("http", new HttpServerCodec());
+
+        // Idiomatic keep-alive management: inspects each request's Connection intent and either
+        // keeps the socket alive or appends `Connection: close` and closes after the final content.
+        // Placed right after the codec so it governs responses from ALL downstream handlers
+        // (validation handlers write before the aggregator; protocol handlers write after it).
+        p.addLast("http-keep-alive", new HttpServerKeepAliveHandler());
         p.addLast("dns-rebinding", DNS_REBINDING_HANDLER);
         if (corsConfig != null) {
             p.addLast("cors", new CorsHandler(corsConfig));
@@ -118,14 +129,16 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
         }
         p.addLast("interaction", interactionHandler);
 
-        // Reject oversized bodies announced via `Expect: 100-continue` before they are
-        // transferred, instead of buffering and then failing in the aggregator.
-        p.addLast("expect-continue", new HttpServerExpectContinueHandler());
+        // HttpObjectAggregator owns `Expect: 100-continue`: it answers 100 Continue for
+        // acceptable requests and rejects oversized ones (413/417) before the body is
+        // transferred. A separate HttpServerExpectContinueHandler would defeat that by
+        // always acking 100 Continue upstream of the aggregator.
         p.addLast("http-aggregator", new HttpObjectAggregator(maxContentLength));
         if (!readerIdleTimeout.isZero() || !writerIdleTimeout.isZero()) {
             p.addLast(
                     "idle",
-                    new IdleStateHandler((int) readerIdleTimeout.toSeconds(), (int) writerIdleTimeout.toSeconds(), 0));
+                    new IdleStateHandler(
+                            readerIdleTimeout.toMillis(), writerIdleTimeout.toMillis(), 0, TimeUnit.MILLISECONDS));
         }
 
         // Both stateless and stateful modes go through the initialization phase handler.

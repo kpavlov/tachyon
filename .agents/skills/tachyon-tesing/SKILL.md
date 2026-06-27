@@ -1,6 +1,6 @@
 ---
-name: testing
-description: Apply when designing and writing tests
+name: tachyon-testing
+description: Apply project specific rules when designing and writing tests
 ---
 
 # Test Rules

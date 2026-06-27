@@ -53,6 +53,7 @@ public final class NettyServer implements Closeable {
 
     public NettyServer(McpServer server, NettyServerConfig config) {
         var transport = Transport.detect();
+        logger.info("Netty transport: {}", transport.channel.getSimpleName());
 
         // Event loops run on PLATFORM threads. Netty I/O loops never voluntarily
         // yield (they spin in epoll_wait / io_uring_enter / Selector.select), and
@@ -67,7 +68,6 @@ public final class NettyServer implements Closeable {
                 .channel(transport.channel)
                 .option(ChannelOption.SO_BACKLOG, 1024)
                 .option(ChannelOption.SO_REUSEADDR, true)
-                .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                 .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                 .childOption(ChannelOption.TCP_NODELAY, true)
                 .childOption(ChannelOption.SO_KEEPALIVE, true)

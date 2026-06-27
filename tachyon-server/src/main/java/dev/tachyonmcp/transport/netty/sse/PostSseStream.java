@@ -92,7 +92,7 @@ public final class PostSseStream implements OutboundSseStream {
                 .set(HttpHeaderNames.CONTENT_TYPE, "text/event-stream")
                 .set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED)
                 .set(HttpHeaderNames.CACHE_CONTROL, "no-cache")
-                .set(HttpHeaderNames.CONNECTION, "keep-alive");
+                .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
         if (origin != null) {
             response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
         }

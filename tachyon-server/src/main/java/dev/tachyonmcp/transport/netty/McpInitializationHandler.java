@@ -152,6 +152,9 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
         dispatcher
                 .dispatchRequestAsync(id, method, params, null, postStream, null)
                 .whenComplete((result, ex) -> ctx.executor().execute(() -> {
+                    // Neutralize the unused stream so a late server→client message cannot open a
+                    // second response on this (potentially keep-alive) channel.
+                    postStream.close();
                     if (ex != null) {
                         logger.error("Dispatch failed for pre-session request: method={}", method, ex);
                         sendResponseAndClose(
@@ -186,6 +189,9 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                         ChannelHandlerUtils.requireInteractionContext(ctx))
                 .whenComplete((result, ex) -> ctx.executor().execute(() -> {
                     var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
+                    // initialize never emits server→client messages, but neutralize defensively so
+                    // the keep-alive JSON response below can never be preceded by an SSE upgrade.
+                    postStream.close();
                     if (ex != null) {
                         logger.error("Initialize dispatch failed: id={}, elapsed={}ms", id, elapsedMs, ex);
                         sendResponseAndClose(

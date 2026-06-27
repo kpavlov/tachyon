@@ -114,13 +114,12 @@ jobs:
         env:
           NEXT_VERSION: ${{ steps.next-version.outputs.next_version }}
         run: |
-          if git diff --quiet -- pom.xml; then
+          if git diff --quiet -- 'pom.xml' '**/pom.xml'; then
             echo "main is already set to ${NEXT_VERSION}"
             exit 0
           fi
-
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add pom.xml
+          git config user.email "41898282+github-actions[bot]`@users.noreply.github.com`"
+          git add -- 'pom.xml' '**/pom.xml'
           git commit -m "chore: prepare for next development iteration ${NEXT_VERSION}"
           git push origin HEAD:main

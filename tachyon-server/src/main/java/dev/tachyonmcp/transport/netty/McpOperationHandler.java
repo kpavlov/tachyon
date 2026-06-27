@@ -17,7 +17,6 @@ import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
 import dev.tachyonmcp.transport.netty.sse.PostSseStream;
 import dev.tachyonmcp.transport.netty.sse.SseManager;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -38,10 +37,9 @@ import org.slf4j.LoggerFactory;
  * directly (stateless mode) or dynamically by {@link McpInitializationHandler}
  * after a successful initialize.
  *
- * <p>{@code @Sharable} — this handler is stateless. Per-connection state lives in
- * {@link InteractionHandler}'s channel attribute.
+ * <p>Instantiated per channel (see {@link McpHandlerManager#createOperationHandler()});
+ * per-connection state lives in {@link InteractionHandler}'s channel attribute.
  */
-@ChannelHandler.Sharable
 public class McpOperationHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = LoggerFactory.getLogger(McpOperationHandler.class);
@@ -203,6 +201,9 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                         if (postStream.started()) {
                             postStream.close();
                         } else {
+                            // Neutralize the stream so a late server→client message cannot start a
+                            // second HTTP response on this channel, then send the JSON error.
+                            postStream.close();
                             sendInternalError(ctx, requestId, origin);
                         }
                         return;
@@ -221,6 +222,11 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                         }
                         return;
                     }
+                    // A keep-alive JSON/202 response is about to be written; neutralize the unused
+                    // stream so a server→client message that arrives after this check (e.g. an async
+                    // tool's status notification) cannot open a second response on the pooled socket
+                    // and corrupt the next request's reuse of it.
+                    postStream.close();
                     if (result instanceof McpDispatcher.DispatchResult.Accepted) {
                         sendAccepted(ctx, origin);
                         return;
