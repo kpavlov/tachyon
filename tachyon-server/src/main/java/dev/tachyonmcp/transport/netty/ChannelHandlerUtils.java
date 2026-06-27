@@ -5,7 +5,6 @@
 package dev.tachyonmcp.transport.netty;
 
 import static dev.tachyonmcp.transport.netty.InteractionHandler.INTERACTION_CONTEXT_KEY;
-import static io.netty.channel.ChannelFutureListener.CLOSE;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import io.netty.buffer.ByteBuf;
@@ -77,18 +76,12 @@ public final class ChannelHandlerUtils {
         var response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, body);
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, contentType);
         response.headers().set(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
-        if (close) {
-            response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-        }
         if (origin != null) {
             response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
         }
-
-        ChannelFuture channelFuture = ctx.writeAndFlush(response);
-        if (close) {
-            return channelFuture.addListener(CLOSE);
-        } else {
-            return channelFuture;
-        }
+        // Mark the keep-alive intent; HttpServerKeepAliveHandler adds `Connection: close`
+        // and closes the channel after this response when keep-alive is disabled.
+        HttpUtil.setKeepAlive(response, !close);
+        return ctx.writeAndFlush(response);
     }
 }

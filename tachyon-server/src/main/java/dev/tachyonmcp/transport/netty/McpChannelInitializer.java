@@ -18,6 +18,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerExpectContinueHandler;
+import io.netty.handler.codec.http.HttpServerKeepAliveHandler;
 import io.netty.handler.codec.http.cors.CorsConfig;
 import io.netty.handler.codec.http.cors.CorsHandler;
 import io.netty.handler.flush.FlushConsolidationHandler;
@@ -106,6 +107,11 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
         p.addFirst("flush", new FlushConsolidationHandler(flushAfter, true));
         p.addLast("logger", CHANNEL_LOGGER);
         p.addLast("http", new HttpServerCodec());
+        // Idiomatic keep-alive management: inspects each request's Connection intent and either
+        // keeps the socket alive or appends `Connection: close` and closes after the final content.
+        // Placed right after the codec so it governs responses from ALL downstream handlers
+        // (validation handlers write before the aggregator; protocol handlers write after it).
+        p.addLast("http-keep-alive", new HttpServerKeepAliveHandler());
         p.addLast("dns-rebinding", DNS_REBINDING_HANDLER);
         if (corsConfig != null) {
             p.addLast("cors", new CorsHandler(corsConfig));

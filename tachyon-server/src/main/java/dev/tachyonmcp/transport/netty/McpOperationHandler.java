@@ -203,6 +203,9 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                         if (postStream.started()) {
                             postStream.close();
                         } else {
+                            // Neutralize the stream so a late server→client message cannot start a
+                            // second HTTP response on this channel, then send the JSON error.
+                            postStream.close();
                             sendInternalError(ctx, requestId, origin);
                         }
                         return;
@@ -221,6 +224,11 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                         }
                         return;
                     }
+                    // A keep-alive JSON/202 response is about to be written; neutralize the unused
+                    // stream so a server→client message that arrives after this check (e.g. an async
+                    // tool's status notification) cannot open a second response on the pooled socket
+                    // and corrupt the next request's reuse of it.
+                    postStream.close();
                     if (result instanceof McpDispatcher.DispatchResult.Accepted) {
                         sendAccepted(ctx, origin);
                         return;
