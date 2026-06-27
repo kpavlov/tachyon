@@ -50,16 +50,16 @@ public final class OutboundSseStreamMessageRouter implements MessageRouter {
     @Override
     public boolean tryRoute(McpSession session, SseEvent event) {
         var outboundStream = OUTBOUND_SSE_STREAM.get();
-        logger.info("TRACE tryRoute: session={}, outboundStream={}", session.id(), outboundStream);
+        logger.trace("tryRoute: session={}, outboundStream={}", session.id(), outboundStream);
         if (outboundStream == null) return false;
         var currentSessionId = DISPATCH_SESSION_ID.get();
         if (currentSessionId == null || !currentSessionId.equals(session.id())) {
-            logger.info("TRACE tryRoute sessionId mismatch: current={}, expected={}", currentSessionId, session.id());
+            logger.trace("tryRoute sessionId mismatch: current={}, expected={}", currentSessionId, session.id());
             return false;
         }
         outboundStream.start();
         outboundStream.writeEvent(event);
-        logger.info("TRACE tryRoute ROUTED");
+        logger.trace("tryRoute ROUTED");
         return true;
     }
 }

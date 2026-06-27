@@ -103,7 +103,7 @@ public final class PostSseStream implements OutboundSseStream {
         var primingId = eventIdSupplier.getAsLong();
         var priming = new SseEvent(String.valueOf(primingId), "message", "");
         channel.write(new DefaultHttpContent(SseSerializer.encode(channel.alloc(), priming)));
-        logger.info("TRACE POST-SSE stream started, priming event id={}, channel={}", primingId, channel.id());
+        logger.trace("POST-SSE stream started, priming event id={}, channel={}", primingId, channel.id());
         for (var event : queued) {
             channel.write(new DefaultHttpContent(SseSerializer.encode(channel.alloc(), event)));
         }
@@ -117,11 +117,10 @@ public final class PostSseStream implements OutboundSseStream {
         }
         if (!started) {
             queued.add(event);
-            logger.info(
-                    "TRACE POST-SSE queued event (not started), id={}, data={}", event.id(), abbreviate(event.data()));
+            logger.trace("POST-SSE queued event (not started), id={}, data={}", event.id(), abbreviate(event.data()));
             return;
         }
-        logger.info("TRACE POST-SSE writing event, id={}, data={}", event.id(), abbreviate(event.data()));
+        logger.trace("POST-SSE writing event, id={}, data={}", event.id(), abbreviate(event.data()));
         var buf = SseSerializer.encode(channel.alloc(), event);
         channel.writeAndFlush(new DefaultHttpContent(buf)).addListener((ChannelFutureListener) f -> {
             if (!f.isSuccess()) {

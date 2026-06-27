@@ -356,7 +356,6 @@ public class McpServer implements Closeable {
         } else if (!messageRouter.tryRoute(session, sseEvent)) {
             session.send(sseEvent);
         }
-        logger.info("TRACE sendNotification: method={}, session={}, routed={}", method, session.id(), sseEvent);
     }
 
     static final Duration PENDING_REQUEST_TIMEOUT = Duration.ofSeconds(60);
@@ -389,8 +388,8 @@ public class McpServer implements Closeable {
         } else {
             var routed = messageRouter.tryRoute(session, sseEvent);
             if (!routed) {
-                logger.info(
-                        "TRACE sendRequest fallback session.send: method={}, session={}, conn={}",
+                logger.trace(
+                        "sendRequest fallback session.send: method={}, session={}, conn={}",
                         method,
                         session.id(),
                         session.connection());

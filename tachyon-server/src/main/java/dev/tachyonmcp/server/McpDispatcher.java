@@ -195,12 +195,6 @@ public class McpDispatcher {
 
                         try {
                             Object resultValue;
-                            logger.info(
-                                    "TRACE dispatchRequestAsync: method={}, outboundSseStream={}, session={}, thread={}",
-                                    method,
-                                    outboundSseStream,
-                                    session.id(),
-                                    Thread.currentThread().getName());
                             resultValue = OutboundSseStreamMessageRouter.withDispatchContext(
                                     session.id(), outboundSseStream, () -> handler.handle(ic, params));
                             var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
