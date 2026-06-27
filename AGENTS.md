@@ -2,7 +2,7 @@
 
 ## Project
 
-A Java 25 AI runtime server implementing [MCP spec 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25).
+A Java 21 AI runtime server implementing MCP protocol.
 
 ## Quick Commands
 
@@ -30,6 +30,8 @@ mvn spotless:apply                     # Auto-format Java, POM, and Markdown fil
 - **Copyright**: `/* Copyright (c) 2026 Konstantin Pavlov. */` on every source file.
 - **No comments in code** unless explaining non-obvious spec behavior.
 - Write unit tests only for cases when E2E tests can't verify. Drop unit tests where E2E counterpart exists
-- Use `git mv` to move files to preserve git history
+- Use `git mv` to move files to preserve git history.
+- Use provided MCP tools to work with code
+- Respond concisely with emoji.
 - **Formatting**: Spotless (Palantir Java Format) — runs `check` on `mvn verify`, auto-fix with
   `mvn spotless:apply`.
