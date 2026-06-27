@@ -492,11 +492,16 @@ abstract class AbstractServerConformanceIT {
         System.out.println("[conformance] Raw output saved: " + rawFile.toAbsolutePath());
 
         var scenarios = ConformanceReportWriter.parseResults(outputLines);
+
         var baselinePath = Path.of("conformance-baseline.yml");
         var expectedFailures =
                 Files.exists(baselinePath) ? ConformanceReportWriter.parseBaseline(baselinePath) : List.<String>of();
+
+        var outputDir = Path.of("target", "failsafe-reports", "conformance-results");
+        var checks = ConformanceReportWriter.readChecks(outputDir);
+
         var reportPath = Path.of("target", "failsafe-reports", "TEST-ConformanceReport.xml");
-        ConformanceReportWriter.writeReport(reportPath.toAbsolutePath(), scenarios, expectedFailures, elapsed);
+        ConformanceReportWriter.writeReport(reportPath.toAbsolutePath(), scenarios, expectedFailures, elapsed, checks);
         System.out.println("[conformance] Report written: " + reportPath.toAbsolutePath());
 
         assertThat(result.finished())
