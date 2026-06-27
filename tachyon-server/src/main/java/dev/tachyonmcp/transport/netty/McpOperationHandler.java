@@ -17,7 +17,6 @@ import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
 import dev.tachyonmcp.transport.netty.sse.PostSseStream;
 import dev.tachyonmcp.transport.netty.sse.SseManager;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -38,10 +37,9 @@ import org.slf4j.LoggerFactory;
  * directly (stateless mode) or dynamically by {@link McpInitializationHandler}
  * after a successful initialize.
  *
- * <p>{@code @Sharable} — this handler is stateless. Per-connection state lives in
- * {@link InteractionHandler}'s channel attribute.
+ * <p>Instantiated per channel (see {@link McpHandlerManager#createOperationHandler()});
+ * per-connection state lives in {@link InteractionHandler}'s channel attribute.
  */
-@ChannelHandler.Sharable
 public class McpOperationHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = LoggerFactory.getLogger(McpOperationHandler.class);
