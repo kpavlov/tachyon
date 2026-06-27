@@ -134,17 +134,22 @@ class NotificationDeliveryTest {
     }
 
     @Test
-    void shouldNotSendLoggingWithoutLevelSet() {
+    void shouldSendLoggingWithoutLevelSet() {
         var params = java.util.Map.of(
                 "name", "test_tool",
                 "arguments", java.util.Map.of(),
                 "_meta", java.util.Map.of("progressToken", 42));
         dispatcher.dispatchRequestAsync(1, "tools/call", params, "sess_test").join();
 
+        // info() sends unconditionally; sendLoggingIfEnabled skips (no level configured)
         var logEvents = testConn.sent.stream()
                 .filter(e -> e.data().contains("notifications/message"))
                 .toList();
-        assertThat(logEvents).isEmpty();
+        assertThat(logEvents).hasSize(3);
+        assertThat(logEvents).allSatisfy(e -> {
+            assertThat(e.data()).contains("\"level\":\"info\"");
+            assertThat(e.data()).contains("\"logger\":\"tachyon.tools\"");
+        });
     }
 
     @Test
@@ -180,7 +185,7 @@ class NotificationDeliveryTest {
                 .toList();
         assertThat(logEvents).hasSize(15);
         assertThat(logEvents).allSatisfy(e -> {
-            assertThat(e.data()).contains("\"level\":\"debug\"");
+            assertThat(e.data()).containsAnyOf("\"level\":\"info\"", "\"level\":\"debug\"");
             assertThat(e.data()).contains("\"logger\":\"tachyon.tools\"");
             assertThat(e.data()).contains("\"tool\":\"test_tool\"");
         });

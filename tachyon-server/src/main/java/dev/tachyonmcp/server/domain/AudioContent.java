@@ -16,7 +16,6 @@ import tools.jackson.databind.JsonNode;
  * {@code mimeType} describing the encoding (e.g. {@code audio/mp3}).
  */
 @Value.Immutable
-@Value.Builder
 @Value.Style(allParameters = true, typeImmutable = "Default*")
 public non-sealed interface AudioContent extends ContentBlock, HasMeta {
 

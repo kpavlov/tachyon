@@ -16,7 +16,6 @@ import tools.jackson.databind.JsonNode;
  * forwarded to the resource handler for additional context.
  */
 @Value.Immutable
-@Value.Builder
 @Value.Style(
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,

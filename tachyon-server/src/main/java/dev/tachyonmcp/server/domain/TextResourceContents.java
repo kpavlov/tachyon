@@ -17,7 +17,6 @@ import tools.jackson.databind.JsonNode;
  * format (e.g. {@code application/json}, {@code text/markdown}).
  */
 @Value.Immutable
-@Value.Builder
 @Value.Style(
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,

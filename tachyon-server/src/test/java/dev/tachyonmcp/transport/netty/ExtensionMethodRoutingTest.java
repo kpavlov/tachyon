@@ -6,6 +6,7 @@ package dev.tachyonmcp.transport.netty;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.server.McpDispatcher;
@@ -17,6 +18,7 @@ import dev.tachyonmcp.server.session.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -26,6 +28,7 @@ class ExtensionMethodRoutingTest {
     private McpServer server;
     private McpSession session;
     private McpDispatcher dispatcher;
+    private @Nullable McpContext context;
 
     @BeforeEach
     void setUp() {
@@ -37,8 +40,10 @@ class ExtensionMethodRoutingTest {
     @Test
     void rejectsExtensionMethodWhenNotNegotiated() {
         session.activate();
+        var ctx = new DefaultMcpContext(Protocols.versions().get(0), server);
+        ctx.setSession(session);
         var result = (McpDispatcher.DispatchResult.Response) dispatcher
-                .dispatchRequestAsync(1, "test/ext-method", null, "sess_routing")
+                .dispatchRequestAsync(1, "test/ext-method", null, "sess_routing", null, ctx)
                 .join();
         var body = result.responseBody().toString(StandardCharsets.UTF_8);
         assertThat(body).contains("error");
@@ -51,7 +56,7 @@ class ExtensionMethodRoutingTest {
         session.activate();
         var params = Map.of("_meta", Map.of("com.test/ext", JsonNodeFactory.instance.objectNode()));
         var result = (McpDispatcher.DispatchResult.Response) dispatcher
-                .dispatchRequestAsync(1, "test/ext-method", params, "sess_routing")
+                .dispatchRequestAsync(1, "test/ext-method", params, "sess_routing", null, context)
                 .join();
         var body = result.responseBody().toString(StandardCharsets.UTF_8);
         assertThat(body).contains("result");
@@ -73,8 +78,10 @@ class ExtensionMethodRoutingTest {
                 .protocolVersion("2025-11-25")
                 .capabilities(caps)
                 .build();
-        var context = new DefaultMcpContext(session, server);
-        handler.handle(context, params);
+        var ctx = new DefaultMcpContext(Protocols.versions().get(0), server);
+        ctx.setSession(session);
+        handler.handle(ctx, params);
+        this.context = ctx;
     }
 
     private static class TestExtension implements McpExtension {

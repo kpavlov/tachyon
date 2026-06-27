@@ -16,7 +16,6 @@ import org.jspecify.annotations.Nullable;
  * vs. dark variants.
  */
 @Value.Immutable
-@Value.Builder
 @Value.Style(allParameters = true, typeImmutable = "Default*")
 public interface Icon {
 

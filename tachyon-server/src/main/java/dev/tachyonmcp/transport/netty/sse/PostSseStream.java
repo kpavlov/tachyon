@@ -103,7 +103,7 @@ public final class PostSseStream implements OutboundSseStream {
         var primingId = eventIdSupplier.getAsLong();
         var priming = new SseEvent(String.valueOf(primingId), "message", "");
         channel.write(new DefaultHttpContent(SseSerializer.encode(channel.alloc(), priming)));
-        logger.debug("POST-SSE stream started, priming event id={}, channel={}", primingId, channel.id());
+        logger.trace("POST-SSE stream started, priming event id={}, channel={}", primingId, channel.id());
         for (var event : queued) {
             channel.write(new DefaultHttpContent(SseSerializer.encode(channel.alloc(), event)));
         }
@@ -117,10 +117,12 @@ public final class PostSseStream implements OutboundSseStream {
         }
         if (!started) {
             queued.add(event);
+            logger.trace("POST-SSE queued event (not started), id={}, data={}", event.id(), abbreviate(event.data()));
             return;
         }
+        logger.trace("POST-SSE writing event, id={}, data={}", event.id(), abbreviate(event.data()));
         var buf = SseSerializer.encode(channel.alloc(), event);
-        channel.write(new DefaultHttpContent(buf)).addListener((ChannelFutureListener) f -> {
+        channel.writeAndFlush(new DefaultHttpContent(buf)).addListener((ChannelFutureListener) f -> {
             if (!f.isSuccess()) {
                 logger.warn(
                         "POST-SSE write failed, closing channel={}: {}",
@@ -153,7 +155,7 @@ public final class PostSseStream implements OutboundSseStream {
                 .addComponent(true, prefix)
                 .addComponent(true, body)
                 .addComponent(true, suffix);
-        channel.write(new DefaultHttpContent(frame)).addListener((ChannelFutureListener) f -> {
+        channel.writeAndFlush(new DefaultHttpContent(frame)).addListener((ChannelFutureListener) f -> {
             if (!f.isSuccess()) channel.close();
         });
     }
@@ -163,5 +165,9 @@ public final class PostSseStream implements OutboundSseStream {
         closed = true;
         if (!channel.isActive() || !started) return;
         channel.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
+    }
+
+    private static String abbreviate(String s) {
+        return s != null && s.length() > 120 ? s.substring(0, 120) + "..." : s;
     }
 }

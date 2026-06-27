@@ -4,20 +4,25 @@
 
 package dev.tachyonmcp.server.session;
 
+import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.ProtocolMappers;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
-import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.protocol.Protocols;
+import dev.tachyonmcp.runtime.DefaultInteractionContext;
 import dev.tachyonmcp.server.McpServer;
 import dev.tachyonmcp.server.Notifications;
+import dev.tachyonmcp.server.OutboundSseStream;
 import dev.tachyonmcp.server.ServerContext;
 import dev.tachyonmcp.server.domain.LoggingLevel;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import org.jspecify.annotations.Nullable;
 
-public class DefaultMcpContext implements McpContext {
+public class DefaultMcpContext extends DefaultInteractionContext<McpSession> implements McpContext {
 
-    private static final McpContext NOOP_CONTEXT = new DefaultMcpContext() {
+    private static final McpContext NOOP_CONTEXT = new DefaultMcpContext(null, null) {
         @Override
         public ServerContext server() {
             throw new UnsupportedOperationException("No server context available");
@@ -34,7 +39,7 @@ public class DefaultMcpContext implements McpContext {
         }
 
         @Override
-        public @Nullable String getProtocol() {
+        public @Nullable Protocol getProtocol() {
             throw new UnsupportedOperationException("No protocol available");
         }
 
@@ -49,172 +54,107 @@ public class DefaultMcpContext implements McpContext {
         }
     };
 
-    private final ServerContextImpl server;
-    private final NotificationsImpl notifications;
-    private final McpSession session;
-    private final @Nullable InteractionContext<McpSession> interactionContext;
+    private static final String STATELESS_SESSION_ID = "stateless";
+
+    private final McpServer mcpServer;
+    private volatile @Nullable OutboundSseStream outboundStream;
 
     public static McpContext noop() {
         return NOOP_CONTEXT;
     }
 
-    private static final String STATELESS_SESSION_ID = "stateless";
-
     public static McpContext stateless(McpServer server) {
-        return new DefaultMcpContext(new McpSession(STATELESS_SESSION_ID, SseConnection.NOOP), server);
+        var protocol = Protocols.versions().get(0);
+        var ctx = new DefaultMcpContext(protocol, server);
+        ctx.setSession(new McpSession(STATELESS_SESSION_ID, SseConnection.NOOP));
+        return ctx;
     }
 
-    protected DefaultMcpContext() {
-        this.server = null;
-        this.notifications = null;
-        this.session = null;
-        this.interactionContext = null;
-    }
-
-    public DefaultMcpContext(McpSession session, McpServer server) {
-        this(session, server, null);
-    }
-
-    public DefaultMcpContext(McpSession session, McpServer server, @Nullable InteractionContext<McpSession> ic) {
-        this.session = session;
-        this.interactionContext = ic;
-        this.server = new ServerContextImpl(session, server);
-        this.notifications = new NotificationsImpl(session, server);
+    public DefaultMcpContext(Protocol protocol, McpServer mcpServer) {
+        super(protocol);
+        this.mcpServer = mcpServer;
     }
 
     @Override
     public ServerContext server() {
-        return server;
+        return new ServerCtx();
     }
 
     @Override
     public Notifications notifications() {
-        return notifications;
+        return new NotificationsImpl();
     }
 
     @Override
     public @Nullable McpSession session() {
-        return session;
+        return super.session();
     }
 
     @Override
-    public void enableExtension(String extensionId) {
-        if (interactionContext != null) interactionContext.enableExtension(extensionId);
-        if (session != null) session.enableExtension(extensionId);
+    public @Nullable OutboundSseStream outboundStream() {
+        return outboundStream;
     }
 
     @Override
-    public boolean isExtensionEnabled(String extensionId) {
-        if (interactionContext != null) return interactionContext.isExtensionEnabled(extensionId);
-        return session != null && session.isExtensionEnabled(extensionId);
-    }
-
-    @Override
-    public @Nullable String getProtocol() {
-        return interactionContext != null ? interactionContext.getProtocol() : null;
-    }
-
-    @Override
-    public @Nullable String getProtocolVersion() {
-        return session != null ? session.protocolVersion() : null;
-    }
-
-    @Override
-    public void setProtocolVersion(@Nullable String protocolVersion) {
-        if (session != null) {
-            session.protocolVersion(protocolVersion);
-        }
+    public void setOutboundStream(@Nullable OutboundSseStream stream) {
+        this.outboundStream = stream;
     }
 
     @Override
     public ProtocolResponseMapper responseMapper() {
-        return server.mcpServer().responseMapper();
+        return mcpServer.responseMapper();
     }
 
-    @Override
-    public @Nullable Lifecycle getLifecycle() {
-        return interactionContext != null ? interactionContext.getLifecycle() : null;
-    }
-
-    @Override
-    public void setLifecycle(Lifecycle lifecycle) {
-        if (interactionContext != null) interactionContext.setLifecycle(lifecycle);
-    }
-
-    @Override
-    public void setSession(McpSession session) {
-        if (interactionContext != null) interactionContext.setSession(session);
-    }
-
-    @Override
-    public Map<String, Object> attributes() {
-        return interactionContext != null ? interactionContext.attributes() : Map.of();
-    }
-
-    @Override
-    public void setAttribute(String name, Object value) {
-        if (interactionContext != null) interactionContext.setAttribute(name, value);
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> @Nullable T getAttribute(String name) {
-        if (interactionContext != null) {
-            return interactionContext.getAttribute(name);
-        }
-        return null;
-    }
-
-    private record ServerContextImpl(McpSession session, McpServer server) implements ServerContext {
+    private class ServerCtx implements ServerContext {
 
         @Override
         public String sessionId() {
-            return session.id();
+            return session().id();
         }
 
         @Override
         @Nullable
         public String protocolVersion() {
-            return session.protocolVersion();
+            return session().protocolVersion();
         }
 
         @Override
         public void protocolVersion(String version) {
-            session.protocolVersion(version);
+            session().protocolVersion(version);
         }
 
         @Override
         public void setLoggingLevel(LoggingLevel level) {
-            server.setLoggingLevel(session.id(), level);
+            mcpServer.setLoggingLevel(session().id(), level);
         }
 
         @Override
         @Nullable
         public LoggingLevel getLoggingLevel() {
-            return server.getLoggingLevel(session.id());
+            return mcpServer.getLoggingLevel(session().id());
         }
 
         @Override
         public CompletableFuture<String> sendRequest(String method, Object params) {
-            return server.sendRequest(session, method, params);
+            return mcpServer.sendRequest(session(), method, params, DefaultMcpContext.this.outboundStream());
         }
 
         @Override
         public McpSession session() {
-            return session;
+            return DefaultMcpContext.this.session();
         }
 
         @Override
         public McpServer mcpServer() {
-            return server;
+            return mcpServer;
         }
     }
 
-    private record NotificationsImpl(McpSession session, McpServer server) implements Notifications {
+    private class NotificationsImpl implements Notifications {
 
         @Override
         public void send(String method, Object params) {
-            server.sendNotification(session, method, params);
+            mcpServer.sendNotification(session(), method, params, DefaultMcpContext.this.outboundStream());
         }
 
         @Override
@@ -225,28 +165,35 @@ public class DefaultMcpContext implements McpContext {
             paramsMap.put("progress", progress);
             paramsMap.put("total", total);
             paramsMap.put("message", message);
-            server.sendNotification(session, "notifications/progress", paramsMap);
-        }
-
-        private void logAtConfiguredLevel(String logger, Object data) {
-            var level = server.getLoggingLevel(session.id());
-            if (level == null) return;
-            server.log(session, level, logger, data);
+            mcpServer.sendNotification(
+                    session(), "notifications/progress", paramsMap, DefaultMcpContext.this.outboundStream());
         }
 
         @Override
         public void info(String logger, Object data) {
-            logAtConfiguredLevel(logger, data);
+            mcpServer.sendNotification(
+                    session(),
+                    "notifications/message",
+                    Map.of("level", "info", "logger", logger, "data", data),
+                    DefaultMcpContext.this.outboundStream());
         }
 
         @Override
         public void warning(String logger, Object data) {
-            logAtConfiguredLevel(logger, data);
+            mcpServer.sendNotification(
+                    session(),
+                    "notifications/message",
+                    Map.of("level", "warning", "logger", logger, "data", data),
+                    DefaultMcpContext.this.outboundStream());
         }
 
         @Override
         public void error(String logger, Object data) {
-            logAtConfiguredLevel(logger, data);
+            mcpServer.sendNotification(
+                    session(),
+                    "notifications/message",
+                    Map.of("level", "error", "logger", logger, "data", data),
+                    DefaultMcpContext.this.outboundStream());
         }
     }
 }

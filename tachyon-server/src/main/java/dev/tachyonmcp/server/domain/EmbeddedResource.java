@@ -17,7 +17,6 @@ import tools.jackson.databind.JsonNode;
  * server to attach resource data directly without requiring a separate read round-trip.
  */
 @Value.Immutable
-@Value.Builder
 @Value.Style(
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,

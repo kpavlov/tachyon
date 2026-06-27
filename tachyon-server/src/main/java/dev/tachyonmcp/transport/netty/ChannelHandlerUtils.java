@@ -20,10 +20,12 @@ public final class ChannelHandlerUtils {
 
     private ChannelHandlerUtils() {}
 
-    public static InteractionContext<?> interactionContext(ChannelHandlerContext ctx) {
-        return Objects.requireNonNull(
-                ctx.channel().attr(INTERACTION_CONTEXT_KEY).get(),
-                "InteractionContext is null. Check if InteractionHandler is configured correctly.");
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static <T extends InteractionContext> T requireInteractionContext(ChannelHandlerContext ctx) {
+        var raw =
+                (InteractionContext) ctx.channel().attr(INTERACTION_CONTEXT_KEY).get();
+        return (T) Objects.requireNonNull(
+                raw, "InteractionContext is null. Check if InteractionHandler is configured correctly.");
     }
 
     public static void sendAccepted(ChannelHandlerContext ctx, @Nullable String origin) {
@@ -65,16 +67,7 @@ public final class ChannelHandlerUtils {
         return sendResponse(ctx, status, contentType, body, true, origin);
     }
 
-    public static void sendPlainText(
-            ChannelHandlerContext ctx,
-            HttpResponseStatus status,
-            String message,
-            boolean close,
-            @Nullable String origin) {
-        sendResponse(ctx, status, "text/plain", ByteBufUtil.writeUtf8(ctx.alloc(), message), close, origin);
-    }
-
-    public static ChannelFuture sendResponse(
+    private static ChannelFuture sendResponse(
             ChannelHandlerContext ctx,
             HttpResponseStatus status,
             String contentType,

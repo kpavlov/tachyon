@@ -17,7 +17,6 @@ import tools.jackson.databind.JsonNode;
  * metadata (URI, name, title, description, MIME type) without the actual content data.
  */
 @Value.Immutable
-@Value.Builder
 @Value.Style(allParameters = true, typeImmutable = "Default*")
 public non-sealed interface ResourceLink extends ContentBlock {
 

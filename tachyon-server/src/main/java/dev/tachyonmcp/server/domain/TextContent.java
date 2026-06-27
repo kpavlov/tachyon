@@ -16,7 +16,6 @@ import tools.jackson.databind.JsonNode;
  * server to hint at audience, priority, or modification time.
  */
 @Value.Immutable
-@Value.Builder
 @Value.Style(
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,

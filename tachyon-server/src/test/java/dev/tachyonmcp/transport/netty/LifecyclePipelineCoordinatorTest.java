@@ -7,6 +7,9 @@ package dev.tachyonmcp.transport.netty;
 import static dev.tachyonmcp.transport.netty.InteractionHandler.INTERACTION_CONTEXT_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.protocol.ContextProvider;
+import dev.tachyonmcp.protocol.Protocols;
+import dev.tachyonmcp.runtime.DefaultInteractionContext;
 import dev.tachyonmcp.runtime.InteractionContext.Lifecycle;
 import dev.tachyonmcp.runtime.InteractionEvent;
 import dev.tachyonmcp.server.McpDispatcher;
@@ -18,6 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.*;
 import java.nio.charset.StandardCharsets;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +35,13 @@ class LifecyclePipelineCoordinatorTest {
     void setUp() {
         server = TachyonServer.builder().build();
         final var dispatcher = new McpDispatcher(server, Runnable::run);
-        channel = new EmbeddedChannel(new InteractionHandler("mcp"));
+        channel = new EmbeddedChannel(new InteractionHandler(new ContextProvider() {
+            @Override
+            @SuppressWarnings("unchecked")
+            public <T> @Nullable T provide(Class<T> type) {
+                return type.isInstance(server) ? (T) server : null;
+            }
+        }));
         channel.pipeline()
                 .addLast(
                         McpHandlerManager.HANDLER_INIT,
@@ -94,11 +104,13 @@ class LifecyclePipelineCoordinatorTest {
 
     @Test
     void interactionContextLifecycleTransitionsViaEvents() {
-        // Test the full lifecycle using direct event firing
+        var protocol = Protocols.versions().get(0);
+        channel.attr(INTERACTION_CONTEXT_KEY).set(new DefaultInteractionContext<>(protocol));
+
         var ic = channel.attr(INTERACTION_CONTEXT_KEY).get();
         assertThat(ic).isNotNull();
         assertThat(ic.getLifecycle()).isEqualTo(Lifecycle.INITIALIZATION);
-        assertThat(ic.getProtocol()).isEqualTo("mcp");
+        assertThat(ic.getProtocol().familyName()).isEqualTo("mcp");
 
         // OperationStarted
         channel.pipeline()

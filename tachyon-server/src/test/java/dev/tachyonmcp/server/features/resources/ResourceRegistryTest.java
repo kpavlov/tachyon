@@ -6,6 +6,7 @@ package dev.tachyonmcp.server.features.resources;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.EmptyResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListResourceTemplatesResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListResourcesResult;
@@ -18,6 +19,7 @@ import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.Role;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.session.DefaultMcpContext;
+import dev.tachyonmcp.server.session.McpSession;
 import dev.tachyonmcp.server.session.SseConnection;
 import dev.tachyonmcp.server.session.SseEvent;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
@@ -35,6 +37,12 @@ class ResourceRegistryTest {
     private final McpServer server = TachyonServer.builder().build();
     private final ResourceRegistry registry = new ResourceRegistry(server);
     private final HashMap<String, McpMethodHandler> handlers = new HashMap<>();
+
+    private static DefaultMcpContext context(McpSession session, McpServer server) {
+        var ctx = new DefaultMcpContext(Protocols.versions().get(0), server);
+        ctx.setSession(session);
+        return ctx;
+    }
 
     @BeforeEach
     void setUp() {
@@ -93,7 +101,7 @@ class ResourceRegistryTest {
         session.activate();
 
         var result = handlers.get("resources/subscribe")
-                .handle(new DefaultMcpContext(session, server), Map.of("uri", "test://resource/1"));
+                .handle(context(session, server), Map.of("uri", "test://resource/1"));
 
         assertThat(result).isInstanceOf(EmptyResult.class);
         assertThat(registry.isSubscribed("test://resource/1", "test-session")).isTrue();
@@ -104,12 +112,11 @@ class ResourceRegistryTest {
         var session = server.createSession("test-session");
         session.activate();
 
-        handlers.get("resources/subscribe")
-                .handle(new DefaultMcpContext(session, server), Map.of("uri", "test://resource/1"));
+        handlers.get("resources/subscribe").handle(context(session, server), Map.of("uri", "test://resource/1"));
         assertThat(registry.isSubscribed("test://resource/1", "test-session")).isTrue();
 
         var result = handlers.get("resources/unsubscribe")
-                .handle(new DefaultMcpContext(session, server), Map.of("uri", "test://resource/1"));
+                .handle(context(session, server), Map.of("uri", "test://resource/1"));
 
         assertThat(result).isInstanceOf(EmptyResult.class);
         assertThat(registry.isSubscribed("test://resource/1", "test-session")).isFalse();
@@ -122,8 +129,7 @@ class ResourceRegistryTest {
         sess.connection(conn);
         sess.activate();
 
-        handlers.get("resources/subscribe")
-                .handle(new DefaultMcpContext(sess, server), Map.of("uri", "test://resource/1"));
+        handlers.get("resources/subscribe").handle(context(sess, server), Map.of("uri", "test://resource/1"));
         registry.add(
                 ResourceDescriptor.of("test-resource", "test://resource/1", "Test resource", "text/plain"),
                 (ctx, req) -> TextResourceContents.of("test://resource/1", "text/plain", ""));

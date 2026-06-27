@@ -12,12 +12,27 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
 
 class ConformanceReportWriter {
 
     private static final Pattern SCENARIO_LINE = Pattern.compile("^[✗✓] (.+): (\\d+) passed, (\\d+) failed$");
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     record ScenarioResult(String name, int passed, int failed) {}
+
+    record SpecReference(String id, String url) {}
+
+    record CheckDetail(
+            String id,
+            String name,
+            String description,
+            String status,
+            String errorMessage,
+            List<SpecReference> specReferences,
+            JsonNode details) {}
 
     static List<String> parseBaseline(Path baselinePath) throws IOException {
         try (var lines = Files.lines(baselinePath)) {
@@ -46,9 +61,71 @@ class ConformanceReportWriter {
         return results;
     }
 
+    static List<CheckDetail> readChecks(Path outputDir) throws IOException {
+        if (!Files.isDirectory(outputDir)) {
+            return List.of();
+        }
+        var checks = new ArrayList<CheckDetail>();
+        try (var files = Files.walk(outputDir)) {
+            var jsonFiles = files.filter(p -> p.endsWith("checks.json")).toList();
+            for (var jsonFile : jsonFiles) {
+                var root = MAPPER.readTree(jsonFile.toFile());
+                if (root instanceof ArrayNode array) {
+                    for (var node : array) {
+                        checks.add(parseCheck(node));
+                    }
+                }
+            }
+        }
+        return checks;
+    }
+
+    private static CheckDetail parseCheck(JsonNode node) {
+        var specRefs = new ArrayList<SpecReference>();
+        var refsNode = node.get("specReferences");
+        if (refsNode instanceof ArrayNode refs) {
+            for (var ref : refs) {
+                specRefs.add(new SpecReference(
+                        ref.get("id").asString(), ref.get("url").asString()));
+            }
+        }
+        return new CheckDetail(
+                node.get("id").asString(),
+                node.get("name").asString(),
+                node.get("description").asString(),
+                node.get("status").asString(),
+                node.has("errorMessage") ? node.get("errorMessage").asString() : "<none>",
+                specRefs,
+                node.get("details"));
+    }
+
+    static void logFailedScenarios(
+            List<ScenarioResult> scenarios, List<String> expectedFailures, List<CheckDetail> checks) {
+        var failed = scenarios.stream().filter(s -> s.failed() > 0).toList();
+        if (failed.isEmpty()) return;
+        System.out.println("[conformance] Results (⚠️-baseline):");
+        for (var scenario : failed) {
+            var isBaseline = expectedFailures.contains(scenario.name());
+            var marker = isBaseline ? "⚠️" : "❌";
+            System.out.println("  " + marker + " " + scenario.name() + " (passed: " + scenario.passed() + ", failed: "
+                    + scenario.failed() + ")");
+            for (var check : checks) {
+                if (!check.name().equals(scenario.name()) || !"FAILURE".equals(check.status())) continue;
+                System.out.println("      " + check.description());
+                System.out.println("      error: " + check.errorMessage());
+                System.out.println("      details: " + check.details());
+            }
+        }
+    }
+
     static void writeReport(
-            Path outputPath, List<ScenarioResult> scenarios, List<String> expectedFailures, long totalMillis)
+            Path outputPath,
+            List<ScenarioResult> scenarios,
+            List<String> expectedFailures,
+            long totalMillis,
+            List<CheckDetail> checks)
             throws IOException {
+        logFailedScenarios(scenarios, expectedFailures, checks);
         var totalTests = scenarios.size();
         var totalSkipped = (int) scenarios.stream()
                 .filter(s -> s.failed() > 0 && expectedFailures.contains(s.name()))
@@ -87,6 +164,7 @@ class ConformanceReportWriter {
                             .append(scenario.failed())
                             .append(" failed")
                             .append("\" type=\"conformance\">\n");
+                    appendFailedChecks(sb, scenario.name(), checks);
                     sb.append("    </failure>\n  </testcase>\n");
                 }
             } else {
@@ -98,6 +176,36 @@ class ConformanceReportWriter {
 
         Files.createDirectories(outputPath.getParent());
         Files.writeString(outputPath, sb.toString(), StandardCharsets.UTF_8);
+    }
+
+    private static void appendFailedChecks(StringBuilder sb, String scenarioName, List<CheckDetail> checks) {
+        var matching = checks.stream()
+                .filter(c -> c.name().equals(scenarioName) && "FAILURE".equals(c.status()))
+                .toList();
+        for (var check : matching) {
+            sb.append("      <check id=\"").append(escapeXml(check.id())).append("\">\n");
+            sb.append("        <description>")
+                    .append(escapeXml(check.description()))
+                    .append("</description>\n");
+            sb.append("        <errorMessage>")
+                    .append(escapeXml(check.errorMessage()))
+                    .append("</errorMessage>\n");
+            sb.append("        <details>")
+                    .append(escapeXml(check.details().toString()))
+                    .append("</details>\n");
+            if (!check.specReferences().isEmpty()) {
+                sb.append("        <specReferences>\n");
+                for (var ref : check.specReferences()) {
+                    sb.append("          <specReference id=\"")
+                            .append(escapeXml(ref.id()))
+                            .append("\" url=\"")
+                            .append(escapeXml(ref.url()))
+                            .append("\"/>\n");
+                }
+                sb.append("        </specReferences>\n");
+            }
+            sb.append("      </check>\n");
+        }
     }
 
     private static String escapeXml(String s) {

@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.runtime;
 
+import dev.tachyonmcp.protocol.Protocol;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -17,8 +18,7 @@ import org.jspecify.annotations.Nullable;
  */
 public class DefaultInteractionContext<S extends Session> implements InteractionContext<S> {
 
-    private final String protocol;
-    private volatile @Nullable String protocolVersion;
+    private final Protocol protocol;
 
     private final Map<String, Object> attributes = new ConcurrentHashMap<>(3);
     private final Set<String> enabledExtensions = ConcurrentHashMap.newKeySet();
@@ -27,23 +27,13 @@ public class DefaultInteractionContext<S extends Session> implements Interaction
 
     private final AtomicReference<@Nullable S> sessionHolder = new AtomicReference<>();
 
-    public DefaultInteractionContext(String protocol) {
+    public DefaultInteractionContext(Protocol protocol) {
         this.protocol = protocol;
     }
 
     @Override
-    public String getProtocol() {
+    public Protocol getProtocol() {
         return protocol;
-    }
-
-    @Override
-    public @Nullable String getProtocolVersion() {
-        return protocolVersion;
-    }
-
-    @Override
-    public void setProtocolVersion(@Nullable String protocolVersion) {
-        this.protocolVersion = protocolVersion;
     }
 
     @Override
@@ -64,9 +54,7 @@ public class DefaultInteractionContext<S extends Session> implements Interaction
 
     @Override
     public void setSession(S session) {
-        if (!this.sessionHolder.compareAndSet(null, session)) {
-            throw new IllegalStateException("Session already set");
-        }
+        this.sessionHolder.set(session);
     }
 
     @Override

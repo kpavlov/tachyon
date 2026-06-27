@@ -6,6 +6,7 @@ package dev.tachyonmcp.server.handlers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.server.McpServer;
@@ -38,7 +39,7 @@ class ExtensionNegotiationTest {
     void extensionEnabledWhenBothSidesDeclare() throws Exception {
         var handler = server.getHandler("initialize");
         var params = buildInitParams(Map.of("com.test/ext1", JsonNodeFactory.instance.objectNode()));
-        var context = new DefaultMcpContext(session, server);
+        var context = context(session, server);
         handler.handle(context, params);
 
         assertThat(context.isExtensionEnabled("com.test/ext1")).isTrue();
@@ -48,7 +49,7 @@ class ExtensionNegotiationTest {
     void extensionNotEnabledWhenClientDoesNotDeclare() throws Exception {
         var handler = server.getHandler("initialize");
         var params = buildInitParams(Map.of());
-        var context = new DefaultMcpContext(session, server);
+        var context = context(session, server);
         handler.handle(context, params);
 
         assertThat(context.isExtensionEnabled("com.test/ext1")).isFalse();
@@ -58,7 +59,7 @@ class ExtensionNegotiationTest {
     void onConnectionInitCalledForNegotiatedExtension() throws Exception {
         var handler = server.getHandler("initialize");
         var params = buildInitParams(Map.of("com.test/ext1", JsonNodeFactory.instance.objectNode()));
-        var context = new DefaultMcpContext(session, server);
+        var context = context(session, server);
         handler.handle(context, params);
 
         assertThat(testExtension.initCalled.get()).isTrue();
@@ -68,10 +69,16 @@ class ExtensionNegotiationTest {
     void onConnectionInitNotCalledForUnnegotiatedExtension() throws Exception {
         var handler = server.getHandler("initialize");
         var params = buildInitParams(Map.of());
-        var context = new DefaultMcpContext(session, server);
+        var context = context(session, server);
         handler.handle(context, params);
 
         assertThat(testExtension.initCalled.get()).isFalse();
+    }
+
+    private static DefaultMcpContext context(McpSession session, McpServer server) {
+        var ctx = new DefaultMcpContext(Protocols.versions().get(0), server);
+        ctx.setSession(session);
+        return ctx;
     }
 
     private static InitializeRequestParams buildInitParams(Map<String, JsonNode> extensions) {
