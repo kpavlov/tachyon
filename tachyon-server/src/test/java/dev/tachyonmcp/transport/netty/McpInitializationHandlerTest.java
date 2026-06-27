@@ -28,7 +28,7 @@ class McpInitializationHandlerTest {
     void setUp() {
         server = TachyonServer.builder().build();
         McpDispatcher dispatcher = new McpDispatcher(server, Runnable::run);
-        channel = new EmbeddedChannel(new InteractionHandler("mcp"));
+        channel = new EmbeddedChannel(new InteractionHandler());
         channel.pipeline()
                 .addLast(
                         McpHandlerManager.HANDLER_INIT,

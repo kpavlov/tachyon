@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.runtime;
 
+import dev.tachyonmcp.protocol.Protocol;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
@@ -18,13 +19,11 @@ public interface InteractionContext<S extends Session> {
         SHUTDOWN
     }
 
-    @Nullable
-    String getProtocol();
+    Protocol getProtocol();
 
-    @Nullable
-    String getProtocolVersion();
-
-    void setProtocolVersion(@Nullable String protocolVersion);
+    default String getProtocolVersion() {
+        return getProtocol().versionString();
+    }
 
     @Nullable
     Lifecycle getLifecycle();

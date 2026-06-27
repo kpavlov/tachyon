@@ -20,9 +20,14 @@ public final class ChannelHandlerUtils {
 
     private ChannelHandlerUtils() {}
 
+    @Nullable
     public static InteractionContext<?> interactionContext(ChannelHandlerContext ctx) {
+        return ctx.channel().attr(INTERACTION_CONTEXT_KEY).get();
+    }
+
+    public static InteractionContext<?> requireInteractionContext(ChannelHandlerContext ctx) {
         return Objects.requireNonNull(
-                ctx.channel().attr(INTERACTION_CONTEXT_KEY).get(),
+                interactionContext(ctx),
                 "InteractionContext is null. Check if InteractionHandler is configured correctly.");
     }
 

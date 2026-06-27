@@ -85,7 +85,7 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
         this.corsConfig = corsConfig;
         this.pipelineCustomizer = pipelineCustomizer;
         this.dispatcher = new McpDispatcher(server, server.executor());
-        this.interactionHandler = new InteractionHandler("mcp");
+        this.interactionHandler = new InteractionHandler();
 
         protocolVersionHandler = new ProtocolVersionHandler(endpointPath);
         acceptHeaderValidator = new AcceptValidationHandler(endpointPath);

@@ -38,8 +38,6 @@ public final class InitializeHandler implements McpMethodHandler {
 
     @Override
     public Object handle(McpContext context, Object params) {
-        context.setProtocolVersion(MCP_VERSION);
-
         var capabilities = mcpServer.resolveCapabilities();
 
         negotiateExtensions(context, params);

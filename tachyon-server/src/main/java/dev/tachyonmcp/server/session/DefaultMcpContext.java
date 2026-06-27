@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.session;
 
+import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.ProtocolMappers;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.runtime.InteractionContext;
@@ -17,7 +18,7 @@ import org.jspecify.annotations.Nullable;
 
 public class DefaultMcpContext implements McpContext {
 
-    private static final McpContext NOOP_CONTEXT = new DefaultMcpContext() {
+    private static final McpContext NOOP_CONTEXT = new DefaultMcpContext(null, null) {
         @Override
         public ServerContext server() {
             throw new UnsupportedOperationException("No server context available");
@@ -34,7 +35,7 @@ public class DefaultMcpContext implements McpContext {
         }
 
         @Override
-        public @Nullable String getProtocol() {
+        public @Nullable Protocol getProtocol() {
             throw new UnsupportedOperationException("No protocol available");
         }
 
@@ -51,8 +52,8 @@ public class DefaultMcpContext implements McpContext {
 
     private final ServerContextImpl server;
     private final NotificationsImpl notifications;
-    private final McpSession session;
-    private final @Nullable InteractionContext<McpSession> interactionContext;
+    private final @Nullable McpSession session;
+    private final InteractionContext<McpSession> interactionContext;
 
     public static McpContext noop() {
         return NOOP_CONTEXT;
@@ -62,13 +63,6 @@ public class DefaultMcpContext implements McpContext {
 
     public static McpContext stateless(McpServer server) {
         return new DefaultMcpContext(new McpSession(STATELESS_SESSION_ID, SseConnection.NOOP), server);
-    }
-
-    protected DefaultMcpContext() {
-        this.server = null;
-        this.notifications = null;
-        this.session = null;
-        this.interactionContext = null;
     }
 
     public DefaultMcpContext(McpSession session, McpServer server) {
@@ -99,31 +93,18 @@ public class DefaultMcpContext implements McpContext {
 
     @Override
     public void enableExtension(String extensionId) {
-        if (interactionContext != null) interactionContext.enableExtension(extensionId);
+        interactionContext.enableExtension(extensionId);
         if (session != null) session.enableExtension(extensionId);
     }
 
     @Override
     public boolean isExtensionEnabled(String extensionId) {
-        if (interactionContext != null) return interactionContext.isExtensionEnabled(extensionId);
-        return session != null && session.isExtensionEnabled(extensionId);
+        return interactionContext.isExtensionEnabled(extensionId);
     }
 
     @Override
-    public @Nullable String getProtocol() {
-        return interactionContext != null ? interactionContext.getProtocol() : null;
-    }
-
-    @Override
-    public @Nullable String getProtocolVersion() {
-        return session != null ? session.protocolVersion() : null;
-    }
-
-    @Override
-    public void setProtocolVersion(@Nullable String protocolVersion) {
-        if (session != null) {
-            session.protocolVersion(protocolVersion);
-        }
+    public Protocol getProtocol() {
+        return interactionContext.getProtocol();
     }
 
     @Override
@@ -133,36 +114,32 @@ public class DefaultMcpContext implements McpContext {
 
     @Override
     public @Nullable Lifecycle getLifecycle() {
-        return interactionContext != null ? interactionContext.getLifecycle() : null;
+        return interactionContext.getLifecycle();
     }
 
     @Override
     public void setLifecycle(Lifecycle lifecycle) {
-        if (interactionContext != null) interactionContext.setLifecycle(lifecycle);
+        interactionContext.setLifecycle(lifecycle);
     }
 
     @Override
     public void setSession(McpSession session) {
-        if (interactionContext != null) interactionContext.setSession(session);
+        interactionContext.setSession(session);
     }
 
     @Override
     public Map<String, Object> attributes() {
-        return interactionContext != null ? interactionContext.attributes() : Map.of();
+        return interactionContext.attributes();
     }
 
     @Override
     public void setAttribute(String name, Object value) {
-        if (interactionContext != null) interactionContext.setAttribute(name, value);
+        interactionContext.setAttribute(name, value);
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public <T> @Nullable T getAttribute(String name) {
-        if (interactionContext != null) {
-            return interactionContext.getAttribute(name);
-        }
-        return null;
+        return interactionContext.getAttribute(name);
     }
 
     private record ServerContextImpl(McpSession session, McpServer server) implements ServerContext {
