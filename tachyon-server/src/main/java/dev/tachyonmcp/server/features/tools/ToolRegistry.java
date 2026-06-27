@@ -36,7 +36,7 @@ public class ToolRegistry {
 
     private static final Logger logger = LoggerFactory.getLogger(ToolRegistry.class);
 
-    private final ConcurrentHashMap<String, ToolHandler> handlers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ToolHandler<? extends ToolResult>> handlers = new ConcurrentHashMap<>();
     private final JsonSchemaValidator validator;
 
     private @Nullable Runnable onChange;
@@ -57,7 +57,7 @@ public class ToolRegistry {
         }
     }
 
-    public void register(ToolHandler handler) {
+    public void register(ToolHandler<? extends ToolResult> handler) {
         Objects.requireNonNull(handler, "ToolHandler must not be null");
         var descriptor = handler.descriptor();
         Objects.requireNonNull(descriptor, "ToolDescriptor must not be null");
@@ -88,7 +88,7 @@ public class ToolRegistry {
         }
     }
 
-    public @Nullable ToolHandler get(String name) {
+    public @Nullable ToolHandler<? extends ToolResult> get(String name) {
         return handlers.get(name);
     }
 
@@ -97,7 +97,7 @@ public class ToolRegistry {
         return handler != null ? handler.descriptor() : null;
     }
 
-    public Collection<ToolHandler> getAll() {
+    public Collection<ToolHandler<? extends ToolResult>> getAll() {
         return handlers.values();
     }
 

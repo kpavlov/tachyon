@@ -5,9 +5,12 @@
 package dev.tachyonmcp.server.features.tools;
 
 import dev.tachyonmcp.server.session.McpContext;
+import java.util.Map;
+import org.jspecify.annotations.Nullable;
+import tools.jackson.databind.JsonNode;
 
 @FunctionalInterface
-public interface ToolFn {
+public interface ToolFn<R extends ToolResult> {
 
-    Object apply(McpContext context, Object arguments) throws Exception;
+    R apply(McpContext context, @Nullable Map<String, JsonNode> arguments) throws Exception;
 }

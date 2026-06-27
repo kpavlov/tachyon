@@ -12,6 +12,7 @@ import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.tools.SyncToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -236,8 +237,8 @@ class ServerTest {
                 }
 
                 @Override
-                public Object handle(McpContext context, Object args) {
-                    return Map.of();
+                public ToolResult handle(McpContext context, Map<String, JsonNode> args) {
+                    return ToolResult.of();
                 }
             });
 
@@ -352,8 +353,8 @@ class ServerTest {
                 }
 
                 @Override
-                public Object handle(McpContext context, Object args) {
-                    return Map.of();
+                public ToolResult handle(McpContext context, Map<String, JsonNode> args) {
+                    return ToolResult.of();
                 }
             });
 

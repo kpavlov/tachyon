@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 class WeatherServerTest {
 
     private static McpServerHandle handle;
-    private static int port;
     private static HttpClientStreamableHttpTransport clientTransport;
     private static McpSyncClient client;
     private static McpSchema.InitializeResult initResult;
@@ -29,7 +28,7 @@ class WeatherServerTest {
     @BeforeAll
     static void beforeAll() {
         handle = WeatherServer.createServer(0);
-        port = handle.port();
+        int port = handle.port();
 
         clientTransport = HttpClientStreamableHttpTransport
             .builder("http://localhost:" + port)

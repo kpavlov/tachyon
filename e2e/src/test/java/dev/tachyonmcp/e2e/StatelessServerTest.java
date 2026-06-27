@@ -32,9 +32,8 @@ class StatelessServerTest {
     void beforeAll() {
         serverHandle = TachyonServer.builder()
                 .tool(new EchoToolHandler())
-                .stateless(true)
-                .host("localhost")
-                .port(0)
+                .session(s -> s.stateless(true))
+                .network(n -> n.host("localhost").port(0))
                 .bind();
         port = serverHandle.port();
     }

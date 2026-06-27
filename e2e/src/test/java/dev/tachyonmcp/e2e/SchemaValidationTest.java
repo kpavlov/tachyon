@@ -17,6 +17,8 @@ import dev.tachyonmcp.server.features.tools.SyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.McpContext;
 import java.util.List;
+import java.util.Map;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -196,7 +198,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
 
     // region: Tool handler
 
-    private static class ValidatedToolHandler implements SyncToolHandler<Object, ToolResult> {
+    private static class ValidatedToolHandler implements SyncToolHandler<ToolResult> {
 
         @Override
         public String name() {
@@ -214,7 +216,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, Object arguments) {
+        public ToolResult handle(McpContext context, @Nullable Map<String, JsonNode> arguments) {
             return ToolResult.text("ok");
         }
     }
@@ -223,7 +225,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
 
     // region: Schema builders
 
-    private static class ValidatedToolHandler2 implements SyncToolHandler<Object, ToolResult> {
+    private static class ValidatedToolHandler2 implements SyncToolHandler<ToolResult> {
 
         @Override
         public String name() {
@@ -241,7 +243,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, Object arguments) {
+        public ToolResult handle(McpContext context, @Nullable Map<String, JsonNode> arguments) {
             return ToolResult.text("ok");
         }
     }

@@ -4,7 +4,6 @@
 
 package dev.tachyonmcp.server.handlers;
 
-import dev.tachyonmcp.server.JsonSchemaValidator;
 import dev.tachyonmcp.server.McpMethodHandler;
 import dev.tachyonmcp.server.session.McpContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
@@ -13,11 +12,7 @@ import java.util.Map;
 
 public final class CompletionHandler implements McpMethodHandler {
 
-    private final JsonSchemaValidator validator;
-
-    public CompletionHandler(JsonSchemaValidator validator) {
-        this.validator = validator;
-    }
+    public CompletionHandler() {}
 
     @Override
     public String method() {
@@ -32,8 +27,14 @@ public final class CompletionHandler implements McpMethodHandler {
         if (ref == null) {
             return JsonRpcErrors.invalidParams("Missing ref parameter");
         }
+        if (!(ref instanceof Map<?, ?>)) {
+            return JsonRpcErrors.invalidParams("Invalid ref parameter");
+        }
         if (argument == null) {
             return JsonRpcErrors.invalidParams("Missing argument parameter");
+        }
+        if (!(argument instanceof Map<?, ?>)) {
+            return JsonRpcErrors.invalidParams("Invalid argument parameter");
         }
         return context.responseMapper().completeResult(List.of(), null, false);
     }

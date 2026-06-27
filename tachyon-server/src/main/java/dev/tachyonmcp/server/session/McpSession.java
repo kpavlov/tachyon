@@ -13,14 +13,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import org.jspecify.annotations.Nullable;
 
 public class McpSession extends Session {
 
     private final AtomicReference<SseConnection> connection;
     private final AtomicReference<Backpressure> backpressure;
     private final AtomicLong cursor;
-    private volatile String protocolVersion;
     private final Set<String> enabledExtensions = ConcurrentHashMap.newKeySet();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -50,14 +48,6 @@ public class McpSession extends Session {
 
     public void cursor(long position) {
         cursor.set(position);
-    }
-
-    public @Nullable String protocolVersion() {
-        return protocolVersion;
-    }
-
-    public void protocolVersion(String protocolVersion) {
-        this.protocolVersion = protocolVersion;
     }
 
     public void enableExtension(String extensionId) {

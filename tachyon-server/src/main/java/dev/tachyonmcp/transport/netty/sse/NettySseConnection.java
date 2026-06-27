@@ -39,6 +39,24 @@ public final class NettySseConnection implements SseConnection {
 
     @Override
     public void send(SseEvent event) {
+        var eventLoop = channel.eventLoop();
+        if (eventLoop.inEventLoop()) {
+            doSend(event);
+        } else {
+            eventLoop.execute(() -> doSend(event));
+        }
+    }
+
+    public void close() {
+        var eventLoop = channel.eventLoop();
+        if (eventLoop.inEventLoop()) {
+            doClose();
+        } else {
+            eventLoop.execute(this::doClose);
+        }
+    }
+
+    private void doSend(SseEvent event) {
         if (!channel.isActive()) return;
         var buf = SseSerializer.encode(channel.alloc(), event);
         channel.writeAndFlush(new DefaultHttpContent(buf)).addListener((ChannelFutureListener) f -> {
@@ -46,7 +64,7 @@ public final class NettySseConnection implements SseConnection {
         });
     }
 
-    public void close() {
+    private void doClose() {
         if (channel.isActive()) {
             channel.write(new DefaultHttpContent(
                     ByteBufUtil.writeUtf8(channel.alloc(), "retry: " + SSE_RETRY_DELAY_MS + "\n")));

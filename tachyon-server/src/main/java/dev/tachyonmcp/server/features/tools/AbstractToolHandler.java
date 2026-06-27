@@ -6,7 +6,7 @@ package dev.tachyonmcp.server.features.tools;
 
 import java.util.Objects;
 
-public abstract class AbstractToolHandler {
+public abstract class AbstractToolHandler<R extends ToolResult> implements ToolHandler<R> {
 
     private final ToolDescriptor descriptor;
 

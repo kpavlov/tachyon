@@ -6,14 +6,12 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ContentBlock;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextContent;
 import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.McpContext;
-import java.util.List;
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 
@@ -50,7 +48,7 @@ class ToolNotificationsTest extends AbstractMcpE2eTest {
         }
     }
 
-    private static class NotifyingToolHandler extends AbstractSyncToolHandler {
+    private static class NotifyingToolHandler extends AbstractSyncToolHandler<ToolResult> {
 
         NotifyingToolHandler() {
             super(ToolDescriptor.builder("notifier")
@@ -60,28 +58,19 @@ class ToolNotificationsTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public Object handle(McpContext context, Object arguments) {
-            var text = extractMessage(arguments);
+        public ToolResult handle(McpContext context, @Nullable Map<String, JsonNode> arguments) {
+            String text = "";
+            if (arguments != null) {
+                var msg = arguments.get("message");
+                if (msg instanceof JsonNode node) {
+                    text = node.asString();
+                }
+            }
 
             context.notifications().send("notifications/tool/test", Map.of("message", text));
             context.notifications().info("tool.notifier", Map.of("message", text));
 
-            var textContent = TextContent.of(text);
-            var content = List.<ContentBlock>of(textContent);
-            return new CallToolResult(content, null, null, null, null);
-        }
-
-        private static String extractMessage(Object arguments) {
-            if (arguments instanceof Map<?, ?> map) {
-                var msg = map.get("message");
-                if (msg instanceof JsonNode node) {
-                    return node.asString();
-                }
-                if (msg instanceof String s) {
-                    return s;
-                }
-            }
-            return "";
+            return ToolResult.text(text);
         }
     }
 }

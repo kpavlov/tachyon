@@ -4,9 +4,8 @@
 
 package dev.tachyonmcp.server.features.tools;
 
-import dev.tachyonmcp.server.session.McpContext;
-
-public abstract class AbstractSyncToolHandler extends AbstractToolHandler implements SyncToolHandler<Object, Object> {
+public abstract class AbstractSyncToolHandler<R extends ToolResult> extends AbstractToolHandler<R>
+        implements SyncToolHandler<R> {
 
     public AbstractSyncToolHandler(ToolDescriptor descriptor) {
         super(descriptor);
@@ -15,7 +14,4 @@ public abstract class AbstractSyncToolHandler extends AbstractToolHandler implem
     public AbstractSyncToolHandler(String name) {
         super(name);
     }
-
-    @Override
-    public abstract Object handle(McpContext context, Object arguments) throws Exception;
 }

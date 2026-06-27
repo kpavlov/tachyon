@@ -18,6 +18,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
@@ -67,7 +68,7 @@ public class TasksExtension implements McpExtension {
                         }));
     }
 
-    private static final class CreateTaskHandler extends AbstractAsyncToolHandler {
+    private static final class CreateTaskHandler extends AbstractAsyncToolHandler<ToolResult> {
 
         private final TaskRegistry tasks;
         private final Executor executor;
@@ -79,7 +80,7 @@ public class TasksExtension implements McpExtension {
         }
 
         @Override
-        public CompletionStage<Object> handleAsync(McpContext context, Object arguments) {
+        public CompletionStage<ToolResult> handleAsync(McpContext context, @Nullable Map<String, JsonNode> arguments) {
             var sessionId = OutboundSseStreamMessageRouter.currentSessionId();
             var outboundStream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
             return CompletableFuture.supplyAsync(
@@ -88,9 +89,11 @@ public class TasksExtension implements McpExtension {
                             return OutboundSseStreamMessageRouter.withDispatchContext(sessionId, outboundStream, () -> {
                                 String name = "unnamed";
                                 String description = null;
-                                if (arguments instanceof Map<?, ?> map) {
-                                    if (map.get("name") instanceof String s) name = s;
-                                    if (map.get("description") instanceof String s) description = s;
+                                if (arguments != null) {
+                                    var nameNode = arguments.get("name");
+                                    if (nameNode != null && nameNode.isString()) name = nameNode.asString();
+                                    var descNode = arguments.get("description");
+                                    if (descNode != null && descNode.isString()) description = descNode.asString();
                                 }
                                 return ToolResult.text(
                                         tasks.createTask(name, description).id());

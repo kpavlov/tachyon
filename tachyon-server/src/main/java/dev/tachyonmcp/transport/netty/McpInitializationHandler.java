@@ -111,7 +111,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                         executor)
                 .exceptionally(ex -> {
                     logger.error("Failed to parse POST body during initialization", ex);
-                    executor.execute(() -> {
+                    ctx.executor().execute(() -> {
                         var errorBytes = dispatcher.parseError();
                         sendResponseAndClose(
                                 ctx, HttpResponseStatus.BAD_REQUEST, "application/json", errorBytes, origin);
@@ -125,12 +125,14 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
         switch (message) {
             case null -> {
                 var errorBytes = dispatcher.parseError();
-                sendResponseAndClose(ctx, HttpResponseStatus.BAD_REQUEST, "application/json", errorBytes, origin);
+                ctx.executor()
+                        .execute(() -> sendResponseAndClose(
+                                ctx, HttpResponseStatus.BAD_REQUEST, "application/json", errorBytes, origin));
             }
             case JsonRpcMessage.Request req
             when METHOD_INITIALIZE.equals(req.method()) -> handleInitialize(ctx, req.id(), req.params(), origin);
             case JsonRpcMessage.Notification not -> {
-                sendAccepted(ctx, origin);
+                ctx.executor().execute(() -> sendAccepted(ctx, origin));
                 CompletableFuture.runAsync(
                         () -> dispatcher.dispatchNotification(not.method(), not.params(), null), executor);
             }
@@ -143,13 +145,13 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
 
     private void dispatchPreSessionRequest(ChannelHandlerContext ctx, JsonRpcMessage message, @Nullable String origin) {
         if (!(message instanceof JsonRpcMessage.Request(Object id, String method, Object params))) {
-            sendAccepted(ctx, origin);
+            ctx.executor().execute(() -> sendAccepted(ctx, origin));
             return;
         }
         var postStream = new PostSseStream(ctx.channel(), origin, server::nextEventId);
         dispatcher
                 .dispatchRequestAsync(id, method, params, null, postStream, null)
-                .whenComplete((result, ex) -> executor.execute(() -> {
+                .whenComplete((result, ex) -> ctx.executor().execute(() -> {
                     if (ex != null) {
                         logger.error("Dispatch failed for pre-session request: method={}", method, ex);
                         sendResponseAndClose(
@@ -182,7 +184,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                         null,
                         postStream,
                         ChannelHandlerUtils.requireInteractionContext(ctx))
-                .whenComplete((result, ex) -> executor.execute(() -> {
+                .whenComplete((result, ex) -> ctx.executor().execute(() -> {
                     var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
                     if (ex != null) {
                         logger.error("Initialize dispatch failed: id={}, elapsed={}ms", id, elapsedMs, ex);

@@ -35,7 +35,6 @@ public interface Protocol {
     default int priority() {
         return 0;
     }
-    ;
 
     /**
      * Returns {@code true} when this implementation can handle the given HTTP request.

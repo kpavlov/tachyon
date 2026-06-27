@@ -338,12 +338,12 @@ abstract class AbstractServerConformanceIT {
 
         var inputSchema = buildJsonSchema2020_12();
         server.registerTool(
-                new AbstractSyncToolHandler(ToolDescriptor.builder("json_schema_2020_12_tool")
+                new AbstractSyncToolHandler<>(ToolDescriptor.builder("json_schema_2020_12_tool")
                         .description("Tool with JSON Schema 2020-12 features")
                         .inputSchema(inputSchema)
                         .build()) {
                     @Override
-                    public Object handle(McpContext context, Object arguments) {
+                    public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
                         return ToolResult.text("JSON Schema 2020-12 tool called");
                     }
                 });
@@ -531,7 +531,7 @@ abstract class AbstractServerConformanceIT {
         }
     }
 
-    private static class EchoToolHandler extends AbstractSyncToolHandler {
+    private static class EchoToolHandler extends AbstractSyncToolHandler<ToolResult> {
 
         private static final JsonNode INPUT_SCHEMA = buildEchoSchema();
 
@@ -554,11 +554,8 @@ abstract class AbstractServerConformanceIT {
         }
 
         @Override
-        public Object handle(McpContext context, Object arguments) {
-            if (!(arguments instanceof Map<?, ?> map)) {
-                return ToolResult.text("");
-            }
-            var message = map.get("message");
+        public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
+            var message = arguments.get("message");
             return ToolResult.text(message != null ? message.toString() : "");
         }
     }

@@ -61,8 +61,9 @@ abstract class AbstractMcpE2eTest {
     }
 
     protected void startServer(Consumer<ServerBuilder> configurer) {
-        if (nettyServer != null && usingCustomServer) {
+        if (usingCustomServer) {
             nettyServer.close();
+            server.close();
         }
         ServerBuilder serverBuilder = TachyonServer.builder();
         configurer.accept(serverBuilder);
