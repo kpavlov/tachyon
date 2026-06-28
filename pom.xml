@@ -8,7 +8,7 @@
 
     <groupId>dev.tachyonmcp</groupId>
     <artifactId>tachyon-root</artifactId>
-    <version>1.0.-SNAPSHOT</version>
+    <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Tachyon MCP Root</name>
@@ -55,8 +55,6 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.install.skip>true</maven.install.skip>
-
         <!-- Java -->
         <java.version>21</java.version>
 
@@ -83,6 +81,8 @@
         <maven-surefire-plugin.version>3.5.6</maven-surefire-plugin.version>
         <palantir-java-format.version>2.92.0</palantir-java-format.version>
         <spotless-maven-plugin.version>3.7.0</spotless-maven-plugin.version>
+        <spotbugs-maven-plugin.version>4.10.2.0</spotbugs-maven-plugin.version>
+        <spotbugs.version>4.10.2</spotbugs.version>
 
         <!-- Test configuration -->
         <surefire.forkCount>1C</surefire.forkCount>
@@ -338,6 +338,38 @@
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <version>${maven-surefire-plugin.version}</version>
                 </plugin>
+                <plugin>
+                    <groupId>com.github.spotbugs</groupId>
+                    <artifactId>spotbugs-maven-plugin</artifactId>
+                    <version>${spotbugs-maven-plugin.version}</version>
+                    <dependencies>
+                        <dependency>
+                            <groupId>com.github.spotbugs</groupId>
+                            <artifactId>spotbugs</artifactId>
+                            <version>${spotbugs.version}</version>
+                        </dependency>
+                    </dependencies>
+                    <configuration>
+                        <includeTests>true</includeTests>
+                        <threshold>High</threshold>
+                        <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+                        <plugins>
+                            <plugin>
+                                <groupId>com.h3xstream.findsecbugs</groupId>
+                                <artifactId>findsecbugs-plugin</artifactId>
+                                <version>1.14.0</version>
+                            </plugin>
+                        </plugins>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                            <phase>verify</phase>
+                        </execution>
+                    </executions>
+                </plugin>
             </plugins>
         </pluginManagement>
 
@@ -356,26 +388,8 @@
                 <artifactId>spotless-maven-plugin</artifactId>
             </plugin>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-install-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>install-root-pom</id>
-                        <inherited>false</inherited>
-                        <goals>
-                            <goal>install-file</goal>
-                        </goals>
-                        <phase>package</phase>
-                        <configuration>
-                            <file>${project.basedir}/pom.xml</file>
-                            <groupId>${project.groupId}</groupId>
-                            <artifactId>${project.artifactId}</artifactId>
-                            <version>1.0.0-SNAPSHOT</version>
-                            <packaging>pom</packaging>
-                            <localRepositoryPath>${project.build.directory}/local-repo</localRepositoryPath>
-                        </configuration>
-                    </execution>
-                </executions>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>

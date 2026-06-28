@@ -1,4 +1,4 @@
-.PHONY: build test package conformance e2e clean format all inspector example
+.PHONY: build test lint package conformance e2e clean format all inspector example
 
 all: clean format build example
 
@@ -13,7 +13,7 @@ test:
 
 package:
 	@echo "📦 Packaging and installing tachyon-server to local repository..."
-	@rm -rf target/local-repo
+	@rm -rf ~/.m2/repository/dev/tachyonmcp
 	@mvn install -pl tachyon-server -am -DskipTests -q
 
 example: package
@@ -36,6 +36,11 @@ clean:
 format:
 	@echo "🎨 Formatting code with Spotless (Palantir)..."
 	@mvn spotless:apply -q
+
+
+lint:
+	@echo "🔍 Linting code..."
+	@mvn spotless:check spotbugs:check -pl !reports
 
 .PHONY: inspector
 inspector:

@@ -94,8 +94,9 @@ jobs:
             release_version="${MANUAL_RELEASE_VERSION}"
           fi
 
+          base_version="${release_version%%-*}"
           IFS='.' read -r major minor patch <<EOF
-          ${release_version}
+          ${base_version}
           EOF
 
           next_patch=$((patch + 1))

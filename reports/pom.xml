@@ -9,7 +9,7 @@
     <parent>
         <groupId>dev.tachyonmcp</groupId>
         <artifactId>tachyon-root</artifactId>
-        <version>1.0.-SNAPSHOT</version>
+        <version>1.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>reports</artifactId>
@@ -21,6 +21,7 @@
     <properties>
         <maven.deploy.skip>true</maven.deploy.skip>
         <maven.install.skip>true</maven.install.skip>
+        <spotbugs.skip>true</spotbugs.skip>
     </properties>
 
     <dependencies>
