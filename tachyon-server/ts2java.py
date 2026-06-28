@@ -41,462 +41,265 @@ UNKNOWN_SIMPLE_MAP = {
 
 STRING_NUMBER_UNIONS = {"ProgressToken", "RequestId"}
 
-# Module-level globals — populated by Generator.init_from_ts()
-ALL_REQUEST_NAMES = set()
-ALL_RESULT_NAMES = set()
-ALL_NOTIF_NAMES = set()
-ALL_DISCRIMINATED_UNIONS = OrderedDict()
-ALL_VARIANT_NAMES = set()
-ALL_STRUCTURAL_UNIONS = OrderedDict()
-ALL_INTERFACE_EXTENDS = (
-    OrderedDict()
-)  # child -> parent for vertical interface hierarchies
-METHOD_MAP = OrderedDict()
-NOTIFICATIONS = []
-
 
 # --- TS Parser ---
 
 
-def parse_ts(filepath):
-    with open(filepath) as f:
-        text = f.read()
-    text = re.sub(r"//[^\n]*", "", text)
-    text = re.sub(r"/\*[^*].*?\*/", "", text, flags=re.DOTALL)
-    exports = []
-    i = 0
-    jsdoc = ""
-    while i < len(text):
-        m = re.match(r"/\*\*[\s\S]*?\*/", text[i:])
-        if m:
-            jsdoc = m.group(0)
-            i += m.end()
-            continue
-        m = re.match(
-            r"export\s+interface\s+(\w+)(?:\s+extends\s+([^{]+))?\s*\{", text[i:]
-        )
-        if m:
-            name = m.group(1)
-            raw_extends = m.group(2)
-            parts = []
-            if raw_extends:
-                raw_extends = raw_extends.strip()
-                depth = 0
-                part = ""
-                for ch in raw_extends:
-                    if ch in "<(":
-                        depth += 1
-                        part += ch
-                    elif ch in ">)":
-                        depth -= 1
-                        part += ch
-                    elif ch == "," and depth == 0:
+class TsParser:
+    """Parse TypeScript spec into structured exports."""
+
+    @staticmethod
+    def parse_ts(filepath):
+        with open(filepath) as f:
+            text = f.read()
+        text = re.sub(r"//[^\n]*", "", text)
+        text = re.sub(r"/\*[^*].*?\*/", "", text, flags=re.DOTALL)
+        exports = []
+        i = 0
+        jsdoc = ""
+        while i < len(text):
+            m = re.match(r"/\*\*[\s\S]*?\*/", text[i:])
+            if m:
+                jsdoc = m.group(0)
+                i += m.end()
+                continue
+            m = re.match(
+                r"export\s+interface\s+(\w+)(?:\s+extends\s+([^{]+))?\s*\{",
+                text[i:],
+            )
+            if m:
+                name = m.group(1)
+                raw_extends = m.group(2)
+                parts = []
+                if raw_extends:
+                    raw_extends = raw_extends.strip()
+                    depth = 0
+                    part = ""
+                    for ch in raw_extends:
+                        if ch in "<(":
+                            depth += 1
+                            part += ch
+                        elif ch in ">)":
+                            depth -= 1
+                            part += ch
+                        elif ch == "," and depth == 0:
+                            parts.append(part.strip())
+                            part = ""
+                        else:
+                            part += ch
+                    if part.strip():
                         parts.append(part.strip())
-                        part = ""
-                    else:
-                        part += ch
-                if part.strip():
-                    parts.append(part.strip())
-                resolved = []
-                for p in parts:
-                    p = p.rstrip(",").strip()
-                    if p.startswith("Omit<"):
-                        inner = p[5:-1]
-                        idx = inner.rfind(",")
-                        ot = inner[:idx].strip()
-                        ok = inner[idx + 1 :].strip()
-                        resolved.append(("omit", ot, ok))
-                    else:
-                        resolved.append(("extends", p))
-                parts = resolved
-            brace_start = i + m.end()
-            body, end_idx = extract_balanced(text, brace_start)
-            fields = parse_fields(body)
-            exports.append(
-                {
-                    "kind": "interface",
-                    "name": name,
-                    "extends": parts,
-                    "fields": fields,
-                    "jsdoc": jsdoc,
-                }
+                    resolved = []
+                    for p in parts:
+                        p = p.rstrip(",").strip()
+                        if p.startswith("Omit<"):
+                            inner = p[5:-1]
+                            idx = inner.rfind(",")
+                            ot = inner[:idx].strip()
+                            ok = inner[idx + 1 :].strip()
+                            resolved.append(("omit", ot, ok))
+                        else:
+                            resolved.append(("extends", p))
+                    parts = resolved
+                brace_start = i + m.end()
+                body, end_idx = TsParser.extract_balanced(text, brace_start)
+                fields = TsParser.parse_fields(body)
+                exports.append(
+                    {
+                        "kind": "interface",
+                        "name": name,
+                        "extends": parts,
+                        "fields": fields,
+                        "jsdoc": jsdoc,
+                    }
+                )
+                i = end_idx + 1
+                jsdoc = ""
+                continue
+            m = re.match(
+                r"export\s+type\s+(\w+)\s*=\s*(.+?);\s*", text[i:], re.DOTALL
             )
-            i = end_idx + 1
-            jsdoc = ""
-            continue
-        m = re.match(r"export\s+type\s+(\w+)\s*=\s*(.+?);\s*", text[i:], re.DOTALL)
-        if m:
-            name = m.group(1)
-            rhs = re.sub(r"//.*", "", m.group(2)).strip()
-            exports.append(
-                {"kind": "type_alias", "name": name, "rhs": rhs, "jsdoc": jsdoc}
-            )
-            i += m.end()
-            jsdoc = ""
-            continue
-        m = re.match(r"export\s+(const|function|class|enum)\s", text[i:])
-        if m:
-            end = text.find(";", i)
-            i = (end + 1) if end != -1 else len(text)
-            jsdoc = ""
-            continue
-        i += 1
-    return exports
-
-
-def extract_balanced(text, start):
-    depth = 1
-    i = start
-    while i < len(text) and depth > 0:
-        if text[i] == "{":
-            depth += 1
-        elif text[i] == "}":
-            depth -= 1
-        i += 1
-    return text[start : i - 1], i - 1
-
-
-def parse_fields(body):
-    fields = []
-    i = 0
-    jsdoc = ""
-    while i < len(body):
-        if body[i] in " \t\n\r":
+            if m:
+                name = m.group(1)
+                rhs = re.sub(r"//.*", "", m.group(2)).strip()
+                exports.append(
+                    {
+                        "kind": "type_alias",
+                        "name": name,
+                        "rhs": rhs,
+                        "jsdoc": jsdoc,
+                    }
+                )
+                i += m.end()
+                jsdoc = ""
+                continue
+            m = re.match(r"export\s+(const|function|class|enum)\s", text[i:])
+            if m:
+                end = text.find(";", i)
+                i = (end + 1) if end != -1 else len(text)
+                jsdoc = ""
+                continue
             i += 1
-            continue
-        m = re.match(r"/\*\*[\s\S]*?\*/", body[i:])
-        if m:
-            jsdoc = m.group(0)
-            i += m.end()
-            continue
-        m = re.match(r"//[^\n]*", body[i:])
-        if m:
-            i += m.end()
-            continue
-        m = re.match(r"/\*[^*].*?\*/", body[i:], re.DOTALL)
-        if m:
-            i += m.end()
-            continue
-        if body[i] == "}":
-            break
-        m = re.match(r"\[\s*(\w+)\s*:\s*(\w+)\s*\]\s*:\s*(.+?);", body[i:])
-        if m:
-            fields.append(
-                {
-                    "kind": "index",
-                    "key_name": m.group(1),
-                    "key_type": m.group(2),
-                    "value_type": m.group(3).strip(),
-                    "jsdoc": jsdoc,
-                }
-            )
-            i += m.end()
-            jsdoc = ""
-            continue
-        m = re.match(r"(\w+)(\??)\s*:\s*", body[i:])
-        if m:
-            name = m.group(1)
-            optional = m.group(2) == "?"
-            after_colon = i + m.end()
-            type_str, end_idx = parse_type(body, after_colon)
-            semicolon = body.find(";", end_idx)
-            if semicolon == -1:
+        return exports
+
+    @staticmethod
+    def extract_balanced(text, start):
+        depth = 1
+        i = start
+        while i < len(text) and depth > 0:
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+            i += 1
+        return text[start : i - 1], i - 1
+
+    @staticmethod
+    def parse_fields(body):
+        fields = []
+        i = 0
+        jsdoc = ""
+        while i < len(body):
+            if body[i] in " \t\n\r":
+                i += 1
+                continue
+            m = re.match(r"/\*\*[\s\S]*?\*/", body[i:])
+            if m:
+                jsdoc = m.group(0)
+                i += m.end()
+                continue
+            m = re.match(r"//[^\n]*", body[i:])
+            if m:
+                i += m.end()
+                continue
+            m = re.match(r"/\*[^*].*?\*/", body[i:], re.DOTALL)
+            if m:
+                i += m.end()
+                continue
+            if body[i] == "}":
                 break
-            raw_type = body[after_colon:semicolon].strip()
-            fields.append(
-                {
-                    "kind": "field",
-                    "name": name,
-                    "optional": optional,
-                    "type_str": type_str,
-                    "raw_type": raw_type,
-                    "jsdoc": jsdoc,
-                }
-            )
-            i = semicolon + 1
-            jsdoc = ""
-            continue
-        i += 1
-    return fields
-
-
-def parse_type(text, start):
-    i = start
-    depth = 0
-    depth_paren = 0
-    depth_angle = 0
-    while i < len(text):
-        ch = text[i]
-        if ch == "(" and depth == 0:
-            depth_paren += 1
-        elif ch == ")" and depth == 0:
-            depth_paren -= 1
-        elif ch == "<":
-            depth_angle += 1
-        elif ch == ">":
-            depth_angle -= 1
-        elif ch == "{":
-            depth += 1
-        elif ch == "}":
-            depth -= 1
-        if depth < 0:
-            break
-        if depth == 0 and depth_paren == 0 and depth_angle == 0:
-            if ch in ";,:":
-                if ch in ";," or ch == ":":
+            m = re.match(r"\[\s*(\w+)\s*:\s*(\w+)\s*\]\s*:\s*(.+?);", body[i:])
+            if m:
+                fields.append(
+                    {
+                        "kind": "index",
+                        "key_name": m.group(1),
+                        "key_type": m.group(2),
+                        "value_type": m.group(3).strip(),
+                        "jsdoc": jsdoc,
+                    }
+                )
+                i += m.end()
+                jsdoc = ""
+                continue
+            m = re.match(r"(\w+)(\??)\s*:\s*", body[i:])
+            if m:
+                name = m.group(1)
+                optional = m.group(2) == "?"
+                after_colon = i + m.end()
+                type_str, end_idx = TsParser.parse_type(body, after_colon)
+                semicolon = body.find(";", end_idx)
+                if semicolon == -1:
                     break
-        i += 1
-    return text[start:i].strip(), i
+                raw_type = body[after_colon:semicolon].strip()
+                fields.append(
+                    {
+                        "kind": "field",
+                        "name": name,
+                        "optional": optional,
+                        "type_str": type_str,
+                        "raw_type": raw_type,
+                        "jsdoc": jsdoc,
+                    }
+                )
+                i = semicolon + 1
+                jsdoc = ""
+                continue
+            i += 1
+        return fields
+
+    @staticmethod
+    def parse_type(text, start):
+        i = start
+        depth = 0
+        depth_paren = 0
+        depth_angle = 0
+        while i < len(text):
+            ch = text[i]
+            if ch == "(" and depth == 0:
+                depth_paren += 1
+            elif ch == ")" and depth == 0:
+                depth_paren -= 1
+            elif ch == "<":
+                depth_angle += 1
+            elif ch == ">":
+                depth_angle -= 1
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+            if depth < 0:
+                break
+            if depth == 0 and depth_paren == 0 and depth_angle == 0:
+                if ch in ";,:":
+                    if ch in ";," or ch == ":":
+                        break
+            i += 1
+        return text[start:i].strip(), i
 
 
-def format_jsdoc(jsdoc_raw):
-    if not jsdoc_raw:
-        return ""
-    lines = jsdoc_raw.split("\n")
-    desc_lines = []
-    for line in lines:
-        s = line.strip()
-        if s.startswith("/**"):
-            continue
-        if s.endswith("*/"):
-            s = s[:-2].strip()
-        if s.startswith("*"):
-            s = s[1:].strip()
-        if s.startswith("@") or s == "":
-            continue
-        desc_lines.append(s)
-    return " ".join(desc_lines).strip()
+# --- Javadoc Formatting ---
 
 
-def make_javadoc(desc, param_docs=None, indent=""):
-    """Render a Javadoc block; returns empty string if there is nothing to say."""
-    has_params = any(d for _, d in (param_docs or []))
-    if not desc and not has_params:
-        return ""
-    lines = [f"{indent}/**\n"]
-    if desc:
-        lines.append(f"{indent} * {desc}\n")
-    if has_params:
+class JavadocFormatter:
+    """Format JSDoc strings to JavaDoc blocks."""
+
+    @staticmethod
+    def format_jsdoc(jsdoc_raw):
+        if not jsdoc_raw:
+            return ""
+        lines = jsdoc_raw.split("\n")
+        desc_lines = []
+        for line in lines:
+            s = line.strip()
+            if s.startswith("/**"):
+                continue
+            if s.endswith("*/"):
+                s = s[:-2].strip()
+            if s.startswith("*"):
+                s = s[1:].strip()
+            if s.startswith("@") or s == "":
+                continue
+            desc_lines.append(s)
+        text = " ".join(desc_lines).strip()
+        text = re.sub(r'\{@includeCode\s+[^}]*\}', "", text)
+
+        def _clean_link(m):
+            inner = m.group(1).strip()
+            if "|" in inner:
+                return inner.split("|", 1)[1].strip()
+            return inner
+
+        text = re.sub(r"\{@link\s+([^}]*)\}", _clean_link, text)
+        return text
+
+    @staticmethod
+    def make_javadoc(desc, param_docs=None, indent=""):
+        if not desc and not any(d for _, d in (param_docs or [])):
+            return ""
+        lines = [f"{indent}/**\n"]
         if desc:
-            lines.append(f"{indent} *\n")
-        for pname, pdoc in (param_docs or []):
-            if pdoc:
-                lines.append(f"{indent} * @param {pname} {pdoc}\n")
-    lines.append(f"{indent} */\n")
-    return "".join(lines)
+            lines.append(f"{indent} * {desc}\n")
+        if any(d for _, d in (param_docs or [])):
+            if desc:
+                lines.append(f"{indent} *\n")
+            for pname, pdoc in (param_docs or []):
+                if pdoc:
+                    lines.append(f"{indent} * @param {pname} {pdoc}\n")
+        lines.append(f"{indent} */\n")
+        return "".join(lines)
 
 
-def resolve_type(
-    type_str,
-    known_types,
-    all_interfaces,
-    anon_registry,
-    all_type_aliases=None,
-    owning_type=None,
-    field_name=None,
-    type_mappings=None,
-):
-    type_str = type_str.strip()
-    if type_str.startswith("typeof "):
-        return "String"
-    if type_str.startswith('"') and type_str.endswith('"'):
-        return "String"
-    if type_str == "null":
-        return "Void"
-    if type_str in PRIMITIVE_MAP:
-        return PRIMITIVE_MAP[type_str]
-    if type_mappings and type_str in type_mappings:
-        return type_mappings[type_str]
-    if all_type_aliases and type_str in all_type_aliases:
-        alias_rhs = all_type_aliases[type_str]["rhs"]
-        alias_parts = [p.strip() for p in alias_rhs.split("|") if p.strip()]
-        alias_non_null = [p for p in alias_parts if p != "null"]
-        alias_non_literals = [
-            p for p in alias_non_null
-            if not (p.startswith('"') and p.endswith('"'))
-        ]
-        alias_literals = [
-            p for p in alias_non_null
-            if p.startswith('"') and p.endswith('"')
-        ]
-        if alias_literals and not alias_non_literals:
-            return type_str
-        if len(alias_non_literals) == 1:
-            only = alias_non_literals[0]
-            if only in PRIMITIVE_MAP:
-                return PRIMITIVE_MAP[only]
-            if only.startswith("{"):
-                return resolve_inline_object(only, anon_registry, owning_type, field_name)
-            arr_match = re.match(r"(.+?)\s*\[\]$", only)
-            if arr_match and "|" not in arr_match.group(1):
-                inner = resolve_type(
-                    arr_match.group(1), known_types, all_interfaces, anon_registry,
-                    all_type_aliases, owning_type, field_name, type_mappings
-                )
-                return "java.util.List<" + inner + ">"
-            rec_match = re.match(r"Record<(\w+),\s*(\w+)>", only)
-            if rec_match:
-                key_t = PRIMITIVE_MAP.get(rec_match.group(1), rec_match.group(1))
-                val_t = rec_match.group(2)
-                val_t = PRIMITIVE_MAP.get(val_t, val_t)
-                if val_t == "unknown":
-                    val_t = UNKNOWN_TYPE_MAP.get("unknown", "tools.jackson.databind.JsonNode")
-                jk = "String" if key_t == "String" else key_t
-                return f"java.util.Map<{jk}, {val_t}>"
-            if only in known_types:
-                return resolve_type(
-                    only, known_types, all_interfaces, anon_registry,
-                    all_type_aliases, owning_type, field_name, type_mappings
-                )
-        if alias_literals and "string" in alias_non_literals:
-            return "String"
-        if len(alias_non_literals) > 1:
-            if type_str in ALL_DISCRIMINATED_UNIONS or type_str in ALL_STRUCTURAL_UNIONS:
-                return type_str
-            return resolve_union_type(
-                alias_rhs, known_types, all_interfaces, anon_registry,
-                all_type_aliases, owning_type, field_name, type_mappings
-            )
-    if "&" in type_str:
-        parts = [p.strip() for p in type_str.split("&")]
-        named = [p for p in parts if not p.startswith("{") and p in known_types]
-        if named:
-            return named[0]
-        inline = [p for p in parts if p.startswith("{")]
-        if inline:
-            return resolve_inline_object(
-                " & ".join(inline), anon_registry, owning_type, field_name
-            )
-        return "Object"
-    if type_str.startswith("{"):
-        return resolve_inline_object(type_str, anon_registry, owning_type, field_name)
-    arr_match = re.match(r"\((.+)\)\s*\[\]", type_str)
-    if arr_match:
-        inner = resolve_union_type(
-            arr_match.group(1),
-            known_types,
-            all_interfaces,
-            anon_registry,
-            all_type_aliases,
-            owning_type,
-            field_name,
-            type_mappings,
-        )
-        return "java.util.List<" + inner + ">"
-    arr_match = re.match(r"(.+?)\s*\[\]", type_str)
-    if arr_match and "|" not in arr_match.group(1):
-        inner = resolve_type(
-            arr_match.group(1),
-            known_types,
-            all_interfaces,
-            anon_registry,
-            all_type_aliases,
-            owning_type,
-            field_name,
-            type_mappings,
-        )
-        return "java.util.List<" + inner + ">"
-    if "|" in type_str:
-        return resolve_union_type(
-            type_str,
-            known_types,
-            all_interfaces,
-            anon_registry,
-            all_type_aliases,
-            owning_type,
-            field_name,
-            type_mappings,
-        )
-    arr_gen = re.match(r"Array<(.+)>", type_str, re.DOTALL)
-    if arr_gen:
-        inner = arr_gen.group(1).strip()
-        if inner.startswith("{"):
-            return "java.util.List<tools.jackson.databind.JsonNode>"
-        return "java.util.List<" + inner + ">"
-    if type_str in STRING_NUMBER_UNIONS:
-        return "Object"
-    if type_str in known_types:
-        return type_str
-    return type_str
-
-
-def resolve_union_type(
-    type_str,
-    known_types,
-    all_interfaces,
-    anon_registry,
-    all_type_aliases=None,
-    owning_type=None,
-    field_name=None,
-    type_mappings=None,
-):
-    parts = [p.strip() for p in type_str.split("|")]
-    non_null = [p for p in parts if p != "null"]
-    if "string" in non_null and "number" in non_null:
-        return "Object"
-    if "string" in non_null and "integer" in non_null:
-        return "Object"
-    all_literals = all(p.startswith('"') and p.endswith('"') for p in non_null)
-    if all_literals:
-        return "String"
-    if len(non_null) == 1:
-        return resolve_type(
-            non_null[0],
-            known_types,
-            all_interfaces,
-            anon_registry,
-            all_type_aliases,
-            owning_type,
-            field_name,
-            type_mappings,
-        )
-    if len(non_null) >= 2:
-        for union_name, variants in ALL_STRUCTURAL_UNIONS.items():
-            if set(non_null) == set(variants):
-                return union_name
-        for parent, children in ALL_INTERFACE_EXTENDS.items():
-            if set(non_null).issubset(set(children)):
-                return parent
-    for p in non_null:
-        if p in known_types:
-            return p
-    return "Object"
-
-
-def resolve_inline_object(type_str, anon_registry, owning_type=None, field_name=None):
-    if re.search(r"\[\s*\w+\s*:\s*\w+\s*\]\s*:", type_str):
-        return "java.util.Map<String, tools.jackson.databind.JsonNode>"
-    body_match = re.match(r"\{(.+)\}", type_str, re.DOTALL)
-    if not body_match:
-        return "java.util.Map<String, tools.jackson.databind.JsonNode>"
-    body = body_match.group(1).strip()
-    for key, val in anon_registry.items():
-        if isinstance(val, tuple) and val[0] == body:
-            _, existing_owner = val
-            if owning_type and existing_owner == owning_type:
-                return key[1]
-            if not owning_type:
-                return key[1]
-        elif isinstance(val, str) and val == body:
-            return key[1] if isinstance(key, tuple) else key
-    if field_name:
-        name = field_name[0].upper() + field_name[1:] if field_name else "Anon"
-    else:
-        name = "Anon_" + str(len(anon_registry) + 1)
-    base_name = name
-    counter = 1
-    while any(
-        k[1] == name
-        for k, v in anon_registry.items()
-        if isinstance(k, tuple) and v[1] == owning_type
-    ):
-        counter += 1
-        name = f"{base_name}{counter}"
-    key = (owning_type, name) if owning_type else name
-    anon_registry[key] = (body, owning_type)
-    return name
-    anon_registry[name] = (body, owning_type)
-    return name
 
 
 # --- Generator ---
@@ -544,12 +347,13 @@ class Generator:
             else None
         )
 
-        # Override PRIMITIVE_MAP for unknown/object types
-        PRIMITIVE_MAP["unknown"] = self.unknown_java_type
-        PRIMITIVE_MAP["object"] = self.unknown_java_type
+        # Per-instance primitive map (don't mutate module-level PRIMITIVE_MAP)
+        self.primitive_map = dict(PRIMITIVE_MAP)
+        self.primitive_map["unknown"] = self.unknown_java_type
+        self.primitive_map["object"] = self.unknown_java_type
 
         self.ts_text = open(self.ts_path).read()
-        self.exports = parse_ts(self.ts_path)
+        self.exports = TsParser.parse_ts(self.ts_path)
         self.all_interfaces = {}
         self.all_type_aliases = {}
         self.anon_registry = OrderedDict()
@@ -558,6 +362,15 @@ class Generator:
         self.inner_types = set()
         self.inner_model_owners = {}
         self.processed_inner = set()
+        self.request_names = set()
+        self.result_names = set()
+        self.notif_names = set()
+        self.discriminated_unions = OrderedDict()
+        self.variant_names = set()
+        self.structural_unions = OrderedDict()
+        self.interface_extends = OrderedDict()
+        self.method_map = OrderedDict()
+        self.notifications = []
 
         for exp in self.exports:
             self.known_type_names.add(exp["name"])
@@ -588,19 +401,15 @@ class Generator:
         )
 
     def init_from_ts(self):
-        global ALL_REQUEST_NAMES, ALL_RESULT_NAMES, ALL_NOTIF_NAMES
-        global ALL_DISCRIMINATED_UNIONS, ALL_VARIANT_NAMES, ALL_STRUCTURAL_UNIONS
-        global ALL_INTERFACE_EXTENDS
-        global METHOD_MAP, NOTIFICATIONS
-        ALL_REQUEST_NAMES.clear()
-        ALL_RESULT_NAMES.clear()
-        ALL_NOTIF_NAMES.clear()
-        ALL_DISCRIMINATED_UNIONS.clear()
-        ALL_VARIANT_NAMES.clear()
-        ALL_STRUCTURAL_UNIONS.clear()
-        ALL_INTERFACE_EXTENDS.clear()
-        METHOD_MAP.clear()
-        NOTIFICATIONS[:] = []
+        self.request_names.clear()
+        self.result_names.clear()
+        self.notif_names.clear()
+        self.discriminated_unions.clear()
+        self.variant_names.clear()
+        self.structural_unions.clear()
+        self.interface_extends.clear()
+        self.method_map.clear()
+        self.notifications[:] = []
 
         text = self.ts_text
 
@@ -641,11 +450,11 @@ class Generator:
         ]:
             parts = parse_union(uname)
             if uname.endswith("Request"):
-                ALL_REQUEST_NAMES.update(parts)
+                self.request_names.update(parts)
             elif uname.endswith("Result"):
-                ALL_RESULT_NAMES.update(parts)
+                self.result_names.update(parts)
             elif uname.endswith("Notification"):
-                ALL_NOTIF_NAMES.update(parts)
+                self.notif_names.update(parts)
 
         # 2. Detect discriminated unions
         seen_unions = {
@@ -705,11 +514,11 @@ class Generator:
                         )
                         if sub:
                             items.append((v, sub.group(1)))
-                    ALL_DISCRIMINATED_UNIONS[name] = (disc, items)
-                    ALL_VARIANT_NAMES.update(variants)
+                    self.discriminated_unions[name] = (disc, items)
+                    self.variant_names.update(variants)
 
         # 3. Structural unions
-        seen_unions |= set(ALL_DISCRIMINATED_UNIONS.keys())
+        seen_unions |= set(self.discriminated_unions.keys())
         for m in re.finditer(r"export type (\w+)\s*=\s*(.*?);", text, re.DOTALL):
             name = m.group(1)
             if name in seen_unions:
@@ -724,9 +533,9 @@ class Generator:
                 if re.match(r"^[A-Z]", p) and '"' not in p and p != "never"
             ]
             if len(struct) >= 2:
-                ALL_STRUCTURAL_UNIONS[name] = struct
+                self.structural_unions[name] = struct
 
-        # 4. Build METHOD_MAP
+        # 4. Build method_map
         meth_map = {}
         for m in re.finditer(
             r'export interface (\w+)\b[^}]*?method:\s*"([^"]+)"', text, re.DOTALL
@@ -735,19 +544,19 @@ class Generator:
             meth = m.group(2)
             meth_map[iface] = meth
 
-        for req in sorted(ALL_REQUEST_NAMES):
+        for req in sorted(self.request_names):
             if req not in meth_map:
                 continue
             meth = meth_map[req]
             base = req[: -len("Request")] if req.endswith("Request") else req
             res = base + "Result"
-            if res not in ALL_RESULT_NAMES:
+            if res not in self.result_names:
                 res = "EmptyResult"
-            METHOD_MAP[meth] = (req, res)
-            ALL_RESULT_NAMES.add(res)
+            self.method_map[meth] = (req, res)
+            self.result_names.add(res)
 
-        # 5. Build NOTIFICATIONS
-        for notif in sorted(ALL_NOTIF_NAMES):
+        # 5. Build notifications
+        for notif in sorted(self.notif_names):
             if notif not in meth_map:
                 continue
             meth = meth_map[notif]
@@ -757,10 +566,9 @@ class Generator:
                 body = extract_body(text, idx)
             pm = re.search(r"params:\s*(\w+)", body) if body else None
             pt = pm.group(1) if pm else None
-            NOTIFICATIONS.append((meth, notif, pt))
+            self.notifications.append((meth, notif, pt))
 
         # 6. Interface extends hierarchy (child -> parent for vertical sealed interfaces)
-        # Count how many interfaces extend each parent
         parent_children = OrderedDict()
         for exp in self.exports:
             if exp["kind"] != "interface":
@@ -774,7 +582,178 @@ class Generator:
                     parent_children[parent_name].append(name)
         for parent_name, children in parent_children.items():
             if len(children) >= 2:
-                ALL_INTERFACE_EXTENDS[parent_name] = children
+                self.interface_extends[parent_name] = children
+
+    def resolve_type(
+        self,
+        type_str,
+        owning_type=None,
+        field_name=None,
+        type_mappings=None,
+    ):
+        type_str = type_str.strip()
+        if type_str.startswith("typeof "):
+            return "String"
+        if type_str.startswith('"') and type_str.endswith('"'):
+            return "String"
+        if type_str == "null":
+            return "Void"
+        if type_str in self.primitive_map:
+            return self.primitive_map[type_str]
+        if type_mappings and type_str in type_mappings:
+            return type_mappings[type_str]
+        if self.all_type_aliases and type_str in self.all_type_aliases:
+            alias_rhs = self.all_type_aliases[type_str]["rhs"]
+            alias_parts = [p.strip() for p in alias_rhs.split("|") if p.strip()]
+            alias_non_null = [p for p in alias_parts if p != "null"]
+            alias_non_literals = [
+                p for p in alias_non_null
+                if not (p.startswith('"') and p.endswith('"'))
+            ]
+            alias_literals = [
+                p for p in alias_non_null
+                if p.startswith('"') and p.endswith('"')
+            ]
+            if alias_literals and not alias_non_literals:
+                return type_str
+            if len(alias_non_literals) == 1:
+                only = alias_non_literals[0]
+                if only in self.primitive_map:
+                    return self.primitive_map[only]
+                if only.startswith("{"):
+                    return self.resolve_inline_object(only, owning_type, field_name)
+                arr_match = re.match(r"(.+?)\s*\[\]$", only)
+                if arr_match and "|" not in arr_match.group(1):
+                    inner = self.resolve_type(
+                        arr_match.group(1), owning_type, field_name, type_mappings
+                    )
+                    return "java.util.List<" + inner + ">"
+                rec_match = re.match(r"Record<(\w+),\s*(\w+)>", only)
+                if rec_match:
+                    key_t = self.primitive_map.get(rec_match.group(1), rec_match.group(1))
+                    val_t = rec_match.group(2)
+                    val_t = self.primitive_map.get(val_t, val_t)
+                    if val_t == "unknown":
+                        val_t = UNKNOWN_TYPE_MAP.get("unknown", "tools.jackson.databind.JsonNode")
+                    jk = "String" if key_t == "String" else key_t
+                    return f"java.util.Map<{jk}, {val_t}>"
+                if only in self.known_type_names:
+                    return self.resolve_type(
+                        only, owning_type, field_name, type_mappings
+                    )
+            if alias_literals and "string" in alias_non_literals:
+                return "String"
+            if len(alias_non_literals) > 1:
+                if type_str in self.discriminated_unions or type_str in self.structural_unions:
+                    return type_str
+                return self.resolve_union_type(
+                    alias_rhs, owning_type, field_name, type_mappings
+                )
+        if "&" in type_str:
+            parts = [p.strip() for p in type_str.split("&")]
+            named = [p for p in parts if not p.startswith("{") and p in self.known_type_names]
+            if named:
+                return named[0]
+            inline = [p for p in parts if p.startswith("{")]
+            if inline:
+                return self.resolve_inline_object(
+                    " & ".join(inline), owning_type, field_name
+                )
+            return "Object"
+        if type_str.startswith("{"):
+            return self.resolve_inline_object(type_str, owning_type, field_name)
+        arr_match = re.match(r"\((.+)\)\s*\[\]", type_str)
+        if arr_match:
+            inner = self.resolve_union_type(
+                arr_match.group(1), owning_type, field_name, type_mappings
+            )
+            return "java.util.List<" + inner + ">"
+        arr_match = re.match(r"(.+?)\s*\[\]", type_str)
+        if arr_match and "|" not in arr_match.group(1):
+            inner = self.resolve_type(
+                arr_match.group(1), owning_type, field_name, type_mappings
+            )
+            return "java.util.List<" + inner + ">"
+        if "|" in type_str:
+            return self.resolve_union_type(
+                type_str, owning_type, field_name, type_mappings
+            )
+        arr_gen = re.match(r"Array<(.+)>", type_str, re.DOTALL)
+        if arr_gen:
+            inner = arr_gen.group(1).strip()
+            if inner.startswith("{"):
+                return "java.util.List<tools.jackson.databind.JsonNode>"
+            return "java.util.List<" + inner + ">"
+        if type_str in STRING_NUMBER_UNIONS:
+            return "Object"
+        if type_str in self.known_type_names:
+            return type_str
+        return type_str
+
+    def resolve_union_type(
+        self,
+        type_str,
+        owning_type=None,
+        field_name=None,
+        type_mappings=None,
+    ):
+        parts = [p.strip() for p in type_str.split("|")]
+        non_null = [p for p in parts if p != "null"]
+        if "string" in non_null and "number" in non_null:
+            return "Object"
+        if "string" in non_null and "integer" in non_null:
+            return "Object"
+        all_literals = all(p.startswith('"') and p.endswith('"') for p in non_null)
+        if all_literals:
+            return "String"
+        if len(non_null) == 1:
+            return self.resolve_type(
+                non_null[0], owning_type, field_name, type_mappings
+            )
+        if len(non_null) >= 2:
+            for union_name, variants in self.structural_unions.items():
+                if set(non_null) == set(variants):
+                    return union_name
+            for parent, children in self.interface_extends.items():
+                if set(non_null).issubset(set(children)):
+                    return parent
+        for p in non_null:
+            if p in self.known_type_names:
+                return p
+        return "Object"
+
+    def resolve_inline_object(self, type_str, owning_type=None, field_name=None):
+        if re.search(r"\[\s*\w+\s*:\s*\w+\s*\]\s*:", type_str):
+            return "java.util.Map<String, tools.jackson.databind.JsonNode>"
+        body_match = re.match(r"\{(.+)\}", type_str, re.DOTALL)
+        if not body_match:
+            return "java.util.Map<String, tools.jackson.databind.JsonNode>"
+        body = body_match.group(1).strip()
+        for key, val in self.anon_registry.items():
+            if isinstance(val, tuple) and val[0] == body:
+                _, existing_owner = val
+                if owning_type and existing_owner == owning_type:
+                    return key[1]
+                if not owning_type:
+                    return key[1]
+            elif isinstance(val, str) and val == body:
+                return key[1] if isinstance(key, tuple) else key
+        if field_name:
+            name = field_name[0].upper() + field_name[1:] if field_name else "Anon"
+        else:
+            name = "Anon_" + str(len(self.anon_registry) + 1)
+        base_name = name
+        counter = 1
+        while any(
+            k[1] == name
+            for k, v in self.anon_registry.items()
+            if isinstance(k, tuple) and v[1] == owning_type
+        ):
+            counter += 1
+            name = f"{base_name}{counter}"
+        key = (owning_type, name) if owning_type else name
+        self.anon_registry[key] = (body, owning_type)
+        return name
 
     def cap(self, s):
         return s[0].upper() + s[1:] if s else ""
@@ -924,12 +903,8 @@ class Generator:
         name = m.group(1)
         optional = bool(m.group(2))
         raw_type = m.group(3).strip()
-        java_type = resolve_type(
+        java_type = self.resolve_type(
             raw_type,
-            self.known_type_names,
-            self.all_interfaces,
-            self.anon_registry,
-            self.all_type_aliases,
             owning_type=class_name,
             field_name=name,
             type_mappings=self.type_mappings,
@@ -957,12 +932,8 @@ class Generator:
             if ftm_key in self.field_type_mappings:
                 field_type = self.field_type_mappings[ftm_key]
             else:
-                field_type = resolve_type(
+                field_type = self.resolve_type(
                     f["type_str"],
-                    self.known_type_names,
-                    self.all_interfaces,
-                    self.anon_registry,
-                    self.all_type_aliases,
                     owning_type=class_name,
                     field_name=f["name"],
                     type_mappings=self.type_mappings,
@@ -983,7 +954,7 @@ class Generator:
                     field_type,
                     fname,
                     f.get("optional", False),
-                    format_jsdoc(f.get("jsdoc", "")),
+                    JavadocFormatter.format_jsdoc(f.get("jsdoc", "")),
                     json_name,
                 )
             )
@@ -1005,26 +976,13 @@ class Generator:
         return components, has_additional
 
     def simplify_type(self, typ):
-        known_prefixes = [
-            "java.util.",
-            "tools.jackson.databind.",
-            "tools.jackson.core.util.",
-        ]
-        for p in known_prefixes:
-            typ = typ.replace(p, "")
-        return typ
+        return re.sub(r'(?<![A-Za-z])(?:[a-z_][a-z0-9_]*\.)+([A-Z]\w+)', r'\1', typ)
 
     def _collect_imports(self, components, imports):
         for c in components:
             t = c[0]
-            if "java.util.List" in t:
-                imports.add("java.util.List")
-            if "java.util.Map" in t:
-                imports.add("java.util.Map")
-            if "tools.jackson.databind.JsonNode" in t:
-                imports.add("tools.jackson.databind.JsonNode")
-            if "tools.jackson.databind.util.TokenBuffer" in t:
-                imports.add("tools.jackson.databind.util.TokenBuffer")
+            for m in re.finditer(r'((?:[a-z_][a-z0-9_]*\.)+[A-Z]\w+)', t):
+                imports.add(m.group(1))
             if c[2]:
                 imports.add("org.jspecify.annotations.Nullable")
 
@@ -1040,7 +998,7 @@ class Generator:
         for key, (body, _) in children:
             anon_name = key[1]
             qualified_name = f"{parent_name}.{anon_name}"
-            fields = parse_fields("{" + body + "}")
+            fields = TsParser.parse_fields("{" + body + "}")
             comps, _ = self.get_components(fields, qualified_name)
             self._collect_imports(comps, imports)
             self._collect_inner_imports(qualified_name, imports)
@@ -1075,7 +1033,7 @@ class Generator:
                 f'    @JsonProperty("{json_name}") {nullable}{simple_typ} {fname}'
             )
 
-        class_desc = format_jsdoc(jsdoc) if jsdoc else ""
+        class_desc = JavadocFormatter.format_jsdoc(jsdoc) if jsdoc else ""
         param_docs = [(fname, jd) for _, fname, _, jd, _ in components if jd]
 
         out = []
@@ -1083,7 +1041,7 @@ class Generator:
         out.append("\n")
         out.append(imp_str)
         out.append("\n")
-        jd_block = make_javadoc(class_desc, param_docs or None)
+        jd_block = JavadocFormatter.make_javadoc(class_desc, param_docs or None)
         if jd_block:
             out.append(jd_block)
         out.append('@JsonIgnoreProperties(ignoreUnknown = true)\n')
@@ -1114,7 +1072,7 @@ class Generator:
             self.inner_types.add(qualified_name)
             self.inner_model_owners[qualified_name] = parent_name
             self.model_files[qualified_name] = ""
-            fields = parse_fields("{" + body + "}")
+            fields = TsParser.parse_fields("{" + body + "}")
             comps, _ = self.get_components(fields, qualified_name)
             self.model_components[qualified_name] = comps
             out.append(f'{indent}@JsonIgnoreProperties(ignoreUnknown = true)\n')
@@ -1142,8 +1100,8 @@ class Generator:
         out.append("\n")
         out.append("import javax.annotation.processing.Generated;\n")
         out.append("\n")
-        class_desc = format_jsdoc(jsdoc) if jsdoc else ""
-        jd_block = make_javadoc(class_desc)
+        class_desc = JavadocFormatter.format_jsdoc(jsdoc) if jsdoc else ""
+        jd_block = JavadocFormatter.make_javadoc(class_desc)
         if jd_block:
             out.append(jd_block)
         ext = f" extends {super_iface}" if super_iface else ""
@@ -1163,8 +1121,8 @@ class Generator:
         out.append("import com.fasterxml.jackson.annotation.JsonSubTypes;\n")
         out.append("import com.fasterxml.jackson.annotation.JsonTypeInfo;\n")
         out.append("\n")
-        class_desc = format_jsdoc(jsdoc) if jsdoc else ""
-        jd_block = make_javadoc(class_desc)
+        class_desc = JavadocFormatter.format_jsdoc(jsdoc) if jsdoc else ""
+        jd_block = JavadocFormatter.make_javadoc(class_desc)
         if jd_block:
             out.append(jd_block)
         entries = [
@@ -1207,8 +1165,8 @@ class Generator:
         out.append("\n")
         out.append(imp_str)
         out.append("\n")
-        class_desc = format_jsdoc(jsdoc) if jsdoc else ""
-        jd_block = make_javadoc(class_desc)
+        class_desc = JavadocFormatter.format_jsdoc(jsdoc) if jsdoc else ""
+        jd_block = JavadocFormatter.make_javadoc(class_desc)
         if jd_block:
             out.append(jd_block)
         entries = [
@@ -1223,11 +1181,11 @@ class Generator:
         out.append('@Generated("ts2java")\n')
         # Determine extends clause — if this sealed interface is also a child of another
         parent_ext = ""
-        for pn, pc in ALL_INTERFACE_EXTENDS.items():
+        for pn, pc in self.interface_extends.items():
             if (
                 name in pc
-                and pn not in ALL_DISCRIMINATED_UNIONS
-                and pn not in ALL_STRUCTURAL_UNIONS
+                and pn not in self.discriminated_unions
+                and pn not in self.structural_unions
             ):
                 parent_ext = f" extends {pn}"
                 break
@@ -1251,8 +1209,8 @@ class Generator:
         out.append("import com.fasterxml.jackson.annotation.JsonSubTypes;\n")
         out.append("import com.fasterxml.jackson.annotation.JsonTypeInfo;\n")
         out.append("\n")
-        class_desc = format_jsdoc(jsdoc) if jsdoc else ""
-        jd_block = make_javadoc(class_desc)
+        class_desc = JavadocFormatter.format_jsdoc(jsdoc) if jsdoc else ""
+        jd_block = JavadocFormatter.make_javadoc(class_desc)
         if jd_block:
             out.append(jd_block)
         entries = [
@@ -1279,8 +1237,8 @@ class Generator:
         out.append(self.pkg(self.pkg_models))
         out.append("\nimport javax.annotation.processing.Generated;\n")
         out.append("import com.fasterxml.jackson.annotation.JsonValue;\n\n")
-        class_desc = format_jsdoc(jsdoc) if jsdoc else ""
-        jd_block = make_javadoc(class_desc)
+        class_desc = JavadocFormatter.format_jsdoc(jsdoc) if jsdoc else ""
+        jd_block = JavadocFormatter.make_javadoc(class_desc)
         if jd_block:
             out.append(jd_block)
         out.append('@Generated("ts2java")\n')
@@ -1336,35 +1294,40 @@ class Generator:
         indent = "    " * depth
         factory_methods = {
             "TextContent": [
-                ("of", ["String text"], "return new TextContent(\"text\", text, null, null);"),
+                ("of", ["String text"], ['"text"', "text"]),
             ],
             "CallToolResult": [
-                ("ofText", ["String text"], "return new CallToolResult(List.of(TextContent.of(text)), null, null, null, null);"),
-                ("ofError", ["String message"], "return new CallToolResult(List.of(TextContent.of(message)), null, true, null, null);"),
-                ("of", ["ContentBlock... content"], "return new CallToolResult(List.of(content), null, null, null, null);"),
+                ("ofText", ["String text"], ["List.of(TextContent.of(text))"]),
+                ("ofError", ["String message"], ["List.of(TextContent.of(message))", None, "true"]),
+                ("of", ["ContentBlock... content"], ["List.of(content)"]),
             ],
             "PromptMessage": [
-                ("of", ["Role role", "ContentBlock content"], "return new PromptMessage(role, content);"),
-                ("user", ["ContentBlock content"], "return new PromptMessage(Role.USER, content);"),
-                ("user", ["String text"], "return new PromptMessage(Role.USER, TextContent.of(text));"),
+                ("of", ["Role role", "ContentBlock content"], ["role", "content"]),
+                ("user", ["ContentBlock content"], ["Role.USER", "content"]),
+                ("user", ["String text"], ["Role.USER", "TextContent.of(text)"]),
             ],
             "ImageContent": [
-                ("of", ["String data", "String mimeType"], "return new ImageContent(\"image\", data, mimeType, null, null);"),
+                ("of", ["String data", "String mimeType"], ['"image"', "data", "mimeType"]),
             ],
             "AudioContent": [
-                ("of", ["String data", "String mimeType"], "return new AudioContent(\"audio\", data, mimeType, null, null);"),
+                ("of", ["String data", "String mimeType"], ['"audio"', "data", "mimeType"]),
             ],
             "TextResourceContents": [
-                ("of", ["String text", "String uri", "String mimeType"], "return new TextResourceContents(text, uri, mimeType, null);"),
+                ("of", ["String text", "String uri", "String mimeType"], ["text", "uri", "mimeType"]),
             ],
             "EmbeddedResource": [
-                ("of", ["ResourceContents resource"], "return new EmbeddedResource(\"resource\", resource, null, null);"),
+                ("of", ["ResourceContents resource"], ['"resource"', "resource"]),
             ],
         }
         if name not in factory_methods:
             return
+        num = len(components)
         out.append("\n")
-        for method_name, params, body in factory_methods[name]:
+        for method_name, params, explicit in factory_methods[name]:
+            args = [str(e) if e is not None else "null" for e in explicit]
+            while len(args) < num:
+                args.append("null")
+            body = f"return new {name}(" + ", ".join(args) + ");"
             out.append(f"{indent}    public static {name} {method_name}({', '.join(params)}) {{\n")
             out.append(f"{indent}        {body}\n")
             out.append(f"{indent}    }}\n\n")
@@ -1475,11 +1438,14 @@ class Generator:
             owner = model_name
             out.append(f"import {self.pkg_models}.{model_name};\n")
 
-        # Imports for referenced model types
+        # Imports for referenced model types and FQN from type mappings
         refs = set()
         for typ, _, _, _, _ in regular:
             parts = typ.replace("<", " ").replace(">", " ").replace(",", " ").split()
             for p in parts:
+                if "." in p and not p[0].isupper():
+                    refs.add(p)
+                    continue
                 base = p.split(".")[-1]
                 if base in (
                     "ArrayList",
@@ -1504,8 +1470,12 @@ class Generator:
                 elif base in self.model_files:
                     refs.add(base)
         refs.discard(owner)
+        refs.discard(self.pkg_models + "." + owner)
         for r in sorted(refs):
-            out.append(f"import {self.pkg_models}.{r};\n")
+            if "." in r:
+                out.append(f"import {r};\n")
+            else:
+                out.append(f"import {self.pkg_models}.{r};\n")
 
         out.append("\n")
         out.append('@Generated("ts2java")\n')
@@ -1530,8 +1500,8 @@ class Generator:
                     default = "0L"
                 elif typ == "double":
                     default = "0.0"
-                typ_ref = self.ref_for_type(typ, model_name)
-                out.append(f"        {typ_ref} {fname} = {default};\n")
+                var_typ = self.ref_for_type(typ, model_name)
+                out.append(f"        {var_typ} {fname} = {default};\n")
         if has_additional:
             out.append("        Map<String, JsonNode> additionalProperties = null;\n")
 
@@ -1829,7 +1799,7 @@ class Generator:
         out.append("import javax.annotation.processing.Generated;\n\n")
         out.append('@Generated("ts2java")\n')
         out.append(f"public final class {name} {{\n")
-        for method, _ in METHOD_MAP.items():
+        for method, _ in self.method_map.items():
             cn = method.upper().replace("/", "_")
             out.append(f'    public static final String {cn} = "{method}";\n')
         out.append(f"    private {name}() {{}}\n")
@@ -1853,7 +1823,7 @@ class Generator:
             return
         out = [self.pkg(self.pkg_protocol), "\n"]
         model_refs = set()
-        for _, (req, res) in METHOD_MAP.items():
+        for _, (req, res) in self.method_map.items():
             model_refs.add(req)
             model_refs.add(res)
         model_refs.add("UnknownRequest")
@@ -1871,7 +1841,7 @@ class Generator:
             "    private static Map<String, MethodDescriptor> buildMethods() {\n"
         )
         out.append("        var map = new LinkedHashMap<String, MethodDescriptor>();\n")
-        for method, (req, res) in METHOD_MAP.items():
+        for method, (req, res) in self.method_map.items():
             out.append(
                 f'        map.put("{method}", new MethodDescriptor("{method}", {req}.class, {res}.class));\n'
             )
@@ -2077,9 +2047,9 @@ class Generator:
                 model_imports.add(owner)
             else:
                 model_imports.add(model_part)
-        for req, _ in METHOD_MAP.values():
+        for req, _ in self.method_map.values():
             model_imports.add(req)
-        for _, notif, _ in NOTIFICATIONS:
+        for _, notif, _ in self.notifications:
             model_imports.add(notif)
         for ref in sorted(model_imports):
             out.append(f"import {self.pkg_models}.{ref};\n")
@@ -2138,7 +2108,7 @@ class Generator:
         out.append(
             "        private final Map<String, Object> codecs = new LinkedHashMap<>();\n\n"
         )
-        for method, (req, res) in METHOD_MAP.items():
+        for method, (req, res) in self.method_map.items():
             out.append(f"        public Builder register{req}() {{\n")
             out.append(
                 f'            codecs.put("request:{method}", new {req}Codec());\n'
@@ -2146,7 +2116,7 @@ class Generator:
             out.append(f'            codecs.put("result:{res}", new {res}Codec());\n')
             out.append("            return this;\n")
             out.append("        }\n")
-        for method, notif, _ in NOTIFICATIONS:
+        for method, notif, _ in self.notifications:
             out.append(f"        public Builder register{notif}() {{\n")
             out.append(
                 f'            codecs.put("notification:{method}", new {notif}Codec());\n'
@@ -2180,13 +2150,13 @@ class Generator:
 
         # 2. Discriminated union interfaces + variants
         variant_interfaces = {}
-        for union_name, (disc, variants) in ALL_DISCRIMINATED_UNIONS.items():
+        for union_name, (disc, variants) in self.discriminated_unions.items():
             for vn, _ in variants:
                 if vn not in variant_interfaces:
                     variant_interfaces[vn] = []
                 variant_interfaces[vn].append(union_name)
         processed_union_variants = set()
-        for union_name, (disc, variants) in ALL_DISCRIMINATED_UNIONS.items():
+        for union_name, (disc, variants) in self.discriminated_unions.items():
             for vn, _ in variants:
                 if vn in processed_union_variants:
                     continue
@@ -2202,12 +2172,12 @@ class Generator:
 
         # 3. Structural unions — collect variant->parent mapping first
         structural_variant_parents = {}
-        for un, variants in ALL_STRUCTURAL_UNIONS.items():
+        for un, variants in self.structural_unions.items():
             for v in variants:
                 if v not in structural_variant_parents:
                     structural_variant_parents[v] = []
                 structural_variant_parents[v].append(un)
-        for un, variants in ALL_STRUCTURAL_UNIONS.items():
+        for un, variants in self.structural_unions.items():
             if un in self.type_mappings:
                 continue
             parents = structural_variant_parents.get(un)
@@ -2220,8 +2190,8 @@ class Generator:
         # Only ResourceContents needs a sealed interface for polymorphic
         # deserialization — other extends-parents have field type conflicts
         # with their grandparent types when implemented as interfaces.
-        if "ResourceContents" in ALL_INTERFACE_EXTENDS:
-            rc_children = ALL_INTERFACE_EXTENDS["ResourceContents"]
+        if "ResourceContents" in self.interface_extends:
+            rc_children = self.interface_extends["ResourceContents"]
             rc_exp = self.all_interfaces.get("ResourceContents")
             self.add_sealed_interface_from_extends("ResourceContents", rc_children,
                                                    jsdoc=rc_exp.get("jsdoc") if rc_exp else None)
@@ -2235,28 +2205,28 @@ class Generator:
                 continue
             if name in self.all_type_aliases:
                 continue
-            if name in ALL_VARIANT_NAMES:
+            if name in self.variant_names:
                 continue
-            if name in ALL_STRUCTURAL_UNIONS:
+            if name in self.structural_unions:
                 continue
-            if name in ALL_DISCRIMINATED_UNIONS:
+            if name in self.discriminated_unions:
                 continue
 
             fields, has_idx = self.collect_all_fields(exp)
             comps, _ = self.get_components(fields, name, has_idx)
 
             ifaces = []
-            if name in ALL_REQUEST_NAMES:
+            if name in self.request_names:
                 ifaces.append("McpRequest")
-            if name in ALL_NOTIF_NAMES:
+            if name in self.notif_names:
                 ifaces.append("McpNotification")
-            if name in ALL_RESULT_NAMES:
+            if name in self.result_names:
                 ifaces.append("McpResponse")
             if name in structural_variant_parents:
                 ifaces.extend(structural_variant_parents[name])
             # Add extends parents for child interfaces (only when parent
             # is a sealed interface; flat records don't support implements)
-            for pn, children in ALL_INTERFACE_EXTENDS.items():
+            for pn, children in self.interface_extends.items():
                 if name in children and pn in self.model_files:
                     fname = self.model_files[pn]
                     if "sealed interface" in fname:
@@ -2290,7 +2260,7 @@ class Generator:
             if len(non_null) == 1 and len(non_literals) == 1:
                 only = non_literals[0]
                 # Simple primitive alias (Cursor = string) → no model needed
-                if only in PRIMITIVE_MAP:
+                if only in self.primitive_map:
                     continue
                 # Alias to another model (EmptyResult = Result, ClientResult = EmptyResult)
                 comps_raw = None
@@ -2306,7 +2276,7 @@ class Generator:
                         if typ in self.inner_models:
                             typ = self.type_ref(typ)
                         comps.append((typ, fname, optional, field_jsdoc, json_name))
-                    if name in ALL_RESULT_NAMES:
+                    if name in self.result_names:
                         self.add_model(name, comps, ["McpResponse"], jsdoc=exp.get("jsdoc"))
                     else:
                         self.add_model(name, comps, jsdoc=exp.get("jsdoc"))
@@ -2336,11 +2306,11 @@ class Generator:
                     merged = list(all_fields.values())
                     comps, _ = self.get_components(merged, name, has_idx)
                     ifaces = []
-                    if name in ALL_REQUEST_NAMES:
+                    if name in self.request_names:
                         ifaces.append("McpRequest")
-                    if name in ALL_NOTIF_NAMES:
+                    if name in self.notif_names:
                         ifaces.append("McpNotification")
-                    if name in ALL_RESULT_NAMES:
+                    if name in self.result_names:
                         ifaces.append("McpResponse")
                     self.add_model(name, comps, ifaces if ifaces else None, jsdoc=exp.get("jsdoc"))
 
@@ -2358,11 +2328,11 @@ class Generator:
                 if isinstance(val, tuple):
                     body, owning_type = val
                     if owning_type is None:
-                        fields = parse_fields("{" + body + "}")
+                        fields = TsParser.parse_fields("{" + body + "}")
                         comps, _ = self.get_components(fields, anon_name)
                         self.add_model(anon_name, comps)
                 else:
-                    fields = parse_fields("{" + val + "}")
+                    fields = TsParser.parse_fields("{" + val + "}")
                     comps, _ = self.get_components(fields, anon_name)
                     self.add_model(anon_name, comps)
 
@@ -2386,9 +2356,9 @@ class Generator:
         # 7. Message hierarchy interfaces
         hierarchy = [
             ("McpMessage", None, ["McpRequest", "McpNotification", "McpResponse"]),
-            ("McpRequest", "McpMessage", list(ALL_REQUEST_NAMES) + ["UnknownRequest"]),
-            ("McpNotification", "McpMessage", list(ALL_NOTIF_NAMES)),
-            ("McpResponse", "McpMessage", list(ALL_RESULT_NAMES)),
+            ("McpRequest", "McpMessage", list(self.request_names) + ["UnknownRequest"]),
+            ("McpNotification", "McpMessage", list(self.notif_names)),
+            ("McpResponse", "McpMessage", list(self.result_names)),
         ]
         for cls, super_iface, permits in hierarchy:
             self.add_interface(cls, permits if permits else None, super_iface)
@@ -2399,18 +2369,18 @@ class Generator:
             for model_name in list(self.model_files.keys()):
                 if model_name in self.type_mappings:
                     continue
-                if model_name in ALL_STRUCTURAL_UNIONS:
+                if model_name in self.structural_unions:
                     continue
-                if model_name in ALL_DISCRIMINATED_UNIONS:
-                    disc, variants = ALL_DISCRIMINATED_UNIONS[model_name]
+                if model_name in self.discriminated_unions:
+                    disc, variants = self.discriminated_unions[model_name]
                     self.add_discriminated_codec(model_name, disc, variants)
                     continue
-                if model_name in ALL_INTERFACE_EXTENDS:
+                if model_name in self.interface_extends:
                     # Only generate deduction codecs for polymorphic extends parents
                     # that are actually referenced as field types (e.g., ResourceContents).
                     # Others (BaseMetadata, Icons) are not used polymorphically.
                     if model_name == "ResourceContents":
-                        children = ALL_INTERFACE_EXTENDS[model_name]
+                        children = self.interface_extends[model_name]
                         variant_field_map = OrderedDict()
                         parent_exp = self.all_interfaces.get(model_name)
                         parent_field_set = set()

@@ -141,7 +141,7 @@
                             <goal>exec</goal>
                         </goals>
                         <configuration>
-                            <skip>true</skip>
+                            <skip>false</skip>
                             <executable>python3</executable>
                             <arguments>
                                 <argument>${project.basedir}/ts2java.py</argument>
@@ -193,7 +193,6 @@
                             <goal>report</goal>
                         </goals>
                     </execution>
-
                 </executions>
             </plugin>
             <plugin>
