@@ -1,8 +1,16 @@
 server:
-  - none
   - server-stateless
   - sep-2164-resource-not-found
   - caching
+  - tasks-lifecycle
+  - tasks-capability-negotiation
+  - tasks-wire-fields
+  - tasks-request-state-removal
+  - tasks-mrtr-input
+  - tasks-request-headers
+  - tasks-dispatch-and-envelope
+  - tasks-required-task-error
+  - tasks-mrtr-composition
   - http-header-validation
   - http-custom-header-server-validation
   - input-required-result-basic-elicitation
