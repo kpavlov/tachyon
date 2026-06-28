@@ -443,8 +443,8 @@ abstract class AbstractServerConformanceIT {
                         "test://template/{id}/data",
                         "Test template",
                         "text/plain",
-                        id -> TextResourceContents.of(
-                                "test://template/" + id + "/data", "text/plain", "Resource content for id: " + id)));
+                        (ctx, uri, params) -> TextResourceContents.of(
+                                uri, "text/plain", "Resource content for id: " + params.get("id"))));
     }
 
     private void registerPrompts() {

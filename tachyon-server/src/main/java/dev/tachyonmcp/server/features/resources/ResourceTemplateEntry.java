@@ -7,9 +7,10 @@ package dev.tachyonmcp.server.features.resources;
 import dev.tachyonmcp.server.McpResourceType;
 import dev.tachyonmcp.server.domain.Annotations;
 import dev.tachyonmcp.server.domain.Icon;
-import dev.tachyonmcp.server.domain.TextResourceContents;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.function.Function;
+import java.util.regex.Pattern;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
@@ -39,15 +40,68 @@ public interface ResourceTemplateEntry extends McpResourceType {
     @Nullable
     List<Icon> icons();
 
-    Function<String, TextResourceContents> resolver();
+    ResourceTemplateHandler handler();
+
+    @Value.Check
+    default void check() {
+        if (name().isBlank()) throw new IllegalArgumentException("name must not be blank");
+        if (uriTemplate().isBlank()) throw new IllegalArgumentException("uriTemplate must not be blank");
+    }
+
+    @Value.Check
+    default void checkVariableNames() {
+        var stripped = UriTemplatePatterns.VAR.matcher(uriTemplate()).replaceAll("");
+        if (stripped.contains("{") || stripped.contains("}")) {
+            throw new IllegalArgumentException("Malformed URI template (unmatched or empty braces): " + uriTemplate());
+        }
+        var m = UriTemplatePatterns.VAR.matcher(uriTemplate());
+        while (m.find()) {
+            var name = m.group(1);
+            if (!UriTemplatePatterns.VALID_NAME.matcher(name).matches()) {
+                throw new IllegalArgumentException("Invalid URI template variable name: " + name);
+            }
+        }
+    }
+
+    @Value.Derived
+    default List<String> paramNames() {
+        var names = new ArrayList<String>();
+        var seen = new HashSet<String>();
+        var m = UriTemplatePatterns.VAR.matcher(uriTemplate());
+        while (m.find()) {
+            var name = m.group(1);
+            if (!seen.add(name)) {
+                throw new IllegalArgumentException("Duplicate URI template variable name: " + name);
+            }
+            names.add(name);
+        }
+        return List.copyOf(names);
+    }
+
+    @Value.Derived
+    default Pattern compiledPattern() {
+        var names = paramNames();
+        var sb = new StringBuilder("^");
+        var m = UriTemplatePatterns.VAR.matcher(uriTemplate());
+        int last = 0;
+        int i = 0;
+        while (m.find()) {
+            sb.append(Pattern.quote(uriTemplate().substring(last, m.start())));
+            sb.append("(?<").append(names.get(i++)).append(">[^/]+)");
+            last = m.end();
+        }
+        sb.append(Pattern.quote(uriTemplate().substring(last)));
+        sb.append("$");
+        return Pattern.compile(sb.toString());
+    }
 
     static ResourceTemplateEntry of(
             String name,
             String uriTemplate,
             @Nullable String description,
             @Nullable String mimeType,
-            Function<String, TextResourceContents> resolver) {
-        return DefaultResourceTemplateEntry.of(name, uriTemplate, description, mimeType, null, null, null, resolver);
+            ResourceTemplateHandler handler) {
+        return DefaultResourceTemplateEntry.of(name, uriTemplate, description, mimeType, null, null, null, handler);
     }
 
     static ResourceTemplateEntry of(
@@ -58,8 +112,8 @@ public interface ResourceTemplateEntry extends McpResourceType {
             @Nullable String title,
             @Nullable Annotations annotations,
             @Nullable List<Icon> icons,
-            Function<String, TextResourceContents> resolver) {
+            ResourceTemplateHandler handler) {
         return DefaultResourceTemplateEntry.of(
-                name, uriTemplate, description, mimeType, title, annotations, icons, resolver);
+                name, uriTemplate, description, mimeType, title, annotations, icons, handler);
     }
 }

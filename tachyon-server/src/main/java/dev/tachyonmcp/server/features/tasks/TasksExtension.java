@@ -61,10 +61,11 @@ public class TasksExtension implements McpExtension {
 
         server.resources()
                 .addTemplate(ResourceTemplateEntry.of(
-                        "task-status", "task://{id}", "Current status of a task", "text/plain", id -> {
+                        "task-status", "task://{id}", "Current status of a task", "text/plain", (ctx, uri, params) -> {
+                            var id = params.get("id");
                             var entry = server.tasks().getById(id);
                             var text = entry != null ? entry.status().name() : "not_found";
-                            return TextResourceContents.of("task://" + id, "text/plain", text, null);
+                            return TextResourceContents.of(uri, "text/plain", text, null);
                         }));
     }
 

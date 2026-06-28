@@ -25,6 +25,11 @@ public interface TaskDescriptor extends McpResourceType {
     @Nullable
     List<Icon> icons();
 
+    @Value.Check
+    default void check() {
+        if (name().isBlank()) throw new IllegalArgumentException("name must not be blank");
+    }
+
     static DefaultTaskDescriptor.Builder builder() {
         return DefaultTaskDescriptor.builder();
     }
