@@ -32,6 +32,7 @@ e2e: package
 clean:
 	@echo "🧹 Cleaning..."
 	@mvn clean -q
+	@mvn clean -q -f examples/weather/pom.xml
 
 format:
 	@echo "🎨 Formatting code with Spotless (Palantir)..."

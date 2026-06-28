@@ -11,6 +11,7 @@ import dev.tachyonmcp.server.McpServer;
 import dev.tachyonmcp.server.OutboundSseStreamMessageRouter;
 import dev.tachyonmcp.server.domain.*;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.server.features.prompts.PromptHandlerResult;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
 import dev.tachyonmcp.server.features.tools.*;
@@ -19,12 +20,14 @@ import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.netty.NettyServer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import org.awaitility.Awaitility;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -69,6 +72,55 @@ abstract class AbstractServerConformanceIT {
 
     // Minimal WAV header + silence
     private static final String MINI_WAV_BASE64 = "UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+
+    private static final String HMAC_SECRET = "conformance-test-hmac-secret";
+
+    private static FormInputRequest buildFormElicitation(String message, String propName, String propType) {
+        var schema = new LinkedHashMap<String, JsonNode>();
+        schema.put("type", JsonNodeFactory.instance.stringNode("object"));
+        var props = JsonNodeFactory.instance.objectNode();
+        props.putObject(propName).put("type", propType);
+        schema.put("properties", props);
+        schema.put("required", JsonNodeFactory.instance.arrayNode().add(propName));
+        return FormInputRequest.of(message, schema);
+    }
+
+    private static RpcMethodRequest buildSamplingRequest(String questionText) {
+        var messages = JsonNodeFactory.instance.arrayNode();
+        var msg = JsonNodeFactory.instance.objectNode();
+        msg.put("role", "user");
+        var content = msg.putObject("content");
+        content.put("type", "text");
+        content.put("text", questionText);
+        messages.add(msg);
+        var params = JsonNodeFactory.instance.objectNode();
+        params.set("messages", messages);
+        params.put("maxTokens", 100);
+        return RpcMethodRequest.of("sampling/createMessage", params);
+    }
+
+    private static RpcMethodRequest buildRootsListRequest() {
+        return RpcMethodRequest.of("roots/list", JsonNodeFactory.instance.objectNode());
+    }
+
+    private static String signState(String payload) {
+        try {
+            var mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(HMAC_SECRET.getBytes(), "HmacSHA256"));
+            var hmac = mac.doFinal(payload.getBytes());
+            return payload + "." + Base64.getEncoder().encodeToString(hmac);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static boolean verifyState(String signedState) {
+        if (signedState == null) return false;
+        var lastDot = signedState.lastIndexOf('.');
+        if (lastDot < 0) return false;
+        var payload = signedState.substring(0, lastDot);
+        return signState(payload).equals(signedState);
+    }
 
     protected McpServer server;
     protected NettyServer nettyServer;
@@ -130,7 +182,7 @@ abstract class AbstractServerConformanceIT {
                 INPUT_SCHEMA_NO_ARGS,
                 (ctx, args) -> ToolResult.error("This tool intentionally returns an error for testing")));
 
-        server.registerTool(new ToolHandler() {
+        server.registerTool(new ToolHandler<>() {
             @Override
             public ToolDescriptor descriptor() {
                 return ToolDescriptor.builder("test_tool_with_progress")
@@ -144,16 +196,16 @@ abstract class AbstractServerConformanceIT {
                 var pt = request.progressToken();
                 if (pt != null) {
                     ctx.notifications().progress(pt, 0, 100, "Starting");
-                    sleep(50);
+                    delay(50);
                     ctx.notifications().progress(pt, 50, 100, "Halfway");
-                    sleep(50);
+                    delay(50);
                     ctx.notifications().progress(pt, 100, 100, "Complete");
                 }
                 return CompletableFuture.completedFuture(ToolResult.text("Tool execution completed"));
             }
         });
 
-        server.registerTool(new ToolHandler() {
+        server.registerTool(new ToolHandler<>() {
             @Override
             public ToolDescriptor descriptor() {
                 return ToolDescriptor.builder("test_tool_with_logging")
@@ -165,9 +217,9 @@ abstract class AbstractServerConformanceIT {
             @Override
             public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
                 ctx.notifications().info("tachyon.tools", Map.of("message", "Tool execution started"));
-                sleep(50);
+                delay(50);
                 ctx.notifications().info("tachyon.tools", Map.of("message", "Tool processing data"));
-                sleep(50);
+                delay(50);
                 ctx.notifications().info("tachyon.tools", Map.of("message", "Tool execution completed"));
                 return CompletableFuture.completedFuture(ToolResult.text("Tool execution completed"));
             }
@@ -343,7 +395,7 @@ abstract class AbstractServerConformanceIT {
                         .inputSchema(inputSchema)
                         .build()) {
                     @Override
-                    public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
+                    public ToolResult handle(McpContext context, @Nullable Map<String, JsonNode> arguments) {
                         return ToolResult.text("JSON Schema 2020-12 tool called");
                     }
                 });
@@ -360,6 +412,227 @@ abstract class AbstractServerConformanceIT {
                     }
                     return ToolResult.text("reconnection triggered");
                 }));
+
+        registerInputRequiredTools();
+    }
+
+    private void registerInputRequiredTools() {
+        // A1/A7/A10/A14/A15: elicitation - basic flow + missing/extra/invalid responses
+        server.registerTool(new ToolHandler<>() {
+            @Override
+            public ToolDescriptor descriptor() {
+                return ToolDescriptor.builder("test_input_required_result_elicitation")
+                        .description("SEP-2322 elicitation InputRequiredResult")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS)
+                        .build();
+            }
+
+            @Override
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+                var inputResponses = request.inputResponses();
+                if (inputResponses != null && inputResponses.containsKey("user_name")) {
+                    var resp = inputResponses.get("user_name");
+                    if (resp != null && resp.isObject()) {
+                        var content = resp.path("content");
+                        var name = content.has("name") ? content.get("name").asString() : "World";
+                        return CompletableFuture.completedFuture(ToolResult.text("Hello, " + name + "!"));
+                    }
+                }
+                return CompletableFuture.completedFuture(ToolResult.inputRequired(
+                        Map.of("user_name", buildFormElicitation("What is your name?", "name", "string")), null));
+            }
+        });
+
+        // A2: sampling
+        server.registerTool(new ToolHandler<>() {
+            @Override
+            public ToolDescriptor descriptor() {
+                return ToolDescriptor.builder("test_input_required_result_sampling")
+                        .description("SEP-2322 sampling InputRequiredResult")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS)
+                        .build();
+            }
+
+            @Override
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+                var inputResponses = request.inputResponses();
+                if (inputResponses != null && inputResponses.containsKey("capital_question")) {
+                    var resp = inputResponses.get("capital_question");
+                    var text = resp != null && resp.path("content").has("text")
+                            ? resp.path("content").get("text").asString()
+                            : "done";
+                    return CompletableFuture.completedFuture(ToolResult.text(text));
+                }
+                return CompletableFuture.completedFuture(ToolResult.inputRequired(
+                        Map.of("capital_question", buildSamplingRequest("What is the capital of France?")), null));
+            }
+        });
+
+        // A3: roots/list
+        server.registerTool(new ToolHandler<>() {
+            @Override
+            public ToolDescriptor descriptor() {
+                return ToolDescriptor.builder("test_input_required_result_list_roots")
+                        .description("SEP-2322 roots/list InputRequiredResult")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS)
+                        .build();
+            }
+
+            @Override
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+                var inputResponses = request.inputResponses();
+                if (inputResponses != null && inputResponses.containsKey("client_roots")) {
+                    return CompletableFuture.completedFuture(ToolResult.text("Roots received"));
+                }
+                return CompletableFuture.completedFuture(
+                        ToolResult.inputRequired(Map.of("client_roots", buildRootsListRequest()), null));
+            }
+        });
+
+        // A4: request state round-trip
+        server.registerTool(new ToolHandler<>() {
+            @Override
+            public ToolDescriptor descriptor() {
+                return ToolDescriptor.builder("test_input_required_result_request_state")
+                        .description("SEP-2322 requestState round-trip")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS)
+                        .build();
+            }
+
+            @Override
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+                var inputResponses = request.inputResponses();
+                var requestState = request.requestState();
+                if (inputResponses != null && inputResponses.containsKey("confirm") && requestState != null) {
+                    return CompletableFuture.completedFuture(ToolResult.text("state-ok"));
+                }
+                return CompletableFuture.completedFuture(ToolResult.inputRequired(
+                        Map.of("confirm", buildFormElicitation("Please confirm", "ok", "boolean")),
+                        "opaque-server-state"));
+            }
+        });
+
+        // A5: multiple input requests of different types
+        server.registerTool(new ToolHandler<>() {
+            @Override
+            public ToolDescriptor descriptor() {
+                return ToolDescriptor.builder("test_input_required_result_multiple_inputs")
+                        .description("SEP-2322 multiple inputRequests")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS)
+                        .build();
+            }
+
+            @Override
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+                var inputResponses = request.inputResponses();
+                if (inputResponses != null
+                        && inputResponses.containsKey("user_name")
+                        && inputResponses.containsKey("greeting")
+                        && inputResponses.containsKey("client_roots")) {
+                    return CompletableFuture.completedFuture(ToolResult.text("All inputs received"));
+                }
+                var inputRequests = new LinkedHashMap<String, InputRequest>();
+                inputRequests.put("user_name", buildFormElicitation("What is your name?", "name", "string"));
+                inputRequests.put("greeting", buildSamplingRequest("Generate a greeting"));
+                inputRequests.put("client_roots", buildRootsListRequest());
+                return CompletableFuture.completedFuture(ToolResult.inputRequired(inputRequests, "multi-input-state"));
+            }
+        });
+
+        // A6: multi-round with evolving requestState
+        server.registerTool(new ToolHandler<>() {
+            @Override
+            public ToolDescriptor descriptor() {
+                return ToolDescriptor.builder("test_input_required_result_multi_round")
+                        .description("SEP-2322 multi-round InputRequiredResult")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS)
+                        .build();
+            }
+
+            @Override
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+                var inputResponses = request.inputResponses();
+                var requestState = request.requestState();
+                if (inputResponses != null && inputResponses.containsKey("step2")) {
+                    var color = inputResponses
+                            .get("step2")
+                            .path("content")
+                            .path("color")
+                            .asString("unknown");
+                    return CompletableFuture.completedFuture(ToolResult.text("Done with color: " + color));
+                }
+                if (inputResponses != null
+                        && inputResponses.containsKey("step1")
+                        && "state-round-1".equals(requestState)) {
+                    return CompletableFuture.completedFuture(ToolResult.inputRequired(
+                            Map.of(
+                                    "step2",
+                                    buildFormElicitation("Step 2: What is your favorite color?", "color", "string")),
+                            "state-round-2"));
+                }
+                return CompletableFuture.completedFuture(ToolResult.inputRequired(
+                        Map.of("step1", buildFormElicitation("Step 1: What is your name?", "name", "string")),
+                        "state-round-1"));
+            }
+        });
+
+        // A12: tampered state rejection via HMAC
+        server.registerTool(new ToolHandler<>() {
+            @Override
+            public ToolDescriptor descriptor() {
+                return ToolDescriptor.builder("test_input_required_result_tampered_state")
+                        .description("SEP-2322 tampered requestState rejection")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS)
+                        .build();
+            }
+
+            @Override
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+                var inputResponses = request.inputResponses();
+                var requestState = request.requestState();
+                if (inputResponses != null && inputResponses.containsKey("confirm")) {
+                    if (requestState == null || !verifyState(requestState)) {
+                        throw new IllegalArgumentException("Invalid or tampered requestState");
+                    }
+                    return CompletableFuture.completedFuture(ToolResult.text("State verified"));
+                }
+                return CompletableFuture.completedFuture(ToolResult.inputRequired(
+                        Map.of("confirm", buildFormElicitation("Please confirm", "ok", "boolean")),
+                        signState("tamper-check")));
+            }
+        });
+
+        // A13: respect client capabilities from _meta
+        server.registerTool(new ToolHandler<>() {
+            @Override
+            public ToolDescriptor descriptor() {
+                return ToolDescriptor.builder("test_input_required_result_capabilities")
+                        .description("SEP-2322 respect client capabilities")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS)
+                        .build();
+            }
+
+            @Override
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+                var meta = request.meta();
+                var capabilities = meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
+                var hasSampling =
+                        capabilities != null && !capabilities.path("sampling").isMissingNode();
+                var hasElicitation = capabilities != null
+                        && !capabilities.path("elicitation").isMissingNode();
+                var inputRequests = new LinkedHashMap<String, InputRequest>();
+                if (hasSampling) {
+                    inputRequests.put("ai_response", buildSamplingRequest("Generate a helpful response"));
+                }
+                if (hasElicitation) {
+                    inputRequests.put("user_name", buildFormElicitation("What is your name?", "name", "string"));
+                }
+                if (inputRequests.isEmpty()) {
+                    return CompletableFuture.completedFuture(ToolResult.text("No capabilities declared"));
+                }
+                return CompletableFuture.completedFuture(ToolResult.inputRequired(inputRequests, null));
+            }
+        });
     }
 
     private static JsonNode buildJsonSchema2020_12() {
@@ -473,6 +746,23 @@ abstract class AbstractServerConformanceIT {
                 .add(
                         PromptDescriptor.of("test_prompt_with_image", "Prompt with image"),
                         List.of(PromptMessage.user(ImageContent.of(MINI_PNG_BASE64, "image/png"))));
+
+        // A9: InputRequiredResult on prompts/get
+        server.prompts()
+                .add(
+                        PromptDescriptor.of(
+                                "test_input_required_result_prompt", "Prompt requiring elicitation input (SEP-2322)"),
+                        (args, inputResponses, requestState) -> {
+                            if (inputResponses != null && inputResponses.containsKey("user_context")) {
+                                return PromptHandlerResult.messages(List.of(PromptMessage.user("Context received")));
+                            }
+                            return PromptHandlerResult.inputRequired(
+                                    Map.of(
+                                            "user_context",
+                                            buildFormElicitation(
+                                                    "What context should the prompt use?", "context", "string")),
+                                    null);
+                        });
     }
 
     @Test
@@ -523,12 +813,8 @@ abstract class AbstractServerConformanceIT {
         server.close();
     }
 
-    private static void sleep(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+    private static void delay(long millis) {
+        Awaitility.await().timeout(millis, TimeUnit.MILLISECONDS);
     }
 
     private static class EchoToolHandler extends AbstractSyncToolHandler<ToolResult> {
@@ -554,8 +840,8 @@ abstract class AbstractServerConformanceIT {
         }
 
         @Override
-        public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
-            var message = arguments.get("message");
+        public ToolResult handle(McpContext context, @Nullable Map<String, JsonNode> arguments) {
+            var message = Objects.requireNonNull(arguments).get("message");
             return ToolResult.text(message != null ? message.asString() : "");
         }
     }

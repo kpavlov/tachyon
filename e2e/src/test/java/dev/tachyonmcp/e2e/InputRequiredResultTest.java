@@ -18,11 +18,12 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.awaitility.Awaitility;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
-class InputRequiredResultE2eTest extends AbstractMcpE2eTest {
+class InputRequiredResultTest extends AbstractMcpE2eTest {
 
     private static final JsonNodeFactory FACTORY = JsonNodeFactory.instance;
 
@@ -84,12 +85,13 @@ class InputRequiredResultE2eTest extends AbstractMcpE2eTest {
                     .inPath("$.result.inputRequests.step2.params.message")
                     .isEqualTo("Step 2: What is your favorite color?");
             var state2 = extractRequestState(round2.body());
-            assertThat(state2).isEqualTo("state-round-2");
+            assertThat(state2).startsWith("state-round-2:");
 
             // Round 3: call tool with step2 inputResponses + updated requestState -> expect complete result
-            var round3 = client.sendRequest(sessionId, """
-                {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"test_multi_round","arguments":{},"inputResponses":{"step2":{"color":"blue"}},"requestState":"state-round-2"}}
-                """);
+            var round3 = client.sendRequest(
+                    sessionId,
+                    "{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"tools/call\",\"params\":{\"name\":\"test_multi_round\",\"arguments\":{},\"inputResponses\":{\"step2\":{\"color\":\"blue\"}},\"requestState\":\""
+                            + state2 + "\"}}");
 
             assertThatJson(round3.body())
                     .inPath("$.result.content[0].text")
@@ -110,6 +112,12 @@ class InputRequiredResultE2eTest extends AbstractMcpE2eTest {
                 """);
 
             assertThatJson(response.body()).inPath("$.result.resultType").isEqualTo("input_required");
+            assertThatJson(response.body())
+                    .inPath("$.result.inputRequests.user_name.method")
+                    .isEqualTo("elicitation/create");
+            assertThatJson(response.body())
+                    .inPath("$.result.inputRequests.user_name.params.message")
+                    .isEqualTo("What is your name?");
         }
     }
 
@@ -151,7 +159,7 @@ class InputRequiredResultE2eTest extends AbstractMcpE2eTest {
         }
     }
 
-    private static String extractRequestState(String responseBody) {
+    private static @Nullable String extractRequestState(String responseBody) {
         try {
             var mapper = new tools.jackson.databind.ObjectMapper();
             var tree = mapper.readTree(responseBody);
@@ -208,21 +216,24 @@ class InputRequiredResultE2eTest extends AbstractMcpE2eTest {
         @Override
         public CompletionStage<ToolResult> handle(ToolRequest request, McpContext context) {
             var inputResponses = request.inputResponses();
+            var requestState = request.requestState();
 
-            if (inputResponses != null && inputResponses.containsKey("step2")) {
-                var step1Resp = inputResponses.get("step2");
-                var color = step1Resp != null && step1Resp.has("color")
-                        ? step1Resp.get("color").asString()
+            if (requestState != null && requestState.startsWith("state-round-2:")) {
+                var name = requestState.substring("state-round-2:".length());
+                var color = inputResponses != null && inputResponses.containsKey("step2")
+                        ? inputResponses.get("step2").path("color").asString("unknown")
                         : "unknown";
                 return CompletableFuture.completedFuture(
-                        ToolResult.text("Hello, Bob! Your favorite color is " + color + "."));
+                        ToolResult.text("Hello, " + name + "! Your favorite color is " + color + "."));
             }
 
-            if (inputResponses != null && inputResponses.containsKey("step1")) {
+            if ("state-round-1".equals(requestState) && inputResponses != null && inputResponses.containsKey("step1")) {
+                var name = inputResponses.get("step1").path("name").asString("unknown");
                 var inputRequests = new LinkedHashMap<String, InputRequest>();
                 inputRequests.put(
                         "step2", buildFormElicitation("Step 2: What is your favorite color?", "color", "string"));
-                return CompletableFuture.completedFuture(ToolResult.inputRequired(inputRequests, "state-round-2"));
+                return CompletableFuture.completedFuture(
+                        ToolResult.inputRequired(inputRequests, "state-round-2:" + name));
             }
 
             var inputRequests = new LinkedHashMap<String, InputRequest>();
