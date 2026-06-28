@@ -2,7 +2,4 @@
 
 package dev.tachyonmcp.server.domain;
 
-public sealed interface InputRequest permits FormInputRequest, UrlInputRequest {
-
-    String message();
-}
+public sealed interface InputRequest permits FormInputRequest, UrlInputRequest, RpcMethodRequest {}

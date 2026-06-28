@@ -6,7 +6,13 @@ package dev.tachyonmcp.server.features.prompts;
 
 import dev.tachyonmcp.server.McpResourceType;
 
-record PromptEntry(PromptDescriptor descriptor, PromptHandler handler) implements McpResourceType {
+record PromptEntry(PromptDescriptor descriptor, InputRequiredPromptHandler handler) implements McpResourceType {
+
+    static PromptEntry of(PromptDescriptor descriptor, PromptHandler simple) {
+        return new PromptEntry(
+                descriptor,
+                (args, inputResponses, requestState) -> PromptHandlerResult.messages(simple.getMessages(args)));
+    }
 
     @Override
     public String name() {

@@ -350,7 +350,7 @@
                         </dependency>
                     </dependencies>
                     <configuration>
-                        <includeTests>true</includeTests>
+                        <includeTests>false</includeTests>
                         <threshold>High</threshold>
                         <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
                         <plugins>

@@ -30,7 +30,7 @@ import org.junit.jupiter.api.TestInstance;
  * fires repeatedly within the test window — proving both the heartbeat write and the timer rescheduling.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class SseHeartbeatE2eTest {
+class SseHeartbeatTest {
 
     private static final Duration READER_IDLE = Duration.ofMillis(150);
 

@@ -15,10 +15,13 @@ import dev.tachyonmcp.server.features.tools.ToolRegistry;
 import dev.tachyonmcp.server.session.McpContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
@@ -31,10 +34,14 @@ public class PromptRegistry extends Registry<PromptEntry> {
     }
 
     public void add(PromptDescriptor descriptor, List<PromptMessage> messages) {
-        super.add(new PromptEntry(descriptor, args -> messages));
+        super.add(PromptEntry.of(descriptor, args -> messages));
     }
 
     public void add(PromptDescriptor descriptor, PromptHandler handler) {
+        super.add(PromptEntry.of(descriptor, handler));
+    }
+
+    public void add(PromptDescriptor descriptor, InputRequiredPromptHandler handler) {
         super.add(new PromptEntry(descriptor, handler));
     }
 
@@ -67,6 +74,8 @@ public class PromptRegistry extends Registry<PromptEntry> {
 
     private record PromptsGetHandler(Registry<PromptEntry> registry, JsonSchemaValidator validator)
             implements McpMethodHandler {
+
+        private static final Logger logger = LoggerFactory.getLogger(PromptsGetHandler.class);
 
         @Override
         public String method() {
@@ -105,26 +114,37 @@ public class PromptRegistry extends Registry<PromptEntry> {
                             errors.stream().map(SchemaValidationError::message).collect(Collectors.joining("; ")));
                 }
             }
-            java.util.List<PromptMessage> domainMessages;
+
+            var inputResponses = extractInputResponsesFromParams(params);
+            var requestState = extractRequestStateFromParams(params);
+
+            PromptHandlerResult result;
             try {
-                domainMessages = entry.handler().getMessages(extractArguments(params));
+                result = entry.handler().handle(extractArguments(params), inputResponses, requestState);
             } catch (Exception e) {
-                return JsonRpcErrors.internalError(e.getMessage());
+                logger.error("Prompt handler error for '{}'", name, e);
+                return JsonRpcErrors.internalError("Prompt handler failed");
             }
-            if (domainMessages == null) {
-                domainMessages = List.of();
-            }
-            return context.responseMapper().getPromptResult(entry.descriptor().description(), domainMessages);
+
+            return switch (result) {
+                case PromptHandlerResult.Messages m -> {
+                    var messages = m.messages() != null ? m.messages() : List.<PromptMessage>of();
+                    yield context.responseMapper()
+                            .getPromptResult(entry.descriptor().description(), messages);
+                }
+                case PromptHandlerResult.InputRequired ir ->
+                    context.responseMapper().inputRequiredResult(ir.inputRequests(), ir.requestState());
+            };
         }
 
-        private static String extractArguments(Object params) {
+        private static @Nullable String extractArguments(Object params) {
             if (params instanceof GetPromptRequestParams p && p.arguments() != null) {
                 return JsonRpcCodec.writeValueAsString(p.arguments());
             }
             if (params instanceof Map<?, ?> map && map.get("arguments") instanceof Map<?, ?> args) {
                 return JsonRpcCodec.writeValueAsString(args);
             }
-            return "";
+            return null;
         }
 
         private static @Nullable Map<String, JsonNode> extractArgumentsMap(Object params) {
@@ -146,6 +166,24 @@ public class PromptRegistry extends Registry<PromptEntry> {
             if (!(params instanceof Map<?, ?> map)) return null;
             if (map.get("name") instanceof String s) return s;
             return null;
+        }
+
+        private static @Nullable Map<String, JsonNode> extractInputResponsesFromParams(Object params) {
+            if (!(params instanceof Map<?, ?> map)) return null;
+            var raw = map.get("inputResponses");
+            if (!(raw instanceof Map<?, ?> rawMap) || rawMap.isEmpty()) return null;
+            var result = new LinkedHashMap<String, JsonNode>();
+            for (var entry : rawMap.entrySet()) {
+                if (entry.getKey() instanceof String k) {
+                    result.put(k, ProtocolCodecUtil.parseJsonNode(JsonRpcCodec.writeValueAsString(entry.getValue())));
+                }
+            }
+            return result.isEmpty() ? null : result;
+        }
+
+        private static @Nullable String extractRequestStateFromParams(Object params) {
+            if (!(params instanceof Map<?, ?> map)) return null;
+            return map.get("requestState") instanceof String s ? s : null;
         }
     }
 }

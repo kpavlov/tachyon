@@ -20,12 +20,7 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListResourcesResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListTasksResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListToolsResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ReadResourceResult;
-import dev.tachyonmcp.server.domain.FormInputRequest;
-import dev.tachyonmcp.server.domain.InitializeResponse;
-import dev.tachyonmcp.server.domain.InputRequest;
-import dev.tachyonmcp.server.domain.PromptMessage;
-import dev.tachyonmcp.server.domain.ResourceContents;
-import dev.tachyonmcp.server.domain.UrlInputRequest;
+import dev.tachyonmcp.server.domain.*;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
@@ -37,7 +32,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JsonGenerator;
 import tools.jackson.core.JsonParser;
@@ -46,13 +40,12 @@ import tools.jackson.databind.JsonNode;
 public final class McpResponseMapper implements ProtocolResponseMapper {
 
     private static final Object EMPTY = new EmptyResult(null, null);
-    private static final AtomicBoolean CODEC_REGISTERED = new AtomicBoolean();
 
-    public McpResponseMapper() {
-        if (CODEC_REGISTERED.compareAndSet(false, true)) {
-            CodecRegistry.registerOverride(InputRequiredPayload.class, new InputRequiredPayloadCodec());
-        }
+    static {
+        CodecRegistry.registerOverride(InputRequiredPayload.class, new InputRequiredPayloadCodec());
     }
+
+    public McpResponseMapper() {}
 
     @Override
     public boolean supports(String protocolName, String protocolVersion) {
@@ -171,14 +164,20 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
         return new GetTaskPayloadResult(null, additionalProps);
     }
 
+    @Override
+    public Object inputRequiredResult(
+            Map<String, ? extends InputRequest> inputRequests, @Nullable String requestState) {
+        return new InputRequiredPayload(inputRequests, requestState);
+    }
+
     private record InputRequiredPayload(
-            @Nullable Map<String, InputRequest> inputRequests,
+            @Nullable Map<String, ? extends InputRequest> inputRequests,
             @Nullable String requestState) {}
 
     private static final class InputRequiredPayloadCodec implements Codec<InputRequiredPayload> {
 
         @Override
-        public InputRequiredPayload decode(JsonParser parser) throws IOException {
+        public InputRequiredPayload decode(JsonParser parser) {
             throw new UnsupportedOperationException("server-side only");
         }
 
@@ -188,12 +187,9 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
             gen.writeStringProperty("resultType", "input_required");
             if (value.inputRequests() != null) {
                 gen.writeObjectPropertyStart("inputRequests");
-                var paramsCodec = CodecRegistry.codecFor(ElicitRequestParams.class);
                 for (var entry : value.inputRequests().entrySet()) {
                     gen.writeObjectPropertyStart(entry.getKey());
-                    gen.writeStringProperty("method", "elicitation/create");
-                    gen.writeName("params");
-                    paramsCodec.encode(gen, toProtocol(entry.getValue()));
+                    writeInputRequest(gen, entry.getValue());
                     gen.writeEndObject();
                 }
                 gen.writeEndObject();
@@ -204,13 +200,34 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
             gen.writeEndObject();
         }
 
-        private static ElicitRequestParams toProtocol(InputRequest req) {
-            if (req instanceof FormInputRequest f) {
-                return new ElicitRequestFormParams(null, f.message(), f.requestedSchema(), null, null);
-            } else if (req instanceof UrlInputRequest u) {
-                return new ElicitRequestURLParams("url", u.message(), u.elicitationId(), u.url(), null, null);
+        private static void writeInputRequest(JsonGenerator gen, InputRequest req) throws IOException {
+            switch (req) {
+                case RpcMethodRequest r -> {
+                    gen.writeStringProperty("method", r.method());
+                    if (r.params() != null) {
+                        gen.writeName("params");
+                        CodecRegistry.codecFor(JsonNode.class).encode(gen, r.params());
+                    } else {
+                        gen.writeObjectPropertyStart("params");
+                        gen.writeEndObject();
+                    }
+                }
+                case FormInputRequest f -> {
+                    gen.writeStringProperty("method", "elicitation/create");
+                    gen.writeName("params");
+                    var paramsCodec = CodecRegistry.codecFor(ElicitRequestParams.class);
+                    paramsCodec.encode(
+                            gen, new ElicitRequestFormParams(null, f.message(), f.requestedSchema(), null, null));
+                }
+                case UrlInputRequest u -> {
+                    gen.writeStringProperty("method", "elicitation/create");
+                    gen.writeName("params");
+                    var paramsCodec = CodecRegistry.codecFor(ElicitRequestParams.class);
+                    paramsCodec.encode(
+                            gen,
+                            new ElicitRequestURLParams("url", u.message(), u.elicitationId(), u.url(), null, null));
+                }
             }
-            throw new IllegalArgumentException("Unknown InputRequest type: " + req.getClass());
         }
     }
 }

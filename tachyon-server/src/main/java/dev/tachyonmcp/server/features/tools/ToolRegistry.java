@@ -267,7 +267,7 @@ public class ToolRegistry {
             if (params instanceof CallToolRequestParams p) {
                 var name = p.name();
                 if (name == null) return null;
-                return new CallParams(name, p.arguments(), p._meta(), null, null);
+                return new CallParams(name, p.arguments(), p._meta(), p.inputResponses(), p.requestState());
             }
             return null;
         }
