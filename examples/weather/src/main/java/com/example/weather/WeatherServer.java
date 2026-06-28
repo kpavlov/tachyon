@@ -3,7 +3,7 @@
 package com.example.weather;
 
 import dev.tachyonmcp.server.McpServerHandle;
-import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.ReadResourceRequest;
 import dev.tachyonmcp.server.domain.ResourceContents;
@@ -12,10 +12,12 @@ import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
 import dev.tachyonmcp.server.session.McpContext;
-import java.util.List;
-import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 
 public final class WeatherServer {
 
@@ -28,7 +30,7 @@ public final class WeatherServer {
     }
 
     static McpServerHandle createServer(int port) {
-        var handle = TachyonMcpServer.builder()
+        var handle = TachyonServer.builder()
                 .info(it -> it
                         .name("weather-server")
                         .title("Weather Server")
@@ -53,7 +55,7 @@ public final class WeatherServer {
                         (ctx, req) -> WeatherImageResource.read())
                 .prompt(
                         PromptDescriptor.of("rewrite-forecast", "Rewrites a weather forecast in a given style"),
-                        WeatherServer::handleRewriteForecast)
+                    WeatherServer::handleRewriteForecast)
                 .session(s -> s.stateless(true))
                 .port(port)
                 .bind();
@@ -91,7 +93,7 @@ public final class WeatherServer {
 
                 ---
                 Published by Tachyon Weather MCP — %s
-                """.formatted(java.time.LocalDate.now());
+            """.formatted(LocalDate.now());
         return TextResourceContents.of(req.uri(), "text/markdown", article);
     }
 
