@@ -4,20 +4,15 @@ package dev.tachyonmcp.server.features.prompts;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class PromptDescriptorTest {
 
-    @Test
-    void shouldRejectBlankName() {
-        assertThatThrownBy(() -> PromptDescriptor.of("", "A prompt"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("name");
-    }
-
-    @Test
-    void shouldRejectWhitespaceOnlyName() {
-        assertThatThrownBy(() -> PromptDescriptor.of("  ", "A prompt"))
+    @ParameterizedTest
+    @ValueSource(strings = {"", "  "})
+    void shouldRejectBlankName(String name) {
+        assertThatThrownBy(() -> PromptDescriptor.of(name, "A prompt"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("name");
     }

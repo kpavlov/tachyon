@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -180,6 +181,48 @@ class ResourceRegistryTest {
     }
 
     @Test
+    void shouldFireOnChangeWhenTemplateAdded() {
+        var callCount = new AtomicInteger(0);
+        registry.onChange(callCount::incrementAndGet);
+
+        registry.addTemplate(ResourceTemplateEntry.of(
+                "tmpl",
+                "test://tmpl/{id}",
+                null,
+                null,
+                (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "")));
+
+        assertThat(callCount).hasValue(1);
+    }
+
+    @Test
+    void shouldFireOnChangeWhenExistingTemplateRemoved() {
+        registry.addTemplate(ResourceTemplateEntry.of(
+                "tmpl",
+                "test://tmpl/{id}",
+                null,
+                null,
+                (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "")));
+
+        var callCount = new AtomicInteger(0);
+        registry.onChange(callCount::incrementAndGet);
+
+        registry.removeTemplate("tmpl");
+
+        assertThat(callCount).hasValue(1);
+    }
+
+    @Test
+    void shouldNotFireOnChangeWhenRemovingNonExistentTemplate() {
+        var callCount = new AtomicInteger(0);
+        registry.onChange(callCount::incrementAndGet);
+
+        registry.removeTemplate("does-not-exist");
+
+        assertThat(callCount).hasValue(0);
+    }
+
+    @Test
     void shouldReplaceHandlerAndFireOnChangeWhenAddedWithSameName() {
         registry.add(
                 ResourceDescriptor.of("doc", "resource://doc-v1", null, "text/plain"),
@@ -303,6 +346,62 @@ class ResourceRegistryTest {
                         (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "x")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("foo-bar");
+    }
+
+    @Test
+    void shouldRejectTemplateWithEmptyBraces() {
+        assertThatThrownBy(() -> ResourceTemplateEntry.of(
+                        "bad",
+                        "resource://{}",
+                        null,
+                        null,
+                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "x")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("braces");
+    }
+
+    @Test
+    void shouldRejectTemplateWithUnmatchedOpenBrace() {
+        assertThatThrownBy(() -> ResourceTemplateEntry.of(
+                        "bad",
+                        "resource://{foo",
+                        null,
+                        null,
+                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "x")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("braces");
+    }
+
+    @Test
+    void shouldRejectTemplateWithDuplicateVariableNames() {
+        assertThatThrownBy(() -> ResourceTemplateEntry.of(
+                        "bad",
+                        "resource://{id}/{id}",
+                        null,
+                        null,
+                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "x")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Duplicate");
+    }
+
+    @Test
+    void shouldPreferMoreSpecificTemplateOnOverlap() throws Exception {
+        var matched = new AtomicReference<String>();
+        registry.addTemplate(
+                ResourceTemplateEntry.of("generic", "resource://{type}/{id}", null, null, (ctx, uri, params) -> {
+                    matched.set("generic");
+                    return TextResourceContents.of(uri, "text/plain", "generic");
+                }));
+        registry.addTemplate(
+                ResourceTemplateEntry.of("specific", "resource://users/{id}", null, null, (ctx, uri, params) -> {
+                    matched.set("specific");
+                    return TextResourceContents.of(uri, "text/plain", "specific");
+                }));
+
+        handlers.get("resources/read")
+                .handle(DefaultMcpContext.noop(), Map.<String, Object>of("uri", "resource://users/42"));
+
+        assertThat(matched).hasValue("specific");
     }
 
     @Test

@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2026 Konstantin Pavlov.
- */
+/* Copyright (c) 2026 Konstantin Pavlov. */
 
 package dev.tachyonmcp.e2e;
 

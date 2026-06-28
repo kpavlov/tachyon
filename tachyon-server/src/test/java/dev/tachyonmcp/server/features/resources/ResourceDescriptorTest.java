@@ -28,4 +28,11 @@ class ResourceDescriptorTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("size");
     }
+
+    @Test
+    void shouldRejectNaNSize() {
+        assertThatThrownBy(() -> ResourceDescriptor.of("res", "resource://x", null, null, null, null, Double.NaN, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("size");
+    }
 }

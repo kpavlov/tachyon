@@ -8,6 +8,7 @@ import dev.tachyonmcp.server.McpResourceType;
 import dev.tachyonmcp.server.domain.Annotations;
 import dev.tachyonmcp.server.domain.Icon;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.regex.Pattern;
 import org.immutables.value.Value;
@@ -49,6 +50,10 @@ public interface ResourceTemplateEntry extends McpResourceType {
 
     @Value.Check
     default void checkVariableNames() {
+        var stripped = UriTemplatePatterns.VAR.matcher(uriTemplate()).replaceAll("");
+        if (stripped.contains("{") || stripped.contains("}")) {
+            throw new IllegalArgumentException("Malformed URI template (unmatched or empty braces): " + uriTemplate());
+        }
         var m = UriTemplatePatterns.VAR.matcher(uriTemplate());
         while (m.find()) {
             var name = m.group(1);
@@ -61,9 +66,14 @@ public interface ResourceTemplateEntry extends McpResourceType {
     @Value.Derived
     default List<String> paramNames() {
         var names = new ArrayList<String>();
+        var seen = new HashSet<String>();
         var m = UriTemplatePatterns.VAR.matcher(uriTemplate());
         while (m.find()) {
-            names.add(m.group(1));
+            var name = m.group(1);
+            if (!seen.add(name)) {
+                throw new IllegalArgumentException("Duplicate URI template variable name: " + name);
+            }
+            names.add(name);
         }
         return List.copyOf(names);
     }

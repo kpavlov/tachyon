@@ -37,4 +37,11 @@ class AnnotationsTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("priority");
     }
+
+    @Test
+    void shouldRejectNaNPriority() {
+        assertThatThrownBy(() -> Annotations.of(null, Double.NaN, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("priority");
+    }
 }

@@ -130,11 +130,15 @@ public class ResourceRegistry {
 
     public ResourceRegistry addTemplate(ResourceTemplateEntry template) {
         templates.put(template.name(), template);
+        fireOnChange();
         return this;
     }
 
     public ResourceRegistry removeTemplate(String name) {
-        templates.remove(name);
+        var removed = templates.remove(name);
+        if (removed != null) {
+            fireOnChange();
+        }
         return this;
     }
 
@@ -142,17 +146,24 @@ public class ResourceRegistry {
 
     @Nullable
     private TemplateMatch matchTemplate(String uri) {
-        for (var template : templates.values()) {
-            var matcher = template.compiledPattern().matcher(uri);
-            if (matcher.matches()) {
-                var params = new LinkedHashMap<String, String>();
-                for (var name : template.paramNames()) {
-                    params.put(name, matcher.group(name));
-                }
-                return new TemplateMatch(template, params);
-            }
-        }
-        return null;
+        return templates.values().stream()
+                .sorted(Comparator.comparingInt((ResourceTemplateEntry t) -> -UriTemplatePatterns.VAR
+                                .matcher(t.uriTemplate())
+                                .replaceAll("")
+                                .length())
+                        .thenComparing(ResourceTemplateEntry::name))
+                .map(template -> {
+                    var matcher = template.compiledPattern().matcher(uri);
+                    if (!matcher.matches()) return (TemplateMatch) null;
+                    var params = new LinkedHashMap<String, String>();
+                    for (var name : template.paramNames()) {
+                        params.put(name, matcher.group(name));
+                    }
+                    return new TemplateMatch(template, params);
+                })
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
     }
 
     public void registerHandlers(Map<String, McpMethodHandler> registry) {

@@ -29,4 +29,13 @@ class ResourceLinkTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("size");
     }
+
+    @Test
+    void shouldRejectNaNSize() {
+        assertThatThrownBy(() -> ResourceLink.builder("resource://x", "link")
+                        .size(Double.NaN)
+                        .build())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("size");
+    }
 }
