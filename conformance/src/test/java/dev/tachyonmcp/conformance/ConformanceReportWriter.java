@@ -126,6 +126,13 @@ class ConformanceReportWriter {
             List<CheckDetail> checks)
             throws IOException {
         logFailedScenarios(scenarios, expectedFailures, checks);
+        var xml = buildXmlReport(scenarios, expectedFailures, totalMillis, checks);
+        Files.createDirectories(outputPath.getParent());
+        Files.writeString(outputPath, xml, StandardCharsets.UTF_8);
+    }
+
+    private static String buildXmlReport(
+            List<ScenarioResult> scenarios, List<String> expectedFailures, long totalMillis, List<CheckDetail> checks) {
         var totalTests = scenarios.size();
         var totalSkipped = (int) scenarios.stream()
                 .filter(s -> s.failed() > 0 && expectedFailures.contains(s.name()))
@@ -133,7 +140,6 @@ class ConformanceReportWriter {
         var totalFailures = (int) scenarios.stream()
                 .filter(s -> s.failed() > 0 && !expectedFailures.contains(s.name()))
                 .count();
-        var now = Instant.now();
 
         var sb = new StringBuilder();
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
@@ -146,7 +152,7 @@ class ConformanceReportWriter {
                 .append("\" time=\"")
                 .append(String.format("%.3f", totalMillis / 1000.0))
                 .append("\" timestamp=\"")
-                .append(now.toString())
+                .append(Instant.now())
                 .append("\">\n");
 
         for (var scenario : scenarios) {
@@ -173,9 +179,7 @@ class ConformanceReportWriter {
         }
 
         sb.append("</testsuite>\n");
-
-        Files.createDirectories(outputPath.getParent());
-        Files.writeString(outputPath, sb.toString(), StandardCharsets.UTF_8);
+        return sb.toString();
     }
 
     private static void appendFailedChecks(StringBuilder sb, String scenarioName, List<CheckDetail> checks) {

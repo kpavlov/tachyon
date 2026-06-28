@@ -19,12 +19,18 @@ class ConformanceRunner {
 
     private final String conformanceVersion;
 
-    public ConformanceRunner(String serverUrl, String conformanceVersion) {
+    private final String outputDir;
+
+    private final String baselineFile;
+
+    ConformanceRunner(String serverUrl, String conformanceVersion, String outputDir, String baselineFile) {
         this.serverUrl = serverUrl;
         this.conformanceVersion = conformanceVersion;
+        this.outputDir = outputDir;
+        this.baselineFile = baselineFile;
     }
 
-    public static boolean isNpxAvailable() {
+    static boolean isNpxAvailable() {
         try {
             var process =
                     new ProcessBuilder("which", "npx").redirectErrorStream(true).start();
@@ -34,15 +40,53 @@ class ConformanceRunner {
         }
     }
 
-    public ConformanceResult runSuite(boolean verbose, String suiteName) throws IOException, InterruptedException {
-        return run(verbose, "--suite", suiteName);
+    List<String> listScenarios(String protocolVersion) throws IOException, InterruptedException {
+        var args = List.of("npx", "--yes", CONFORMANCE_PACKAGE + "@" + conformanceVersion, "list");
+
+        var process = new ProcessBuilder(args).redirectErrorStream(true).start();
+        var outputLines = new ArrayList<String>();
+        try (var reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                outputLines.add(line);
+            }
+        }
+        process.waitFor(30, TimeUnit.SECONDS);
+
+        var serverLines = outputLines.stream()
+                .dropWhile(l -> !l.startsWith("Server scenarios"))
+                .skip(1)
+                .takeWhile(l -> !l.startsWith("Client scenarios"))
+                .filter(l -> l.startsWith("  - "))
+                .toList();
+
+        var scenarios = new ArrayList<String>();
+        for (var line : serverLines) {
+            var bracket = line.indexOf('[');
+            var name = bracket > 0
+                    ? line.substring(4, bracket).strip()
+                    : line.substring(4).strip();
+            if (bracket > 0) {
+                var versionsStr = line.substring(bracket + 1, line.indexOf(']', bracket));
+                var versions = List.of(versionsStr.split(",\\s*"));
+                if (!versions.contains(protocolVersion)) {
+                    continue;
+                }
+            }
+            scenarios.add(name);
+        }
+        return scenarios;
     }
 
-    public ConformanceResult runScenario(boolean verbose, String scenario) throws IOException, InterruptedException {
-        return run(verbose, "--scenario", scenario);
+    ConformanceResult runSuite(String suiteName) throws IOException, InterruptedException {
+        return run("--suite", suiteName);
     }
 
-    private ConformanceResult run(boolean verbose, String... extraArgs) throws IOException, InterruptedException {
+    ConformanceResult runScenario(String scenario) throws IOException, InterruptedException {
+        return run("--scenario", scenario);
+    }
+
+    private ConformanceResult run(String... extraArgs) throws IOException, InterruptedException {
         var args = new ArrayList<>(List.of(
                 "npx",
                 "--yes",
@@ -50,12 +94,10 @@ class ConformanceRunner {
                 "server",
                 "--url",
                 serverUrl,
-                //            "--verbose",
-                //            String.valueOf(verbose),
                 "--expected-failures",
-                "./conformance-baseline.yml",
+                baselineFile,
                 "--output-dir",
-                "target/failsafe-reports/conformance-results"));
+                outputDir));
         args.addAll(List.of(extraArgs));
 
         var process = new ProcessBuilder(args).redirectErrorStream(true).start();
