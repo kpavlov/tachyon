@@ -39,6 +39,11 @@ public interface PromptDescriptor extends McpResourceType {
     @Nullable
     String extensionId();
 
+    @Value.Check
+    default void check() {
+        if (name().isBlank()) throw new IllegalArgumentException("name must not be blank");
+    }
+
     static DefaultPromptDescriptor.Builder builder() {
         return DefaultPromptDescriptor.builder();
     }

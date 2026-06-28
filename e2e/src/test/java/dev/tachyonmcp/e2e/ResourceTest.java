@@ -21,7 +21,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-class ResourceCapabilitiesTest extends AbstractMcpE2eTest {
+class ResourceTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldListRegisteredResources() throws Exception {
@@ -71,6 +71,41 @@ class ResourceCapabilitiesTest extends AbstractMcpE2eTest {
             assertThatJson(response.body())
                     .inPath("$.result.contents[0].mimeType")
                     .isEqualTo("text/plain");
+        }
+    }
+
+    @Test
+    void shouldReadCorrectResourceWhenMultipleRegistered() throws Exception {
+        startEmptyServer();
+        server.resources()
+                .add(
+                        ResourceDescriptor.of("alpha", "resource://alpha", "Alpha", "text/plain"),
+                        (ctx, req) -> TextResourceContents.of("resource://alpha", "text/plain", "content-alpha"))
+                .add(
+                        ResourceDescriptor.of("beta", "resource://beta", "Beta", "text/plain"),
+                        (ctx, req) -> TextResourceContents.of("resource://beta", "text/plain", "content-beta"))
+                .add(
+                        ResourceDescriptor.of("gamma", "resource://gamma", "Gamma", "text/plain"),
+                        (ctx, req) -> TextResourceContents.of("resource://gamma", "text/plain", "content-gamma"));
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+            var response = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://beta"}}
+                """);
+
+            // language=JSON
+            assertThatJson(response.body()).inPath("$.result").isEqualTo("""
+                {
+                  "contents": [
+                    {
+                      "uri": "resource://beta",
+                      "mimeType": "text/plain",
+                      "text": "content-beta"
+                    }
+                  ]
+                }
+                """);
         }
     }
 

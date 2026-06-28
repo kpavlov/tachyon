@@ -43,6 +43,13 @@ public interface ResourceDescriptor extends McpResourceType {
     @Nullable
     String extensionId();
 
+    @Value.Check
+    default void check() {
+        if (name().isBlank()) throw new IllegalArgumentException("name must not be blank");
+        if (uri().isBlank()) throw new IllegalArgumentException("uri must not be blank");
+        if (size() != null && size() < 0) throw new IllegalArgumentException("size must be >= 0, got: " + size());
+    }
+
     static DefaultResourceDescriptor.Builder builder() {
         return DefaultResourceDescriptor.builder();
     }

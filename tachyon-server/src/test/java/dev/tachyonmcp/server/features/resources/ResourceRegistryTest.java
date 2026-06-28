@@ -5,6 +5,7 @@
 package dev.tachyonmcp.server.features.resources;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.EmptyResult;
@@ -269,6 +270,42 @@ class ResourceRegistryTest {
     }
 
     @Test
+    void shouldRejectTemplateWithBlankName() {
+        assertThatThrownBy(() -> ResourceTemplateEntry.of(
+                        "",
+                        "resource://{id}",
+                        null,
+                        null,
+                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "x")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("name");
+    }
+
+    @Test
+    void shouldRejectTemplateWithBlankUriTemplate() {
+        assertThatThrownBy(() -> ResourceTemplateEntry.of(
+                        "tmpl",
+                        "  ",
+                        null,
+                        null,
+                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "x")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("uriTemplate");
+    }
+
+    @Test
+    void shouldRejectTemplateWithInvalidVariableName() {
+        assertThatThrownBy(() -> ResourceTemplateEntry.of(
+                        "bad",
+                        "resource://{foo-bar}",
+                        null,
+                        null,
+                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "x")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("foo-bar");
+    }
+
+    @Test
     void shouldMapAllResourceTemplateFieldsToProtocolModel() throws Exception {
         var annotations = Annotations.of(null, 0.5, null);
         var icon = Icon.of("https://example.com/tmpl.png", null, null, null);
@@ -280,7 +317,7 @@ class ResourceRegistryTest {
                 "Template Title",
                 annotations,
                 List.of(icon),
-                id -> TextResourceContents.of("test://tmpl/" + id, "text/plain", "content-" + id));
+                (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "content-" + params.get("id")));
         registry.addTemplate(entry);
 
         var result = (ListResourceTemplatesResult)

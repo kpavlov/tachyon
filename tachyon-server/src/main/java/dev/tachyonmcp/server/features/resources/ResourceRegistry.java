@@ -128,24 +128,28 @@ public class ResourceRegistry {
         return byUri.get(uri);
     }
 
-    public void addTemplate(ResourceTemplateEntry template) {
+    public ResourceRegistry addTemplate(ResourceTemplateEntry template) {
         templates.put(template.name(), template);
+        return this;
     }
 
-    public void removeTemplate(String name) {
+    public ResourceRegistry removeTemplate(String name) {
         templates.remove(name);
+        return this;
     }
+
+    private record TemplateMatch(ResourceTemplateEntry entry, Map<String, String> params) {}
 
     @Nullable
-    ResourceTemplateEntry resolveTemplate(String uri) {
+    private TemplateMatch matchTemplate(String uri) {
         for (var template : templates.values()) {
-            var pattern = template.uriTemplate()
-                    .replace("{", "\\{")
-                    .replace("}", "\\}")
-                    .replace("\\{id\\}", "(.+)");
-            var matcher = java.util.regex.Pattern.compile("^" + pattern + "$").matcher(uri);
+            var matcher = template.compiledPattern().matcher(uri);
             if (matcher.matches()) {
-                return template;
+                var params = new LinkedHashMap<String, String>();
+                for (var name : template.paramNames()) {
+                    params.put(name, matcher.group(name));
+                }
+                return new TemplateMatch(template, params);
             }
         }
         return null;
@@ -234,15 +238,10 @@ public class ResourceRegistry {
                 }
             }
             if (entry == null) {
-                var template = registry.resolveTemplate(uri);
-                if (template != null) {
-                    var re = java.util.regex.Pattern.compile(
-                                    template.uriTemplate().replace("{id}", "(.+)"))
-                            .matcher(uri);
-                    if (re.matches()) {
-                        var content = template.resolver().apply(re.group(1));
-                        return context.responseMapper().readResourceResult(List.of(content));
-                    }
+                var match = registry.matchTemplate(uri);
+                if (match != null) {
+                    var content = match.entry().handler().read(context, uri, match.params());
+                    return context.responseMapper().readResourceResult(List.of(content));
                 }
                 return JsonRpcErrors.resourceNotFound("Resource not found");
             }

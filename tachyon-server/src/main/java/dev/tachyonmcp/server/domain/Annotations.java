@@ -29,6 +29,13 @@ public interface Annotations {
     @Nullable
     String lastModified();
 
+    @Value.Check
+    default void checkPriority() {
+        if (priority() != null && (priority() < 0.0 || priority() > 1.0)) {
+            throw new IllegalArgumentException("priority must be in [0.0, 1.0], got: " + priority());
+        }
+    }
+
     static DefaultAnnotations.Builder builder() {
         return DefaultAnnotations.builder();
     }

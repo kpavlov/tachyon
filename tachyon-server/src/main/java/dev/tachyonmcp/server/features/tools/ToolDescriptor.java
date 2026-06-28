@@ -45,6 +45,11 @@ public interface ToolDescriptor {
     @Nullable
     String extensionId();
 
+    @Value.Check
+    default void check() {
+        if (name().isBlank()) throw new IllegalArgumentException("name must not be blank");
+    }
+
     static DefaultToolDescriptor.Builder builder() {
         return DefaultToolDescriptor.builder();
     }
