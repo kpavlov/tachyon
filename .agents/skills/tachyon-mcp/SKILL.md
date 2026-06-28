@@ -1,0 +1,190 @@
+---
+name: tachyon-mcp
+description: Build MCP (Model Context Protocol) servers using the [Tachyon MCP](https://github.com/kpavlov/tachyon).
+compatibility: Designed for Claude Code on Java 21 Maven projects
+version: 1.0.0-beta.2
+metadata:
+    author: Konstantin Pavlov
+---
+# Tachyon MCP Server Skill️
+
+Make **Java 21+** MCP server. Tachyon lib. Transport = Streamable HTTP (Netty).
+
+## Core
+
+- `TachyonServer.builder()` → `ServerBuilder`. Start here.
+- `.bind()` → build `McpServer` + Netty transport → `McpServerHandle` (`Closeable`).
+- `.build()` → `McpServer` only, no transport.
+- `McpServerHandle`: `.server()`, `.port()`.
+- `McpContext` → session + notifications + server ctx. Every handler gets it.
+
+## Quickstart
+
+```java
+var handle = TachyonServer.builder()
+    .name("my-server")
+    .version("1.0")
+    .port(8080)
+    .bind();
+// handle.port() → real bound port (matters when port=0)
+```
+
+## `ServerBuilder` methods
+
+| Method | What |
+|---|---|
+| `.info(cfg)` | name, version, description, title, websiteUrl, instructions |
+| `.capabilities(cfg)` | tools/resources/prompts/tasks/completions/logging |
+| `.session(cfg)` | stateless, sessionTtl, SessionLogRouter, SessionStore |
+| `.network(cfg)` | host, port, endpointPath, timeouts, CORS, maxContentLength |
+| `.name(s)` `.port(p)` | shorthands |
+| `.tool(handler)` | Sync/Async/ToolHandler |
+| `.resource(descriptor[, handler])` | static resource (no handler = external URI) |
+| `.prompt(descriptor, handler\|messages)` | prompt |
+| `.extension(ext)` | McpExtension plugin |
+| `.jsonSchemaValidator(v)` | custom validator (default Networknt) |
+| `.pipelineCustomizer(c)` | raw Netty pipeline escape hatch |
+
+## Tools 🔧
+
+`SyncToolHandler<R extends ToolResult>` (sync, preferred) or `AsyncToolHandler<R>`.
+
+> ⚠️ `args` map is `@Nullable` (null when no input schema / no args). Guard first: `if (args == null) return ToolResult.error("missing arguments");`
+
+Class — extend `AbstractSyncToolHandler`:
+
+```java
+class MyTool extends AbstractSyncToolHandler<ToolResult> {
+    public MyTool() {
+        super(ToolDescriptor.builder("my-tool")
+            .description("Does something useful")
+            .inputSchema(jsonSchema)
+            .build());
+    }
+    @Override
+    public ToolResult handle(McpContext ctx, Map<String, JsonNode> args) throws Exception {
+        return ToolResult.text("result");
+    }
+}
+```
+
+Lambda — `SyncToolHandler.of(name, description, inputSchema, (ctx, args) -> ...)`:
+
+```java
+.tool(SyncToolHandler.of("hello", "Say hello", null,
+    (ctx, args) -> ToolResult.text("Hello, world!")))
+```
+
+`ToolResult`: `.text(t)` · `.error(msg)` (isError=true) · `.of(content...)` · `.empty()`
+
+Full: `resources/java/ToolHandlerExample.java`
+
+## Resources
+
+Static (fixed URI):
+
+```java
+.resource(
+    ResourceDescriptor.of("name", "myapp://data/item", "Description", "application/json"),
+    (ctx, req) -> TextResourceContents.of(req.uri(), "application/json", jsonData))
+```
+
+Template (`{param}`, add after bind):
+
+```java
+handle.server().resources()
+    .addTemplate(ResourceTemplateEntry.of(
+        "template-name", "myapp://data/{id}", "Description", "application/json",
+        (ctx, uri, params) -> {
+            var id = params.get("id");
+            return TextResourceContents.of(uri, "application/json", data);
+        }));
+```
+
+Full: `resources/java/ResourceHandlerExample.java`
+
+## Prompts
+
+```java
+.prompt(
+    PromptDescriptor.of("rewrite-forecast", "Rewrites a forecast in a given style"),
+    args -> List.of(PromptMessage.user("Rewrite this in pirate style.")))
+```
+
+Full: `resources/java/PromptHandlerExample.java`
+
+## Config️
+
+### Capabilities `capabilities(cfg -> ...)`
+Default `AUTO` → advertised only when registered. Force with `Mode.ON` / `Mode.OFF`.
+
+| Method | Effect |
+|---|---|
+| `.tools()` / `.tools(listChanged)` / `.noTools()` | tools |
+| `.resources()` / `.resources(subscribe, listChanged)` / `.noResources()` | resources |
+| `.prompts()` / `.prompts(listChanged)` / `.noPrompts()` | prompts |
+| `.tasks()` / `.tasks(list, cancel, requests)` | tasks |
+| `.completions()` | arg autocomplete |
+| `.logging()` | logging notifications |
+
+### Network `network(cfg -> ...)`
+| Method | Default |
+|---|---|
+| `.host(s)` | `127.0.0.1` |
+| `.port(p)` | **required** before `bind()` |
+| `.endpointPath(p)` | `/mcp` |
+| `.readerIdleTimeout(d)` / `.writerIdleTimeout(d)` | 60s / 5min |
+| `.maxContentLength(b)` | 1MB |
+| `.allowedOrigins(...)` | none (all denied) |
+| `.allowNullOrigin(b)` / `.allowPrivateNetworks(b)` | false |
+| `.allowedHeaders(...)` | none |
+
+### Session `session(cfg -> ...)`
+| Method | Default |
+|---|---|
+| `.stateless(b)` | false |
+| `.sessionTtl(d)` | 30s |
+| `.sessionLogRouter(r)` / `.sessionStore(s)` | null (in-memory) |
+
+## JSON Schema
+
+> ⚠️ **Jackson 3** — `tools.jackson:jackson-databind:3.x`, NOT Jackson 2. Import `tools.jackson.databind.{ObjectMapper,JsonNode}` (**not** `com.fasterxml.jackson.*`). Use `JsonNode.asString()` (**not** `asText()`).
+
+```java
+private static final JsonNode INPUT_SCHEMA = MAPPER.readTree("""
+    { "type": "object",
+      "properties": { "city": { "type": "string", "description": "City name" } },
+      "required": ["city"] }
+    """);
+```
+
+→ `ToolDescriptor.builder("name").inputSchema(INPUT_SCHEMA).build()`
+
+## Extensions
+
+```java
+public interface McpExtension extends Extension<McpContext> {
+    default JsonNode serverSettings() { return JsonNodeFactory.instance.objectNode(); }
+    default Set<String> methods() { return Set.of(); }
+    default void bootstrap(McpServer server) {}
+    default void onConnectionInit(McpContext context, Map<String, JsonNode> clientSettings) {}
+}
+```
+
+Register: `.extension(myExtension)`
+
+## Tests
+
+- Unit: JUnit 6 + AssertJ, `@TempDir`, port `0` = random.
+- E2E: `io.modelcontextprotocol.sdk:mcp-core:2.0.0-RC1` client.
+- `mvn test` (unit+e2e) · `mvn verify` (+conformance) · `mvn spotless:apply`.
+
+## Resource files
+
+Load on demand (next to this skill):
+
+- `resources/java/ServerBasic.java` — full server, all features
+- `resources/java/ToolHandlerExample.java` — `ToolDescriptor`, `SyncToolHandler.of()`, `AbstractSyncToolHandler`
+- `resources/java/ResourceHandlerExample.java` — `ResourceDescriptor`, `ResourceTemplateEntry`, `ResourceHandler`
+- `resources/java/PromptHandlerExample.java` — `PromptDescriptor`, `PromptArgument`, `PromptHandler`
+- `resources/java/ConfigReference.java` — `CapabilitiesConfig.Builder`, `NetworkConfig.Builder`, `SessionConfig.Builder`
