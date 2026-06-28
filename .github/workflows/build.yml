@@ -45,7 +45,7 @@ jobs:
 
       - name: Publish test results
         uses: mikepenz/action-junit-report@v6
-        if: always()
+        if: ${{ !cancelled() }}
         with:
           report_paths: '**/target/*-reports/TEST-*.xml'
           check_name: Test Report (JDK ${{ matrix.java }})
@@ -59,7 +59,7 @@ jobs:
 
       - name: Publish coverage report
         uses: madrapps/jacoco-report@v1.8.0
-        if: always()
+        if: ${{ !cancelled() }}
         with:
           paths: 'reports/target/site/jacoco-aggregate/jacoco.xml'
           title: Coverage Report (JDK ${{ matrix.java }})
@@ -85,12 +85,13 @@ jobs:
 
       - name: Upload reports as artifacts
         uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() }}
+        if: always()
         with:
           name: reports-jdk-${{ matrix.java }}
           path: |
             **/target/*-reports/**
             reports/target/site/jacoco-aggregate/
+            **/spotbugsXml.xml
 
   examples:
     strategy:
@@ -123,7 +124,7 @@ jobs:
 
       - name: Publish test results
         uses: mikepenz/action-junit-report@v6
-        if: always()
+        if: ${{ !cancelled() }}
         with:
           report_paths: 'examples/${{ matrix.example }}/target/*-reports/TEST-*.xml'
           check_name: 'Test Report: ${{ matrix.example }} (JDK ${{ matrix.java }})'
