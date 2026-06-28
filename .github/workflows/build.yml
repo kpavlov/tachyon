@@ -93,7 +93,7 @@ jobs:
             reports/target/site/jacoco-aggregate/
             **/spotbugsXml.xml
 
-  examples:
+  examples-snapshot:
     strategy:
       fail-fast: false
       matrix:
