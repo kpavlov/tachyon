@@ -1155,6 +1155,14 @@ export interface CallToolRequestParams extends TaskAugmentedRequestParams {
      * Arguments to use for the tool call.
      */
     arguments?: { [key: string]: unknown };
+    /**
+     * Client responses to server-initiated requests from a previous InputRequiredResult.
+     */
+    inputResponses?: { [key: string]: unknown };
+    /**
+     * Opaque state token passed back from a previous InputRequiredResult.
+     */
+    requestState?: string;
 }
 
 /**

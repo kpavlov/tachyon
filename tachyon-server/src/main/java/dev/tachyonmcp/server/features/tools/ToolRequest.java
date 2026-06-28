@@ -32,17 +32,27 @@ public interface ToolRequest extends HasMeta {
     @Nullable
     Cancellation cancellation();
 
+    @Nullable
+    Map<String, JsonNode> inputResponses();
+
+    @Nullable
+    String requestState();
+
+    static DefaultToolRequest.Builder builder() {
+        return DefaultToolRequest.builder();
+    }
+
     static ToolRequest of(
             String name,
             @Nullable Map<String, JsonNode> arguments,
             @Nullable Map<String, JsonNode> meta,
             @Nullable Object progressToken,
             @Nullable Cancellation cancellation) {
-        return DefaultToolRequest.of(name, arguments, meta, progressToken, cancellation);
+        return DefaultToolRequest.of(name, arguments, meta, progressToken, cancellation, null, null);
     }
 
     static ToolRequest of(
             String name, @Nullable Map<String, JsonNode> arguments, @Nullable Map<String, JsonNode> meta) {
-        return DefaultToolRequest.of(name, arguments, meta, null, null);
+        return DefaultToolRequest.of(name, arguments, meta, null, null, null, null);
     }
 }
