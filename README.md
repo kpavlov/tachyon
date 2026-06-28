@@ -39,7 +39,7 @@ void main() {
                 return ToolResult.text("☀️ 22°C");
             }
         })
-        .stateless(true)
+        .session(cfg -> cfg.stateless(true))
         .port(8080)
         .bind();
 }
@@ -92,7 +92,7 @@ void main() {
 ### Tasks
 
 - `tasks/list`, `tasks/get`, `tasks/cancel`, `tasks/result`
-- State machine enforcement — SUBMITTED → WORKING → COMPLETED/FAILED/CANCELLED
+- State machine enforcement — SUBMITTED → WORKING → INPUT_REQUIRED → COMPLETED/FAILED/CANCELLED, plus REJECTED/AUTH_REQUIRED
 - `notifications/tasks/status` broadcast on every transition
 - Task Janitor for stale tasks
 - `execution.taskSupport` per tool (forbidden/optional/required)
@@ -142,7 +142,7 @@ void main() {
 <dependency>
     <groupId>dev.tachyonmcp</groupId>
     <artifactId>tachyon-server</artifactId>
-    <version>1.0.0-alpha.2</version>
+    <version>1.0.0-beta.1</version>
 </dependency>
 ```
 
@@ -150,7 +150,7 @@ void main() {
 ```bash
 git clone https://github.com/kpavlov/tachyon.git
 cd tachyon
-mvn install -pl tachyon-mcp-server -DskipTests
+mvn install -pl tachyon-server -DskipTests
 ```
 
 ## Quick Start
@@ -172,18 +172,18 @@ void main() {
 
     TachyonServer.builder()
         .name("weather-mcp")
-        .tool(new AbstractSyncToolHandler(
+        .tool(new AbstractSyncToolHandler<ToolResult>(
             ToolDescriptor.builder("get_forecast")
                 .description("Get weather forecast")
                 .inputSchema(schema)
                 .build()) {
             @Override
-            public Object handle(McpContext ctx, Object args) {
+            public ToolResult handle(McpContext ctx, @Nullable Map<String, JsonNode> args) {
                 return ToolResult.text("☀️ 22°C");
             }
         })
-        .stateless(true) // start in stateless node (no sessions)
-        .port(8080) // bind to 1270.0.1:8080
+        .session(cfg -> cfg.stateless(true)) // start in stateless mode (no sessions)
+        .port(8080) // bind to 127.0.0.1:8080
         .bind();
 }
 ```
@@ -237,7 +237,7 @@ Not yet. The current pipeline targets HTTP/1.1; HTTP/2 upgrade is a pipeline con
 Extend `AbstractSyncToolHandler` or `AbstractAsyncToolHandler`, passing a `ToolDescriptor`:
 
 ```java
-class MyTool extends AbstractSyncToolHandler {
+class MyTool extends AbstractSyncToolHandler<ToolResult> {
     MyTool() {
         super(ToolDescriptor.builder("my_tool")
                 .description("Does something useful")
@@ -246,8 +246,8 @@ class MyTool extends AbstractSyncToolHandler {
     }
 
     @Override
-    public Object handle(McpContext ctx, Object args) throws Exception {
-        return CallToolResult.ofText("done");
+    public ToolResult handle(McpContext ctx, @Nullable Map<String, JsonNode> args) throws Exception {
+        return ToolResult.text("done");
     }
 
     private static JsonNode buildSchema() {
@@ -261,7 +261,7 @@ class MyTool extends AbstractSyncToolHandler {
 ### How do I implement a custom resource?
 ```java
 server.resources().add(
-    ResourceDescriptor.of("custom://data"),
+    ResourceDescriptor.of("custom-data", "custom://data", null, null),
     (ctx, req) -> new TextResourceContents("content", req.uri(), "text/plain", null));
 ```
 
