@@ -13,7 +13,7 @@ test:
 
 package:
 	@echo "📦 Packaging and installing tachyon-server to local repository..."
-	@rm -rf target/local-repo
+	@rm -rf ~/.m2/repository/dev/tachyonmcp
 	@mvn install -pl tachyon-server -am -DskipTests -q
 
 example: package

@@ -17,7 +17,7 @@
         <maven.compiler.release>21</maven.compiler.release>
         <jackson.version>3.2.0</jackson.version>
         <junit.version>6.1.0</junit.version>
-        <tachyon-server.version>1.0.0-alpha3</tachyon-server.version>
+        <tachyon-server.version>1.0.0-beta.1</tachyon-server.version>
 <!--        <tachyon-server.version>1.0.0-SNAPSHOT</tachyon-server.version>-->
         <assertj.version>3.27.7</assertj.version>
     </properties>
@@ -90,14 +90,6 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-    <!-- Resolves the plugin from the parent project's local staging repo (populated by make ci / make build). -->
-    <repositories>
-        <repository>
-            <id>project-local</id>
-            <url>file://${project.basedir}/../../target/local-repo</url>
-        </repository>
-    </repositories>
 
     <build>
         <plugins>
