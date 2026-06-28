@@ -4,10 +4,16 @@ package com.example.weather;
 
 import dev.tachyonmcp.server.McpServerHandle;
 import dev.tachyonmcp.server.TachyonMcpServer;
+import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.ReadResourceRequest;
+import dev.tachyonmcp.server.domain.ResourceContents;
 import dev.tachyonmcp.server.domain.TextResourceContents;
+import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
+import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
 import dev.tachyonmcp.server.session.McpContext;
+import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,53 +28,90 @@ public final class WeatherServer {
     }
 
     static McpServerHandle createServer(int port) {
-        return TachyonMcpServer.builder()
-            .info(it -> it
-                .name("weather-server")
-                .title("Weather Server")
-                .description("Weather MCP server")
-                .websiteUrl("http://localhost:8080/mcp")
-                .instructions("Test instructions")
-                .version("1.0")
-            )
-            .tool(new GetWeatherTool())
-            .resource(
-                ResourceDescriptor.of(
-                    "prediction-article",
-                    "weather://prediction/article",
-                    "Weather prediction article",
-                    "text/markdown"),
-                WeatherServer::handleArticleResource)
-            .session(s->s.stateless(true))
-            .port(port)
-            .bind();
+        var handle = TachyonMcpServer.builder()
+                .info(it -> it
+                        .name("weather-server")
+                        .title("Weather Server")
+                        .description("Weather MCP server")
+                        .websiteUrl("http://localhost:8080/mcp")
+                        .instructions("Test instructions")
+                        .version("1.0"))
+                .tool(new GetWeatherTool())
+                .resource(
+                        ResourceDescriptor.of(
+                                "prediction-article",
+                                "weather://prediction/article",
+                                "Weather prediction article",
+                                "text/markdown"),
+                        WeatherServer::handleArticleResource)
+                .resource(
+                        ResourceDescriptor.of(
+                                "weather-image",
+                                "weather://current/image",
+                                "Current weather icon",
+                                "image/png"),
+                        (ctx, req) -> WeatherImageResource.read())
+                .prompt(
+                        PromptDescriptor.of("rewrite-forecast", "Rewrites a weather forecast in a given style"),
+                        WeatherServer::handleRewriteForecast)
+                .session(s -> s.stateless(true))
+                .port(port)
+                .bind();
+
+        handle.server().resources()
+                .addTemplate(ResourceTemplateEntry.of(
+                        "forecast",
+                        "weather://forecast/{city}",
+                        "Weather forecast for a city",
+                        "application/json",
+                        WeatherServer::handleForecastTemplate));
+
+        return handle;
     }
 
     private WeatherServer() {
     }
 
     private static TextResourceContents handleArticleResource(McpContext ctx, ReadResourceRequest req) {
-        // language=markdown
         var article = """
-            # Weather Prediction
+                # Weather Prediction
 
-            Weather prediction uses physics-based models and statistical methods to forecast
-            atmospheric conditions. Modern forecasting combines:
+                Weather prediction uses physics-based models and statistical methods to forecast
+                atmospheric conditions. Modern forecasting combines:
 
-            - **Numerical Weather Prediction (NWP)** — solving fluid dynamics equations
-              on a 3-D grid of the atmosphere
-            - **Ensemble forecasting** — running multiple model perturbations to estimate
-              confidence intervals
-            - **Machine learning** — neural networks that learn from historical patterns
-              and improve short-term nowcasting
+                - **Numerical Weather Prediction (NWP)** — solving fluid dynamics equations
+                  on a 3-D grid of the atmosphere
+                - **Ensemble forecasting** — running multiple model perturbations to estimate
+                  confidence intervals
+                - **Machine learning** — neural networks that learn from historical patterns
+                  and improve short-term nowcasting
 
-            The global observing system includes weather stations, radiosondes, aircraft
-            reports, ocean buoys, and over 30 polar-orbiting and geostationary satellites.
+                The global observing system includes weather stations, radiosondes, aircraft
+                reports, ocean buoys, and over 30 polar-orbiting and geostationary satellites.
 
-            ---
-            Published by Tachyon Weather MCP — %s
-            """.formatted(java.time.LocalDate.now());
+                ---
+                Published by Tachyon Weather MCP — %s
+                """.formatted(java.time.LocalDate.now());
         return TextResourceContents.of(req.uri(), "text/markdown", article);
+    }
+
+    private static ResourceContents handleForecastTemplate(McpContext ctx, String uri, Map<String, String> params) {
+        var city = params.get("city");
+        var forecast = """
+                {
+                  "city": "%s",
+                  "condition": "Partly cloudy",
+                  "temperature": 22,
+                  "unit": "celsius",
+                  "humidity": 55,
+                  "wind": 15
+                }
+                """.formatted(city);
+        return TextResourceContents.of(uri, "application/json", forecast);
+    }
+
+    private static List<PromptMessage> handleRewriteForecast(String arguments) {
+        return List.of(PromptMessage.user("Rewrite this forecast in a pirate style."));
     }
 
 }
