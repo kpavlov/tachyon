@@ -217,7 +217,14 @@ public class ToolRegistry {
             sendLoggingIfEnabled(context, parsed.name(), "started");
 
             var progressToken = parseProgressToken(parsed.meta());
-            var request = ToolRequest.of(parsed.name(), parsed.args(), parsed.meta(), progressToken, null);
+            var request = ToolRequest.builder()
+                    .name(parsed.name())
+                    .arguments(parsed.args())
+                    .meta(parsed.meta())
+                    .progressToken(progressToken)
+                    .inputResponses(parsed.inputResponses())
+                    .requestState(parsed.requestState())
+                    .build();
 
             try {
                 var toolResult =
@@ -243,22 +250,37 @@ public class ToolRegistry {
         private record CallParams(
                 String name,
                 @Nullable Map<String, JsonNode> args,
-                @Nullable Map<String, JsonNode> meta) {}
+                @Nullable Map<String, JsonNode> meta,
+                @Nullable Map<String, JsonNode> inputResponses,
+                @Nullable String requestState) {}
 
         private @Nullable CallParams parseCallParams(Object params) {
-            if (params instanceof CallToolRequestParams p) {
-                var name = p.name();
-                if (name == null) return null;
-                return new CallParams(name, p.arguments(), p._meta());
-            }
             if (params instanceof Map<?, ?> map) {
                 var json = JsonRpcCodec.writeValueAsString(map);
                 var typed = ProtocolCodecUtil.decodeWithCodec(json, CallToolRequestParams.class);
                 var name = typed.name();
                 if (name == null) return null;
-                return new CallParams(name, typed.arguments(), typed._meta());
+                var inputResponses = extractInputResponsesFromMap(map.get("inputResponses"));
+                var requestState = map.get("requestState") instanceof String s ? s : null;
+                return new CallParams(name, typed.arguments(), typed._meta(), inputResponses, requestState);
+            }
+            if (params instanceof CallToolRequestParams p) {
+                var name = p.name();
+                if (name == null) return null;
+                return new CallParams(name, p.arguments(), p._meta(), null, null);
             }
             return null;
+        }
+
+        private static @Nullable Map<String, JsonNode> extractInputResponsesFromMap(@Nullable Object raw) {
+            if (!(raw instanceof Map<?, ?> rawMap) || rawMap.isEmpty()) return null;
+            var result = new java.util.LinkedHashMap<String, JsonNode>();
+            for (var entry : rawMap.entrySet()) {
+                if (entry.getKey() instanceof String k) {
+                    result.put(k, ProtocolCodecUtil.parseJsonNode(JsonRpcCodec.writeValueAsString(entry.getValue())));
+                }
+            }
+            return result.isEmpty() ? null : result;
         }
 
         private @Nullable String validateInput(@Nullable JsonNode schema, @Nullable Map<String, JsonNode> args) {

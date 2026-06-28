@@ -7,6 +7,9 @@ package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CompleteResult;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ElicitRequestFormParams;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ElicitRequestParams;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ElicitRequestURLParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.EmptyResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetPromptResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetTaskPayloadResult;
@@ -17,26 +20,39 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListResourcesResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListTasksResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListToolsResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ReadResourceResult;
+import dev.tachyonmcp.server.domain.FormInputRequest;
 import dev.tachyonmcp.server.domain.InitializeResponse;
+import dev.tachyonmcp.server.domain.InputRequest;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.ResourceContents;
+import dev.tachyonmcp.server.domain.UrlInputRequest;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
 import dev.tachyonmcp.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.jspecify.annotations.Nullable;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.core.JsonParser;
 import tools.jackson.databind.JsonNode;
 
 public final class McpResponseMapper implements ProtocolResponseMapper {
 
     private static final Object EMPTY = new EmptyResult(null, null);
+    private static final AtomicBoolean CODEC_REGISTERED = new AtomicBoolean();
 
-    public McpResponseMapper() {}
+    public McpResponseMapper() {
+        if (CODEC_REGISTERED.compareAndSet(false, true)) {
+            CodecRegistry.registerOverride(InputRequiredPayload.class, new InputRequiredPayloadCodec());
+        }
+    }
 
     @Override
     public boolean supports(String protocolName, String protocolVersion) {
@@ -80,6 +96,9 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
 
     @Override
     public Object callToolResult(ToolResult result) {
+        if (result.inputRequests() != null) {
+            return new InputRequiredPayload(result.inputRequests(), result.requestState());
+        }
         var protocolContent = result.content().stream()
                 .map(McpToolMapper::toProtocolContentBlock)
                 .toList();
@@ -150,5 +169,48 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
         var additionalProps = new LinkedHashMap<String, JsonNode>();
         additionalProps.put("result", result);
         return new GetTaskPayloadResult(null, additionalProps);
+    }
+
+    private record InputRequiredPayload(
+            @Nullable Map<String, InputRequest> inputRequests,
+            @Nullable String requestState) {}
+
+    private static final class InputRequiredPayloadCodec implements Codec<InputRequiredPayload> {
+
+        @Override
+        public InputRequiredPayload decode(JsonParser parser) throws IOException {
+            throw new UnsupportedOperationException("server-side only");
+        }
+
+        @Override
+        public void encode(JsonGenerator gen, InputRequiredPayload value) throws IOException {
+            gen.writeStartObject();
+            gen.writeStringProperty("resultType", "input_required");
+            if (value.inputRequests() != null) {
+                gen.writeObjectPropertyStart("inputRequests");
+                var paramsCodec = CodecRegistry.codecFor(ElicitRequestParams.class);
+                for (var entry : value.inputRequests().entrySet()) {
+                    gen.writeObjectPropertyStart(entry.getKey());
+                    gen.writeStringProperty("method", "elicitation/create");
+                    gen.writeName("params");
+                    paramsCodec.encode(gen, toProtocol(entry.getValue()));
+                    gen.writeEndObject();
+                }
+                gen.writeEndObject();
+            }
+            if (value.requestState() != null) {
+                gen.writeStringProperty("requestState", value.requestState());
+            }
+            gen.writeEndObject();
+        }
+
+        private static ElicitRequestParams toProtocol(InputRequest req) {
+            if (req instanceof FormInputRequest f) {
+                return new ElicitRequestFormParams(null, f.message(), f.requestedSchema(), null, null);
+            } else if (req instanceof UrlInputRequest u) {
+                return new ElicitRequestURLParams("url", u.message(), u.elicitationId(), u.url(), null, null);
+            }
+            throw new IllegalArgumentException("Unknown InputRequest type: " + req.getClass());
+        }
     }
 }
