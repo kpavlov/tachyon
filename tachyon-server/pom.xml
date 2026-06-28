@@ -9,7 +9,7 @@
     <parent>
         <groupId>dev.tachyonmcp</groupId>
         <artifactId>tachyon-root</artifactId>
-        <version>1.0.-SNAPSHOT</version>
+        <version>1.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>tachyon-server</artifactId>
@@ -203,28 +203,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-install-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>install-jar</id>
-                        <goals>
-                            <goal>install-file</goal>
-                        </goals>
-                        <phase>package</phase>
-                        <configuration>
-                            <file>${project.build.directory}/${project.build.finalName}.jar</file>
-                            <groupId>${project.groupId}</groupId>
-                            <artifactId>${project.artifactId}</artifactId>
-                            <version>1.0.0-SNAPSHOT</version>
-                            <packaging>jar</packaging>
-                            <localRepositoryPath>${project.basedir}/../target/local-repo</localRepositoryPath>
-                            <pomFile>${project.basedir}/pom.xml</pomFile>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>

@@ -114,8 +114,9 @@ jobs:
           cache: maven
 
       - name: Install jar
-        run: mvn install -pl tachyon-server -am -DskipTests --no-transfer-progress
-
+        run: |
+          rm -rf ~/.m2/repository/dev/tachyonmcp
+          mvn install -pl tachyon-server -am -DskipTests --no-transfer-progress
 
       - name: Verify examples
         run: mvn verify -f examples/${{ matrix.example }}/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
