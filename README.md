@@ -58,6 +58,16 @@ Fully implements MCP spec **2025-11-25** Streamable HTTP transport with native I
     }
     ```
 
+## Agent Skill
+
+Add agent skill to write better code using this SDK:
+
+```shell
+npx skills add kpavlov/tachyon --skill tachyon-mcp
+```
+
+Check out [Skills CLI](https://github.com/vercel-labs/skills) for more options.
+
 ## Features
 
 ### Core Protocol (46/46 conformance tests passing)
