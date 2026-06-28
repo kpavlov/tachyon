@@ -265,7 +265,15 @@ def format_jsdoc(jsdoc_raw):
         if s.startswith("@") or s == "":
             continue
         desc_lines.append(s)
-    return " ".join(desc_lines).strip()
+    text = " ".join(desc_lines).strip()
+    text = re.sub(r'\{@includeCode\s+[^}]*\}', '', text)
+    def _clean_link(m):
+        inner = m.group(1).strip()
+        if '|' in inner:
+            return inner.split('|', 1)[1].strip()
+        return inner
+    text = re.sub(r'\{@link\s+([^}]*)\}', _clean_link, text)
+    return text
 
 
 def make_javadoc(desc, param_docs=None, indent=""):
@@ -1005,26 +1013,13 @@ class Generator:
         return components, has_additional
 
     def simplify_type(self, typ):
-        known_prefixes = [
-            "java.util.",
-            "tools.jackson.databind.",
-            "tools.jackson.core.util.",
-        ]
-        for p in known_prefixes:
-            typ = typ.replace(p, "")
-        return typ
+        return re.sub(r'(?<![A-Za-z])(?:[a-z_][a-z0-9_]*\.)+([A-Z]\w+)', r'\1', typ)
 
     def _collect_imports(self, components, imports):
         for c in components:
             t = c[0]
-            if "java.util.List" in t:
-                imports.add("java.util.List")
-            if "java.util.Map" in t:
-                imports.add("java.util.Map")
-            if "tools.jackson.databind.JsonNode" in t:
-                imports.add("tools.jackson.databind.JsonNode")
-            if "tools.jackson.databind.util.TokenBuffer" in t:
-                imports.add("tools.jackson.databind.util.TokenBuffer")
+            for m in re.finditer(r'((?:[a-z_][a-z0-9_]*\.)+[A-Z]\w+)', t):
+                imports.add(m.group(1))
             if c[2]:
                 imports.add("org.jspecify.annotations.Nullable")
 
@@ -1336,35 +1331,40 @@ class Generator:
         indent = "    " * depth
         factory_methods = {
             "TextContent": [
-                ("of", ["String text"], "return new TextContent(\"text\", text, null, null);"),
+                ("of", ["String text"], ['"text"', "text"]),
             ],
             "CallToolResult": [
-                ("ofText", ["String text"], "return new CallToolResult(List.of(TextContent.of(text)), null, null, null, null);"),
-                ("ofError", ["String message"], "return new CallToolResult(List.of(TextContent.of(message)), null, true, null, null);"),
-                ("of", ["ContentBlock... content"], "return new CallToolResult(List.of(content), null, null, null, null);"),
+                ("ofText", ["String text"], ["List.of(TextContent.of(text))"]),
+                ("ofError", ["String message"], ["List.of(TextContent.of(message))", None, "true"]),
+                ("of", ["ContentBlock... content"], ["List.of(content)"]),
             ],
             "PromptMessage": [
-                ("of", ["Role role", "ContentBlock content"], "return new PromptMessage(role, content);"),
-                ("user", ["ContentBlock content"], "return new PromptMessage(Role.USER, content);"),
-                ("user", ["String text"], "return new PromptMessage(Role.USER, TextContent.of(text));"),
+                ("of", ["Role role", "ContentBlock content"], ["role", "content"]),
+                ("user", ["ContentBlock content"], ["Role.USER", "content"]),
+                ("user", ["String text"], ["Role.USER", "TextContent.of(text)"]),
             ],
             "ImageContent": [
-                ("of", ["String data", "String mimeType"], "return new ImageContent(\"image\", data, mimeType, null, null);"),
+                ("of", ["String data", "String mimeType"], ['"image"', "data", "mimeType"]),
             ],
             "AudioContent": [
-                ("of", ["String data", "String mimeType"], "return new AudioContent(\"audio\", data, mimeType, null, null);"),
+                ("of", ["String data", "String mimeType"], ['"audio"', "data", "mimeType"]),
             ],
             "TextResourceContents": [
-                ("of", ["String text", "String uri", "String mimeType"], "return new TextResourceContents(text, uri, mimeType, null);"),
+                ("of", ["String text", "String uri", "String mimeType"], ["text", "uri", "mimeType"]),
             ],
             "EmbeddedResource": [
-                ("of", ["ResourceContents resource"], "return new EmbeddedResource(\"resource\", resource, null, null);"),
+                ("of", ["ResourceContents resource"], ['"resource"', "resource"]),
             ],
         }
         if name not in factory_methods:
             return
+        num = len(components)
         out.append("\n")
-        for method_name, params, body in factory_methods[name]:
+        for method_name, params, explicit in factory_methods[name]:
+            args = [str(e) if e is not None else "null" for e in explicit]
+            while len(args) < num:
+                args.append("null")
+            body = f"return new {name}(" + ", ".join(args) + ");"
             out.append(f"{indent}    public static {name} {method_name}({', '.join(params)}) {{\n")
             out.append(f"{indent}        {body}\n")
             out.append(f"{indent}    }}\n\n")
@@ -1475,11 +1475,14 @@ class Generator:
             owner = model_name
             out.append(f"import {self.pkg_models}.{model_name};\n")
 
-        # Imports for referenced model types
+        # Imports for referenced model types and FQN from type mappings
         refs = set()
         for typ, _, _, _, _ in regular:
             parts = typ.replace("<", " ").replace(">", " ").replace(",", " ").split()
             for p in parts:
+                if "." in p and not p[0].isupper():
+                    refs.add(p)
+                    continue
                 base = p.split(".")[-1]
                 if base in (
                     "ArrayList",
@@ -1504,8 +1507,12 @@ class Generator:
                 elif base in self.model_files:
                     refs.add(base)
         refs.discard(owner)
+        refs.discard(self.pkg_models + "." + owner)
         for r in sorted(refs):
-            out.append(f"import {self.pkg_models}.{r};\n")
+            if "." in r:
+                out.append(f"import {r};\n")
+            else:
+                out.append(f"import {self.pkg_models}.{r};\n")
 
         out.append("\n")
         out.append('@Generated("ts2java")\n')
@@ -1530,8 +1537,8 @@ class Generator:
                     default = "0L"
                 elif typ == "double":
                     default = "0.0"
-                typ_ref = self.ref_for_type(typ, model_name)
-                out.append(f"        {typ_ref} {fname} = {default};\n")
+                var_typ = self.ref_for_type(typ, model_name)
+                out.append(f"        {var_typ} {fname} = {default};\n")
         if has_additional:
             out.append("        Map<String, JsonNode> additionalProperties = null;\n")
 
