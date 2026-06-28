@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import org.jspecify.annotations.Nullable;
@@ -217,6 +218,11 @@ public class McpDispatcher {
                                 return errorResult(id, error.code(), error.message());
                             }
                             return new DispatchResult.Response(encodeResponse(id, resultValue), null);
+                        } catch (CancellationException e) {
+                            var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
+                            watchdog.cancel(false);
+                            logger.debug("Handler cancelled: method={}, id={}, elapsed={}ms", method, id, elapsedMs);
+                            return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
                         } catch (Exception e) {
                             var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
                             watchdog.cancel(false);

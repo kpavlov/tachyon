@@ -14,36 +14,49 @@ Fully implements MCP spec **2025-11-25** Streamable HTTP transport with native I
 
 **TL;DR**
 
-```java
-import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.session.McpContext;
-import tools.jackson.databind.node.JsonNodeFactory;
+1. Add dependency:
 
-void main() {
-    var schema = JsonNodeFactory.instance.objectNode();
-    schema.put("type", "object");
-    schema.putObject("properties").putObject("city").put("type", "string");
+    ```xml
+    <dependency>
+        <groupId>dev.tachyonmcp</groupId>
+        <artifactId>tachyon-server</artifactId>
+        <version>1.0.0-beta.2</version>
+    </dependency>
+    ```
 
-    TachyonServer.builder()
-        .name("weather-mcp")
-        .tool(new AbstractSyncToolHandler(
-            ToolDescriptor.builder("get_forecast")
-                .description("Get weather forecast")
-                .inputSchema(schema)
-                .build()) {
-            @Override
-            public Object handle(McpContext ctx, Object args) {
-                return ToolResult.text("☀️ 22°C");
-            }
-        })
-        .session(cfg -> cfg.stateless(true))
-        .port(8080)
-        .bind();
-}
-```
+2. Create MCP server:
+
+    ```java
+    import dev.tachyonmcp.server.TachyonServer;
+    import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
+    import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+    import dev.tachyonmcp.server.features.tools.ToolResult;
+    import dev.tachyonmcp.server.session.McpContext;
+    import tools.jackson.databind.node.JsonNodeFactory;
+
+    void main() {
+        var schema = JsonNodeFactory.instance.objectNode();
+        schema.put("type", "object");
+        schema.putObject("properties").putObject("city").put("type", "string");
+
+        TachyonServer.builder()
+            .name("weather-mcp")
+            .tool(new AbstractSyncToolHandler(
+                ToolDescriptor.builder("get_forecast")
+                    .description("Get weather forecast")
+                    .inputSchema(schema)
+                    .build()) {
+
+                @Override
+                public Object handle(McpContext ctx, Object args) {
+                    return ToolResult.text("☀️ 22°C");
+                }
+            })
+            .session(cfg -> cfg.stateless(true))
+            .port(8080)
+            .bind();
+    }
+    ```
 
 ## Features
 
@@ -135,16 +148,6 @@ void main() {
 ## Installation
 
 **Requirements**: JDK 21+
-
-### Maven
-
-```xml
-<dependency>
-    <groupId>dev.tachyonmcp</groupId>
-    <artifactId>tachyon-server</artifactId>
-    <version>1.0.0-beta.1</version>
-</dependency>
-```
 
 ### Build from source
 ```bash
