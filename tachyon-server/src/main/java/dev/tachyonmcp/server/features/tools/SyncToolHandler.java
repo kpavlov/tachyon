@@ -10,6 +10,7 @@ import dev.tachyonmcp.server.session.McpContext;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.function.BiFunction;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
@@ -67,7 +68,10 @@ public interface SyncToolHandler<R extends ToolResult> extends ToolHandler<R> {
     }
 
     static <R extends ToolResult> SyncToolHandler<R> of(
-            String name, @Nullable String description, @Nullable JsonNode inputSchema, ToolFn<R> fn) {
+            String name,
+            @Nullable String description,
+            @Nullable JsonNode inputSchema,
+            BiFunction<McpContext, @Nullable Map<String, JsonNode>, R> fn) {
         return new SyncToolHandler<>() {
             @Override
             public String name() {
