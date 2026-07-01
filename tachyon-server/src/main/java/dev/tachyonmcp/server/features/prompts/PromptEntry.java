@@ -6,7 +6,7 @@ package dev.tachyonmcp.server.features.prompts;
 
 import dev.tachyonmcp.server.McpResourceType;
 
-record PromptEntry(PromptDescriptor descriptor, InputRequiredPromptHandler handler) implements McpResourceType {
+public record PromptEntry(PromptDescriptor descriptor, InputRequiredPromptHandler handler) implements McpResourceType {
 
     static PromptEntry of(PromptDescriptor descriptor, PromptHandler simple) {
         return new PromptEntry(

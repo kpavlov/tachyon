@@ -25,6 +25,8 @@ jobs:
           - 21
         example:
           - weather
+          - echo-kotlin
+
     runs-on: ubuntu-latest
     timeout-minutes: 7
 
