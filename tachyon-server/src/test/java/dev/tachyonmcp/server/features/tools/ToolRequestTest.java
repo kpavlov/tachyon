@@ -27,7 +27,7 @@ class ToolRequestTest {
 
     @Test
     void builderSetsArguments() {
-        var args = Map.of("k", JSON.textNode("v"));
+        var args = Map.of("k", JSON.stringNode("v"));
         var req = ToolRequest.builder().name("t").arguments(args).build();
         assertThat(req.arguments()).isEqualTo(args);
     }
@@ -40,7 +40,7 @@ class ToolRequestTest {
 
     @Test
     void builderSetsMeta() {
-        var meta = Map.of("mk", JSON.textNode("mv"));
+        var meta = Map.of("mk", JSON.stringNode("mv"));
         var req = ToolRequest.builder().name("t").meta(meta).build();
         assertThat(req.meta()).isEqualTo(meta);
     }
@@ -77,8 +77,8 @@ class ToolRequestTest {
 
     @Test
     void ofFactoryWithAllParams() {
-        Map<String, JsonNode> args = Map.of("k", JSON.textNode("v"));
-        Map<String, JsonNode> meta = Map.of("m", JSON.textNode("mv"));
+        Map<String, JsonNode> args = Map.of("k", JSON.stringNode("v"));
+        Map<String, JsonNode> meta = Map.of("m", JSON.stringNode("mv"));
         var req = ToolRequest.of("my-tool", args, meta, 99L, null);
         assertThat(req.name()).isEqualTo("my-tool");
         assertThat(req.arguments()).isEqualTo(args);
@@ -96,7 +96,7 @@ class ToolRequestTest {
 
     @Test
     void ofFactoryWithThreeParams() {
-        Map<String, JsonNode> args = Map.of("k", JSON.textNode("v"));
+        Map<String, JsonNode> args = Map.of("k", JSON.stringNode("v"));
         var req = ToolRequest.of("my-tool", args, null);
         assertThat(req.name()).isEqualTo("my-tool");
         assertThat(req.arguments()).isEqualTo(args);
@@ -104,9 +104,9 @@ class ToolRequestTest {
 
     @Test
     void metaIsAccessibleWhenPresent() {
-        Map<String, JsonNode> meta = Map.of("k", JSON.textNode("v"));
+        Map<String, JsonNode> meta = Map.of("k", JSON.stringNode("v"));
         var req = ToolRequest.builder().name("t").meta(meta).build();
         assertThat(req.meta()).isNotNull();
-        assertThat(req.meta().get("k").asText()).isEqualTo("v");
+        assertThat(req.meta().get("k").asString()).isEqualTo("v");
     }
 }

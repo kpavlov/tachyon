@@ -1,6 +1,6 @@
-.PHONY: build test lint package conformance e2e clean format all inspector example
+.PHONY: build test lint package conformance e2e clean format all inspector examples
 
-all: clean format build example
+all: clean format lint build examples
 
 build:
 	@echo "🏗️ Building..."
@@ -14,11 +14,12 @@ test:
 package:
 	@echo "📦 Packaging and installing tachyon-server to local repository..."
 	@rm -rf ~/.m2/repository/dev/tachyonmcp
-	@mvn install -pl tachyon-server -am -DskipTests -q
+	@mvn install -pl tachyon-server,tachyon-server-kotlin -am -DskipTests
 
-example: package
+examples: package
 	@echo "🌤️ Building and testing weather example..."
 	@mvn verify -f examples/weather/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT
+	@mvn verify -f examples/echo-kotlin/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT
 
 conformance: package
 	@echo "🔄 Running MCP conformance suite..."
@@ -35,13 +36,16 @@ clean:
 	@mvn clean -q -f examples/weather/pom.xml
 
 format:
-	@echo "🎨 Formatting code with Spotless (Palantir)..."
+	@echo "🎨 Formatting code..."
 	@mvn spotless:apply -q
-
+	@mvn exec:java@detekt-format -pl tachyon-server-kotlin -q
+	@echo "✅ Done..."
 
 lint:
 	@echo "🔍 Linting code..."
-	@mvn spotless:check spotbugs:check -pl !reports
+	@mvn spotless:check -pl !reports
+	@mvn exec:java@detekt -pl tachyon-server-kotlin
+	@mvn spotbugs:check -pl !reports
 
 .PHONY: inspector
 inspector:

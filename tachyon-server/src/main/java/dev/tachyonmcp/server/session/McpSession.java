@@ -11,8 +11,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /** Server-side session representing a single MCP client connection. */
 public class McpSession extends Session {
@@ -21,7 +19,6 @@ public class McpSession extends Session {
     private final AtomicReference<Backpressure> backpressure;
     private final AtomicLong cursor;
     private final Set<String> enabledExtensions = ConcurrentHashMap.newKeySet();
-    private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     public McpSession(String id, SseConnection connection) {
         super(id);
@@ -66,11 +63,6 @@ public class McpSession extends Session {
         return enabledExtensions.contains(extensionId);
     }
 
-    /** Returns the read-write lock for this session's state. */
-    public ReadWriteLock lock() {
-        return lock;
-    }
-
     /** Recomputes and returns the backpressure state based on stream writability. */
     public Backpressure computeBackpressure() {
         return backpressure.updateAndGet(current -> {
@@ -98,19 +90,14 @@ public class McpSession extends Session {
 
     @Override
     public boolean close() {
-        lock.writeLock().lock();
-        try {
-            var closed = state.compareAndSet(SessionState.ACTIVE, SessionState.CLOSED)
-                    || state.compareAndSet(SessionState.DRAINING, SessionState.CLOSED)
-                    || state.compareAndSet(SessionState.INITIALIZING, SessionState.CLOSED);
-            if (closed) {
-                var conn = connection.getAndSet(SseConnection.NOOP);
-                conn.close();
-            }
-            return closed;
-        } finally {
-            lock.writeLock().unlock();
+        var closed = state.compareAndSet(SessionState.ACTIVE, SessionState.CLOSED)
+                || state.compareAndSet(SessionState.DRAINING, SessionState.CLOSED)
+                || state.compareAndSet(SessionState.INITIALIZING, SessionState.CLOSED);
+        if (closed) {
+            var conn = connection.getAndSet(SseConnection.NOOP);
+            conn.close();
         }
+        return closed;
     }
 
     @Override

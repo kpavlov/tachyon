@@ -48,6 +48,7 @@
 
     <modules>
         <module>tachyon-server</module>
+        <module>tachyon-server-kotlin</module>
         <module>e2e</module>
         <module>conformance</module>
         <module>reports</module>
@@ -57,6 +58,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Java -->
         <java.version>21</java.version>
+        <kotlin.version>2.2.21</kotlin.version>
 
         <!-- Dependencies -->
         <assertj.version>3.27.7</assertj.version>
@@ -70,6 +72,7 @@
         <junit.pioneer.version>2.3.0</junit.pioneer.version>
         <junit.platform.version>1.12.2</junit.platform.version>
         <junit.version>6.1.1</junit.version>
+        <kotest.version>6.2.1</kotest.version>
         <netty.version>4.2.15.Final</netty.version>
         <slf4j.version>2.0.18</slf4j.version>
 
@@ -82,6 +85,8 @@
         <palantir-java-format.version>2.92.0</palantir-java-format.version>
         <spotless-maven-plugin.version>3.8.0</spotless-maven-plugin.version>
         <spotbugs-maven-plugin.version>4.10.2.0</spotbugs-maven-plugin.version>
+        <detekt.version>2.0.0-alpha.5</detekt.version>
+        <ktlint.version>1.5.0</ktlint.version>
         <spotbugs.version>4.10.2</spotbugs.version>
 
         <!-- Test configuration -->
@@ -92,6 +97,7 @@
             java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.base/java.nio.channels.spi=ALL-UNNAMED
             -Dio.netty.leakDetection.level=PARANOID
         </argLine>
+        <kotlinx-coroutines.version>1.11.0</kotlinx-coroutines.version>
     </properties>
 
     <dependencyManagement>
@@ -149,6 +155,14 @@
                         <artifactId>jackson-dataformat-yaml</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-bom</artifactId>
+                <version>${kotlin.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
 
             <dependency>
@@ -313,6 +327,11 @@
                                 <include>**/*.md</include>
                             </includes>
                         </markdown>
+                        <kotlin>
+                            <ktlint>
+                                <version>${ktlint.version}</version>
+                            </ktlint>
+                        </kotlin>
                     </configuration>
                     <executions>
                         <execution>

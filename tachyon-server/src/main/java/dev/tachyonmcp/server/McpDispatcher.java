@@ -23,7 +23,9 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -111,13 +113,19 @@ public class McpDispatcher {
             if (sessionId == null) {
                 return dispatchInitializeAsync(id, params, ic);
             }
-            // initialize with an existing session ID → reject (E2: prevents re-initialization)
             var err = JsonRpcErrors.invalidRequest("Session already initialized");
             return CompletableFuture.completedFuture(errorResult(id, err.code(), err.message()));
         }
 
         if (server.isStateless() || (METHOD_PING.equals(method) && sessionId == null)) {
-            return dispatchStatelessAsync(id, method, params, outboundSseStream);
+            var statelessIc = DefaultMcpContext.stateless(server);
+            statelessIc.setOutboundStream(outboundSseStream);
+            var handler = lookupHandler(method, params, statelessIc);
+            if (handler == null) {
+                return CompletableFuture.completedFuture(
+                        errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found"));
+            }
+            return invokeHandlerAsync(id, method, params, outboundSseStream, statelessIc, null, handler);
         }
 
         if (sessionId == null) {
@@ -133,12 +141,10 @@ public class McpDispatcher {
         var session = sessionOpt.get();
         session.touch();
 
-        // Always bind the current session and outbound stream to the IC per-request
-        // (keep-alive connections reuse the channel IC across multiple sessions)
-        if (ic != null) {
-            ic.setSession(session);
-            ic.setOutboundStream(outboundSseStream);
-        }
+        var protocol = ic != null ? ic.getProtocol() : Protocols.versions().get(0);
+        var requestCtx = new DefaultMcpContext(protocol, server);
+        requestCtx.setSession(session);
+        requestCtx.setOutboundStream(outboundSseStream);
 
         var sessionState = session.state();
         if (sessionState == SessionState.CLOSED) {
@@ -150,137 +156,90 @@ public class McpDispatcher {
                     errorResult(id, JsonRpcErrors.INVALID_REQUEST, "Session is not yet active, only ping allowed"));
         }
 
+        var handler = lookupHandler(method, params, requestCtx);
+        if (handler == null) {
+            return CompletableFuture.completedFuture(
+                    errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found"));
+        }
+
+        return invokeHandlerAsync(id, method, params, outboundSseStream, requestCtx, session, handler);
+    }
+
+    private @Nullable McpMethodHandler lookupHandler(String method, Object params, McpContext ic) {
+        var owningExtensionId = server.extensionForMethod(method);
+        if (owningExtensionId != null) {
+            if (!ic.isExtensionEnabled(owningExtensionId)) return null;
+            if (server.extensionRequiresMeta(owningExtensionId) && !hasMetaKey(params, owningExtensionId)) return null;
+        }
+        return server.getHandler(method);
+    }
+
+    private CompletableFuture<DispatchResult> invokeHandlerAsync(
+            Object id,
+            String method,
+            Object params,
+            @Nullable OutboundSseStream outboundSseStream,
+            McpContext context,
+            @Nullable McpSession session,
+            McpMethodHandler handler) {
         var paramsStr = params instanceof Map || params instanceof List
                 ? JsonRpcCodec.writeValueAsString(params)
                 : params instanceof String s ? s : null;
 
-        var owningExtensionId = server.extensionForMethod(method);
-        if (owningExtensionId != null) {
-            if (!ic.isExtensionEnabled(owningExtensionId)) {
-                return CompletableFuture.completedFuture(
-                        errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found"));
-            }
-            if (server.extensionRequiresMeta(owningExtensionId) && !hasMetaKey(params, owningExtensionId)) {
-                return CompletableFuture.completedFuture(
-                        errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found"));
-            }
-        }
-
-        var handler = server.getHandler(method);
-        if (handler == null) {
-            var err = JsonRpcErrors.methodNotFound("Method not found");
-            return CompletableFuture.completedFuture(errorResult(id, err.code(), err.message()));
-        }
-
         return CompletableFuture.supplyAsync(
-                () -> {
-                    // E12: hold read lock so concurrent session.close() (write lock) must wait
-                    var readLock = session.lock().readLock();
-                    readLock.lock();
-                    try {
-                        if (session.state() == SessionState.CLOSED) {
-                            return errorResult(id, JsonRpcErrors.INVALID_REQUEST, "Session closed");
-                        }
-                        server.appendEvent(new SessionEvent.RequestEvent(
-                                session.id(), id, method, paramsStr, System.currentTimeMillis()));
-                        var thread = Thread.currentThread();
-                        var startNs = System.nanoTime();
-                        logger.debug(
-                                "Handler start: method={}, id={}, thread={}#{} virtual={}",
-                                method,
-                                id,
-                                thread.getName(),
-                                thread.threadId(),
-                                thread.isVirtual());
-
-                        var watchdog = HandlerWatchdog.watch(method, id, startNs, thread, SLOW_HANDLER_MS);
-
-                        try {
-                            Object resultValue;
-                            resultValue = OutboundSseStreamMessageRouter.withDispatchContext(
-                                    session.id(), outboundSseStream, () -> handler.handle(ic, params));
-                            var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
-                            watchdog.cancel(false);
-                            if (elapsedMs > SLOW_HANDLER_MS) {
-                                logger.debug(
-                                        "Handler completed (was slow): method={}, id={}, elapsed={}ms,"
-                                                + " thread={}#{} virtual={}",
-                                        method,
-                                        id,
-                                        elapsedMs,
-                                        thread.getName(),
-                                        thread.threadId(),
-                                        thread.isVirtual());
-                            } else {
-                                logger.debug("Handler done: method={}, id={}, elapsed={}ms", method, id, elapsedMs);
-                            }
-                            if (resultValue instanceof JsonRpcError error) {
-                                logger.debug("Handler error for {}: {}", method, error.message());
-                                return errorResult(id, error.code(), error.message());
-                            }
-                            return new DispatchResult.Response(encodeResponse(id, resultValue), null);
-                        } catch (CancellationException e) {
-                            var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
-                            watchdog.cancel(false);
-                            logger.debug("Handler cancelled: method={}, id={}, elapsed={}ms", method, id, elapsedMs);
-                            return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
-                        } catch (Exception e) {
-                            var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
-                            watchdog.cancel(false);
-                            logger.warn(
-                                    "Handler exception: method={}, id={}, elapsed={}ms,"
-                                            + " thread={}#{} virtual={}: {}",
+                        () -> {
+                            var startNs = System.nanoTime();
+                            var thread = Thread.currentThread();
+                            logger.debug(
+                                    "Handler start: method={}, id={}, thread={}#{} virtual={}",
                                     method,
                                     id,
-                                    elapsedMs,
                                     thread.getName(),
                                     thread.threadId(),
-                                    thread.isVirtual(),
-                                    e.getMessage(),
-                                    e);
-                            return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
-                        }
-                    } finally {
-                        if (ic != null) {
-                            ic.setOutboundStream(null);
-                        }
-                        readLock.unlock();
+                                    thread.isVirtual());
+
+                            if (session != null) {
+                                server.appendEvent(new SessionEvent.RequestEvent(
+                                        session.id(), id, method, paramsStr, System.currentTimeMillis()));
+                            }
+
+                            var watchdog = HandlerWatchdog.watch(method, id, startNs, SLOW_HANDLER_MS);
+
+                            try {
+                                return OutboundSseStreamMessageRouter.withDispatchContext(
+                                        session != null ? session.id() : null, outboundSseStream, () -> {
+                                            try {
+                                                return handler.handleAsync(context, params);
+                                            } catch (Exception e) {
+                                                return CompletableFuture.failedFuture(e);
+                                            }
+                                        });
+                            } catch (Exception e) {
+                                return CompletableFuture.failedFuture(e);
+                            }
+                        },
+                        executor)
+                .thenCompose(Function.identity())
+                .handle((result, ex) -> {
+                    if (ex != null) {
+                        return handleHandlerError(id, method, ex);
                     }
-                },
-                executor);
+                    if (result instanceof JsonRpcError error) {
+                        logger.debug("Handler error for {}: {}", method, error.message());
+                        return errorResult(id, error.code(), error.message());
+                    }
+                    return new DispatchResult.Response(encodeResponse(id, result), null);
+                });
     }
 
-    private CompletableFuture<DispatchResult> dispatchStatelessAsync(
-            Object id, String method, Object params, @Nullable OutboundSseStream outboundSseStream) {
-        var owningExtensionId = server.extensionForMethod(method);
-        if (owningExtensionId != null) {
-            return CompletableFuture.completedFuture(
-                    errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found"));
+    private DispatchResult handleHandlerError(Object id, String method, Throwable ex) {
+        var unwrapped = ex instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : ex;
+        if (unwrapped instanceof CancellationException) {
+            logger.debug("Handler cancelled: method={}, id={}", method, id);
+            return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
         }
-        var handler = server.getHandler(method);
-        if (handler == null) {
-            var err = JsonRpcErrors.methodNotFound("Method not found");
-            return CompletableFuture.completedFuture(errorResult(id, err.code(), err.message()));
-        }
-        return CompletableFuture.supplyAsync(
-                () -> {
-                    var context = DefaultMcpContext.stateless(server);
-                    context.setOutboundStream(outboundSseStream);
-                    try {
-                        var result = OutboundSseStreamMessageRouter.withDispatchContext(
-                                null, outboundSseStream, () -> handler.handle(context, params));
-                        if (result instanceof JsonRpcError error) {
-                            return errorResult(id, error.code(), error.message());
-                        }
-                        return new DispatchResult.Response(encodeResponse(id, result), null);
-                    } catch (Exception e) {
-                        logger.warn("Stateless handler exception: method={}", method, e);
-                        return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
-                    } finally {
-                        context.setOutboundStream(null);
-                    }
-                },
-                executor);
+        logger.warn("Handler exception: method={}, id={}: {}", method, id, unwrapped.getMessage(), unwrapped);
+        return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
     }
 
     public DispatchResult dispatchNotification(String method, @Nullable Object params, @Nullable String sessionId) {
@@ -402,42 +361,60 @@ public class McpDispatcher {
     }
 
     private CompletableFuture<DispatchResult> dispatchInitializeAsync(Object id, Object rawParams, McpContext ic) {
-        return CompletableFuture.supplyAsync(
-                () -> {
-                    logger.debug("Client initialize: id={} stateless={}", id, server.isStateless());
-                    var handler = server.getHandler("initialize");
-                    if (handler == null) {
-                        return errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found: initialize");
-                    }
-                    if (server.isStateless()) {
-                        try {
-                            var result = handler.handle(DefaultMcpContext.stateless(server), rawParams);
-                            if (result instanceof JsonRpcError error) {
-                                logger.debug("Initialize handler error (stateless): {}", error.message());
-                                return errorResult(id, error.code(), error.message());
-                            }
-                            return new DispatchResult.Response(encodeResponse(id, result), null);
-                        } catch (Exception e) {
-                            logger.warn("Initialize handler exception (stateless)", e);
+        logger.debug("Client initialize: id={} stateless={}", id, server.isStateless());
+        var handler = server.getHandler("initialize");
+        if (handler == null) {
+            return CompletableFuture.completedFuture(
+                    errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found: initialize"));
+        }
+        if (server.isStateless()) {
+            var statelessIc = DefaultMcpContext.stateless(server);
+            return CompletableFuture.supplyAsync(
+                            () -> {
+                                try {
+                                    return handler.handleAsync(statelessIc, rawParams);
+                                } catch (Exception e) {
+                                    return CompletableFuture.failedFuture(e);
+                                }
+                            },
+                            executor)
+                    .thenCompose(Function.identity())
+                    .handle((result, ex) -> {
+                        if (ex != null) {
+                            logger.warn("Initialize handler exception (stateless)", ex);
                             return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
                         }
-                    }
-                    var sessionId = generateSessionId();
-                    var session = server.createSession(sessionId);
-                    try {
-                        ic.setSession(session);
-                        var result = handler.handle(ic, rawParams);
                         if (result instanceof JsonRpcError error) {
-                            logger.debug("Initialize handler error: {}", error.message());
+                            logger.debug("Initialize handler error (stateless): {}", error.message());
                             return errorResult(id, error.code(), error.message());
                         }
-                        return new DispatchResult.Response(encodeResponse(id, result), sessionId);
-                    } catch (Exception e) {
-                        logger.warn("Initialize handler exception", e);
+                        return new DispatchResult.Response(encodeResponse(id, result), null);
+                    });
+        }
+        var sessionId = generateSessionId();
+        var session = server.createSession(sessionId);
+        ic.setSession(session);
+        return CompletableFuture.supplyAsync(
+                        () -> {
+                            try {
+                                return handler.handleAsync(ic, rawParams);
+                            } catch (Exception e) {
+                                return CompletableFuture.failedFuture(e);
+                            }
+                        },
+                        executor)
+                .thenCompose(Function.identity())
+                .handle((result, ex) -> {
+                    if (ex != null) {
+                        logger.warn("Initialize handler exception", ex);
                         return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
                     }
-                },
-                executor);
+                    if (result instanceof JsonRpcError error) {
+                        logger.debug("Initialize handler error: {}", error.message());
+                        return errorResult(id, error.code(), error.message());
+                    }
+                    return new DispatchResult.Response(encodeResponse(id, result), sessionId);
+                });
     }
 
     private DispatchResult errorResult(Object id, int code, String message) {

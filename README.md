@@ -54,7 +54,7 @@ Fully implements MCP spec **2025-11-25** Streamable HTTP transport with native I
             })
             .session(cfg -> cfg.stateless(true))
             .port(8080)
-            .bind();
+            .start();
     }
     ```
 
@@ -65,6 +65,9 @@ Add agent skill to write better code using this SDK:
 ```shell
 npx skills add kpavlov/tachyon --skill tachyon-mcp
 ```
+
+The skill includes compilable Java and Kotlin example sources under `.agents/skills/tachyon-mcp/resources/`.
+They are linked into `e2e/src/skill/` and compiled during `mvn test` to keep them valid.
 
 Check out [Skills CLI](https://github.com/vercel-labs/skills) for more options.
 

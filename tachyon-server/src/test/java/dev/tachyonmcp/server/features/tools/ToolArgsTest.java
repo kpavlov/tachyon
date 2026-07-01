@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Map;
+import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.JsonNodeFactory;
 
@@ -21,13 +22,13 @@ class ToolArgsTest {
 
     @Test
     void ofNonNullRawProducesNonEmptyArgs() {
-        var args = ToolArgs.of(Map.of("key", JSON.textNode("val")));
+        var args = ToolArgs.of(Map.of("key", JSON.stringNode("val")));
         assertThat(args.isEmpty()).isFalse();
     }
 
     @Test
     void hasReturnsTrueForExistingKey() {
-        var args = ToolArgs.of(Map.of("k", JSON.textNode("v")));
+        var args = ToolArgs.of(Map.of("k", JSON.stringNode("v")));
         assertThat(args.has("k")).isTrue();
     }
 
@@ -39,7 +40,7 @@ class ToolArgsTest {
 
     @Test
     void stringReturnsValue() {
-        var args = ToolArgs.of(Map.of("k", JSON.textNode("hello")));
+        var args = ToolArgs.of(Map.of("k", JSON.stringNode("hello")));
         assertThat(args.string("k")).isEqualTo("hello");
     }
 
@@ -63,7 +64,7 @@ class ToolArgsTest {
 
     @Test
     void stringOptReturnsValueWhenPresent() {
-        var args = ToolArgs.of(Map.of("k", JSON.textNode("v")));
+        var args = ToolArgs.of(Map.of("k", JSON.stringNode("v")));
         assertThat(args.stringOpt("k")).contains("v");
     }
 
@@ -75,7 +76,7 @@ class ToolArgsTest {
 
     @Test
     void stringOrReturnsValueWhenPresent() {
-        var args = ToolArgs.of(Map.of("k", JSON.textNode("v")));
+        var args = ToolArgs.of(Map.of("k", JSON.stringNode("v")));
         assertThat(args.stringOr("k", "def")).isEqualTo("v");
     }
 
@@ -87,8 +88,8 @@ class ToolArgsTest {
 
     @Test
     void nodeReturnsValueWhenPresent() {
-        var args = ToolArgs.of(Map.of("k", JSON.textNode("v")));
-        assertThat(args.node("k").asText()).isEqualTo("v");
+        var args = ToolArgs.of(Map.of("k", JSON.stringNode("v")));
+        assertThat(args.node("k").asString()).isEqualTo("v");
     }
 
     @Test
@@ -116,19 +117,19 @@ class ToolArgsTest {
 
     @Test
     void rawReturnsValueForPresentKey() {
-        var args = ToolArgs.of(Map.of("k", JSON.textNode("v")));
+        var args = ToolArgs.of(Map.of("k", JSON.stringNode("v")));
         assertThat(args.raw("k")).isNotNull();
     }
 
     @Test
     void rawReturnsNullForDifferentMissingKey() {
-        var args = ToolArgs.of(Map.of("a", JSON.textNode("x")));
+        var args = ToolArgs.of(Map.of("a", JSON.stringNode("x")));
         assertThat(args.raw("b")).isNull();
     }
 
     @Test
     void rawReturnsNodeWithText() {
-        var args = ToolArgs.of(Map.of("k", JSON.textNode("v")));
-        assertThat(args.raw("k").asText()).isEqualTo("v");
+        var args = ToolArgs.of(Map.of("k", JSON.stringNode("v")));
+        assertThat(Objects.requireNonNull(args.raw("k")).asString()).isEqualTo("v");
     }
 }

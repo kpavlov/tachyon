@@ -23,6 +23,10 @@ import io.netty.channel.ChannelPipeline;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 
@@ -38,6 +42,9 @@ public final class ServerBuilder {
 
     @Nullable
     Consumer<ChannelPipeline> pipelineCustomizer;
+
+    private @Nullable ExecutorService executor;
+    private @Nullable ThreadFactory threadFactory;
 
     ServerBuilder() {}
 
@@ -135,6 +142,30 @@ public final class ServerBuilder {
         return this;
     }
 
+    /**
+     * Sets a caller-owned executor for handler dispatch. The server will not shut it down on close.
+     * Mutually exclusive with {@link #threadFactory}.
+     */
+    public ServerBuilder executor(ExecutorService executor) {
+        if (threadFactory != null) {
+            throw new IllegalStateException("executor() and threadFactory() are mutually exclusive");
+        }
+        this.executor = executor;
+        return this;
+    }
+
+    /**
+     * Sets a thread factory for virtual-thread-per-task executor creation. The server owns this
+     * executor and will shut it down on close. Mutually exclusive with {@link #executor}.
+     */
+    public ServerBuilder threadFactory(ThreadFactory threadFactory) {
+        if (executor != null) {
+            throw new IllegalStateException("executor() and threadFactory() are mutually exclusive");
+        }
+        this.threadFactory = threadFactory;
+        return this;
+    }
+
     // === Transport escape hatch ===
 
     /** Provides a customizer for the Netty channel pipeline. */
@@ -154,7 +185,26 @@ public final class ServerBuilder {
         var store = sessionConfig.sessionStore() != null ? sessionConfig.sessionStore() : new InMemorySessionStore();
         var allExtensions = Collections.unmodifiableList(featuresConfig.extensions);
         var serverConfig = buildConfig();
-        var server = new McpServer(router, store, serverConfig, featuresConfig.jsonSchemaValidator, allExtensions);
+        ExecutorService resolvedExecutor;
+        boolean ownsExecutor;
+        if (executor != null) {
+            resolvedExecutor = executor;
+            ownsExecutor = false;
+        } else if (threadFactory != null) {
+            resolvedExecutor = Executors.newThreadPerTaskExecutor(threadFactory);
+            ownsExecutor = true;
+        } else {
+            resolvedExecutor = McpServer.defaultExecutorForBuilder();
+            ownsExecutor = true;
+        }
+        var server = new McpServer(
+                resolvedExecutor,
+                ownsExecutor,
+                router,
+                store,
+                serverConfig,
+                featuresConfig.jsonSchemaValidator,
+                allExtensions);
         featuresConfig.tools.forEach(server::registerTool);
         featuresConfig.resources.forEach(r -> {
             var d = r.descriptor();
@@ -169,11 +219,11 @@ public final class ServerBuilder {
         return server;
     }
 
-    /** Builds the server and binds the Netty transport. Requires a port to be set. */
-    public McpServerHandle bind() {
+    /** Builds the server and starts the Netty transport (blocking). Requires a port to be set. */
+    public McpServerHandle start() {
         var networkConfig = networkBuilder.build();
         if (networkConfig.port() < 0) {
-            throw new IllegalStateException("Port must be set before bind()");
+            throw new IllegalStateException("Port must be set before start()");
         }
         var server = build();
         var nettyConfig = new NettyServerConfig(
@@ -191,6 +241,11 @@ public final class ServerBuilder {
                 pipelineCustomizer);
         var netty = new NettyServer(server, nettyConfig);
         return new McpServerHandle(server, netty.port(), netty);
+    }
+
+    /** Builds the server and starts the Netty transport (non-blocking). */
+    public CompletableFuture<McpServerHandle> startAsync() {
+        return CompletableFuture.supplyAsync(this::start);
     }
 
     /** Builds the {@link ServerConfig} from the current builder state. */

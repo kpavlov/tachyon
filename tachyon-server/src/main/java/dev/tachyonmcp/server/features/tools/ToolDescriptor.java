@@ -13,10 +13,7 @@ import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
 @Value.Immutable
-@Value.Style(
-        allParameters = true,
-        visibility = Value.Style.ImplementationVisibility.PACKAGE,
-        typeImmutable = "Default*")
+@Value.Style(allParameters = true, typeImmutable = "Default*")
 public interface ToolDescriptor {
 
     String name();

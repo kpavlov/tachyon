@@ -50,7 +50,8 @@ public class McpServer implements Closeable {
     private final Map<String, McpMethodHandler> methodHandlers = new ConcurrentHashMap<>();
     final Map<String, LoggingLevel> loggingLevels = new ConcurrentHashMap<>();
     final ConcurrentHashMap<Object, CompletableFuture<String>> pendingRequests = new ConcurrentHashMap<>();
-    private final ExecutorService virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
+    private final ExecutorService executor;
+    private final boolean ownsExecutor;
     private final List<McpExtension> extensions;
     private final Map<String, String> extensionMethodOwners = new ConcurrentHashMap<>();
     private final Map<String, McpExtension> extensionsById = new ConcurrentHashMap<>();
@@ -83,9 +84,9 @@ public class McpServer implements Closeable {
         return config.session().stateless();
     }
 
-    /** Returns the virtual-thread-per-task executor used for handler dispatch. */
+    /** Returns the executor used for handler dispatch. */
     public ExecutorService executor() {
-        return virtualThreadExecutor;
+        return executor;
     }
 
     /** Sets the logging level for a session. */
@@ -166,20 +167,16 @@ public class McpServer implements Closeable {
         return builder.build();
     }
 
-    public McpServer() {
-        this(new InMemorySessionLogRouter(), new InMemorySessionStore(), ServerConfig.DEFAULT, null, List.of());
-    }
-
-    public McpServer(SessionLogRouter router, SessionStore sessionStore, JsonSchemaValidator validator) {
-        this(router, sessionStore, ServerConfig.DEFAULT, validator, List.of());
-    }
-
-    public McpServer(
+    McpServer(
+            ExecutorService executor,
+            boolean ownsExecutor,
             SessionLogRouter router,
             SessionStore sessionStore,
             ServerConfig config,
             @Nullable JsonSchemaValidator validator,
             @Nullable List<McpExtension> extensions) {
+        this.executor = executor;
+        this.ownsExecutor = ownsExecutor;
         this.config = Objects.requireNonNull(config, "config cannot be null");
         this.router = Objects.requireNonNull(router, "router cannot be null");
         this.extensions = extensions != null ? extensions : List.of();
@@ -195,6 +192,39 @@ public class McpServer implements Closeable {
         if (!config.session().stateless()) {
             sessionManager.startJanitor(config.session().sessionTtl());
         }
+    }
+
+    public McpServer() {
+        this(
+                defaultExecutor(),
+                true,
+                new InMemorySessionLogRouter(),
+                new InMemorySessionStore(),
+                ServerConfig.DEFAULT,
+                null,
+                List.of());
+    }
+
+    public McpServer(SessionLogRouter router, SessionStore sessionStore, JsonSchemaValidator validator) {
+        this(defaultExecutor(), true, router, sessionStore, ServerConfig.DEFAULT, validator, List.of());
+    }
+
+    public McpServer(
+            SessionLogRouter router,
+            SessionStore sessionStore,
+            ServerConfig config,
+            @Nullable JsonSchemaValidator validator,
+            @Nullable List<McpExtension> extensions) {
+        this(defaultExecutor(), true, router, sessionStore, config, validator, extensions);
+    }
+
+    static ExecutorService defaultExecutorForBuilder() {
+        return defaultExecutor();
+    }
+
+    private static ExecutorService defaultExecutor() {
+        return Executors.newThreadPerTaskExecutor(
+                Thread.ofVirtual().name("tachyon-", 0).factory());
     }
 
     private void setupChangeListeners(ServerConfig config) {
@@ -549,14 +579,16 @@ public class McpServer implements Closeable {
         try {
             logger.info("Shutting down TachyonServer");
             shutdownExtensions();
-            virtualThreadExecutor.shutdown();
-            try {
-                if (!virtualThreadExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
-                    virtualThreadExecutor.shutdownNow();
+            if (ownsExecutor) {
+                executor.shutdown();
+                try {
+                    if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
+                        executor.shutdownNow();
+                    }
+                } catch (InterruptedException e) {
+                    executor.shutdownNow();
+                    Thread.currentThread().interrupt();
                 }
-            } catch (InterruptedException e) {
-                virtualThreadExecutor.shutdownNow();
-                Thread.currentThread().interrupt();
             }
             taskRegistry.stopTtlJanitor();
             sessionManager.close();

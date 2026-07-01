@@ -14,6 +14,7 @@ description: Apply project specific rules when designing and writing tests
 - `JsonUnit` + AssertJ for JSON. Assert full JSON. `whenIgnoringPaths`, `IGNORING_ARRAY_ORDER`, `IGNORING_EXTRA_FIELDS`, `TREATING_NULL_AS_ABSENT`.
 - `// language=JSON` before JSON strings.
 - Awaitility for polling.
+- Kotlin: use kotest-assertions
 
 ## JSON Schemas
 

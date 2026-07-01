@@ -16,7 +16,9 @@ import dev.tachyonmcp.server.features.PaginatedResult;
 import dev.tachyonmcp.server.session.McpContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -204,18 +206,25 @@ public class ToolRegistry {
 
         @Override
         public Object handle(McpContext context, Object params) throws Exception {
+            return handleAsync(context, params).toCompletableFuture().join();
+        }
+
+        @Override
+        public CompletionStage<Object> handleAsync(McpContext context, Object params) {
             var parsed = parseCallParams(params);
-            if (parsed == null) return invalidRequest("Invalid params");
-            if (parsed.name().isBlank()) return invalidRequest("Missing tool name");
-            if (parsed.name().length() > 64) return invalidRequest("Tool name exceeds maximum length (SEP-986)");
+            if (parsed == null) return CompletableFuture.completedFuture(invalidRequest("Invalid params"));
+            if (parsed.name().isBlank()) return CompletableFuture.completedFuture(invalidRequest("Missing tool name"));
+            if (parsed.name().length() > 64)
+                return CompletableFuture.completedFuture(invalidRequest("Tool name exceeds maximum length (SEP-986)"));
 
             var handler = registry.get(parsed.name());
-            if (handler == null) return methodNotFound("Method not found");
+            if (handler == null) return CompletableFuture.completedFuture(methodNotFound("Method not found"));
             var extId = handler.descriptor().extensionId();
-            if (extId != null && !context.isExtensionEnabled(extId)) return methodNotFound("Method not found");
+            if (extId != null && !context.isExtensionEnabled(extId))
+                return CompletableFuture.completedFuture(methodNotFound("Method not found"));
 
             var validationError = validateInput(handler.descriptor().inputSchema(), parsed.args());
-            if (validationError != null) return invalidRequest(validationError);
+            if (validationError != null) return CompletableFuture.completedFuture(invalidRequest(validationError));
 
             sendLoggingIfEnabled(context, parsed.name(), "started");
 
@@ -229,22 +238,33 @@ public class ToolRegistry {
                     .requestState(parsed.requestState())
                     .build();
 
+            CompletionStage<? extends ToolResult<?>> toolStage;
             try {
-                var toolResult =
-                        handler.handle(request, context).toCompletableFuture().join();
-                sendLoggingIfEnabled(context, parsed.name(), "completed");
-                validateOutput(handler.descriptor().outputSchema(), toolResult);
-                return context.responseMapper().callToolResult(toolResult);
-            } catch (InvalidArgumentException e) {
-                return invalidRequest("invalid argument '" + e.argName() + "': " + e.getMessage());
-            } catch (CompletionException e) {
-                var cause = e.getCause();
-                if (cause instanceof InvalidArgumentException ia) {
-                    return invalidRequest("invalid argument '" + ia.argName() + "': " + ia.getMessage());
-                }
-                if (cause instanceof Exception ex) throw ex;
-                throw new RuntimeException(cause);
+                toolStage = handler.handle(request, context);
+            } catch (Exception e) {
+                return CompletableFuture.completedFuture(wrapToolError(e));
             }
+
+            return toolStage
+                    .thenApply(toolResult -> {
+                        sendLoggingIfEnabled(context, parsed.name(), "completed");
+                        validateOutput(handler.descriptor().outputSchema(), toolResult);
+                        return context.responseMapper().callToolResult(toolResult);
+                    })
+                    .exceptionally(e -> {
+                        var cause = CompletionException.class.isInstance(e) && e.getCause() != null ? e.getCause() : e;
+                        if (cause instanceof InvalidArgumentException ia) {
+                            return invalidRequest("invalid argument '" + ia.argName() + "': " + ia.getMessage());
+                        }
+                        throw new CompletionException(cause);
+                    });
+        }
+
+        private static Object wrapToolError(Exception e) {
+            if (e instanceof InvalidArgumentException ia) {
+                return invalidRequest("invalid argument '" + ia.argName() + "': " + ia.getMessage());
+            }
+            throw new CompletionException(e);
         }
 
         private static @Nullable Object parseProgressToken(@Nullable Map<String, JsonNode> meta) {

@@ -41,7 +41,9 @@ jobs:
           cache: maven
 
       - name: Build and Verify
-        run: mvn verify --no-transfer-progress
+        run: |
+          mvn verify --no-transfer-progress
+          make examples
 
       - name: Publish test results
         uses: mikepenz/action-junit-report@v6
@@ -101,6 +103,8 @@ jobs:
           - 21
         example:
           - weather
+          - echo-kotlin
+
     runs-on: ubuntu-latest
     timeout-minutes: 7
 
@@ -117,7 +121,7 @@ jobs:
       - name: Install jar
         run: |
           rm -rf ~/.m2/repository/dev/tachyonmcp
-          mvn install -pl tachyon-server -am -DskipTests --no-transfer-progress
+          mvn install -pl tachyon-server-kotlin -am -DskipTests --no-transfer-progress
 
       - name: Verify examples
         run: mvn verify -f examples/${{ matrix.example }}/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress

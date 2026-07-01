@@ -15,7 +15,9 @@ import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.McpContext;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
@@ -62,5 +64,58 @@ class NettyServerThreadingTest {
                     .as("tool handler must run on a virtual thread")
                     .endsWith("virtual:true");
         }
+    }
+
+    @Test
+    void customThreadFactoryAddsNamePrefix() throws Exception {
+        var handlerThreadName = new CompletableFuture<String>();
+
+        try (McpServer server = TachyonServer.builder()
+                .threadFactory(Thread.ofVirtual().name("tenant-", 0).factory())
+                .tool(new AbstractSyncToolHandler("name_probe") {
+                    @Override
+                    public ToolResult<?> handle(McpContext context, ToolArgs args) {
+                        handlerThreadName.complete(Thread.currentThread().getName());
+                        return ToolResult.empty();
+                    }
+                })
+                .build()) {
+            server.createSession("sess-name").activate();
+            var dispatcher = new McpDispatcher(server, server.executor());
+            dispatcher
+                    .dispatchRequestAsync(
+                            1,
+                            "tools/call",
+                            java.util.Map.of("name", "name_probe", "arguments", java.util.Map.of()),
+                            "sess-name")
+                    .join();
+
+            String name = handlerThreadName.get(10, TimeUnit.SECONDS);
+            assertThat(name).as("thread name must use tenant prefix").startsWith("tenant-");
+        }
+    }
+
+    @Test
+    void callerSuppliedExecutorIsNotShutDownByServerClose() throws Exception {
+        var executor = Executors.newSingleThreadExecutor();
+        var closed = new AtomicBoolean(false);
+
+        var server = TachyonServer.builder()
+                .executor(executor)
+                .tool(new AbstractSyncToolHandler("exec_probe") {
+                    @Override
+                    public ToolResult<?> handle(McpContext context, ToolArgs args) {
+                        return ToolResult.empty();
+                    }
+                })
+                .build();
+        server.close();
+
+        // The executor should still be usable (not shut down)
+        executor.submit(() -> closed.set(true)).get(5, TimeUnit.SECONDS);
+        assertThat(closed)
+                .as("caller-owned executor must remain active after server.close()")
+                .isTrue();
+        executor.shutdown();
     }
 }
