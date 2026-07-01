@@ -9,7 +9,7 @@ import kotlin.contracts.contract
 @Suppress("FunctionName")
 @OptIn(ExperimentalContracts::class)
 public inline fun TachyonServer(
-    port: Int = 8080,
+    port: Int? = null,
     configure: (@TachyonDsl TachyonServerBuilder).() -> Unit = {},
 ): McpServerHandle {
     contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
@@ -18,11 +18,13 @@ public inline fun TachyonServer(
 
 @OptIn(ExperimentalContracts::class)
 public inline fun tachyonServer(
-    port: Int = 8080,
+    port: Int? = null,
     configure: (@TachyonDsl TachyonServerBuilder).() -> Unit = {},
 ): McpServerHandle {
     contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
-    return TachyonServerBuilder().apply(configure).applyPort(port).bind()
+    val builder = TachyonServerBuilder().apply(configure)
+    builder.applyPort(port)
+    return builder.bind()
 }
 
 @OptIn(ExperimentalContracts::class)

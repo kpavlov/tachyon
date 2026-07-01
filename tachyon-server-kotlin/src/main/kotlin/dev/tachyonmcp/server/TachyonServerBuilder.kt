@@ -18,6 +18,9 @@ public class TachyonServerBuilder
         @PublishedApi
         internal val delegate: ServerBuilder = TachyonServer.builder()
 
+        @PublishedApi
+        internal var networkPortExplicitlySet: Boolean = false
+
         public inline fun info(
             crossinline configure: (@TachyonDsl ServerInfoScope).() -> Unit,
         ): TachyonServerBuilder {
@@ -35,7 +38,12 @@ public class TachyonServerBuilder
         public inline fun network(
             crossinline configure: (@TachyonDsl NetworkScope).() -> Unit,
         ): TachyonServerBuilder {
-            delegate.network { NetworkScope().apply(configure).applyTo(it) }
+            val scope = NetworkScope()
+            scope.configure()
+            delegate.network { scope.applyTo(it) }
+            if (scope.port != null) {
+                networkPortExplicitlySet = true
+            }
             return this
         }
 
@@ -95,9 +103,13 @@ public class TachyonServerBuilder
             customizer: (@TachyonDsl ChannelPipeline).() -> Unit,
         ): TachyonServerBuilder = this.also { delegate.pipelineCustomizer { it.customizer() } }
 
-        @PublishedApi internal fun applyPort(port: Int): TachyonServerBuilder =
+        @PublishedApi internal fun applyPort(port: Int?): TachyonServerBuilder =
             this.also {
-                delegate.port(port)
+                if (port != null) {
+                    delegate.port(port)
+                } else if (!networkPortExplicitlySet) {
+                    delegate.port(8080)
+                }
             }
 
         @PublishedApi internal fun bind(): McpServerHandle = delegate.bind()

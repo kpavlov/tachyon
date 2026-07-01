@@ -22,6 +22,25 @@ public class CapabilitiesScope
         public var completions: Boolean = false
         public var logging: Boolean = false
 
+        public fun tools(listChanged: Boolean = false) {
+            tools = Mode.ON
+            toolsListChanged = listChanged
+        }
+
+        public fun resources(
+            subscribe: Boolean = false,
+            listChanged: Boolean = false,
+        ) {
+            resources = true
+            resourcesSubscribe = subscribe
+            resourcesListChanged = listChanged
+        }
+
+        public fun prompts(listChanged: Boolean = false) {
+            prompts = true
+            promptsListChanged = listChanged
+        }
+
         @PublishedApi
         internal fun applyTo(builder: CapabilitiesConfig.Builder) {
             builder.toolsMode(tools)

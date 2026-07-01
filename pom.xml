@@ -348,11 +348,6 @@
                     <version>3.6.3</version>
                 </plugin>
                 <plugin>
-                    <groupId>org.detekt</groupId>
-                    <artifactId>detekt-maven-plugin</artifactId>
-                    <version>${detekt.version}</version>
-                </plugin>
-                <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>build-helper-maven-plugin</artifactId>
                     <version>3.6.1</version>

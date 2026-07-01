@@ -18,7 +18,7 @@ package:
 
 examples: package
 	@echo "🌤️ Building and testing weather example..."
-	@#mvn verify -f examples/weather/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT
+	@mvn verify -f examples/weather/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT
 	@mvn verify -f examples/echo-kotlin/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT
 
 conformance: package

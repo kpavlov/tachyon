@@ -179,6 +179,54 @@ Register: `.extension(myExtension)`
 - E2E: `io.modelcontextprotocol.sdk:mcp-core:2.0.0-RC1` client.
 - `mvn test` (unit+e2e) · `mvn verify` (+conformance) · `mvn spotless:apply`.
 
+## Kotlin DSL
+
+Also available — Kotlin DSL with suspend tool handlers, `buildServer { }`, and `TachyonServer { }`.
+
+```kotlin
+// buildServer {} → McpServer without transport
+// TachyonServer(port) {} → McpServerHandle with Netty transport
+
+val handle = TachyonServer(port = 8080) {
+    info {
+        name = "demo-server"
+        version = "1.0"
+        description = "Demo MCP server"
+    }
+    capabilities {
+        tools(true)
+        resources(true, true)
+        prompts(true)
+    }
+    tool(name = "ping", description = "Simple ping") {
+        ToolResult.text("pong")
+    }
+    resource(
+        name = "config",
+        uri = "demo://config",
+        description = "Server configuration",
+    ) {
+        TextResourceContents.of(uri, "application/json", """{"mode":"production"}""")
+    }
+    prompt(name = "greet", description = "Generates a greeting") { _ ->
+        listOf(PromptMessage.user("Say hello"))
+    }
+}
+```
+
+Post-build registration with `registerTool`:
+
+```kotlin
+server.registerTool(
+    ToolDescriptor.builder("reverse-echo")
+        .description("Echo reversed message")
+        .inputSchema(schema)
+        .build(),
+) {
+    ToolResult.text(args.string("message").reversed())
+}
+```
+
 ## Resource files
 
 Load on demand (next to this skill):
@@ -188,3 +236,7 @@ Load on demand (next to this skill):
 - `resources/java/ResourceHandlerExample.java` — `ResourceDescriptor`, `ResourceTemplateEntry`, `ResourceHandler`
 - `resources/java/PromptHandlerExample.java` — `PromptDescriptor`, `PromptArgument`, `PromptHandler`
 - `resources/java/ConfigReference.java` — `CapabilitiesConfig.Builder`, `NetworkConfig.Builder`, `SessionConfig.Builder`
+- `resources/kotlin/ServerBasic.kt` — full server, all features (Kotlin DSL)
+- `resources/kotlin/ToolHandlerExample.kt` — suspend handler, `AbstractSyncToolHandler`, `AbstractAsyncToolHandler`, `registerTool`
+- `resources/kotlin/ResourceHandlerExample.kt` — static resources, URI templates (Kotlin DSL)
+- `resources/kotlin/PromptHandlerExample.kt` — prompt descriptors and handlers (Kotlin DSL)

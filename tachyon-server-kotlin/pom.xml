@@ -138,7 +138,6 @@
                                 <argument>${java.version}</argument>
                                 <argument>--language-version</argument>
                                 <argument>2.2</argument>
-                                <argument>--debug</argument>
                                 <argument>--report</argument>
                                 <argument>html:${project.build.directory}/detekt/detekt.html</argument>
                                 <argument>--report</argument>
@@ -162,7 +161,7 @@
                                 <argument>--excludes</argument>
                                 <argument>**/build/**:**/.gradle/**</argument>
                                 <argument>--jvm-target</argument>
-                                <argument>21</argument>
+                                <argument>${java.version}</argument>
                                 <argument>--language-version</argument>
                                 <argument>2.2</argument>
                                 <argument>--auto-correct</argument>
