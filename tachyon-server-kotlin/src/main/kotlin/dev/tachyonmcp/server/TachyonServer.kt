@@ -24,7 +24,7 @@ public inline fun tachyonServer(
     contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
     val builder = TachyonServerBuilder().apply(configure)
     builder.applyPort(port)
-    return builder.bind()
+    return builder.start()
 }
 
 @OptIn(ExperimentalContracts::class)

@@ -23,6 +23,7 @@ import io.netty.channel.ChannelPipeline;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -221,11 +222,11 @@ public final class ServerBuilder {
         return server;
     }
 
-    /** Builds the server and binds the Netty transport. Requires a port to be set. */
-    public McpServerHandle bind() {
+    /** Builds the server and starts the Netty transport (blocking). Requires a port to be set. */
+    public McpServerHandle start() {
         var networkConfig = networkBuilder.build();
         if (networkConfig.port() < 0) {
-            throw new IllegalStateException("Port must be set before bind()");
+            throw new IllegalStateException("Port must be set before start()");
         }
         var server = build();
         var nettyConfig = new NettyServerConfig(
@@ -243,6 +244,11 @@ public final class ServerBuilder {
                 pipelineCustomizer);
         var netty = new NettyServer(server, nettyConfig);
         return new McpServerHandle(server, netty.port(), netty);
+    }
+
+    /** Builds the server and starts the Netty transport (non-blocking). */
+    public CompletableFuture<McpServerHandle> startAsync() {
+        return CompletableFuture.supplyAsync(this::start);
     }
 
     /** Builds the {@link ServerConfig} from the current builder state. */

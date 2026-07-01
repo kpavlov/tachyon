@@ -13,7 +13,7 @@ Make **Java 21+** MCP server. Tachyon lib. Transport = Streamable HTTP (Netty).
 ## Core
 
 - `TachyonServer.builder()` → `ServerBuilder`. Start here.
-- `.bind()` → build `McpServer` + Netty transport → `McpServerHandle` (`Closeable`).
+- `.start()` (blocking) / `.startAsync()` (non-blocking) → build `McpServer` + Netty transport → `McpServerHandle` (`Closeable`).
 - `.build()` → `McpServer` only, no transport.
 - `McpServerHandle`: `.server()`, `.port()`.
 - `McpContext` → session + notifications + server ctx. Every handler gets it.
@@ -25,7 +25,7 @@ var handle = TachyonServer.builder()
     .name("my-server")
     .version("1.0")
     .port(8080)
-    .bind();
+    .start();
 // handle.port() → real bound port (matters when port=0)
 ```
 
@@ -131,7 +131,7 @@ Default `AUTO` → advertised only when registered. Force with `Mode.ON` / `Mode
 | Method | Default |
 |---|---|
 | `.host(s)` | `127.0.0.1` |
-| `.port(p)` | **required** before `bind()` |
+| `.port(p)` | **required** before `start()` |
 | `.endpointPath(p)` | `/mcp` |
 | `.readerIdleTimeout(d)` / `.writerIdleTimeout(d)` | 60s / 5min |
 | `.maxContentLength(b)` | 1MB |

@@ -54,7 +54,7 @@ Fully implements MCP spec **2025-11-25** Streamable HTTP transport with native I
             })
             .session(cfg -> cfg.stateless(true))
             .port(8080)
-            .bind();
+            .start();
     }
     ```
 

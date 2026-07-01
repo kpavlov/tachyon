@@ -40,7 +40,7 @@ public final class ServerBasic {
                         PromptDescriptor.of("greet", "Generates a greeting"),
                         args -> List.of(PromptMessage.user("Say hello")))
                 .port(port)
-                .bind();
+                .start();
 
         handle.server()
                 .resources()

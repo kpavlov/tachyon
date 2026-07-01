@@ -8,7 +8,7 @@ import java.io.Closeable;
 import java.io.IOException;
 
 /**
- * Handle returned by the server builder's {@code bind()} method.
+ * Handle returned by the server builder's {@code start()} / {@code startAsync()} method.
  * Combines the logical {@link McpServer} and the bound transport.
  * Call {@link #close()} to shut down both.
  */

@@ -58,7 +58,7 @@ public final class WeatherServer {
                     WeatherServer::handleRewriteForecast)
                 .session(s -> s.stateless(true))
                 .port(port)
-                .bind();
+                .start();
 
         handle.server().resources()
                 .addTemplate(ResourceTemplateEntry.of(

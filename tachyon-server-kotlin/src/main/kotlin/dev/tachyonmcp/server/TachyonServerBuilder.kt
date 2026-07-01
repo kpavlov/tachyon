@@ -10,6 +10,7 @@ import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
 import io.netty.channel.ChannelPipeline
 import tools.jackson.databind.JsonNode
+import java.util.concurrent.CompletableFuture
 
 @TachyonDsl
 public class TachyonServerBuilder
@@ -112,7 +113,11 @@ public class TachyonServerBuilder
                 }
             }
 
-        @PublishedApi internal fun bind(): McpServerHandle = delegate.bind()
+        @PublishedApi internal fun start(): McpServerHandle = delegate.start()
+
+        @PublishedApi internal fun startAsync(): CompletableFuture<McpServerHandle> =
+            delegate
+                .startAsync()
 
         @PublishedApi internal fun build(): McpServer = delegate.build()
     }

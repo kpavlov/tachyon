@@ -34,7 +34,7 @@ class StatelessServerTest {
                 .tool(new EchoToolHandler())
                 .session(s -> s.stateless(true))
                 .network(n -> n.host("localhost").port(0))
-                .bind();
+                .start();
         port = serverHandle.port();
     }
 

@@ -24,7 +24,7 @@ final class SharedE2eServer {
                 .capabilities(c -> c.tools())
                 .tool(new EchoToolHandler())
                 .network(n -> n.port(0))
-                .bind();
+                .start();
         started.set(true);
         Runtime.getRuntime().addShutdownHook(new Thread(handle::close));
         logger.info("Shared E2E server started on port {}", handle.port());
