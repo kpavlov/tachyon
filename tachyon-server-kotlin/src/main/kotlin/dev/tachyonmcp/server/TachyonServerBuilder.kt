@@ -6,7 +6,7 @@ import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.ResourceContents
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor
-import dev.tachyonmcp.server.features.tools.SyncToolHandler
+import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
 import io.netty.channel.ChannelPipeline
 import tools.jackson.databind.JsonNode
@@ -50,13 +50,18 @@ public class TachyonServerBuilder
             name: String,
             description: String? = null,
             inputSchema: JsonNode? = null,
-            handler: ToolScope.() -> ToolResult<*>,
+            handler: suspend ToolScope.() -> ToolResult<*>,
         ): TachyonServerBuilder =
             this.also {
                 delegate.tool(
-                    SyncToolHandler.of(name, description, inputSchema) { ctx, args ->
-                        ToolScope(ctx, args).handler()
-                    },
+                    asyncHandler(
+                        ToolDescriptor
+                            .builder(name)
+                            .description(description)
+                            .inputSchema(inputSchema)
+                            .build(),
+                        handler,
+                    ),
                 )
             }
 

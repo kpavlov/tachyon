@@ -2,8 +2,8 @@
 
 package dev.tachyonmcp.server
 
-import dev.tachyonmcp.server.features.tools.SyncToolHandler
 import dev.tachyonmcp.server.features.tools.ToolArgs
+import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.session.McpContext
 import tools.jackson.databind.JsonNode
@@ -20,12 +20,15 @@ public fun ServerBuilder.tool(
     name: String,
     description: String? = null,
     inputSchema: JsonNode? = null,
-    handler: ToolScope.() -> ToolResult<*>,
+    handler: suspend ToolScope.() -> ToolResult<*>,
 ): ServerBuilder =
     tool(
-        SyncToolHandler.of(
-            name,
-            description,
-            inputSchema,
-        ) { ctx, args -> ToolScope(ctx, args).handler() },
+        asyncHandler(
+            ToolDescriptor
+                .builder(name)
+                .description(description)
+                .inputSchema(inputSchema)
+                .build(),
+            handler,
+        ),
     )

@@ -63,8 +63,12 @@ public interface SyncToolHandler extends ToolHandler {
     }
 
     @Override
-    default CompletionStage<? extends ToolResult<?>> handle(ToolRequest request, McpContext context) throws Exception {
-        return CompletableFuture.completedFuture(handle(context, ToolArgs.of(request.arguments())));
+    default CompletionStage<? extends ToolResult<?>> handle(ToolRequest request, McpContext context) {
+        try {
+            return CompletableFuture.completedFuture(handle(context, ToolArgs.of(request.arguments())));
+        } catch (Exception e) {
+            return CompletableFuture.failedFuture(e);
+        }
     }
 
     /** Creates a simple SyncToolHandler from a name, description, schema, and function. */

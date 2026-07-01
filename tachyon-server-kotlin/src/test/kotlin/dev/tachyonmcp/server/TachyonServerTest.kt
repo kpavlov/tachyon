@@ -13,7 +13,9 @@ import dev.tachyonmcp.server.session.InMemorySessionStore
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
+import kotlinx.coroutines.delay
 import org.junit.jupiter.api.Test
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
@@ -165,5 +167,40 @@ internal class TachyonServerTest {
             }
         server.getTool("build") shouldNotBe null
         server.close()
+    }
+
+    @Test
+    fun `suspend tool with delay returns correct result`() {
+        TachyonServer(port = 0) {
+            name("delay-test")
+            tool("slow", "Delayed") {
+                delay(10.milliseconds)
+                ToolResult.text("delayed-ok")
+            }
+        }.use { handle ->
+            McpProbe(handle.port()).use { probe ->
+                val init = probe.initialize()
+                init.statusCode() shouldBe 200
+
+                val response = probe.callTool("slow")
+                response.statusCode() shouldBe 200
+                response.body() shouldContain "delayed-ok"
+            }
+        }
+    }
+
+    @Test
+    fun `sync tool body compiles and works with suspend signature`() {
+        TachyonServer(port = 0) {
+            name("sync-test")
+            tool("ping", "Health check") { ToolResult.text("pong") }
+        }.use { handle ->
+            McpProbe(handle.port()).use { probe ->
+                probe.initialize()
+                val response = probe.callTool("ping")
+                response.statusCode() shouldBe 200
+                response.body() shouldContain "pong"
+            }
+        }
     }
 }

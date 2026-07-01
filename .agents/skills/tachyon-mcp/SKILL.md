@@ -183,7 +183,7 @@ Register: `.extension(myExtension)`
 
 Load on demand (next to this skill):
 
-- `resources/java/ServerBasic.java` — full server, all features
+- [resources/java/ServerBasic.java](resources/java/ServerBasic.java) — full server, all features
 - `resources/java/ToolHandlerExample.java` — `ToolDescriptor`, `SyncToolHandler.of()`, `AbstractSyncToolHandler`
 - `resources/java/ResourceHandlerExample.java` — `ResourceDescriptor`, `ResourceTemplateEntry`, `ResourceHandler`
 - `resources/java/PromptHandlerExample.java` — `PromptDescriptor`, `PromptArgument`, `PromptHandler`

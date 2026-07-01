@@ -27,7 +27,7 @@ mvn spotless:apply  # auto-fix
 - TDD + SOLID. TachyonServer is SUT in unit tests.
 - **Tests**: JUnit 6 + Kotest (Kotlin) / AssertJ (Java) + Awaitility. `@TempDir` for unit, port 0 for E2E. Prefer E2E for long scenarios. No tautologies. Many asserts per test.
 - **Nullability**: JSpecify `@Nullable`/`@NonNull`. `@NullMarked` at package level.
-- **Copyright**: `/* Copyright (c) 2026 Konstantin Pavlov. */` everywhere.
+- **Copyright**: `Copyright (c) 2026 Konstantin Pavlov.` in file headers everywhere, `@author` in class java/kdocs. don't overwrite existing attributions.
 - **No comments** unless spec needs explain.
 - Unit tests only when E2E can't. Drop unit if E2E covers.
 - `git mv` for files.

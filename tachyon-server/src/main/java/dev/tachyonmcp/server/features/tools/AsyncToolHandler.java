@@ -41,8 +41,13 @@ public interface AsyncToolHandler extends ToolHandler {
         return null;
     }
 
-    /** Executes the tool asynchronously. */
-    CompletionStage<? extends ToolResult<?>> handleAsync(McpContext context, ToolArgs args) throws Exception;
+    /** Executes the tool asynchronously with parsed args. */
+    CompletionStage<? extends ToolResult<?>> handleAsync(McpContext context, ToolArgs args);
+
+    /** Executes the tool asynchronously with the full request (includes meta/progressToken). */
+    default CompletionStage<? extends ToolResult<?>> handleAsync(McpContext context, ToolRequest request) {
+        return handleAsync(context, ToolArgs.of(request.arguments()));
+    }
 
     @Nullable
     default ToolAnnotations annotations() {
@@ -62,8 +67,8 @@ public interface AsyncToolHandler extends ToolHandler {
     }
 
     @Override
-    default CompletionStage<? extends ToolResult<?>> handle(ToolRequest request, McpContext context) throws Exception {
-        return handleAsync(context, ToolArgs.of(request.arguments()));
+    default CompletionStage<? extends ToolResult<?>> handle(ToolRequest request, McpContext context) {
+        return handleAsync(context, request);
     }
 
     /** Wraps a synchronous tool handler as an async one. */

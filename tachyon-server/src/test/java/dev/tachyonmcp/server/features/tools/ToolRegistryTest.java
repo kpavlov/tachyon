@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListToolsResult;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextContent;
 import dev.tachyonmcp.server.JsonSchemaValidator;
 import dev.tachyonmcp.server.McpMethodHandler;
 import dev.tachyonmcp.server.TachyonServer;
@@ -26,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
@@ -510,6 +513,77 @@ class ToolRegistryTest {
         var handlers = new java.util.HashMap<String, McpMethodHandler>();
         registry.registerHandlers(handlers);
         assertThat(handlers.get("tools/call").method()).isEqualTo("tools/call");
+    }
+
+    @Test
+    void asyncToolHandlerCompletesFromSeparateThread() throws Exception {
+        var handlers = new HashMap<String, McpMethodHandler>();
+        registry.registerHandlers(handlers);
+        var executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "async-tool-pool"));
+        registry.register(new AsyncToolHandler() {
+            @Override
+            public String name() {
+                return "async-thread";
+            }
+
+            @Override
+            public CompletionStage<ToolResult<?>> handleAsync(McpContext context, ToolRequest request) {
+                return CompletableFuture.supplyAsync(() -> ToolResult.text("from-thread"), executor);
+            }
+
+            @Override
+            public CompletionStage<? extends ToolResult<?>> handleAsync(McpContext context, ToolArgs args) {
+                return handleAsync(context, ToolRequest.of(name(), null, null));
+            }
+        });
+
+        try (var server = TachyonServer.builder().build()) {
+            var session = server.createSession("s-async-thread");
+            session.activate();
+            var callHandler = handlers.get("tools/call");
+            var ctx = new DefaultMcpContext(Protocols.versions().get(0), server);
+            ctx.setSession(session);
+            var params = Map.of("name", "async-thread", "arguments", Map.of());
+            var stage = callHandler.handleAsync(ctx, params);
+            var result = (CallToolResult) stage.toCompletableFuture().get(5, TimeUnit.SECONDS);
+            assertThat(result.content()).isNotEmpty();
+            assertThat(((TextContent) result.content().getFirst()).text()).isEqualTo("from-thread");
+        }
+        executor.shutdown();
+    }
+
+    @Test
+    void asyncToolHandlerInvalidArgumentExceptionMapsToInvalidRequest() throws Exception {
+        var handlers = new HashMap<String, McpMethodHandler>();
+        registry.registerHandlers(handlers);
+        registry.register(new AsyncToolHandler() {
+            @Override
+            public String name() {
+                return "invalid-arg-async";
+            }
+
+            @Override
+            public CompletionStage<ToolResult<?>> handleAsync(McpContext context, ToolRequest request) {
+                return CompletableFuture.failedFuture(new InvalidArgumentException("arg", "bad input"));
+            }
+
+            @Override
+            public CompletionStage<? extends ToolResult<?>> handleAsync(McpContext context, ToolArgs args) {
+                return handleAsync(context, ToolRequest.of(name(), null, null));
+            }
+        });
+
+        try (var server = TachyonServer.builder().build()) {
+            var session = server.createSession("s-inv-arg");
+            session.activate();
+            var callHandler = handlers.get("tools/call");
+            var ctx = new DefaultMcpContext(Protocols.versions().get(0), server);
+            ctx.setSession(session);
+            var params = Map.of("name", "invalid-arg-async", "arguments", Map.of());
+            var result = callHandler.handle(ctx, params);
+            assertThat(result).isInstanceOf(JsonRpcError.class);
+            assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
+        }
     }
 
     @Test
