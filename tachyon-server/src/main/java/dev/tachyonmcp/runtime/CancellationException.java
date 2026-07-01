@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.runtime;
 
+/** Thrown when a cancelled handler is detected. */
 public class CancellationException extends RuntimeException {
 
     public CancellationException() {

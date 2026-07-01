@@ -24,6 +24,8 @@ import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
@@ -66,7 +68,7 @@ class ToolRegistryTest {
             """);
         var annotations = ToolAnnotations.of(null, true, false, true, false);
         registry.register(
-                new AbstractSyncToolHandler<>(ToolDescriptor.builder("full-tool")
+                new AbstractSyncToolHandler(ToolDescriptor.builder("full-tool")
                         .title("Full Tool")
                         .description("Does everything")
                         .inputSchema(TEST_SCHEMA)
@@ -75,7 +77,7 @@ class ToolRegistryTest {
                         .annotations(annotations)
                         .build()) {
                     @Override
-                    public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
+                    public ToolResult<?> handle(McpContext context, ToolArgs args) {
                         return ToolResult.text("ok");
                     }
                 });
@@ -246,10 +248,10 @@ class ToolRegistryTest {
         var handlers = new HashMap<String, McpMethodHandler>();
         registry.registerHandlers(handlers);
         registry.register(
-                new AbstractSyncToolHandler<>(
+                new AbstractSyncToolHandler(
                         ToolDescriptor.builder("ts-tool").taskSupport(enumValue).build()) {
                     @Override
-                    public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
+                    public ToolResult<?> handle(McpContext context, ToolArgs args) {
                         return ToolResult.text("ok");
                     }
                 });
@@ -301,12 +303,12 @@ class ToolRegistryTest {
         registry.registerHandlers(handlers);
         var icon = Icon.of("https://example.com/tool-icon.png", "image/png", null, null);
         registry.register(
-                new AbstractSyncToolHandler<>(ToolDescriptor.builder("icon-tool")
+                new AbstractSyncToolHandler(ToolDescriptor.builder("icon-tool")
                         .description("Tool with icon")
                         .icons(List.of(icon))
                         .build()) {
                     @Override
-                    public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
+                    public ToolResult<?> handle(McpContext context, ToolArgs args) {
                         return ToolResult.text("ok");
                     }
                 });
@@ -322,7 +324,206 @@ class ToolRegistryTest {
         assertThat(tool.icons().getFirst().mimeType()).isEqualTo("image/png");
     }
 
-    private static class TestTool extends AbstractSyncToolHandler<ToolResult> {
+    @Test
+    void getDescriptorReturnsNullForMissingTool() {
+        assertThat(registry.getDescriptor("nonexistent")).isNull();
+    }
+
+    @Test
+    void getDescriptorReturnsDescriptorForRegisteredTool() {
+        registry.register(new TestTool("desc-tool", "test desc", null));
+        var desc = registry.getDescriptor("desc-tool");
+        assertThat(desc).isNotNull();
+        assertThat(desc.name()).isEqualTo("desc-tool");
+        assertThat(desc.description()).isEqualTo("test desc");
+    }
+
+    @Test
+    void getAllReturnsAllHandlers() {
+        registry.register(new TestTool("t1", null, null));
+        registry.register(new TestTool("t2", null, null));
+        assertThat(registry.getAll()).hasSize(2);
+    }
+
+    @Test
+    void isEmptyReturnsTrueWhenEmpty() {
+        assertThat(registry.isEmpty()).isTrue();
+    }
+
+    @Test
+    void isEmptyReturnsFalseWhenNotEmpty() {
+        registry.register(new TestTool("t", null, null));
+        assertThat(registry.isEmpty()).isFalse();
+    }
+
+    @Test
+    void listWithZeroLimitUsesDefaultPageSize() {
+        registry.register(new TestTool("a", null, null));
+        registry.register(new TestTool("b", null, null));
+        var result = registry.list(0, null);
+        assertThat(result.items()).hasSize(2);
+    }
+
+    @Test
+    void listWithCursorSkipsPastCursor() {
+        registry.register(new TestTool("alpha", null, null));
+        registry.register(new TestTool("beta", null, null));
+        registry.register(new TestTool("gamma", null, null));
+        var result = registry.list(1, "alpha");
+        assertThat(result.items()).hasSize(1);
+        assertThat(result.items().getFirst().name()).isEqualTo("beta");
+    }
+
+    @Test
+    void listWithFilterExcludesMismatched() {
+        registry.register(new TestTool("keep", null, null));
+        registry.register(new TestTool("skip", null, null));
+        var result = registry.list(50, null, d -> d.name().startsWith("k"));
+        assertThat(result.items()).hasSize(1);
+        assertThat(result.items().getFirst().name()).isEqualTo("keep");
+    }
+
+    @Test
+    void listWithCustomDefaultLimit() {
+        registry.register(new TestTool("a", null, null));
+        registry.register(new TestTool("b", null, null));
+        var result = registry.list(0, null, 1);
+        assertThat(result.items()).hasSize(1);
+    }
+
+    @Test
+    void listReturnsCursorWhenMoreItemsAvailable() {
+        registry.register(new TestTool("a", null, null));
+        registry.register(new TestTool("b", null, null));
+        var result = registry.list(1, null);
+        assertThat(result.nextCursor()).isEqualTo("a");
+    }
+
+    @Test
+    void listReturnsNullCursorWhenAllItemsReturned() {
+        registry.register(new TestTool("a", null, null));
+        var result = registry.list(10, null);
+        assertThat(result.nextCursor()).isNull();
+    }
+
+    @Test
+    void parseLimitFromNumber() {
+        var params = Map.<String, Object>of("limit", 5);
+        assertThat(ToolRegistry.parseLimit(params)).isEqualTo(5);
+    }
+
+    @Test
+    void parseLimitFromNonNumberReturnsZero() {
+        var params = Map.<String, Object>of("limit", "not-a-number");
+        assertThat(ToolRegistry.parseLimit(params)).isZero();
+    }
+
+    @Test
+    void parseLimitFromNullParamsReturnsZero() {
+        assertThat(ToolRegistry.parseLimit(null)).isZero();
+    }
+
+    @Test
+    void parseLimitFromEmptyMapReturnsZero() {
+        assertThat(ToolRegistry.parseLimit(Map.of())).isZero();
+    }
+
+    @Test
+    void parseCursorFromString() {
+        var params = Map.<String, Object>of("cursor", "abc");
+        assertThat(ToolRegistry.parseCursor(params)).isEqualTo("abc");
+    }
+
+    @Test
+    void parseCursorFromNonStringReturnsNull() {
+        var params = Map.<String, Object>of("cursor", 123);
+        assertThat(ToolRegistry.parseCursor(params)).isNull();
+    }
+
+    @Test
+    void parseCursorFromNullParamsReturnsNull() {
+        assertThat(ToolRegistry.parseCursor(null)).isNull();
+    }
+
+    @Test
+    void parseCursorFromEmptyMapReturnsNull() {
+        assertThat(ToolRegistry.parseCursor(Map.of())).isNull();
+    }
+
+    @Test
+    void registerThrowsOnNullHandler() {
+        assertThatThrownBy(() -> registry.register(null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("ToolHandler");
+    }
+
+    @Test
+    void registerThrowsOnNullDescriptor() {
+        var handler = new ToolHandler() {
+            @Override
+            public ToolDescriptor descriptor() {
+                return null;
+            }
+
+            @Override
+            public CompletionStage<? extends ToolResult<?>> handle(ToolRequest request, McpContext context) {
+                return CompletableFuture.completedFuture(ToolResult.text("x"));
+            }
+        };
+        assertThatThrownBy(() -> registry.register(handler))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("ToolDescriptor");
+    }
+
+    @Test
+    void getReturnsNullForMissingTool() {
+        assertThat(registry.get("nonexistent")).isNull();
+    }
+
+    @Test
+    void removeNonExistentToolDoesNotThrow() {
+        registry.remove("nonexistent");
+        assertThat(registry.get("nonexistent")).isNull();
+    }
+
+    @Test
+    void registryResetBetweenTests() {
+        assertThat(registry.isEmpty()).isTrue();
+    }
+
+    @Test
+    void registerHandlersAddsBothMethods() {
+        var handlers = new java.util.HashMap<String, McpMethodHandler>();
+        registry.registerHandlers(handlers);
+        assertThat(handlers).containsOnlyKeys("tools/list", "tools/call");
+    }
+
+    @Test
+    void toolsListHandlerMethodName() {
+        var handlers = new java.util.HashMap<String, McpMethodHandler>();
+        registry.registerHandlers(handlers);
+        assertThat(handlers.get("tools/list").method()).isEqualTo("tools/list");
+    }
+
+    @Test
+    void toolsCallHandlerMethodName() {
+        var handlers = new java.util.HashMap<String, McpMethodHandler>();
+        registry.registerHandlers(handlers);
+        assertThat(handlers.get("tools/call").method()).isEqualTo("tools/call");
+    }
+
+    @Test
+    void shouldFireOnChangeWhenToolReRegistered() {
+        registry.register(new TestTool("re-register", null, null));
+
+        var callCount = new AtomicInteger(0);
+        registry.onChange(callCount::incrementAndGet);
+
+        registry.register(new TestTool("re-register", null, null));
+        assertThat(callCount).hasValue(1);
+    }
+
+    private static class TestTool extends AbstractSyncToolHandler {
 
         TestTool(String name, @Nullable String description, @Nullable JsonNode schema) {
             super(ToolDescriptor.builder(name)
@@ -332,7 +533,7 @@ class ToolRegistryTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
+        public ToolResult<?> handle(McpContext context, ToolArgs args) {
             return ToolResult.text("ok");
         }
     }

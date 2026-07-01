@@ -1,15 +1,16 @@
-/*
- * Copyright (c) 2026 Konstantin Pavlov.
- */
+/* Copyright (c) 2026 Konstantin Pavlov. */
 
 package dev.tachyonmcp.server.features.tools;
 
 import dev.tachyonmcp.server.session.McpContext;
 import java.util.concurrent.CompletionStage;
 
-public interface ToolHandler<R extends ToolResult> {
+/** Handles tool execution. One handler per tool. */
+public interface ToolHandler {
 
+    /** Returns the metadata descriptor for this tool. */
     ToolDescriptor descriptor();
 
-    CompletionStage<R> handle(ToolRequest request, McpContext context) throws Exception;
+    /** Executes the tool with the given request and context. */
+    CompletionStage<? extends ToolResult<?>> handle(ToolRequest request, McpContext context) throws Exception;
 }

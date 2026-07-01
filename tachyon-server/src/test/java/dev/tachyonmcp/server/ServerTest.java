@@ -12,6 +12,7 @@ import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.tools.SyncToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.*;
 import java.util.ArrayList;
@@ -220,7 +221,7 @@ class ServerTest {
             session.connection(conn);
             session.activate();
 
-            server.registerTool(new SyncToolHandler<>() {
+            server.registerTool(new SyncToolHandler() {
                 @Override
                 public String name() {
                     return "dynamic-tool";
@@ -237,8 +238,8 @@ class ServerTest {
                 }
 
                 @Override
-                public ToolResult handle(McpContext context, Map<String, JsonNode> args) {
-                    return ToolResult.of();
+                public ToolResult<?> handle(McpContext context, ToolArgs args) {
+                    return ToolResult.empty();
                 }
             });
 
@@ -336,7 +337,7 @@ class ServerTest {
             var session = server.createSession("sess_init");
             session.connection(conn);
 
-            server.registerTool(new SyncToolHandler<>() {
+            server.registerTool(new SyncToolHandler() {
                 @Override
                 public String name() {
                     return "tool-during-init";
@@ -353,8 +354,8 @@ class ServerTest {
                 }
 
                 @Override
-                public ToolResult handle(McpContext context, Map<String, JsonNode> args) {
-                    return ToolResult.of();
+                public ToolResult<?> handle(McpContext context, ToolArgs args) {
+                    return ToolResult.empty();
                 }
             });
 

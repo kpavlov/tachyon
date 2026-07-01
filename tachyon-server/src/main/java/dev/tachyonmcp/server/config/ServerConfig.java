@@ -6,6 +6,14 @@ package dev.tachyonmcp.server.config;
 
 import java.util.Objects;
 
+/**
+ * Aggregated server configuration grouping identity, capabilities, session, and network settings.
+ *
+ * @param identity     server identity metadata (name, version, etc.)
+ * @param capabilities which MCP features are enabled
+ * @param session      session lifecycle and persistence settings
+ * @param network      transport-level settings (host, port, CORS, etc.)
+ */
 public record ServerConfig(
         ServerIdentity identity, CapabilitiesConfig capabilities, SessionConfig session, NetworkConfig network) {
 

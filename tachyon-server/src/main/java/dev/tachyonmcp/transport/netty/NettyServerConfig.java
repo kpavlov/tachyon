@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 
+/** Configuration for the Netty transport. */
 public record NettyServerConfig(
         String host,
         int port,
@@ -22,6 +23,7 @@ public record NettyServerConfig(
         @Nullable CorsConfig corsConfig,
         @Nullable Consumer<ChannelPipeline> pipelineCustomizer) {
 
+    /** Builds a CORS configuration from the given parameters. */
     public static CorsConfig buildCorsConfig(
             @Nullable List<String> allowedOrigins,
             boolean allowNullOrigin,

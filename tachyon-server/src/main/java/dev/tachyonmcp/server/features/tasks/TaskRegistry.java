@@ -25,6 +25,7 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** Registry for long-running tasks with create/cancel/complete lifecycle and TTL janitor. */
 public class TaskRegistry extends Registry<TaskEntry> {
 
     private static final Logger logger = LoggerFactory.getLogger(TaskRegistry.class);
@@ -37,6 +38,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
     private final McpServer server;
     private volatile @Nullable ScheduledExecutorService ttlJanitor;
 
+    /** Creates a task registry bound to the given server (for broadcasting status notifications). */
     public TaskRegistry(McpServer server) {
         this.server = server;
     }
@@ -60,22 +62,27 @@ public class TaskRegistry extends Registry<TaskEntry> {
         }
     }
 
+    /** Returns the task with the given unique ID. */
     public @Nullable TaskEntry getById(String id) {
         return byId.get(id);
     }
 
+    /** Creates a task with the given name and optional description (no TTL). */
     public TaskEntry createTask(String name, @Nullable String description) {
         return createTask(name, description, 0.0);
     }
 
+    /** Creates a task with the given name, description, and TTL in seconds (0 = no TTL). */
     public TaskEntry createTask(String name, @Nullable String description, double ttl) {
         return createTask(TaskDescriptor.of(name, description), ttl);
     }
 
+    /** Creates a task from a descriptor (no TTL). */
     public TaskEntry createTask(TaskDescriptor descriptor) {
         return createTask(descriptor, 0.0);
     }
 
+    /** Creates a task from a descriptor with the given TTL in seconds (0 = no TTL). */
     public TaskEntry createTask(TaskDescriptor descriptor, double ttl) {
         var id = UUID.randomUUID().toString();
         var entry = new TaskEntry(descriptor, id, TaskState.WORKING, ttl);
@@ -84,6 +91,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
         return entry;
     }
 
+    /** Cancels the task with the given ID. */
     public boolean cancelTask(String taskId) {
         var entry = byId.get(taskId);
         if (entry == null) {
@@ -97,6 +105,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
         return true;
     }
 
+    /** Marks the task as completed with an optional result JSON. */
     public boolean completeTask(String taskId, @Nullable String resultJson) {
         var entry = byId.get(taskId);
         if (entry == null) {
@@ -111,6 +120,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
         return true;
     }
 
+    /** Marks the task as failed with an optional result JSON. */
     public boolean failTask(String taskId, @Nullable String resultJson) {
         var entry = byId.get(taskId);
         if (entry == null) {
@@ -125,6 +135,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
         return true;
     }
 
+    /** Updates task status from a client notification. */
     public boolean updateStatusFromClientNotification(
             String taskId, @Nullable TaskState newStatus, @Nullable String statusMessage) {
         var entry = byId.get(taskId);
@@ -149,6 +160,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
 
     private final AtomicBoolean ttlJanitorStarted = new AtomicBoolean();
 
+    /** Starts the background janitor that expires stale tasks. Idempotent. */
     public void startTtlJanitor() {
         if (!ttlJanitorStarted.compareAndSet(false, true)) {
             return;
@@ -163,6 +175,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
                 this::expireStaleTasks, TTL_JANITOR_INTERVAL_SECONDS, TTL_JANITOR_INTERVAL_SECONDS, TimeUnit.SECONDS);
     }
 
+    /** Stops the task TTL janitor. */
     public void stopTtlJanitor() {
         var executor = ttlJanitor;
         if (executor != null) {

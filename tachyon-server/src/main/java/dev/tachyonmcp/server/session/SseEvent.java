@@ -6,6 +6,7 @@ package dev.tachyonmcp.server.session;
 
 import java.util.Objects;
 
+/** A single Server-Sent Event with an ID, event type, and data payload. */
 public record SseEvent(String id, String event, String data) {
 
     public SseEvent(String id, String event, String data) {

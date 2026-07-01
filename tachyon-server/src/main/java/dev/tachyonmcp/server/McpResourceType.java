@@ -4,6 +4,8 @@
 
 package dev.tachyonmcp.server;
 
+/** Common interface for named MCP resource types (tools, resources, prompts, tasks). */
 public interface McpResourceType {
+    /** Unique name of this resource type. */
     String name();
 }

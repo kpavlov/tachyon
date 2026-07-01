@@ -1,0 +1,162 @@
+/* Copyright (c) 2026 Konstantin Pavlov. */
+
+package dev.tachyonmcp.server.features.tools;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import dev.tachyonmcp.server.domain.InputRequest;
+import dev.tachyonmcp.server.domain.TextContent;
+import dev.tachyonmcp.server.domain.UrlInputRequest;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+
+class ToolResultTest {
+
+    private static final JsonNodeFactory JSON = JsonNodeFactory.instance;
+
+    @Test
+    void blocksWithNoArgsIsEmptySuccess() {
+        var r = ToolResult.blocks();
+        assertThat(r).isInstanceOf(ToolResult.Success.class);
+        assertThat(((ToolResult.Success<?>) r).content()).isEmpty();
+    }
+
+    @Test
+    void successAllowsNullStructuredAndEmptyContent() {
+        var r = new ToolResult.Success<>(null, List.of());
+        assertThat(r.structured()).isEmpty();
+        assertThat(r.content()).isEmpty();
+    }
+
+    @Test
+    void successWithStructuredAndNoContentIsAllowed() {
+        var r = new ToolResult.Success<>("data", List.of());
+        assertThat(r.structured()).contains("data");
+        assertThat(r.content()).isEmpty();
+    }
+
+    @Test
+    void textFactoryProducesTextContentBlock() {
+        var r = ToolResult.text("hello");
+        assertThat(r).isInstanceOf(ToolResult.Success.class);
+        var s = (ToolResult.Success<?>) r;
+        assertThat(s.content()).hasSize(1);
+        assertThat(((TextContent) s.content().getFirst()).text()).isEqualTo("hello");
+        assertThat(s.structured()).isEmpty();
+    }
+
+    @Test
+    void withMetaMergesNotNests() {
+        var base = ToolResult.text("x").withMeta("a", JSON.numberNode(1));
+        var merged = base.withMeta("b", JSON.numberNode(2));
+
+        assertThat(merged).isInstanceOf(ToolResult.WithMeta.class);
+        var wm = (ToolResult.WithMeta<?>) merged;
+        assertThat(wm.inner()).isNotInstanceOf(ToolResult.WithMeta.class);
+        assertThat(wm.meta()).containsKey("a").containsKey("b");
+    }
+
+    @Test
+    void withMetaKeyOverridesMerges() {
+        var base = ToolResult.text("x").withMeta("k", JSON.numberNode(1));
+        var updated = base.withMeta("k", JSON.numberNode(99));
+
+        var wm = (ToolResult.WithMeta<?>) updated;
+        assertThat(wm.meta().get("k").asLong()).isEqualTo(99);
+    }
+
+    @Test
+    void withMetaEmptyMapReturnsThis() {
+        var r = ToolResult.text("x");
+        assertThat(r.withMeta(Map.of())).isSameAs(r);
+    }
+
+    @Test
+    void withMetaImmutability() {
+        var source = new HashMap<String, JsonNode>();
+        source.put("k", JSON.numberNode(1));
+        var r = ToolResult.text("x").withMeta(source);
+        source.put("injected", JSON.numberNode(99));
+        var wm = (ToolResult.WithMeta<?>) r;
+        assertThat(wm.meta()).doesNotContainKey("injected");
+    }
+
+    @Test
+    void successContentIsDefensiveCopy() {
+        var list = new java.util.ArrayList<dev.tachyonmcp.server.domain.ContentBlock>();
+        list.add(TextContent.of("a"));
+        var r = new ToolResult.Success<>(null, list);
+        list.add(TextContent.of("b"));
+        assertThat(r.content()).hasSize(1);
+    }
+
+    @Test
+    void errorIsErrorResult() {
+        ToolResult<Object> err = ToolResult.error("boom");
+
+        assertThat(err).isInstanceOf(ToolResult.ErrorResult.class);
+        assertThat(((ToolResult.ErrorResult) err).message()).isEqualTo("boom");
+    }
+
+    @Test
+    void emptyIsSuccessWithoutContent() {
+        ToolResult<Object> empty = ToolResult.empty();
+
+        assertThat(empty).isInstanceOf(ToolResult.Success.class);
+        var success = (ToolResult.Success<?>) empty;
+        assertThat(success.structuredValue()).isNull();
+        assertThat(success.content()).isEmpty();
+    }
+
+    @Test
+    void failureCanCarryMeta() {
+        ToolResult<Object> err = ToolResult.error("oops").withMeta("trace", JSON.stringNode("id-1"));
+        assertThat(err).isInstanceOf(ToolResult.WithMeta.class);
+        var wm = (ToolResult.WithMeta<?>) err;
+        assertThat(wm.inner()).isInstanceOf(ToolResult.ErrorResult.class);
+        assertThat(wm.meta().get("trace").asString()).isEqualTo("id-1");
+    }
+
+    @Test
+    void inputRequiredFactory() {
+        var req = new LinkedHashMap<String, InputRequest>();
+        req.put("field", UrlInputRequest.of("authenticate", "elic-1", "https://example.com/auth"));
+        var r = ToolResult.inputRequired(req, "state-1");
+        assertThat(r).isInstanceOf(ToolResult.InputRequired.class);
+        var ir = (ToolResult.InputRequired) r;
+        assertThat(ir.inputRequests()).containsOnlyKeys("field");
+        assertThat(ir.requestState()).isEqualTo("state-1");
+    }
+
+    @Test
+    void inputRequiredWithNullState() {
+        var req = Map.<String, dev.tachyonmcp.server.domain.InputRequest>of();
+        var r = ToolResult.inputRequired(req, null);
+        assertThat(r).isInstanceOf(ToolResult.InputRequired.class);
+        assertThat(((ToolResult.InputRequired) r).requestState()).isNull();
+    }
+
+    @Test
+    void ofFactoryWithPayload() {
+        ToolResult<Integer> r = ToolResult.of(42);
+        assertThat(r).isInstanceOf(ToolResult.Success.class);
+        var s = (ToolResult.Success<Integer>) r;
+        assertThat(s.structured()).contains(42);
+        assertThat(s.content()).isNotEmpty();
+    }
+
+    @Test
+    void ofFactoryWithPayloadAndText() {
+        ToolResult<String> r = ToolResult.of("data", "custom text");
+        assertThat(r).isInstanceOf(ToolResult.Success.class);
+        var s = (ToolResult.Success<String>) r;
+        assertThat(s.structured()).contains("data");
+        assertThat(((dev.tachyonmcp.server.domain.TextContent) s.content().getFirst()).text())
+                .isEqualTo("custom text");
+    }
+}

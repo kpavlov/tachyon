@@ -10,6 +10,15 @@ import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
+/**
+ * Server response to the {@code initialize} request.
+ *
+ * @param protocolVersion      the negotiated protocol version string
+ * @param capabilities         the server's capabilities
+ * @param serverIdentity       server identity metadata
+ * @param instructions         optional server-level instructions for the client
+ * @param negotiatedExtensions extension-specific negotiated data
+ */
 public record InitializeResponse(
         String protocolVersion,
         ServerCapabilities capabilities,

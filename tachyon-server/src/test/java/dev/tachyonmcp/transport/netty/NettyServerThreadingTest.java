@@ -10,17 +10,15 @@ import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.McpServer;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.McpContext;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
-import tools.jackson.databind.JsonNode;
 
 @Execution(ExecutionMode.SAME_THREAD)
 class NettyServerThreadingTest {
@@ -30,10 +28,10 @@ class NettyServerThreadingTest {
         var handlerThread = new CompletableFuture<String>();
 
         try (McpServer server = TachyonServer.builder()
-                        .tool(new AbstractSyncToolHandler<>("thread_probe") {
+                        .tool(new AbstractSyncToolHandler("thread_probe") {
 
                             @Override
-                            public ToolResult handle(McpContext context, @Nullable Map<String, JsonNode> args) {
+                            public ToolResult<?> handle(McpContext context, ToolArgs args) {
                                 Thread thread = Thread.currentThread();
                                 handlerThread.complete(thread.getName() + " virtual:" + thread.isVirtual());
                                 return ToolResult.empty();

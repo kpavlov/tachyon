@@ -52,14 +52,14 @@ class McpOperationHandlerRequestTest {
             .build();
 
     /** Emits two progress notifications (which upgrade the POST response to SSE), then returns a result. */
-    private static final ToolHandler<ToolResult> PROGRESS_TOOL = new ToolHandler<>() {
+    private static final ToolHandler PROGRESS_TOOL = new ToolHandler() {
         @Override
         public ToolDescriptor descriptor() {
             return PROGRESS_DESCRIPTOR;
         }
 
         @Override
-        public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+        public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
             var pt = request.progressToken();
             ctx.notifications().progress(pt, 0, 100, "Starting");
             ctx.notifications().progress(pt, 100, 100, "Complete");
@@ -169,15 +169,15 @@ class McpOperationHandlerRequestTest {
                         .putObject("properties"))
                 .build();
         var upgraded = new CountDownLatch(1);
-        var neverComplete = new CompletableFuture<ToolResult>();
-        ToolHandler<ToolResult> stalledTool = new ToolHandler<>() {
+        var neverComplete = new CompletableFuture<ToolResult<?>>();
+        ToolHandler stalledTool = new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
                 return descriptor;
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
                 ctx.notifications().progress(request.progressToken(), 0, 100, "working");
                 upgraded.countDown();
                 return neverComplete;

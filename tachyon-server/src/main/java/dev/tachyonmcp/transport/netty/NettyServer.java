@@ -42,6 +42,7 @@ public final class NettyServer implements Closeable {
     private final Channel serverChannel;
     private final DefaultChannelGroup childChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
+    /** Returns the port the server is bound to. */
     public int port() {
         return ((InetSocketAddress) serverChannel.localAddress()).getPort();
     }

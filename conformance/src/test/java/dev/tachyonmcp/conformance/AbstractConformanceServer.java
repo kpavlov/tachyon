@@ -14,14 +14,16 @@ import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
 import dev.tachyonmcp.server.features.tools.*;
 import dev.tachyonmcp.server.session.McpContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
-import java.util.*;
+import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.awaitility.Awaitility;
-import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -177,26 +179,26 @@ abstract class AbstractConformanceServer {
                 "test_image_content",
                 "Returns image content",
                 INPUT_SCHEMA_NO_ARGS,
-                (ctx, args) -> ToolResult.of(List.of(ImageContent.of(MINI_PNG_BASE64, "image/png")))));
+                (ctx, args) -> ToolResult.blocks(ImageContent.of(MINI_PNG_BASE64, "image/png"))));
 
         server.registerTool(SyncToolHandler.of(
                 "test_audio_content",
                 "Returns audio content",
                 INPUT_SCHEMA_NO_ARGS,
-                (ctx, args) -> ToolResult.of(List.of(AudioContent.of(MINI_WAV_BASE64, "audio/wav")))));
+                (ctx, args) -> ToolResult.blocks(AudioContent.of(MINI_WAV_BASE64, "audio/wav"))));
 
         server.registerTool(SyncToolHandler.of(
                 "test_embedded_resource", "Returns embedded resource", INPUT_SCHEMA_NO_ARGS, (ctx, args) -> {
                     var res = TextResourceContents.of(
                             "test://embedded-resource", "text/plain", "This is an embedded resource content.");
-                    return ToolResult.of(List.of(EmbeddedResource.of(res)));
+                    return ToolResult.blocks(EmbeddedResource.of(res));
                 }));
 
         server.registerTool(SyncToolHandler.of(
                 "test_multiple_content_types", "Returns multiple content types", INPUT_SCHEMA_NO_ARGS, (ctx, args) -> {
                     var mixed = TextResourceContents.of(
                             "test://mixed-content-resource", "application/json", "{\"test\":\"data\",\"value\":123}");
-                    return ToolResult.of(
+                    return ToolResult.blocks(
                             TextContent.of("Multiple content types test:"),
                             ImageContent.of(MINI_PNG_BASE64, "image/png"),
                             EmbeddedResource.of(mixed));
@@ -208,7 +210,7 @@ abstract class AbstractConformanceServer {
                 INPUT_SCHEMA_NO_ARGS,
                 (ctx, args) -> ToolResult.error("This tool intentionally returns an error for testing")));
 
-        server.registerTool(new ToolHandler<>() {
+        server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
                 return ToolDescriptor.builder("test_tool_with_progress")
@@ -218,7 +220,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<? extends ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
                 var pt = request.progressToken();
                 if (pt != null) {
                     ctx.notifications().progress(pt, 0, 100, "Starting");
@@ -231,7 +233,7 @@ abstract class AbstractConformanceServer {
             }
         });
 
-        server.registerTool(new ToolHandler<>() {
+        server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
                 return ToolDescriptor.builder("test_tool_with_logging")
@@ -241,7 +243,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<? extends ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
                 ctx.notifications().info("tachyon.tools", Map.of("message", "Tool execution started"));
                 delay(50);
                 ctx.notifications().info("tachyon.tools", Map.of("message", "Tool processing data"));
@@ -253,8 +255,9 @@ abstract class AbstractConformanceServer {
 
         server.registerTool(SyncToolHandler.of(
                 "test_sampling", "Tool that requests sampling", INPUT_SCHEMA_WITH_PROMPT, (ctx, args) -> {
-                    if (args instanceof Map<?, ?> map && map.get("prompt") != null) {
-                        var prompt = map.get("prompt");
+                    var promptOpt = args.stringOpt("prompt");
+                    if (promptOpt.isPresent()) {
+                        var prompt = promptOpt.get();
                         try {
                             var paramsMap = Map.of(
                                     "messages",
@@ -283,20 +286,23 @@ abstract class AbstractConformanceServer {
 
         server.registerTool(SyncToolHandler.of(
                 "test_elicitation", "Tool that requests elicitation", INPUT_SCHEMA_WITH_MESSAGE, (ctx, args) -> {
-                    if (args instanceof Map<?, ?> map && map.get("message") != null) {
-                        var message = map.get("message");
+                    var messageOpt = args.stringOpt("message");
+                    if (messageOpt.isPresent()) {
+                        var message = messageOpt.get();
                         try {
                             var paramsMap = Map.of(
-                                    "mode", "form",
-                                    "message", message.toString(),
+                                    "mode",
+                                    "form",
+                                    "message",
+                                    message,
                                     "requestedSchema",
-                                            Map.of(
-                                                    "type", "object",
-                                                    "properties",
-                                                            Map.of(
-                                                                    "username", Map.of("type", "string"),
-                                                                    "email", Map.of("type", "string")),
-                                                    "required", List.of("username", "email")));
+                                    Map.of(
+                                            "type", "object",
+                                            "properties",
+                                                    Map.of(
+                                                            "username", Map.of("type", "string"),
+                                                            "email", Map.of("type", "string")),
+                                            "required", List.of("username", "email")));
                             var responseJson = ctx.server()
                                     .sendRequest("elicitation/create", JsonRpcCodec.writeValueAsString(paramsMap))
                                     .get(2, TimeUnit.SECONDS);
@@ -416,12 +422,13 @@ abstract class AbstractConformanceServer {
 
         var inputSchema = buildJsonSchema();
         server.registerTool(
-                new AbstractSyncToolHandler<>(ToolDescriptor.builder("json_schema_2020_12_tool")
+                new AbstractSyncToolHandler(ToolDescriptor.builder("json_schema_2020_12_tool")
                         .description("Tool with JSON Schema 2020-12 features")
                         .inputSchema(inputSchema)
                         .build()) {
+
                     @Override
-                    public ToolResult handle(McpContext context, @Nullable Map<String, JsonNode> arguments) {
+                    public ToolResult<String> handle(McpContext context, ToolArgs arguments) {
                         return ToolResult.text("JSON Schema 2020-12 tool called");
                     }
                 });
@@ -443,7 +450,7 @@ abstract class AbstractConformanceServer {
     }
 
     private void registerInputRequiredTools(McpServer server) {
-        server.registerTool(new ToolHandler<>() {
+        server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
                 return ToolDescriptor.builder("test_input_required_result_elicitation")
@@ -453,7 +460,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
                 var inputResponses = request.inputResponses();
                 if (inputResponses != null && inputResponses.containsKey("user_name")) {
                     var resp = inputResponses.get("user_name");
@@ -468,7 +475,7 @@ abstract class AbstractConformanceServer {
             }
         });
 
-        server.registerTool(new ToolHandler<>() {
+        server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
                 return ToolDescriptor.builder("test_input_required_result_sampling")
@@ -478,7 +485,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
                 var inputResponses = request.inputResponses();
                 if (inputResponses != null && inputResponses.containsKey("capital_question")) {
                     var resp = inputResponses.get("capital_question");
@@ -492,7 +499,7 @@ abstract class AbstractConformanceServer {
             }
         });
 
-        server.registerTool(new ToolHandler<>() {
+        server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
                 return ToolDescriptor.builder("test_input_required_result_list_roots")
@@ -502,7 +509,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
                 var inputResponses = request.inputResponses();
                 if (inputResponses != null && inputResponses.containsKey("client_roots")) {
                     return CompletableFuture.completedFuture(ToolResult.text("Roots received"));
@@ -512,7 +519,7 @@ abstract class AbstractConformanceServer {
             }
         });
 
-        server.registerTool(new ToolHandler<>() {
+        server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
                 return ToolDescriptor.builder("test_input_required_result_request_state")
@@ -522,7 +529,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
                 var inputResponses = request.inputResponses();
                 var requestState = request.requestState();
                 if (inputResponses != null && inputResponses.containsKey("confirm") && requestState != null) {
@@ -534,7 +541,7 @@ abstract class AbstractConformanceServer {
             }
         });
 
-        server.registerTool(new ToolHandler<>() {
+        server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
                 return ToolDescriptor.builder("test_input_required_result_multiple_inputs")
@@ -544,7 +551,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
                 var inputResponses = request.inputResponses();
                 if (inputResponses != null
                         && inputResponses.containsKey("user_name")
@@ -560,7 +567,7 @@ abstract class AbstractConformanceServer {
             }
         });
 
-        server.registerTool(new ToolHandler<>() {
+        server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
                 return ToolDescriptor.builder("test_input_required_result_multi_round")
@@ -570,7 +577,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
                 var inputResponses = request.inputResponses();
                 var requestState = request.requestState();
                 if (inputResponses != null && inputResponses.containsKey("step2")) {
@@ -596,7 +603,7 @@ abstract class AbstractConformanceServer {
             }
         });
 
-        server.registerTool(new ToolHandler<>() {
+        server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
                 return ToolDescriptor.builder("test_input_required_result_tampered_state")
@@ -606,7 +613,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
                 var inputResponses = request.inputResponses();
                 var requestState = request.requestState();
                 if (inputResponses != null && inputResponses.containsKey("confirm")) {
@@ -621,7 +628,7 @@ abstract class AbstractConformanceServer {
             }
         });
 
-        server.registerTool(new ToolHandler<>() {
+        server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
                 return ToolDescriptor.builder("test_input_required_result_capabilities")
@@ -631,7 +638,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
                 var meta = request.meta();
                 var capabilities = meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
                 var hasSampling =
@@ -726,7 +733,7 @@ abstract class AbstractConformanceServer {
                         });
     }
 
-    private static class EchoToolHandler extends AbstractSyncToolHandler<ToolResult> {
+    private static class EchoToolHandler extends AbstractSyncToolHandler {
 
         // language=json
         private static final JsonNode INPUT_SCHEMA = parseJson("""
@@ -745,9 +752,9 @@ abstract class AbstractConformanceServer {
         }
 
         @Override
-        public ToolResult handle(McpContext context, @Nullable Map<String, JsonNode> arguments) {
-            var message = Objects.requireNonNull(arguments).get("message");
-            return ToolResult.text(message != null ? message.asString() : "");
+        public ToolResult<String> handle(McpContext context, ToolArgs arguments) {
+            var message = arguments.stringOr("message", "");
+            return ToolResult.text(message);
         }
     }
 }

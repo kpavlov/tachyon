@@ -27,6 +27,9 @@ import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
 import dev.tachyonmcp.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.features.tools.ToolResult.InputRequired;
+import dev.tachyonmcp.server.features.tools.ToolResult.Success;
+import dev.tachyonmcp.server.features.tools.ToolResult.WithMeta;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -88,14 +91,38 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
     }
 
     @Override
-    public Object callToolResult(ToolResult result) {
-        if (result.inputRequests() != null) {
-            return new InputRequiredPayload(result.inputRequests(), result.requestState());
+    public Object callToolResult(ToolResult<?> result) {
+        @Nullable Map<String, JsonNode> meta = null;
+        ToolResult<?> unwrapped = result;
+        if (result instanceof WithMeta<?> wm) {
+            meta = wm.meta().isEmpty() ? null : wm.meta();
+            unwrapped = wm.inner();
         }
-        var protocolContent = result.content().stream()
-                .map(McpToolMapper::toProtocolContentBlock)
-                .toList();
-        return new CallToolResult(protocolContent, result.structuredContent(), result.isError(), result.meta(), null);
+        final var resolvedMeta = meta;
+        return switch (unwrapped) {
+            case InputRequired ir -> new InputRequiredPayload(ir.inputRequests(), ir.requestState(), resolvedMeta);
+            case ToolResult.ErrorResult er ->
+                new CallToolResult(
+                        List.of(McpToolMapper.toProtocolContentBlock(TextContent.of(er.message()))),
+                        null,
+                        true,
+                        resolvedMeta,
+                        null);
+            case Success<?> s -> wireSuccess(s, resolvedMeta);
+            case WithMeta<?> ignored -> throw new AssertionError("WithMeta unwrapped above");
+        };
+    }
+
+    @SuppressWarnings("unchecked")
+    private Object wireSuccess(Success<?> s, @Nullable Map<String, JsonNode> meta) {
+        var blocks =
+                s.content().stream().map(McpToolMapper::toProtocolContentBlock).toList();
+        @Nullable Map<String, JsonNode> structured = null;
+        var sv = s.structuredValue();
+        if (sv instanceof Map<?, ?> rawMap) {
+            structured = (Map<String, JsonNode>) rawMap;
+        }
+        return new CallToolResult(blocks, structured, null, meta, null);
     }
 
     @Override
@@ -167,12 +194,13 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
     @Override
     public Object inputRequiredResult(
             Map<String, ? extends InputRequest> inputRequests, @Nullable String requestState) {
-        return new InputRequiredPayload(inputRequests, requestState);
+        return new InputRequiredPayload(inputRequests, requestState, null);
     }
 
     private record InputRequiredPayload(
             @Nullable Map<String, ? extends InputRequest> inputRequests,
-            @Nullable String requestState) {}
+            @Nullable String requestState,
+            @Nullable Map<String, JsonNode> meta) {}
 
     private static final class InputRequiredPayloadCodec implements Codec<InputRequiredPayload> {
 
@@ -196,6 +224,14 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
             }
             if (value.requestState() != null) {
                 gen.writeStringProperty("requestState", value.requestState());
+            }
+            if (value.meta() != null) {
+                gen.writeObjectPropertyStart("_meta");
+                for (var entry : value.meta().entrySet()) {
+                    gen.writeName(entry.getKey());
+                    gen.writeRawValue(entry.getValue().toString());
+                }
+                gen.writeEndObject();
             }
             gen.writeEndObject();
         }

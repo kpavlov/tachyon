@@ -29,6 +29,10 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Core MCP server that manages sessions, registries, method handlers, and
+ * extension lifecycle. Created via {@link ServerBuilder}.
+ */
 public class McpServer implements Closeable {
 
     private static final Logger logger = LoggerFactory.getLogger(McpServer.class);
@@ -59,6 +63,7 @@ public class McpServer implements Closeable {
         RESPONSE_MAPPERS = List.copyOf(mappers);
     }
 
+    /** Returns the protocol response mapper for the default MCP version. */
     public ProtocolResponseMapper responseMapper() {
         for (var mapper : RESPONSE_MAPPERS) {
             if (mapper.supports("mcp", "2025-11-25")) {
@@ -68,26 +73,35 @@ public class McpServer implements Closeable {
         throw new IllegalStateException("No protocol response mapper found");
     }
 
+    /** Returns the server configuration. */
     public ServerConfig config() {
         return config;
     }
 
+    /** Returns {@code true} when running in stateless mode (no session persistence). */
     public boolean isStateless() {
         return config.session().stateless();
     }
 
+    /** Returns the virtual-thread-per-task executor used for handler dispatch. */
     public ExecutorService executor() {
         return virtualThreadExecutor;
     }
 
+    /** Sets the logging level for a session. */
     public void setLoggingLevel(String sessionId, LoggingLevel level) {
         loggingLevels.put(sessionId, level);
     }
 
+    /** Returns the logging level for a session, or {@code null} if not set. */
     public LoggingLevel getLoggingLevel(String sessionId) {
         return loggingLevels.get(sessionId);
     }
 
+    /**
+     * Emits a log notification for the given session if the requested level meets
+     * the configured threshold.
+     */
     public void log(McpSession session, LoggingLevel requested, String logger, Object data) {
         var configured = loggingLevels.get(session.id());
         if (configured == null) return;
@@ -100,6 +114,7 @@ public class McpServer implements Closeable {
         return requested.ordinal() >= configured.ordinal();
     }
 
+    /** Resolves effective capabilities based on configuration and registered features. */
     public ServerCapabilities resolveCapabilities() {
         final var builder = ServerCapabilities.builder();
 
@@ -202,6 +217,7 @@ public class McpServer implements Closeable {
         broadcastNotification(method, java.util.Map.of());
     }
 
+    /** Sends a notification to all active sessions. */
     public void broadcastNotification(String method, Object params) {
         for (var entry : sessionManager.allSessions()) {
             if (entry.state() == SessionState.ACTIVE) {
@@ -221,16 +237,19 @@ public class McpServer implements Closeable {
         CompletionHandlers.register(methodHandlers);
     }
 
+    /** Registers a method handler keyed by its own method name. */
     public void registerHandler(McpMethodHandler handler) {
         methodHandlers.put(handler.method(), handler);
         logger.info("Handler registered: {}", handler.method());
     }
 
+    /** Registers a method handler with an explicit method name. */
     public void registerHandler(String method, McpMethodHandler handler) {
         methodHandlers.put(method, handler);
         logger.info("Handler registered: {}", method);
     }
 
+    /** Returns the handler for a method, or {@code null} if not registered. */
     @Nullable
     public McpMethodHandler getHandler(String method) {
         return methodHandlers.get(method);
@@ -256,58 +275,71 @@ public class McpServer implements Closeable {
         }
     }
 
+    /** Returns the registered extensions. */
     public List<McpExtension> extensions() {
         return Collections.unmodifiableList(extensions);
     }
 
+    /** Returns the extension ID that owns the given method, or {@code null} if none. */
     public @Nullable String extensionForMethod(String method) {
         return extensionMethodOwners.get(method);
     }
 
+    /** Returns {@code true} if the given extension requires the meta envelope for its methods. */
     public boolean extensionRequiresMeta(String extensionId) {
         var ext = extensionsById.get(extensionId);
         return ext != null && ext.requiresMetaEnvelope();
     }
 
-    public void registerTool(SyncToolHandler<?> handler) {
+    /** Registers a synchronous tool handler. */
+    public void registerTool(SyncToolHandler handler) {
         toolRegistry.register(handler);
         logger.info("Tool registered: {}", handler.name());
     }
 
-    public void registerTool(AsyncToolHandler<?> handler) {
+    /** Registers an asynchronous tool handler. */
+    public void registerTool(AsyncToolHandler handler) {
         toolRegistry.register(handler);
         logger.info("Tool registered: {}", handler.name());
     }
 
-    public void registerTool(ToolHandler<?> handler) {
+    /** Registers a tool handler. */
+    public void registerTool(ToolHandler handler) {
         toolRegistry.register(handler);
         logger.info("Tool registered: {}", handler.descriptor().name());
     }
 
+    /** Returns the descriptor for a tool by name, or {@code null} if not registered. */
     public @Nullable ToolDescriptor getTool(String name) {
         return toolRegistry.getDescriptor(name);
     }
 
+    /** Returns the resource registry. */
     public ResourceRegistry resources() {
         return resourceRegistry;
     }
 
+    /** Returns the prompt registry. */
     public PromptRegistry prompts() {
         return promptRegistry;
     }
 
+    /** Returns the task registry. */
     public TaskRegistry tasks() {
         return taskRegistry;
     }
 
+    /** Creates and registers a new session with the given ID. */
     public McpSession createSession(String sessionId) {
         return sessionManager.createSession(sessionId);
     }
 
+    /** Returns the session with the given ID, if present. */
     public Optional<McpSession> getSession(String sessionId) {
         return sessionManager.getSession(sessionId);
     }
 
+    /** Removes and closes the session with the given ID. */
     public void removeSession(String sessionId) {
         sessionManager.removeSession(sessionId);
     }
@@ -324,10 +356,12 @@ public class McpServer implements Closeable {
         return sseEvent;
     }
 
+    /** Sends a notification to the given session. */
     public void sendNotification(McpSession session, String method, Object params) {
         sendNotification(session, method, params, null);
     }
 
+    /** Sends a notification to the given session, optionally via a bound outbound SSE stream. */
     public void sendNotification(
             McpSession session, String method, @Nullable Object params, @Nullable OutboundSseStream stream) {
         if (session.state() == SessionState.CLOSED) {
@@ -360,10 +394,12 @@ public class McpServer implements Closeable {
 
     static final Duration PENDING_REQUEST_TIMEOUT = Duration.ofSeconds(60);
 
+    /** Sends a request to the client and returns a future that completes with the response. */
     public CompletableFuture<String> sendRequest(McpSession session, String method, Object params) {
         return sendRequest(session, method, params, null);
     }
 
+    /** Sends a request to the client, optionally via a bound outbound SSE stream, and returns a future. */
     public CompletableFuture<String> sendRequest(
             McpSession session, String method, Object params, @Nullable OutboundSseStream stream) {
         var paramsStr = params instanceof Map || params instanceof List
@@ -399,6 +435,7 @@ public class McpServer implements Closeable {
         return future;
     }
 
+    /** Completes a pending client request with the given result JSON. */
     public boolean completePendingRequest(Object requestId, String resultJson) {
         var future = pendingRequests.remove(requestId);
         if (future != null) {
@@ -408,6 +445,7 @@ public class McpServer implements Closeable {
         return false;
     }
 
+    /** Fails a pending client request with the given error message. */
     public boolean failPendingRequest(Object requestId, String message) {
         var future = pendingRequests.remove(requestId);
         if (future != null) {
@@ -417,6 +455,7 @@ public class McpServer implements Closeable {
         return false;
     }
 
+    /** Registers a pending request with a timeout. */
     public void registerPendingRequest(Object requestId, CompletableFuture<String> future) {
         pendingRequests.put(requestId, future);
         future.orTimeout(PENDING_REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
@@ -452,14 +491,17 @@ public class McpServer implements Closeable {
         return sb.toString();
     }
 
+    /** Appends an event to the session log. */
     public void appendEvent(SessionEvent event) {
         router.append(event);
     }
 
+    /** Replays session events after the given sequence number. */
     public List<SessionEvent> replay(String sessionId, long lastSeq) {
         return router.replay(sessionId, lastSeq);
     }
 
+    /** Returns and increments the event ID counter. */
     public long nextEventId() {
         return eventIdCounter.incrementAndGet();
     }

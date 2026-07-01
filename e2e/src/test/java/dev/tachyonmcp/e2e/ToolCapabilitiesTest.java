@@ -10,10 +10,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.features.tools.SyncToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.McpContext;
-import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -181,14 +181,14 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
     @Test
     void shouldRegisterWithMinimalDescriptor() throws Exception {
         startEmptyServer();
-        server.registerTool(new SyncToolHandler<>() {
+        server.registerTool(new SyncToolHandler() {
             @Override
             public String name() {
                 return "minimal-tool";
             }
 
             @Override
-            public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
+            public ToolResult<?> handle(McpContext context, ToolArgs arguments) {
                 return ToolResult.text("ok");
             }
         });
@@ -211,7 +211,7 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
     void shouldRegisterWithFullDescriptor() throws Exception {
         var annotations = ToolAnnotations.of(null, true, false, null, null);
         startEmptyServer();
-        server.registerTool(new SyncToolHandler<>() {
+        server.registerTool(new SyncToolHandler() {
             @Override
             public String name() {
                 return "full-tool";
@@ -248,7 +248,7 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
             }
 
             @Override
-            public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
+            public ToolResult<?> handle(McpContext context, ToolArgs arguments) {
                 return ToolResult.text("ok");
             }
         });
@@ -270,7 +270,7 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
 
     // region: Tool Handler Implementations
 
-    private record OutputSchemaToolHandler(JsonNode outputSchemaNode) implements SyncToolHandler<ToolResult> {
+    private record OutputSchemaToolHandler(JsonNode outputSchemaNode) implements SyncToolHandler {
         @Override
         public String name() {
             return "output-schema-tool";
@@ -292,12 +292,12 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
+        public ToolResult<?> handle(McpContext context, ToolArgs arguments) {
             return ToolResult.text("ok");
         }
     }
 
-    private record SimpleToolHandler(String name, String description) implements SyncToolHandler<ToolResult> {
+    private record SimpleToolHandler(String name, String description) implements SyncToolHandler {
         @Override
         public String name() {
             return name;
@@ -314,12 +314,12 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
+        public ToolResult<?> handle(McpContext context, ToolArgs arguments) {
             return ToolResult.text("ok");
         }
     }
 
-    private record TaskAwareToolHandler(TaskSupport taskSupport) implements SyncToolHandler<ToolResult> {
+    private record TaskAwareToolHandler(TaskSupport taskSupport) implements SyncToolHandler {
         @Override
         public String name() {
             return "task-aware-tool";
@@ -341,7 +341,7 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
+        public ToolResult<?> handle(McpContext context, ToolArgs arguments) {
             return ToolResult.text("ok");
         }
     }

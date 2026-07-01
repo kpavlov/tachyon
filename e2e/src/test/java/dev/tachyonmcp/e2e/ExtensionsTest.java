@@ -211,7 +211,7 @@ class ExtensionsTest extends AbstractMcpE2eTest {
                 }
 
                 @Override
-                public CompletionStage<ToolResult> handle(ToolRequest request, McpContext context) {
+                public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext context) {
                     return CompletableFuture.completedFuture(ToolResult.text("ext-tool-result"));
                 }
             });

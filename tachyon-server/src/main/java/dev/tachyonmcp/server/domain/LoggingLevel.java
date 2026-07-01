@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.domain;
 
+/** Logging levels matching the MCP protocol specification. Ordered by severity ascending. */
 public enum LoggingLevel {
     DEBUG("debug"),
     INFO("info"),
@@ -20,10 +21,12 @@ public enum LoggingLevel {
         this.value = value;
     }
 
+    /** Returns the wire-level string for this logging level. */
     public String getValue() {
         return value;
     }
 
+    /** Parses a logging level from its wire-level string. */
     public static LoggingLevel fromValue(String value) {
         for (var v : values()) {
             if (v.value.equals(value)) return v;

@@ -10,15 +10,14 @@ import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.extensions.McpExtension;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
 import dev.tachyonmcp.server.features.tools.AbstractAsyncToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.McpContext;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
-import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
@@ -69,7 +68,7 @@ public class TasksExtension implements McpExtension {
                         }));
     }
 
-    private static final class CreateTaskHandler extends AbstractAsyncToolHandler<ToolResult> {
+    private static final class CreateTaskHandler extends AbstractAsyncToolHandler {
 
         private final TaskRegistry tasks;
         private final Executor executor;
@@ -81,21 +80,15 @@ public class TasksExtension implements McpExtension {
         }
 
         @Override
-        public CompletionStage<ToolResult> handleAsync(McpContext context, @Nullable Map<String, JsonNode> arguments) {
+        public CompletionStage<? extends ToolResult<?>> handleAsync(McpContext context, ToolArgs args) {
             var sessionId = OutboundSseStreamMessageRouter.currentSessionId();
             var outboundStream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
             return CompletableFuture.supplyAsync(
                     () -> {
                         try {
                             return OutboundSseStreamMessageRouter.withDispatchContext(sessionId, outboundStream, () -> {
-                                String name = "unnamed";
-                                String description = null;
-                                if (arguments != null) {
-                                    var nameNode = arguments.get("name");
-                                    if (nameNode != null && nameNode.isString()) name = nameNode.asString();
-                                    var descNode = arguments.get("description");
-                                    if (descNode != null && descNode.isString()) description = descNode.asString();
-                                }
+                                var name = args.stringOr("name", "unnamed");
+                                var description = args.stringOpt("description").orElse(null);
                                 return ToolResult.text(
                                         tasks.createTask(name, description).id());
                             });

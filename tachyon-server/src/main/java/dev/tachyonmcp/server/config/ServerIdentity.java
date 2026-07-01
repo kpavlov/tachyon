@@ -10,6 +10,17 @@ import java.util.Objects;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
+/**
+ * Server identity metadata sent to the client during initialization.
+ *
+ * @param name         server name (required)
+ * @param version      server version (required)
+ * @param description  optional human-readable description
+ * @param title        optional display title
+ * @param websiteUrl   optional URL to the server's website
+ * @param instructions optional instructions for how to use the server
+ * @param icons        optional list of icon entries
+ */
 @Value.Builder
 @Value.Style(visibility = Value.Style.ImplementationVisibility.PACKAGE, typeImmutable = "Default*")
 public record ServerIdentity(

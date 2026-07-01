@@ -2,16 +2,13 @@
  * Copyright (c) 2026 Konstantin Pavlov.
  */
 
-import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
-import dev.tachyonmcp.server.features.tools.SyncToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.features.tools.*;
 import dev.tachyonmcp.server.session.McpContext;
-import java.util.Map;
 import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+
+import java.util.Map;
 
 /**
  * Demonstrates the two tool-handler patterns:
@@ -36,20 +33,20 @@ final class ToolHandlerExample {
     /**
      * Lambda-style: use SyncToolHandler.of() inside a builder chain.
      */
-    static SyncToolHandler<ToolResult> lambdaHello() {
+    static SyncToolHandler lambdaHello() {
         return SyncToolHandler.of("hello", "Say hello", null, (ctx, args) -> ToolResult.text("Hello, world!"));
     }
 
     /**
      * Lambda with input schema and arguments.
      */
-    static SyncToolHandler<ToolResult> lambdaGreet() {
+    static SyncToolHandler lambdaGreet() {
         return SyncToolHandler.of(
                 "greeting",
                 "Generates a personalized greeting",
                 GREET_SCHEMA,
-                (@NonNull McpContext ctx, @Nullable Map<String, JsonNode> args) -> {
-                    String name = args.get("name").asString();
+                (@NonNull McpContext ctx, ToolArgs args) -> {
+                    String name = args.string("name");
                     return ToolResult.text("Hello, " + name + "!");
                 });
     }
@@ -57,7 +54,7 @@ final class ToolHandlerExample {
     /**
      * Class-based: extend AbstractSyncToolHandler.
      */
-    static final class GreetingTool extends AbstractSyncToolHandler<ToolResult> {
+    static final class GreetingTool extends AbstractSyncToolHandler {
         GreetingTool() {
             super(ToolDescriptor.builder("greeting")
                     .title("Greeting")
@@ -68,8 +65,8 @@ final class ToolHandlerExample {
 
         @Override
         @NonNull
-        public ToolResult handle(McpContext ctx, @NonNull Map<String, JsonNode> args) {
-            var name = args.get("name").asString();
+        public ToolResult<String> handle(McpContext ctx, ToolArgs args) {
+            var name = args.string("name");
             return ToolResult.text("Hello, " + name + "!");
         }
     }

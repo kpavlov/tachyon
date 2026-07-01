@@ -100,6 +100,22 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
     }
 
     @Test
+    void inputRequiredPreservesMeta() throws Exception {
+        startServer(it -> it.tool(new MetaInputRequiredTestHandler()));
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+
+            var response = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"test_meta_elicitation","arguments":{}}}
+                """);
+
+            assertThatJson(response.body()).inPath("$.result.resultType").isEqualTo("input_required");
+            assertThatJson(response.body()).inPath("$.result._meta.trace-id").isEqualTo("abc-123");
+        }
+    }
+
+    @Test
     void missingInputResponsesReRequests() throws Exception {
         startServer(it -> it.tool(new InputRequiredTestHandler()));
 
@@ -179,7 +195,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public CompletionStage<ToolResult> handle(ToolRequest request, McpContext context) {
+        public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext context) {
             var inputResponses = request.inputResponses();
             if (inputResponses != null && inputResponses.containsKey("user_name")) {
                 var resp = inputResponses.get("user_name");
@@ -214,7 +230,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public CompletionStage<ToolResult> handle(ToolRequest request, McpContext context) {
+        public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext context) {
             var inputResponses = request.inputResponses();
             var requestState = request.requestState();
 
@@ -242,6 +258,22 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
         }
     }
 
+    private static class MetaInputRequiredTestHandler extends AbstractToolHandler implements ToolHandler {
+
+        MetaInputRequiredTestHandler() {
+            super(ToolDescriptor.builder("test_meta_elicitation")
+                    .description("Tests InputRequiredResult meta propagation")
+                    .build());
+        }
+
+        @Override
+        public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext context) {
+            var inputRequests = Map.of("user_name", buildFormElicitation("What is your name?", "name", "string"));
+            return CompletableFuture.completedFuture(
+                    ToolResult.inputRequired(inputRequests, null).withMeta("trace-id", FACTORY.stringNode("abc-123")));
+        }
+    }
+
     private static class UrlElicitationTestHandler extends AbstractToolHandler implements ToolHandler {
 
         UrlElicitationTestHandler() {
@@ -251,7 +283,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public CompletionStage<ToolResult> handle(ToolRequest request, McpContext context) {
+        public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext context) {
             var inputResponses = request.inputResponses();
             if (inputResponses != null && inputResponses.containsKey("auth")) {
                 var resp = inputResponses.get("auth");

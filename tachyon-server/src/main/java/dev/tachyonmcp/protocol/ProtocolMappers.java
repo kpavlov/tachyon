@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.ServiceLoader;
 import org.jspecify.annotations.Nullable;
 
+/**
+ * Registry of {@link ProtocolResponseMapper} implementations discovered via {@link ServiceLoader}.
+ */
 public class ProtocolMappers {
 
     private ProtocolMappers() {}
@@ -23,6 +26,7 @@ public class ProtocolMappers {
         }
     }
 
+    /** Returns the mapper for the given protocol family and version, or {@code null} if none registered. */
     @Nullable
     public static ProtocolResponseMapper getMapper(String protocolName, String protocolVersion) {
         for (var mapper : MAPPERS) {

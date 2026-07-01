@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 
+/** Fluent builder for {@link McpServer}. Supports feature registration and configuration. */
 public final class ServerBuilder {
 
     private final ServerIdentityBuilder identityBuilder =
@@ -42,31 +43,37 @@ public final class ServerBuilder {
 
     // === Configuration groups ===
 
+    /** Configures server identity (name, version, etc.). */
     public ServerBuilder info(Consumer<ServerIdentityBuilder> configurer) {
         configurer.accept(identityBuilder);
         return this;
     }
 
+    /** Configures which MCP capabilities are enabled. */
     public ServerBuilder capabilities(Consumer<CapabilitiesConfig.Builder> configurer) {
         configurer.accept(capabilitiesConfig);
         return this;
     }
 
+    /** Configures session lifecycle settings. */
     public ServerBuilder session(Consumer<SessionConfig.Builder> configurer) {
         configurer.accept(sessionBuilder);
         return this;
     }
 
+    /** Configures network settings (host, port, CORS, etc.). */
     public ServerBuilder network(Consumer<NetworkConfig.Builder> configurer) {
         configurer.accept(networkBuilder);
         return this;
     }
 
+    /** Sets the server name (shorthand for {@code info(b -> b.name(name))}). */
     public ServerBuilder name(String name) {
         identityBuilder.name(name);
         return this;
     }
 
+    /** Sets the listen port (shorthand for {@code network(b -> b.port(port))}). */
     public ServerBuilder port(int port) {
         networkBuilder.port(port);
         return this;
@@ -74,46 +81,55 @@ public final class ServerBuilder {
 
     // === Feature registration ===
 
+    /** Registers a tool handler. */
     public ServerBuilder tool(ToolHandler handler) {
         featuresConfig.tools.add(handler);
         return this;
     }
 
-    public ServerBuilder tool(SyncToolHandler<?> handler) {
+    /** Registers a synchronous tool handler. */
+    public ServerBuilder tool(SyncToolHandler handler) {
         featuresConfig.tools.add(handler);
         return this;
     }
 
-    public ServerBuilder tool(AsyncToolHandler<?> handler) {
+    /** Registers an asynchronous tool handler. */
+    public ServerBuilder tool(AsyncToolHandler handler) {
         featuresConfig.tools.add(handler);
         return this;
     }
 
+    /** Registers a resource with no read handler (returns empty content). */
     public ServerBuilder resource(ResourceDescriptor descriptor) {
         featuresConfig.resources.add(new FeaturesConfig.ResourceRegistration(descriptor, null));
         return this;
     }
 
+    /** Registers a resource with a read handler. */
     public ServerBuilder resource(ResourceDescriptor descriptor, ResourceHandler handler) {
         featuresConfig.resources.add(new FeaturesConfig.ResourceRegistration(descriptor, handler));
         return this;
     }
 
+    /** Registers a prompt with static messages (no handler, messages provided directly). */
     public ServerBuilder prompt(PromptDescriptor descriptor, List<PromptMessage> messages) {
         featuresConfig.prompts.add(new FeaturesConfig.PromptRegistration(descriptor, args -> messages));
         return this;
     }
 
+    /** Registers a prompt with a dynamic handler. */
     public ServerBuilder prompt(PromptDescriptor descriptor, PromptHandler handler) {
         featuresConfig.prompts.add(new FeaturesConfig.PromptRegistration(descriptor, handler));
         return this;
     }
 
+    /** Registers a server extension. */
     public ServerBuilder extension(McpExtension extension) {
         featuresConfig.extensions.add(extension);
         return this;
     }
 
+    /** Sets a custom JSON schema validator. */
     public ServerBuilder jsonSchemaValidator(JsonSchemaValidator validator) {
         featuresConfig.jsonSchemaValidator = validator;
         return this;
@@ -121,6 +137,7 @@ public final class ServerBuilder {
 
     // === Transport escape hatch ===
 
+    /** Provides a customizer for the Netty channel pipeline. */
     public ServerBuilder pipelineCustomizer(@Nullable Consumer<ChannelPipeline> customizer) {
         this.pipelineCustomizer = customizer;
         return this;
@@ -128,6 +145,7 @@ public final class ServerBuilder {
 
     // === Terminal methods ===
 
+    /** Builds the {@link McpServer} without binding a transport. */
     public McpServer build() {
         var sessionConfig = sessionBuilder.build();
         var router = sessionConfig.sessionLogRouter() != null
@@ -151,6 +169,7 @@ public final class ServerBuilder {
         return server;
     }
 
+    /** Builds the server and binds the Netty transport. Requires a port to be set. */
     public McpServerHandle bind() {
         var networkConfig = networkBuilder.build();
         if (networkConfig.port() < 0) {
@@ -174,6 +193,7 @@ public final class ServerBuilder {
         return new McpServerHandle(server, netty.port(), netty);
     }
 
+    /** Builds the {@link ServerConfig} from the current builder state. */
     public ServerConfig buildConfig() {
         return new ServerConfig(
                 identityBuilder.build(), capabilitiesConfig.build(), sessionBuilder.build(), networkBuilder.build());

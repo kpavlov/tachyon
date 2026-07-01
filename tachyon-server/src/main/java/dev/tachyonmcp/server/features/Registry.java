@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
 
+/** Base registry for named, paginated MCP resource types. */
 public abstract class Registry<R extends McpResourceType> {
 
     private final ConcurrentHashMap<String, R> items = new ConcurrentHashMap<>();
@@ -21,15 +22,18 @@ public abstract class Registry<R extends McpResourceType> {
 
     private @Nullable Runnable onChange;
 
+    /** Registers a callback invoked when the registry contents change. */
     public void onChange(@Nullable Runnable callback) {
         this.onChange = callback;
     }
 
+    /** Adds or replaces an item by name. */
     public void add(R item) {
         items.put(item.name(), item);
         fireOnChange();
     }
 
+    /** Removes the item with the given name. */
     public void remove(String name) {
         var removed = items.remove(name);
         if (removed != null) {
@@ -43,10 +47,12 @@ public abstract class Registry<R extends McpResourceType> {
         }
     }
 
+    /** Returns the item by name, or {@code null} if not found. */
     public @Nullable R get(String name) {
         return items.get(name);
     }
 
+    /** Returns all registered items. */
     public Collection<R> getAll() {
         return items.values();
     }

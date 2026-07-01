@@ -6,6 +6,7 @@ import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
+/** Requests user input by invoking another RPC method. */
 @Value.Immutable
 @Value.Style(
         allParameters = true,
@@ -13,8 +14,10 @@ import tools.jackson.databind.JsonNode;
         typeImmutable = "Default*")
 public non-sealed interface RpcMethodRequest extends InputRequest {
 
+    /** The RPC method to invoke for input. */
     String method();
 
+    /** Optional parameters for the RPC method. */
     @Nullable
     JsonNode params();
 
