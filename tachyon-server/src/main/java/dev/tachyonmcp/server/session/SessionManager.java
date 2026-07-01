@@ -15,6 +15,7 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** Manages the lifecycle of MCP sessions. */
 public class SessionManager implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(SessionManager.class);
@@ -22,6 +23,7 @@ public class SessionManager implements AutoCloseable {
     private final SessionStore store;
     private final ScheduledExecutorService janitor;
 
+    /** Creates a session manager backed by the given store. */
     public SessionManager(SessionStore store) {
         this.store = store;
         this.janitor = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -31,10 +33,12 @@ public class SessionManager implements AutoCloseable {
         });
     }
 
+    /** Creates a session with no initial connection. */
     public McpSession createSession(String sessionId) {
         return createSession(sessionId, SseConnection.NOOP);
     }
 
+    /** Creates a session with the given SSE connection. */
     public McpSession createSession(String sessionId, SseConnection connection) {
         var session = new McpSession(sessionId, connection);
         var previous = store.put(sessionId, session);
@@ -46,6 +50,7 @@ public class SessionManager implements AutoCloseable {
         return session;
     }
 
+    /** Returns the session for the given ID, if present. */
     public Optional<McpSession> getSession(@Nullable String sessionId) {
         if (sessionId == null) {
             return Optional.empty();
@@ -53,10 +58,12 @@ public class SessionManager implements AutoCloseable {
         return store.get(sessionId);
     }
 
+    /** Returns all active sessions. */
     public Collection<McpSession> allSessions() {
         return store.values();
     }
 
+    /** Removes and closes the session with the given ID. */
     public void removeSession(String sessionId) {
         var session = store.remove(sessionId);
         if (session != null) {
@@ -65,6 +72,7 @@ public class SessionManager implements AutoCloseable {
         }
     }
 
+    /** Starts the background janitor that closes expired sessions. */
     public void startJanitor(Duration ttl) {
         final var ttlNanos = ttl.toNanos();
         janitor.scheduleWithFixedDelay(

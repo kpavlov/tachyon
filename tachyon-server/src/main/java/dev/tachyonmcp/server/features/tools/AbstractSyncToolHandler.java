@@ -1,11 +1,8 @@
-/*
- * Copyright (c) 2026 Konstantin Pavlov.
- */
+/* Copyright (c) 2026 Konstantin Pavlov. */
 
 package dev.tachyonmcp.server.features.tools;
 
-public abstract class AbstractSyncToolHandler<R extends ToolResult> extends AbstractToolHandler<R>
-        implements SyncToolHandler<R> {
+public abstract class AbstractSyncToolHandler extends AbstractToolHandler implements SyncToolHandler {
 
     public AbstractSyncToolHandler(ToolDescriptor descriptor) {
         super(descriptor);

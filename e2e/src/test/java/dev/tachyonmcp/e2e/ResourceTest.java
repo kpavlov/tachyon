@@ -11,14 +11,12 @@ import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.tools.SyncToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.McpContext;
-import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 class ResourceTest extends AbstractMcpE2eTest {
@@ -198,7 +196,7 @@ class ResourceTest extends AbstractMcpE2eTest {
 
     // ---- Tool handler implementations ----
 
-    private record NotifyListChangedToolHandler(String action) implements SyncToolHandler<ToolResult> {
+    private record NotifyListChangedToolHandler(String action) implements SyncToolHandler {
 
         @Override
         public String name() {
@@ -211,7 +209,7 @@ class ResourceTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
+        public ToolResult<?> handle(McpContext context, ToolArgs arguments) {
             var resources = context.server().mcpServer().resources();
             if ("add".equals(action)) {
                 resources.add(
@@ -220,11 +218,11 @@ class ResourceTest extends AbstractMcpE2eTest {
             } else {
                 resources.remove("doc");
             }
-            return ToolResult.of(List.of(TextContent.of("done")));
+            return ToolResult.blocks(TextContent.of("done"));
         }
     }
 
-    private static class NotifyUpdatedToolHandler implements SyncToolHandler<ToolResult> {
+    private static class NotifyUpdatedToolHandler implements SyncToolHandler {
         @Override
         public String name() {
             return "notify-update";
@@ -236,9 +234,9 @@ class ResourceTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, Map<String, JsonNode> arguments) {
+        public ToolResult<?> handle(McpContext context, ToolArgs arguments) {
             context.server().mcpServer().resources().notifyResourceUpdated("resource://doc");
-            return ToolResult.of(List.of(TextContent.of("notified")));
+            return ToolResult.blocks(TextContent.of("notified"));
         }
     }
 }

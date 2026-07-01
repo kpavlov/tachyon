@@ -1,0 +1,17 @@
+/* Copyright (c) 2026 Konstantin Pavlov. */
+
+package dev.tachyonmcp.server.features.tools;
+
+public final class InvalidArgumentException extends RuntimeException {
+
+    private final String argName;
+
+    public InvalidArgumentException(String argName, String message) {
+        super(message);
+        this.argName = argName;
+    }
+
+    public String argName() {
+        return argName;
+    }
+}

@@ -24,10 +24,12 @@ public final class McpServerHandle implements Closeable {
         this.transport = transport;
     }
 
+    /** Returns the port the server is bound to. */
     public int port() {
         return port;
     }
 
+    /** Returns the underlying {@link McpServer}. */
     public McpServer server() {
         return server;
     }

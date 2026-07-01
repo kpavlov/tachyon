@@ -4,6 +4,7 @@ package dev.tachyonmcp.server.domain;
 
 import org.immutables.value.Value;
 
+/** Requests user input by opening a URL (e.g. for OAuth or form fill). */
 @Value.Immutable
 @Value.Style(
         allParameters = true,
@@ -11,10 +12,13 @@ import org.immutables.value.Value;
         typeImmutable = "Default*")
 public non-sealed interface UrlInputRequest extends InputRequest {
 
+    /** Prompt message shown to the user. */
     String message();
 
+    /** Identifier linking the response back to the elicitation context. */
     String elicitationId();
 
+    /** URL to open for user input. */
     String url();
 
     static DefaultUrlInputRequest.Builder builder() {

@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
  * {@code v2025_11_25} models/codecs. The version-specific call-sites (marked below) move behind an
  * {@code McpDialect} when a second spec version is wired.
  */
+/** Dispatches parsed JSON-RPC messages to registered method handlers and manages the dispatch lifecycle. */
 public class McpDispatcher {
 
     private static final Logger logger = LoggerFactory.getLogger(McpDispatcher.class);

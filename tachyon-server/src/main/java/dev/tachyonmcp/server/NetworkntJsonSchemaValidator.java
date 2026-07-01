@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import tools.jackson.databind.JsonNode;
 
+/** JSON Schema validator backed by {@code networknt/json-schema-validator}. */
 public class NetworkntJsonSchemaValidator implements JsonSchemaValidator {
 
     private final SchemaRegistry registry;

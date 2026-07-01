@@ -1,12 +1,10 @@
-/*
- * Copyright (c) 2026 Konstantin Pavlov.
- */
+/* Copyright (c) 2026 Konstantin Pavlov. */
 
 package dev.tachyonmcp.server.features.tools;
 
 import java.util.Objects;
 
-public abstract class AbstractToolHandler<R extends ToolResult> implements ToolHandler<R> {
+public abstract class AbstractToolHandler implements ToolHandler {
 
     private final ToolDescriptor descriptor;
 

@@ -21,6 +21,7 @@ import tools.jackson.core.json.JsonFactory;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
+/** Low-level JSON-RPC 2.0 codec: parse and serialize messages to/from Netty {@link ByteBuf}. */
 public final class JsonRpcCodec {
 
     public static final ObjectReadContext TREE_READ_CONTEXT = new ObjectReadContext.Base() {
@@ -50,6 +51,7 @@ public final class JsonRpcCodec {
 
     private JsonRpcCodec() {}
 
+    /** Parses a JSON-RPC message from a {@link ByteBuf}. */
     public static JsonRpcMessage parseRequest(ByteBuf buf) {
         try (var in = new ByteBufInputStream(buf);
                 JsonParser p = FACTORY.createParser(ObjectReadContext.empty(), (InputStream) in)) {
@@ -59,6 +61,7 @@ public final class JsonRpcCodec {
         }
     }
 
+    /** Serializes a JSON-RPC response. */
     public static ByteBuf serializeResponse(Object id, @Nullable String resultJson) {
         return serialize(gen -> {
             gen.writeStartObject();
@@ -74,6 +77,7 @@ public final class JsonRpcCodec {
         });
     }
 
+    /** Serializes a JSON-RPC error response. */
     public static ByteBuf serializeError(Object id, int code, String message, @Nullable String dataJson) {
         return serialize(gen -> {
             gen.writeStartObject();
@@ -101,6 +105,7 @@ public final class JsonRpcCodec {
         }
     }
 
+    /** Serializes a JSON-RPC request. */
     public static ByteBuf serializeRequest(Object id, String method, String paramsJson) {
         return serialize(gen -> {
             gen.writeStartObject();
@@ -113,6 +118,7 @@ public final class JsonRpcCodec {
         });
     }
 
+    /** Serializes a JSON-RPC notification (no ID). */
     public static ByteBuf serializeNotification(String method, String paramsJson) {
         return serialize(gen -> {
             gen.writeStartObject();
@@ -124,6 +130,7 @@ public final class JsonRpcCodec {
         });
     }
 
+    /** Serializes a JSON-RPC notification to a string. */
     public static String serializeNotificationAsString(String method, String paramsJson) {
         return serializeToString(gen -> {
             gen.writeStartObject();
@@ -135,6 +142,7 @@ public final class JsonRpcCodec {
         });
     }
 
+    /** Serializes a JSON-RPC request to a string. */
     public static String serializeRequestAsString(Object id, String method, String paramsJson) {
         return serializeToString(gen -> {
             gen.writeStartObject();
@@ -238,6 +246,7 @@ public final class JsonRpcCodec {
         };
     }
 
+    /** Reads the remainder of the current JSON value as a raw JSON string. */
     public static String readRawJson(JsonParser p) {
         var writer = new StringWriter();
         try (JsonGenerator gen = FACTORY.createGenerator(ObjectWriteContext.empty(), writer)) {
@@ -246,6 +255,7 @@ public final class JsonRpcCodec {
         return writer.toString();
     }
 
+    /** Reads the current JSON value as a {@link JsonNode}. */
     public static JsonNode readTreeValue(JsonParser p) throws IOException {
         return switch (p.currentToken()) {
             case START_OBJECT -> readObjectNode(p);
@@ -278,6 +288,7 @@ public final class JsonRpcCodec {
         return node;
     }
 
+    /** Deserializes a JSON string to a generic Java object (Map, List, String, Number, Boolean, or null). */
     public static @Nullable Object readValue(String json) {
         try (var p = FACTORY.createParser(ObjectReadContext.empty(), json)) {
             p.nextToken();
@@ -287,6 +298,7 @@ public final class JsonRpcCodec {
         }
     }
 
+    /** Reads the current JSON token as a generic Java value. */
     public static @Nullable Object readGenericValue(JsonParser p) throws IOException {
         return switch (p.currentToken()) {
             case START_OBJECT -> readObject(p);
@@ -319,6 +331,7 @@ public final class JsonRpcCodec {
         return list;
     }
 
+    /** Serializes a Java object to a JSON string, using registered codecs when available. */
     @Nullable
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static String writeValueAsString(@Nullable Object value) {
@@ -346,6 +359,7 @@ public final class JsonRpcCodec {
         return ValueSerializer.writeValueAsString(value);
     }
 
+    /** Writes a Java object as a JSON value via the given generator. */
     public static void writeJsonValue(JsonGenerator gen, @Nullable Object value) {
         ValueSerializer.writeJsonValue(gen, value);
     }

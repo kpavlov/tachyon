@@ -14,7 +14,7 @@
 
     <artifactId>e2e</artifactId>
 
-    <name>Tachyon MCP :: E2E</name>
+    <name>Tachyon MCP E2E</name>
     <description>End-to-end tests</description>
 
     <properties>

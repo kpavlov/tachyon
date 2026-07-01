@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/** Server-side session representing a single MCP client connection. */
 public class McpSession extends Session {
 
     private final AtomicReference<SseConnection> connection;
@@ -29,39 +30,48 @@ public class McpSession extends Session {
         this.cursor = new AtomicLong(-1);
     }
 
+    /** Returns the current SSE connection. */
     public SseConnection connection() {
         return connection.get();
     }
 
+    /** Replaces the SSE connection (e.g. after reconnection). */
     public void connection(SseConnection connection) {
         this.connection.set(Objects.requireNonNull(connection, "connection"));
         this.lastActivityNanos = System.nanoTime();
     }
 
+    /** Returns the current backpressure state. */
     public Backpressure backpressure() {
         return backpressure.get();
     }
 
+    /** Returns the last replayed SSE event cursor. */
     public long cursor() {
         return cursor.get();
     }
 
+    /** Sets the replayed SSE event cursor. */
     public void cursor(long position) {
         cursor.set(position);
     }
 
+    /** Enables an extension for this session. */
     public void enableExtension(String extensionId) {
         enabledExtensions.add(extensionId);
     }
 
+    /** Returns whether the given extension is enabled for this session. */
     public boolean isExtensionEnabled(String extensionId) {
         return enabledExtensions.contains(extensionId);
     }
 
+    /** Returns the read-write lock for this session's state. */
     public ReadWriteLock lock() {
         return lock;
     }
 
+    /** Recomputes and returns the backpressure state based on stream writability. */
     public Backpressure computeBackpressure() {
         return backpressure.updateAndGet(current -> {
             if (!connection.get().isWritable()) {
@@ -71,13 +81,12 @@ public class McpSession extends Session {
         });
     }
 
+    /** Returns {@code true} if the session should throttle outbound events. */
     public boolean shouldThrottle() {
         return computeBackpressure() != Backpressure.HOT;
     }
 
-    /**
-     * @return {@code true} if the event was delivered; {@code false} if the session is CLOSED
-     */
+    /** Sends an SSE event to the client. */
     public boolean send(SseEvent event) {
         var conn = connection.get();
         if (conn == SseConnection.NOOP) {

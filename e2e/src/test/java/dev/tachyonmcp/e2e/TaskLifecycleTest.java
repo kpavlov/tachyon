@@ -7,6 +7,7 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
@@ -15,7 +16,6 @@ import dev.tachyonmcp.server.session.McpContext;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.JsonNode;
 
 class TaskLifecycleTest extends AbstractMcpE2eTest {
 
@@ -152,9 +152,9 @@ class TaskLifecycleTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public CompletionStage<ToolResult> handle(ToolRequest request, McpContext context) {
-            var args = request.arguments();
-            var name = args != null && args.get("name") instanceof JsonNode n ? n.asString() : "unnamed";
+        public CompletionStage<? extends ToolResult<?>> handle(ToolRequest request, McpContext context) {
+            var args = ToolArgs.of(request.arguments());
+            var name = args.stringOr("name", "unnamed");
             context.server().mcpServer().tasks().createTask(name, null);
             return CompletableFuture.completedFuture(ToolResult.text("created"));
         }

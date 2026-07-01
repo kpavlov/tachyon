@@ -6,6 +6,7 @@ import java.util.Map;
 import org.immutables.value.Value;
 import tools.jackson.databind.JsonNode;
 
+/** Requests user input via a form described by a JSON schema. */
 @Value.Immutable
 @Value.Style(
         allParameters = true,
@@ -13,8 +14,10 @@ import tools.jackson.databind.JsonNode;
         typeImmutable = "Default*")
 public non-sealed interface FormInputRequest extends InputRequest {
 
+    /** Prompt message shown to the user. */
     String message();
 
+    /** JSON schema describing the expected form fields. */
     Map<String, JsonNode> requestedSchema();
 
     static DefaultFormInputRequest.Builder builder() {

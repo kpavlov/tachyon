@@ -1,21 +1,20 @@
-/*
- * Copyright (c) 2026 Konstantin Pavlov.
- */
+/* Copyright (c) 2026 Konstantin Pavlov. */
 
 package dev.tachyonmcp.server.features.tools;
 
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.session.McpContext;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
-public interface SyncToolHandler<R extends ToolResult> extends ToolHandler<R> {
+/** Convenient base for synchronous (blocking) tool handlers. */
+public interface SyncToolHandler extends ToolHandler {
 
+    /** The tool name. */
     String name();
 
     @Nullable
@@ -43,7 +42,8 @@ public interface SyncToolHandler<R extends ToolResult> extends ToolHandler<R> {
         return null;
     }
 
-    R handle(McpContext context, @Nullable Map<String, JsonNode> arguments) throws Exception;
+    /** Executes the tool synchronously. */
+    ToolResult<?> handle(McpContext context, ToolArgs args) throws Exception;
 
     @Nullable
     default ToolAnnotations annotations() {
@@ -63,16 +63,17 @@ public interface SyncToolHandler<R extends ToolResult> extends ToolHandler<R> {
     }
 
     @Override
-    default CompletionStage<R> handle(ToolRequest request, McpContext context) throws Exception {
-        return CompletableFuture.completedFuture(handle(context, request.arguments()));
+    default CompletionStage<? extends ToolResult<?>> handle(ToolRequest request, McpContext context) throws Exception {
+        return CompletableFuture.completedFuture(handle(context, ToolArgs.of(request.arguments())));
     }
 
-    static <R extends ToolResult> SyncToolHandler<R> of(
+    /** Creates a simple SyncToolHandler from a name, description, schema, and function. */
+    static SyncToolHandler of(
             String name,
             @Nullable String description,
             @Nullable JsonNode inputSchema,
-            BiFunction<McpContext, @Nullable Map<String, JsonNode>, R> fn) {
-        return new SyncToolHandler<>() {
+            BiFunction<McpContext, ToolArgs, ToolResult<?>> fn) {
+        return new SyncToolHandler() {
             @Override
             public String name() {
                 return name;
@@ -91,7 +92,7 @@ public interface SyncToolHandler<R extends ToolResult> extends ToolHandler<R> {
             }
 
             @Override
-            public R handle(McpContext ctx, @Nullable Map<String, JsonNode> args) throws Exception {
+            public ToolResult<?> handle(McpContext ctx, ToolArgs args) throws Exception {
                 return fn.apply(ctx, args);
             }
         };

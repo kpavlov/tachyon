@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 
+/** Base class for sessions identified by a unique string ID with lifecycle state tracking. */
 public abstract class Session {
 
     private final String id;
@@ -20,22 +21,27 @@ public abstract class Session {
         this.lastActivityNanos = System.nanoTime();
     }
 
+    /** Returns the unique session identifier. */
     public String id() {
         return id;
     }
 
+    /** Returns the current session state. */
     public SessionState state() {
         return state.get();
     }
 
+    /** Returns the nanosecond timestamp of the last activity on this session. */
     public long lastActivityNanos() {
         return lastActivityNanos;
     }
 
+    /** Updates the last-activity timestamp to now. */
     public void touch() {
         this.lastActivityNanos = System.nanoTime();
     }
 
+    /** Transitions from {@link SessionState#INITIALIZING} to {@link SessionState#ACTIVE}. */
     public boolean activate() {
         if (state.compareAndSet(SessionState.INITIALIZING, SessionState.ACTIVE)) {
             this.lastActivityNanos = System.nanoTime();

@@ -15,12 +15,7 @@ import dev.tachyonmcp.server.SchemaValidationError;
 import dev.tachyonmcp.server.features.PaginatedResult;
 import dev.tachyonmcp.server.session.McpContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
@@ -32,17 +27,19 @@ import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
+/** Registry for tool handlers with input/output schema validation. */
 public class ToolRegistry {
 
     private static final Logger logger = LoggerFactory.getLogger(ToolRegistry.class);
 
-    private final ConcurrentHashMap<String, ToolHandler<? extends ToolResult>> handlers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ToolHandler> handlers = new ConcurrentHashMap<>();
     private final JsonSchemaValidator validator;
 
     private @Nullable Runnable onChange;
 
     private static final int DEFAULT_PAGE_SIZE = 50;
 
+    /** Creates a tool registry with the given schema validator. */
     public ToolRegistry(JsonSchemaValidator validator) {
         this.validator = validator;
     }
@@ -57,7 +54,8 @@ public class ToolRegistry {
         }
     }
 
-    public void register(ToolHandler<? extends ToolResult> handler) {
+    /** Registers a tool handler. */
+    public void register(ToolHandler handler) {
         Objects.requireNonNull(handler, "ToolHandler must not be null");
         var descriptor = handler.descriptor();
         Objects.requireNonNull(descriptor, "ToolDescriptor must not be null");
@@ -82,25 +80,30 @@ public class ToolRegistry {
 
     private static final Pattern VALID_NAME_PATTERN = Pattern.compile("[a-zA-Z0-9_\\-./]+");
 
+    /** Removes the tool with the given name. */
     public void remove(String name) {
         if (handlers.remove(name) != null) {
             fireOnChange();
         }
     }
 
-    public @Nullable ToolHandler<? extends ToolResult> get(String name) {
+    /** Returns the tool handler by name. */
+    public @Nullable ToolHandler get(String name) {
         return handlers.get(name);
     }
 
+    /** Returns the tool descriptor by name. */
     public @Nullable ToolDescriptor getDescriptor(String name) {
         var handler = handlers.get(name);
         return handler != null ? handler.descriptor() : null;
     }
 
-    public Collection<ToolHandler<? extends ToolResult>> getAll() {
+    /** Returns all registered tool handlers. */
+    public Collection<ToolHandler> getAll() {
         return handlers.values();
     }
 
+    /** Returns whether the registry is empty. */
     public boolean isEmpty() {
         return handlers.isEmpty();
     }
@@ -219,7 +222,7 @@ public class ToolRegistry {
             var progressToken = parseProgressToken(parsed.meta());
             var request = ToolRequest.builder()
                     .name(parsed.name())
-                    .arguments(parsed.args())
+                    .arguments(parsed.args() != null ? parsed.args() : Collections.emptyMap())
                     .meta(parsed.meta())
                     .progressToken(progressToken)
                     .inputResponses(parsed.inputResponses())
@@ -232,8 +235,13 @@ public class ToolRegistry {
                 sendLoggingIfEnabled(context, parsed.name(), "completed");
                 validateOutput(handler.descriptor().outputSchema(), toolResult);
                 return context.responseMapper().callToolResult(toolResult);
+            } catch (InvalidArgumentException e) {
+                return invalidRequest("invalid argument '" + e.argName() + "': " + e.getMessage());
             } catch (CompletionException e) {
                 var cause = e.getCause();
+                if (cause instanceof InvalidArgumentException ia) {
+                    return invalidRequest("invalid argument '" + ia.argName() + "': " + ia.getMessage());
+                }
                 if (cause instanceof Exception ex) throw ex;
                 throw new RuntimeException(cause);
             }
@@ -294,10 +302,17 @@ public class ToolRegistry {
             return joinMessages(errors);
         }
 
-        private void validateOutput(@Nullable JsonNode schema, ToolResult result) {
-            if (schema == null || result.structuredContent() == null) return;
+        private void validateOutput(@Nullable JsonNode schema, ToolResult<?> result) {
+            if (schema == null) return;
+            var inner = result instanceof ToolResult.WithMeta<?> wm ? wm.inner() : result;
+            if (!(inner instanceof ToolResult.Success<?> s)) return;
+            if (!(s.structuredValue() instanceof java.util.Map<?, ?> map)) return;
             var contentNode = JsonNodeFactory.instance.objectNode();
-            contentNode.setAll(result.structuredContent());
+            for (var entry : map.entrySet()) {
+                if (entry.getKey() instanceof String k && entry.getValue() instanceof JsonNode v) {
+                    contentNode.set(k, v);
+                }
+            }
             var errors = validator.validate(schema, contentNode);
             if (!errors.isEmpty()) {
                 logger.debug("Tool output failed schema validation (advisory only): {}", joinMessages(errors));

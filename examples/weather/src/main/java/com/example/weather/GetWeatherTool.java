@@ -4,6 +4,7 @@
 package com.example.weather;
 
 import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.McpContext;
@@ -11,10 +12,9 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
-import java.util.Map;
 import java.util.random.RandomGenerator;
 
-class GetWeatherTool extends AbstractSyncToolHandler<ToolResult> {
+class GetWeatherTool extends AbstractSyncToolHandler {
     private static final RandomGenerator RANDOM = RandomGenerator.getDefault();
     // language=json
     private static final JsonNode INPUT_SCHEMA = new ObjectMapper().readTree("""
@@ -45,15 +45,10 @@ class GetWeatherTool extends AbstractSyncToolHandler<ToolResult> {
 
 
     @Override
-    public ToolResult handle(McpContext context, Map<String, JsonNode> args) {
-        var city = args.containsKey("city") ? args.get("city").asString() : "";
-        var units = args.containsKey("units") ? args.get("units").asString() : "celsius";
-        if (!city.isBlank()) {
-            var weather = generateWeather(city, units);
-            return ToolResult.text(weather);
-        } else {
-            return ToolResult.error("Parameter `city` is required");
-        }
+    public ToolResult<?> handle(McpContext context, ToolArgs args) {
+        var city = args.string("city");
+        var units = args.stringOr("units", "celsius");
+        return ToolResult.text(generateWeather(city, units));
     }
 
     private static String generateWeather(String city, String units) {

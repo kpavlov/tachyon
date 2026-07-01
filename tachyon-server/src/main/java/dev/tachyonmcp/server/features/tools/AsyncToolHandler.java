@@ -1,20 +1,18 @@
-/*
- * Copyright (c) 2026 Konstantin Pavlov.
- */
+/* Copyright (c) 2026 Konstantin Pavlov. */
 
 package dev.tachyonmcp.server.features.tools;
 
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.session.McpContext;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
-public interface AsyncToolHandler<R extends ToolResult> extends ToolHandler<R> {
+/** Convenient base for asynchronous (non-blocking) tool handlers. */
+public interface AsyncToolHandler extends ToolHandler {
 
     String name();
 
@@ -43,7 +41,8 @@ public interface AsyncToolHandler<R extends ToolResult> extends ToolHandler<R> {
         return null;
     }
 
-    CompletionStage<R> handleAsync(McpContext context, @Nullable Map<String, JsonNode> arguments) throws Exception;
+    /** Executes the tool asynchronously. */
+    CompletionStage<? extends ToolResult<?>> handleAsync(McpContext context, ToolArgs args) throws Exception;
 
     @Nullable
     default ToolAnnotations annotations() {
@@ -63,13 +62,14 @@ public interface AsyncToolHandler<R extends ToolResult> extends ToolHandler<R> {
     }
 
     @Override
-    default CompletionStage<R> handle(ToolRequest request, McpContext context) throws Exception {
-        return handleAsync(context, request.arguments());
+    default CompletionStage<? extends ToolResult<?>> handle(ToolRequest request, McpContext context) throws Exception {
+        return handleAsync(context, ToolArgs.of(request.arguments()));
     }
 
-    static <R extends ToolResult> AsyncToolHandler<R> adapt(SyncToolHandler<R> sync) {
+    /** Wraps a synchronous tool handler as an async one. */
+    static AsyncToolHandler adapt(SyncToolHandler sync) {
         Objects.requireNonNull(sync, "sync");
-        return new AsyncToolHandler<>() {
+        return new AsyncToolHandler() {
             @Override
             public String name() {
                 return sync.name();
@@ -81,9 +81,9 @@ public interface AsyncToolHandler<R extends ToolResult> extends ToolHandler<R> {
             }
 
             @Override
-            public CompletionStage<R> handleAsync(McpContext ctx, @Nullable Map<String, JsonNode> input) {
+            public CompletionStage<? extends ToolResult<?>> handleAsync(McpContext ctx, ToolArgs args) {
                 try {
-                    return CompletableFuture.completedFuture(sync.handle(ctx, input));
+                    return CompletableFuture.completedFuture(sync.handle(ctx, args));
                 } catch (Exception e) {
                     return CompletableFuture.failedFuture(e);
                 }

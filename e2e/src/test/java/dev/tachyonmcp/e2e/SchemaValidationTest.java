@@ -14,11 +14,10 @@ import dev.tachyonmcp.server.domain.Role;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.tools.SyncToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.McpContext;
 import java.util.List;
-import java.util.Map;
-import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -198,7 +197,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
 
     // region: Tool handler
 
-    private static class ValidatedToolHandler implements SyncToolHandler<ToolResult> {
+    private static class ValidatedToolHandler implements SyncToolHandler {
 
         @Override
         public String name() {
@@ -216,7 +215,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, @Nullable Map<String, JsonNode> arguments) {
+        public ToolResult<?> handle(McpContext context, ToolArgs arguments) {
             return ToolResult.text("ok");
         }
     }
@@ -225,7 +224,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
 
     // region: Schema builders
 
-    private static class ValidatedToolHandler2 implements SyncToolHandler<ToolResult> {
+    private static class ValidatedToolHandler2 implements SyncToolHandler {
 
         @Override
         public String name() {
@@ -243,7 +242,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, @Nullable Map<String, JsonNode> arguments) {
+        public ToolResult<?> handle(McpContext context, ToolArgs arguments) {
             return ToolResult.text("ok");
         }
     }

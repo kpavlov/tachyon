@@ -20,6 +20,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
 
+/** Registry for resources, templates, and subscriptions. */
 public class ResourceRegistry {
 
     private final ConcurrentHashMap<String, ResourceEntry> byName = new ConcurrentHashMap<>();
@@ -32,6 +33,7 @@ public class ResourceRegistry {
 
     private static final int DEFAULT_PAGE_SIZE = 50;
 
+    /** Creates a resource registry bound to the given server (for broadcasting subscription notifications). */
     public ResourceRegistry(McpServer server) {
         this.server = server;
     }
@@ -66,6 +68,7 @@ public class ResourceRegistry {
         return this;
     }
 
+    /** Returns the resource descriptor by name. */
     public @Nullable ResourceDescriptor get(String name) {
         var entry = byName.get(name);
         return entry != null ? entry.descriptor() : null;
@@ -174,11 +177,13 @@ public class ResourceRegistry {
         registry.put("resources/unsubscribe", new ResourcesUnsubscribeHandler(this));
     }
 
+    /** Returns whether the given session is subscribed to the resource URI. */
     public boolean isSubscribed(String uri, String sessionId) {
         var subs = subscriptions.get(uri);
         return subs != null && subs.contains(sessionId);
     }
 
+    /** Notifies all subscribed sessions that a resource has been updated. */
     public void notifyResourceUpdated(String uri) {
         var subscribedSessionIds = subscriptions.get(uri);
         if (subscribedSessionIds == null || subscribedSessionIds.isEmpty()) {

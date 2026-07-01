@@ -7,11 +7,11 @@ package dev.tachyonmcp.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.McpContext;
 import java.util.Map;
-import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 
@@ -48,7 +48,7 @@ class ToolNotificationsTest extends AbstractMcpE2eTest {
         }
     }
 
-    private static class NotifyingToolHandler extends AbstractSyncToolHandler<ToolResult> {
+    private static class NotifyingToolHandler extends AbstractSyncToolHandler {
 
         NotifyingToolHandler() {
             super(ToolDescriptor.builder("notifier")
@@ -58,13 +58,11 @@ class ToolNotificationsTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, @Nullable Map<String, JsonNode> arguments) {
+        public ToolResult handle(McpContext context, ToolArgs arguments) {
             String text = "";
-            if (arguments != null) {
-                var msg = arguments.get("message");
-                if (msg instanceof JsonNode node) {
-                    text = node.asString();
-                }
+            var msg = arguments.raw("message");
+            if (msg instanceof JsonNode node) {
+                text = node.asString();
             }
 
             context.notifications().send("notifications/tool/test", Map.of("message", text));

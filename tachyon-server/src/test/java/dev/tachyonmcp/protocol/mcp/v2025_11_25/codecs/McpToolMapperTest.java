@@ -285,16 +285,17 @@ class McpToolMapperTest {
 
     @Test
     void toDomainResultPreservesToolResult() {
-        var original = ToolResult.of(List.of(TextContent.of("hello")));
+        var original = ToolResult.blocks(TextContent.of("hello"));
         var result = McpToolMapper.toDomainResult(original);
         assertThat(result).isSameAs(original);
     }
 
     @Test
     void toDomainResultConvertsObject() {
-        var result = McpToolMapper.toDomainResult("test");
-        assertThat(result.content()).hasSize(1);
-        assertThat(((TextContent) result.content().getFirst()).text()).isEqualTo("test");
+        var result = (ToolResult.Success<?>) McpToolMapper.toDomainResult("test");
+        var content = result.content();
+        assertThat(content).hasSize(1);
+        assertThat(((TextContent) content.getFirst()).text()).isEqualTo("test");
     }
 
     @Test

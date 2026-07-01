@@ -11,6 +11,20 @@ import java.time.Duration;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
+/**
+ * Network-level server configuration.
+ *
+ * @param host               bind address (default {@code "127.0.0.1"})
+ * @param port               listen port (must be set before {@code bind()})
+ * @param endpointPath       HTTP path for MCP endpoints (default {@code "/mcp"})
+ * @param readerIdleTimeout  idle timeout for reading (default 60s)
+ * @param writerIdleTimeout  idle timeout for writing (default 5min)
+ * @param maxContentLength   maximum HTTP body size in bytes
+ * @param allowedOrigins     CORS allowed origins ({@code null} = defaults)
+ * @param allowNullOrigin    whether to allow {@code Origin: null}
+ * @param allowPrivateNetworks whether to allow private network CORS
+ * @param allowedHeaders     additional allowed CORS headers
+ */
 public record NetworkConfig(
         String host,
         int port,
@@ -39,6 +53,7 @@ public record NetworkConfig(
         return new Builder();
     }
 
+    /** Builder for {@link NetworkConfig}. */
     public static final class Builder {
         private String host = "127.0.0.1";
         private int port = -1;
@@ -55,6 +70,7 @@ public record NetworkConfig(
 
         private Builder() {}
 
+        /** Sets the bind address. Mutually exclusive with {@link #address}. */
         public Builder host(String host) {
             if (addressExplicitlySet) {
                 throw new IllegalStateException("Cannot combine host() with address()");
@@ -64,6 +80,7 @@ public record NetworkConfig(
             return this;
         }
 
+        /** Sets the listen port. Mutually exclusive with {@link #address}. */
         public Builder port(int port) {
             if (addressExplicitlySet) {
                 throw new IllegalStateException("Cannot combine port() with address()");
@@ -73,6 +90,7 @@ public record NetworkConfig(
             return this;
         }
 
+        /** Sets the bind address and port from a {@link SocketAddress}. Mutually exclusive with {@link #host}/{@link #port}. */
         public Builder address(SocketAddress addr) {
             if (hostPortExplicitlySet) {
                 throw new IllegalStateException("Cannot combine address() with host()/port()");
@@ -85,21 +103,25 @@ public record NetworkConfig(
             return this;
         }
 
+        /** Sets the HTTP path for MCP endpoints. */
         public Builder endpointPath(String endpointPath) {
             this.endpointPath = endpointPath;
             return this;
         }
 
+        /** Sets the reader idle timeout. */
         public Builder readerIdleTimeout(Duration timeout) {
             this.readerIdleTimeout = timeout;
             return this;
         }
 
+        /** Sets the writer idle timeout. */
         public Builder writerIdleTimeout(Duration timeout) {
             this.writerIdleTimeout = timeout;
             return this;
         }
 
+        /** Sets the maximum HTTP body size in bytes (must be positive). */
         public Builder maxContentLength(int bytes) {
             if (bytes <= 0) {
                 throw new IllegalArgumentException("maxContentLength must be positive");
@@ -108,26 +130,31 @@ public record NetworkConfig(
             return this;
         }
 
+        /** Sets the CORS allowed origins. */
         public Builder allowedOrigins(String... origins) {
             this.allowedOrigins = List.of(origins);
             return this;
         }
 
+        /** Sets whether to allow {@code Origin: null}. */
         public Builder allowNullOrigin(boolean allow) {
             this.allowNullOrigin = allow;
             return this;
         }
 
+        /** Sets whether to allow private network CORS. */
         public Builder allowPrivateNetworks(boolean allow) {
             this.allowPrivateNetworks = allow;
             return this;
         }
 
+        /** Sets additional allowed CORS headers. */
         public Builder allowedHeaders(String... headers) {
             this.allowedHeaders = List.of(headers);
             return this;
         }
 
+        /** Builds the {@link NetworkConfig}. */
         public NetworkConfig build() {
             return new NetworkConfig(
                     host,
