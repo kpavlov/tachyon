@@ -38,6 +38,6 @@ public final class HandlerWatchdog {
 
     private static void fire(Object method, Object id, long startNs) {
         var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
-        logger.warn("Handler slow: method={}, id={}, elapsed={}ms", method, id, elapsedMs);
+        logger.debug("Handler slow: method={}, id={}, elapsed={}ms", method, id, elapsedMs);
     }
 }

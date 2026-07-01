@@ -4,27 +4,34 @@
 
 package dev.tachyonmcp.server
 
+import dev.tachyonmcp.server.features.tools.ToolArgs
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.session.DefaultMcpContext
 import io.kotest.assertions.assertSoftly
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicBoolean
 
 internal class AsyncHandlerTest {
     @Test
     fun `cancelling future cancels coroutine`() {
         val started = CompletableDeferred<Unit>()
+        val cancelled = AtomicBoolean(false)
         val handler =
             asyncHandler(
                 ToolDescriptor.builder("cancel-test").build(),
             ) {
                 started.complete(Unit)
-                while (true) {
-                    Thread.sleep(100)
+                try {
+                    delay(Long.MAX_VALUE)
+                } finally {
+                    cancelled.set(true)
                 }
                 @Suppress("UNREACHABLE_CODE")
                 ToolResult.text("never")
@@ -33,16 +40,14 @@ internal class AsyncHandlerTest {
         TachyonServer.builder().build().use { server ->
             val ctx = DefaultMcpContext.stateless(server)
             val future =
-                handler.handleAsync(
-                    ctx,
-                    dev.tachyonmcp.server.features.tools.ToolArgs
-                        .of(null),
-                ) as CompletableFuture<out ToolResult<*>>
+                handler.handleAsync(ctx, ToolArgs.of(null)) as CompletableFuture<out ToolResult<*>>
 
             runBlocking { started.await() }
             future.cancel(true)
 
+            await().untilTrue(cancelled)
             assertSoftly {
+                cancelled.get() shouldBe true
                 future.isCancelled() shouldBe true
             }
         }

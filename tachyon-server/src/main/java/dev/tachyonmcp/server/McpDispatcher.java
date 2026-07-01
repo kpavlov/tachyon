@@ -125,7 +125,7 @@ public class McpDispatcher {
                 return CompletableFuture.completedFuture(
                         errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found"));
             }
-            return invokeHandlerAsync(id, method, params, outboundSseStream, statelessIc, null);
+            return invokeHandlerAsync(id, method, params, outboundSseStream, statelessIc, null, handler);
         }
 
         if (sessionId == null) {
@@ -141,10 +141,10 @@ public class McpDispatcher {
         var session = sessionOpt.get();
         session.touch();
 
-        if (ic != null) {
-            ic.setSession(session);
-            ic.setOutboundStream(outboundSseStream);
-        }
+        var protocol = ic != null ? ic.getProtocol() : Protocols.versions().get(0);
+        var requestCtx = new DefaultMcpContext(protocol, server);
+        requestCtx.setSession(session);
+        requestCtx.setOutboundStream(outboundSseStream);
 
         var sessionState = session.state();
         if (sessionState == SessionState.CLOSED) {
@@ -156,13 +156,13 @@ public class McpDispatcher {
                     errorResult(id, JsonRpcErrors.INVALID_REQUEST, "Session is not yet active, only ping allowed"));
         }
 
-        var handler = lookupHandler(method, params, ic);
+        var handler = lookupHandler(method, params, requestCtx);
         if (handler == null) {
             return CompletableFuture.completedFuture(
                     errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found"));
         }
 
-        return invokeHandlerAsync(id, method, params, outboundSseStream, ic, session);
+        return invokeHandlerAsync(id, method, params, outboundSseStream, requestCtx, session, handler);
     }
 
     private @Nullable McpMethodHandler lookupHandler(String method, Object params, McpContext ic) {
@@ -180,13 +180,8 @@ public class McpDispatcher {
             Object params,
             @Nullable OutboundSseStream outboundSseStream,
             McpContext context,
-            @Nullable McpSession session) {
-        var handler = server.getHandler(method);
-        if (handler == null) {
-            return CompletableFuture.completedFuture(
-                    errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found"));
-        }
-
+            @Nullable McpSession session,
+            McpMethodHandler handler) {
         var paramsStr = params instanceof Map || params instanceof List
                 ? JsonRpcCodec.writeValueAsString(params)
                 : params instanceof String s ? s : null;
@@ -216,13 +211,11 @@ public class McpDispatcher {
                                             try {
                                                 return handler.handleAsync(context, params);
                                             } catch (Exception e) {
-                                                return CompletableFuture.<Object>failedFuture(e);
+                                                return CompletableFuture.failedFuture(e);
                                             }
                                         });
                             } catch (Exception e) {
-                                return CompletableFuture.<Object>failedFuture(e);
-                            } finally {
-                                context.setOutboundStream(null);
+                                return CompletableFuture.failedFuture(e);
                             }
                         },
                         executor)
@@ -381,7 +374,7 @@ public class McpDispatcher {
                                 try {
                                     return handler.handleAsync(statelessIc, rawParams);
                                 } catch (Exception e) {
-                                    return CompletableFuture.<Object>failedFuture(e);
+                                    return CompletableFuture.failedFuture(e);
                                 }
                             },
                             executor)
@@ -406,7 +399,7 @@ public class McpDispatcher {
                             try {
                                 return handler.handleAsync(ic, rawParams);
                             } catch (Exception e) {
-                                return CompletableFuture.<Object>failedFuture(e);
+                                return CompletableFuture.failedFuture(e);
                             }
                         },
                         executor)

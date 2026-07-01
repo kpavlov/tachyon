@@ -101,6 +101,18 @@ public class DefaultMcpContext extends DefaultInteractionContext<McpSession> imp
     }
 
     @Override
+    public void enableExtension(String extensionId) {
+        var s = session();
+        if (s != null) s.enableExtension(extensionId);
+    }
+
+    @Override
+    public boolean isExtensionEnabled(String extensionId) {
+        var s = session();
+        return s != null && s.isExtensionEnabled(extensionId);
+    }
+
+    @Override
     public ProtocolResponseMapper responseMapper() {
         return mcpServer.responseMapper();
     }

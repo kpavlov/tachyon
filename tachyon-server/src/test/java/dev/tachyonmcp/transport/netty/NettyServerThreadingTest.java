@@ -112,8 +112,7 @@ class NettyServerThreadingTest {
         server.close();
 
         // The executor should still be usable (not shut down)
-        closed.set(false);
-        var result = executor.submit(() -> closed.set(true)).get(5, TimeUnit.SECONDS);
+        executor.submit(() -> closed.set(true)).get(5, TimeUnit.SECONDS);
         assertThat(closed)
                 .as("caller-owned executor must remain active after server.close()")
                 .isTrue();

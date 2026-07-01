@@ -43,8 +43,8 @@ public final class ServerBuilder {
     @Nullable
     Consumer<ChannelPipeline> pipelineCustomizer;
 
-    private ExecutorService executor;
-    private ThreadFactory threadFactory;
+    private @Nullable ExecutorService executor;
+    private @Nullable ThreadFactory threadFactory;
 
     ServerBuilder() {}
 
@@ -185,9 +185,6 @@ public final class ServerBuilder {
         var store = sessionConfig.sessionStore() != null ? sessionConfig.sessionStore() : new InMemorySessionStore();
         var allExtensions = Collections.unmodifiableList(featuresConfig.extensions);
         var serverConfig = buildConfig();
-        if (executor != null && threadFactory != null) {
-            throw new IllegalStateException("executor() and threadFactory() are mutually exclusive");
-        }
         ExecutorService resolvedExecutor;
         boolean ownsExecutor;
         if (executor != null) {

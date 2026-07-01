@@ -203,4 +203,31 @@ internal class TachyonServerTest {
             }
         }
     }
+
+    @Test
+    fun `notification sent during suspend tool arrives on the request stream`() {
+        TachyonServer(port = 0) {
+            name("notify-test")
+            tool("notify", "Notifies mid-run") {
+                delay(10.milliseconds)
+                ctx.notifications().info("notify-test", "mid-run-note")
+                delay(10.milliseconds)
+                ToolResult.text("notify-done")
+            }
+        }.use { handle ->
+            McpProbe(handle.port()).use { probe ->
+                probe.initialize()
+                val response = probe.callTool("notify")
+                response.statusCode() shouldBe 200
+                response.headers().firstValue("content-type").orElse("") shouldContain
+                    "text/event-stream"
+
+                val body = response.body()
+                body shouldContain "notifications/message"
+                body shouldContain "mid-run-note"
+                body shouldContain "notify-done"
+                (body.indexOf("mid-run-note") < body.indexOf("notify-done")) shouldBe true
+            }
+        }
+    }
 }

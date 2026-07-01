@@ -89,6 +89,16 @@ class ExtensionNegotiationTest {
                 .build();
     }
 
+    @Test
+    void sessionBackedExtensionStateIsSharedAcrossContexts() {
+        var ctxA = context(session, server);
+        var ctxB = context(session, server);
+
+        ctxA.enableExtension("test-ext");
+        assertThat(ctxA.isExtensionEnabled("test-ext")).isTrue();
+        assertThat(ctxB.isExtensionEnabled("test-ext")).isTrue();
+    }
+
     private static class TestExtension implements McpExtension {
 
         final AtomicBoolean initCalled = new AtomicBoolean();
