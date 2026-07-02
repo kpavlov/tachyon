@@ -6,7 +6,7 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.ServerBuilder;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.transport.netty.NettyServer;
@@ -22,7 +22,7 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class AbstractMcpE2eTest {
 
-    protected McpServer server;
+    protected Server server;
     protected NettyServer nettyServer;
     protected int port;
     private boolean usingCustomServer;

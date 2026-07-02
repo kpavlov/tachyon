@@ -2,17 +2,17 @@
 
 package dev.tachyonmcp.server
 
+import dev.tachyonmcp.runtime.InteractionContext
 import dev.tachyonmcp.server.features.tools.ToolArgs
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.session.McpContext
 import tools.jackson.databind.JsonNode
 
 @TachyonDsl
 public class ToolScope
     @PublishedApi
     internal constructor(
-        public val ctx: McpContext,
+        public val ctx: InteractionContext,
         public val args: ToolArgs,
     )
 

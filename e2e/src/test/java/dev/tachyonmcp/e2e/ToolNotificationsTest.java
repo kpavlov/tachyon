@@ -6,11 +6,11 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.session.McpContext;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -58,7 +58,7 @@ class ToolNotificationsTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, ToolArgs arguments) {
+        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
             String text = "";
             var msg = arguments.raw("message");
             if (msg instanceof JsonNode node) {

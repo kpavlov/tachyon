@@ -6,7 +6,7 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.transport.netty.McpChannelInitializer;
 import dev.tachyonmcp.transport.netty.NettyServer;
@@ -34,7 +34,7 @@ class SseHeartbeatTest {
 
     private static final Duration READER_IDLE = Duration.ofMillis(150);
 
-    private McpServer server;
+    private Server server;
     private NettyServer nettyServer;
     private int port;
 

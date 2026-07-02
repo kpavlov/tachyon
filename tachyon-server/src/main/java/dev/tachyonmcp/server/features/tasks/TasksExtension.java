@@ -4,16 +4,16 @@
 
 package dev.tachyonmcp.server.features.tasks;
 
-import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.OutboundSseStreamMessageRouter;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.domain.TextResourceContents;
-import dev.tachyonmcp.server.extensions.McpExtension;
+import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
 import dev.tachyonmcp.server.features.tools.AbstractAsyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.session.McpContext;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -21,7 +21,7 @@ import java.util.concurrent.Executor;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
-public class TasksExtension implements McpExtension {
+public class TasksExtension implements ServerExtension {
 
     public static final String ID = "io.modelcontextprotocol/tasks";
 
@@ -49,7 +49,7 @@ public class TasksExtension implements McpExtension {
     }
 
     @Override
-    public void bootstrap(McpServer server) {
+    public void bootstrap(Server server) {
         var descriptor = ToolDescriptor.builder("create_task")
                 .description("Create a new task")
                 .inputSchema(CREATE_TASK_SCHEMA)
@@ -73,14 +73,14 @@ public class TasksExtension implements McpExtension {
         private final TaskRegistry tasks;
         private final Executor executor;
 
-        CreateTaskHandler(ToolDescriptor descriptor, McpServer server) {
+        CreateTaskHandler(ToolDescriptor descriptor, Server server) {
             super(descriptor);
             this.tasks = server.tasks();
             this.executor = server.executor();
         }
 
         @Override
-        public CompletionStage<? extends ToolResult> handleAsync(McpContext context, ToolArgs args) {
+        public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolArgs args) {
             var sessionId = OutboundSseStreamMessageRouter.currentSessionId();
             var outboundStream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
             return CompletableFuture.supplyAsync(

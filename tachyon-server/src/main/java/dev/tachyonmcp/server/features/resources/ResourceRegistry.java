@@ -7,12 +7,12 @@ package dev.tachyonmcp.server.features.resources;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ReadResourceRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.SubscribeRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.UnsubscribeRequestParams;
-import dev.tachyonmcp.server.McpMethodHandler;
-import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.domain.ReadResourceRequest;
 import dev.tachyonmcp.server.features.PaginatedResult;
 import dev.tachyonmcp.server.features.tools.ToolRegistry;
-import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,14 +27,14 @@ public class ResourceRegistry {
     private final ConcurrentHashMap<String, ResourceEntry> byUri = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ResourceTemplateEntry> templates = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Set<String>> subscriptions = new ConcurrentHashMap<>();
-    private final McpServer server;
+    private final Server server;
 
     private @Nullable Runnable onChange;
 
     private static final int DEFAULT_PAGE_SIZE = 50;
 
     /** Creates a resource registry bound to the given server (for broadcasting subscription notifications). */
-    public ResourceRegistry(McpServer server) {
+    public ResourceRegistry(Server server) {
         this.server = server;
     }
 
@@ -169,7 +169,7 @@ public class ResourceRegistry {
                 .orElse(null);
     }
 
-    public void registerHandlers(Map<String, McpMethodHandler> registry) {
+    public void registerHandlers(Map<String, RpcMethodHandler> registry) {
         registry.put("resources/list", new ResourcesListHandler(this));
         registry.put("resources/templates/list", new ResourcesTemplatesListHandler(this));
         registry.put("resources/read", new ResourcesReadHandler(this));
@@ -198,7 +198,7 @@ public class ResourceRegistry {
         }
     }
 
-    private record ResourcesListHandler(ResourceRegistry registry) implements McpMethodHandler {
+    private record ResourcesListHandler(ResourceRegistry registry) implements RpcMethodHandler {
 
         @Override
         public String method() {
@@ -206,7 +206,7 @@ public class ResourceRegistry {
         }
 
         @Override
-        public Object handle(McpContext context, Object params) {
+        public Object handle(DispatchContext context, Object params) {
             var limit = ToolRegistry.parseLimit(params);
             var cursor = ToolRegistry.parseCursor(params);
             var paginated = registry.list(limit, cursor, e -> {
@@ -218,7 +218,7 @@ public class ResourceRegistry {
         }
     }
 
-    private record ResourcesTemplatesListHandler(ResourceRegistry registry) implements McpMethodHandler {
+    private record ResourcesTemplatesListHandler(ResourceRegistry registry) implements RpcMethodHandler {
 
         @Override
         public String method() {
@@ -226,13 +226,13 @@ public class ResourceRegistry {
         }
 
         @Override
-        public Object handle(McpContext context, Object params) {
+        public Object handle(DispatchContext context, Object params) {
             var templates = registry.templates.values().stream().toList();
             return context.responseMapper().listResourceTemplatesResult(templates, null);
         }
     }
 
-    private record ResourcesReadHandler(ResourceRegistry registry) implements McpMethodHandler {
+    private record ResourcesReadHandler(ResourceRegistry registry) implements RpcMethodHandler {
 
         @Override
         public String method() {
@@ -240,7 +240,7 @@ public class ResourceRegistry {
         }
 
         @Override
-        public Object handle(McpContext context, Object params) {
+        public Object handle(DispatchContext context, Object params) {
             var readParams = toReadParams(params);
             if (readParams == null) {
                 return JsonRpcErrors.invalidRequest("Missing resource URI");
@@ -276,7 +276,7 @@ public class ResourceRegistry {
         }
     }
 
-    private record ResourcesSubscribeHandler(ResourceRegistry registry) implements McpMethodHandler {
+    private record ResourcesSubscribeHandler(ResourceRegistry registry) implements RpcMethodHandler {
 
         @Override
         public String method() {
@@ -284,7 +284,7 @@ public class ResourceRegistry {
         }
 
         @Override
-        public Object handle(McpContext context, Object params) {
+        public Object handle(DispatchContext context, Object params) {
             var uri = extractUri(params);
             if (uri == null) {
                 return JsonRpcErrors.invalidRequest("Missing resource URI");
@@ -309,7 +309,7 @@ public class ResourceRegistry {
         }
     }
 
-    private record ResourcesUnsubscribeHandler(ResourceRegistry registry) implements McpMethodHandler {
+    private record ResourcesUnsubscribeHandler(ResourceRegistry registry) implements RpcMethodHandler {
 
         @Override
         public String method() {
@@ -317,7 +317,7 @@ public class ResourceRegistry {
         }
 
         @Override
-        public Object handle(McpContext context, Object params) {
+        public Object handle(DispatchContext context, Object params) {
             var uri = extractUri(params);
             if (uri == null) {
                 return JsonRpcErrors.invalidRequest("Missing resource URI");

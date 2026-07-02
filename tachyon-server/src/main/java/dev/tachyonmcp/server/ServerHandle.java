@@ -9,16 +9,16 @@ import java.io.IOException;
 
 /**
  * Handle returned by the server builder's {@code start()} / {@code startAsync()} method.
- * Combines the logical {@link McpServer} and the bound transport.
+ * Combines the logical {@link Server} and the bound transport.
  * Call {@link #close()} to shut down both.
  */
-public final class McpServerHandle implements Closeable {
+public final class ServerHandle implements Closeable {
 
-    private final McpServer server;
+    private final Server server;
     private final int port;
     private final Closeable transport;
 
-    public McpServerHandle(McpServer server, int port, Closeable transport) {
+    public ServerHandle(Server server, int port, Closeable transport) {
         this.server = server;
         this.port = port;
         this.transport = transport;
@@ -29,8 +29,8 @@ public final class McpServerHandle implements Closeable {
         return port;
     }
 
-    /** Returns the underlying {@link McpServer}. */
-    public McpServer server() {
+    /** Returns the underlying {@link Server}. */
+    public Server server() {
         return server;
     }
 

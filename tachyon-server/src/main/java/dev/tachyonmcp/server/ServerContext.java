@@ -4,12 +4,14 @@
 
 package dev.tachyonmcp.server;
 
+import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.server.domain.LoggingLevel;
-import dev.tachyonmcp.server.session.McpSession;
-import java.util.concurrent.CompletableFuture;
 import org.jspecify.annotations.Nullable;
 
-/** Server-level operations available within a handler dispatch context. */
+/**
+ * Server-level operations reachable from the internal MCP dispatch surface
+ * ({@link dev.tachyonmcp.server.session.DispatchContext}). Not part of the tool-author API.
+ */
 public interface ServerContext {
 
     /** Returns the current session ID. */
@@ -22,13 +24,10 @@ public interface ServerContext {
     @Nullable
     LoggingLevel getLoggingLevel();
 
-    /** Sends a request to the client and returns a future that completes with the response. */
-    CompletableFuture<String> sendRequest(String method, Object params);
-
     /** Returns the current session, or {@code null} in stateless mode. */
     @Nullable
-    McpSession session();
+    Session session();
 
-    /** Returns the owning {@link McpServer}. */
-    McpServer mcpServer();
+    /** Returns the owning {@link Server}. */
+    Server mcpServer();
 }

@@ -6,7 +6,7 @@ package dev.tachyonmcp.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.session.SseEvent;
+import dev.tachyonmcp.runtime.SseEvent;
 import org.junit.jupiter.api.Test;
 
 class SseEventTest {

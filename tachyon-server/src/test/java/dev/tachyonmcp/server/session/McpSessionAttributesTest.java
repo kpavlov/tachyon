@@ -6,6 +6,9 @@ package dev.tachyonmcp.server.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.runtime.Session;
+import dev.tachyonmcp.runtime.SseConnection;
+import dev.tachyonmcp.runtime.SseEvent;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
@@ -13,20 +16,20 @@ class McpSessionAttributesTest {
 
     @Test
     void enableAndCheckExtension() {
-        var session = new McpSession("s1", new TestConnection());
+        var session = new Session("s1", new TestConnection());
         session.enableExtension("test/ext1");
         assertThat(session.isExtensionEnabled("test/ext1")).isTrue();
     }
 
     @Test
     void unenableExtensionReturnsFalse() {
-        var session = new McpSession("s2", new TestConnection());
+        var session = new Session("s2", new TestConnection());
         assertThat(session.isExtensionEnabled("test/ext2")).isFalse();
     }
 
     @Test
     void extensionsAreIndependent() {
-        var session = new McpSession("s3", new TestConnection());
+        var session = new Session("s3", new TestConnection());
         session.enableExtension("ext/a");
         session.enableExtension("ext/b");
         assertThat(session.isExtensionEnabled("ext/a")).isTrue();

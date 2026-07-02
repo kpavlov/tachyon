@@ -6,8 +6,8 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
-import dev.tachyonmcp.server.session.McpSession;
 import java.net.http.HttpResponse;
 import org.junit.jupiter.api.Test;
 
@@ -28,7 +28,7 @@ class SessionLifecycleTest extends AbstractMcpE2eTest {
 
             assertThat(server.getSession(sessionB))
                     .isPresent()
-                    .map(McpSession::state)
+                    .map(Session::state)
                     .hasValue(SessionState.ACTIVE);
 
             var response = clientB.sendRequest(sessionB, pingBody);
@@ -43,7 +43,7 @@ class SessionLifecycleTest extends AbstractMcpE2eTest {
             var sessionId = client.initialize();
             assertThat(server.getSession(sessionId))
                     .isPresent()
-                    .map(McpSession::state)
+                    .map(Session::state)
                     .hasValue(SessionState.ACTIVE);
 
             HttpResponse<String> response = client.delete(sessionId);
@@ -97,7 +97,7 @@ class SessionLifecycleTest extends AbstractMcpE2eTest {
             // session2 should still be active
             assertThat(server.getSession(session2))
                     .isPresent()
-                    .map(McpSession::state)
+                    .map(Session::state)
                     .hasValue(SessionState.ACTIVE);
 
             // session2 should still work

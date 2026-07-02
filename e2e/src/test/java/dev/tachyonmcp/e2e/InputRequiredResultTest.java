@@ -7,11 +7,11 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.FormInputRequest;
 import dev.tachyonmcp.server.domain.InputRequest;
 import dev.tachyonmcp.server.domain.UrlInputRequest;
 import dev.tachyonmcp.server.features.tools.*;
-import dev.tachyonmcp.server.session.McpContext;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -195,7 +195,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public CompletionStage<ToolResult> handle(ToolRequest request, McpContext context) {
+        public CompletionStage<ToolResult> handle(InteractionContext context, ToolRequest request) {
             var inputResponses = request.inputResponses();
             if (inputResponses != null && inputResponses.containsKey("user_name")) {
                 var resp = inputResponses.get("user_name");
@@ -230,7 +230,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public CompletionStage<ToolResult> handle(ToolRequest request, McpContext context) {
+        public CompletionStage<ToolResult> handle(InteractionContext context, ToolRequest request) {
             var inputResponses = request.inputResponses();
             var requestState = request.requestState();
 
@@ -267,7 +267,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public CompletionStage<ToolResult> handle(ToolRequest request, McpContext context) {
+        public CompletionStage<ToolResult> handle(InteractionContext context, ToolRequest request) {
             var inputRequests = Map.of("user_name", buildFormElicitation("What is your name?", "name", "string"));
             return CompletableFuture.completedFuture(
                     ToolResult.inputRequired(inputRequests, null).withMeta("trace-id", FACTORY.stringNode("abc-123")));
@@ -283,7 +283,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public CompletionStage<ToolResult> handle(ToolRequest request, McpContext context) {
+        public CompletionStage<ToolResult> handle(InteractionContext context, ToolRequest request) {
             var inputResponses = request.inputResponses();
             if (inputResponses != null && inputResponses.containsKey("auth")) {
                 var resp = inputResponses.get("auth");

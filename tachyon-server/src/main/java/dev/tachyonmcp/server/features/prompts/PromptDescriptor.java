@@ -4,7 +4,7 @@
 
 package dev.tachyonmcp.server.features.prompts;
 
-import dev.tachyonmcp.server.McpResourceType;
+import dev.tachyonmcp.server.ServerResourceType;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.PromptArgument;
 import java.util.List;
@@ -17,7 +17,7 @@ import tools.jackson.databind.JsonNode;
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
         typeImmutable = "Default*")
-public interface PromptDescriptor extends McpResourceType {
+public interface PromptDescriptor extends ServerResourceType {
 
     String name();
 

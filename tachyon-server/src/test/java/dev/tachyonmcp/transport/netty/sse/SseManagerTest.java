@@ -6,10 +6,10 @@ package dev.tachyonmcp.transport.netty.sse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.runtime.SseConnection;
+import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.session.SessionEvent;
-import dev.tachyonmcp.server.session.SseConnection;
-import dev.tachyonmcp.server.session.SseEvent;
 import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
 

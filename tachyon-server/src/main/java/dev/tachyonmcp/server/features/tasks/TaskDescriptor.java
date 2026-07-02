@@ -4,7 +4,7 @@
 
 package dev.tachyonmcp.server.features.tasks;
 
-import dev.tachyonmcp.server.McpResourceType;
+import dev.tachyonmcp.server.ServerResourceType;
 import dev.tachyonmcp.server.domain.Icon;
 import java.util.List;
 import org.immutables.value.Value;
@@ -12,7 +12,7 @@ import org.jspecify.annotations.Nullable;
 
 @Value.Immutable
 @Value.Style(allParameters = true, typeImmutable = "Default*")
-public interface TaskDescriptor extends McpResourceType {
+public interface TaskDescriptor extends ServerResourceType {
 
     String name();
 

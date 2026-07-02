@@ -12,14 +12,14 @@ import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListToolsResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextContent;
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.JsonSchemaValidator;
-import dev.tachyonmcp.server.McpMethodHandler;
+import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.session.DefaultMcpContext;
-import dev.tachyonmcp.server.session.McpContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.HashMap;
@@ -49,7 +49,7 @@ class ToolRegistryTest {
 
     @Test
     void listToolsReturnsEmptyListWhenNoToolsRegistered() throws Exception {
-        var handlers = new HashMap<String, McpMethodHandler>();
+        var handlers = new HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
         var listHandler = handlers.get("tools/list");
         var result = listHandler.handle(DefaultMcpContext.noop(), null);
@@ -59,7 +59,7 @@ class ToolRegistryTest {
 
     @Test
     void listTools() throws Exception {
-        var handlers = new HashMap<String, McpMethodHandler>();
+        var handlers = new HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
 
         // minimal: only name set; all optional fields absent
@@ -80,7 +80,7 @@ class ToolRegistryTest {
                         .annotations(annotations)
                         .build()) {
                     @Override
-                    public ToolResult handle(McpContext context, ToolArgs args) {
+                    public ToolResult handle(InteractionContext context, ToolArgs args) {
                         return ToolResult.text("ok");
                     }
                 });
@@ -120,7 +120,7 @@ class ToolRegistryTest {
 
     @Test
     void callToolNotFound() throws Exception {
-        var handlers = new HashMap<String, McpMethodHandler>();
+        var handlers = new HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
 
         var callHandler = handlers.get("tools/call");
@@ -134,7 +134,7 @@ class ToolRegistryTest {
 
     @Test
     void callToolMissingName() throws Exception {
-        var handlers = new HashMap<String, McpMethodHandler>();
+        var handlers = new HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
 
         var callHandler = handlers.get("tools/call");
@@ -147,7 +147,7 @@ class ToolRegistryTest {
 
     @Test
     void callToolWithNullParams() throws Exception {
-        var handlers = new HashMap<String, McpMethodHandler>();
+        var handlers = new HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
 
         var callHandler = handlers.get("tools/call");
@@ -163,7 +163,7 @@ class ToolRegistryTest {
         try (var server = TachyonServer.builder().build()) {
             var session = server.createSession("test");
             session.activate();
-            var handlers = new HashMap<String, McpMethodHandler>();
+            var handlers = new HashMap<String, RpcMethodHandler>();
             registry.registerHandlers(handlers);
             registry.register(new TestTool("echo", "Echo", TEST_SCHEMA));
 
@@ -248,13 +248,13 @@ class ToolRegistryTest {
     @ParameterizedTest
     @CsvSource({"FORBIDDEN,forbidden", "OPTIONAL,optional", "REQUIRED,required"})
     void taskSupportSerializesToWireValue(TaskSupport enumValue, String wireValue) throws Exception {
-        var handlers = new HashMap<String, McpMethodHandler>();
+        var handlers = new HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
         registry.register(
                 new AbstractSyncToolHandler(
                         ToolDescriptor.builder("ts-tool").taskSupport(enumValue).build()) {
                     @Override
-                    public ToolResult handle(McpContext context, ToolArgs args) {
+                    public ToolResult handle(InteractionContext context, ToolArgs args) {
                         return ToolResult.text("ok");
                     }
                 });
@@ -302,7 +302,7 @@ class ToolRegistryTest {
 
     @Test
     void shouldMapIconsFromDescriptorToProtocolModel() throws Exception {
-        var handlers = new HashMap<String, McpMethodHandler>();
+        var handlers = new HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
         var icon = Icon.of("https://example.com/tool-icon.png", "image/png", null, null);
         registry.register(
@@ -311,7 +311,7 @@ class ToolRegistryTest {
                         .icons(List.of(icon))
                         .build()) {
                     @Override
-                    public ToolResult handle(McpContext context, ToolArgs args) {
+                    public ToolResult handle(InteractionContext context, ToolArgs args) {
                         return ToolResult.text("ok");
                     }
                 });
@@ -469,7 +469,7 @@ class ToolRegistryTest {
             }
 
             @Override
-            public CompletionStage<? extends ToolResult> handle(ToolRequest request, McpContext context) {
+            public CompletionStage<? extends ToolResult> handle(InteractionContext context, ToolRequest request) {
                 return CompletableFuture.completedFuture(ToolResult.text("x"));
             }
         };
@@ -496,28 +496,28 @@ class ToolRegistryTest {
 
     @Test
     void registerHandlersAddsBothMethods() {
-        var handlers = new java.util.HashMap<String, McpMethodHandler>();
+        var handlers = new java.util.HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
         assertThat(handlers).containsOnlyKeys("tools/list", "tools/call");
     }
 
     @Test
     void toolsListHandlerMethodName() {
-        var handlers = new java.util.HashMap<String, McpMethodHandler>();
+        var handlers = new java.util.HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
         assertThat(handlers.get("tools/list").method()).isEqualTo("tools/list");
     }
 
     @Test
     void toolsCallHandlerMethodName() {
-        var handlers = new java.util.HashMap<String, McpMethodHandler>();
+        var handlers = new java.util.HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
         assertThat(handlers.get("tools/call").method()).isEqualTo("tools/call");
     }
 
     @Test
     void asyncToolHandlerCompletesFromSeparateThread() throws Exception {
-        var handlers = new HashMap<String, McpMethodHandler>();
+        var handlers = new HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
         var executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "async-tool-pool"));
         registry.register(new AsyncToolHandler() {
@@ -527,12 +527,12 @@ class ToolRegistryTest {
             }
 
             @Override
-            public CompletionStage<ToolResult> handleAsync(McpContext context, ToolRequest request) {
+            public CompletionStage<ToolResult> handleAsync(InteractionContext context, ToolRequest request) {
                 return CompletableFuture.supplyAsync(() -> ToolResult.text("from-thread"), executor);
             }
 
             @Override
-            public CompletionStage<? extends ToolResult> handleAsync(McpContext context, ToolArgs args) {
+            public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolArgs args) {
                 return handleAsync(context, ToolRequest.of(name(), null, null));
             }
         });
@@ -554,7 +554,7 @@ class ToolRegistryTest {
 
     @Test
     void asyncToolHandlerInvalidArgumentExceptionMapsToInvalidRequest() throws Exception {
-        var handlers = new HashMap<String, McpMethodHandler>();
+        var handlers = new HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
         registry.register(new AsyncToolHandler() {
             @Override
@@ -563,12 +563,12 @@ class ToolRegistryTest {
             }
 
             @Override
-            public CompletionStage<ToolResult> handleAsync(McpContext context, ToolRequest request) {
+            public CompletionStage<ToolResult> handleAsync(InteractionContext context, ToolRequest request) {
                 return CompletableFuture.failedFuture(new InvalidArgumentException("arg", "bad input"));
             }
 
             @Override
-            public CompletionStage<? extends ToolResult> handleAsync(McpContext context, ToolArgs args) {
+            public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolArgs args) {
                 return handleAsync(context, ToolRequest.of(name(), null, null));
             }
         });
@@ -607,7 +607,7 @@ class ToolRegistryTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, ToolArgs args) {
+        public ToolResult handle(InteractionContext context, ToolArgs args) {
             return ToolResult.text("ok");
         }
     }

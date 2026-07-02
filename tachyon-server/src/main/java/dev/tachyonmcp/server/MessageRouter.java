@@ -4,8 +4,8 @@
 
 package dev.tachyonmcp.server;
 
-import dev.tachyonmcp.server.session.McpSession;
-import dev.tachyonmcp.server.session.SseEvent;
+import dev.tachyonmcp.runtime.Session;
+import dev.tachyonmcp.runtime.SseEvent;
 
 /**
  * Routes server-to-client SSE events to the appropriate transport channel.
@@ -15,7 +15,7 @@ import dev.tachyonmcp.server.session.SseEvent;
  * to that stream (lazy SSE upgrade of the transport response). Events for any other session
  * continue through the standard GET-SSE pipeline (hot buffer + flush).
  *
- * <p>This abstraction keeps {@link McpServer#sendRequest} / {@link McpServer#sendNotification}
+ * <p>This abstraction keeps {@link Server#sendRequest} / {@link Server#sendNotification}
  * free of transport-aware branching.
  */
 public interface MessageRouter {
@@ -29,5 +29,5 @@ public interface MessageRouter {
      *         should NOT fall through to GET-SSE); {@code false} otherwise (caller should buffer
      *         + flush via the session's connection)
      */
-    boolean tryRoute(McpSession session, SseEvent event);
+    boolean tryRoute(Session session, SseEvent event);
 }

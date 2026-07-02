@@ -4,15 +4,15 @@
 
 package dev.tachyonmcp.conformance;
 
-import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.OutboundSseStreamMessageRouter;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.domain.*;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptHandlerResult;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
 import dev.tachyonmcp.server.features.tools.*;
-import dev.tachyonmcp.server.session.McpContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.Base64;
 import java.util.LinkedHashMap;
@@ -156,9 +156,9 @@ abstract class AbstractConformanceServer {
         Awaitility.await().timeout(millis, TimeUnit.MILLISECONDS);
     }
 
-    protected abstract McpServer createServer();
+    protected abstract Server createServer();
 
-    McpServer startServer() {
+    Server startServer() {
         var srv = createServer();
         registerTools(srv);
         registerResources(srv);
@@ -166,7 +166,7 @@ abstract class AbstractConformanceServer {
         return srv;
     }
 
-    private void registerTools(McpServer server) {
+    private void registerTools(Server server) {
         server.registerTool(new EchoToolHandler());
 
         server.registerTool(SyncToolHandler.of(
@@ -220,7 +220,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<? extends ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<? extends ToolResult> handle(InteractionContext ctx, ToolRequest request) {
                 var pt = request.progressToken();
                 if (pt != null) {
                     ctx.notifications().progress(pt, 0, 100, "Starting");
@@ -243,7 +243,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<? extends ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<? extends ToolResult> handle(InteractionContext ctx, ToolRequest request) {
                 ctx.notifications().info("tachyon.tools", Map.of("message", "Tool execution started"));
                 delay(50);
                 ctx.notifications().info("tachyon.tools", Map.of("message", "Tool processing data"));
@@ -268,8 +268,8 @@ abstract class AbstractConformanceServer {
                                             Map.of("type", "text", "text", prompt.toString()))),
                                     "maxTokens",
                                     100);
-                            var responseJson = ctx.server()
-                                    .sendRequest("sampling/createMessage", JsonRpcCodec.writeValueAsString(paramsMap))
+                            var responseJson = ctx.sendRequest(
+                                            "sampling/createMessage", JsonRpcCodec.writeValueAsString(paramsMap))
                                     .get(2, TimeUnit.SECONDS);
                             var responseObj = (Map<String, Object>) JsonRpcCodec.readValue(responseJson);
                             var content = responseObj.get("content");
@@ -303,8 +303,8 @@ abstract class AbstractConformanceServer {
                                                             "username", Map.of("type", "string"),
                                                             "email", Map.of("type", "string")),
                                             "required", List.of("username", "email")));
-                            var responseJson = ctx.server()
-                                    .sendRequest("elicitation/create", JsonRpcCodec.writeValueAsString(paramsMap))
+                            var responseJson = ctx.sendRequest(
+                                            "elicitation/create", JsonRpcCodec.writeValueAsString(paramsMap))
                                     .get(2, TimeUnit.SECONDS);
                             var responseObj = (Map<String, Object>) JsonRpcCodec.readValue(responseJson);
                             var action = responseObj.get("action");
@@ -343,8 +343,8 @@ abstract class AbstractConformanceServer {
                                                                         "default",
                                                                         "active"),
                                                         "verified", Map.of("type", "boolean", "default", true))));
-                        var responseJson = ctx.server()
-                                .sendRequest("elicitation/create", JsonRpcCodec.writeValueAsString(paramsMap))
+                        var responseJson = ctx.sendRequest(
+                                        "elicitation/create", JsonRpcCodec.writeValueAsString(paramsMap))
                                 .get(2, TimeUnit.SECONDS);
                         var responseObj = (Map<String, Object>) JsonRpcCodec.readValue(responseJson);
                         var action = responseObj.get("action");
@@ -406,8 +406,8 @@ abstract class AbstractConformanceServer {
                                 "mode", "form",
                                 "message", "Please select your preferences",
                                 "requestedSchema", Map.of("type", "object", "properties", props));
-                        var responseJson = ctx.server()
-                                .sendRequest("elicitation/create", JsonRpcCodec.writeValueAsString(paramsMap))
+                        var responseJson = ctx.sendRequest(
+                                        "elicitation/create", JsonRpcCodec.writeValueAsString(paramsMap))
                                 .get(2, TimeUnit.SECONDS);
                         var responseObj = (Map<String, Object>) JsonRpcCodec.readValue(responseJson);
                         var action = responseObj.get("action");
@@ -428,7 +428,7 @@ abstract class AbstractConformanceServer {
                         .build()) {
 
                     @Override
-                    public ToolResult handle(McpContext context, ToolArgs arguments) {
+                    public ToolResult handle(InteractionContext context, ToolArgs arguments) {
                         return ToolResult.text("JSON Schema 2020-12 tool called");
                     }
                 });
@@ -449,7 +449,7 @@ abstract class AbstractConformanceServer {
         registerInputRequiredTools(server);
     }
 
-    private void registerInputRequiredTools(McpServer server) {
+    private void registerInputRequiredTools(Server server) {
         server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
@@ -460,7 +460,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest request) {
                 var inputResponses = request.inputResponses();
                 if (inputResponses != null && inputResponses.containsKey("user_name")) {
                     var resp = inputResponses.get("user_name");
@@ -485,7 +485,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest request) {
                 var inputResponses = request.inputResponses();
                 if (inputResponses != null && inputResponses.containsKey("capital_question")) {
                     var resp = inputResponses.get("capital_question");
@@ -509,7 +509,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest request) {
                 var inputResponses = request.inputResponses();
                 if (inputResponses != null && inputResponses.containsKey("client_roots")) {
                     return CompletableFuture.completedFuture(ToolResult.text("Roots received"));
@@ -529,7 +529,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest request) {
                 var inputResponses = request.inputResponses();
                 var requestState = request.requestState();
                 if (inputResponses != null && inputResponses.containsKey("confirm") && requestState != null) {
@@ -551,7 +551,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest request) {
                 var inputResponses = request.inputResponses();
                 if (inputResponses != null
                         && inputResponses.containsKey("user_name")
@@ -577,7 +577,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest request) {
                 var inputResponses = request.inputResponses();
                 var requestState = request.requestState();
                 if (inputResponses != null && inputResponses.containsKey("step2")) {
@@ -613,7 +613,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest request) {
                 var inputResponses = request.inputResponses();
                 var requestState = request.requestState();
                 if (inputResponses != null && inputResponses.containsKey("confirm")) {
@@ -638,7 +638,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest request) {
                 var meta = request.meta();
                 var capabilities = meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
                 var hasSampling =
@@ -660,7 +660,7 @@ abstract class AbstractConformanceServer {
         });
     }
 
-    private void registerResources(McpServer server) {
+    private void registerResources(Server server) {
         server.resources()
                 .add(
                         ResourceDescriptor.of("hello", "hello://world", "Hello resource", "text/plain"),
@@ -689,7 +689,7 @@ abstract class AbstractConformanceServer {
                                 uri, "text/plain", "Resource content for id: " + params.get("id"))));
     }
 
-    private void registerPrompts(McpServer server) {
+    private void registerPrompts(Server server) {
         server.prompts()
                 .add(PromptDescriptor.of("greeting", "A greeting prompt"), List.of(PromptMessage.user("Hello!")));
 
@@ -752,7 +752,7 @@ abstract class AbstractConformanceServer {
         }
 
         @Override
-        public ToolResult handle(McpContext context, ToolArgs arguments) {
+        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
             var message = arguments.stringOr("message", "");
             return ToolResult.text(message);
         }

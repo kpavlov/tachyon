@@ -12,11 +12,11 @@ import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.runtime.DefaultInteractionContext;
 import dev.tachyonmcp.runtime.InteractionContext.Lifecycle;
 import dev.tachyonmcp.runtime.InteractionEvent;
+import dev.tachyonmcp.runtime.Session;
+import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.server.McpDispatcher;
-import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.session.McpSession;
-import dev.tachyonmcp.server.session.SseConnection;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.*;
@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 
 class LifecyclePipelineCoordinatorTest {
 
-    private McpServer server;
+    private Server server;
     private EmbeddedChannel channel;
 
     @BeforeEach
@@ -105,7 +105,7 @@ class LifecyclePipelineCoordinatorTest {
     @Test
     void interactionContextLifecycleTransitionsViaEvents() {
         var protocol = Protocols.versions().get(0);
-        channel.attr(INTERACTION_CONTEXT_KEY).set(new DefaultInteractionContext<>(protocol));
+        channel.attr(INTERACTION_CONTEXT_KEY).set(new DefaultInteractionContext(protocol));
 
         var ic = channel.attr(INTERACTION_CONTEXT_KEY).get();
         assertThat(ic).isNotNull();
@@ -114,8 +114,7 @@ class LifecyclePipelineCoordinatorTest {
 
         // OperationStarted
         channel.pipeline()
-                .fireUserEventTriggered(
-                        new InteractionEvent.OperationStarted(new McpSession("s1", SseConnection.NOOP)));
+                .fireUserEventTriggered(new InteractionEvent.OperationStarted(new Session("s1", SseConnection.NOOP)));
         ic = channel.attr(INTERACTION_CONTEXT_KEY).get();
         assertThat(ic).isNotNull();
         assertThat(ic.getLifecycle()).isEqualTo(Lifecycle.OPERATION);

@@ -2,7 +2,7 @@
  * Copyright (c) 2026 Konstantin Pavlov.
  */
 
-package dev.tachyonmcp.server.session;
+package dev.tachyonmcp.runtime;
 
 /** A writable SSE connection to a client. */
 public interface SseConnection {

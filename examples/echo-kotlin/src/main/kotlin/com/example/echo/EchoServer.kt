@@ -2,7 +2,7 @@
 
 package com.example.echo
 
-import dev.tachyonmcp.server.McpServerHandle
+import dev.tachyonmcp.server.ServerHandle
 import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.config.Mode
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
@@ -10,7 +10,7 @@ import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.registerTool
 import tools.jackson.databind.node.JsonNodeFactory
 
-fun createServer(port: Int = 0): McpServerHandle {
+fun createServer(port: Int = 0): ServerHandle {
     val inputSchema = buildEchoSchema()
     val handle =
         TachyonServer(port = port) {

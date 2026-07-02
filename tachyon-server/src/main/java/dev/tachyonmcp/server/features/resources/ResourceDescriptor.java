@@ -4,7 +4,7 @@
 
 package dev.tachyonmcp.server.features.resources;
 
-import dev.tachyonmcp.server.McpResourceType;
+import dev.tachyonmcp.server.ServerResourceType;
 import dev.tachyonmcp.server.domain.Annotations;
 import dev.tachyonmcp.server.domain.Icon;
 import java.util.List;
@@ -16,7 +16,7 @@ import org.jspecify.annotations.Nullable;
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
         typeImmutable = "Default*")
-public interface ResourceDescriptor extends McpResourceType {
+public interface ResourceDescriptor extends ServerResourceType {
 
     String name();
 

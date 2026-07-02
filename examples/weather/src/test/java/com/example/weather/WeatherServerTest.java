@@ -4,7 +4,7 @@ package com.example.weather;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.McpServerHandle;
+import dev.tachyonmcp.server.ServerHandle;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 
 class WeatherServerTest {
 
-    private static McpServerHandle handle;
+    private static ServerHandle handle;
     private static HttpClientStreamableHttpTransport clientTransport;
     private static McpSyncClient client;
     private static McpSchema.InitializeResult initResult;

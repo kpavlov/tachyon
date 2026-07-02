@@ -4,8 +4,7 @@
 
 package dev.tachyonmcp.protocol;
 
-import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.runtime.Session;
+import dev.tachyonmcp.runtime.MutableInteractionContext;
 import io.netty.handler.codec.http.HttpRequest;
 
 /**
@@ -47,7 +46,7 @@ public interface Protocol {
     ProtocolResponseMapper responseMapper();
 
     /**
-     * Creates the per-channel {@link InteractionContext} for this protocol.
+     * Creates the per-channel {@link MutableInteractionContext} for this protocol.
      *
      * <ul>
      *   <li>MCP: {@code DefaultMcpContext}
@@ -56,5 +55,5 @@ public interface Protocol {
      *
      * @param provider to obtain server-level dependencies (e.g. {@code McpServer})
      */
-    InteractionContext<Session> createInteractionContext(ContextProvider provider);
+    MutableInteractionContext createInteractionContext(ContextProvider provider);
 }
