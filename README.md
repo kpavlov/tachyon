@@ -9,8 +9,7 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/kpavlov/tachyon)
 
-**Tachyon MCP** is a Java 21 [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server built on [Netty](https://netty.io).
-Fully implements MCP spec **2025-11-25** Streamable HTTP transport with native I/O, protocol extensions, and a stateless mode for serverless deployments.
+**Tachyon MCP** is a Java 21 [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server built on [Netty](https://netty.io). Implements the **2025-11-25** Streamable HTTP transport, protocol extensions, and stateless mode.
 
 **TL;DR**
 
@@ -20,7 +19,7 @@ Fully implements MCP spec **2025-11-25** Streamable HTTP transport with native I
     <dependency>
         <groupId>dev.tachyonmcp</groupId>
         <artifactId>tachyon-server</artifactId>
-        <version>1.0.0-beta.2</version>
+        <version>1.0.0-beta.3</version>
     </dependency>
     ```
 
@@ -29,6 +28,7 @@ Fully implements MCP spec **2025-11-25** Streamable HTTP transport with native I
     ```java
     import dev.tachyonmcp.server.TachyonServer;
     import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
+    import dev.tachyonmcp.server.features.tools.ToolArgs;
     import dev.tachyonmcp.server.features.tools.ToolDescriptor;
     import dev.tachyonmcp.server.features.tools.ToolResult;
     import dev.tachyonmcp.server.session.McpContext;
@@ -48,7 +48,7 @@ Fully implements MCP spec **2025-11-25** Streamable HTTP transport with native I
                     .build()) {
 
                 @Override
-                public Object handle(McpContext ctx, Object args) {
+                public ToolResult handle(McpContext ctx, ToolArgs args) {
                     return ToolResult.text("☀️ 22°C");
                 }
             })
@@ -57,6 +57,18 @@ Fully implements MCP spec **2025-11-25** Streamable HTTP transport with native I
             .start();
     }
     ```
+
+## Documentation
+
+| Guide | Description |
+|---|---|
+| [Quickstart](docs/quickstart.md) | Build a working server in 5 minutes |
+| [Tools](docs/tools.md) | Sync/async handlers, input schema, `ToolResult` |
+| [Resources](docs/resources.md) | Static URIs, dynamic handlers, URI templates |
+| [Tasks](docs/tasks.md) | Long-running operations, state machine, `TasksExtension` |
+| [Extensions](docs/extensions.md) | Custom protocol extensions, negotiation |
+| [Kotlin DSL](docs/kotlin.md) | Coroutine-first DSL, `TachyonServer { }`, scope reference |
+| [Kotlin module](tachyon-server-kotlin/README.md) | `tachyon-server-kotlin` module overview |
 
 ## Agent Skill
 
@@ -171,57 +183,22 @@ mvn install -pl tachyon-server -DskipTests
 
 ## Quick Start
 
-### Minimal server with tool
+See [docs/quickstart.md](docs/quickstart.md) for a full walkthrough with Java and Kotlin examples, curl test, and next-step links.
 
-```java
-import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.session.McpContext;
-import tools.jackson.databind.node.JsonNodeFactory;
-
-void main() {
-    var schema = JsonNodeFactory.instance.objectNode();
-    schema.put("type", "object");
-    schema.putObject("properties").putObject("city").put("type", "string");
-
-    TachyonServer.builder()
-        .name("weather-mcp")
-        .tool(new AbstractSyncToolHandler<ToolResult>(
-            ToolDescriptor.builder("get_forecast")
-                .description("Get weather forecast")
-                .inputSchema(schema)
-                .build()) {
-            @Override
-            public ToolResult handle(McpContext ctx, @Nullable Map<String, JsonNode> args) {
-                return ToolResult.text("☀️ 22°C");
-            }
-        })
-        .session(cfg -> cfg.stateless(true)) // start in stateless mode (no sessions)
-        .port(8080) // bind to 127.0.0.1:8080
-        .bind();
-}
-```
-
-### With TasksExtension (negotiable) - [SEP-1686](https://modelcontextprotocol.io/seps/1686-tasks)
+### TasksExtension (SEP-1686)
 
 ```java
 var handle = TachyonServer.builder()
     .extension(TasksExtension.instance())  // exposes create_task tool + task://{id} resource
     .port(8080)
-    .bind();
+    .start();
 ```
 
-Clients that include `"extensions": {"io.modelcontextprotocol/tasks": {}}` in their
-`initialize` capabilities receive the extension's tool and resource template.
-Clients that don't negotiate the extension see standard MCP tasks via `tasks/list` / `tasks/get`.
+Clients that include `"extensions": {"io.modelcontextprotocol/tasks": {}}` in their `initialize` capabilities receive the extension's tool and resource template. Clients that don't negotiate it see standard `tasks/*` methods. See [docs/tasks.md](docs/tasks.md).
 
 ### Protocol isolation
 
-Handler interfaces (`ToolHandler`, `ResourceHandler`, `PromptHandler`) and descriptor types use stable domain types.
-When Tachyon upgrades to a new protocol version, only the internal mapper layer changes;
-handler implementations are unaffected. Domain types track the 2026-07-28 spec shape where it improves on 2025-11-25 (e.g. `Annotations.lastModified`, `ResourceLink` in `ContentBlock`).
+Handler interfaces (`ToolHandler`, `ResourceHandler`, `PromptHandler`) and descriptor types use stable domain types. When Tachyon upgrades to a new protocol version, only the internal mapper layer changes; handler implementations are unaffected. Domain types track the 2026-07-28 spec shape where it improves on 2025-11-25 (e.g. `Annotations.lastModified`, `ResourceLink` in `ContentBlock`).
 
 ## Performance
 
@@ -235,8 +212,7 @@ handler implementations are unaffected. Domain types track the 2026-07-28 spec s
 ## Gaps & Limitations
 
 - [ ] **Rate limiting** — Not yet implemented
-- [ ] **URL elicitation mode / -32042 error**  — Form mode works, URL mode missing
-- [ ] **2026-07-28 draft protocol version** — Not negotiable; version-gated features ready
+- [ ] **2026-07-28 draft protocol version** — High priority
 - [ ] **Stale session on re-initialize** — 30s TTL lingering, affects reconnect only
 
 ---
@@ -244,43 +220,16 @@ handler implementations are unaffected. Domain types track the 2026-07-28 spec s
 ## FAQ
 
 ### Can I deploy to AWS Lambda?
-Yes. Use `stateless(true)` to skip session persistence. Each invocation processes one request independently.
+Yes. Use `.session(cfg -> cfg.stateless(true))` to skip session persistence. Each invocation processes one request independently.
 
 ### Does it support HTTP/2?
-Not yet. The current pipeline targets HTTP/1.1; HTTP/2 upgrade is a pipeline configuration change comming soon.
+Not yet. The current transport targets HTTP/1.1.
 
-### How do I write a custom tool?
-Extend `AbstractSyncToolHandler` or `AbstractAsyncToolHandler`, passing a `ToolDescriptor`:
+### How do I write a tool?
+See [docs/tools.md](docs/tools.md) — covers lambda and class-based handlers, input schema, and `ToolResult` factories.
 
-```java
-class MyTool extends AbstractSyncToolHandler<ToolResult> {
-    MyTool() {
-        super(ToolDescriptor.builder("my_tool")
-                .description("Does something useful")
-                .inputSchema(buildSchema())
-                .build());
-    }
-
-    @Override
-    public ToolResult handle(McpContext ctx, @Nullable Map<String, JsonNode> args) throws Exception {
-        return ToolResult.text("done");
-    }
-
-    private static JsonNode buildSchema() {
-        var s = JsonNodeFactory.instance.objectNode();
-        s.put("type", "object");
-        return s;
-    }
-}
-```
-
-### How do I implement a custom resource?
-```java
-server.resources().add(
-    ResourceDescriptor.of("custom-data", "custom://data", null, null),
-    (ctx, req) -> new TextResourceContents("content", req.uri(), "text/plain", null));
-```
-
+### How do I expose a resource?
+See [docs/resources.md](docs/resources.md) — covers static URIs, dynamic handlers, URI templates, and subscriptions.
 
 ## License
 
