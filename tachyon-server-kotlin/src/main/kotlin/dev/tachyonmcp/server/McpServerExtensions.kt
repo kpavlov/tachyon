@@ -13,12 +13,12 @@ import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
 @JvmSynthetic
-public fun McpServer.registerTool(
+public fun Server.registerTool(
     name: String,
     description: String? = null,
     inputSchema: JsonNode? = null,
     block: suspend ToolScope.() -> ToolResult,
-): McpServer =
+): Server =
     registerTool(configure = {
         name(name)
         description(description)
@@ -27,10 +27,10 @@ public fun McpServer.registerTool(
 
 @JvmSynthetic
 @OptIn(ExperimentalContracts::class)
-public inline fun McpServer.registerTool(
+public inline fun Server.registerTool(
     configure: DefaultToolDescriptor.Builder.() -> Unit = {},
     noinline block: suspend ToolScope.() -> ToolResult,
-): McpServer {
+): Server {
     contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
     return registerTool(
         descriptor = ToolDescriptor.builder().apply(configure).build(),
@@ -39,10 +39,10 @@ public inline fun McpServer.registerTool(
 }
 
 @JvmSynthetic
-public fun McpServer.registerTool(
+public fun Server.registerTool(
     descriptor: ToolDescriptor,
     block: suspend ToolScope.() -> ToolResult,
-): McpServer {
+): Server {
     this.registerTool(asyncHandler(descriptor, block))
     return this
 }

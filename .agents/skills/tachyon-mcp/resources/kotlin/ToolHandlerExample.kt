@@ -2,7 +2,8 @@
 
 package dev.tachyonmcp.skill
 
-import dev.tachyonmcp.server.McpServer
+import dev.tachyonmcp.runtime.InteractionContext
+import dev.tachyonmcp.server.Server
 import dev.tachyonmcp.server.TachyonServerBuilder
 import dev.tachyonmcp.server.buildServer
 import dev.tachyonmcp.server.features.tools.AbstractAsyncToolHandler
@@ -11,7 +12,6 @@ import dev.tachyonmcp.server.features.tools.ToolArgs
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.registerTool
-import dev.tachyonmcp.server.session.McpContext
 import dev.tachyonmcp.server.toolDescriptor
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
@@ -52,7 +52,7 @@ class GreetingTool : AbstractSyncToolHandler(
         inputSchema = GREET_SCHEMA
     },
 ) {
-    override fun handle(ctx: McpContext, args: ToolArgs): ToolResult {
+    override fun handle(ctx: InteractionContext, args: ToolArgs): ToolResult {
         val name = args.string("name")
         return ToolResult.text("Hello, $name!")
     }
@@ -68,13 +68,13 @@ class AsyncGreetingTool : AbstractAsyncToolHandler(
         inputSchema = GREET_SCHEMA
     },
 ) {
-    override fun handleAsync(ctx: McpContext, args: ToolArgs): CompletionStage<out ToolResult> {
+    override fun handleAsync(ctx: InteractionContext, args: ToolArgs): CompletionStage<out ToolResult> {
         return CompletableFuture.completedFuture(ToolResult.text("Hello, Async!"))
     }
 }
 
 /** Build a server using the DSL and register tools post-build. */
-fun buildWithPostRegistration(): McpServer {
+fun buildWithPostRegistration(): Server {
     val server = buildServer {
         registerHello()
         registerGreeting()

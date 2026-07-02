@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetPromptResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListPromptsResult;
 import dev.tachyonmcp.server.JsonSchemaValidator;
-import dev.tachyonmcp.server.McpMethodHandler;
+import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.PromptArgument;
 import dev.tachyonmcp.server.domain.PromptMessage;
@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 class PromptRegistryTest {
 
     private final PromptRegistry registry = new PromptRegistry(JsonSchemaValidator.noop());
-    private final HashMap<String, McpMethodHandler> handlers = new HashMap<>();
+    private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
 
     @BeforeEach
     void setUp() {

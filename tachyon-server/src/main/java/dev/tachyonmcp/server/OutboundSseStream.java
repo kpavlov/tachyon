@@ -4,7 +4,7 @@
 
 package dev.tachyonmcp.server;
 
-import dev.tachyonmcp.server.session.SseEvent;
+import dev.tachyonmcp.runtime.SseEvent;
 import org.jspecify.annotations.Nullable;
 
 /**

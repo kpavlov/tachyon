@@ -7,8 +7,8 @@ package dev.tachyonmcp.server.handlers;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.LoggingLevelMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.SetLevelRequestParams;
-import dev.tachyonmcp.server.McpMethodHandler;
-import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.Map;
@@ -17,11 +17,11 @@ public final class LoggingHandlers {
 
     private LoggingHandlers() {}
 
-    public static void register(Map<String, McpMethodHandler> registry) {
+    public static void register(Map<String, RpcMethodHandler> registry) {
         registry.put("logging/setLevel", new SetLevelHandler());
     }
 
-    private static class SetLevelHandler implements McpMethodHandler {
+    private static class SetLevelHandler implements RpcMethodHandler {
 
         @Override
         public String method() {
@@ -29,7 +29,7 @@ public final class LoggingHandlers {
         }
 
         @Override
-        public Object handle(McpContext context, Object params) {
+        public Object handle(DispatchContext context, Object params) {
             SetLevelRequestParams typed;
             if (params instanceof SetLevelRequestParams p) {
                 typed = p;

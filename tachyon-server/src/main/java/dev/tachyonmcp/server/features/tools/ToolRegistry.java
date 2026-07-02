@@ -10,10 +10,10 @@ import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.methodNotFound;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolRequestParams;
 import dev.tachyonmcp.server.JsonSchemaValidator;
-import dev.tachyonmcp.server.McpMethodHandler;
+import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.SchemaValidationError;
 import dev.tachyonmcp.server.features.PaginatedResult;
-import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -155,7 +155,7 @@ public class ToolRegistry {
         return PaginatedResult.of(result, nextCursor);
     }
 
-    public void registerHandlers(Map<String, McpMethodHandler> registry) {
+    public void registerHandlers(Map<String, RpcMethodHandler> registry) {
         registry.put("tools/list", new ToolsListHandler(this));
         registry.put("tools/call", new ToolsCallHandler(this, validator));
     }
@@ -174,7 +174,7 @@ public class ToolRegistry {
         return null;
     }
 
-    private record ToolsListHandler(ToolRegistry registry) implements McpMethodHandler {
+    private record ToolsListHandler(ToolRegistry registry) implements RpcMethodHandler {
 
         @Override
         public String method() {
@@ -182,7 +182,7 @@ public class ToolRegistry {
         }
 
         @Override
-        public Object handle(McpContext context, Object params) {
+        public Object handle(DispatchContext context, Object params) {
             int limit = 0;
             String cursor = null;
             if (params instanceof Map<?, ?> map) {
@@ -197,7 +197,7 @@ public class ToolRegistry {
         }
     }
 
-    private record ToolsCallHandler(ToolRegistry registry, JsonSchemaValidator validator) implements McpMethodHandler {
+    private record ToolsCallHandler(ToolRegistry registry, JsonSchemaValidator validator) implements RpcMethodHandler {
 
         @Override
         public String method() {
@@ -205,12 +205,12 @@ public class ToolRegistry {
         }
 
         @Override
-        public Object handle(McpContext context, Object params) throws Exception {
+        public Object handle(DispatchContext context, Object params) throws Exception {
             return handleAsync(context, params).toCompletableFuture().join();
         }
 
         @Override
-        public CompletionStage<Object> handleAsync(McpContext context, Object params) {
+        public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
             var parsed = parseCallParams(params);
             if (parsed == null) return CompletableFuture.completedFuture(invalidRequest("Invalid params"));
             if (parsed.name().isBlank()) return CompletableFuture.completedFuture(invalidRequest("Missing tool name"));
@@ -240,7 +240,7 @@ public class ToolRegistry {
 
             CompletionStage<? extends ToolResult> toolStage;
             try {
-                toolStage = handler.handle(request, context);
+                toolStage = handler.handle(context, request);
             } catch (Exception e) {
                 return CompletableFuture.completedFuture(wrapToolError(e));
             }
@@ -343,7 +343,7 @@ public class ToolRegistry {
             return errors.stream().map(SchemaValidationError::message).collect(Collectors.joining("; "));
         }
 
-        private void sendLoggingIfEnabled(McpContext context, String toolName, String status) {
+        private void sendLoggingIfEnabled(DispatchContext context, String toolName, String status) {
             var level = context.server().getLoggingLevel();
             if (level == null) return;
             context.server()

@@ -2,7 +2,7 @@
 
 package com.example.weather;
 
-import dev.tachyonmcp.server.McpServerHandle;
+import dev.tachyonmcp.server.ServerHandle;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.ReadResourceRequest;
@@ -11,7 +11,7 @@ import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
-import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.runtime.InteractionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +29,7 @@ public final class WeatherServer {
         log.info("Connect your MCP client to http://localhost:{}/mcp", port);
     }
 
-    static McpServerHandle createServer(int port) {
+    static ServerHandle createServer(int port) {
         var handle = TachyonServer.builder()
                 .info(it -> it
                         .name("weather-server")
@@ -74,7 +74,7 @@ public final class WeatherServer {
     private WeatherServer() {
     }
 
-    private static TextResourceContents handleArticleResource(McpContext ctx, ReadResourceRequest req) {
+    private static TextResourceContents handleArticleResource(InteractionContext ctx, ReadResourceRequest req) {
         var article = """
                 # Weather Prediction
 
@@ -97,7 +97,7 @@ public final class WeatherServer {
         return TextResourceContents.of(req.uri(), "text/markdown", article);
     }
 
-    private static ResourceContents handleForecastTemplate(McpContext ctx, String uri, Map<String, String> params) {
+    private static ResourceContents handleForecastTemplate(InteractionContext ctx, String uri, Map<String, String> params) {
         var city = params.get("city");
         var forecast = """
                 {

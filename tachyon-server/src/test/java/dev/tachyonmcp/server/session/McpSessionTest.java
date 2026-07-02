@@ -7,20 +7,24 @@ package dev.tachyonmcp.server.session;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.tachyonmcp.runtime.Backpressure;
+import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
+import dev.tachyonmcp.runtime.SseConnection;
+import dev.tachyonmcp.runtime.SseEvent;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class McpSessionTest {
 
-    private McpSession session;
+    private Session session;
     private TestConnection connection;
 
     @BeforeEach
     void setUp() {
         connection = new TestConnection();
-        session = new McpSession("sess_1", connection);
+        session = new Session("sess_1", connection);
     }
 
     @Test
@@ -94,12 +98,12 @@ class McpSessionTest {
 
     @Test
     void throwsOnNullId() {
-        assertThatThrownBy(() -> new McpSession(null, connection)).isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> new Session(null, connection)).isInstanceOf(NullPointerException.class);
     }
 
     @Test
     void throwsOnNullConnection() {
-        assertThatThrownBy(() -> new McpSession("id", null)).isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> new Session("id", null)).isInstanceOf(NullPointerException.class);
     }
 
     @Test

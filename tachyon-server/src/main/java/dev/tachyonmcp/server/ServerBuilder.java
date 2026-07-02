@@ -7,7 +7,7 @@ package dev.tachyonmcp.server;
 import dev.tachyonmcp.server.config.*;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.TextResourceContents;
-import dev.tachyonmcp.server.extensions.McpExtension;
+import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptHandler;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
@@ -30,7 +30,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 
-/** Fluent builder for {@link McpServer}. Supports feature registration and configuration. */
+/** Fluent builder for {@link Server}. Supports feature registration and configuration. */
 public final class ServerBuilder {
 
     private final ServerIdentityBuilder identityBuilder =
@@ -131,7 +131,7 @@ public final class ServerBuilder {
     }
 
     /** Registers a server extension. */
-    public ServerBuilder extension(McpExtension extension) {
+    public ServerBuilder extension(ServerExtension extension) {
         featuresConfig.extensions.add(extension);
         return this;
     }
@@ -176,8 +176,8 @@ public final class ServerBuilder {
 
     // === Terminal methods ===
 
-    /** Builds the {@link McpServer} without binding a transport. */
-    public McpServer build() {
+    /** Builds the {@link Server} without binding a transport. */
+    public Server build() {
         var sessionConfig = sessionBuilder.build();
         var router = sessionConfig.sessionLogRouter() != null
                 ? sessionConfig.sessionLogRouter()
@@ -194,10 +194,10 @@ public final class ServerBuilder {
             resolvedExecutor = Executors.newThreadPerTaskExecutor(threadFactory);
             ownsExecutor = true;
         } else {
-            resolvedExecutor = McpServer.defaultExecutorForBuilder();
+            resolvedExecutor = Server.defaultExecutorForBuilder();
             ownsExecutor = true;
         }
-        var server = new McpServer(
+        var server = new Server(
                 resolvedExecutor,
                 ownsExecutor,
                 router,
@@ -220,7 +220,7 @@ public final class ServerBuilder {
     }
 
     /** Builds the server and starts the Netty transport (blocking). Requires a port to be set. */
-    public McpServerHandle start() {
+    public ServerHandle start() {
         var networkConfig = networkBuilder.build();
         if (networkConfig.port() < 0) {
             throw new IllegalStateException("Port must be set before start()");
@@ -240,11 +240,11 @@ public final class ServerBuilder {
                         networkConfig.allowedHeaders()),
                 pipelineCustomizer);
         var netty = new NettyServer(server, nettyConfig);
-        return new McpServerHandle(server, netty.port(), netty);
+        return new ServerHandle(server, netty.port(), netty);
     }
 
     /** Builds the server and starts the Netty transport (non-blocking). */
-    public CompletableFuture<McpServerHandle> startAsync() {
+    public CompletableFuture<ServerHandle> startAsync() {
         return CompletableFuture.supplyAsync(this::start);
     }
 
@@ -259,7 +259,7 @@ public final class ServerBuilder {
         final List<ToolHandler> tools = new ArrayList<>();
         final List<ResourceRegistration> resources = new ArrayList<>();
         final List<PromptRegistration> prompts = new ArrayList<>();
-        final List<McpExtension> extensions = new ArrayList<>();
+        final List<ServerExtension> extensions = new ArrayList<>();
 
         JsonSchemaValidator jsonSchemaValidator = new NetworkntJsonSchemaValidator();
 

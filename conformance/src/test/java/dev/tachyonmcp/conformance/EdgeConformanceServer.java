@@ -4,13 +4,13 @@
 
 package dev.tachyonmcp.conformance;
 
-import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
 
 class EdgeConformanceServer extends AbstractConformanceServer {
 
     @Override
-    protected McpServer createServer() {
+    protected Server createServer() {
         return TachyonServer.builder().network(n -> n.host("localhost")).build();
     }
 }

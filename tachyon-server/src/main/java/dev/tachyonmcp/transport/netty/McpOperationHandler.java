@@ -9,10 +9,10 @@ import static dev.tachyonmcp.transport.netty.McpResponseWriter.*;
 
 import dev.tachyonmcp.runtime.InteractionEvent;
 import dev.tachyonmcp.runtime.McpHeaderNames;
+import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.server.McpDispatcher;
-import dev.tachyonmcp.server.McpServer;
-import dev.tachyonmcp.server.session.McpContext;
-import dev.tachyonmcp.server.session.McpSession;
+import dev.tachyonmcp.server.Server;
+import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
 import dev.tachyonmcp.transport.netty.sse.PostSseStream;
@@ -45,12 +45,12 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = LoggerFactory.getLogger(McpOperationHandler.class);
 
-    private final McpServer server;
+    private final Server server;
     private final McpDispatcher dispatcher;
     private final Executor executor;
     private final SseManager sseManager;
 
-    public McpOperationHandler(McpServer server, McpDispatcher dispatcher, Executor executor) {
+    public McpOperationHandler(Server server, McpDispatcher dispatcher, Executor executor) {
         this.server = server;
         this.dispatcher = dispatcher;
         this.executor = executor;
@@ -98,7 +98,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
     private void handlePost(ChannelHandlerContext ctx, FullHttpRequest req, @Nullable String origin) {
         var sessionId = req.headers().get(McpHeaderNames.MCP_SESSION_ID);
         if (sessionId != null) {
-            server.getSession(sessionId).ifPresent(McpSession::touch);
+            server.getSession(sessionId).ifPresent(Session::touch);
         }
         var body = req.content().retain();
         CompletableFuture.runAsync(
@@ -191,7 +191,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         final var requestId = req.id();
         final var method = req.method();
         final var startNs = System.nanoTime();
-        final McpContext ic = ChannelHandlerUtils.requireInteractionContext(ctx);
+        final DispatchContext ic = ChannelHandlerUtils.requireInteractionContext(ctx);
         dispatcher
                 .dispatchRequestAsync(requestId, method, req.params(), sessionId, postStream, ic)
                 .whenComplete((result, ex) -> ctx.executor().execute(() -> {

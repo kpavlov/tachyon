@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.session;
 
+import dev.tachyonmcp.runtime.Session;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,30 +13,30 @@ import org.jspecify.annotations.Nullable;
 
 public class InMemorySessionStore implements SessionStore {
 
-    private final ConcurrentHashMap<String, McpSession> sessions = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Session> sessions = new ConcurrentHashMap<>();
 
     @Override
-    public @Nullable McpSession put(String sessionId, McpSession session) {
+    public @Nullable Session put(String sessionId, Session session) {
         return sessions.put(sessionId, session);
     }
 
     @Override
-    public Optional<McpSession> get(String sessionId) {
+    public Optional<Session> get(String sessionId) {
         return Optional.ofNullable(sessions.get(sessionId));
     }
 
     @Override
-    public McpSession computeIfAbsent(String sessionId, Function<String, McpSession> factory) {
+    public Session computeIfAbsent(String sessionId, Function<String, Session> factory) {
         return sessions.computeIfAbsent(sessionId, factory);
     }
 
     @Override
-    public Collection<McpSession> values() {
+    public Collection<Session> values() {
         return sessions.values();
     }
 
     @Override
-    public @Nullable McpSession remove(String sessionId) {
+    public @Nullable Session remove(String sessionId) {
         return sessions.remove(sessionId);
     }
 

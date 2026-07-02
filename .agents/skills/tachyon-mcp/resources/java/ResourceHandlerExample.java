@@ -8,7 +8,7 @@ import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
-import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.runtime.InteractionContext;
 
 /**
  * Demonstrates static resources and URI-template resource registrations.
@@ -19,7 +19,7 @@ final class ResourceHandlerExample {
      * Static resource — fixed URI.
      */
     static ResourceHandler configHandler() {
-        return (McpContext ctx, ReadResourceRequest req) ->
+        return (InteractionContext ctx, ReadResourceRequest req) ->
             TextResourceContents.of(req.uri(), "application/json", "{\"mode\":\"production\"}");
     }
 
@@ -31,7 +31,7 @@ final class ResourceHandlerExample {
      * Static resource — binary (image, PDF, etc).
      */
     static ResourceHandler imageHandler() {
-        return (McpContext ctx, ReadResourceRequest req) ->
+        return (InteractionContext ctx, ReadResourceRequest req) ->
             BlobResourceContents.of(req.uri(), "image/png", "iVBORw0KGgoAAAANS...");
     }
 
@@ -44,7 +44,7 @@ final class ResourceHandlerExample {
             "myapp://users/{userId}/profile",
             "User profile data",
             "application/json",
-            (McpContext ctx, String uri, java.util.Map<String, String> params) -> {
+            (InteractionContext ctx, String uri, java.util.Map<String, String> params) -> {
                 var userId = params.get("userId");
                 return TextResourceContents.of(uri, "application/json", "{\"userId\":\"" + userId + "\"}");
             });

@@ -2,9 +2,9 @@
 
 package dev.tachyonmcp.server.features.tools;
 
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
-import dev.tachyonmcp.server.session.McpContext;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
@@ -43,7 +43,7 @@ public interface SyncToolHandler extends ToolHandler {
     }
 
     /** Executes the tool synchronously. */
-    ToolResult handle(McpContext context, ToolArgs args) throws Exception;
+    ToolResult handle(InteractionContext context, ToolArgs args) throws Exception;
 
     @Nullable
     default ToolAnnotations annotations() {
@@ -63,7 +63,7 @@ public interface SyncToolHandler extends ToolHandler {
     }
 
     @Override
-    default CompletionStage<? extends ToolResult> handle(ToolRequest request, McpContext context) {
+    default CompletionStage<? extends ToolResult> handle(InteractionContext context, ToolRequest request) {
         try {
             return CompletableFuture.completedFuture(handle(context, ToolArgs.of(request.arguments())));
         } catch (Exception e) {
@@ -76,7 +76,7 @@ public interface SyncToolHandler extends ToolHandler {
             String name,
             @Nullable String description,
             @Nullable JsonNode inputSchema,
-            BiFunction<McpContext, ToolArgs, ToolResult> fn) {
+            BiFunction<InteractionContext, ToolArgs, ToolResult> fn) {
         return new SyncToolHandler() {
             @Override
             public String name() {
@@ -96,7 +96,7 @@ public interface SyncToolHandler extends ToolHandler {
             }
 
             @Override
-            public ToolResult handle(McpContext ctx, ToolArgs args) throws Exception {
+            public ToolResult handle(InteractionContext ctx, ToolArgs args) throws Exception {
                 return fn.apply(ctx, args);
             }
         };

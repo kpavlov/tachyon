@@ -6,7 +6,7 @@ package dev.tachyonmcp.transport.netty.sse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.session.SseEvent;
+import dev.tachyonmcp.runtime.SseEvent;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import java.nio.charset.StandardCharsets;

@@ -6,11 +6,11 @@ package dev.tachyonmcp.server.handlers;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.runtime.Extension;
-import dev.tachyonmcp.server.McpMethodHandler;
-import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.domain.InitializeResponse;
-import dev.tachyonmcp.server.extensions.McpExtension;
-import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.server.extensions.ServerExtension;
+import dev.tachyonmcp.server.session.DispatchContext;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,16 +18,16 @@ import java.util.stream.Collectors;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-public final class InitializeHandler implements McpMethodHandler {
+public final class InitializeHandler implements RpcMethodHandler {
 
     private static final String MCP_VERSION = "2025-11-25";
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private final McpServer mcpServer;
-    private final List<McpExtension> extensions;
+    private final Server server;
+    private final List<ServerExtension> extensions;
 
-    public InitializeHandler(McpServer mcpServer, List<McpExtension> extensions) {
-        this.mcpServer = mcpServer;
+    public InitializeHandler(Server server, List<ServerExtension> extensions) {
+        this.server = server;
         this.extensions = extensions;
     }
 
@@ -37,13 +37,13 @@ public final class InitializeHandler implements McpMethodHandler {
     }
 
     @Override
-    public Object handle(McpContext context, Object params) {
-        var capabilities = mcpServer.resolveCapabilities();
+    public Object handle(DispatchContext context, Object params) {
+        var capabilities = server.resolveCapabilities();
 
         negotiateExtensions(context, params);
         var negotiatedExtensions = buildNegotiatedExtensions(context);
 
-        final var serverConfig = mcpServer.config();
+        final var serverConfig = server.config();
 
         var domainResponse = new InitializeResponse(
                 MCP_VERSION,
@@ -55,7 +55,7 @@ public final class InitializeHandler implements McpMethodHandler {
         return context.responseMapper().initializeResult(domainResponse);
     }
 
-    private void negotiateExtensions(McpContext context, Object params) {
+    private void negotiateExtensions(DispatchContext context, Object params) {
         var clientExtensions = extractClientExtensions(params);
         for (var ext : extensions) {
             if (clientExtensions.containsKey(ext.extensionId())) {
@@ -66,10 +66,10 @@ public final class InitializeHandler implements McpMethodHandler {
         }
     }
 
-    private Map<String, JsonNode> buildNegotiatedExtensions(McpContext context) {
+    private Map<String, JsonNode> buildNegotiatedExtensions(DispatchContext context) {
         return extensions.stream()
                 .filter(e -> context.isExtensionEnabled(e.extensionId()))
-                .collect(Collectors.toMap(Extension::extensionId, McpExtension::serverSettings));
+                .collect(Collectors.toMap(Extension::extensionId, ServerExtension::serverSettings));
     }
 
     @SuppressWarnings("unchecked")

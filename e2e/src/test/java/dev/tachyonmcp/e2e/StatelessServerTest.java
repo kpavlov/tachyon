@@ -7,7 +7,7 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.McpServerHandle;
+import dev.tachyonmcp.server.ServerHandle;
 import dev.tachyonmcp.server.TachyonServer;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -25,7 +25,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class StatelessServerTest {
 
-    private McpServerHandle serverHandle;
+    private ServerHandle serverHandle;
     private int port;
 
     @BeforeAll

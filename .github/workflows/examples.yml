@@ -41,7 +41,9 @@ jobs:
           cache: maven
 
       - name: Verify examples
-        run: mvn verify -f examples/${{ matrix.example }}/pom.xml --no-transfer-progress
+        working-directory: examples/${{ matrix.example }}
+#        run: mvn verify --no-transfer-progress
+        run: mvn verify --no-transfer-progress -Dtachyon-server.version=1.0.0-beta.3
 
       - name: Publish test results
         uses: mikepenz/action-junit-report@v6

@@ -3,7 +3,7 @@
  */
 
 import dev.tachyonmcp.server.features.tools.*;
-import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.runtime.InteractionContext;
 import org.jspecify.annotations.NonNull;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -45,7 +45,7 @@ final class ToolHandlerExample {
                 "greeting",
                 "Generates a personalized greeting",
                 GREET_SCHEMA,
-                (@NonNull McpContext ctx, ToolArgs args) -> {
+                (@NonNull InteractionContext ctx, ToolArgs args) -> {
                     String name = args.string("name");
                     return ToolResult.text("Hello, " + name + "!");
                 });
@@ -65,7 +65,7 @@ final class ToolHandlerExample {
 
         @Override
         @NonNull
-        public ToolResult handle(McpContext ctx, ToolArgs args) {
+        public ToolResult handle(InteractionContext ctx, ToolArgs args) {
             var name = args.string("name");
             return ToolResult.text("Hello, " + name + "!");
         }

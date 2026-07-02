@@ -4,13 +4,13 @@
 
 package dev.tachyonmcp.server.handlers;
 
-import dev.tachyonmcp.server.McpMethodHandler;
-import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.List;
 import java.util.Map;
 
-public final class CompletionHandler implements McpMethodHandler {
+public final class CompletionHandler implements RpcMethodHandler {
 
     public CompletionHandler() {}
 
@@ -20,7 +20,7 @@ public final class CompletionHandler implements McpMethodHandler {
     }
 
     @Override
-    public Object handle(McpContext context, Object params) {
+    public Object handle(DispatchContext context, Object params) {
         var paramsMap = params instanceof Map<?, ?> m ? m : Map.<String, Object>of();
         var ref = paramsMap.get("ref");
         var argument = paramsMap.get("argument");

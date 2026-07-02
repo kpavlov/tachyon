@@ -4,10 +4,10 @@
 
 package dev.tachyonmcp.transport.netty.sse;
 
-import dev.tachyonmcp.server.McpServer;
-import dev.tachyonmcp.server.session.McpSession;
-import dev.tachyonmcp.server.session.SseConnection;
-import dev.tachyonmcp.server.session.SseEvent;
+import dev.tachyonmcp.runtime.Session;
+import dev.tachyonmcp.runtime.SseConnection;
+import dev.tachyonmcp.runtime.SseEvent;
+import dev.tachyonmcp.server.Server;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
@@ -26,14 +26,14 @@ public class SseManager {
 
     static final int SSE_RETRY_DELAY_MS = 3000;
 
-    private final McpServer server;
+    private final Server server;
 
-    public SseManager(McpServer server) {
+    public SseManager(Server server) {
         this.server = server;
     }
 
     public void openStream(
-            ChannelHandlerContext ctx, McpSession session, @Nullable String lastEventId, @Nullable String origin) {
+            ChannelHandlerContext ctx, Session session, @Nullable String lastEventId, @Nullable String origin) {
         var connection = new NettySseConnection(ctx.channel(), () -> {
             session.connection(SseConnection.NOOP);
             session.touch();
@@ -79,14 +79,14 @@ public class SseManager {
         connection.send(primeSse);
     }
 
-    void replayEvents(McpSession session, String lastEventId) {
+    void replayEvents(Session session, String lastEventId) {
         try {
             var lastSseId = Long.parseLong(lastEventId);
             var replayed = server.replay(session.id(), -1);
             for (var event : replayed) {
                 var sseId = event.sseEventId();
                 if (sseId < 0 || sseId <= lastSseId) continue;
-                var sseEvent = McpServer.toSseEvent(event);
+                var sseEvent = Server.toSseEvent(event);
                 if (sseEvent == null) continue;
                 if (!session.send(sseEvent)) break; // session closed mid-replay
             }

@@ -7,11 +7,11 @@ package dev.tachyonmcp.server.features.tasks;
 import dev.tachyonmcp.protocol.ProtocolMappers;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
-import dev.tachyonmcp.server.McpMethodHandler;
-import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.features.Registry;
 import dev.tachyonmcp.server.features.tools.ToolRegistry;
-import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.Map;
 import java.util.Objects;
@@ -35,11 +35,11 @@ public class TaskRegistry extends Registry<TaskEntry> {
             Objects.requireNonNull(ProtocolMappers.getMapper("mcp", "2025-11-25"));
 
     private final ConcurrentHashMap<String, TaskEntry> byId = new ConcurrentHashMap<>();
-    private final McpServer server;
+    private final Server server;
     private volatile @Nullable ScheduledExecutorService ttlJanitor;
 
     /** Creates a task registry bound to the given server (for broadcasting status notifications). */
-    public TaskRegistry(McpServer server) {
+    public TaskRegistry(Server server) {
         this.server = server;
     }
 
@@ -201,14 +201,14 @@ public class TaskRegistry extends Registry<TaskEntry> {
         server.broadcastNotification("notifications/tasks/status", mapper.taskStatusNotificationParams(entry));
     }
 
-    public void registerHandlers(Map<String, McpMethodHandler> registry) {
+    public void registerHandlers(Map<String, RpcMethodHandler> registry) {
         registry.put("tasks/list", new TasksListHandler(this));
         registry.put("tasks/get", new TasksGetHandler(this));
         registry.put("tasks/cancel", new TasksCancelHandler(this));
         registry.put("tasks/result", new TasksResultHandler(this));
     }
 
-    private record TasksListHandler(Registry<TaskEntry> registry) implements McpMethodHandler {
+    private record TasksListHandler(Registry<TaskEntry> registry) implements RpcMethodHandler {
 
         @Override
         public String method() {
@@ -216,7 +216,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
         }
 
         @Override
-        public Object handle(McpContext context, Object params) {
+        public Object handle(DispatchContext context, Object params) {
             var limit = ToolRegistry.parseLimit(params);
             var cursor = ToolRegistry.parseCursor(params);
             var paginated = registry.list(limit, cursor);
@@ -225,7 +225,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
         }
     }
 
-    private record TasksGetHandler(TaskRegistry registry) implements McpMethodHandler {
+    private record TasksGetHandler(TaskRegistry registry) implements RpcMethodHandler {
 
         @Override
         public String method() {
@@ -233,7 +233,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
         }
 
         @Override
-        public Object handle(McpContext context, Object params) {
+        public Object handle(DispatchContext context, Object params) {
             var taskId = extractParamId(params);
             if (taskId == null) {
                 return JsonRpcErrors.invalidRequest("Missing task ID");
@@ -261,7 +261,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
         }
     }
 
-    private record TasksCancelHandler(TaskRegistry registry) implements McpMethodHandler {
+    private record TasksCancelHandler(TaskRegistry registry) implements RpcMethodHandler {
 
         @Override
         public String method() {
@@ -269,7 +269,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
         }
 
         @Override
-        public Object handle(McpContext context, Object params) {
+        public Object handle(DispatchContext context, Object params) {
             var taskId = TasksGetHandler.extractParamId(params);
             if (taskId == null) {
                 return JsonRpcErrors.invalidRequest("Missing task ID");
@@ -286,7 +286,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
         }
     }
 
-    private record TasksResultHandler(TaskRegistry registry) implements McpMethodHandler {
+    private record TasksResultHandler(TaskRegistry registry) implements RpcMethodHandler {
 
         @Override
         public String method() {
@@ -294,7 +294,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
         }
 
         @Override
-        public Object handle(McpContext context, Object params) {
+        public Object handle(DispatchContext context, Object params) {
             var taskId = TasksGetHandler.extractParamId(params);
             if (taskId == null) {
                 return JsonRpcErrors.invalidRequest("Missing task ID");

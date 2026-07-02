@@ -9,9 +9,11 @@ import dev.tachyonmcp.protocol.ProtocolMappers;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.runtime.DefaultInteractionContext;
-import dev.tachyonmcp.server.McpServer;
-import dev.tachyonmcp.server.Notifications;
+import dev.tachyonmcp.runtime.Notifications;
+import dev.tachyonmcp.runtime.Session;
+import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.server.OutboundSseStream;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.ServerContext;
 import dev.tachyonmcp.server.domain.LoggingLevel;
 import java.util.LinkedHashMap;
@@ -20,9 +22,9 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import org.jspecify.annotations.Nullable;
 
-public class DefaultMcpContext extends DefaultInteractionContext<McpSession> implements McpContext {
+public class DefaultMcpContext extends DefaultInteractionContext implements DispatchContext {
 
-    private static final McpContext NOOP_CONTEXT = new DefaultMcpContext(null, null) {
+    private static final DispatchContext NOOP_CONTEXT = new DefaultMcpContext(null, null) {
         @Override
         public ServerContext server() {
             throw new UnsupportedOperationException("No server context available");
@@ -34,7 +36,7 @@ public class DefaultMcpContext extends DefaultInteractionContext<McpSession> imp
         }
 
         @Override
-        public @Nullable McpSession session() {
+        public @Nullable Session session() {
             return null;
         }
 
@@ -56,23 +58,23 @@ public class DefaultMcpContext extends DefaultInteractionContext<McpSession> imp
 
     private static final String STATELESS_SESSION_ID = "stateless";
 
-    private final McpServer mcpServer;
+    private final Server server;
     private volatile @Nullable OutboundSseStream outboundStream;
 
-    public static McpContext noop() {
+    public static DispatchContext noop() {
         return NOOP_CONTEXT;
     }
 
-    public static McpContext stateless(McpServer server) {
+    public static DispatchContext stateless(Server server) {
         var protocol = Protocols.versions().get(0);
         var ctx = new DefaultMcpContext(protocol, server);
-        ctx.setSession(new McpSession(STATELESS_SESSION_ID, SseConnection.NOOP));
+        ctx.setSession(new Session(STATELESS_SESSION_ID, SseConnection.NOOP));
         return ctx;
     }
 
-    public DefaultMcpContext(Protocol protocol, McpServer mcpServer) {
+    public DefaultMcpContext(Protocol protocol, Server server) {
         super(protocol);
-        this.mcpServer = mcpServer;
+        this.server = server;
     }
 
     @Override
@@ -86,7 +88,12 @@ public class DefaultMcpContext extends DefaultInteractionContext<McpSession> imp
     }
 
     @Override
-    public @Nullable McpSession session() {
+    public CompletableFuture<String> sendRequest(String method, Object params) {
+        return server.sendRequest(session(), method, params, outboundStream);
+    }
+
+    @Override
+    public @Nullable Session session() {
         return super.session();
     }
 
@@ -114,7 +121,7 @@ public class DefaultMcpContext extends DefaultInteractionContext<McpSession> imp
 
     @Override
     public ProtocolResponseMapper responseMapper() {
-        return mcpServer.responseMapper();
+        return server.responseMapper();
     }
 
     private class ServerCtx implements ServerContext {
@@ -126,29 +133,24 @@ public class DefaultMcpContext extends DefaultInteractionContext<McpSession> imp
 
         @Override
         public void setLoggingLevel(LoggingLevel level) {
-            mcpServer.setLoggingLevel(session().id(), level);
+            server.setLoggingLevel(session().id(), level);
         }
 
         @Override
         @Nullable
         public LoggingLevel getLoggingLevel() {
-            return mcpServer.getLoggingLevel(session().id());
-        }
-
-        @Override
-        public CompletableFuture<String> sendRequest(String method, Object params) {
-            return mcpServer.sendRequest(session(), method, params, DefaultMcpContext.this.outboundStream());
+            return server.getLoggingLevel(session().id());
         }
 
         @Override
         @Nullable
-        public McpSession session() {
+        public Session session() {
             return DefaultMcpContext.this.session();
         }
 
         @Override
-        public McpServer mcpServer() {
-            return mcpServer;
+        public Server mcpServer() {
+            return server;
         }
     }
 
@@ -156,7 +158,7 @@ public class DefaultMcpContext extends DefaultInteractionContext<McpSession> imp
 
         @Override
         public void send(String method, Object params) {
-            mcpServer.sendNotification(session(), method, params, DefaultMcpContext.this.outboundStream());
+            server.sendNotification(session(), method, params, DefaultMcpContext.this.outboundStream());
         }
 
         @Override
@@ -167,13 +169,13 @@ public class DefaultMcpContext extends DefaultInteractionContext<McpSession> imp
             paramsMap.put("progress", progress);
             paramsMap.put("total", total);
             paramsMap.put("message", message);
-            mcpServer.sendNotification(
+            server.sendNotification(
                     session(), "notifications/progress", paramsMap, DefaultMcpContext.this.outboundStream());
         }
 
         @Override
         public void info(String logger, Object data) {
-            mcpServer.sendNotification(
+            server.sendNotification(
                     session(),
                     "notifications/message",
                     Map.of("level", "info", "logger", logger, "data", data),
@@ -182,7 +184,7 @@ public class DefaultMcpContext extends DefaultInteractionContext<McpSession> imp
 
         @Override
         public void warning(String logger, Object data) {
-            mcpServer.sendNotification(
+            server.sendNotification(
                     session(),
                     "notifications/message",
                     Map.of("level", "warning", "logger", logger, "data", data),
@@ -191,7 +193,7 @@ public class DefaultMcpContext extends DefaultInteractionContext<McpSession> imp
 
         @Override
         public void error(String logger, Object data) {
-            mcpServer.sendNotification(
+            server.sendNotification(
                     session(),
                     "notifications/message",
                     Map.of("level", "error", "logger", logger, "data", data),

@@ -7,7 +7,7 @@ package dev.tachyonmcp.transport.netty;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.McpDispatcher;
-import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 
 class McpOperationHandlerTest {
 
-    private McpServer server;
+    private Server server;
     private EmbeddedChannel channel;
 
     @BeforeEach

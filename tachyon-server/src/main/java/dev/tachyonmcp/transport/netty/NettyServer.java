@@ -4,7 +4,7 @@
 
 package dev.tachyonmcp.transport.netty;
 
-import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.Server;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -47,15 +47,15 @@ public final class NettyServer implements Closeable {
         return ((InetSocketAddress) serverChannel.localAddress()).getPort();
     }
 
-    public NettyServer(int port, McpServer server) {
+    public NettyServer(int port, Server server) {
         this(server, NettyServerConfig.defaults(port));
     }
 
-    public NettyServer(String host, int port, McpServer server) {
+    public NettyServer(String host, int port, Server server) {
         this(server, NettyServerConfig.defaults(host, port));
     }
 
-    public NettyServer(McpServer server, NettyServerConfig config) {
+    public NettyServer(Server server, NettyServerConfig config) {
         var transport = Transport.detect();
         logger.info("Netty transport: {}", transport.channel.getSimpleName());
 

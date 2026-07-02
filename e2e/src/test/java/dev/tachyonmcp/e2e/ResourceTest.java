@@ -7,13 +7,14 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.tools.SyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.server.session.DispatchContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -209,8 +210,8 @@ class ResourceTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, ToolArgs arguments) {
-            var resources = context.server().mcpServer().resources();
+        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
+            var resources = ((DispatchContext) context).server().mcpServer().resources();
             if ("add".equals(action)) {
                 resources.add(
                         ResourceDescriptor.of("added-resource", "resource://added", "Added by handler", "text/plain"),
@@ -234,8 +235,8 @@ class ResourceTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, ToolArgs arguments) {
-            context.server().mcpServer().resources().notifyResourceUpdated("resource://doc");
+        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
+            ((DispatchContext) context).server().mcpServer().resources().notifyResourceUpdated("resource://doc");
             return ToolResult.blocks(TextContent.of("notified"));
         }
     }

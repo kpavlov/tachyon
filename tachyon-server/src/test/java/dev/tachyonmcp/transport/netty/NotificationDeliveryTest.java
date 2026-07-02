@@ -6,17 +6,17 @@ package dev.tachyonmcp.transport.netty;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.runtime.Session;
+import dev.tachyonmcp.runtime.SseConnection;
+import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.McpDispatcher;
-import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.session.McpContext;
-import dev.tachyonmcp.server.session.McpSession;
-import dev.tachyonmcp.server.session.SseConnection;
-import dev.tachyonmcp.server.session.SseEvent;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -42,7 +42,7 @@ class NotificationDeliveryTest {
         }
 
         @Override
-        public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
+        public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest request) {
             var pt = request.progressToken();
             ctx.notifications().progress(pt, 0, 100, "Starting");
             ctx.notifications().progress(pt, 50, 100, "Halfway");
@@ -55,7 +55,7 @@ class NotificationDeliveryTest {
         }
     };
 
-    private McpServer server;
+    private Server server;
     private McpDispatcher dispatcher;
     private CollectingConnection testConn;
 
@@ -64,7 +64,7 @@ class NotificationDeliveryTest {
         server = TachyonServer.builder().tool(PROGRESS_AND_LOG_TOOL).build();
         dispatcher = new McpDispatcher(server, server.executor());
         testConn = new CollectingConnection();
-        McpSession session = server.createSession("sess_test");
+        Session session = server.createSession("sess_test");
         session.connection(testConn);
         session.activate();
     }

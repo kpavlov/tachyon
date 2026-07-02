@@ -7,6 +7,7 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.JsonSchemaValidator;
 import dev.tachyonmcp.server.NetworkntJsonSchemaValidator;
 import dev.tachyonmcp.server.domain.PromptArgument;
@@ -16,7 +17,6 @@ import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.tools.SyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.session.McpContext;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -215,7 +215,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, ToolArgs arguments) {
+        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
             return ToolResult.text("ok");
         }
     }
@@ -242,7 +242,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, ToolArgs arguments) {
+        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
             return ToolResult.text("ok");
         }
     }

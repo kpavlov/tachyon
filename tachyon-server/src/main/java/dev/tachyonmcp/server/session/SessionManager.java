@@ -4,7 +4,9 @@
 
 package dev.tachyonmcp.server.session;
 
+import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
+import dev.tachyonmcp.runtime.SseConnection;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Optional;
@@ -34,13 +36,13 @@ public class SessionManager implements AutoCloseable {
     }
 
     /** Creates a session with no initial connection. */
-    public McpSession createSession(String sessionId) {
+    public Session createSession(String sessionId) {
         return createSession(sessionId, SseConnection.NOOP);
     }
 
     /** Creates a session with the given SSE connection. */
-    public McpSession createSession(String sessionId, SseConnection connection) {
-        var session = new McpSession(sessionId, connection);
+    public Session createSession(String sessionId, SseConnection connection) {
+        var session = new Session(sessionId, connection);
         var previous = store.put(sessionId, session);
         if (previous != null) {
             logger.debug("Replaced existing session: {}", sessionId);
@@ -51,7 +53,7 @@ public class SessionManager implements AutoCloseable {
     }
 
     /** Returns the session for the given ID, if present. */
-    public Optional<McpSession> getSession(@Nullable String sessionId) {
+    public Optional<Session> getSession(@Nullable String sessionId) {
         if (sessionId == null) {
             return Optional.empty();
         }
@@ -59,7 +61,7 @@ public class SessionManager implements AutoCloseable {
     }
 
     /** Returns all active sessions. */
-    public Collection<McpSession> allSessions() {
+    public Collection<Session> allSessions() {
         return store.values();
     }
 
@@ -95,7 +97,7 @@ public class SessionManager implements AutoCloseable {
     public void close() {
         try {
             janitor.shutdownNow();
-            store.values().forEach(McpSession::close);
+            store.values().forEach(Session::close);
             store.close();
             logger.debug("SessionManager closed");
         } catch (Exception e) {

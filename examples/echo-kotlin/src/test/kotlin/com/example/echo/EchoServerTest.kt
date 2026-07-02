@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test
 
 class EchoServerTest {
     companion object {
-        private lateinit var handle: dev.tachyonmcp.server.McpServerHandle
+        private lateinit var handle: dev.tachyonmcp.server.ServerHandle
 
         @JvmStatic
         @BeforeAll

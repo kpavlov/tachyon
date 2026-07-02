@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.session;
 
+import dev.tachyonmcp.runtime.Session;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.function.Function;
@@ -14,18 +15,18 @@ public interface SessionStore extends AutoCloseable {
 
     /** Stores a session, returning any previous session with the same ID. */
     @Nullable
-    McpSession put(String sessionId, McpSession session);
+    Session put(String sessionId, Session session);
 
     /** Returns the session for the given ID, if present. */
-    Optional<McpSession> get(String sessionId);
+    Optional<Session> get(String sessionId);
 
     /** Returns the existing session or creates and stores a new one via the factory. */
-    McpSession computeIfAbsent(String sessionId, Function<String, McpSession> factory);
+    Session computeIfAbsent(String sessionId, Function<String, Session> factory);
 
     /** Returns all stored sessions. */
-    Collection<McpSession> values();
+    Collection<Session> values();
 
     /** Removes and returns the session for the given ID. */
     @Nullable
-    McpSession remove(String sessionId);
+    Session remove(String sessionId);
 }

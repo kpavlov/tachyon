@@ -12,17 +12,17 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.EmptyResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListResourceTemplatesResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListResourcesResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ReadResourceResult;
-import dev.tachyonmcp.server.McpMethodHandler;
-import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.runtime.Session;
+import dev.tachyonmcp.runtime.SseConnection;
+import dev.tachyonmcp.runtime.SseEvent;
+import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.Annotations;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.Role;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.session.DefaultMcpContext;
-import dev.tachyonmcp.server.session.McpSession;
-import dev.tachyonmcp.server.session.SseConnection;
-import dev.tachyonmcp.server.session.SseEvent;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.HashMap;
@@ -36,11 +36,11 @@ import org.junit.jupiter.api.Test;
 
 class ResourceRegistryTest {
 
-    private final McpServer server = TachyonServer.builder().build();
+    private final Server server = TachyonServer.builder().build();
     private final ResourceRegistry registry = new ResourceRegistry(server);
-    private final HashMap<String, McpMethodHandler> handlers = new HashMap<>();
+    private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
 
-    private static DefaultMcpContext context(McpSession session, McpServer server) {
+    private static DefaultMcpContext context(Session session, Server server) {
         var ctx = new DefaultMcpContext(Protocols.versions().get(0), server);
         ctx.setSession(session);
         return ctx;

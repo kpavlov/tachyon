@@ -7,12 +7,12 @@ package dev.tachyonmcp.server.features.prompts;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetPromptRequestParams;
 import dev.tachyonmcp.server.JsonSchemaValidator;
-import dev.tachyonmcp.server.McpMethodHandler;
+import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.SchemaValidationError;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.features.Registry;
 import dev.tachyonmcp.server.features.tools.ToolRegistry;
-import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.LinkedHashMap;
@@ -45,12 +45,12 @@ public class PromptRegistry extends Registry<PromptEntry> {
         super.add(new PromptEntry(descriptor, handler));
     }
 
-    public void registerHandlers(Map<String, McpMethodHandler> registry) {
+    public void registerHandlers(Map<String, RpcMethodHandler> registry) {
         registry.put("prompts/list", new PromptsListHandler(this));
         registry.put("prompts/get", new PromptsGetHandler(this, validator));
     }
 
-    private record PromptsListHandler(Registry<PromptEntry> registry) implements McpMethodHandler {
+    private record PromptsListHandler(Registry<PromptEntry> registry) implements RpcMethodHandler {
 
         @Override
         public String method() {
@@ -58,7 +58,7 @@ public class PromptRegistry extends Registry<PromptEntry> {
         }
 
         @Override
-        public Object handle(McpContext context, Object params) {
+        public Object handle(DispatchContext context, Object params) {
             var limit = ToolRegistry.parseLimit(params);
             var cursor = ToolRegistry.parseCursor(params);
             var paginated = registry.list(limit, cursor, e -> {
@@ -73,7 +73,7 @@ public class PromptRegistry extends Registry<PromptEntry> {
     }
 
     private record PromptsGetHandler(Registry<PromptEntry> registry, JsonSchemaValidator validator)
-            implements McpMethodHandler {
+            implements RpcMethodHandler {
 
         private static final Logger logger = LoggerFactory.getLogger(PromptsGetHandler.class);
 
@@ -83,7 +83,7 @@ public class PromptRegistry extends Registry<PromptEntry> {
         }
 
         @Override
-        public Object handle(McpContext context, Object params) {
+        public Object handle(DispatchContext context, Object params) {
             var name = extractParamName(params);
             if (name == null) {
                 return JsonRpcErrors.invalidRequest("Missing prompt name");

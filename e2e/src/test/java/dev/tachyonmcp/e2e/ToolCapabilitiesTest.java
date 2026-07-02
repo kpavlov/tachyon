@@ -7,13 +7,13 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.features.tools.SyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.session.McpContext;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -188,7 +188,7 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
             }
 
             @Override
-            public ToolResult handle(McpContext context, ToolArgs arguments) {
+            public ToolResult handle(InteractionContext context, ToolArgs arguments) {
                 return ToolResult.text("ok");
             }
         });
@@ -248,7 +248,7 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
             }
 
             @Override
-            public ToolResult handle(McpContext context, ToolArgs arguments) {
+            public ToolResult handle(InteractionContext context, ToolArgs arguments) {
                 return ToolResult.text("ok");
             }
         });
@@ -292,7 +292,7 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, ToolArgs arguments) {
+        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
             return ToolResult.text("ok");
         }
     }
@@ -314,7 +314,7 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, ToolArgs arguments) {
+        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
             return ToolResult.text("ok");
         }
     }
@@ -341,7 +341,7 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, ToolArgs arguments) {
+        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
             return ToolResult.text("ok");
         }
     }
