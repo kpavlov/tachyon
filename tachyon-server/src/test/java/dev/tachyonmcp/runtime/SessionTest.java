@@ -2,21 +2,16 @@
  * Copyright (c) 2026 Konstantin Pavlov.
  */
 
-package dev.tachyonmcp.server.session;
+package dev.tachyonmcp.runtime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import dev.tachyonmcp.runtime.Backpressure;
-import dev.tachyonmcp.runtime.Session;
-import dev.tachyonmcp.runtime.SessionState;
-import dev.tachyonmcp.runtime.SseConnection;
-import dev.tachyonmcp.runtime.SseEvent;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class McpSessionTest {
+class SessionTest {
 
     private Session session;
     private TestConnection connection;
@@ -91,7 +86,6 @@ class McpSessionTest {
     void shouldThrottleWhenNotWritable() {
         connection.writable = true;
         assertThat(session.shouldThrottle()).isFalse();
-
         connection.writable = false;
         assertThat(session.shouldThrottle()).isTrue();
     }
@@ -112,13 +106,29 @@ class McpSessionTest {
         assertThat(session.activate()).isFalse();
     }
 
+    @Test
+    void rejectsConnectionOnClosedSession() {
+        session.activate();
+        session.close();
+        var newConn = new TestConnection();
+        session.connection(newConn);
+        assertThat(newConn.closed).isTrue();
+        assertThat(session.connection()).isSameAs(SseConnection.NOOP);
+    }
+
     private static class TestConnection implements SseConnection {
 
         volatile boolean writable = true;
+        volatile boolean closed;
 
         @Override
         public boolean isWritable() {
             return writable;
+        }
+
+        @Override
+        public void close() {
+            closed = true;
         }
 
         @Override

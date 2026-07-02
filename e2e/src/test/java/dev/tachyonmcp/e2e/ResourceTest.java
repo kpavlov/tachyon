@@ -14,7 +14,6 @@ import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.tools.SyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.session.DispatchContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -197,7 +196,12 @@ class ResourceTest extends AbstractMcpE2eTest {
 
     // ---- Tool handler implementations ----
 
-    private record NotifyListChangedToolHandler(String action) implements SyncToolHandler {
+    private class NotifyListChangedToolHandler implements SyncToolHandler {
+        private final String action;
+
+        NotifyListChangedToolHandler(String action) {
+            this.action = action;
+        }
 
         @Override
         public String name() {
@@ -211,7 +215,7 @@ class ResourceTest extends AbstractMcpE2eTest {
 
         @Override
         public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-            var resources = ((DispatchContext) context).server().resources();
+            var resources = server.resources();
             if ("add".equals(action)) {
                 resources.add(
                         ResourceDescriptor.of("added-resource", "resource://added", "Added by handler", "text/plain"),
@@ -223,7 +227,8 @@ class ResourceTest extends AbstractMcpE2eTest {
         }
     }
 
-    private static class NotifyUpdatedToolHandler implements SyncToolHandler {
+    private class NotifyUpdatedToolHandler implements SyncToolHandler {
+
         @Override
         public String name() {
             return "notify-update";
@@ -236,7 +241,7 @@ class ResourceTest extends AbstractMcpE2eTest {
 
         @Override
         public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-            ((DispatchContext) context).server().resources().notifyResourceUpdated("resource://doc");
+            server.resources().notifyResourceUpdated("resource://doc");
             return ToolResult.blocks(TextContent.of("notified"));
         }
     }

@@ -9,6 +9,7 @@ import dev.tachyonmcp.server.ServerResourceType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
@@ -100,5 +101,5 @@ public abstract class Registry<R extends ServerResourceType> {
         return PaginatedResult.of(result, nextCursor);
     }
 
-    public abstract void registerHandlers(java.util.Map<String, RpcMethodHandler> registry);
+    public abstract void registerHandlers(Map<String, RpcMethodHandler> registry);
 }

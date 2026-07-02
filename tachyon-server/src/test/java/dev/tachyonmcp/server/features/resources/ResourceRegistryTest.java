@@ -42,7 +42,7 @@ class ResourceRegistryTest {
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
 
     private static DispatchContext context(Session session, Server server) {
-        var ctx = DefaultMcpContext.create(Protocols.versions().get(0), server);
+        var ctx = DefaultMcpContext.create(Protocols.versions().getFirst(), server);
         ctx.setSession(session);
         return ctx;
     }
@@ -87,7 +87,7 @@ class ResourceRegistryTest {
         assertThat(result).isInstanceOf(ReadResourceResult.class);
         var readResult = (ReadResourceResult) result;
         assertThat(readResult.contents()).hasSize(1);
-        assertThat(readResult.contents().get(0).uri()).isEqualTo("test://resource/1");
+        assertThat(readResult.contents().getFirst().uri()).isEqualTo("test://resource/1");
     }
 
     @Test
@@ -96,6 +96,24 @@ class ResourceRegistryTest {
 
         assertThat(result).isInstanceOf(ListResourceTemplatesResult.class);
         assertThat(((ListResourceTemplatesResult) result).resourceTemplates()).isEmpty();
+    }
+
+    @Test
+    void subscribeRejectsNullSession() throws Exception {
+        var result = handlers.get("resources/subscribe")
+                .handle(DefaultMcpContext.noop(), Map.of("uri", "test://resource/1"));
+
+        assertThat(result).isInstanceOf(JsonRpcError.class);
+        assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
+    }
+
+    @Test
+    void unsubscribeRejectsNullSession() throws Exception {
+        var result = handlers.get("resources/unsubscribe")
+                .handle(DefaultMcpContext.noop(), Map.of("uri", "test://resource/1"));
+
+        assertThat(result).isInstanceOf(JsonRpcError.class);
+        assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
     }
 
     @Test

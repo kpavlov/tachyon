@@ -72,6 +72,10 @@ public class Session {
 
     /** Replaces the SSE connection (e.g. after reconnection). */
     public void connection(SseConnection connection) {
+        if (state.get() == SessionState.CLOSED) {
+            connection.close();
+            return;
+        }
         this.connection.set(Objects.requireNonNull(connection, "connection"));
         this.lastActivityNanos = System.nanoTime();
     }

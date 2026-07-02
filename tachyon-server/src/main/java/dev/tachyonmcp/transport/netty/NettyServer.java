@@ -42,7 +42,9 @@ public final class NettyServer implements Closeable {
     private final Channel serverChannel;
     private final DefaultChannelGroup childChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
-    /** Returns the port the server is bound to. */
+    /**
+     * Returns the port the server is bound to.
+     */
     public int port() {
         return ((InetSocketAddress) serverChannel.localAddress()).getPort();
     }
@@ -63,7 +65,7 @@ public final class NettyServer implements Closeable {
         // yield (they spin in epoll_wait / io_uring_enter / Selector.select), and
         // native transports pin via JNI — so virtual threads provide no benefit
         // here and add scheduling cost. Virtual threads are used only for
-        // application-level work (see McpServer#executor()).
+        // application-level work (see Server#executor()).
         eventLoopGroup = new MultiThreadIoEventLoopGroup(new DefaultThreadFactory("netty-io"), transport.ioHandler);
 
         var bootstrap = new ServerBootstrap();

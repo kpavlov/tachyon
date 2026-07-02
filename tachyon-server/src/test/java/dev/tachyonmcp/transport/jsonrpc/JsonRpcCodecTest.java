@@ -86,6 +86,24 @@ class JsonRpcCodecTest {
     }
 
     @Test
+    void toJsonParamsReturnsEmptyObjectForNull() {
+        assertThat(JsonRpcCodec.toJsonParams(null)).isEqualTo("{}");
+    }
+
+    @Test
+    void toJsonParamsReturnsStringUnchanged() {
+        assertThat(JsonRpcCodec.toJsonParams("already-serialized")).isEqualTo("already-serialized");
+    }
+
+    @Test
+    void toJsonParamsSerializesObject() {
+        var json = JsonRpcCodec.toJsonParams(java.util.Map.of("key", "value"));
+        assertThatJson(json).isEqualTo("""
+                {"key":"value"}
+                """);
+    }
+
+    @Test
     void writeValueAsStringWithProtocolModelReturnsJsonNotToString() {
         var content = TextContent.of("ok");
         var result = new CallToolResult(List.of(content), null, null, null, null);

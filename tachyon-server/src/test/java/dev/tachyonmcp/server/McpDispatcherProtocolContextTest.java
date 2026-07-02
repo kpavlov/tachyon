@@ -100,6 +100,7 @@ class McpDispatcherProtocolContextTest {
                     .as("handler must receive a DispatchContext wrapping the channel context")
                     .isNotNull()
                     .isInstanceOf(DefaultMcpContext.class);
+            assertThat(protocol.lastCreated).hasValue(channelContext);
             assertThat(handlerContext.get()).isNotNull();
             assertThat(handlerContext.get().getProtocol()).isSameAs(protocol);
             assertThat(handlerContext.get().session()).isSameAs(session);

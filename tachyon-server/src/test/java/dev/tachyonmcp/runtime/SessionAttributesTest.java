@@ -2,17 +2,13 @@
  * Copyright (c) 2026 Konstantin Pavlov.
  */
 
-package dev.tachyonmcp.server.session;
+package dev.tachyonmcp.runtime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.runtime.Session;
-import dev.tachyonmcp.runtime.SseConnection;
-import dev.tachyonmcp.runtime.SseEvent;
-import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
-class McpSessionAttributesTest {
+class SessionAttributesTest {
 
     @Test
     void enableAndCheckExtension() {
@@ -45,6 +41,6 @@ class McpSessionAttributesTest {
         }
 
         @Override
-        public void send(@NonNull SseEvent event) {}
+        public void send(SseEvent event) {}
     }
 }

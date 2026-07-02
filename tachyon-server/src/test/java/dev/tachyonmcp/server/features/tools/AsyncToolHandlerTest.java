@@ -91,7 +91,7 @@ class AsyncToolHandlerTest {
     }
 
     @Test
-    void defaultTitleIsNull() {
+    void defaultsAreNull() {
         var handler = new AsyncToolHandler() {
             @Override
             public String name() {
@@ -104,85 +104,10 @@ class AsyncToolHandlerTest {
             }
         };
         assertThat(handler.title()).isNull();
-    }
-
-    @Test
-    void defaultDescriptionIsNull() {
-        var handler = new AsyncToolHandler() {
-            @Override
-            public String name() {
-                return "t";
-            }
-
-            @Override
-            public CompletionStage<? extends ToolResult> handleAsync(InteractionContext ctx, ToolArgs args) {
-                return CompletableFuture.completedFuture(ToolResult.text("ok"));
-            }
-        };
         assertThat(handler.description()).isNull();
-    }
-
-    @Test
-    void defaultInputSchemaIsNull() {
-        var handler = new AsyncToolHandler() {
-            @Override
-            public String name() {
-                return "t";
-            }
-
-            @Override
-            public CompletionStage<? extends ToolResult> handleAsync(InteractionContext ctx, ToolArgs args) {
-                return CompletableFuture.completedFuture(ToolResult.text("ok"));
-            }
-        };
         assertThat(handler.inputSchema()).isNull();
-    }
-
-    @Test
-    void defaultOutputSchemaIsNull() {
-        var handler = new AsyncToolHandler() {
-            @Override
-            public String name() {
-                return "t";
-            }
-
-            @Override
-            public CompletionStage<? extends ToolResult> handleAsync(InteractionContext ctx, ToolArgs args) {
-                return CompletableFuture.completedFuture(ToolResult.text("ok"));
-            }
-        };
         assertThat(handler.outputSchema()).isNull();
-    }
-
-    @Test
-    void defaultTaskSupportIsNull() {
-        var handler = new AsyncToolHandler() {
-            @Override
-            public String name() {
-                return "t";
-            }
-
-            @Override
-            public CompletionStage<? extends ToolResult> handleAsync(InteractionContext ctx, ToolArgs args) {
-                return CompletableFuture.completedFuture(ToolResult.text("ok"));
-            }
-        };
         assertThat(handler.taskSupport()).isNull();
-    }
-
-    @Test
-    void defaultAnnotationsIsNull() {
-        var handler = new AsyncToolHandler() {
-            @Override
-            public String name() {
-                return "t";
-            }
-
-            @Override
-            public CompletionStage<? extends ToolResult> handleAsync(InteractionContext ctx, ToolArgs args) {
-                return CompletableFuture.completedFuture(ToolResult.text("ok"));
-            }
-        };
         assertThat(handler.annotations()).isNull();
     }
 }
