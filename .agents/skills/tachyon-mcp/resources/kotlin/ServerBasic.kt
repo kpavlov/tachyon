@@ -10,6 +10,7 @@ import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.promptMessagesOf
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 fun createServer(port: Int = 0): ServerHandle = TachyonServer(port = port) {
     info {
@@ -25,6 +26,7 @@ fun createServer(port: Int = 0): ServerHandle = TachyonServer(port = port) {
     session {
         stateless = false
         sessionTtl = 5.minutes
+        shutdownGracePeriod = 5.seconds
     }
     network {
         allowedOrigins.add("*")

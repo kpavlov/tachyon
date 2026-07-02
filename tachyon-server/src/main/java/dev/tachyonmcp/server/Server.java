@@ -588,7 +588,8 @@ public class Server implements Closeable {
             if (ownsExecutor) {
                 executor.shutdown();
                 try {
-                    if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
+                    var grace = config.session().shutdownGracePeriod();
+                    if (!executor.awaitTermination(grace.toMillis(), TimeUnit.MILLISECONDS)) {
                         executor.shutdownNow();
                     }
                 } catch (InterruptedException e) {

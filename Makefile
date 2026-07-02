@@ -14,7 +14,7 @@ test:
 package:
 	@echo "📦 Packaging and installing tachyon-server to local repository..."
 	@rm -rf ~/.m2/repository/dev/tachyonmcp
-	@mvn install -pl tachyon-server,tachyon-server-kotlin,e2e -am -DskipTests
+	@mvn install -pl tachyon-server,tachyon-server-kotlin -am -DskipTests
 
 examples: package
 	@echo "🌤️ Building and testing weather example..."
