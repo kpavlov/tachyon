@@ -8,9 +8,9 @@ import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.*;
 import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendJsonResponse;
 import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendOptions;
 
+import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.InteractionEvent;
-import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;

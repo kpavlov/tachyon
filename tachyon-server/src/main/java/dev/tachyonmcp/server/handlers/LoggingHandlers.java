@@ -49,7 +49,7 @@ public final class LoggingHandlers {
                 return JsonRpcErrors.invalidRequest("Missing level parameter");
             }
 
-            context.server().setLoggingLevel(LoggingLevelMapper.toDomain(protocolLevel));
+            context.setLoggingLevel(LoggingLevelMapper.toDomain(protocolLevel));
 
             return context.responseMapper().emptyResult();
         }

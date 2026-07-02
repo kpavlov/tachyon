@@ -22,6 +22,5 @@ public final class McpHeaderNames {
      */
     public static final String LAST_EVENT_ID = "Last-Event-ID";
 
-    private McpHeaderNames() {
-    }
+    private McpHeaderNames() {}
 }

@@ -15,7 +15,6 @@ import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.OutboundSseStream;
 import dev.tachyonmcp.server.Server;
-import dev.tachyonmcp.server.ServerContext;
 import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.LinkedHashMap;
@@ -123,8 +122,23 @@ public class DefaultMcpContext implements DispatchContext {
     // === request-scoped dispatch surface ===
 
     @Override
-    public ServerContext server() {
-        return new ServerCtx();
+    public Server server() {
+        return server;
+    }
+
+    @Override
+    public void setLoggingLevel(LoggingLevel level) {
+        var s = session();
+        if (s != null) {
+            server.setLoggingLevel(s.id(), level);
+        }
+    }
+
+    @Override
+    @Nullable
+    public LoggingLevel getLoggingLevel() {
+        var s = session();
+        return s != null ? server.getLoggingLevel(s.id()) : null;
     }
 
     @Override
@@ -155,41 +169,6 @@ public class DefaultMcpContext implements DispatchContext {
     @Override
     public ProtocolResponseMapper responseMapper() {
         return getProtocol().responseMapper();
-    }
-
-    private class ServerCtx implements ServerContext {
-
-        @Override
-        public @Nullable String sessionId() {
-            var s = session();
-            return s != null ? s.id() : null;
-        }
-
-        @Override
-        public void setLoggingLevel(LoggingLevel level) {
-            var s = session();
-            if (s != null) {
-                server.setLoggingLevel(s.id(), level);
-            }
-        }
-
-        @Override
-        @Nullable
-        public LoggingLevel getLoggingLevel() {
-            var s = session();
-            return s != null ? server.getLoggingLevel(s.id()) : null;
-        }
-
-        @Override
-        @Nullable
-        public Session session() {
-            return DefaultMcpContext.this.session();
-        }
-
-        @Override
-        public Server mcpServer() {
-            return server;
-        }
     }
 
     private class NotificationsImpl implements Notifications {
@@ -259,8 +238,18 @@ public class DefaultMcpContext implements DispatchContext {
         }
 
         @Override
-        public ServerContext server() {
-            throw new UnsupportedOperationException("No server context available");
+        public Server server() {
+            throw new UnsupportedOperationException("No server available");
+        }
+
+        @Override
+        public void setLoggingLevel(LoggingLevel level) {
+            throw new UnsupportedOperationException("No server available");
+        }
+
+        @Override
+        public @Nullable LoggingLevel getLoggingLevel() {
+            return null;
         }
 
         @Override

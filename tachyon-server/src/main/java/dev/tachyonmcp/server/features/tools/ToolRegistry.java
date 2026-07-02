@@ -344,15 +344,11 @@ public class ToolRegistry {
         }
 
         private void sendLoggingIfEnabled(DispatchContext context, String toolName, String status) {
-            var level = context.server().getLoggingLevel();
+            var session = context.session();
+            if (session == null) return;
+            var level = context.getLoggingLevel();
             if (level == null) return;
-            context.server()
-                    .mcpServer()
-                    .log(
-                            context.server().session(),
-                            level,
-                            "tachyon.tools",
-                            Map.of("tool", toolName, "status", status));
+            context.server().log(session, level, "tachyon.tools", Map.of("tool", toolName, "status", status));
         }
     }
 }

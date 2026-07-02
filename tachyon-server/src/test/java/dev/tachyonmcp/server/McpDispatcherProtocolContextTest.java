@@ -18,15 +18,18 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 class McpDispatcherProtocolContextTest {
 
-    /** Fake protocol that records context-factory invocations. */
+    /**
+     * Fake protocol that records context-factory invocations.
+     */
     private static final class RecordingProtocol implements Protocol {
 
         final AtomicInteger contextsCreated = new AtomicInteger();
-        final AtomicReference<MutableInteractionContext> lastCreated = new AtomicReference<>();
+        final AtomicReference<@Nullable MutableInteractionContext> lastCreated = new AtomicReference<>();
 
         RecordingProtocol() {}
 
@@ -52,7 +55,7 @@ class McpDispatcherProtocolContextTest {
 
         @Override
         public ProtocolResponseMapper responseMapper() {
-            return Protocols.versions().get(0).responseMapper();
+            return Protocols.versions().getFirst().responseMapper();
         }
 
         @Override
@@ -71,8 +74,8 @@ class McpDispatcherProtocolContextTest {
             var session = server.createSession("sess_p1");
             session.activate();
 
-            var handlerContext = new AtomicReference<DispatchContext>();
-            server.registerHandler("test/capture", new RpcMethodHandler() {
+            var handlerContext = new AtomicReference<@Nullable DispatchContext>();
+            server.registerHandler(new RpcMethodHandler() {
                 @Override
                 public String method() {
                     return "test/capture";
@@ -97,6 +100,7 @@ class McpDispatcherProtocolContextTest {
                     .as("handler must receive a DispatchContext wrapping the channel context")
                     .isNotNull()
                     .isInstanceOf(DefaultMcpContext.class);
+            assertThat(handlerContext.get()).isNotNull();
             assertThat(handlerContext.get().getProtocol()).isSameAs(protocol);
             assertThat(handlerContext.get().session()).isSameAs(session);
         }
@@ -149,7 +153,7 @@ class McpDispatcherProtocolContextTest {
             assertThat(context.session())
                     .as("stateless dispatch must not fabricate a session")
                     .isNull();
-            assertThat(context.server().sessionId()).isNull();
+            assertThat(context.getLoggingLevel()).isNull();
             assertThat(context.getProtocol().familyName()).isEqualTo("mcp");
             assertThat(context.sendRequest("sampling/createMessage", Map.of()))
                     .as("server-to-client requests without a session must fail fast")

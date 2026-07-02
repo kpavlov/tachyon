@@ -211,7 +211,7 @@ class ResourceTest extends AbstractMcpE2eTest {
 
         @Override
         public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-            var resources = ((DispatchContext) context).server().mcpServer().resources();
+            var resources = ((DispatchContext) context).server().resources();
             if ("add".equals(action)) {
                 resources.add(
                         ResourceDescriptor.of("added-resource", "resource://added", "Added by handler", "text/plain"),
@@ -236,7 +236,7 @@ class ResourceTest extends AbstractMcpE2eTest {
 
         @Override
         public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-            ((DispatchContext) context).server().mcpServer().resources().notifyResourceUpdated("resource://doc");
+            ((DispatchContext) context).server().resources().notifyResourceUpdated("resource://doc");
             return ToolResult.blocks(TextContent.of("notified"));
         }
     }

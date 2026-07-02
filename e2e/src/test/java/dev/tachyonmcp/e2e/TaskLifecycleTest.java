@@ -156,7 +156,7 @@ class TaskLifecycleTest extends AbstractMcpE2eTest {
         public CompletionStage<? extends ToolResult> handle(InteractionContext context, ToolRequest request) {
             var args = ToolArgs.of(request.arguments());
             var name = args.stringOr("name", "unnamed");
-            ((DispatchContext) context).server().mcpServer().tasks().createTask(name, null);
+            ((DispatchContext) context).server().tasks().createTask(name, null);
             return CompletableFuture.completedFuture(ToolResult.text("created"));
         }
     }

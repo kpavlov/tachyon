@@ -34,7 +34,6 @@ internal fun asyncHandler(
             val dispatcher =
                 cachedDispatcher ?: (context as DispatchContext)
                     .server()
-                    .mcpServer()
                     .executor()
                     .asCoroutineDispatcher()
                     .also { cachedDispatcher = it }

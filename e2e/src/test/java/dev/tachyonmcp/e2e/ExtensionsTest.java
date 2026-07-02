@@ -177,7 +177,7 @@ class ExtensionsTest extends AbstractMcpE2eTest {
 
         @Override
         public void bootstrap(Server server) {
-            server.registerHandler("test/ext-call", new RpcMethodHandler() {
+            server.registerHandler(new RpcMethodHandler() {
                 @Override
                 public String method() {
                     return "test/ext-call";

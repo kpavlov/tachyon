@@ -33,8 +33,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Core MCP server that manages sessions, registries, method handlers, and
- * extension lifecycle. Created via {@link ServerBuilder}.
+ * Core MCP server that manages sessions, registries, method handlers, and extension lifecycle.
+ * Created via {@link ServerBuilder}.
+ *
+ * <p>When a second protocol lands, split the feature registries (tools, resources, prompts,
+ * tasks) from the session/transport core into a separate abstraction.
  */
 public class Server implements Closeable {
 

@@ -7,8 +7,8 @@ package dev.tachyonmcp.transport.netty;
 import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.*;
 import static dev.tachyonmcp.transport.netty.McpResponseWriter.*;
 
-import dev.tachyonmcp.runtime.InteractionEvent;
 import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
+import dev.tachyonmcp.runtime.InteractionEvent;
 import dev.tachyonmcp.runtime.MutableInteractionContext;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.server.McpDispatcher;

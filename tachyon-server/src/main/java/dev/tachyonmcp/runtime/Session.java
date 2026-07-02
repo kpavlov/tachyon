@@ -12,9 +12,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A single client connection identified by a unique string ID, tracking lifecycle state and the
- * streamable-HTTP+SSE transport channel (connection, backpressure, replay cursor). Protocol-agnostic:
- * shared by every protocol served over the same transport.
+ * A streamable-HTTP session shared by protocols on this transport. Tracks lifecycle state and
+ * the SSE channel (connection, backpressure, replay cursor) for a single client identified by
+ * a unique string ID1
  */
 public class Session {
 

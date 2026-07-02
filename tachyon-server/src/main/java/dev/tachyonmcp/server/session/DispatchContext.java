@@ -7,7 +7,8 @@ package dev.tachyonmcp.server.session;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.runtime.MutableInteractionContext;
 import dev.tachyonmcp.server.OutboundSseStream;
-import dev.tachyonmcp.server.ServerContext;
+import dev.tachyonmcp.server.Server;
+import dev.tachyonmcp.server.domain.LoggingLevel;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -20,8 +21,15 @@ import org.jspecify.annotations.Nullable;
  */
 public interface DispatchContext extends MutableInteractionContext {
 
-    /** Returns the server-level context. */
-    ServerContext server();
+    /** Returns the owning {@link Server}. */
+    Server server();
+
+    /** Sets the logging level for the current session; no-op when no session is bound. */
+    void setLoggingLevel(LoggingLevel level);
+
+    /** Returns the logging level for the current session, or {@code null} when unset or session-less. */
+    @Nullable
+    LoggingLevel getLoggingLevel();
 
     /** Returns the protocol response mapper for the current protocol version. */
     ProtocolResponseMapper responseMapper();
