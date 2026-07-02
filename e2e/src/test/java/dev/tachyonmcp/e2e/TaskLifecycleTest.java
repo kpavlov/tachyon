@@ -152,7 +152,7 @@ class TaskLifecycleTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public CompletionStage<? extends ToolResult<?>> handle(ToolRequest request, McpContext context) {
+        public CompletionStage<? extends ToolResult> handle(ToolRequest request, McpContext context) {
             var args = ToolArgs.of(request.arguments());
             var name = args.stringOr("name", "unnamed");
             context.server().mcpServer().tasks().createTask(name, null);

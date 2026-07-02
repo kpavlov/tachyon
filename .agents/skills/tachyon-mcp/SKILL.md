@@ -47,14 +47,12 @@ var handle = TachyonServer.builder()
 
 ## Tools 🔧
 
-`SyncToolHandler<R extends ToolResult>` (sync, preferred) or `AsyncToolHandler<R>`.
-
-> ⚠️ `args` map is `@Nullable` (null when no input schema / no args). Guard first: `if (args == null) return ToolResult.error("missing arguments");`
+`SyncToolHandler` (sync, preferred) or `AsyncToolHandler`.
 
 Class — extend `AbstractSyncToolHandler`:
 
 ```java
-class MyTool extends AbstractSyncToolHandler<ToolResult> {
+class MyTool extends AbstractSyncToolHandler {
     public MyTool() {
         super(ToolDescriptor.builder("my-tool")
             .description("Does something useful")
@@ -62,7 +60,7 @@ class MyTool extends AbstractSyncToolHandler<ToolResult> {
             .build());
     }
     @Override
-    public ToolResult handle(McpContext ctx, Map<String, JsonNode> args) throws Exception {
+    public ToolResult handle(McpContext ctx, ToolArgs args) throws Exception {
         return ToolResult.text("result");
     }
 }
@@ -75,7 +73,7 @@ Lambda — `SyncToolHandler.of(name, description, inputSchema, (ctx, args) -> ..
     (ctx, args) -> ToolResult.text("Hello, world!")))
 ```
 
-`ToolResult`: `.text(t)` · `.error(msg)` (isError=true) · `.of(content...)` · `.empty()`
+`ToolResult` (not generic): `.text(t)` · `.error(msg)` (isError=true) · `.blocks(ContentBlock...)` · `.of(payload)` (structuredContent via Jackson) · `.of(payload, text)` · `.empty()`
 
 Full: `resources/java/ToolHandlerExample.java`
 

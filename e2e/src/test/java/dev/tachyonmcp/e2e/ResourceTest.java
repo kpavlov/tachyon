@@ -209,7 +209,7 @@ class ResourceTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult<?> handle(McpContext context, ToolArgs arguments) {
+        public ToolResult handle(McpContext context, ToolArgs arguments) {
             var resources = context.server().mcpServer().resources();
             if ("add".equals(action)) {
                 resources.add(
@@ -234,7 +234,7 @@ class ResourceTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult<?> handle(McpContext context, ToolArgs arguments) {
+        public ToolResult handle(McpContext context, ToolArgs arguments) {
             context.server().mcpServer().resources().notifyResourceUpdated("resource://doc");
             return ToolResult.blocks(TextContent.of("notified"));
         }

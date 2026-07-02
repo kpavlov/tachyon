@@ -238,7 +238,7 @@ public class ToolRegistry {
                     .requestState(parsed.requestState())
                     .build();
 
-            CompletionStage<? extends ToolResult<?>> toolStage;
+            CompletionStage<? extends ToolResult> toolStage;
             try {
                 toolStage = handler.handle(request, context);
             } catch (Exception e) {
@@ -322,10 +322,10 @@ public class ToolRegistry {
             return joinMessages(errors);
         }
 
-        private void validateOutput(@Nullable JsonNode schema, ToolResult<?> result) {
+        private void validateOutput(@Nullable JsonNode schema, ToolResult result) {
             if (schema == null) return;
-            var inner = result instanceof ToolResult.WithMeta<?> wm ? wm.inner() : result;
-            if (!(inner instanceof ToolResult.Success<?> s)) return;
+            var inner = result instanceof ToolResult.WithMeta wm ? wm.inner() : result;
+            if (!(inner instanceof ToolResult.Success s)) return;
             if (!(s.structuredValue() instanceof java.util.Map<?, ?> map)) return;
             var contentNode = JsonNodeFactory.instance.objectNode();
             for (var entry : map.entrySet()) {

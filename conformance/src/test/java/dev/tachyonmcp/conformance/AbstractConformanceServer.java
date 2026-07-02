@@ -220,7 +220,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<? extends ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<? extends ToolResult> handle(ToolRequest request, McpContext ctx) {
                 var pt = request.progressToken();
                 if (pt != null) {
                     ctx.notifications().progress(pt, 0, 100, "Starting");
@@ -243,7 +243,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<? extends ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<? extends ToolResult> handle(ToolRequest request, McpContext ctx) {
                 ctx.notifications().info("tachyon.tools", Map.of("message", "Tool execution started"));
                 delay(50);
                 ctx.notifications().info("tachyon.tools", Map.of("message", "Tool processing data"));
@@ -428,7 +428,7 @@ abstract class AbstractConformanceServer {
                         .build()) {
 
                     @Override
-                    public ToolResult<String> handle(McpContext context, ToolArgs arguments) {
+                    public ToolResult handle(McpContext context, ToolArgs arguments) {
                         return ToolResult.text("JSON Schema 2020-12 tool called");
                     }
                 });
@@ -460,7 +460,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
                 var inputResponses = request.inputResponses();
                 if (inputResponses != null && inputResponses.containsKey("user_name")) {
                     var resp = inputResponses.get("user_name");
@@ -485,7 +485,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
                 var inputResponses = request.inputResponses();
                 if (inputResponses != null && inputResponses.containsKey("capital_question")) {
                     var resp = inputResponses.get("capital_question");
@@ -509,7 +509,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
                 var inputResponses = request.inputResponses();
                 if (inputResponses != null && inputResponses.containsKey("client_roots")) {
                     return CompletableFuture.completedFuture(ToolResult.text("Roots received"));
@@ -529,7 +529,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
                 var inputResponses = request.inputResponses();
                 var requestState = request.requestState();
                 if (inputResponses != null && inputResponses.containsKey("confirm") && requestState != null) {
@@ -551,7 +551,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
                 var inputResponses = request.inputResponses();
                 if (inputResponses != null
                         && inputResponses.containsKey("user_name")
@@ -577,7 +577,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
                 var inputResponses = request.inputResponses();
                 var requestState = request.requestState();
                 if (inputResponses != null && inputResponses.containsKey("step2")) {
@@ -613,7 +613,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
                 var inputResponses = request.inputResponses();
                 var requestState = request.requestState();
                 if (inputResponses != null && inputResponses.containsKey("confirm")) {
@@ -638,7 +638,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
                 var meta = request.meta();
                 var capabilities = meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
                 var hasSampling =
@@ -752,7 +752,7 @@ abstract class AbstractConformanceServer {
         }
 
         @Override
-        public ToolResult<String> handle(McpContext context, ToolArgs arguments) {
+        public ToolResult handle(McpContext context, ToolArgs arguments) {
             var message = arguments.stringOr("message", "");
             return ToolResult.text(message);
         }

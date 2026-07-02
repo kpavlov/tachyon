@@ -59,7 +59,7 @@ class McpOperationHandlerRequestTest {
         }
 
         @Override
-        public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
+        public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
             var pt = request.progressToken();
             ctx.notifications().progress(pt, 0, 100, "Starting");
             ctx.notifications().progress(pt, 100, 100, "Complete");
@@ -169,7 +169,7 @@ class McpOperationHandlerRequestTest {
                         .putObject("properties"))
                 .build();
         var upgraded = new CountDownLatch(1);
-        var neverComplete = new CompletableFuture<ToolResult<?>>();
+        var neverComplete = new CompletableFuture<ToolResult>();
         ToolHandler stalledTool = new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
@@ -177,7 +177,7 @@ class McpOperationHandlerRequestTest {
             }
 
             @Override
-            public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
+            public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
                 ctx.notifications().progress(request.progressToken(), 0, 100, "working");
                 upgraded.countDown();
                 return neverComplete;

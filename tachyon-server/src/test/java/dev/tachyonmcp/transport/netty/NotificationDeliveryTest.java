@@ -42,7 +42,7 @@ class NotificationDeliveryTest {
         }
 
         @Override
-        public CompletionStage<ToolResult<?>> handle(ToolRequest request, McpContext ctx) {
+        public CompletionStage<ToolResult> handle(ToolRequest request, McpContext ctx) {
             var pt = request.progressToken();
             ctx.notifications().progress(pt, 0, 100, "Starting");
             ctx.notifications().progress(pt, 50, 100, "Halfway");

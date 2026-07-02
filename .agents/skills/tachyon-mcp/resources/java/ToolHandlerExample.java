@@ -65,7 +65,7 @@ final class ToolHandlerExample {
 
         @Override
         @NonNull
-        public ToolResult<String> handle(McpContext ctx, ToolArgs args) {
+        public ToolResult handle(McpContext ctx, ToolArgs args) {
             var name = args.string("name");
             return ToolResult.text("Hello, " + name + "!");
         }

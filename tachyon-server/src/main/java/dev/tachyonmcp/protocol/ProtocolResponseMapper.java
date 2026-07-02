@@ -43,7 +43,7 @@ public interface ProtocolResponseMapper {
     Object listToolsResult(List<ToolDescriptor> tools, @Nullable String nextCursor);
 
     /** Maps a tool call result into protocol-specific shape. */
-    Object callToolResult(ToolResult<?> result);
+    Object callToolResult(ToolResult result);
 
     /** Maps a paginated list of resource descriptors into protocol-specific shape. */
     Object listResourcesResult(List<ResourceDescriptor> resources, @Nullable String nextCursor);

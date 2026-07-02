@@ -215,7 +215,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult<?> handle(McpContext context, ToolArgs arguments) {
+        public ToolResult handle(McpContext context, ToolArgs arguments) {
             return ToolResult.text("ok");
         }
     }
@@ -242,7 +242,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult<?> handle(McpContext context, ToolArgs arguments) {
+        public ToolResult handle(McpContext context, ToolArgs arguments) {
             return ToolResult.text("ok");
         }
     }

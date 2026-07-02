@@ -36,7 +36,7 @@ class EchoToolHandler extends AbstractAsyncToolHandler {
     }
 
     @Override
-    public CompletionStage<? extends ToolResult<?>> handleAsync(McpContext context, ToolArgs args) {
+    public CompletionStage<? extends ToolResult> handleAsync(McpContext context, ToolArgs args) {
         return CompletableFuture.supplyAsync(() -> ToolResult.text(args.stringOr("message", "")));
     }
 }

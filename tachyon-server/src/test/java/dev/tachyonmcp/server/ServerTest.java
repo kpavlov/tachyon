@@ -238,7 +238,7 @@ class ServerTest {
                 }
 
                 @Override
-                public ToolResult<?> handle(McpContext context, ToolArgs args) {
+                public ToolResult handle(McpContext context, ToolArgs args) {
                     return ToolResult.empty();
                 }
             });
@@ -354,7 +354,7 @@ class ServerTest {
                 }
 
                 @Override
-                public ToolResult<?> handle(McpContext context, ToolArgs args) {
+                public ToolResult handle(McpContext context, ToolArgs args) {
                     return ToolResult.empty();
                 }
             });

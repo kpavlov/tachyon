@@ -12,5 +12,5 @@ public interface ToolHandler {
     ToolDescriptor descriptor();
 
     /** Executes the tool with the given request and context. */
-    CompletionStage<? extends ToolResult<?>> handle(ToolRequest request, McpContext context);
+    CompletionStage<? extends ToolResult> handle(ToolRequest request, McpContext context);
 }

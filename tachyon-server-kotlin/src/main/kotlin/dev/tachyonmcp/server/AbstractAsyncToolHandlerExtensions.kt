@@ -19,7 +19,7 @@ import java.util.concurrent.CompletionStage
 @JvmSynthetic
 internal fun asyncHandler(
     descriptor: ToolDescriptor,
-    block: suspend ToolScope.() -> ToolResult<*>,
+    block: suspend ToolScope.() -> ToolResult,
 ): AbstractAsyncToolHandler =
     object : AbstractAsyncToolHandler(descriptor) {
         @Volatile
@@ -29,7 +29,7 @@ internal fun asyncHandler(
         override fun handleAsync(
             context: McpContext,
             args: ToolArgs,
-        ): CompletionStage<out ToolResult<*>> {
+        ): CompletionStage<out ToolResult> {
             val dispatcher =
                 cachedDispatcher ?: context
                     .server()

@@ -80,7 +80,7 @@ class ToolRegistryTest {
                         .annotations(annotations)
                         .build()) {
                     @Override
-                    public ToolResult<?> handle(McpContext context, ToolArgs args) {
+                    public ToolResult handle(McpContext context, ToolArgs args) {
                         return ToolResult.text("ok");
                     }
                 });
@@ -254,7 +254,7 @@ class ToolRegistryTest {
                 new AbstractSyncToolHandler(
                         ToolDescriptor.builder("ts-tool").taskSupport(enumValue).build()) {
                     @Override
-                    public ToolResult<?> handle(McpContext context, ToolArgs args) {
+                    public ToolResult handle(McpContext context, ToolArgs args) {
                         return ToolResult.text("ok");
                     }
                 });
@@ -311,7 +311,7 @@ class ToolRegistryTest {
                         .icons(List.of(icon))
                         .build()) {
                     @Override
-                    public ToolResult<?> handle(McpContext context, ToolArgs args) {
+                    public ToolResult handle(McpContext context, ToolArgs args) {
                         return ToolResult.text("ok");
                     }
                 });
@@ -469,7 +469,7 @@ class ToolRegistryTest {
             }
 
             @Override
-            public CompletionStage<? extends ToolResult<?>> handle(ToolRequest request, McpContext context) {
+            public CompletionStage<? extends ToolResult> handle(ToolRequest request, McpContext context) {
                 return CompletableFuture.completedFuture(ToolResult.text("x"));
             }
         };
@@ -527,12 +527,12 @@ class ToolRegistryTest {
             }
 
             @Override
-            public CompletionStage<ToolResult<?>> handleAsync(McpContext context, ToolRequest request) {
+            public CompletionStage<ToolResult> handleAsync(McpContext context, ToolRequest request) {
                 return CompletableFuture.supplyAsync(() -> ToolResult.text("from-thread"), executor);
             }
 
             @Override
-            public CompletionStage<? extends ToolResult<?>> handleAsync(McpContext context, ToolArgs args) {
+            public CompletionStage<? extends ToolResult> handleAsync(McpContext context, ToolArgs args) {
                 return handleAsync(context, ToolRequest.of(name(), null, null));
             }
         });
@@ -563,12 +563,12 @@ class ToolRegistryTest {
             }
 
             @Override
-            public CompletionStage<ToolResult<?>> handleAsync(McpContext context, ToolRequest request) {
+            public CompletionStage<ToolResult> handleAsync(McpContext context, ToolRequest request) {
                 return CompletableFuture.failedFuture(new InvalidArgumentException("arg", "bad input"));
             }
 
             @Override
-            public CompletionStage<? extends ToolResult<?>> handleAsync(McpContext context, ToolArgs args) {
+            public CompletionStage<? extends ToolResult> handleAsync(McpContext context, ToolArgs args) {
                 return handleAsync(context, ToolRequest.of(name(), null, null));
             }
         });
@@ -607,7 +607,7 @@ class ToolRegistryTest {
         }
 
         @Override
-        public ToolResult<?> handle(McpContext context, ToolArgs args) {
+        public ToolResult handle(McpContext context, ToolArgs args) {
             return ToolResult.text("ok");
         }
     }

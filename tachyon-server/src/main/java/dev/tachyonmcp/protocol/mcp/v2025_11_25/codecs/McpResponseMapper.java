@@ -39,10 +39,13 @@ import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JsonGenerator;
 import tools.jackson.core.JsonParser;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 public final class McpResponseMapper implements ProtocolResponseMapper {
 
     private static final Object EMPTY = new EmptyResult(null, null);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     static {
         CodecRegistry.registerOverride(InputRequiredPayload.class, new InputRequiredPayloadCodec());
@@ -91,12 +94,12 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
     }
 
     @Override
-    public Object callToolResult(ToolResult<?> result) {
-        @Nullable Map<String, JsonNode> meta = null;
-        ToolResult<?> unwrapped = result;
-        if (result instanceof WithMeta<?> wm) {
-            meta = wm.meta().isEmpty() ? null : wm.meta();
-            unwrapped = wm.inner();
+    public Object callToolResult(ToolResult result) {
+        Map<String, JsonNode> meta = null;
+        ToolResult unwrapped = result;
+        if (result instanceof WithMeta(ToolResult inner, Map<String, JsonNode> meta1)) {
+            meta = meta1.isEmpty() ? null : meta1;
+            unwrapped = inner;
         }
         final var resolvedMeta = meta;
         return switch (unwrapped) {
@@ -108,19 +111,28 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
                         true,
                         resolvedMeta,
                         null);
-            case Success<?> s -> wireSuccess(s, resolvedMeta);
-            case WithMeta<?> ignored -> throw new AssertionError("WithMeta unwrapped above");
+            case Success s -> wireSuccess(s, resolvedMeta);
+            case WithMeta ignored -> throw new AssertionError("WithMeta unwrapped above");
         };
     }
 
-    @SuppressWarnings("unchecked")
-    private Object wireSuccess(Success<?> s, @Nullable Map<String, JsonNode> meta) {
+    private Object wireSuccess(Success s, @Nullable Map<String, JsonNode> meta) {
         var blocks =
                 s.content().stream().map(McpToolMapper::toProtocolContentBlock).toList();
-        @Nullable Map<String, JsonNode> structured = null;
+        Map<String, JsonNode> structured = null;
         var sv = s.structuredValue();
-        if (sv instanceof Map<?, ?> rawMap) {
-            structured = (Map<String, JsonNode>) rawMap;
+        if (sv != null) {
+            JsonNode node = MAPPER.valueToTree(sv);
+            if (!node.isObject()) {
+                throw new IllegalArgumentException(
+                        "structuredContent must serialize to a JSON object, got " + node.getNodeType() + ": " + node);
+            }
+            var objNode = (ObjectNode) node;
+            var map = new LinkedHashMap<String, JsonNode>();
+            for (var entry : objNode.properties()) {
+                map.put(entry.getKey(), entry.getValue());
+            }
+            structured = map;
         }
         return new CallToolResult(blocks, structured, null, meta, null);
     }

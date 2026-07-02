@@ -80,7 +80,7 @@ public class TasksExtension implements McpExtension {
         }
 
         @Override
-        public CompletionStage<? extends ToolResult<?>> handleAsync(McpContext context, ToolArgs args) {
+        public CompletionStage<? extends ToolResult> handleAsync(McpContext context, ToolArgs args) {
             var sessionId = OutboundSseStreamMessageRouter.currentSessionId();
             var outboundStream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
             return CompletableFuture.supplyAsync(

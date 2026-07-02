@@ -179,7 +179,7 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
                     }
 
                     @Override
-                    public CompletionStage<ToolResult<?>> handle(ToolRequest req, McpContext ctx) {
+                    public CompletionStage<ToolResult> handle(ToolRequest req, McpContext ctx) {
                         ctx.server().mcpServer().tasks().createTask("sync-notif-task", null);
                         return CompletableFuture.completedFuture(ToolResult.text("ok"));
                     }
