@@ -7,7 +7,7 @@ package dev.tachyonmcp.protocol.mcp.v2025_11_25;
 import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.McpResponseMapper;
-import dev.tachyonmcp.runtime.McpHeaderNames;
+import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import java.util.Set;

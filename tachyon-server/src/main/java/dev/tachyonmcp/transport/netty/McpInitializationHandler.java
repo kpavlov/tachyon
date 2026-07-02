@@ -10,7 +10,7 @@ import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendOptions;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.InteractionEvent;
-import dev.tachyonmcp.runtime.McpHeaderNames;
+import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;

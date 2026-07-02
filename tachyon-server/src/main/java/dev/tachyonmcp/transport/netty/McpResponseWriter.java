@@ -4,7 +4,7 @@
 
 package dev.tachyonmcp.transport.netty;
 
-import dev.tachyonmcp.runtime.McpHeaderNames;
+import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import io.netty.buffer.ByteBuf;
