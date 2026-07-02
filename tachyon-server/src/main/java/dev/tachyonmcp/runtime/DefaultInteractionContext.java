@@ -8,6 +8,7 @@ import dev.tachyonmcp.protocol.Protocol;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
@@ -16,7 +17,7 @@ import org.jspecify.annotations.Nullable;
  * Per-channel mutable context tracking the interaction lifecycle phase, the bound
  * {@link Session}, and protocol version.
  */
-public class DefaultInteractionContext<S extends Session> implements InteractionContext<S> {
+public class DefaultInteractionContext implements MutableInteractionContext {
 
     private final Protocol protocol;
 
@@ -25,7 +26,7 @@ public class DefaultInteractionContext<S extends Session> implements Interaction
 
     private volatile Lifecycle lifecycle = Lifecycle.INITIALIZATION;
 
-    private final AtomicReference<@Nullable S> sessionHolder = new AtomicReference<>();
+    private final AtomicReference<@Nullable Session> sessionHolder = new AtomicReference<>();
 
     public DefaultInteractionContext(Protocol protocol) {
         this.protocol = protocol;
@@ -48,12 +49,12 @@ public class DefaultInteractionContext<S extends Session> implements Interaction
 
     @Override
     @Nullable
-    public S session() {
+    public Session session() {
         return sessionHolder.get();
     }
 
     @Override
-    public void setSession(S session) {
+    public void setSession(@Nullable Session session) {
         this.sessionHolder.set(session);
     }
 
@@ -65,6 +66,17 @@ public class DefaultInteractionContext<S extends Session> implements Interaction
     @Override
     public boolean isExtensionEnabled(String extensionId) {
         return enabledExtensions.contains(extensionId);
+    }
+
+    @Override
+    public Notifications notifications() {
+        throw new UnsupportedOperationException("notifications are not supported in this context");
+    }
+
+    @Override
+    public CompletableFuture<String> sendRequest(String method, Object params) {
+        return CompletableFuture.failedFuture(
+                new UnsupportedOperationException("sendRequest is not supported in this context"));
     }
 
     @Override

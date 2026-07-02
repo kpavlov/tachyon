@@ -113,11 +113,11 @@ public class TachyonServerBuilder
                 }
             }
 
-        @PublishedApi internal fun start(): McpServerHandle = delegate.start()
+        @PublishedApi internal fun start(): ServerHandle = delegate.start()
 
-        @PublishedApi internal fun startAsync(): CompletableFuture<McpServerHandle> =
+        @PublishedApi internal fun startAsync(): CompletableFuture<ServerHandle> =
             delegate
                 .startAsync()
 
-        @PublishedApi internal fun build(): McpServer = delegate.build()
+        @PublishedApi internal fun build(): Server = delegate.build()
     }

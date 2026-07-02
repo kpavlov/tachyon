@@ -6,8 +6,8 @@ package dev.tachyonmcp.transport.netty.sse;
 
 import static dev.tachyonmcp.transport.netty.sse.SseManager.SSE_RETRY_DELAY_MS;
 
+import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.OutboundSseStream;
-import dev.tachyonmcp.server.session.SseEvent;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;

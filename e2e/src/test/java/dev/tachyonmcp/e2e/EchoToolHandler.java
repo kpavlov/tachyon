@@ -2,11 +2,11 @@
 
 package dev.tachyonmcp.e2e;
 
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.features.tools.AbstractAsyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.session.McpContext;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import tools.jackson.databind.JsonNode;
@@ -36,7 +36,7 @@ class EchoToolHandler extends AbstractAsyncToolHandler {
     }
 
     @Override
-    public CompletionStage<? extends ToolResult> handleAsync(McpContext context, ToolArgs args) {
+    public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolArgs args) {
         return CompletableFuture.supplyAsync(() -> ToolResult.text(args.stringOr("message", "")));
     }
 }

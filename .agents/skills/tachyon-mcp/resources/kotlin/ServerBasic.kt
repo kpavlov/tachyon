@@ -2,7 +2,7 @@
 
 package dev.tachyonmcp.skill
 
-import dev.tachyonmcp.server.McpServerHandle
+import dev.tachyonmcp.server.ServerHandle
 import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.TextResourceContents
@@ -11,7 +11,7 @@ import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.promptMessagesOf
 import kotlin.time.Duration.Companion.minutes
 
-fun createServer(port: Int = 0): McpServerHandle = TachyonServer(port = port) {
+fun createServer(port: Int = 0): ServerHandle = TachyonServer(port = port) {
     info {
         name = "demo-server"
         version = "1.0"
@@ -45,7 +45,7 @@ fun createServer(port: Int = 0): McpServerHandle = TachyonServer(port = port) {
     }
 }
 
-fun addUserTemplate(handle: McpServerHandle) {
+fun addUserTemplate(handle: ServerHandle) {
     handle.server().resources().addTemplate(
         ResourceTemplateEntry.of(
             "user-profile",

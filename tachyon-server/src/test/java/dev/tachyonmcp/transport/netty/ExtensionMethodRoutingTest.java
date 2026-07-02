@@ -9,12 +9,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
+import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.server.McpDispatcher;
-import dev.tachyonmcp.server.McpMethodHandler;
-import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.extensions.McpExtension;
-import dev.tachyonmcp.server.session.*;
+import dev.tachyonmcp.server.extensions.ServerExtension;
+import dev.tachyonmcp.server.session.DefaultMcpContext;
+import dev.tachyonmcp.server.session.DispatchContext;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Set;
@@ -25,10 +27,10 @@ import tools.jackson.databind.node.JsonNodeFactory;
 
 class ExtensionMethodRoutingTest {
 
-    private McpServer server;
-    private McpSession session;
+    private Server server;
+    private Session session;
     private McpDispatcher dispatcher;
-    private @Nullable McpContext context;
+    private @Nullable DispatchContext context;
 
     @BeforeEach
     void setUp() {
@@ -40,7 +42,7 @@ class ExtensionMethodRoutingTest {
     @Test
     void rejectsExtensionMethodWhenNotNegotiated() {
         session.activate();
-        var ctx = new DefaultMcpContext(Protocols.versions().get(0), server);
+        var ctx = DefaultMcpContext.create(Protocols.versions().get(0), server);
         ctx.setSession(session);
         var result = (McpDispatcher.DispatchResult.Response) dispatcher
                 .dispatchRequestAsync(1, "test/ext-method", null, "sess_routing", null, ctx)
@@ -78,13 +80,13 @@ class ExtensionMethodRoutingTest {
                 .protocolVersion("2025-11-25")
                 .capabilities(caps)
                 .build();
-        var ctx = new DefaultMcpContext(Protocols.versions().get(0), server);
+        var ctx = DefaultMcpContext.create(Protocols.versions().get(0), server);
         ctx.setSession(session);
         handler.handle(ctx, params);
         this.context = ctx;
     }
 
-    private static class TestExtension implements McpExtension {
+    private static class TestExtension implements ServerExtension {
 
         @Override
         public String extensionId() {
@@ -102,15 +104,15 @@ class ExtensionMethodRoutingTest {
         }
 
         @Override
-        public void bootstrap(McpServer server) {
-            server.registerHandler("test/ext-method", new McpMethodHandler() {
+        public void bootstrap(Server server) {
+            server.registerHandler("test/ext-method", new RpcMethodHandler() {
                 @Override
                 public String method() {
                     return "test/ext-method";
                 }
 
                 @Override
-                public Object handle(McpContext context, Object params) {
+                public Object handle(DispatchContext context, Object params) {
                     return Map.of("status", "ok");
                 }
             });

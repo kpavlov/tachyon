@@ -1,0 +1,44 @@
+/*
+ * Copyright (c) 2026 Konstantin Pavlov.
+ */
+
+package dev.tachyonmcp.runtime;
+
+import org.jspecify.annotations.Nullable;
+
+/** Sends notifications from within an interaction (handler dispatch) context. */
+public interface Notifications {
+
+    /** No-op sender for synthetic contexts that are not bound to a live connection. */
+    Notifications NOOP = new Notifications() {
+        @Override
+        public void send(String method, Object params) {}
+
+        @Override
+        public void progress(@Nullable Object progressToken, double progress, double total, String message) {}
+
+        @Override
+        public void info(String logger, Object data) {}
+
+        @Override
+        public void warning(String logger, Object data) {}
+
+        @Override
+        public void error(String logger, Object data) {}
+    };
+
+    /** Sends a generic notification with the given method and params. */
+    void send(String method, Object params);
+
+    /** Sends a progress notification. */
+    void progress(@Nullable Object progressToken, double progress, double total, String message);
+
+    /** Sends an info-level log message. */
+    void info(String logger, Object data);
+
+    /** Sends a warning-level log message. */
+    void warning(String logger, Object data);
+
+    /** Sends an error-level log message. */
+    void error(String logger, Object data);
+}

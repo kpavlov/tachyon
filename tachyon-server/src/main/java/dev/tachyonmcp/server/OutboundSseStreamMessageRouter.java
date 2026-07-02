@@ -4,8 +4,8 @@
 
 package dev.tachyonmcp.server;
 
-import dev.tachyonmcp.server.session.McpSession;
-import dev.tachyonmcp.server.session.SseEvent;
+import dev.tachyonmcp.runtime.Session;
+import dev.tachyonmcp.runtime.SseEvent;
 import java.util.concurrent.Callable;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -48,7 +48,7 @@ public final class OutboundSseStreamMessageRouter implements MessageRouter {
     }
 
     @Override
-    public boolean tryRoute(McpSession session, SseEvent event) {
+    public boolean tryRoute(Session session, SseEvent event) {
         var outboundStream = OUTBOUND_SSE_STREAM.get();
         logger.trace("tryRoute: session={}, outboundStream={}", session.id(), outboundStream);
         if (outboundStream == null) return false;

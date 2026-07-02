@@ -2,6 +2,7 @@
 
 package com.example.echo
 
+import dev.tachyonmcp.server.ServerHandle
 import io.kotest.assertions.json.shouldEqualJson
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -9,7 +10,7 @@ import org.junit.jupiter.api.Test
 
 class EchoServerTest {
     companion object {
-        private lateinit var handle: dev.tachyonmcp.server.McpServerHandle
+        private lateinit var handle: ServerHandle
 
         @JvmStatic
         @BeforeAll

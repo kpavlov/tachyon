@@ -5,10 +5,13 @@
 package dev.tachyonmcp.server;
 
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
+import dev.tachyonmcp.runtime.Backpressure;
+import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
+import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.config.ServerConfig;
 import dev.tachyonmcp.server.domain.LoggingLevel;
-import dev.tachyonmcp.server.extensions.McpExtension;
+import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.features.prompts.PromptRegistry;
 import dev.tachyonmcp.server.features.resources.ResourceRegistry;
 import dev.tachyonmcp.server.features.tasks.TaskRegistry;
@@ -30,12 +33,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Core MCP server that manages sessions, registries, method handlers, and
- * extension lifecycle. Created via {@link ServerBuilder}.
+ * Core MCP server that manages sessions, registries, method handlers, and extension lifecycle.
+ * Created via {@link ServerBuilder}.
+ *
+ * <p>When a second protocol lands, split the feature registries (tools, resources, prompts,
+ * tasks) from the session/transport core into a separate abstraction.
  */
-public class McpServer implements Closeable {
+public class Server implements Closeable {
 
-    private static final Logger logger = LoggerFactory.getLogger(McpServer.class);
+    private static final Logger logger = LoggerFactory.getLogger(Server.class);
 
     private final ServerConfig config;
     private final SessionLogRouter router;
@@ -47,14 +53,14 @@ public class McpServer implements Closeable {
     private final ResourceRegistry resourceRegistry;
     private final TaskRegistry taskRegistry;
     private final PromptRegistry promptRegistry;
-    private final Map<String, McpMethodHandler> methodHandlers = new ConcurrentHashMap<>();
+    private final Map<String, RpcMethodHandler> methodHandlers = new ConcurrentHashMap<>();
     final Map<String, LoggingLevel> loggingLevels = new ConcurrentHashMap<>();
     final ConcurrentHashMap<Object, CompletableFuture<String>> pendingRequests = new ConcurrentHashMap<>();
     private final ExecutorService executor;
     private final boolean ownsExecutor;
-    private final List<McpExtension> extensions;
+    private final List<ServerExtension> extensions;
     private final Map<String, String> extensionMethodOwners = new ConcurrentHashMap<>();
-    private final Map<String, McpExtension> extensionsById = new ConcurrentHashMap<>();
+    private final Map<String, ServerExtension> extensionsById = new ConcurrentHashMap<>();
 
     private static final List<ProtocolResponseMapper> RESPONSE_MAPPERS;
 
@@ -103,7 +109,7 @@ public class McpServer implements Closeable {
      * Emits a log notification for the given session if the requested level meets
      * the configured threshold.
      */
-    public void log(McpSession session, LoggingLevel requested, String logger, Object data) {
+    public void log(Session session, LoggingLevel requested, String logger, Object data) {
         var configured = loggingLevels.get(session.id());
         if (configured == null) return;
         if (!isLevelEnabled(requested, configured)) return;
@@ -167,14 +173,14 @@ public class McpServer implements Closeable {
         return builder.build();
     }
 
-    McpServer(
+    Server(
             ExecutorService executor,
             boolean ownsExecutor,
             SessionLogRouter router,
             SessionStore sessionStore,
             ServerConfig config,
             @Nullable JsonSchemaValidator validator,
-            @Nullable List<McpExtension> extensions) {
+            @Nullable List<ServerExtension> extensions) {
         this.executor = executor;
         this.ownsExecutor = ownsExecutor;
         this.config = Objects.requireNonNull(config, "config cannot be null");
@@ -194,7 +200,7 @@ public class McpServer implements Closeable {
         }
     }
 
-    public McpServer() {
+    public Server() {
         this(
                 defaultExecutor(),
                 true,
@@ -205,16 +211,16 @@ public class McpServer implements Closeable {
                 List.of());
     }
 
-    public McpServer(SessionLogRouter router, SessionStore sessionStore, JsonSchemaValidator validator) {
+    public Server(SessionLogRouter router, SessionStore sessionStore, JsonSchemaValidator validator) {
         this(defaultExecutor(), true, router, sessionStore, ServerConfig.DEFAULT, validator, List.of());
     }
 
-    public McpServer(
+    public Server(
             SessionLogRouter router,
             SessionStore sessionStore,
             ServerConfig config,
             @Nullable JsonSchemaValidator validator,
-            @Nullable List<McpExtension> extensions) {
+            @Nullable List<ServerExtension> extensions) {
         this(defaultExecutor(), true, router, sessionStore, config, validator, extensions);
     }
 
@@ -268,20 +274,20 @@ public class McpServer implements Closeable {
     }
 
     /** Registers a method handler keyed by its own method name. */
-    public void registerHandler(McpMethodHandler handler) {
+    public void registerHandler(RpcMethodHandler handler) {
         methodHandlers.put(handler.method(), handler);
         logger.info("Handler registered: {}", handler.method());
     }
 
     /** Registers a method handler with an explicit method name. */
-    public void registerHandler(String method, McpMethodHandler handler) {
+    public void registerHandler(String method, RpcMethodHandler handler) {
         methodHandlers.put(method, handler);
         logger.info("Handler registered: {}", method);
     }
 
     /** Returns the handler for a method, or {@code null} if not registered. */
     @Nullable
-    public McpMethodHandler getHandler(String method) {
+    public RpcMethodHandler getHandler(String method) {
         return methodHandlers.get(method);
     }
 
@@ -306,7 +312,7 @@ public class McpServer implements Closeable {
     }
 
     /** Returns the registered extensions. */
-    public List<McpExtension> extensions() {
+    public List<ServerExtension> extensions() {
         return Collections.unmodifiableList(extensions);
     }
 
@@ -360,12 +366,12 @@ public class McpServer implements Closeable {
     }
 
     /** Creates and registers a new session with the given ID. */
-    public McpSession createSession(String sessionId) {
+    public Session createSession(String sessionId) {
         return sessionManager.createSession(sessionId);
     }
 
     /** Returns the session with the given ID, if present. */
-    public Optional<McpSession> getSession(String sessionId) {
+    public Optional<Session> getSession(String sessionId) {
         return sessionManager.getSession(sessionId);
     }
 
@@ -374,7 +380,7 @@ public class McpServer implements Closeable {
         sessionManager.removeSession(sessionId);
     }
 
-    SseEvent appendResponse(McpSession session, SessionEvent.ResponseEvent event) {
+    SseEvent appendResponse(Session session, SessionEvent.ResponseEvent event) {
         var sseEventId = nextEventId();
         var enriched = new SessionEvent.ResponseEvent(
                 event.sessionId(), event.requestId(), event.resultJson(), event.timestamp(), sseEventId);
@@ -387,13 +393,13 @@ public class McpServer implements Closeable {
     }
 
     /** Sends a notification to the given session. */
-    public void sendNotification(McpSession session, String method, Object params) {
+    public void sendNotification(Session session, String method, Object params) {
         sendNotification(session, method, params, null);
     }
 
     /** Sends a notification to the given session, optionally via a bound outbound SSE stream. */
     public void sendNotification(
-            McpSession session, String method, @Nullable Object params, @Nullable OutboundSseStream stream) {
+            Session session, String method, @Nullable Object params, @Nullable OutboundSseStream stream) {
         if (session.state() == SessionState.CLOSED) {
             return;
         }
@@ -425,13 +431,13 @@ public class McpServer implements Closeable {
     static final Duration PENDING_REQUEST_TIMEOUT = Duration.ofSeconds(60);
 
     /** Sends a request to the client and returns a future that completes with the response. */
-    public CompletableFuture<String> sendRequest(McpSession session, String method, Object params) {
+    public CompletableFuture<String> sendRequest(Session session, String method, Object params) {
         return sendRequest(session, method, params, null);
     }
 
     /** Sends a request to the client, optionally via a bound outbound SSE stream, and returns a future. */
     public CompletableFuture<String> sendRequest(
-            McpSession session, String method, Object params, @Nullable OutboundSseStream stream) {
+            Session session, String method, Object params, @Nullable OutboundSseStream stream) {
         var paramsStr = params instanceof Map || params instanceof List
                 ? JsonRpcCodec.writeValueAsString(params)
                 : (String) params;
@@ -536,7 +542,7 @@ public class McpServer implements Closeable {
         return eventIdCounter.incrementAndGet();
     }
 
-    void pumpChronicle(McpSession session) {
+    void pumpChronicle(Session session) {
         if (!session.connection().isWritable()) {
             return;
         }
@@ -553,7 +559,7 @@ public class McpServer implements Closeable {
         session.cursor(lastIndex);
     }
 
-    Backpressure backpressure(McpSession session) {
+    Backpressure backpressure(Session session) {
         return session.computeBackpressure();
     }
 

@@ -4,10 +4,10 @@
 
 package dev.tachyonmcp.server.handlers;
 
-import dev.tachyonmcp.server.McpMethodHandler;
-import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.session.DispatchContext;
 
-public class EmptyResultHandler implements McpMethodHandler {
+public class EmptyResultHandler implements RpcMethodHandler {
 
     private final String methodName;
 
@@ -21,7 +21,7 @@ public class EmptyResultHandler implements McpMethodHandler {
     }
 
     @Override
-    public Object handle(McpContext context, Object params) {
+    public Object handle(DispatchContext context, Object params) {
         return context.responseMapper().emptyResult();
     }
 }

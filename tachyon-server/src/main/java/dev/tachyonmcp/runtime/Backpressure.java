@@ -2,7 +2,7 @@
  * Copyright (c) 2026 Konstantin Pavlov.
  */
 
-package dev.tachyonmcp.server.session;
+package dev.tachyonmcp.runtime;
 
 /**
  * Represents SSE stream backpressure state.

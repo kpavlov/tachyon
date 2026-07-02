@@ -2,16 +2,16 @@
 
 package dev.tachyonmcp.server
 
+import dev.tachyonmcp.runtime.InteractionContext
 import dev.tachyonmcp.server.domain.ReadResourceRequest
 import dev.tachyonmcp.server.domain.ResourceContents
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor
-import dev.tachyonmcp.server.session.McpContext
 
 @TachyonDsl
 public class ResourceScope
     @PublishedApi
     internal constructor(
-        public val ctx: McpContext,
+        public val ctx: InteractionContext,
         public val request: ReadResourceRequest,
     ) {
         public val uri: String

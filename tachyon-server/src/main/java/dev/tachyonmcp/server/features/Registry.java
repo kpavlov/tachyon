@@ -4,17 +4,18 @@
 
 package dev.tachyonmcp.server.features;
 
-import dev.tachyonmcp.server.McpMethodHandler;
-import dev.tachyonmcp.server.McpResourceType;
+import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.ServerResourceType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
 
 /** Base registry for named, paginated MCP resource types. */
-public abstract class Registry<R extends McpResourceType> {
+public abstract class Registry<R extends ServerResourceType> {
 
     private final ConcurrentHashMap<String, R> items = new ConcurrentHashMap<>();
 
@@ -75,7 +76,7 @@ public abstract class Registry<R extends McpResourceType> {
         }
         var all = items.values().stream()
                 .filter(filter)
-                .sorted(Comparator.comparing(McpResourceType::name))
+                .sorted(Comparator.comparing(ServerResourceType::name))
                 .toList();
         var result = new ArrayList<R>();
         boolean pastCursor = cursor == null;
@@ -100,5 +101,5 @@ public abstract class Registry<R extends McpResourceType> {
         return PaginatedResult.of(result, nextCursor);
     }
 
-    public abstract void registerHandlers(java.util.Map<String, McpMethodHandler> registry);
+    public abstract void registerHandlers(Map<String, RpcMethodHandler> registry);
 }

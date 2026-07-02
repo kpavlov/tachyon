@@ -2,25 +2,24 @@
  * Copyright (c) 2026 Konstantin Pavlov.
  */
 
-package dev.tachyonmcp.server.session;
+package dev.tachyonmcp.runtime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import dev.tachyonmcp.runtime.SessionState;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class McpSessionTest {
+class SessionTest {
 
-    private McpSession session;
+    private Session session;
     private TestConnection connection;
 
     @BeforeEach
     void setUp() {
         connection = new TestConnection();
-        session = new McpSession("sess_1", connection);
+        session = new Session("sess_1", connection);
     }
 
     @Test
@@ -87,19 +86,18 @@ class McpSessionTest {
     void shouldThrottleWhenNotWritable() {
         connection.writable = true;
         assertThat(session.shouldThrottle()).isFalse();
-
         connection.writable = false;
         assertThat(session.shouldThrottle()).isTrue();
     }
 
     @Test
     void throwsOnNullId() {
-        assertThatThrownBy(() -> new McpSession(null, connection)).isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> new Session(null, connection)).isInstanceOf(NullPointerException.class);
     }
 
     @Test
     void throwsOnNullConnection() {
-        assertThatThrownBy(() -> new McpSession("id", null)).isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> new Session("id", null)).isInstanceOf(NullPointerException.class);
     }
 
     @Test
@@ -108,13 +106,29 @@ class McpSessionTest {
         assertThat(session.activate()).isFalse();
     }
 
+    @Test
+    void rejectsConnectionOnClosedSession() {
+        session.activate();
+        session.close();
+        var newConn = new TestConnection();
+        session.connection(newConn);
+        assertThat(newConn.closed).isTrue();
+        assertThat(session.connection()).isSameAs(SseConnection.NOOP);
+    }
+
     private static class TestConnection implements SseConnection {
 
         volatile boolean writable = true;
+        volatile boolean closed;
 
         @Override
         public boolean isWritable() {
             return writable;
+        }
+
+        @Override
+        public void close() {
+            closed = true;
         }
 
         @Override

@@ -9,14 +9,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
-import dev.tachyonmcp.server.McpMethodHandler;
-import dev.tachyonmcp.server.McpServer;
-import dev.tachyonmcp.server.extensions.McpExtension;
+import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.Server;
+import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.server.session.DispatchContext;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -162,7 +163,7 @@ class ExtensionsTest extends AbstractMcpE2eTest {
         }
     }
 
-    private static class TestExtension implements McpExtension {
+    private static class TestExtension implements ServerExtension {
 
         @Override
         public String extensionId() {
@@ -175,22 +176,22 @@ class ExtensionsTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public void bootstrap(McpServer server) {
-            server.registerHandler("test/ext-call", new McpMethodHandler() {
+        public void bootstrap(Server server) {
+            server.registerHandler(new RpcMethodHandler() {
                 @Override
                 public String method() {
                     return "test/ext-call";
                 }
 
                 @Override
-                public Object handle(McpContext context, Object params) {
+                public Object handle(DispatchContext context, Object params) {
                     return Map.of("status", "ok");
                 }
             });
         }
     }
 
-    private static class TestExtensionWithTool implements McpExtension {
+    private static class TestExtensionWithTool implements ServerExtension {
 
         @Override
         public String extensionId() {
@@ -198,7 +199,7 @@ class ExtensionsTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public void bootstrap(McpServer server) {
+        public void bootstrap(Server server) {
             server.registerTool(new ToolHandler() {
                 private final ToolDescriptor descriptor = ToolDescriptor.builder("ext-tool")
                         .description("Extension-owned tool")
@@ -211,7 +212,7 @@ class ExtensionsTest extends AbstractMcpE2eTest {
                 }
 
                 @Override
-                public CompletionStage<ToolResult> handle(ToolRequest request, McpContext context) {
+                public CompletionStage<ToolResult> handle(InteractionContext context, ToolRequest request) {
                     return CompletableFuture.completedFuture(ToolResult.text("ext-tool-result"));
                 }
             });

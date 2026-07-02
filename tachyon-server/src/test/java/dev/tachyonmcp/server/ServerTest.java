@@ -6,7 +6,11 @@ package dev.tachyonmcp.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.runtime.Backpressure;
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.SessionState;
+import dev.tachyonmcp.runtime.SseConnection;
+import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
@@ -140,7 +144,7 @@ class ServerTest {
         var event = new SessionEvent.OutboundRequestEvent(
                 "s", "req-1", "sampling/createMessage", "{\"p\":\"v\"}", 100L, 7L);
 
-        var sseEvent = McpServer.toSseEvent(event);
+        var sseEvent = Server.toSseEvent(event);
 
         assertThat(sseEvent).isNotNull();
         assertThat(sseEvent.id()).isEqualTo("7");
@@ -156,8 +160,8 @@ class ServerTest {
         var requestEvent = new SessionEvent.RequestEvent("s", 1, "ping", "{}", 100L);
         var cancelEvent = new SessionEvent.CancelEvent("s", 1, 100L);
 
-        assertThat(McpServer.toSseEvent(requestEvent)).isNull();
-        assertThat(McpServer.toSseEvent(cancelEvent)).isNull();
+        assertThat(Server.toSseEvent(requestEvent)).isNull();
+        assertThat(Server.toSseEvent(cancelEvent)).isNull();
     }
 
     @Test
@@ -165,12 +169,12 @@ class ServerTest {
         var response = new SessionEvent.ResponseEvent("s", 1, "{\"ok\":true}", 100L, 5L);
         var notification = new SessionEvent.NotificationEvent("s", "notifications/tools/list_changed", "{}", 100L, 7L);
 
-        var ssResponse = McpServer.toSseEvent(response);
+        var ssResponse = Server.toSseEvent(response);
         assertThat(ssResponse).isNotNull();
         assertThat(ssResponse.id()).isEqualTo("5");
         assertThat(ssResponse.data()).isEqualTo("{\"ok\":true}");
 
-        var ssNotification = McpServer.toSseEvent(notification);
+        var ssNotification = Server.toSseEvent(notification);
         assertThat(ssNotification).isNotNull();
         assertThat(ssNotification.id()).isEqualTo("7");
         assertThat(ssNotification.data()).contains("notifications/tools/list_changed");
@@ -191,7 +195,7 @@ class ServerTest {
 
             // All events go through toSseEvent; non-SSE must return null (not throw)
             long nonNullCount = allEvents.stream()
-                    .map(McpServer::toSseEvent)
+                    .map(Server::toSseEvent)
                     .filter(Objects::nonNull)
                     .count();
             assertThat(nonNullCount).isEqualTo(1); // only the ResponseEvent
@@ -238,7 +242,7 @@ class ServerTest {
                 }
 
                 @Override
-                public ToolResult handle(McpContext context, ToolArgs args) {
+                public ToolResult handle(InteractionContext context, ToolArgs args) {
                     return ToolResult.empty();
                 }
             });
@@ -354,7 +358,7 @@ class ServerTest {
                 }
 
                 @Override
-                public ToolResult handle(McpContext context, ToolArgs args) {
+                public ToolResult handle(InteractionContext context, ToolArgs args) {
                     return ToolResult.empty();
                 }
             });

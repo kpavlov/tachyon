@@ -7,7 +7,7 @@ import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.runtime.InteractionContext;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -45,7 +45,7 @@ class GetWeatherTool extends AbstractSyncToolHandler {
 
 
     @Override
-    public ToolResult handle(McpContext context, ToolArgs args) {
+    public ToolResult handle(InteractionContext context, ToolArgs args) {
         var city = args.string("city");
         var units = args.stringOr("units", "celsius");
         return ToolResult.text(generateWeather(city, units));

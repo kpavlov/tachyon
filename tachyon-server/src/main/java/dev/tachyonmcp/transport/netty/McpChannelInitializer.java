@@ -4,9 +4,8 @@
 
 package dev.tachyonmcp.transport.netty;
 
-import dev.tachyonmcp.protocol.ContextProvider;
 import dev.tachyonmcp.server.McpDispatcher;
-import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.transport.netty.http.AcceptValidationHandler;
 import dev.tachyonmcp.transport.netty.http.DnsRebindingProtectionHandler;
 import dev.tachyonmcp.transport.netty.http.EndpointValidatorHandler;
@@ -67,7 +66,7 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
 
     private static final ChannelHandler statelessValidator = new StatelessValidatorHandler();
 
-    private final McpServer server;
+    private final Server server;
     private final McpDispatcher dispatcher;
 
     @Nullable
@@ -78,7 +77,7 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
     public McpChannelInitializer(
             String endpointPath,
             boolean stateless,
-            McpServer server,
+            Server server,
             Duration readerIdleTimeout,
             Duration writerIdleTimeout,
             int maxContentLength,
@@ -94,14 +93,7 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
         this.pipelineCustomizer = pipelineCustomizer;
         this.childChannels = childChannels;
         this.dispatcher = new McpDispatcher(server, server.executor());
-        ContextProvider provider = new ContextProvider() {
-            @Override
-            @SuppressWarnings("unchecked")
-            public <T> @Nullable T provide(Class<T> type) {
-                return type.isInstance(server) ? (T) server : null;
-            }
-        };
-        this.interactionHandler = new InteractionHandler(provider);
+        this.interactionHandler = new InteractionHandler();
 
         protocolVersionHandler = new ProtocolVersionHandler(endpointPath);
         acceptHeaderValidator = new AcceptValidationHandler(endpointPath);

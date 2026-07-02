@@ -7,12 +7,13 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.features.tasks.TasksExtension;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.server.session.DispatchContext;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.junit.jupiter.api.Test;
@@ -179,8 +180,8 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
                     }
 
                     @Override
-                    public CompletionStage<ToolResult> handle(ToolRequest req, McpContext ctx) {
-                        ctx.server().mcpServer().tasks().createTask("sync-notif-task", null);
+                    public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest req) {
+                        ((DispatchContext) ctx).server().tasks().createTask("sync-notif-task", null);
                         return CompletableFuture.completedFuture(ToolResult.text("ok"));
                     }
                 })

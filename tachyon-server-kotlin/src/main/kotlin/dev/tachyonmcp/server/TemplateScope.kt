@@ -2,15 +2,15 @@
 
 package dev.tachyonmcp.server
 
+import dev.tachyonmcp.runtime.InteractionContext
 import dev.tachyonmcp.server.domain.ResourceContents
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry
-import dev.tachyonmcp.server.session.McpContext
 
 @TachyonDsl
 public class TemplateScope
     @PublishedApi
     internal constructor(
-        public val ctx: McpContext,
+        public val ctx: InteractionContext,
         public val uri: String,
         public val params: Map<String, String>,
     ) {
@@ -18,7 +18,7 @@ public class TemplateScope
             params[name] ?: throw IllegalArgumentException("missing template variable: $name")
     }
 
-public fun McpServer.resourceTemplate(
+public fun Server.resourceTemplate(
     name: String,
     uriTemplate: String,
     description: String? = null,

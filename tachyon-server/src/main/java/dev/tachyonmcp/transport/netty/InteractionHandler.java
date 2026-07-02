@@ -4,12 +4,10 @@
 
 package dev.tachyonmcp.transport.netty;
 
-import dev.tachyonmcp.protocol.ContextProvider;
 import dev.tachyonmcp.protocol.Protocols;
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.InteractionContext.Lifecycle;
 import dev.tachyonmcp.runtime.InteractionEvent;
-import dev.tachyonmcp.runtime.Session;
+import dev.tachyonmcp.runtime.MutableInteractionContext;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -21,7 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Creates and manages the per-channel {@link InteractionContext} on channel
+ * Creates and manages the per-channel {@link MutableInteractionContext} on channel
  * active/inactive lifecycle events. Must be placed early in the pipeline so
  * downstream handlers can retrieve the context via {@code requireInteractionContext(ctx)}.
  */
@@ -29,14 +27,8 @@ import org.slf4j.LoggerFactory;
 public class InteractionHandler extends ChannelDuplexHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(InteractionHandler.class);
-    public static final AttributeKey<@Nullable InteractionContext<Session>> INTERACTION_CONTEXT_KEY =
+    public static final AttributeKey<@Nullable MutableInteractionContext> INTERACTION_CONTEXT_KEY =
             AttributeKey.valueOf("interactionContext");
-
-    private final ContextProvider contextProvider;
-
-    public InteractionHandler(ContextProvider contextProvider) {
-        this.contextProvider = contextProvider;
-    }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
@@ -78,7 +70,7 @@ public class InteractionHandler extends ChannelDuplexHandler {
             var attr = ctx.channel().attr(INTERACTION_CONTEXT_KEY);
             if (attr.get() == null) {
                 Protocols.resolve(request).ifPresent(proto -> {
-                    attr.setIfAbsent(proto.createInteractionContext(contextProvider));
+                    attr.setIfAbsent(proto.createInteractionContext());
                     logger.debug("Protocol negotiated: {}:{}", proto.familyName(), proto.versionString());
                 });
             }

@@ -9,12 +9,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
-import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.runtime.MutableInteractionContext;
+import dev.tachyonmcp.runtime.Session;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.extensions.McpExtension;
+import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.session.DefaultMcpContext;
-import dev.tachyonmcp.server.session.McpContext;
-import dev.tachyonmcp.server.session.McpSession;
+import dev.tachyonmcp.server.session.DispatchContext;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,8 +25,8 @@ import tools.jackson.databind.node.JsonNodeFactory;
 
 class ExtensionNegotiationTest {
 
-    private McpServer server;
-    private McpSession session;
+    private Server server;
+    private Session session;
     private TestExtension testExtension;
 
     @BeforeEach
@@ -75,8 +76,8 @@ class ExtensionNegotiationTest {
         assertThat(testExtension.initCalled.get()).isFalse();
     }
 
-    private static DefaultMcpContext context(McpSession session, McpServer server) {
-        var ctx = new DefaultMcpContext(Protocols.versions().get(0), server);
+    private static DispatchContext context(Session session, Server server) {
+        var ctx = DefaultMcpContext.create(Protocols.versions().get(0), server);
         ctx.setSession(session);
         return ctx;
     }
@@ -99,7 +100,7 @@ class ExtensionNegotiationTest {
         assertThat(ctxB.isExtensionEnabled("test-ext")).isTrue();
     }
 
-    private static class TestExtension implements McpExtension {
+    private static class TestExtension implements ServerExtension {
 
         final AtomicBoolean initCalled = new AtomicBoolean();
 
@@ -109,7 +110,7 @@ class ExtensionNegotiationTest {
         }
 
         @Override
-        public void onConnectionInit(McpContext context, Map<String, JsonNode> clientSettings) {
+        public void onConnectionInit(MutableInteractionContext context, Map<String, JsonNode> clientSettings) {
             initCalled.set(true);
         }
     }

@@ -6,11 +6,10 @@ package dev.tachyonmcp.transport.netty;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.ContextProvider;
+import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.server.McpDispatcher;
-import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.session.McpSession;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.*;
@@ -22,20 +21,14 @@ import org.junit.jupiter.api.Test;
 
 class McpInitializationHandlerTest {
 
-    private McpServer server;
+    private Server server;
     private EmbeddedChannel channel;
 
     @BeforeEach
     void setUp() {
         server = TachyonServer.builder().build();
         McpDispatcher dispatcher = new McpDispatcher(server, Runnable::run);
-        channel = new EmbeddedChannel(new InteractionHandler(new ContextProvider() {
-            @Override
-            @SuppressWarnings("unchecked")
-            public <T> @Nullable T provide(Class<T> type) {
-                return type.isInstance(server) ? (T) server : null;
-            }
-        }));
+        channel = new EmbeddedChannel(new InteractionHandler());
         channel.pipeline()
                 .addLast(
                         McpHandlerManager.HANDLER_INIT,
@@ -99,7 +92,7 @@ class McpInitializationHandlerTest {
         assertThat(sessionId).isNotNull();
         initResponse.release();
 
-        assertThat(server.getSession(sessionId)).isPresent().map(McpSession::id).hasValue(sessionId);
+        assertThat(server.getSession(sessionId)).isPresent().map(Session::id).hasValue(sessionId);
 
         assertThat(channel.isOpen()).isTrue();
     }

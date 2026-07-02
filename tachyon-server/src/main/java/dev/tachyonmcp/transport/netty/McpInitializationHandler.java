@@ -8,11 +8,11 @@ import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.*;
 import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendJsonResponse;
 import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendOptions;
 
+import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.InteractionEvent;
-import dev.tachyonmcp.runtime.McpHeaderNames;
 import dev.tachyonmcp.server.McpDispatcher;
-import dev.tachyonmcp.server.McpServer;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
 import dev.tachyonmcp.transport.netty.sse.PostSseStream;
 import io.netty.channel.ChannelHandlerContext;
@@ -52,11 +52,11 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(McpInitializationHandler.class);
     private static final String METHOD_INITIALIZE = "initialize";
 
-    private final McpServer server;
+    private final Server server;
     private final McpDispatcher dispatcher;
     private final Executor executor;
 
-    public McpInitializationHandler(McpServer server, McpDispatcher dispatcher, Executor executor) {
+    public McpInitializationHandler(Server server, McpDispatcher dispatcher, Executor executor) {
         this.server = server;
         this.dispatcher = dispatcher;
         this.executor = executor;
@@ -207,7 +207,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                     var response = (McpDispatcher.DispatchResult.Response) result;
                     var resultSessionId = response.sessionId();
 
-                    // Fire event with the live McpSession — InteractionHandler binds it into
+                    // Fire event with the live Session — InteractionHandler binds it into
                     // InteractionContext, and LifecyclePipelineCoordinator replaces this handler
                     // with McpOperationHandler.
                     var mcpSession = resultSessionId != null

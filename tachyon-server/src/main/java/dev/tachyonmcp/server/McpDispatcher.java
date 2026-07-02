@@ -6,11 +6,12 @@ package dev.tachyonmcp.server;
 
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatus;
+import dev.tachyonmcp.runtime.MutableInteractionContext;
+import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.server.features.tasks.TaskState;
 import dev.tachyonmcp.server.session.DefaultMcpContext;
-import dev.tachyonmcp.server.session.McpContext;
-import dev.tachyonmcp.server.session.McpSession;
+import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
@@ -33,14 +34,13 @@ import org.slf4j.LoggerFactory;
 /**
  * Orchestrates the MCP server's per-request flow: parses JSON-RPC messages, establishes the session on
  * {@code initialize}, routes to registered handlers (including extension methods), tracks pending
- * requests, and encodes responses. Collaborator of {@link McpServer} — server holds state/registries,
+ * requests, and encodes responses. Collaborator of {@link Server} — server holds state/registries,
  * this drives one request at a time.
  *
  * <p>MCP- and spec-version-specific: it special-cases {@code initialize}/task-status and binds the
  * {@code v2025_11_25} models/codecs. The version-specific call-sites (marked below) move behind an
  * {@code McpDialect} when a second spec version is wired.
  */
-/** Dispatches parsed JSON-RPC messages to registered method handlers and manages the dispatch lifecycle. */
 public class McpDispatcher {
 
     private static final Logger logger = LoggerFactory.getLogger(McpDispatcher.class);
@@ -55,11 +55,22 @@ public class McpDispatcher {
 
     private final Executor executor;
 
-    private final McpServer server;
+    private final Server server;
 
-    public McpDispatcher(McpServer server, Executor executor) {
+    public McpDispatcher(Server server, Executor executor) {
         this.server = server;
         this.executor = executor;
+    }
+
+    /**
+     * Decorates the per-channel context with the per-request MCP dispatch surface. Without a channel
+     * context (direct invocation, tests), fresh channel state is created for the default protocol.
+     */
+    private DispatchContext dispatchContext(@Nullable MutableInteractionContext channelContext) {
+        var channel = channelContext != null
+                ? channelContext
+                : Protocols.versions().get(0).createInteractionContext();
+        return new DefaultMcpContext(channel, server);
     }
 
     public sealed interface DispatchResult permits DispatchResult.Accepted, DispatchResult.Response {
@@ -88,15 +99,7 @@ public class McpDispatcher {
 
     public CompletableFuture<DispatchResult> dispatchRequestAsync(
             Object id, String method, Object params, @Nullable String sessionId) {
-        McpContext ic = null;
-        if (sessionId != null) {
-            var sessionOpt = server.getSession(sessionId);
-            if (sessionOpt.isPresent()) {
-                ic = new DefaultMcpContext(Protocols.versions().get(0), server);
-                ic.setSession(sessionOpt.get());
-            }
-        }
-        return dispatchRequestAsync(id, method, params, sessionId, null, ic);
+        return dispatchRequestAsync(id, method, params, sessionId, null, null);
     }
 
     public CompletableFuture<DispatchResult> dispatchRequestAsync(
@@ -105,20 +108,20 @@ public class McpDispatcher {
             Object params,
             @Nullable String sessionId,
             @Nullable OutboundSseStream outboundSseStream,
-            McpContext ic) {
+            @Nullable MutableInteractionContext channelContext) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(method, "method");
 
         if (METHOD_INITIALIZE.equals(method)) {
             if (sessionId == null) {
-                return dispatchInitializeAsync(id, params, ic);
+                return dispatchInitializeAsync(id, params, dispatchContext(channelContext));
             }
             var err = JsonRpcErrors.invalidRequest("Session already initialized");
             return CompletableFuture.completedFuture(errorResult(id, err.code(), err.message()));
         }
 
         if (server.isStateless() || (METHOD_PING.equals(method) && sessionId == null)) {
-            var statelessIc = DefaultMcpContext.stateless(server);
+            var statelessIc = dispatchContext(channelContext);
             statelessIc.setOutboundStream(outboundSseStream);
             var handler = lookupHandler(method, params, statelessIc);
             if (handler == null) {
@@ -141,8 +144,7 @@ public class McpDispatcher {
         var session = sessionOpt.get();
         session.touch();
 
-        var protocol = ic != null ? ic.getProtocol() : Protocols.versions().get(0);
-        var requestCtx = new DefaultMcpContext(protocol, server);
+        var requestCtx = dispatchContext(channelContext);
         requestCtx.setSession(session);
         requestCtx.setOutboundStream(outboundSseStream);
 
@@ -165,7 +167,7 @@ public class McpDispatcher {
         return invokeHandlerAsync(id, method, params, outboundSseStream, requestCtx, session, handler);
     }
 
-    private @Nullable McpMethodHandler lookupHandler(String method, Object params, McpContext ic) {
+    private @Nullable RpcMethodHandler lookupHandler(String method, Object params, DispatchContext ic) {
         var owningExtensionId = server.extensionForMethod(method);
         if (owningExtensionId != null) {
             if (!ic.isExtensionEnabled(owningExtensionId)) return null;
@@ -179,9 +181,9 @@ public class McpDispatcher {
             String method,
             Object params,
             @Nullable OutboundSseStream outboundSseStream,
-            McpContext context,
-            @Nullable McpSession session,
-            McpMethodHandler handler) {
+            DispatchContext context,
+            @Nullable Session session,
+            RpcMethodHandler handler) {
         var paramsStr = params instanceof Map || params instanceof List
                 ? JsonRpcCodec.writeValueAsString(params)
                 : params instanceof String s ? s : null;
@@ -249,7 +251,7 @@ public class McpDispatcher {
         }
 
         if (sessionId != null) {
-            server.getSession(sessionId).ifPresent(McpSession::touch);
+            server.getSession(sessionId).ifPresent(Session::touch);
         }
         switch (method) {
             case NOTIFICATIONS_INITIALIZED -> {
@@ -360,7 +362,7 @@ public class McpDispatcher {
         taskRegistry.updateStatusFromClientNotification(taskId, newStatus, statusMessage);
     }
 
-    private CompletableFuture<DispatchResult> dispatchInitializeAsync(Object id, Object rawParams, McpContext ic) {
+    private CompletableFuture<DispatchResult> dispatchInitializeAsync(Object id, Object rawParams, DispatchContext ic) {
         logger.debug("Client initialize: id={} stateless={}", id, server.isStateless());
         var handler = server.getHandler("initialize");
         if (handler == null) {
@@ -368,11 +370,10 @@ public class McpDispatcher {
                     errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found: initialize"));
         }
         if (server.isStateless()) {
-            var statelessIc = DefaultMcpContext.stateless(server);
             return CompletableFuture.supplyAsync(
                             () -> {
                                 try {
-                                    return handler.handleAsync(statelessIc, rawParams);
+                                    return handler.handleAsync(ic, rawParams);
                                 } catch (Exception e) {
                                     return CompletableFuture.failedFuture(e);
                                 }

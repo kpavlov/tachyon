@@ -6,10 +6,10 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.features.tools.SyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.session.McpContext;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -56,7 +56,7 @@ class ToolErrorTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult handle(McpContext context, ToolArgs arguments) {
+        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
             context.notifications().send("notifications/before-boom", Map.of());
             throw new RuntimeException("Simulated handler failure. Ignore it");
         }
