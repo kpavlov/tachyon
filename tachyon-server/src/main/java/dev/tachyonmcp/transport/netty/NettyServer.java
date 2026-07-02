@@ -122,6 +122,19 @@ public final class NettyServer implements Closeable {
         }
     }
 
+    /**
+     * Stops accepting new connections by closing the server channel. Existing child channels and
+     * event loops stay alive so in-flight requests can complete and flush. Idempotent;
+     * {@link #close()} finishes the teardown.
+     */
+    public void stopAccepting() {
+        try {
+            serverChannel.close().sync();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
     @Override
     public void close() {
         logger.debug("Shutting down NettyServer");

@@ -91,6 +91,43 @@ class SessionTest {
     }
 
     @Test
+    void sendDeliversWhenWritable() {
+        connection.writable = true;
+        var event = new SseEvent("1", "message", "{}");
+        assertThat(session.send(event)).isTrue();
+        assertThat(connection.sent).containsExactly(event);
+        assertThat(session.backpressure()).isEqualTo(Backpressure.HOT);
+    }
+
+    @Test
+    void sendDropsWhenThrottled() {
+        connection.writable = false;
+        var event = new SseEvent("1", "message", "{}");
+        assertThat(session.send(event)).isFalse();
+        assertThat(connection.sent).isEmpty();
+        assertThat(session.backpressure()).isEqualTo(Backpressure.COLD);
+    }
+
+    @Test
+    void sendResumesWhenWritableAgain() {
+        connection.writable = false;
+        assertThat(session.send(new SseEvent("1", "message", "{}"))).isFalse();
+        connection.writable = true;
+        var event = new SseEvent("2", "message", "{}");
+        assertThat(session.send(event)).isTrue();
+        assertThat(connection.sent).containsExactly(event);
+        assertThat(session.backpressure()).isEqualTo(Backpressure.HOT);
+    }
+
+    @Test
+    void sendReturnsFalseAfterClose() {
+        session.activate();
+        session.close();
+        assertThat(session.send(new SseEvent("1", "message", "{}"))).isFalse();
+        assertThat(connection.sent).isEmpty();
+    }
+
+    @Test
     void throwsOnNullId() {
         assertThatThrownBy(() -> new Session(null, connection)).isInstanceOf(NullPointerException.class);
     }
@@ -120,6 +157,7 @@ class SessionTest {
 
         volatile boolean writable = true;
         volatile boolean closed;
+        final java.util.List<SseEvent> sent = new java.util.concurrent.CopyOnWriteArrayList<>();
 
         @Override
         public boolean isWritable() {
@@ -132,6 +170,8 @@ class SessionTest {
         }
 
         @Override
-        public void send(@NonNull SseEvent event) {}
+        public void send(@NonNull SseEvent event) {
+            sent.add(event);
+        }
     }
 }
