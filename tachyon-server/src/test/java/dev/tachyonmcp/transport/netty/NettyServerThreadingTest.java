@@ -33,7 +33,7 @@ class NettyServerThreadingTest {
                         .tool(new AbstractSyncToolHandler("thread_probe") {
 
                             @Override
-                            public ToolResult<?> handle(McpContext context, ToolArgs args) {
+                            public ToolResult handle(McpContext context, ToolArgs args) {
                                 Thread thread = Thread.currentThread();
                                 handlerThread.complete(thread.getName() + " virtual:" + thread.isVirtual());
                                 return ToolResult.empty();
@@ -74,7 +74,7 @@ class NettyServerThreadingTest {
                 .threadFactory(Thread.ofVirtual().name("tenant-", 0).factory())
                 .tool(new AbstractSyncToolHandler("name_probe") {
                     @Override
-                    public ToolResult<?> handle(McpContext context, ToolArgs args) {
+                    public ToolResult handle(McpContext context, ToolArgs args) {
                         handlerThreadName.complete(Thread.currentThread().getName());
                         return ToolResult.empty();
                     }
@@ -104,7 +104,7 @@ class NettyServerThreadingTest {
                 .executor(executor)
                 .tool(new AbstractSyncToolHandler("exec_probe") {
                     @Override
-                    public ToolResult<?> handle(McpContext context, ToolArgs args) {
+                    public ToolResult handle(McpContext context, ToolArgs args) {
                         return ToolResult.empty();
                     }
                 })

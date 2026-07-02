@@ -52,7 +52,7 @@ class GreetingTool : AbstractSyncToolHandler(
         inputSchema = GREET_SCHEMA
     },
 ) {
-    override fun handle(ctx: McpContext, args: ToolArgs): ToolResult<*> {
+    override fun handle(ctx: McpContext, args: ToolArgs): ToolResult {
         val name = args.string("name")
         return ToolResult.text("Hello, $name!")
     }
@@ -68,7 +68,7 @@ class AsyncGreetingTool : AbstractAsyncToolHandler(
         inputSchema = GREET_SCHEMA
     },
 ) {
-    override fun handleAsync(ctx: McpContext, args: ToolArgs): CompletionStage<out ToolResult<*>> {
+    override fun handleAsync(ctx: McpContext, args: ToolArgs): CompletionStage<out ToolResult> {
         return CompletableFuture.completedFuture(ToolResult.text("Hello, Async!"))
     }
 }

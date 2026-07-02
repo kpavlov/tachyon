@@ -56,7 +56,7 @@ class ToolErrorTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public ToolResult<?> handle(McpContext context, ToolArgs arguments) {
+        public ToolResult handle(McpContext context, ToolArgs arguments) {
             context.notifications().send("notifications/before-boom", Map.of());
             throw new RuntimeException("Simulated handler failure. Ignore it");
         }

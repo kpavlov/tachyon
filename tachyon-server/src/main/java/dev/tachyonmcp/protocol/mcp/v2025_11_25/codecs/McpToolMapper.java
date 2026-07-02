@@ -22,8 +22,8 @@ final class McpToolMapper {
 
     private McpToolMapper() {}
 
-    public static ToolResult<?> toDomainResult(Object result) {
-        if (result instanceof ToolResult<?> r) return r;
+    public static ToolResult toDomainResult(Object result) {
+        if (result instanceof ToolResult r) return r;
         var text = TextContent.of(result != null ? result.toString() : "");
         return ToolResult.blocks(text);
     }

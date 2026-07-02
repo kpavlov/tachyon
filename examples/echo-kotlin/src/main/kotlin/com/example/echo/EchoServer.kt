@@ -43,7 +43,7 @@ fun createServer(port: Int = 0): McpServerHandle {
                 .build(),
         ) {
             val message = args.string("message")
-            ToolResult<*>.text(message.reversed())
+            ToolResult.text(message.reversed())
         }
     return handle
 }

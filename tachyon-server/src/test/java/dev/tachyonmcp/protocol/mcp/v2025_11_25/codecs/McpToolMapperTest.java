@@ -292,7 +292,7 @@ class McpToolMapperTest {
 
     @Test
     void toDomainResultConvertsObject() {
-        var result = (ToolResult.Success<?>) McpToolMapper.toDomainResult("test");
+        var result = (ToolResult.Success) McpToolMapper.toDomainResult("test");
         var content = result.content();
         assertThat(content).hasSize(1);
         assertThat(((TextContent) content.getFirst()).text()).isEqualTo("test");

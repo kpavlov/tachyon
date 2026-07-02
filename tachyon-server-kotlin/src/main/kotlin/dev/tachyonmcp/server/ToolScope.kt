@@ -20,7 +20,7 @@ public fun ServerBuilder.tool(
     name: String,
     description: String? = null,
     inputSchema: JsonNode? = null,
-    handler: suspend ToolScope.() -> ToolResult<*>,
+    handler: suspend ToolScope.() -> ToolResult,
 ): ServerBuilder =
     tool(
         asyncHandler(

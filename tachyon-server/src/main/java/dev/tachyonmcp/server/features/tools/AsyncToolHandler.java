@@ -42,10 +42,10 @@ public interface AsyncToolHandler extends ToolHandler {
     }
 
     /** Executes the tool asynchronously with parsed args. */
-    CompletionStage<? extends ToolResult<?>> handleAsync(McpContext context, ToolArgs args);
+    CompletionStage<? extends ToolResult> handleAsync(McpContext context, ToolArgs args);
 
     /** Executes the tool asynchronously with the full request (includes meta/progressToken). */
-    default CompletionStage<? extends ToolResult<?>> handleAsync(McpContext context, ToolRequest request) {
+    default CompletionStage<? extends ToolResult> handleAsync(McpContext context, ToolRequest request) {
         return handleAsync(context, ToolArgs.of(request.arguments()));
     }
 
@@ -67,7 +67,7 @@ public interface AsyncToolHandler extends ToolHandler {
     }
 
     @Override
-    default CompletionStage<? extends ToolResult<?>> handle(ToolRequest request, McpContext context) {
+    default CompletionStage<? extends ToolResult> handle(ToolRequest request, McpContext context) {
         return handleAsync(context, request);
     }
 
@@ -86,7 +86,7 @@ public interface AsyncToolHandler extends ToolHandler {
             }
 
             @Override
-            public CompletionStage<? extends ToolResult<?>> handleAsync(McpContext ctx, ToolArgs args) {
+            public CompletionStage<? extends ToolResult> handleAsync(McpContext ctx, ToolArgs args) {
                 try {
                     return CompletableFuture.completedFuture(sync.handle(ctx, args));
                 } catch (Exception e) {

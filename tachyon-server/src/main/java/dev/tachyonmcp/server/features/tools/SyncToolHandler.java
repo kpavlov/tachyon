@@ -43,7 +43,7 @@ public interface SyncToolHandler extends ToolHandler {
     }
 
     /** Executes the tool synchronously. */
-    ToolResult<?> handle(McpContext context, ToolArgs args) throws Exception;
+    ToolResult handle(McpContext context, ToolArgs args) throws Exception;
 
     @Nullable
     default ToolAnnotations annotations() {
@@ -63,7 +63,7 @@ public interface SyncToolHandler extends ToolHandler {
     }
 
     @Override
-    default CompletionStage<? extends ToolResult<?>> handle(ToolRequest request, McpContext context) {
+    default CompletionStage<? extends ToolResult> handle(ToolRequest request, McpContext context) {
         try {
             return CompletableFuture.completedFuture(handle(context, ToolArgs.of(request.arguments())));
         } catch (Exception e) {
@@ -76,7 +76,7 @@ public interface SyncToolHandler extends ToolHandler {
             String name,
             @Nullable String description,
             @Nullable JsonNode inputSchema,
-            BiFunction<McpContext, ToolArgs, ToolResult<?>> fn) {
+            BiFunction<McpContext, ToolArgs, ToolResult> fn) {
         return new SyncToolHandler() {
             @Override
             public String name() {
@@ -96,7 +96,7 @@ public interface SyncToolHandler extends ToolHandler {
             }
 
             @Override
-            public ToolResult<?> handle(McpContext ctx, ToolArgs args) throws Exception {
+            public ToolResult handle(McpContext ctx, ToolArgs args) throws Exception {
                 return fn.apply(ctx, args);
             }
         };

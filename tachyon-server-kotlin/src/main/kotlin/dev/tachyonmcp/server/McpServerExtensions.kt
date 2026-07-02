@@ -17,7 +17,7 @@ public fun McpServer.registerTool(
     name: String,
     description: String? = null,
     inputSchema: JsonNode? = null,
-    block: suspend ToolScope.() -> ToolResult<*>,
+    block: suspend ToolScope.() -> ToolResult,
 ): McpServer =
     registerTool(configure = {
         name(name)
@@ -29,7 +29,7 @@ public fun McpServer.registerTool(
 @OptIn(ExperimentalContracts::class)
 public inline fun McpServer.registerTool(
     configure: DefaultToolDescriptor.Builder.() -> Unit = {},
-    noinline block: suspend ToolScope.() -> ToolResult<*>,
+    noinline block: suspend ToolScope.() -> ToolResult,
 ): McpServer {
     contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
     return registerTool(
@@ -41,7 +41,7 @@ public inline fun McpServer.registerTool(
 @JvmSynthetic
 public fun McpServer.registerTool(
     descriptor: ToolDescriptor,
-    block: suspend ToolScope.() -> ToolResult<*>,
+    block: suspend ToolScope.() -> ToolResult,
 ): McpServer {
     this.registerTool(asyncHandler(descriptor, block))
     return this

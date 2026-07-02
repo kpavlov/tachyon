@@ -59,7 +59,7 @@ public class TachyonServerBuilder
             name: String,
             description: String? = null,
             inputSchema: JsonNode? = null,
-            handler: suspend ToolScope.() -> ToolResult<*>,
+            handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
             this.also {
                 delegate.tool(

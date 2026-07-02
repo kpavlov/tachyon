@@ -21,7 +21,7 @@ class AsyncToolHandlerTest {
             }
 
             @Override
-            public CompletionStage<? extends ToolResult<?>> handleAsync(McpContext ctx, ToolArgs args) {
+            public CompletionStage<? extends ToolResult> handleAsync(McpContext ctx, ToolArgs args) {
                 return CompletableFuture.completedFuture(ToolResult.text("ok"));
             }
         };
@@ -44,7 +44,7 @@ class AsyncToolHandlerTest {
             }
 
             @Override
-            public CompletionStage<? extends ToolResult<?>> handleAsync(McpContext ctx, ToolArgs args) {
+            public CompletionStage<? extends ToolResult> handleAsync(McpContext ctx, ToolArgs args) {
                 return CompletableFuture.completedFuture(ToolResult.text("async"));
             }
         };
@@ -99,7 +99,7 @@ class AsyncToolHandlerTest {
             }
 
             @Override
-            public CompletionStage<? extends ToolResult<?>> handleAsync(McpContext ctx, ToolArgs args) {
+            public CompletionStage<? extends ToolResult> handleAsync(McpContext ctx, ToolArgs args) {
                 return CompletableFuture.completedFuture(ToolResult.text("ok"));
             }
         };
@@ -115,7 +115,7 @@ class AsyncToolHandlerTest {
             }
 
             @Override
-            public CompletionStage<? extends ToolResult<?>> handleAsync(McpContext ctx, ToolArgs args) {
+            public CompletionStage<? extends ToolResult> handleAsync(McpContext ctx, ToolArgs args) {
                 return CompletableFuture.completedFuture(ToolResult.text("ok"));
             }
         };
@@ -131,7 +131,7 @@ class AsyncToolHandlerTest {
             }
 
             @Override
-            public CompletionStage<? extends ToolResult<?>> handleAsync(McpContext ctx, ToolArgs args) {
+            public CompletionStage<? extends ToolResult> handleAsync(McpContext ctx, ToolArgs args) {
                 return CompletableFuture.completedFuture(ToolResult.text("ok"));
             }
         };
@@ -147,7 +147,7 @@ class AsyncToolHandlerTest {
             }
 
             @Override
-            public CompletionStage<? extends ToolResult<?>> handleAsync(McpContext ctx, ToolArgs args) {
+            public CompletionStage<? extends ToolResult> handleAsync(McpContext ctx, ToolArgs args) {
                 return CompletableFuture.completedFuture(ToolResult.text("ok"));
             }
         };
@@ -163,7 +163,7 @@ class AsyncToolHandlerTest {
             }
 
             @Override
-            public CompletionStage<? extends ToolResult<?>> handleAsync(McpContext ctx, ToolArgs args) {
+            public CompletionStage<? extends ToolResult> handleAsync(McpContext ctx, ToolArgs args) {
                 return CompletableFuture.completedFuture(ToolResult.text("ok"));
             }
         };
@@ -179,7 +179,7 @@ class AsyncToolHandlerTest {
             }
 
             @Override
-            public CompletionStage<? extends ToolResult<?>> handleAsync(McpContext ctx, ToolArgs args) {
+            public CompletionStage<? extends ToolResult> handleAsync(McpContext ctx, ToolArgs args) {
                 return CompletableFuture.completedFuture(ToolResult.text("ok"));
             }
         };

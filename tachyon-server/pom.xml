@@ -141,7 +141,7 @@
                             <goal>exec</goal>
                         </goals>
                         <configuration>
-                            <skip>false</skip>
+                            <skip>true</skip>
                             <executable>python3</executable>
                             <arguments>
                                 <argument>${project.basedir}/ts2java.py</argument>

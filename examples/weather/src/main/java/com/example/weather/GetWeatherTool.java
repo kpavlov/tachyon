@@ -45,7 +45,7 @@ class GetWeatherTool extends AbstractSyncToolHandler {
 
 
     @Override
-    public ToolResult<?> handle(McpContext context, ToolArgs args) {
+    public ToolResult handle(McpContext context, ToolArgs args) {
         var city = args.string("city");
         var units = args.stringOr("units", "celsius");
         return ToolResult.text(generateWeather(city, units));
