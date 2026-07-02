@@ -4,15 +4,10 @@
 
 package dev.tachyonmcp.protocol.mcp.v2025_11_25;
 
-import dev.tachyonmcp.protocol.ContextProvider;
 import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.McpResponseMapper;
-import dev.tachyonmcp.runtime.DefaultInteractionContext;
 import dev.tachyonmcp.runtime.McpHeaderNames;
-import dev.tachyonmcp.runtime.MutableInteractionContext;
-import dev.tachyonmcp.server.Server;
-import dev.tachyonmcp.server.session.DefaultMcpContext;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import java.util.Set;
@@ -70,16 +65,5 @@ public final class McpProtocol implements Protocol {
     @Override
     public ProtocolResponseMapper responseMapper() {
         return RESPONSE_MAPPER;
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public MutableInteractionContext createInteractionContext(ContextProvider provider) {
-        var server = provider.provide(Server.class);
-        if (server != null) {
-            return (MutableInteractionContext) (Object) new DefaultMcpContext(this, server);
-        }
-        // Fallback for tests or contexts where no McpServer is wired (e.g. stateless synthetic)
-        return (MutableInteractionContext) (Object) new DefaultInteractionContext(this);
     }
 }

@@ -6,6 +6,7 @@ package dev.tachyonmcp.server;
 
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatus;
+import dev.tachyonmcp.runtime.MutableInteractionContext;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.server.features.tasks.TaskState;
@@ -61,6 +62,17 @@ public class McpDispatcher {
         this.executor = executor;
     }
 
+    /**
+     * Decorates the per-channel context with the per-request MCP dispatch surface. Without a channel
+     * context (direct invocation, tests), fresh channel state is created for the default protocol.
+     */
+    private DispatchContext dispatchContext(@Nullable MutableInteractionContext channelContext) {
+        var channel = channelContext != null
+                ? channelContext
+                : Protocols.versions().get(0).createInteractionContext();
+        return new DefaultMcpContext(channel, server);
+    }
+
     public sealed interface DispatchResult permits DispatchResult.Accepted, DispatchResult.Response {
 
         record Accepted() implements DispatchResult {
@@ -87,15 +99,7 @@ public class McpDispatcher {
 
     public CompletableFuture<DispatchResult> dispatchRequestAsync(
             Object id, String method, Object params, @Nullable String sessionId) {
-        DispatchContext ic = null;
-        if (sessionId != null) {
-            var sessionOpt = server.getSession(sessionId);
-            if (sessionOpt.isPresent()) {
-                ic = new DefaultMcpContext(Protocols.versions().get(0), server);
-                ic.setSession(sessionOpt.get());
-            }
-        }
-        return dispatchRequestAsync(id, method, params, sessionId, null, ic);
+        return dispatchRequestAsync(id, method, params, sessionId, null, null);
     }
 
     public CompletableFuture<DispatchResult> dispatchRequestAsync(
@@ -104,20 +108,20 @@ public class McpDispatcher {
             Object params,
             @Nullable String sessionId,
             @Nullable OutboundSseStream outboundSseStream,
-            DispatchContext ic) {
+            @Nullable MutableInteractionContext channelContext) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(method, "method");
 
         if (METHOD_INITIALIZE.equals(method)) {
             if (sessionId == null) {
-                return dispatchInitializeAsync(id, params, ic);
+                return dispatchInitializeAsync(id, params, dispatchContext(channelContext));
             }
             var err = JsonRpcErrors.invalidRequest("Session already initialized");
             return CompletableFuture.completedFuture(errorResult(id, err.code(), err.message()));
         }
 
         if (server.isStateless() || (METHOD_PING.equals(method) && sessionId == null)) {
-            var statelessIc = DefaultMcpContext.stateless(server);
+            var statelessIc = dispatchContext(channelContext);
             statelessIc.setOutboundStream(outboundSseStream);
             var handler = lookupHandler(method, params, statelessIc);
             if (handler == null) {
@@ -140,8 +144,7 @@ public class McpDispatcher {
         var session = sessionOpt.get();
         session.touch();
 
-        var protocol = ic != null ? ic.getProtocol() : Protocols.versions().get(0);
-        var requestCtx = new DefaultMcpContext(protocol, server);
+        var requestCtx = dispatchContext(channelContext);
         requestCtx.setSession(session);
         requestCtx.setOutboundStream(outboundSseStream);
 
@@ -367,11 +370,10 @@ public class McpDispatcher {
                     errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found: initialize"));
         }
         if (server.isStateless()) {
-            var statelessIc = DefaultMcpContext.stateless(server);
             return CompletableFuture.supplyAsync(
                             () -> {
                                 try {
-                                    return handler.handleAsync(statelessIc, rawParams);
+                                    return handler.handleAsync(ic, rawParams);
                                 } catch (Exception e) {
                                     return CompletableFuture.failedFuture(e);
                                 }

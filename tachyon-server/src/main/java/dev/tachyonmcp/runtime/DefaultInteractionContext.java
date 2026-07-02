@@ -70,7 +70,7 @@ public class DefaultInteractionContext implements MutableInteractionContext {
 
     @Override
     public Notifications notifications() {
-        return Notifications.NOOP;
+        throw new UnsupportedOperationException("notifications are not supported in this context");
     }
 
     @Override

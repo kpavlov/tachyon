@@ -7,7 +7,6 @@ package dev.tachyonmcp.transport.netty;
 import static dev.tachyonmcp.transport.netty.InteractionHandler.INTERACTION_CONTEXT_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.ContextProvider;
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.runtime.DefaultInteractionContext;
 import dev.tachyonmcp.runtime.InteractionContext.Lifecycle;
@@ -21,7 +20,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.*;
 import java.nio.charset.StandardCharsets;
-import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,13 +33,7 @@ class LifecyclePipelineCoordinatorTest {
     void setUp() {
         server = TachyonServer.builder().build();
         final var dispatcher = new McpDispatcher(server, Runnable::run);
-        channel = new EmbeddedChannel(new InteractionHandler(new ContextProvider() {
-            @Override
-            @SuppressWarnings("unchecked")
-            public <T> @Nullable T provide(Class<T> type) {
-                return type.isInstance(server) ? (T) server : null;
-            }
-        }));
+        channel = new EmbeddedChannel(new InteractionHandler());
         channel.pipeline()
                 .addLast(
                         McpHandlerManager.HANDLER_INIT,

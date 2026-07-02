@@ -289,9 +289,13 @@ public class ResourceRegistry {
             if (uri == null) {
                 return JsonRpcErrors.invalidRequest("Missing resource URI");
             }
+            var session = context.session();
+            if (session == null) {
+                return JsonRpcErrors.invalidRequest("resources/subscribe requires a session");
+            }
             registry.subscriptions
                     .computeIfAbsent(uri, k -> new CopyOnWriteArraySet<>())
-                    .add(context.session().id());
+                    .add(session.id());
             return context.responseMapper().emptyResult();
         }
 
@@ -322,9 +326,13 @@ public class ResourceRegistry {
             if (uri == null) {
                 return JsonRpcErrors.invalidRequest("Missing resource URI");
             }
+            var session = context.session();
+            if (session == null) {
+                return JsonRpcErrors.invalidRequest("resources/unsubscribe requires a session");
+            }
             var subs = registry.subscriptions.get(uri);
             if (subs != null) {
-                subs.remove(context.session().id());
+                subs.remove(session.id());
                 if (subs.isEmpty()) {
                     registry.subscriptions.remove(uri);
                 }

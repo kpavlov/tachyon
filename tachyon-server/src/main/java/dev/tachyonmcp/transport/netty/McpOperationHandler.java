@@ -9,10 +9,10 @@ import static dev.tachyonmcp.transport.netty.McpResponseWriter.*;
 
 import dev.tachyonmcp.runtime.InteractionEvent;
 import dev.tachyonmcp.runtime.McpHeaderNames;
+import dev.tachyonmcp.runtime.MutableInteractionContext;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.Server;
-import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
 import dev.tachyonmcp.transport.netty.sse.PostSseStream;
@@ -191,7 +191,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         final var requestId = req.id();
         final var method = req.method();
         final var startNs = System.nanoTime();
-        final DispatchContext ic = ChannelHandlerUtils.requireInteractionContext(ctx);
+        final MutableInteractionContext ic = ChannelHandlerUtils.requireInteractionContext(ctx);
         dispatcher
                 .dispatchRequestAsync(requestId, method, req.params(), sessionId, postStream, ic)
                 .whenComplete((result, ex) -> ctx.executor().execute(() -> {

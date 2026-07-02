@@ -39,7 +39,7 @@ class ExtensionMethodRoutingTest {
     @Test
     void rejectsExtensionMethodWhenNotNegotiated() {
         session.activate();
-        var ctx = new DefaultMcpContext(Protocols.versions().get(0), server);
+        var ctx = DefaultMcpContext.create(Protocols.versions().get(0), server);
         ctx.setSession(session);
         var result = (McpDispatcher.DispatchResult.Response) dispatcher
                 .dispatchRequestAsync(1, "test/ext-method", null, "sess_routing", null, ctx)
@@ -77,7 +77,7 @@ class ExtensionMethodRoutingTest {
                 .protocolVersion("2025-11-25")
                 .capabilities(caps)
                 .build();
-        var ctx = new DefaultMcpContext(Protocols.versions().get(0), server);
+        var ctx = DefaultMcpContext.create(Protocols.versions().get(0), server);
         ctx.setSession(session);
         handler.handle(ctx, params);
         this.context = ctx;

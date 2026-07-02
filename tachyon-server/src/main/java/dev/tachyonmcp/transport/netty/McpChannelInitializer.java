@@ -4,7 +4,6 @@
 
 package dev.tachyonmcp.transport.netty;
 
-import dev.tachyonmcp.protocol.ContextProvider;
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.transport.netty.http.AcceptValidationHandler;
@@ -94,14 +93,7 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
         this.pipelineCustomizer = pipelineCustomizer;
         this.childChannels = childChannels;
         this.dispatcher = new McpDispatcher(server, server.executor());
-        ContextProvider provider = new ContextProvider() {
-            @Override
-            @SuppressWarnings("unchecked")
-            public <T> @Nullable T provide(Class<T> type) {
-                return type.isInstance(server) ? (T) server : null;
-            }
-        };
-        this.interactionHandler = new InteractionHandler(provider);
+        this.interactionHandler = new InteractionHandler();
 
         protocolVersionHandler = new ProtocolVersionHandler(endpointPath);
         acceptHeaderValidator = new AcceptValidationHandler(endpointPath);

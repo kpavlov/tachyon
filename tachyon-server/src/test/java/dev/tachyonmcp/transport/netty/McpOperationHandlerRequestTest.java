@@ -6,7 +6,6 @@ package dev.tachyonmcp.transport.netty;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.ContextProvider;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.Server;
@@ -30,7 +29,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -75,7 +73,7 @@ class McpOperationHandlerRequestTest {
         server = TachyonServer.builder().tool(PROGRESS_TOOL).build();
         var dispatcher = new McpDispatcher(server, Runnable::run);
         channel = new EmbeddedChannel(
-                new InteractionHandler(provider(server)), new McpOperationHandler(server, dispatcher, Runnable::run));
+                new InteractionHandler(), new McpOperationHandler(server, dispatcher, Runnable::run));
         server.createSession("sess-op").activate();
     }
 
@@ -186,7 +184,7 @@ class McpOperationHandlerRequestTest {
         var srv = TachyonServer.builder().tool(stalledTool).build();
         ExecutorService pool = Executors.newSingleThreadExecutor();
         var ch = new EmbeddedChannel(
-                new InteractionHandler(provider(srv)),
+                new InteractionHandler(),
                 new McpOperationHandler(srv, new McpDispatcher(srv, pool::execute), Runnable::run));
         srv.createSession("sess-stall").activate();
         try {
@@ -276,7 +274,7 @@ class McpOperationHandlerRequestTest {
         var statelessServer =
                 TachyonServer.builder().session(s -> s.stateless(true)).build();
         var ch = new EmbeddedChannel(
-                new InteractionHandler(provider(statelessServer)),
+                new InteractionHandler(),
                 new McpOperationHandler(
                         statelessServer, new McpDispatcher(statelessServer, Runnable::run), Runnable::run));
         try {
@@ -346,15 +344,5 @@ class McpOperationHandlerRequestTest {
             }
         }
         return sb.toString();
-    }
-
-    private static ContextProvider provider(Server server) {
-        return new ContextProvider() {
-            @Override
-            @SuppressWarnings("unchecked")
-            public <T> @Nullable T provide(Class<T> type) {
-                return type.isInstance(server) ? (T) server : null;
-            }
-        };
     }
 }

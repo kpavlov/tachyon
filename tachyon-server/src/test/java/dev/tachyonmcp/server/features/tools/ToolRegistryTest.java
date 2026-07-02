@@ -170,7 +170,7 @@ class ToolRegistryTest {
             var callHandler = handlers.get("tools/call");
             var params = Map.of("name", "echo", "arguments", Map.of("message", "hello"));
 
-            var ctx = new DefaultMcpContext(Protocols.versions().get(0), server);
+            var ctx = DefaultMcpContext.create(Protocols.versions().get(0), server);
             ctx.setSession(session);
             var result = callHandler.handle(ctx, params);
             assertThat(result).isInstanceOf(CallToolResult.class);
@@ -541,7 +541,7 @@ class ToolRegistryTest {
             var session = server.createSession("s-async-thread");
             session.activate();
             var callHandler = handlers.get("tools/call");
-            var ctx = new DefaultMcpContext(Protocols.versions().get(0), server);
+            var ctx = DefaultMcpContext.create(Protocols.versions().get(0), server);
             ctx.setSession(session);
             var params = Map.of("name", "async-thread", "arguments", Map.of());
             var stage = callHandler.handleAsync(ctx, params);
@@ -577,7 +577,7 @@ class ToolRegistryTest {
             var session = server.createSession("s-inv-arg");
             session.activate();
             var callHandler = handlers.get("tools/call");
-            var ctx = new DefaultMcpContext(Protocols.versions().get(0), server);
+            var ctx = DefaultMcpContext.create(Protocols.versions().get(0), server);
             ctx.setSession(session);
             var params = Map.of("name", "invalid-arg-async", "arguments", Map.of());
             var result = callHandler.handle(ctx, params);

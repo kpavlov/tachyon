@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.*;
 import tools.jackson.core.json.JsonFactory;
@@ -329,6 +330,18 @@ public final class JsonRpcCodec {
             list.add(readGenericValue(p));
         }
         return list;
+    }
+
+    /**
+     * Serializes JSON-RPC params to a JSON string: strings pass through as already-serialized JSON,
+     * {@code null} becomes an empty object, everything else goes through {@link #writeValueAsString}.
+     */
+    public static String toJsonParams(@Nullable Object params) {
+        return switch (params) {
+            case null -> "{}";
+            case String s -> s;
+            default -> Objects.requireNonNull(writeValueAsString(params));
+        };
     }
 
     /** Serializes a Java object to a JSON string, using registered codecs when available. */

@@ -23,6 +23,7 @@ import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.Role;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.session.DefaultMcpContext;
+import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.HashMap;
@@ -40,8 +41,8 @@ class ResourceRegistryTest {
     private final ResourceRegistry registry = new ResourceRegistry(server);
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
 
-    private static DefaultMcpContext context(Session session, Server server) {
-        var ctx = new DefaultMcpContext(Protocols.versions().get(0), server);
+    private static DispatchContext context(Session session, Server server) {
+        var ctx = DefaultMcpContext.create(Protocols.versions().get(0), server);
         ctx.setSession(session);
         return ctx;
     }

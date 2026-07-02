@@ -14,7 +14,8 @@ import org.jspecify.annotations.Nullable;
  */
 public interface ServerContext {
 
-    /** Returns the current session ID. */
+    /** Returns the current session ID, or {@code null} when no session is bound (stateless mode). */
+    @Nullable
     String sessionId();
 
     /** Sets the logging level for the current session. */

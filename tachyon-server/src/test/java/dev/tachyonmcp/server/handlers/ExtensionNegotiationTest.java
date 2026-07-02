@@ -15,6 +15,7 @@ import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.session.DefaultMcpContext;
+import dev.tachyonmcp.server.session.DispatchContext;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,8 +76,8 @@ class ExtensionNegotiationTest {
         assertThat(testExtension.initCalled.get()).isFalse();
     }
 
-    private static DefaultMcpContext context(Session session, Server server) {
-        var ctx = new DefaultMcpContext(Protocols.versions().get(0), server);
+    private static DispatchContext context(Session session, Server server) {
+        var ctx = DefaultMcpContext.create(Protocols.versions().get(0), server);
         ctx.setSession(session);
         return ctx;
     }
