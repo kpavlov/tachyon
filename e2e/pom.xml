@@ -43,6 +43,7 @@
             <version>${kotlinx-coroutines.version}</version>
             <scope>test</scope>
         </dependency>
+        <!-- Netty transport Java classes (for reflection-based transport detection) -->
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-classes-epoll</artifactId>
@@ -51,6 +52,11 @@
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-classes-kqueue</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport-classes-io_uring</artifactId>
             <scope>runtime</scope>
         </dependency>
 
@@ -166,7 +172,7 @@
                         </goals>
                         <configuration>
                             <sources>
-                                <source>src/skill/java</source>
+                                <source>${project.basedir}/../.agents/skills/tachyon-mcp/resources/java</source>
                                 <source>${project.basedir}/../.agents/skills/tachyon-mcp/resources/kotlin</source>
                             </sources>
                         </configuration>
@@ -175,4 +181,64 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Native Netty transports; disable with -Dnetty.native.enabled=false -->
+        <profile>
+            <id>netty-native-mac</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                </os>
+                <property>
+                    <name>netty.native.enabled</name>
+                    <value>!false</value>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-transport-native-kqueue</artifactId>
+                    <version>${netty.version}</version>
+                    <classifier>${os.detected.classifier}</classifier>
+                    <scope>runtime</scope>
+                </dependency>
+                <dependency>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-resolver-dns-native-macos</artifactId>
+                    <version>${netty.version}</version>
+                    <classifier>${os.detected.classifier}</classifier>
+                    <scope>runtime</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>netty-native-linux</id>
+            <activation>
+                <os>
+                    <name>linux</name>
+                </os>
+                <property>
+                    <name>netty.native.enabled</name>
+                    <value>!false</value>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-transport-native-epoll</artifactId>
+                    <version>${netty.version}</version>
+                    <classifier>${os.detected.classifier}</classifier>
+                    <scope>runtime</scope>
+                </dependency>
+                <dependency>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-transport-native-io_uring</artifactId>
+                    <version>${netty.version}</version>
+                    <classifier>${os.detected.classifier}</classifier>
+                    <scope>runtime</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 </project>

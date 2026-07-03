@@ -36,7 +36,7 @@ var handle = TachyonServer.builder()
 | `.info(cfg)` | name, version, description, title, websiteUrl, instructions |
 | `.capabilities(cfg)` | tools/resources/prompts/tasks/completions/logging |
 | `.session(cfg)` | stateless, sessionTtl, shutdownGracePeriod, SessionLogRouter, SessionStore |
-| `.network(cfg)` | host, port, endpointPath, timeouts, CORS, maxContentLength |
+| `.network(cfg)` | host, port, endpointPath, timeouts, CORS, maxContentLength, ioEngine |
 | `.name(s)` `.port(p)` | shorthands |
 | `.tool(handler)` | Sync/Async/ToolHandler |
 | `.resource(descriptor[, handler])` | static resource (no handler = external URI) |
@@ -136,6 +136,9 @@ Default `AUTO` → advertised only when registered. Force with `Mode.ON` / `Mode
 | `.allowedOrigins(...)` | none (all denied) |
 | `.allowNullOrigin(b)` / `.allowPrivateNetworks(b)` | false |
 | `.allowedHeaders(...)` | none |
+| `.ioEngine(e)` | `NettyIoEngine.AUTO` (io_uring → epoll → kqueue → NIO) |
+
+Native transports need optional runtime jars (`netty-transport-native-epoll` / `-kqueue` / `-io_uring` with `${os.detected.classifier}`); without them `AUTO` falls back to NIO. Explicit unavailable engine throws `UnsupportedOperationException`. See `docs/configuration.md`.
 
 ### Session `session(cfg -> ...)`
 | Method | Default |

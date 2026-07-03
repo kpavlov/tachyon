@@ -5,10 +5,12 @@
 package dev.tachyonmcp.server.config;
 
 import dev.tachyonmcp.transport.netty.McpChannelInitializer;
+import dev.tachyonmcp.transport.netty.NettyIoEngine;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -24,6 +26,7 @@ import org.jspecify.annotations.Nullable;
  * @param allowNullOrigin    whether to allow {@code Origin: null}
  * @param allowPrivateNetworks whether to allow private network CORS
  * @param allowedHeaders     additional allowed CORS headers
+ * @param ioEngine           Netty I/O engine; defaults to {@link NettyIoEngine#AUTO}
  */
 public record NetworkConfig(
         String host,
@@ -35,7 +38,8 @@ public record NetworkConfig(
         @Nullable List<String> allowedOrigins,
         boolean allowNullOrigin,
         boolean allowPrivateNetworks,
-        @Nullable List<String> allowedHeaders) {
+        @Nullable List<String> allowedHeaders,
+        NettyIoEngine ioEngine) {
 
     public static final NetworkConfig DEFAULT = new NetworkConfig(
             "127.0.0.1",
@@ -47,7 +51,8 @@ public record NetworkConfig(
             null,
             false,
             false,
-            null);
+            null,
+            NettyIoEngine.AUTO);
 
     public static Builder builder() {
         return new Builder();
@@ -65,6 +70,7 @@ public record NetworkConfig(
         private boolean allowNullOrigin;
         private boolean allowPrivateNetworks;
         private @Nullable List<String> allowedHeaders;
+        private NettyIoEngine ioEngine = NettyIoEngine.AUTO;
         private boolean hostPortExplicitlySet;
         private boolean addressExplicitlySet;
 
@@ -154,6 +160,12 @@ public record NetworkConfig(
             return this;
         }
 
+        /** Sets the Netty I/O engine; defaults to {@link NettyIoEngine#AUTO}. */
+        public Builder ioEngine(NettyIoEngine ioEngine) {
+            this.ioEngine = Objects.requireNonNull(ioEngine, "ioEngine");
+            return this;
+        }
+
         /** Builds the {@link NetworkConfig}. */
         public NetworkConfig build() {
             return new NetworkConfig(
@@ -166,7 +178,8 @@ public record NetworkConfig(
                     allowedOrigins,
                     allowNullOrigin,
                     allowPrivateNetworks,
-                    allowedHeaders);
+                    allowedHeaders,
+                    ioEngine);
         }
     }
 }
