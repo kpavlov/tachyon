@@ -9,7 +9,7 @@
 
     <parent>
         <groupId>dev.tachyonmcp</groupId>
-        <artifactId>tachyon-root</artifactId>
+        <artifactId>root</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 

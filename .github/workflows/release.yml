@@ -50,9 +50,10 @@ jobs:
 
       - name: Set release version in workspace
         run: >
-          mvn -B versions:set
-          -DnewVersion=${{ steps.release.outputs.release_version }}
-          -DgenerateBackupPoms=false
+          mvn -B versions:set \
+          -DnewVersion=${{ steps.release.outputs.release_version }} \
+          -DgenerateBackupPoms=false \
+          --no-transfer-progress
 
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v5
@@ -71,7 +72,7 @@ jobs:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-        run: mvn -B -P release clean deploy
+        run: mvn -B -P release clean deploy --no-transfer-progress
 
   prepare-next-version:
     needs:
@@ -107,9 +108,10 @@ jobs:
 
       - name: Set next development version
         run: >
-          mvn -B versions:set
-          -DnewVersion=${{ steps.next-version.outputs.next_version }}
-          -DgenerateBackupPoms=false
+          mvn -B versions:set \
+          -DnewVersion=${{ steps.next-version.outputs.next_version }} \
+          -DgenerateBackupPoms=false \
+          --no-transfer-progress
 
       - name: Commit and push next development version
         env:
