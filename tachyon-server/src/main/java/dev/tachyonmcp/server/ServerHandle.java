@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server;
 
+import dev.tachyonmcp.transport.netty.NettyServer;
 import java.io.Closeable;
 import java.io.IOException;
 
@@ -34,8 +35,22 @@ public final class ServerHandle implements Closeable {
         return server;
     }
 
+    /**
+     * Shuts down transport and server. For the Netty transport the order is: stop accepting new
+     * connections, drain in-flight handlers while event loops are still alive (so responses can
+     * flush), then tear down channels and event loops.
+     */
     @Override
     public void close() {
+        if (transport instanceof NettyServer netty) {
+            netty.stopAccepting();
+            try {
+                server.close();
+            } finally {
+                netty.close();
+            }
+            return;
+        }
         try {
             transport.close();
         } catch (IOException e) {

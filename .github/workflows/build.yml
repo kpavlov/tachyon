@@ -124,7 +124,8 @@ jobs:
           mvn install -pl tachyon-server-kotlin -am -DskipTests
 
       - name: Verify examples
-        run: mvn verify -f examples/${{ matrix.example }}/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
+        working-directory: 'examples/${{ matrix.example }}'
+        run: mvn verify -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
 
       - name: Publish test results
         uses: mikepenz/action-junit-report@v6

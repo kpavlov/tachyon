@@ -167,6 +167,7 @@ Check out [Skills CLI](https://github.com/vercel-labs/skills) for more options.
 - Session Janitor — 5s sweep, 30s TTL
 - SSE disconnect ≠ session removal (supports reconnect)
 - Event log replay on reconnection
+- Graceful shutdown — drains in-flight handlers for `shutdownGracePeriod` (default 5s) before force-interrupt
 
 ---
 

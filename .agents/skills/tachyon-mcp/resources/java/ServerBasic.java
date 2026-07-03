@@ -27,7 +27,9 @@ public final class ServerBasic {
         var handle = TachyonServer.builder()
                 .info(it -> it.name("demo-server").version("1.0").description("Demo MCP server"))
                 .capabilities(c -> c.tools(true).resources(true, true).prompts(true))
-                .session(s -> s.stateless(false).sessionTtl(java.time.Duration.ofMinutes(5)))
+                .session(s -> s.stateless(false)
+                        .sessionTtl(java.time.Duration.ofMinutes(5))
+                        .shutdownGracePeriod(java.time.Duration.ofSeconds(5)))
                 .network(n -> n.allowedOrigins("*").allowNullOrigin(true))
                 .tool(SyncToolHandler.of("ping", null, null, (ctx, args) -> ToolResult.text("pong")))
                 .resource(

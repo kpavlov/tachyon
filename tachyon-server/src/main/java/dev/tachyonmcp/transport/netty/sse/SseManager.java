@@ -88,7 +88,7 @@ public class SseManager {
                 if (sseId < 0 || sseId <= lastSseId) continue;
                 var sseEvent = Server.toSseEvent(event);
                 if (sseEvent == null) continue;
-                if (!session.send(sseEvent)) break; // session closed mid-replay
+                if (!session.send(sseEvent)) break; // session closed or throttled mid-replay
             }
         } catch (NumberFormatException e) {
             logger.warn("Invalid Last-Event-ID: {}", lastEventId);

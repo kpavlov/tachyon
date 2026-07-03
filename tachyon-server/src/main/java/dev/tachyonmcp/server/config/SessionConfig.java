@@ -12,18 +12,22 @@ import org.jspecify.annotations.Nullable;
 /**
  * Session lifecycle and persistence configuration.
  *
- * @param stateless        when {@code true}, no session is created and no TTL tracking occurs
- * @param sessionTtl       duration after which idle sessions are evicted (default 30s)
- * @param sessionLogRouter optional custom event log router; {@code null} uses in-memory default
- * @param sessionStore     optional custom session store; {@code null} uses in-memory default
+ * @param stateless           when {@code true}, no session is created and no TTL tracking occurs
+ * @param sessionTtl          duration after which idle sessions are evicted (default 30s)
+ * @param shutdownGracePeriod time an owned executor is given to drain in-flight handlers on
+ *                            {@code close()} before they are force-interrupted (default 5s)
+ * @param sessionLogRouter    optional custom event log router; {@code null} uses in-memory default
+ * @param sessionStore        optional custom session store; {@code null} uses in-memory default
  */
 public record SessionConfig(
         boolean stateless,
         Duration sessionTtl,
+        Duration shutdownGracePeriod,
         @Nullable SessionLogRouter sessionLogRouter,
         @Nullable SessionStore sessionStore) {
 
-    public static final SessionConfig DEFAULT = new SessionConfig(false, Duration.ofSeconds(30), null, null);
+    public static final SessionConfig DEFAULT =
+            new SessionConfig(false, Duration.ofSeconds(30), Duration.ofSeconds(5), null, null);
 
     public static Builder builder() {
         return new Builder();
@@ -33,6 +37,7 @@ public record SessionConfig(
     public static final class Builder {
         private boolean stateless;
         private Duration sessionTtl = Duration.ofSeconds(30);
+        private Duration shutdownGracePeriod = Duration.ofSeconds(5);
         private @Nullable SessionLogRouter sessionLogRouter;
         private @Nullable SessionStore sessionStore;
 
@@ -50,6 +55,16 @@ public record SessionConfig(
             return this;
         }
 
+        /**
+         * Sets the shutdown grace period: how long an owned executor is given to drain in-flight
+         * handlers on {@code close()} before they are force-interrupted. {@code Duration.ZERO}
+         * interrupts running handlers immediately.
+         */
+        public Builder shutdownGracePeriod(Duration shutdownGracePeriod) {
+            this.shutdownGracePeriod = shutdownGracePeriod;
+            return this;
+        }
+
         /** Sets a custom session event log router. */
         public Builder sessionLogRouter(@Nullable SessionLogRouter router) {
             this.sessionLogRouter = router;
@@ -64,7 +79,7 @@ public record SessionConfig(
 
         /** Builds the {@link SessionConfig}. */
         public SessionConfig build() {
-            return new SessionConfig(stateless, sessionTtl, sessionLogRouter, sessionStore);
+            return new SessionConfig(stateless, sessionTtl, shutdownGracePeriod, sessionLogRouter, sessionStore);
         }
     }
 }

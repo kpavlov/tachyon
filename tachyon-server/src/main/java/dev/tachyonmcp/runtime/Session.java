@@ -120,10 +120,18 @@ public class Session {
         return computeBackpressure() != Backpressure.HOT;
     }
 
-    /** Sends an SSE event to the client. */
+    /**
+     * Sends an SSE event to the client. Returns {@code false} without sending when no connection
+     * is attached or the stream is throttled ({@link Backpressure#COLD}) — a slow client must not
+     * accumulate events in the channel's outbound buffer. Dropped events stay in the event log and
+     * are replayable via {@code Last-Event-ID} on reconnect.
+     */
     public boolean send(SseEvent event) {
         var conn = connection.get();
         if (conn == SseConnection.NOOP) {
+            return false;
+        }
+        if (shouldThrottle()) {
             return false;
         }
         conn.send(event);

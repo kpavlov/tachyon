@@ -84,7 +84,7 @@ For class-based handlers, extend `AbstractSyncToolHandler` or `AbstractAsyncTool
 | `ServerInfoScope` | `info { }` | `name`, `version`, `description`, `title`, `instructions` |
 | `CapabilitiesScope` | `capabilities { }` | `tools()`, `resources()`, `prompts()`, `tasks()`, `logging()`, `completions()` |
 | `NetworkScope` | `network { }` | `host`, `port`, `endpointPath`, `allowedOrigins`, `maxContentLength` |
-| `SessionScope` | `session { }` | `stateless`, `sessionTtl` |
+| `SessionScope` | `session { }` | `stateless`, `sessionTtl`, `shutdownGracePeriod` |
 | `ToolScope` | tool lambda | `ctx`, `args` |
 | `ResourceScope` | resource lambda | `ctx`, `request`, `uri` |
 

@@ -65,6 +65,7 @@ final class ConfigReference {
         return SessionConfig.builder()
                 .stateless(false)
                 .sessionTtl(Duration.ofMinutes(10))
+                .shutdownGracePeriod(Duration.ofSeconds(5))
                 .build();
     }
 }

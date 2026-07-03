@@ -35,7 +35,7 @@ var handle = TachyonServer.builder()
 |---|---|
 | `.info(cfg)` | name, version, description, title, websiteUrl, instructions |
 | `.capabilities(cfg)` | tools/resources/prompts/tasks/completions/logging |
-| `.session(cfg)` | stateless, sessionTtl, SessionLogRouter, SessionStore |
+| `.session(cfg)` | stateless, sessionTtl, shutdownGracePeriod, SessionLogRouter, SessionStore |
 | `.network(cfg)` | host, port, endpointPath, timeouts, CORS, maxContentLength |
 | `.name(s)` `.port(p)` | shorthands |
 | `.tool(handler)` | Sync/Async/ToolHandler |
@@ -142,6 +142,7 @@ Default `AUTO` → advertised only when registered. Force with `Mode.ON` / `Mode
 |---|---|
 | `.stateless(b)` | false |
 | `.sessionTtl(d)` | 30s |
+| `.shutdownGracePeriod(d)` | 5s (drain in-flight handlers on close; `ZERO` = interrupt now) |
 | `.sessionLogRouter(r)` / `.sessionStore(s)` | null (in-memory) |
 
 ## JSON Schema
