@@ -44,8 +44,11 @@ public final class ServerHandle implements Closeable {
     public void close() {
         if (transport instanceof NettyServer netty) {
             netty.stopAccepting();
-            server.close();
-            netty.close();
+            try {
+                server.close();
+            } finally {
+                netty.close();
+            }
             return;
         }
         try {
