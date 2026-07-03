@@ -3,6 +3,7 @@
 package dev.tachyonmcp.server
 
 import dev.tachyonmcp.server.config.NetworkConfig
+import dev.tachyonmcp.transport.netty.NettyIoEngine
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
 
@@ -18,6 +19,7 @@ public class NetworkScope
         public var readerIdleTimeout: Duration? = null
         public var writerIdleTimeout: Duration? = null
         public var maxContentLength: Int? = null
+        public var ioEngine: NettyIoEngine? = null
         public val allowedOrigins: MutableList<String> = mutableListOf()
         public val allowedHeaders: MutableList<String> = mutableListOf()
 
@@ -32,5 +34,6 @@ public class NetworkScope
             readerIdleTimeout?.let { builder.readerIdleTimeout(it.toJavaDuration()) }
             writerIdleTimeout?.let { builder.writerIdleTimeout(it.toJavaDuration()) }
             maxContentLength?.let(builder::maxContentLength)
+            ioEngine?.let(builder::ioEngine)
         }
     }

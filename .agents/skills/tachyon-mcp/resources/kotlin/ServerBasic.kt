@@ -9,6 +9,7 @@ import dev.tachyonmcp.server.domain.TextResourceContents
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.promptMessagesOf
+import dev.tachyonmcp.transport.netty.NettyIoEngine
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
@@ -31,6 +32,7 @@ fun createServer(port: Int = 0): ServerHandle = TachyonServer(port = port) {
     network {
         allowedOrigins.add("*")
         allowNullOrigin = true
+        ioEngine = NettyIoEngine.AUTO // io_uring > epoll > kqueue > NIO; native jars optional
     }
     tool(name = "ping", description = "Simple ping") {
         ToolResult.text("pong")

@@ -7,20 +7,11 @@ package dev.tachyonmcp.transport.netty;
 import dev.tachyonmcp.server.Server;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.*;
-import io.netty.channel.epoll.Epoll;
-import io.netty.channel.epoll.EpollIoHandler;
-import io.netty.channel.epoll.EpollServerSocketChannel;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.channel.kqueue.KQueue;
-import io.netty.channel.kqueue.KQueueIoHandler;
-import io.netty.channel.kqueue.KQueueServerSocketChannel;
-import io.netty.channel.nio.NioIoHandler;
-import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.uring.IoUring;
-import io.netty.channel.uring.IoUringIoHandler;
-import io.netty.channel.uring.IoUringServerSocketChannel;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import java.io.Closeable;
@@ -30,9 +21,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Netty-based MCP server with Streamable HTTP transport. Detects the best
- * available I/O handler (io_uring, epoll, kqueue, NIO) and binds a
- * {@link ServerBootstrap} with the MCP pipeline defined by
- * {@link McpChannelInitializer}.
+ * available I/O transport (io_uring, epoll, kqueue, NIO) via
+ * {@link NettyIoEngine#detect()} and binds a {@link ServerBootstrap} with the
+ * MCP pipeline defined by {@link McpChannelInitializer}.
  */
 public final class NettyServer implements Closeable {
 
@@ -58,20 +49,23 @@ public final class NettyServer implements Closeable {
     }
 
     public NettyServer(Server server, NettyServerConfig config) {
-        var transport = Transport.detect();
-        logger.info("Netty transport: {}", transport.channel.getSimpleName());
+        var engine = config.ioEngine();
+        if (engine == NettyIoEngine.AUTO) {
+            engine = NettyIoEngine.detect();
+        }
+        logger.info("Netty I/O engine: {}", engine);
 
         // Event loops run on PLATFORM threads. Netty I/O loops never voluntarily
         // yield (they spin in epoll_wait / io_uring_enter / Selector.select), and
         // native transports pin via JNI — so virtual threads provide no benefit
         // here and add scheduling cost. Virtual threads are used only for
         // application-level work (see Server#executor()).
-        eventLoopGroup = new MultiThreadIoEventLoopGroup(new DefaultThreadFactory("netty-io"), transport.ioHandler);
+        eventLoopGroup = new MultiThreadIoEventLoopGroup(new DefaultThreadFactory("netty-io"), engine.ioHandler());
 
         var bootstrap = new ServerBootstrap();
         bootstrap
                 .group(eventLoopGroup)
-                .channel(transport.channel)
+                .channel(engine.channel())
                 .option(ChannelOption.SO_BACKLOG, 1024)
                 .option(ChannelOption.SO_REUSEADDR, true)
                 .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
@@ -96,29 +90,6 @@ public final class NettyServer implements Closeable {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Failed to start Netty server on " + config.host() + ":" + config.port(), e);
-        }
-    }
-
-    private record Transport(IoHandlerFactory ioHandler, Class<? extends ServerSocketChannel> channel) {
-        static Transport detect() {
-            if (isIoUringAvailable()) {
-                return new Transport(IoUringIoHandler.newFactory(), IoUringServerSocketChannel.class);
-            }
-            if (Epoll.isAvailable()) {
-                return new Transport(EpollIoHandler.newFactory(), EpollServerSocketChannel.class);
-            }
-            if (KQueue.isAvailable()) {
-                return new Transport(KQueueIoHandler.newFactory(), KQueueServerSocketChannel.class);
-            }
-            return new Transport(NioIoHandler.newFactory(), NioServerSocketChannel.class);
-        }
-    }
-
-    private static boolean isIoUringAvailable() {
-        try {
-            return IoUring.isAvailable();
-        } catch (NoClassDefFoundError e) {
-            return false;
         }
     }
 

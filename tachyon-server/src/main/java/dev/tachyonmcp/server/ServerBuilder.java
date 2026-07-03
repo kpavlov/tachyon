@@ -238,6 +238,7 @@ public final class ServerBuilder {
                         networkConfig.allowNullOrigin(),
                         networkConfig.allowPrivateNetworks(),
                         networkConfig.allowedHeaders()),
+                networkConfig.ioEngine(),
                 pipelineCustomizer);
         var netty = new NettyServer(server, nettyConfig);
         return new ServerHandle(server, netty.port(), netty);

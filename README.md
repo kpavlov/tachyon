@@ -1,6 +1,3 @@
-<div>
-</div>
-
 [![Maven Central](https://img.shields.io/maven-central/v/dev.tachyonmcp/tachyon-server)](https://repo1.maven.org/maven2/dev/tachyonmcp/tachyon-server/)
 [![Java 21+](https://img.shields.io/badge/Java-21+-orange.svg?logo=jvm)](http://java.com)
 [![Build](https://github.com/kpavlov/tachyon/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/kpavlov/tachyon/actions/workflows/build.yml)
@@ -10,6 +7,14 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/kpavlov/tachyon)
 
 **Tachyon MCP** is a Java 21 [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server built on [Netty](https://netty.io). Implements the **2025-11-25** Streamable HTTP transport, protocol extensions, and stateless mode.
+
+## Why Tachyon?
+
+1. **MCP Spec Compliant** — All official conformance tests green on the current **2025-11-25** spec; tools, resources, prompts, tasks, elicitation, sampling, and extensions (SEP-1686, SEP-2133) in one artifact.
+2. **Your handlers outlive the spec** — MCP moves fast; Tachyon's stable domain types (`ToolHandler`, `ResourceHandler`, `PromptHandler`, Task support) absorb protocol changes in an internal mapper layer, so version bumps don't touch your code.
+3. **Write blocking code, get async runtime** — handlers run on Java 21 virtual threads off the Netty event loop; plain synchronous logic scales without thread pools, reactive chains, or `CompletableFuture` gymnastics. Coroutine-first Kotlin DSL included.
+4. **Serverless-ready** — one-line stateless mode (`.stateless(true)`) drops session state for AWS Lambda and friends; full session mode gives SSE resumability, Last-Event-ID replay, TTL + janitor.
+5. **Production-grade transport** — Netty core with backpressure watermarks, graceful shutdown, DNS-rebinding protection, and auto-detected native transports (io_uring / epoll / kqueue) when you want the extra speed.
 
 **TL;DR**
 
@@ -27,11 +32,11 @@
 
     ```java
     import dev.tachyonmcp.server.TachyonServer;
+    import dev.tachyonmcp.runtime.InteractionContext;
     import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
     import dev.tachyonmcp.server.features.tools.ToolArgs;
     import dev.tachyonmcp.server.features.tools.ToolDescriptor;
     import dev.tachyonmcp.server.features.tools.ToolResult;
-    import dev.tachyonmcp.server.session.McpContext;
     import tools.jackson.databind.node.JsonNodeFactory;
 
     void main() {
@@ -48,7 +53,7 @@
                     .build()) {
 
                 @Override
-                public ToolResult handle(McpContext ctx, ToolArgs args) {
+                public ToolResult handle(InteractionContext ctx, ToolArgs args) {
                     return ToolResult.text("☀️ 22°C");
                 }
             })
@@ -63,6 +68,7 @@
 | Guide | Description |
 |---|---|
 | [Quickstart](docs/quickstart.md) | Build a working server in 5 minutes |
+| [Configuration](docs/configuration.md) | Network, I/O engine (native transports), sessions, CORS |
 | [Tools](docs/tools.md) | Sync/async handlers, input schema, `ToolResult` |
 | [Resources](docs/resources.md) | Static URIs, dynamic handlers, URI templates |
 | [Tasks](docs/tasks.md) | Long-running operations, state machine, `TasksExtension` |
@@ -79,7 +85,7 @@ npx skills add kpavlov/tachyon --skill tachyon-mcp
 ```
 
 The skill includes compilable Java and Kotlin example sources under `.agents/skills/tachyon-mcp/resources/`.
-They are linked into `e2e/src/skill/` and compiled during `mvn test` to keep them valid.
+They are compiled as extra source roots of the `e2e` module during `mvn test` to keep them valid.
 
 Check out [Skills CLI](https://github.com/vercel-labs/skills) for more options.
 

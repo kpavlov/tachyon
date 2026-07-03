@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.transport.netty.McpChannelInitializer;
+import dev.tachyonmcp.transport.netty.NettyIoEngine;
 import dev.tachyonmcp.transport.netty.NettyServer;
 import dev.tachyonmcp.transport.netty.NettyServerConfig;
 import java.net.Socket;
@@ -49,6 +50,7 @@ class SseHeartbeatTest {
                 Duration.ofMinutes(5),
                 McpChannelInitializer.DEFAULT_MAX_CONTENT_LENGTH,
                 NettyServerConfig.buildCorsConfig(null, false, false, null),
+                NettyIoEngine.AUTO,
                 null);
         nettyServer = new NettyServer(server, config);
         port = nettyServer.port();
@@ -77,10 +79,10 @@ class SseHeartbeatTest {
         try (var client = HttpClient.newHttpClient()) {
             // language=JSON
             var body = """
-                    {"jsonrpc":"2.0","id":0,"method":"initialize",
-                     "params":{"protocolVersion":"2025-11-25","capabilities":{},
-                               "clientInfo":{"name":"test","version":"1.0"}}}
-                    """;
+                {"jsonrpc":"2.0","id":0,"method":"initialize",
+                 "params":{"protocolVersion":"2025-11-25","capabilities":{},
+                           "clientInfo":{"name":"test","version":"1.0"}}}
+                """;
             var response = client.send(
                     HttpRequest.newBuilder()
                             .uri(URI.create("http://localhost:" + port + "/mcp"))
@@ -107,7 +109,9 @@ class SseHeartbeatTest {
         }
     }
 
-    /** Opens a raw SSE GET and accumulates everything received over {@code durationMs}. */
+    /**
+     * Opens a raw SSE GET and accumulates everything received over {@code durationMs}.
+     */
     private String readRawSse(String sessionId, long durationMs) throws Exception {
         try (var socket = new Socket("localhost", port)) {
             var req = ("GET /mcp HTTP/1.1\r\n"

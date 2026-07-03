@@ -6,6 +6,7 @@ import dev.tachyonmcp.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.server.config.Mode;
 import dev.tachyonmcp.server.config.NetworkConfig;
 import dev.tachyonmcp.server.config.SessionConfig;
+import dev.tachyonmcp.transport.netty.NettyIoEngine;
 import java.time.Duration;
 
 /**
@@ -57,6 +58,7 @@ final class ConfigReference {
                 .allowNullOrigin(false)
                 .allowPrivateNetworks(true)
                 .allowedHeaders("X-Custom-Header")
+                .ioEngine(NettyIoEngine.AUTO) // io_uring > epoll > kqueue > NIO; native jars optional
                 .build();
     }
 

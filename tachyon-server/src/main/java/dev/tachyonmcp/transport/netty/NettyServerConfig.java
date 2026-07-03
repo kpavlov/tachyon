@@ -21,6 +21,7 @@ public record NettyServerConfig(
         Duration writerIdleTimeout,
         int maxContentLength,
         @Nullable CorsConfig corsConfig,
+        NettyIoEngine ioEngine,
         @Nullable Consumer<ChannelPipeline> pipelineCustomizer) {
 
     /** Builds a CORS configuration from the given parameters. */
@@ -53,6 +54,7 @@ public record NettyServerConfig(
                 Duration.ofMinutes(5),
                 McpChannelInitializer.DEFAULT_MAX_CONTENT_LENGTH,
                 buildCorsConfig(null, false, false, null),
+                NettyIoEngine.AUTO,
                 null);
     }
 
@@ -65,6 +67,7 @@ public record NettyServerConfig(
                 Duration.ofMinutes(5),
                 McpChannelInitializer.DEFAULT_MAX_CONTENT_LENGTH,
                 buildCorsConfig(null, false, false, null),
+                NettyIoEngine.AUTO,
                 null);
     }
 }
