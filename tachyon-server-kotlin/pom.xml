@@ -82,6 +82,7 @@
                 <configuration>
                     <javaParameters>true</javaParameters>
                     <jvmTarget>${java.version}</jvmTarget>
+                    <languageVersion>${kotlin-language.version}</languageVersion>
                     <args>
                         <arg>-Xexplicit-api=strict</arg>
                         <arg>-Werror</arg>
@@ -142,7 +143,7 @@
                                 <argument>--jvm-target</argument>
                                 <argument>${java.version}</argument>
                                 <argument>--language-version</argument>
-                                <argument>2.2</argument>
+                                <argument>${kotlin-language.version}</argument>
                                 <argument>--report</argument>
                                 <argument>html:${project.build.directory}/detekt/detekt.html</argument>
                                 <argument>--report</argument>
@@ -168,7 +169,7 @@
                                 <argument>--jvm-target</argument>
                                 <argument>${java.version}</argument>
                                 <argument>--language-version</argument>
-                                <argument>2.2</argument>
+                                <argument>${kotlin-language.version}</argument>
                                 <argument>--auto-correct</argument>
                             </arguments>
                             <includePluginDependencies>true</includePluginDependencies>

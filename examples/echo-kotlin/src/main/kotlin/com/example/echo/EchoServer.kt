@@ -20,6 +20,9 @@ fun createServer(port: Int = 0): ServerHandle {
                 version = "1.0.0"
                 description = "Echo MCP server built with Tachyon Kotlin DSL"
             }
+            session {
+                stateless = false
+            }
             capabilities {
                 tools = Mode.ON
             }

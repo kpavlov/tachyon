@@ -7,6 +7,9 @@ package dev.tachyonmcp.transport.netty;
 import static dev.tachyonmcp.transport.netty.InteractionHandler.INTERACTION_CONTEXT_KEY;
 
 import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.McpDispatcher;
+import dev.tachyonmcp.server.Server;
+import dev.tachyonmcp.server.session.SessionIdGenerator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelFuture;
@@ -25,6 +28,25 @@ public final class ChannelHandlerUtils {
                 (InteractionContext) ctx.channel().attr(INTERACTION_CONTEXT_KEY).get();
         return (T) Objects.requireNonNull(
                 raw, "InteractionContext is null. Check if InteractionHandler is configured correctly.");
+    }
+
+    /**
+     * When a custom {@link SessionIdGenerator} is configured on a stateful server, stashes a
+     * detached copy of the request (method/URI/headers) on the channel's interaction context so
+     * the generator can read it at session-creation time. A copy is required because the pooled
+     * request is released before the async dispatch runs.
+     */
+    public static void captureInitRequest(ChannelHandlerContext ctx, HttpRequest req, Server server) {
+        if (server.isStateless() || server.sessionIdGenerator() == SessionIdGenerator.DEFAULT) {
+            return;
+        }
+        final DefaultHttpRequest snapshot;
+        if (req instanceof DefaultHttpRequest defaultHttpRequest) {
+            snapshot = defaultHttpRequest;
+        } else {
+            snapshot = new DefaultHttpRequest(req.protocolVersion(), req.method(), req.uri(), req.headers());
+        }
+        requireInteractionContext(ctx).setAttribute(McpDispatcher.ATTR_INIT_REQUEST, snapshot);
     }
 
     public static void sendAccepted(ChannelHandlerContext ctx, @Nullable String origin) {
@@ -47,7 +69,9 @@ public final class ChannelHandlerUtils {
         return sendPlainTextAndClose(ctx, status, message, null);
     }
 
-    /** {@link #sendPlainTextAndClose(ChannelHandlerContext, HttpResponseStatus, String)} echoing {@code origin}. */
+    /**
+     * {@link #sendPlainTextAndClose(ChannelHandlerContext, HttpResponseStatus, String)} echoing {@code origin}.
+     */
     public static ChannelFuture sendPlainTextAndClose(
             ChannelHandlerContext ctx, HttpResponseStatus status, String message, @Nullable String origin) {
         return sendResponse(ctx, status, "text/plain", ByteBufUtil.writeUtf8(ctx.alloc(), message), true, origin);

@@ -4,82 +4,132 @@
 
 package dev.tachyonmcp.server.config;
 
-import dev.tachyonmcp.server.session.SessionLogRouter;
-import dev.tachyonmcp.server.session.SessionStore;
+import dev.tachyonmcp.server.session.*;
 import java.time.Duration;
 import org.jspecify.annotations.Nullable;
 
 /**
  * Session lifecycle and persistence configuration.
  *
- * @param stateless           when {@code true}, no session is created and no TTL tracking occurs
- * @param sessionTtl          duration after which idle sessions are evicted (default 30s)
- * @param shutdownGracePeriod time an owned executor is given to drain in-flight handlers on
- *                            {@code close()} before they are force-interrupted (default 5s)
- * @param sessionLogRouter    optional custom event log router; {@code null} uses in-memory default
- * @param sessionStore        optional custom session store; {@code null} uses in-memory default
+ * @param enabled            when {@code false} (the default) the server is stateless: no session is
+ *                           created and no TTL tracking occurs; set {@code true} to enable sessions
+ * @param sessionTtl         duration after which idle sessions are evicted (default 30s)
+ * @param sessionLogRouter   optional custom event log router; {@code null} uses in-memory default
+ * @param sessionStore       optional custom session store; {@code null} uses in-memory default
+ * @param sessionIdGenerator session id generator; defaults to {@link SessionIdGenerator#DEFAULT}
  */
 public record SessionConfig(
-        boolean stateless,
-        Duration sessionTtl,
-        Duration shutdownGracePeriod,
+        boolean enabled,
+        @Nullable Duration sessionTtl,
         @Nullable SessionLogRouter sessionLogRouter,
-        @Nullable SessionStore sessionStore) {
+        @Nullable SessionStore sessionStore,
+        @Nullable SessionIdGenerator sessionIdGenerator) {
 
-    public static final SessionConfig DEFAULT =
-            new SessionConfig(false, Duration.ofSeconds(30), Duration.ofSeconds(5), null, null);
+    public static final Duration DEFAULT_SESSION_TTL = Duration.ofSeconds(30);
+
+    public static final SessionConfig STATELESS = new SessionConfig(false, null, null, null, null);
+
+    public SessionConfig {
+        if (!enabled
+                && (sessionIdGenerator != null
+                        || sessionStore != null
+                        || sessionLogRouter != null
+                        || sessionTtl != null)) {
+            throw new IllegalStateException("Session options require sessions to be enabled — call enabled(true)");
+        }
+    }
 
     public static Builder builder() {
         return new Builder();
     }
 
-    /** Builder for {@link SessionConfig}. */
+    /**
+     * Builder for {@link SessionConfig}.
+     */
     public static final class Builder {
-        private boolean stateless;
-        private Duration sessionTtl = Duration.ofSeconds(30);
-        private Duration shutdownGracePeriod = Duration.ofSeconds(5);
+        private boolean enabled = false;
+        private @Nullable Duration sessionTtl;
         private @Nullable SessionLogRouter sessionLogRouter;
         private @Nullable SessionStore sessionStore;
+        private @Nullable SessionIdGenerator sessionIdGenerator;
 
         private Builder() {}
 
-        /** Enables stateless mode (no session persistence). */
-        public Builder stateless(boolean stateless) {
-            this.stateless = stateless;
+        /**
+         * Enables server-side sessions. Off by default (the server is stateless), so callers opt in
+         * explicitly with {@code enabled(true)}.
+         */
+        public Builder enabled(boolean enabled) {
+            this.enabled = enabled;
             return this;
         }
 
-        /** Sets the session TTL (idle sessions are evicted after this duration). */
+        /**
+         * Enables stateless mode (no session persistence).
+         *
+         * @deprecated Use {@link #enabled(boolean)}
+         */
+        @Deprecated
+        public Builder stateless(boolean stateless) {
+            this.enabled = !stateless;
+            return this;
+        }
+
+        /**
+         * Sets the session TTL (idle sessions are evicted after this duration).
+         */
         public Builder sessionTtl(Duration sessionTtl) {
             this.sessionTtl = sessionTtl;
             return this;
         }
 
         /**
-         * Sets the shutdown grace period: how long an owned executor is given to drain in-flight
-         * handlers on {@code close()} before they are force-interrupted. {@code Duration.ZERO}
-         * interrupts running handlers immediately.
+         * Sets a custom session event log router.
          */
-        public Builder shutdownGracePeriod(Duration shutdownGracePeriod) {
-            this.shutdownGracePeriod = shutdownGracePeriod;
-            return this;
-        }
-
-        /** Sets a custom session event log router. */
         public Builder sessionLogRouter(@Nullable SessionLogRouter router) {
             this.sessionLogRouter = router;
             return this;
         }
 
-        /** Sets a custom session store implementation. */
+        /**
+         * Sets a custom session store implementation.
+         */
         public Builder sessionStore(@Nullable SessionStore store) {
             this.sessionStore = store;
             return this;
         }
 
-        /** Builds the {@link SessionConfig}. */
+        /**
+         * Sets a custom session id generator (derives the id from the initialize request).
+         * {@code null} restores {@link SessionIdGenerator#DEFAULT}.
+         */
+        public Builder sessionIdGenerator(@Nullable SessionIdGenerator generator) {
+            this.sessionIdGenerator = generator;
+            return this;
+        }
+
+        /**
+         * Builds the {@link SessionConfig}.
+         */
         public SessionConfig build() {
-            return new SessionConfig(stateless, sessionTtl, shutdownGracePeriod, sessionLogRouter, sessionStore);
+            if (!enabled) {
+                if (sessionIdGenerator != null
+                        || sessionStore != null
+                        || sessionLogRouter != null
+                        || sessionTtl != null) {
+                    throw new IllegalStateException(
+                            "Session options require sessions to be enabled — call enabled(true)");
+                }
+
+                return SessionConfig.STATELESS;
+            } else {
+                return new SessionConfig(
+                        enabled,
+                        sessionTtl != null ? sessionTtl : DEFAULT_SESSION_TTL,
+                        sessionLogRouter != null ? sessionLogRouter : new InMemorySessionLogRouter(),
+                        sessionStore != null ? sessionStore : new InMemorySessionStore(),
+                        sessionIdGenerator != null ? sessionIdGenerator : SessionIdGenerator.DEFAULT);
+            }
         }
     }
 }

@@ -55,6 +55,13 @@ public class TachyonServerBuilder
             return this
         }
 
+        public inline fun runtime(
+            crossinline configure: (@TachyonDsl RuntimeScope).() -> Unit,
+        ): TachyonServerBuilder {
+            delegate.runtime { RuntimeScope().apply(configure).applyTo(it) }
+            return this
+        }
+
         public fun tool(
             name: String,
             description: String? = null,

@@ -156,10 +156,10 @@ abstract class AbstractConformanceServer {
         Awaitility.await().timeout(millis, TimeUnit.MILLISECONDS);
     }
 
-    protected abstract Server createServer();
+    protected abstract Server createServer(boolean isStateful);
 
-    Server startServer() {
-        var srv = createServer();
+    Server startServer(boolean isStateful) {
+        var srv = createServer(isStateful);
         registerTools(srv);
         registerResources(srv);
         registerPrompts(srv);

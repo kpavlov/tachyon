@@ -39,6 +39,7 @@ public final class ServerBuilder {
     private final FeaturesConfig featuresConfig = new FeaturesConfig();
     private final SessionConfig.Builder sessionBuilder = SessionConfig.builder();
     private final NetworkConfig.Builder networkBuilder = NetworkConfig.builder();
+    private final RuntimeConfig.Builder runtimeBuilder = RuntimeConfig.builder();
 
     @Nullable
     Consumer<ChannelPipeline> pipelineCustomizer;
@@ -71,6 +72,12 @@ public final class ServerBuilder {
     /** Configures network settings (host, port, CORS, etc.). */
     public ServerBuilder network(Consumer<NetworkConfig.Builder> configurer) {
         configurer.accept(networkBuilder);
+        return this;
+    }
+
+    /** Configures handler-execution runtime settings (shutdown grace period, etc.). */
+    public ServerBuilder runtime(Consumer<RuntimeConfig.Builder> configurer) {
+        configurer.accept(runtimeBuilder);
         return this;
     }
 
@@ -252,7 +259,11 @@ public final class ServerBuilder {
     /** Builds the {@link ServerConfig} from the current builder state. */
     public ServerConfig buildConfig() {
         return new ServerConfig(
-                identityBuilder.build(), capabilitiesConfig.build(), sessionBuilder.build(), networkBuilder.build());
+                identityBuilder.build(),
+                capabilitiesConfig.build(),
+                sessionBuilder.build(),
+                networkBuilder.build(),
+                runtimeBuilder.build());
     }
 
     static final class FeaturesConfig {

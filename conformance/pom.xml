@@ -27,23 +27,6 @@
             <artifactId>tachyon-server</artifactId>
         </dependency>
 
-        <!-- Netty transport Java classes (for reflection-based transport detection) -->
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-transport-classes-epoll</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-transport-classes-kqueue</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-transport-classes-io_uring</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
         <!-- Test -->
         <dependency>
             <groupId>org.awaitility</groupId>

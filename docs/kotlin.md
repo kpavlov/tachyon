@@ -44,8 +44,16 @@ val handle = TachyonServer(port = 8080) {
         resources(subscribe = true, listChanged = true)
         prompts(listChanged = true)
     }
+    session {
+        enabled = true
+        sessionTtl = 5.minutes
+        sessionIdGenerator = { "sess_" + Uuid.random().toHexString() }
+    }
     tool(name = "ping", description = "Ping the server") {
         ToolResult.text("pong")
+    }
+    runtime {
+        shutdownGracePeriod = 5.seconds
     }
     resource(
         name = "config",
@@ -84,7 +92,8 @@ For class-based handlers, extend `AbstractSyncToolHandler` or `AbstractAsyncTool
 | `ServerInfoScope` | `info { }` | `name`, `version`, `description`, `title`, `instructions` |
 | `CapabilitiesScope` | `capabilities { }` | `tools()`, `resources()`, `prompts()`, `tasks()`, `logging()`, `completions()` |
 | `NetworkScope` | `network { }` | `host`, `port`, `endpointPath`, `allowedOrigins`, `maxContentLength` |
-| `SessionScope` | `session { }` | `stateless`, `sessionTtl`, `shutdownGracePeriod` |
+| `SessionScope` | `session { }` | `enabled`, `sessionTtl`, `sessionIdGenerator` |
+| `RuntimeScope` | `runtime { }` | `shutdownGracePeriod` |
 | `ToolScope` | tool lambda | `ctx`, `args` |
 | `ResourceScope` | resource lambda | `ctx`, `request`, `uri` |
 

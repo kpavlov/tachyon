@@ -54,7 +54,7 @@ class McpDispatcherTest {
 
     @Test
     void shouldRejectNonInitializeRequestBeforeSessionIsActive() {
-        try (var server = TachyonServer.builder().build()) {
+        try (var server = TachyonServer.builder().session(s -> s.enabled(true)).build()) {
             server.createSession("sess_init");
             var dispatcher = new McpDispatcher(server, server.executor());
 
@@ -99,7 +99,7 @@ class McpDispatcherTest {
 
     @Test
     void cancelsPendingRequestWithMatchingId() {
-        try (var server = TachyonServer.builder().build()) {
+        try (var server = TachyonServer.builder().session(s -> s.enabled(true)).build()) {
             var session = server.createSession("sess_cancel-pending");
             session.activate();
             var dispatcher = new McpDispatcher(server, server.executor());
@@ -164,7 +164,7 @@ class McpDispatcherTest {
 
     @Test
     void shouldRejectRequestAfterSessionIsClosed() {
-        try (var server = TachyonServer.builder().build()) {
+        try (var server = TachyonServer.builder().session(s -> s.enabled(true)).build()) {
             var session = server.createSession("sess_closed");
             session.activate();
             session.close();

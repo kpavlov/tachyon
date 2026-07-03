@@ -70,7 +70,10 @@ class McpOperationHandlerRequestTest {
 
     @BeforeEach
     void setUp() {
-        server = TachyonServer.builder().tool(PROGRESS_TOOL).build();
+        server = TachyonServer.builder()
+                .session(s -> s.enabled(true))
+                .tool(PROGRESS_TOOL)
+                .build();
         var dispatcher = new McpDispatcher(server, Runnable::run);
         channel = new EmbeddedChannel(
                 new InteractionHandler(), new McpOperationHandler(server, dispatcher, Runnable::run));
@@ -271,8 +274,7 @@ class McpOperationHandlerRequestTest {
     // In stateless mode a GET opens an SSE stream without requiring a session.
     @Test
     void statelessGetOpensSseStream() {
-        var statelessServer =
-                TachyonServer.builder().session(s -> s.stateless(true)).build();
+        var statelessServer = TachyonServer.builder().build();
         var ch = new EmbeddedChannel(
                 new InteractionHandler(),
                 new McpOperationHandler(
@@ -296,6 +298,47 @@ class McpOperationHandlerRequestTest {
         } finally {
             ch.close();
             statelessServer.close();
+        }
+    }
+
+    // A custom SessionIdGenerator sees the request headers even when initialize arrives on a
+    // channel already in the operation phase (keep-alive reuse) — not only via the init handler.
+    @Test
+    void initializeOnOperationChannelUsesCustomSessionIdGenerator() {
+        var customServer = TachyonServer.builder()
+                .session(s -> s.enabled(true)
+                        .sessionIdGenerator(req -> "tenant-" + req.headers().get("X-Tenant-Id")))
+                .build();
+        var ch = new EmbeddedChannel(
+                new InteractionHandler(),
+                new McpOperationHandler(customServer, new McpDispatcher(customServer, Runnable::run), Runnable::run));
+        try {
+            var request = new DefaultFullHttpRequest(
+                    HttpVersion.HTTP_1_1,
+                    HttpMethod.POST,
+                    "/mcp",
+                    Unpooled.copiedBuffer(
+                            "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\","
+                                    + "\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},"
+                                    + "\"clientInfo\":{\"name\":\"t\",\"version\":\"1\"}}}",
+                            StandardCharsets.UTF_8));
+            request.headers()
+                    .set(HttpHeaderNames.ORIGIN, "http://localhost:3000")
+                    .set("X-Tenant-Id", "acme")
+                    .set(HttpHeaderNames.ACCEPT, "application/json, text/event-stream");
+            ch.writeInbound(request);
+
+            ch.runPendingTasks();
+            var msg = ch.readOutbound();
+            assertThat(msg).isInstanceOf(FullHttpResponse.class);
+            var response = (FullHttpResponse) msg;
+            assertThat(response.status()).isEqualTo(HttpResponseStatus.OK);
+            assertThat(response.headers().get("MCP-Session-Id")).isEqualTo("tenant-acme");
+            assertThat(customServer.getSession("tenant-acme")).isPresent();
+            response.release();
+        } finally {
+            ch.close();
+            customServer.close();
         }
     }
 

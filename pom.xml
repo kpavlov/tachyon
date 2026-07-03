@@ -3,7 +3,8 @@
   ~ Copyright (c) 2026 Konstantin Pavlov.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>dev.tachyonmcp</groupId>
@@ -59,6 +60,7 @@
         <!-- Java -->
         <java.version>21</java.version>
         <kotlin.version>2.2.21</kotlin.version>
+        <kotlin-language.version>2.2</kotlin-language.version>
 
         <!-- Dependencies -->
         <assertj.version>3.27.7</assertj.version>

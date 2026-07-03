@@ -67,7 +67,7 @@ abstract class AbstractServerConformanceIT {
 
     private void runConformanceScenario(String scenario, String outputDir, List<String> expectedFailures)
             throws Exception {
-        var server = serverFactory.startServer();
+        var server = serverFactory.startServer(true);
         try (server;
                 var nettyServer = new NettyServer(0, server)) {
             var port = nettyServer.port();

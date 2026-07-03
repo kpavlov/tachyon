@@ -32,8 +32,7 @@ e2e: package
 
 clean:
 	@echo "🧹 Cleaning..."
-	@mvn clean -q
-	@mvn clean -q -f examples/weather/pom.xml
+	@find . -type d -name target -exec rm -rf {} +
 
 format:
 	@echo "🎨 Formatting code..."

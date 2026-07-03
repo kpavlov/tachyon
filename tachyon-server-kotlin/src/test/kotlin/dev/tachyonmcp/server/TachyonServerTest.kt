@@ -10,6 +10,7 @@ import dev.tachyonmcp.server.domain.TextResourceContents
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.session.InMemorySessionLogRouter
 import dev.tachyonmcp.server.session.InMemorySessionStore
+import dev.tachyonmcp.server.session.SessionIdGenerator
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
@@ -66,10 +67,11 @@ internal class TachyonServerTest {
                 maxContentLength = 1_000_000
             }
             session {
-                stateless = false
+                enabled = true
                 sessionTtl = 15.seconds
                 sessionStore = InMemorySessionStore()
                 sessionLogRouter = InMemorySessionLogRouter()
+                sessionIdGenerator { it.headers().get("X-Tenant-Id") ?: "anon" }
             }
             pipelineCustomizer { }
             tool("ping", "Health check") { ToolResult.text("pong") }
@@ -126,8 +128,9 @@ internal class TachyonServerTest {
             }
 
             // session
-            config.session.stateless shouldBe false
+            config.session.enabled shouldBe true
             config.session.sessionTtl shouldBe 15.seconds.toJavaDuration()
+            config.session.sessionIdGenerator shouldNotBe SessionIdGenerator.DEFAULT
 
             // network
             with(config.network) {
@@ -173,6 +176,7 @@ internal class TachyonServerTest {
     fun `suspend tool with delay returns correct result`() {
         TachyonServer(port = 0) {
             name("delay-test")
+            session { enabled = true }
             tool("slow", "Delayed") {
                 delay(10.milliseconds)
                 ToolResult.text("delayed-ok")
@@ -193,6 +197,7 @@ internal class TachyonServerTest {
     fun `sync tool body compiles and works with suspend signature`() {
         TachyonServer(port = 0) {
             name("sync-test")
+            session { enabled = true }
             tool("ping", "Health check") { ToolResult.text("pong") }
         }.use { handle ->
             McpProbe(handle.port()).use { probe ->
@@ -208,6 +213,7 @@ internal class TachyonServerTest {
     fun `notification sent during suspend tool arrives on the request stream`() {
         TachyonServer(port = 0) {
             name("notify-test")
+            session { enabled = true }
             tool("notify", "Notifies mid-run") {
                 delay(10.milliseconds)
                 ctx.notifications().info("notify-test", "mid-run-note")

@@ -91,7 +91,7 @@ public class SessionManager implements AutoCloseable {
                 5,
                 5,
                 TimeUnit.SECONDS);
-        logger.info("Session janitor started (interval=5s, ttl={}ms)", ttlNanos / 1_000_000);
+        logger.debug("Session janitor started (interval=5s, ttl={}ms)", ttlNanos / 1_000_000);
     }
 
     public void close() {

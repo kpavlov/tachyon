@@ -35,8 +35,9 @@ var handle = TachyonServer.builder()
 |---|---|
 | `.info(cfg)` | name, version, description, title, websiteUrl, instructions |
 | `.capabilities(cfg)` | tools/resources/prompts/tasks/completions/logging |
-| `.session(cfg)` | stateless, sessionTtl, shutdownGracePeriod, SessionLogRouter, SessionStore |
+| `.session(cfg)` | enabled (off by default = stateless), sessionTtl, SessionLogRouter, SessionStore, SessionIdGenerator |
 | `.network(cfg)` | host, port, endpointPath, timeouts, CORS, maxContentLength, ioEngine |
+| `.runtime(cfg)` | shutdownGracePeriod |
 | `.name(s)` `.port(p)` | shorthands |
 | `.tool(handler)` | Sync/Async/ToolHandler |
 | `.resource(descriptor[, handler])` | static resource (no handler = external URI) |
@@ -141,12 +142,19 @@ Default `AUTO` → advertised only when registered. Force with `Mode.ON` / `Mode
 Native transports need optional runtime jars (`netty-transport-native-epoll` / `-kqueue` / `-io_uring` with `${os.detected.classifier}`); without them `AUTO` falls back to NIO. Explicit unavailable engine throws `UnsupportedOperationException`. See `docs/configuration.md`.
 
 ### Session `session(cfg -> ...)`
+
 | Method | Default |
 |---|---|
-| `.stateless(b)` | false |
+| `.enabled(b)` | false (stateless) |
 | `.sessionTtl(d)` | 30s |
-| `.shutdownGracePeriod(d)` | 5s (drain in-flight handlers on close; `ZERO` = interrupt now) |
+| `.sessionIdGenerator(g)` | `sess_<uuid8>` (derives id from initialize `HttpRequest`) |
 | `.sessionLogRouter(r)` / `.sessionStore(s)` | null (in-memory) |
+
+### Runtime `runtime(cfg -> ...)`
+
+| Method | Default |
+|---|---|
+| `.shutdownGracePeriod(d)` | 5s (drain in-flight handlers on close; `ZERO` = interrupt now) |
 
 ## JSON Schema
 

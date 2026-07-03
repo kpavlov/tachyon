@@ -61,7 +61,10 @@ class NotificationDeliveryTest {
 
     @BeforeEach
     void setUp() {
-        server = TachyonServer.builder().tool(PROGRESS_AND_LOG_TOOL).build();
+        server = TachyonServer.builder()
+                .session(s -> s.enabled(true))
+                .tool(PROGRESS_AND_LOG_TOOL)
+                .build();
         dispatcher = new McpDispatcher(server, server.executor());
         testConn = new CollectingConnection();
         Session session = server.createSession("sess_test");
