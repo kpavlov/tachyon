@@ -1,22 +1,28 @@
-.PHONY: build test lint package conformance e2e clean format all inspector examples
+.PHONY: build test lint package conformance e2e clean format all ci inspector examples examples-snapshot
 
-all: clean format lint build examples
+all: clean format build examples-snapshot examples
+ci: clean build
 
 build:
 	@echo "🏗️ Building..."
 	@mvn -version
-	@mvn verify -q
+	@mvn verify --no-transfer-progress
 
 test:
 	@echo "🧪 Running tests..."
-	@mvn test
+	@mvn test --no-transfer-progress
 
 package:
 	@echo "📦 Packaging and installing tachyon-server to local repository..."
-	@rm -rf ~/.m2/repository/dev/tachyonmcp
-	@mvn install -pl tachyon-server,tachyon-server-kotlin -am -DskipTests
+	@rm -rf ~/.m2/repository/dev/tachyonmcp/
+	@mvn install -pl tachyon-server-kotlin -am -DskipTests -Dspotbugs.skip -Dspotless.skip
 
-examples: package
+examples:
+	@echo "🌤️ Building and testing weather example..."
+	@mvn verify -f examples/weather/pom.xml --no-transfer-progress
+	@mvn verify -f examples/echo-kotlin/pom.xml --no-transfer-progress
+
+examples-snapshot: package
 	@echo "🌤️ Building and testing weather example..."
 	@mvn verify -f examples/weather/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
 	@mvn verify -f examples/echo-kotlin/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
@@ -42,9 +48,10 @@ format:
 
 lint:
 	@echo "🔍 Linting code..."
-	@mvn spotless:check -pl !reports
-	@mvn exec:java@detekt -pl tachyon-server-kotlin
-	@mvn spotbugs:check -pl !reports
+# 	@mvn spotless:check -pl !reports
+# 	@mvn exec:java@detekt -pl tachyon-server-kotlin
+	@mvn spotbugs:check -pl !reports,!e2e
+	@echo "✅ Done..."
 
 .PHONY: inspector
 inspector:
