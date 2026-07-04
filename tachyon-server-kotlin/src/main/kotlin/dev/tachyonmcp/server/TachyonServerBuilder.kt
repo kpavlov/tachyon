@@ -97,8 +97,7 @@ public class TachyonServerBuilder
                         ToolDescriptor
                             .builder(name)
                             .description(description)
-                            .inputSchema(inputSchema.toJsonNode())
-                            .outputSchema(outputSchema?.toJsonNode())
+                            .schemas(inputSchema, outputSchema)
                             .build(),
                         handler,
                     ),

@@ -38,8 +38,7 @@ public fun Server.registerTool(
     registerTool(configure = {
         name(name)
         description(description)
-        inputSchema(inputSchema.toJsonNode())
-        outputSchema(outputSchema?.toJsonNode())
+        schemas(inputSchema, outputSchema)
     }, block = block)
 
 @JvmSynthetic

@@ -41,6 +41,7 @@ import tools.jackson.databind.JsonNode;
 
 class ToolRegistryTest {
 
+    // language=json
     private static final JsonNode TEST_SCHEMA = parseJson("""
         {"type":"object","properties":{"message":{"type":"string"}},"required":["message"]}
         """);
@@ -66,6 +67,7 @@ class ToolRegistryTest {
         registry.register(new TestTool("minimal-tool", null, null));
 
         // full: all possible fields set
+        // language=json
         var outputSchema = parseJson("""
             {"type":"object","properties":{"result":{"type":"string"}}}
             """);
@@ -170,7 +172,7 @@ class ToolRegistryTest {
             var callHandler = handlers.get("tools/call");
             var params = Map.of("name", "echo", "arguments", Map.of("message", "hello"));
 
-            var ctx = DefaultMcpContext.create(Protocols.versions().get(0), server);
+            var ctx = DefaultMcpContext.create(Protocols.versions().getFirst(), server);
             ctx.setSession(session);
             var result = callHandler.handle(ctx, params);
             assertThat(result).isInstanceOf(CallToolResult.class);
@@ -541,7 +543,7 @@ class ToolRegistryTest {
             var session = server.createSession("s-async-thread");
             session.activate();
             var callHandler = handlers.get("tools/call");
-            var ctx = DefaultMcpContext.create(Protocols.versions().get(0), server);
+            var ctx = DefaultMcpContext.create(Protocols.versions().getFirst(), server);
             ctx.setSession(session);
             var params = Map.of("name", "async-thread", "arguments", Map.of());
             var stage = callHandler.handleAsync(ctx, params);
@@ -577,7 +579,7 @@ class ToolRegistryTest {
             var session = server.createSession("s-inv-arg");
             session.activate();
             var callHandler = handlers.get("tools/call");
-            var ctx = DefaultMcpContext.create(Protocols.versions().get(0), server);
+            var ctx = DefaultMcpContext.create(Protocols.versions().getFirst(), server);
             ctx.setSession(session);
             var params = Map.of("name", "invalid-arg-async", "arguments", Map.of());
             var result = callHandler.handle(ctx, params);
@@ -677,6 +679,77 @@ class ToolRegistryTest {
                     }
                 });
         assertThat(registry.get("valid-output")).isNotNull();
+    }
+
+    // endregion
+
+    // region: Structured value conversion for output validation
+
+    @Test
+    void shouldConvertPlainJavaMapEntriesBeforeOutputValidation() throws Exception {
+        // language=json
+        var outputSchema = parseJson("""
+            {"type":"object","properties":{"message":{"type":"string"},"count":{"type":"integer"}},"required":["message","count"]}
+            """);
+        var registryVal = new ToolRegistry(new dev.tachyonmcp.server.NetworkntJsonSchemaValidator());
+        var handlers = new HashMap<String, RpcMethodHandler>();
+        registryVal.registerHandlers(handlers);
+        var handler =
+                new AbstractSyncToolHandler(ToolDescriptor.builder("structured-out")
+                        .description("test")
+                        .outputSchema(outputSchema)
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext context, ToolArgs args) {
+                        // Map with plain Java values, not JsonNode
+                        return ToolResult.of(Map.of("message", "hello", "count", 42), "text fallback");
+                    }
+                };
+        registryVal.register(handler);
+
+        try (var server = TachyonServer.builder().build()) {
+            var session = server.createSession("s-struct-out");
+            session.activate();
+            var callHandler = handlers.get("tools/call");
+            var ctx = DefaultMcpContext.create(Protocols.versions().getFirst(), server);
+            ctx.setSession(session);
+            var params = Map.of("name", "structured-out", "arguments", Map.of());
+            var result = callHandler.handle(ctx, params);
+            assertThat(result).isInstanceOf(CallToolResult.class);
+            // structuredContent should contain both "message" and "count"
+            assertThat(((CallToolResult) result).structuredContent()).isNotNull();
+            assertThat(((CallToolResult) result).structuredContent()).containsKeys("message", "count");
+        }
+    }
+
+    @Test
+    void shouldConvertMixedJavaAndJsonNodeEntries() throws Exception {
+        var registryVal = new ToolRegistry(new dev.tachyonmcp.server.NetworkntJsonSchemaValidator());
+        var handlers = new HashMap<String, RpcMethodHandler>();
+        registryVal.registerHandlers(handlers);
+        var handler = new AbstractSyncToolHandler(
+                ToolDescriptor.builder("mixed-out").description("test").build()) {
+            @Override
+            public ToolResult handle(InteractionContext context, ToolArgs args) {
+                var jsonNodeVal = tools.jackson.databind.node.JsonNodeFactory.instance.stringNode("json-val");
+                // Mixed map: one JsonNode value, one plain String value
+                return ToolResult.of(Map.of("jsonField", jsonNodeVal, "plainField", "plain-val"), "fallback");
+            }
+        };
+        registryVal.register(handler);
+
+        try (var server = TachyonServer.builder().build()) {
+            var session = server.createSession("s-mixed");
+            session.activate();
+            var callHandler = handlers.get("tools/call");
+            var ctx = DefaultMcpContext.create(Protocols.versions().getFirst(), server);
+            ctx.setSession(session);
+            var params = Map.of("name", "mixed-out", "arguments", Map.of());
+            var result = callHandler.handle(ctx, params);
+            assertThat(result).isInstanceOf(CallToolResult.class);
+            assertThat(((CallToolResult) result).structuredContent()).isNotNull();
+            assertThat(((CallToolResult) result).structuredContent()).containsOnlyKeys("jsonField", "plainField");
+        }
     }
 
     // endregion

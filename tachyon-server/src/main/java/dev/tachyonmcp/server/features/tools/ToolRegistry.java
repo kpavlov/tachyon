@@ -373,8 +373,13 @@ public class ToolRegistry {
             if (structuredValue instanceof java.util.Map<?, ?> map) {
                 var contentNode = JsonNodeFactory.instance.objectNode();
                 for (var entry : map.entrySet()) {
-                    if (entry.getKey() instanceof String k && entry.getValue() instanceof JsonNode v) {
-                        contentNode.set(k, v);
+                    if (entry.getKey() instanceof String k) {
+                        var v = entry.getValue();
+                        if (v instanceof JsonNode jn) {
+                            contentNode.set(k, jn);
+                        } else if (v != null) {
+                            contentNode.set(k, ProtocolCodecUtil.parseJsonNode(JsonRpcCodec.writeValueAsString(v)));
+                        }
                     }
                 }
                 return contentNode;

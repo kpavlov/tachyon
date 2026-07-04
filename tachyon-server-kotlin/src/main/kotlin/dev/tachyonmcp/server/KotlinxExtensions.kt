@@ -8,6 +8,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
 
+private fun JsonObject.toJacksonNode(): JsonNode = toString().toJsonNode()
+
 /**
  * Registers a tool using a [JsonObject] input schema.
  * Requires kotlinx-serialization-json on the classpath.
@@ -23,8 +25,8 @@ public fun Server.registerTool(
     registerTool(
         name = name,
         description = description,
-        inputSchema = inputSchema.toString().toJsonNode(),
-        outputSchema = outputSchema?.toString()?.toJsonNode(),
+        inputSchema = inputSchema.toJacksonNode(),
+        outputSchema = outputSchema?.toJacksonNode(),
         block = block,
     )
 
@@ -42,8 +44,8 @@ public fun ServerBuilder.tool(
     this.tool(
         name = name,
         description = description,
-        inputSchema = inputSchema.toString().toJsonNode(),
-        outputSchema = outputSchema?.toString()?.toJsonNode(),
+        inputSchema = inputSchema.toJacksonNode(),
+        outputSchema = outputSchema?.toJacksonNode(),
         handler = handler,
     )
 
@@ -61,19 +63,19 @@ public fun TachyonServerBuilder.tool(
     this.tool(
         name = name,
         description = description,
-        inputSchema = inputSchema.toString().toJsonNode(),
-        outputSchema = outputSchema?.toString()?.toJsonNode(),
+        inputSchema = inputSchema.toJacksonNode(),
+        outputSchema = outputSchema?.toJacksonNode(),
         handler = handler,
     )
 
 /** Sets the input schema from a [JsonObject]. Requires kotlinx-serialization-json on the classpath. */
 public fun ToolDescriptorScope.inputSchema(json: JsonObject) {
-    inputSchema = json.toString().toJsonNode()
+    inputSchema = json.toJacksonNode()
 }
 
 /** Sets the output schema from a [JsonObject]. Requires kotlinx-serialization-json on the classpath. */
 public fun ToolDescriptorScope.outputSchema(json: JsonObject) {
-    outputSchema = json.toString().toJsonNode()
+    outputSchema = json.toJacksonNode()
 }
 
 /**
