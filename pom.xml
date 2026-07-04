@@ -100,7 +100,7 @@
             -Dio.netty.leakDetection.level=PARANOID
         </argLine>
         <kotlinx-coroutines.version>1.11.0</kotlinx-coroutines.version>
-        <kotlinx-serialization-json.version>1.8.1</kotlinx-serialization-json.version>
+        <kotlinx-serialization-json.version>1.11.0</kotlinx-serialization-json.version>
     </properties>
 
     <dependencyManagement>
