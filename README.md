@@ -13,7 +13,7 @@
 1. **MCP Spec Compliant** — All official conformance tests green on the current **2025-11-25** spec; tools, resources, prompts, tasks, elicitation, sampling, and extensions (SEP-1686, SEP-2133) in one artifact.
 2. **Your handlers outlive the spec** — MCP moves fast; Tachyon's stable domain types (`ToolHandler`, `ResourceHandler`, `PromptHandler`, Task support) absorb protocol changes in an internal mapper layer, so version bumps don't touch your code.
 3. **Write blocking code, get async runtime** — handlers run on Java 21 virtual threads off the Netty event loop; plain synchronous logic scales without thread pools, reactive chains, or `CompletableFuture` gymnastics. Coroutine-first Kotlin DSL included.
-4. **Serverless-ready** — one-line stateless mode (`.stateless(true)`) drops session state for AWS Lambda and friends; full session mode gives SSE resumability, Last-Event-ID replay, TTL + janitor.
+4. **Serverless-ready** — stateless by default, so each request is independent for AWS Lambda and friends; opt into full session mode (`.session(s -> s.enabled(true))`) for SSE resumability, Last-Event-ID replay, TTL + janitor, and a customizable session-id generator.
 5. **Production-grade transport** — Netty core with backpressure watermarks, graceful shutdown, DNS-rebinding protection, and auto-detected native transports (io_uring / epoll / kqueue) when you want the extra speed.
 
 **TL;DR**
@@ -57,7 +57,6 @@
                     return ToolResult.text("☀️ 22°C");
                 }
             })
-            .session(cfg -> cfg.stateless(true))
             .port(8080)
             .start();
     }
@@ -227,7 +226,7 @@ Handler interfaces (`ToolHandler`, `ResourceHandler`, `PromptHandler`) and descr
 ## FAQ
 
 ### Can I deploy to AWS Lambda?
-Yes. Use `.session(cfg -> cfg.stateless(true))` to skip session persistence. Each invocation processes one request independently.
+Yes. Servers are stateless by default, so each invocation processes one request independently. Enable sessions with `.session(cfg -> cfg.enabled(true))` when you need SSE resumability or replay.
 
 ### Does it support HTTP/2?
 Not yet. The current transport targets HTTP/1.1.

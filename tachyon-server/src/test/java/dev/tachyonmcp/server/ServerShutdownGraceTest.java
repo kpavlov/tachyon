@@ -7,7 +7,7 @@ package dev.tachyonmcp.server;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.config.SessionConfig;
+import dev.tachyonmcp.server.config.RuntimeConfig;
 import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolResult;
@@ -30,7 +30,7 @@ class ServerShutdownGraceTest {
 
     @Test
     void defaultGracePeriodIsFiveSeconds() {
-        assertThat(SessionConfig.DEFAULT.shutdownGracePeriod()).isEqualTo(Duration.ofSeconds(5));
+        assertThat(RuntimeConfig.DEFAULT.shutdownGracePeriod()).isEqualTo(Duration.ofSeconds(5));
     }
 
     @Test
@@ -52,7 +52,7 @@ class ServerShutdownGraceTest {
         var interrupted = new CountDownLatch(1);
 
         var server = TachyonServer.builder()
-                .session(s -> s.shutdownGracePeriod(Duration.ofMillis(400)))
+                .runtime(r -> r.shutdownGracePeriod(Duration.ofMillis(400)))
                 .tool(new AbstractSyncToolHandler("slow_probe") {
                     @Override
                     public ToolResult handle(InteractionContext context, ToolArgs args) {

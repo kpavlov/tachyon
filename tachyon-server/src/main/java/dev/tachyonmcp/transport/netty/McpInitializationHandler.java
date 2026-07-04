@@ -87,6 +87,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
         if (httpMethod == HttpMethod.POST) {
             var sessionId = req.headers().get(McpHeaderNames.MCP_SESSION_ID);
             if (sessionId == null) {
+                captureInitRequest(ctx, req, server);
                 handlePostWithoutSession(ctx, req, origin);
                 return;
             }
@@ -129,9 +130,9 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                         .execute(() -> sendResponseAndClose(
                                 ctx, HttpResponseStatus.BAD_REQUEST, "application/json", errorBytes, origin));
             }
-            case JsonRpcMessage.Request req
+            case JsonRpcMessage.Request<?> req
             when METHOD_INITIALIZE.equals(req.method()) -> handleInitialize(ctx, req.id(), req.params(), origin);
-            case JsonRpcMessage.Notification not -> {
+            case JsonRpcMessage.Notification<?> not -> {
                 ctx.executor().execute(() -> sendAccepted(ctx, origin));
                 CompletableFuture.runAsync(
                         () -> dispatcher.dispatchNotification(not.method(), not.params(), null), executor);

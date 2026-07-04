@@ -18,10 +18,13 @@ import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpVersion;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -49,6 +52,20 @@ public class McpDispatcher {
 
     private static final String METHOD_INITIALIZE = "initialize";
     private static final String METHOD_PING = "ping";
+
+    /**
+     * Interaction-context attribute key under which {@link dev.tachyonmcp.transport.netty.McpInitializationHandler} stashes a
+     * detached copy of the {@code initialize} HTTP request, so a custom
+     * {@link dev.tachyonmcp.server.session.SessionIdGenerator} can read its headers/URI.
+     */
+    public static final String ATTR_INIT_REQUEST = "init.request";
+
+    /**
+     * Placeholder request for programmatic dispatch with no channel (the default generator ignores it).
+     */
+    private static final HttpRequest EMPTY_INIT_REQUEST =
+            new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+
     public static final String NOTIFICATIONS_INITIALIZED = "notifications/initialized";
     private static final String NOTIFICATIONS_CANCELLED = "notifications/cancelled";
     private static final String NOTIFICATIONS_TASKS_STATUS = "notifications/tasks/status";
@@ -69,7 +86,7 @@ public class McpDispatcher {
     private DispatchContext dispatchContext(@Nullable MutableInteractionContext channelContext) {
         var channel = channelContext != null
                 ? channelContext
-                : Protocols.versions().get(0).createInteractionContext();
+                : Protocols.versions().getFirst().createInteractionContext();
         return new DefaultMcpContext(channel, server);
     }
 
@@ -114,7 +131,7 @@ public class McpDispatcher {
 
         if (METHOD_INITIALIZE.equals(method)) {
             if (sessionId == null) {
-                return dispatchInitializeAsync(id, params, dispatchContext(channelContext));
+                return dispatchInitializeAsync(id, params, dispatchContext(channelContext), channelContext);
             }
             var err = JsonRpcErrors.invalidRequest("Session already initialized");
             return CompletableFuture.completedFuture(errorResult(id, err.code(), err.message()));
@@ -206,7 +223,6 @@ public class McpDispatcher {
                             }
 
                             var watchdog = HandlerWatchdog.watch(method, id, startNs, SLOW_HANDLER_MS);
-
                             try {
                                 return OutboundSseStreamMessageRouter.withDispatchContext(
                                         session != null ? session.id() : null, outboundSseStream, () -> {
@@ -362,7 +378,8 @@ public class McpDispatcher {
         taskRegistry.updateStatusFromClientNotification(taskId, newStatus, statusMessage);
     }
 
-    private CompletableFuture<DispatchResult> dispatchInitializeAsync(Object id, Object rawParams, DispatchContext ic) {
+    private CompletableFuture<DispatchResult> dispatchInitializeAsync(
+            Object id, Object rawParams, DispatchContext ic, @Nullable MutableInteractionContext channelContext) {
         logger.debug("Client initialize: id={} stateless={}", id, server.isStateless());
         var handler = server.getHandler("initialize");
         if (handler == null) {
@@ -392,12 +409,12 @@ public class McpDispatcher {
                         return new DispatchResult.Response(encodeResponse(id, result), null);
                     });
         }
-        var sessionId = generateSessionId();
-        var session = server.createSession(sessionId);
-        ic.setSession(session);
         return CompletableFuture.supplyAsync(
                         () -> {
                             try {
+                                var sessionId = generateSessionId(channelContext);
+                                var session = server.createSession(sessionId);
+                                ic.setSession(session);
                                 return handler.handleAsync(ic, rawParams);
                             } catch (Exception e) {
                                 return CompletableFuture.failedFuture(e);
@@ -414,6 +431,7 @@ public class McpDispatcher {
                         logger.debug("Initialize handler error: {}", error.message());
                         return errorResult(id, error.code(), error.message());
                     }
+                    var sessionId = ic.session() != null ? ic.session().id() : null;
                     return new DispatchResult.Response(encodeResponse(id, result), sessionId);
                 });
     }
@@ -436,8 +454,10 @@ public class McpDispatcher {
         }
     }
 
-    private static String generateSessionId() {
-        return "sess_" + UUID.randomUUID().toString().substring(0, 8);
+    private String generateSessionId(@Nullable MutableInteractionContext channelContext) {
+        var request = channelContext != null ? channelContext.<HttpRequest>getAttribute(ATTR_INIT_REQUEST) : null;
+        var generator = server.sessionIdGenerator();
+        return generator.generate(request != null ? request : EMPTY_INIT_REQUEST);
     }
 
     private static boolean hasMetaKey(Object params, String key) {

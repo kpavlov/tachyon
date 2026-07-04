@@ -18,10 +18,6 @@
     <name>Tachyon MCP Server Kotlin</name>
     <description>Kotlin extension module for Tachyon MCP server</description>
 
-    <properties>
-        <spotbugs.skip>true</spotbugs.skip>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
@@ -60,7 +56,7 @@
         </dependency>
         <dependency>
             <groupId>org.awaitility</groupId>
-            <artifactId>awaitility</artifactId>
+            <artifactId>awaitility-kotlin</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -82,6 +78,7 @@
                 <configuration>
                     <javaParameters>true</javaParameters>
                     <jvmTarget>${java.version}</jvmTarget>
+                    <languageVersion>${kotlin-language.version}</languageVersion>
                     <args>
                         <arg>-Xexplicit-api=strict</arg>
                         <arg>-Werror</arg>
@@ -133,6 +130,7 @@
                             <blockSystemExit>true</blockSystemExit>
                             <mainClass>dev.detekt.cli.Main</mainClass>
                             <arguments>
+                                <argument>--build-upon-default-config</argument>
                                 <argument>--config</argument>
                                 <argument>${project.basedir}/detekt.yml</argument>
                                 <argument>--input</argument>
@@ -142,7 +140,7 @@
                                 <argument>--jvm-target</argument>
                                 <argument>${java.version}</argument>
                                 <argument>--language-version</argument>
-                                <argument>2.2</argument>
+                                <argument>${kotlin-language.version}</argument>
                                 <argument>--report</argument>
                                 <argument>html:${project.build.directory}/detekt/detekt.html</argument>
                                 <argument>--report</argument>
@@ -157,8 +155,10 @@
                             <goal>java</goal>
                         </goals>
                         <configuration>
+                            <blockSystemExit>true</blockSystemExit>
                             <mainClass>dev.detekt.cli.Main</mainClass>
                             <arguments>
+                                <argument>--build-upon-default-config</argument>
                                 <argument>--config</argument>
                                 <argument>${project.basedir}/detekt.yml</argument>
                                 <argument>--input</argument>
@@ -168,7 +168,7 @@
                                 <argument>--jvm-target</argument>
                                 <argument>${java.version}</argument>
                                 <argument>--language-version</argument>
-                                <argument>2.2</argument>
+                                <argument>${kotlin-language.version}</argument>
                                 <argument>--auto-correct</argument>
                             </arguments>
                             <includePluginDependencies>true</includePluginDependencies>

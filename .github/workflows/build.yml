@@ -41,9 +41,7 @@ jobs:
           cache: maven
 
       - name: Build and Verify
-        run: |
-          mvn verify
-          make examples
+        run: make ci
 
       - name: Publish test results
         uses: mikepenz/action-junit-report@v6

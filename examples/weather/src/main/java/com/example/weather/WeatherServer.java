@@ -38,6 +38,7 @@ public final class WeatherServer {
                         .websiteUrl("http://localhost:8080/mcp")
                         .instructions("Test instructions")
                         .version("1.0"))
+                .session(s->s.stateless(true))
                 .tool(new GetWeatherTool())
                 .resource(
                         ResourceDescriptor.of(
@@ -56,7 +57,6 @@ public final class WeatherServer {
                 .prompt(
                         PromptDescriptor.of("rewrite-forecast", "Rewrites a weather forecast in a given style"),
                     WeatherServer::handleRewriteForecast)
-                .session(s -> s.stateless(true))
                 .port(port)
                 .start();
 

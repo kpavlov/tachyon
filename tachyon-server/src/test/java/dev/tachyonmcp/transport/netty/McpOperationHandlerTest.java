@@ -26,7 +26,7 @@ class McpOperationHandlerTest {
 
     @BeforeEach
     void setUp() {
-        server = TachyonServer.builder().build();
+        server = TachyonServer.builder().session(s -> s.enabled(true)).build();
         channel = new EmbeddedChannel(
                 new McpOperationHandler(server, new McpDispatcher(server, Runnable::run), Runnable::run));
     }

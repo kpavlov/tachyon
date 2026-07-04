@@ -5,6 +5,7 @@
 import dev.tachyonmcp.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.server.config.Mode;
 import dev.tachyonmcp.server.config.NetworkConfig;
+import dev.tachyonmcp.server.config.RuntimeConfig;
 import dev.tachyonmcp.server.config.SessionConfig;
 import dev.tachyonmcp.transport.netty.NettyIoEngine;
 import java.time.Duration;
@@ -65,9 +66,15 @@ final class ConfigReference {
     /** Session — connection lifecycle. */
     static SessionConfig session() {
         return SessionConfig.builder()
-                .stateless(false)
+                .enabled(true) // stateless by default; enable server-side sessions explicitly
                 .sessionTtl(Duration.ofMinutes(10))
-                .shutdownGracePeriod(Duration.ofSeconds(5))
+                .build();
+    }
+
+    /** Runtime — handler-execution lifecycle. */
+    static RuntimeConfig runtime() {
+        return RuntimeConfig.builder()
+                .shutdownGracePeriod(Duration.ofSeconds(5)) // drain in-flight handlers on close; ZERO = interrupt now
                 .build();
     }
 }

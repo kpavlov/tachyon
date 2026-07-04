@@ -12,7 +12,10 @@ import dev.tachyonmcp.server.promptMessagesOf
 import dev.tachyonmcp.transport.netty.NettyIoEngine
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 fun createServer(port: Int = 0): ServerHandle = TachyonServer(port = port) {
     info {
         name = "demo-server"
@@ -25,9 +28,12 @@ fun createServer(port: Int = 0): ServerHandle = TachyonServer(port = port) {
         prompts(listChanged = true)
     }
     session {
-        stateless = false
+        enabled = true
         sessionTtl = 5.minutes
-        shutdownGracePeriod = 5.seconds
+        sessionIdGenerator = { "sid_" + Uuid.random().toHexString() }
+    }
+    runtime {
+        shutdownGracePeriod = 7.seconds
     }
     network {
         allowedOrigins.add("*")
@@ -58,7 +64,11 @@ fun addUserTemplate(handle: ServerHandle) {
             "application/json",
         ) { ctx, uri, params ->
             val userId = params["userId"]
-            TextResourceContents.of(uri, "application/json", """{"userId":"$userId","name":"User"}""")
+            TextResourceContents.of(
+                uri,
+                "application/json",
+                """{"userId":"$userId","name":"User"}"""
+            )
         },
     )
 }

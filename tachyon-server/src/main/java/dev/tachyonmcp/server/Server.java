@@ -87,7 +87,12 @@ public class Server implements Closeable {
 
     /** Returns {@code true} when running in stateless mode (no session persistence). */
     public boolean isStateless() {
-        return config.session().stateless();
+        return !config.session().enabled();
+    }
+
+    /** Returns the configured session id generator (defaults to {@link SessionIdGenerator#DEFAULT}). */
+    public SessionIdGenerator sessionIdGenerator() {
+        return config.session().sessionIdGenerator();
     }
 
     /** Returns the executor used for handler dispatch. */
@@ -195,7 +200,7 @@ public class Server implements Closeable {
         registerDefaults();
         bootstrapExtensions();
         setupChangeListeners(config);
-        if (!config.session().stateless()) {
+        if (config.session().enabled()) {
             sessionManager.startJanitor(config.session().sessionTtl());
         }
     }
@@ -588,7 +593,7 @@ public class Server implements Closeable {
             if (ownsExecutor) {
                 executor.shutdown();
                 try {
-                    var grace = config.session().shutdownGracePeriod();
+                    var grace = config.runtime().shutdownGracePeriod();
                     if (!executor.awaitTermination(grace.toMillis(), TimeUnit.MILLISECONDS)) {
                         executor.shutdownNow();
                     }

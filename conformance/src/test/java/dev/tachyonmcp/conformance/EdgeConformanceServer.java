@@ -10,7 +10,7 @@ import dev.tachyonmcp.server.TachyonServer;
 class EdgeConformanceServer extends AbstractConformanceServer {
 
     @Override
-    protected Server createServer() {
-        return TachyonServer.builder().network(n -> n.host("localhost")).build();
+    protected Server createServer(boolean isStateful) {
+        return TachyonServer.builder().session(s -> s.enabled(isStateful)).build();
     }
 }

@@ -123,15 +123,25 @@ network { ioEngine = NettyIoEngine.EPOLL }
 
 ## Session
 
-Configured via `session { }` / `SessionConfig.Builder`.
+Configured via `session { }` / `SessionConfig.Builder`. Sessions are off by default
+(stateless server). All other session options require `enabled = true` — configuring
+them on a stateless server fails at construction.
 
 | Option | Default | Description |
 |---|---|---|
-| `stateless` | `false` | No session creation, no TTL tracking |
+| `enabled` | `false` | Server-side sessions are off by default (stateless). Set `true` to create sessions with TTL tracking |
 | `sessionTtl` | `30s` | Idle sessions are evicted after this duration |
-| `shutdownGracePeriod` | `5s` | Time in-flight handlers get to drain on `close()`; `ZERO` interrupts immediately |
 | `sessionLogRouter` | in-memory | Custom event log router |
 | `sessionStore` | in-memory | Custom session store |
+| `sessionIdGenerator` | `sess_<uuid>` | Custom hook for deriving session ids from the initialize `HttpRequest` (headers/URI) |
+
+## Runtime
+
+Configured via `runtime { }` / `RuntimeConfig.Builder`.
+
+| Option | Default | Description |
+|---|---|---|
+| `shutdownGracePeriod` | `5s` | Time in-flight handlers get to drain on `close()`; `ZERO` interrupts immediately |
 
 ## Identity and capabilities
 

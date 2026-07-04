@@ -66,6 +66,9 @@ abstract class AbstractMcpE2eTest {
             server.close();
         }
         ServerBuilder serverBuilder = TachyonServer.builder();
+        // The E2E suite exercises the stateful session flow; enable sessions by default.
+        // Individual tests may override via their configurer.
+        serverBuilder.session(s -> s.enabled(true));
         configurer.accept(serverBuilder);
         this.server = serverBuilder.build();
         this.nettyServer = new NettyServer(0, server);

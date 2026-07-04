@@ -42,8 +42,7 @@ jobs:
 
       - name: Verify examples
         working-directory: examples/${{ matrix.example }}
-#        run: mvn verify --no-transfer-progress
-        run: mvn verify --no-transfer-progress -Dtachyon-server.version=1.0.0-beta.3
+        run: mvn verify --no-transfer-progress
 
       - name: Publish test results
         uses: mikepenz/action-junit-report@v6

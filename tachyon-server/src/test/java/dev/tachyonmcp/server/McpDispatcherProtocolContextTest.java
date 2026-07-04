@@ -69,7 +69,7 @@ class McpDispatcherProtocolContextTest {
 
     @Test
     void dispatchWrapsChannelContext() throws Exception {
-        try (var server = TachyonServer.builder().build()) {
+        try (var server = TachyonServer.builder().session(s -> s.enabled(true)).build()) {
             var protocol = new RecordingProtocol();
             var session = server.createSession("sess_p1");
             session.activate();
@@ -126,8 +126,7 @@ class McpDispatcherProtocolContextTest {
 
     @Test
     void statelessDispatchHasNoSession() throws Exception {
-        try (var server =
-                TachyonServer.builder().session(s -> s.stateless(true)).build()) {
+        try (var server = TachyonServer.builder().build()) {
             var handlerContext = new AtomicReference<DispatchContext>();
             server.registerHandler("test/capture", new RpcMethodHandler() {
                 @Override

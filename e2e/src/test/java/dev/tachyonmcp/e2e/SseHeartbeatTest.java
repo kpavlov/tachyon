@@ -41,7 +41,7 @@ class SseHeartbeatTest {
 
     @BeforeAll
     void startServer() {
-        server = TachyonServer.builder().build();
+        server = TachyonServer.builder().session(s -> s.enabled(true)).build();
         var config = new NettyServerConfig(
                 "127.0.0.1",
                 0,

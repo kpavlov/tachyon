@@ -2,6 +2,7 @@
 
 package dev.tachyonmcp.server
 
+import dev.tachyonmcp.server.config.NetworkConfig
 import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.ResourceContents
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
@@ -55,6 +56,13 @@ public class TachyonServerBuilder
             return this
         }
 
+        public inline fun runtime(
+            crossinline configure: (@TachyonDsl RuntimeScope).() -> Unit,
+        ): TachyonServerBuilder {
+            delegate.runtime { RuntimeScope().apply(configure).applyTo(it) }
+            return this
+        }
+
         public fun tool(
             name: String,
             description: String? = null,
@@ -104,20 +112,24 @@ public class TachyonServerBuilder
             customizer: (@TachyonDsl ChannelPipeline).() -> Unit,
         ): TachyonServerBuilder = this.also { delegate.pipelineCustomizer { it.customizer() } }
 
-        @PublishedApi internal fun applyPort(port: Int?): TachyonServerBuilder =
+        @PublishedApi
+        internal fun applyPort(port: Int?): TachyonServerBuilder =
             this.also {
                 if (port != null) {
                     delegate.port(port)
                 } else if (!networkPortExplicitlySet) {
-                    delegate.port(8080)
+                    delegate.port(NetworkConfig.DEFAULT.port())
                 }
             }
 
-        @PublishedApi internal fun start(): ServerHandle = delegate.start()
+        @PublishedApi
+        internal fun start(): ServerHandle = delegate.start()
 
-        @PublishedApi internal fun startAsync(): CompletableFuture<ServerHandle> =
+        @PublishedApi
+        internal fun startAsync(): CompletableFuture<ServerHandle> =
             delegate
                 .startAsync()
 
-        @PublishedApi internal fun build(): Server = delegate.build()
+        @PublishedApi
+        internal fun build(): Server = delegate.build()
     }
