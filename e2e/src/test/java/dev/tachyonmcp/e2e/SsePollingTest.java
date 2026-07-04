@@ -7,6 +7,7 @@ package dev.tachyonmcp.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -30,6 +31,7 @@ class SsePollingTest extends AbstractMcpE2eTest {
         var sessionId = initializeSession();
         var raw = readRawSse(sessionId, 1024, 2000);
         assertThat(raw).contains("retry: 3000");
+        assertThat(raw).contains("X-Accel-Buffering: no");
     }
 
     @Test
@@ -95,7 +97,7 @@ class SsePollingTest extends AbstractMcpE2eTest {
         }
     }
 
-    /** Reads raw SSE bytes up to {@code bufSize} bytes or until {@code timeoutMs}. */
+    /** Reads raw SSE bytes until {@code timeoutMs}. */
     private String readRawSse(String sessionId, int bufSize, int timeoutMs) throws Exception {
         try (var socket = new Socket("localhost", port)) {
             var req = ("GET /mcp HTTP/1.1\r\n"
@@ -106,20 +108,23 @@ class SsePollingTest extends AbstractMcpE2eTest {
                     .getBytes(StandardCharsets.UTF_8);
             socket.getOutputStream().write(req);
             socket.getOutputStream().flush();
+            socket.setSoTimeout(50);
 
+            var sb = new StringBuilder();
             var buf = new byte[bufSize];
-            var total = 0;
             var deadline = System.currentTimeMillis() + timeoutMs;
-            while (total < buf.length && System.currentTimeMillis() < deadline) {
-                if (socket.getInputStream().available() > 0) {
-                    var n = socket.getInputStream().read(buf, total, buf.length - total);
-                    if (n > 0) total += n;
-                } else {
-                    Thread.sleep(5);
+            while (System.currentTimeMillis() < deadline) {
+                try {
+                    var n = socket.getInputStream().read(buf);
+                    if (n < 0) break;
+                    if (n > 0) sb.append(new String(buf, 0, n, StandardCharsets.UTF_8));
+                } catch (SocketTimeoutException e) {
+                    // No data this poll; keep reading until the deadline.
                 }
             }
-            assertThat(total).isGreaterThan(0);
-            return new String(buf, 0, total, StandardCharsets.UTF_8);
+            var raw = sb.toString();
+            assertThat(raw).as("must have received data").isNotEmpty();
+            return raw;
         }
     }
 

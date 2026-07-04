@@ -8,6 +8,7 @@ import static dev.tachyonmcp.transport.netty.sse.SseManager.SSE_RETRY_DELAY_MS;
 
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.OutboundSseStream;
+import dev.tachyonmcp.transport.netty.http.HttpHelpers;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
@@ -88,14 +89,7 @@ public final class PostSseStream implements OutboundSseStream {
         started = true;
 
         var response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        response.headers()
-                .set(HttpHeaderNames.CONTENT_TYPE, "text/event-stream")
-                .set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED)
-                .set(HttpHeaderNames.CACHE_CONTROL, "no-cache")
-                .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-        if (origin != null) {
-            response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
-        }
+        HttpHelpers.setSseStreamHeaders(response, origin);
         channel.write(response);
         channel.write(
                 new DefaultHttpContent(ByteBufUtil.writeUtf8(channel.alloc(), "retry: " + SSE_RETRY_DELAY_MS + "\n")));
