@@ -2,12 +2,12 @@
  * Copyright (c) 2026 Konstantin Pavlov.
  */
 
-import dev.tachyonmcp.server.config.CapabilitiesConfig;
-import dev.tachyonmcp.server.config.Mode;
-import dev.tachyonmcp.server.config.NetworkConfig;
-import dev.tachyonmcp.server.config.RuntimeConfig;
-import dev.tachyonmcp.server.config.SessionConfig;
+import dev.tachyonmcp.server.config.*;
+import dev.tachyonmcp.server.session.InMemorySessionLogRouter;
+import dev.tachyonmcp.server.session.InMemorySessionStore;
+import dev.tachyonmcp.server.session.SessionIdGenerator;
 import dev.tachyonmcp.transport.netty.NettyIoEngine;
+
 import java.time.Duration;
 
 /**
@@ -16,65 +16,78 @@ import java.time.Duration;
  */
 final class ConfigReference {
 
-    /** Capabilities — which MCP features to advertise. */
+    /**
+     * Capabilities — which MCP features to advertise.
+     */
     static CapabilitiesConfig capabilities() {
         return CapabilitiesConfig.builder()
-                .toolsMode(Mode.AUTO) // ON when tools registered
-                .toolsListChanged(false)
-                .resourcesMode(Mode.AUTO) // ON when resources registered
-                .resourcesSubscribe(false)
-                .resourcesListChanged(false)
-                .promptsMode(Mode.AUTO) // ON when prompts registered
-                .promptsListChanged(false)
-                .tasksList(false)
-                .tasksCancel(false)
-                .tasksRequests(false)
-                .completions(false)
-                .logging(false)
-                .build();
+            .toolsMode(Mode.AUTO) // ON when tools registered
+            .toolsListChanged(false)
+            .resourcesMode(Mode.AUTO) // ON when resources registered
+            .resourcesSubscribe(false)
+            .resourcesListChanged(false)
+            .promptsMode(Mode.AUTO) // ON when prompts registered
+            .promptsListChanged(false)
+            .tasksList(false)
+            .tasksCancel(false)
+            .tasksRequests(false)
+            .completions(false)
+            .logging(false)
+            .build();
     }
 
-    /** Convenience defaults. */
+    /**
+     * Convenience defaults.
+     */
     static CapabilitiesConfig convenienceDefaults() {
         return CapabilitiesConfig.builder()
-                .tools(true) // Mode.ON, listChanged=true
-                .resources(true, true) // Mode.ON, subscribe=true, listChanged=true
-                .prompts() // Mode.ON, listChanged=false
-                .tasks() // list=true, cancel=false, requests=false
-                .completions() // true
-                .logging() // true
-                .build();
+            .tools(true) // Mode.ON, listChanged=true
+            .resources(true, true) // Mode.ON, subscribe=true, listChanged=true
+            .prompts() // Mode.ON, listChanged=false
+            .tasks() // list=true, cancel=false, requests=false
+            .completions() // true
+            .logging() // true
+            .build();
     }
 
-    /** Network — binding and transport config. */
+    /**
+     * Network — binding and transport config.
+     */
     static NetworkConfig network() {
         return NetworkConfig.builder()
-                .host("127.0.0.1")
-                .port(8080)
-                .endpointPath("/mcp")
-                .readerIdleTimeout(Duration.ofSeconds(30))
-                .writerIdleTimeout(Duration.ofMinutes(2))
-                .maxContentLength(65536) // 64KB
-                .allowedOrigins("https://app.example.com")
-                .allowNullOrigin(false)
-                .allowPrivateNetworks(true)
-                .allowedHeaders("X-Custom-Header")
-                .ioEngine(NettyIoEngine.AUTO) // io_uring > epoll > kqueue > NIO; native jars optional
-                .build();
+            .host("127.0.0.1")
+            .port(8080)
+            .endpointPath("/mcp")
+            .readerIdleTimeout(Duration.ofSeconds(30))
+            .writerIdleTimeout(Duration.ofMinutes(2))
+            .maxContentLength(65536) // 64KB
+            .allowedOrigins("https://app.example.com")
+            .allowNullOrigin(false)
+            .allowPrivateNetworks(true)
+            .allowedHeaders("X-Custom-Header")
+            .ioEngine(NettyIoEngine.AUTO) // io_uring > epoll > kqueue > NIO; native jars optional
+            .build();
     }
 
-    /** Session — connection lifecycle. */
+    /**
+     * Session — connection lifecycle.
+     */
     static SessionConfig session() {
         return SessionConfig.builder()
-                .enabled(true) // stateless by default; enable server-side sessions explicitly
-                .sessionTtl(Duration.ofMinutes(10))
-                .build();
+            .enabled(true) // stateless by default; enable server-side sessions explicitly
+            .sessionIdGenerator(SessionIdGenerator.DEFAULT)
+            .sessionLogRouter(new InMemorySessionLogRouter())
+            .sessionStore(new InMemorySessionStore())
+            .sessionTtl(Duration.ofMinutes(10))
+            .build();
     }
 
-    /** Runtime — handler-execution lifecycle. */
+    /**
+     * Runtime — handler-execution lifecycle.
+     */
     static RuntimeConfig runtime() {
         return RuntimeConfig.builder()
-                .shutdownGracePeriod(Duration.ofSeconds(5)) // drain in-flight handlers on close; ZERO = interrupt now
-                .build();
+            .shutdownGracePeriod(Duration.ofSeconds(5)) // drain in-flight handlers on close; ZERO = interrupt now
+            .build();
     }
 }

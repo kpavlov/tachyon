@@ -67,6 +67,7 @@ public class TachyonServerBuilder
             name: String,
             description: String? = null,
             inputSchema: JsonNode? = null,
+            outputSchema: JsonNode? = null,
             handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
             this.also {
@@ -76,6 +77,28 @@ public class TachyonServerBuilder
                             .builder(name)
                             .description(description)
                             .inputSchema(inputSchema)
+                            .outputSchema(outputSchema)
+                            .build(),
+                        handler,
+                    ),
+                )
+            }
+
+        public fun tool(
+            name: String,
+            description: String? = null,
+            inputSchema: String,
+            outputSchema: String? = null,
+            handler: suspend ToolScope.() -> ToolResult,
+        ): TachyonServerBuilder =
+            this.also {
+                delegate.tool(
+                    asyncHandler(
+                        ToolDescriptor
+                            .builder(name)
+                            .description(description)
+                            .inputSchema(inputSchema.toJsonNode())
+                            .outputSchema(outputSchema?.toJsonNode())
                             .build(),
                         handler,
                     ),

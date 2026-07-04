@@ -41,6 +41,12 @@ public class ToolRegistry {
 
     private static final int DEFAULT_PAGE_SIZE = 50;
 
+    /**
+     * Maximum description length before a warning is logged. MCP clients may truncate
+     * descriptions beyond this length.
+     */
+    public static final int MAX_DESCRIPTION_LENGTH = 2048;
+
     /** Creates a tool registry with the given schema validator. */
     public ToolRegistry(JsonSchemaValidator validator) {
         this.validator = validator;
@@ -63,8 +69,34 @@ public class ToolRegistry {
         Objects.requireNonNull(descriptor, "ToolDescriptor must not be null");
         var name = descriptor.name();
         validateName(name);
+        validateSchemaRoot("inputSchema", name, descriptor.inputSchema());
+        validateSchemaRoot("outputSchema", name, descriptor.outputSchema());
+        var desc = descriptor.description();
+        if (desc != null && desc.length() > MAX_DESCRIPTION_LENGTH) {
+            logger.warn(
+                    "Tool '{}' description exceeds {} characters ({}), may be truncated by clients",
+                    name,
+                    MAX_DESCRIPTION_LENGTH,
+                    desc.length());
+        }
         handlers.put(name, handler);
         fireOnChange();
+    }
+
+    private static void validateSchemaRoot(String schemaKind, String toolName, @Nullable JsonNode schema) {
+        if (schema == null) return;
+        final String detail;
+        if (!schema.isObject()) {
+            detail = "got: " + schema.getNodeType();
+        } else if (!schema.has("type")) {
+            detail = "missing \"type\"";
+        } else if (!"object".equals(schema.get("type").asString())) {
+            detail = "got: " + schema.get("type");
+        } else {
+            return;
+        }
+        throw new IllegalArgumentException(
+                "Tool '" + toolName + "' " + schemaKind + " root must declare \"type\": \"object\", " + detail);
     }
 
     static void validateName(String name) {
@@ -205,7 +237,7 @@ public class ToolRegistry {
         }
 
         @Override
-        public Object handle(DispatchContext context, Object params) throws Exception {
+        public Object handle(DispatchContext context, Object params) {
             return handleAsync(context, params).toCompletableFuture().join();
         }
 
@@ -252,7 +284,7 @@ public class ToolRegistry {
                         return context.responseMapper().callToolResult(toolResult);
                     })
                     .exceptionally(e -> {
-                        var cause = CompletionException.class.isInstance(e) && e.getCause() != null ? e.getCause() : e;
+                        var cause = e instanceof CompletionException && e.getCause() != null ? e.getCause() : e;
                         if (cause instanceof InvalidArgumentException ia) {
                             return invalidRequest("invalid argument '" + ia.argName() + "': " + ia.getMessage());
                         }
@@ -326,17 +358,28 @@ public class ToolRegistry {
             if (schema == null) return;
             var inner = result instanceof ToolResult.WithMeta wm ? wm.inner() : result;
             if (!(inner instanceof ToolResult.Success s)) return;
-            if (!(s.structuredValue() instanceof java.util.Map<?, ?> map)) return;
-            var contentNode = JsonNodeFactory.instance.objectNode();
-            for (var entry : map.entrySet()) {
-                if (entry.getKey() instanceof String k && entry.getValue() instanceof JsonNode v) {
-                    contentNode.set(k, v);
-                }
-            }
+            var contentNode = structuredValueAsObjectNode(s.structuredValue());
+            if (contentNode == null) return;
             var errors = validator.validate(schema, contentNode);
             if (!errors.isEmpty()) {
                 logger.debug("Tool output failed schema validation (advisory only): {}", joinMessages(errors));
             }
+        }
+
+        private static @Nullable JsonNode structuredValueAsObjectNode(@Nullable Object structuredValue) {
+            if (structuredValue instanceof JsonNode node) {
+                return node.isObject() ? node : null;
+            }
+            if (structuredValue instanceof java.util.Map<?, ?> map) {
+                var contentNode = JsonNodeFactory.instance.objectNode();
+                for (var entry : map.entrySet()) {
+                    if (entry.getKey() instanceof String k && entry.getValue() instanceof JsonNode v) {
+                        contentNode.set(k, v);
+                    }
+                }
+                return contentNode;
+            }
+            return null;
         }
 
         private static String joinMessages(List<SchemaValidationError> errors) {

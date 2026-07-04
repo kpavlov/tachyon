@@ -20,6 +20,7 @@ public fun ServerBuilder.tool(
     name: String,
     description: String? = null,
     inputSchema: JsonNode? = null,
+    outputSchema: JsonNode? = null,
     handler: suspend ToolScope.() -> ToolResult,
 ): ServerBuilder =
     tool(
@@ -28,6 +29,26 @@ public fun ServerBuilder.tool(
                 .builder(name)
                 .description(description)
                 .inputSchema(inputSchema)
+                .outputSchema(outputSchema)
+                .build(),
+            handler,
+        ),
+    )
+
+public fun ServerBuilder.tool(
+    name: String,
+    description: String? = null,
+    inputSchema: String,
+    outputSchema: String? = null,
+    handler: suspend ToolScope.() -> ToolResult,
+): ServerBuilder =
+    tool(
+        asyncHandler(
+            ToolDescriptor
+                .builder(name)
+                .description(description)
+                .inputSchema(inputSchema.toJsonNode())
+                .outputSchema(outputSchema?.toJsonNode())
                 .build(),
             handler,
         ),

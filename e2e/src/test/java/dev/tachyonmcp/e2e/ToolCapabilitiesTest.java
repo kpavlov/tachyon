@@ -207,6 +207,29 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
         }
     }
 
+    // region: Structured content in tools/call
+
+    @Test
+    void shouldReturnStructuredContentAndTextFallback() throws Exception {
+        startServer(it -> it.tool(new StructuredToolHandler()));
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+            var response = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"structured","arguments":{"message":"hi"}}}
+                """);
+
+            assertThat(response.statusCode()).isEqualTo(200);
+            assertThatJson(response.body()).inPath("$.result.content[0].text").isEqualTo("Echo: hi");
+            assertThatJson(response.body())
+                    .inPath("$.result.structuredContent")
+                    .isObject()
+                    .containsKey("echo");
+        }
+    }
+
+    // endregion
+
     @Test
     void shouldRegisterWithFullDescriptor() throws Exception {
         var annotations = ToolAnnotations.of(null, true, false, null, null);
@@ -343,6 +366,30 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
         @Override
         public ToolResult handle(InteractionContext context, ToolArgs arguments) {
             return ToolResult.text("ok");
+        }
+    }
+
+    private static class StructuredToolHandler implements SyncToolHandler {
+        @Override
+        public String name() {
+            return "structured";
+        }
+
+        @Override
+        public String description() {
+            return "Returns structured content";
+        }
+
+        @Override
+        public JsonNode inputSchema() {
+            return INPUT_SCHEMA;
+        }
+
+        @Override
+        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
+            var msg = arguments.string("message");
+            var echo = JsonNodeFactory.instance.objectNode().put("echo", msg);
+            return ToolResult.of(echo, "Echo: " + msg);
         }
     }
 

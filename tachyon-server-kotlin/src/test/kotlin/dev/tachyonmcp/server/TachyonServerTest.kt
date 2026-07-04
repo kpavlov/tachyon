@@ -194,6 +194,45 @@ internal class TachyonServerTest {
     }
 
     @Test
+    fun `tool with outputSchema appears in tools list`() {
+        val schema = """{"type":"object"}"""
+        val outputSchema = """{"type":"object","properties":{"result":{"type":"string"}}}"""
+        TachyonServer(port = 0) {
+            name("output-test")
+            session { enabled = true }
+            tool(
+                "with-output",
+                "Has output schema",
+                inputSchema = schema,
+                outputSchema = outputSchema,
+            ) {
+                ToolResult.text("done")
+            }
+        }.use { handle ->
+            McpProbe(handle.port()).use { probe ->
+                probe.initialize()
+                val response = probe.request(2, "tools/list")
+                response.body() shouldContain "with-output"
+                response.body() shouldContain "outputSchema"
+            }
+        }
+    }
+
+    @Test
+    fun `tool with string overload schema`() {
+        val schema = """{"type":"object"}"""
+        TachyonServer(port = 0) {
+            name("string-schema-test")
+            session { enabled = true }
+            tool("string-schema", inputSchema = schema) {
+                ToolResult.text("ok")
+            }
+        }.use { handle ->
+            handle.server().getTool("string-schema") shouldNotBe null
+        }
+    }
+
+    @Test
     fun `sync tool body compiles and works with suspend signature`() {
         TachyonServer(port = 0) {
             name("sync-test")

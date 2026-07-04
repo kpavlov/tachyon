@@ -597,6 +597,90 @@ class ToolRegistryTest {
         assertThat(callCount).hasValue(1);
     }
 
+    // region: Schema root check
+
+    @Test
+    void shouldAcceptNullInputSchema() {
+        registry.register(new TestTool("null-input", null, null));
+        assertThat(registry.get("null-input")).isNotNull();
+    }
+
+    @Test
+    void shouldAcceptValidInputSchemaWithTypeObject() {
+        registry.register(new TestTool("valid-input", null, TEST_SCHEMA));
+        assertThat(registry.get("valid-input")).isNotNull();
+    }
+
+    @Test
+    void shouldRejectInputSchemaWithWrongRootType() {
+        var schema = parseJson("""
+            {"type":"string"}
+            """);
+        assertThatThrownBy(() -> registry.register(new TestTool("bad", null, schema)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("inputSchema")
+                .hasMessageContaining("\"type\": \"object\"");
+    }
+
+    @Test
+    void shouldRejectInputSchemaWithoutType() {
+        var schema = parseJson("""
+            {"properties":{}}
+            """);
+        assertThatThrownBy(() -> registry.register(new TestTool("no-type", null, schema)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("inputSchema")
+                .hasMessageContaining("\"type\": \"object\"")
+                .hasMessageContaining("missing \"type\"");
+    }
+
+    @Test
+    void shouldRejectInputSchemaThatIsNotAnObject() {
+        var schema = parseJson("\"just a string\"");
+        assertThatThrownBy(() -> registry.register(new TestTool("not-obj", null, schema)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("inputSchema")
+                .hasMessageContaining("\"type\": \"object\"");
+    }
+
+    @Test
+    void shouldRejectOutputSchemaWithWrongRootType() {
+        var outputSchema = parseJson("""
+            {"type":"string"}
+            """);
+        assertThatThrownBy(() -> registry.register(
+                        new AbstractSyncToolHandler(ToolDescriptor.builder("bad-output")
+                                .outputSchema(outputSchema)
+                                .build()) {
+                            @Override
+                            public ToolResult handle(InteractionContext context, ToolArgs args) {
+                                return ToolResult.text("x");
+                            }
+                        }))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("outputSchema")
+                .hasMessageContaining("\"type\": \"object\"");
+    }
+
+    @Test
+    void shouldAcceptValidOutputSchema() {
+        var outputSchema = parseJson("""
+            {"type":"object","properties":{"result":{"type":"string"}}}
+            """);
+        registry.register(
+                new AbstractSyncToolHandler(ToolDescriptor.builder("valid-output")
+                        .outputSchema(outputSchema)
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext context, ToolArgs args) {
+                        return ToolResult.text("ok");
+                    }
+                });
+        assertThat(registry.get("valid-output")).isNotNull();
+    }
+
+    // endregion
+
     private static class TestTool extends AbstractSyncToolHandler {
 
         TestTool(String name, @Nullable String description, @Nullable JsonNode schema) {

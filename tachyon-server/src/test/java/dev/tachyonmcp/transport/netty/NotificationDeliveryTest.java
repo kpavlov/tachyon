@@ -30,8 +30,7 @@ class NotificationDeliveryTest {
 
     private static final ToolDescriptor TOOL_DESCRIPTOR = ToolDescriptor.builder("test_tool")
             .description("Test tool")
-            .inputSchema(
-                    JsonNodeFactory.instance.objectNode().put("type", "object").putObject("properties"))
+            .inputSchema(JsonNodeFactory.instance.objectNode().put("type", "object"))
             .build();
 
     /** Emits 3 progress events and 3 log events per invocation (plus 2 automatic lifecycle logs from ToolsCallHandler). */

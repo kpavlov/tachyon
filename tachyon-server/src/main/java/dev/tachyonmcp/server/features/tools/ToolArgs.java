@@ -2,6 +2,7 @@
 
 package dev.tachyonmcp.server.features.tools;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -27,6 +28,11 @@ public final class ToolArgs {
         return raw.containsKey(key);
     }
 
+    /** Returns an unmodifiable view of the raw argument map. */
+    public Map<String, JsonNode> asMap() {
+        return Collections.unmodifiableMap(raw);
+    }
+
     public String string(String key) {
         return node(key).asString();
     }
@@ -49,6 +55,18 @@ public final class ToolArgs {
 
     public String stringOr(String key, String fallback) {
         return has(key) ? raw.get(key).asString() : fallback;
+    }
+
+    public int intOr(String key, int fallback) {
+        return has(key) ? raw.get(key).asInt() : fallback;
+    }
+
+    public boolean boolOr(String key, boolean fallback) {
+        return has(key) ? raw.get(key).asBoolean() : fallback;
+    }
+
+    public double doubleOr(String key, double fallback) {
+        return has(key) ? raw.get(key).asDouble() : fallback;
     }
 
     public JsonNode node(String key) {
