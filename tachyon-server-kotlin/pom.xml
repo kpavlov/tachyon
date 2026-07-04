@@ -37,6 +37,14 @@
             <artifactId>slf4j-api</artifactId>
         </dependency>
 
+        <!-- Optional: kotlinx-serialization-json for KotlinxExtensions -->
+        <dependency>
+            <groupId>org.jetbrains.kotlinx</groupId>
+            <artifactId>kotlinx-serialization-json</artifactId>
+            <version>${kotlinx-serialization-json.version}</version>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -83,7 +91,17 @@
                         <arg>-Xexplicit-api=strict</arg>
                         <arg>-Werror</arg>
                     </args>
+                    <compilerPlugins>
+                        <plugin>kotlinx-serialization</plugin>
+                    </compilerPlugins>
                 </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.jetbrains.kotlin</groupId>
+                        <artifactId>kotlin-maven-serialization</artifactId>
+                        <version>${kotlin.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

@@ -45,8 +45,7 @@ class McpOperationHandlerRequestTest {
 
     private static final ToolDescriptor PROGRESS_DESCRIPTOR = ToolDescriptor.builder("progress_tool")
             .description("emits progress notifications")
-            .inputSchema(
-                    JsonNodeFactory.instance.objectNode().put("type", "object").putObject("properties"))
+            .inputSchema(JsonNodeFactory.instance.objectNode().put("type", "object"))
             .build();
 
     /** Emits two progress notifications (which upgrade the POST response to SSE), then returns a result. */
@@ -164,10 +163,7 @@ class McpOperationHandlerRequestTest {
     void idleOnUpgradedPostSseStreamSendsHeartbeat() throws InterruptedException {
         var descriptor = ToolDescriptor.builder("stalled_tool")
                 .description("upgrades to SSE then never completes")
-                .inputSchema(JsonNodeFactory.instance
-                        .objectNode()
-                        .put("type", "object")
-                        .putObject("properties"))
+                .inputSchema(JsonNodeFactory.instance.objectNode().put("type", "object"))
                 .build();
         var upgraded = new CountDownLatch(1);
         var neverComplete = new CompletableFuture<ToolResult>();

@@ -18,7 +18,9 @@ config:
 complexity:
   TooManyFunctions:
     active: true
-    excludes: [ '**/*Builder.kt' ]
+    excludes:
+      - '**/*Builder.kt'
+      - '**/*Test.kt'
 #    allowedFunctionsPerFile: 15
 #    allowedFunctionsPerClass: 15
 #    allowedFunctionsPerInterface: 11

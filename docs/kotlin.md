@@ -85,6 +85,71 @@ tool(name = "reverse", description = "Reverse a string") {
 
 For class-based handlers, extend `AbstractSyncToolHandler` or `AbstractAsyncToolHandler` from `tachyon-server` — they work unchanged from Kotlin.
 
+## Tool schemas
+
+`inputSchema` / `outputSchema` accept three shapes on every registration overload
+(`tool(...)` in the DSL, `Server.registerTool(...)` post-build, `toolDescriptor { }`):
+
+```kotlin
+// Jackson JsonNode
+tool("a", inputSchema = jacksonNode) { /* ... */ }
+
+// Raw JSON string — parsed by Tachyon
+tool(
+    "b",
+    inputSchema = """{"type":"object","properties":{"msg":{"type":"string"}}}""",
+    outputSchema = """{"type":"object","properties":{"echo":{"type":"string"}}}""",
+) { /* ... */ }
+
+// kotlinx.serialization JsonObject — requires kotlinx-serialization-json (optional)
+tool("c", inputSchema = buildJsonObject { put("type", "object") }) { /* ... */ }
+```
+
+Schema roots are validated at registration time: a schema whose root does not declare
+`"type": "object"` fails fast with `IllegalArgumentException` instead of surfacing later
+in the MCP client. Tool descriptions longer than 2048 characters log a warning —
+clients may truncate them.
+
+## kotlinx.serialization integration
+
+`kotlinx-serialization-json` is an **optional** dependency of `tachyon-server-kotlin`.
+Add it to use `JsonObject` schemas, `args.decode<T>()`, and `structured(value)`:
+
+```xml
+<dependency>
+    <groupId>org.jetbrains.kotlinx</groupId>
+    <artifactId>kotlinx-serialization-json</artifactId>
+</dependency>
+```
+
+```kotlin
+@Serializable data class EchoArgs(val message: String, val loud: Boolean = false)
+
+@Serializable data class EchoReply(val echo: String)
+
+tool(
+    "echo",
+    inputSchema = """{"type":"object","properties":{"message":{"type":"string"}}}""",
+    outputSchema = """{"type":"object","properties":{"echo":{"type":"string"}}}""",
+) {
+    val input = args.decode<EchoArgs>() // typed decode, unknown keys ignored
+    structured(EchoReply(input.message)) // structuredContent + JSON text fallback
+}
+```
+
+`decode` ignores unknown keys by default; pass a custom `Json` instance for strict decoding.
+`structured(value)` requires the value to encode to a JSON object and pairs with the
+declared `outputSchema`.
+
+## ToolArgs accessors
+
+| Call | Behaviour |
+|---|---|
+| `args.string("k")` / `intValue` / `boolValue` / `doubleValue` | Required — throws when missing |
+| `args.stringOrNull("k")` / `intOrNull` / `booleanOrNull` / `doubleOrNull` | Returns `null` when missing |
+| `args.stringOr("k", "d")` / `int("k", 0)` / `boolean("k", true)` / `double("k", 0.0)` | Falls back to default |
+| `args.decode<T>()` | kotlinx decode into a `@Serializable` class |
+
 ## Scope reference
 
 | Scope | Builder method | Properties |
@@ -132,6 +197,9 @@ TachyonServer(port = 8080) {
 | `ToolResult.empty()` | No content |
 
 `structuredContent` requires a JSON object shape. Tachyon rejects primitives and arrays at runtime.
+
+With kotlinx-serialization on the classpath, prefer `structured(value)` inside a tool lambda —
+it encodes any `@Serializable` value and emits both `structuredContent` and the JSON text fallback.
 
 ## Testing
 

@@ -17,12 +17,28 @@ public fun Server.registerTool(
     name: String,
     description: String? = null,
     inputSchema: JsonNode? = null,
+    outputSchema: JsonNode? = null,
     block: suspend ToolScope.() -> ToolResult,
 ): Server =
     registerTool(configure = {
         name(name)
         description(description)
         inputSchema(inputSchema)
+        outputSchema(outputSchema)
+    }, block = block)
+
+@JvmSynthetic
+public fun Server.registerTool(
+    name: String,
+    description: String? = null,
+    inputSchema: String,
+    outputSchema: String? = null,
+    block: suspend ToolScope.() -> ToolResult,
+): Server =
+    registerTool(configure = {
+        name(name)
+        description(description)
+        schemas(inputSchema, outputSchema)
     }, block = block)
 
 @JvmSynthetic

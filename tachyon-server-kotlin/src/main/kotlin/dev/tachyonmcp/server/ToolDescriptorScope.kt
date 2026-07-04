@@ -19,6 +19,14 @@ public class ToolDescriptorScope
         public var taskSupport: TaskSupport? = null
         public var annotations: ToolAnnotations? = null
 
+        public fun inputSchema(json: String) {
+            inputSchema = json.toJsonNode()
+        }
+
+        public fun outputSchema(json: String) {
+            outputSchema = json.toJsonNode()
+        }
+
         @PublishedApi
         internal fun build(): ToolDescriptor {
             val n = requireNotNull(name) { "ToolDescriptor.name is required" }

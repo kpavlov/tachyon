@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.Map;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
 class ToolArgsTest {
@@ -131,5 +132,49 @@ class ToolArgsTest {
     void rawReturnsNodeWithText() {
         var args = ToolArgs.of(Map.of("k", JSON.stringNode("v")));
         assertThat(Objects.requireNonNull(args.raw("k")).asString()).isEqualTo("v");
+    }
+
+    @Test
+    void asMapReturnsUnmodifiableView() {
+        java.util.Map<String, JsonNode> raw = new java.util.HashMap<>(Map.of("k", JSON.stringNode("v")));
+        var args = ToolArgs.of(raw);
+        assertThat(args.asMap()).containsOnlyKeys("k");
+        assertThat(args.asMap()).isUnmodifiable();
+    }
+
+    @Test
+    void boolOrReturnsValueWhenPresent() {
+        var args = ToolArgs.of(Map.of("k", JSON.booleanNode(true)));
+        assertThat(args.boolOr("k", false)).isTrue();
+    }
+
+    @Test
+    void boolOrReturnsFallbackWhenMissing() {
+        var args = ToolArgs.of(Map.of());
+        assertThat(args.boolOr("k", true)).isTrue();
+    }
+
+    @Test
+    void intOrReturnsValueWhenPresent() {
+        var args = ToolArgs.of(Map.of("k", JSON.numberNode(42)));
+        assertThat(args.intOr("k", 0)).isEqualTo(42);
+    }
+
+    @Test
+    void intOrReturnsFallbackWhenMissing() {
+        var args = ToolArgs.of(Map.of());
+        assertThat(args.intOr("k", 99)).isEqualTo(99);
+    }
+
+    @Test
+    void doubleOrReturnsValueWhenPresent() {
+        var args = ToolArgs.of(Map.of("k", JSON.numberNode(3.14)));
+        assertThat(args.doubleOr("k", 0.0)).isEqualTo(3.14);
+    }
+
+    @Test
+    void doubleOrReturnsFallbackWhenMissing() {
+        var args = ToolArgs.of(Map.of());
+        assertThat(args.doubleOr("k", 1.5)).isEqualTo(1.5);
     }
 }

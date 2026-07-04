@@ -14,6 +14,9 @@ Kotlin coroutine-first DSL for [Tachyon MCP](../README.md). Wraps the Java `Serv
 
 Requires `tachyon-server` on the classpath (included transitively).
 
+Optionally add `org.jetbrains.kotlinx:kotlinx-serialization-json` to unlock `JsonObject`
+schemas, `args.decode<T>()`, and `structured(value)` tool results.
+
 ## Documentation
 
 Full reference: [docs/kotlin.md](../docs/kotlin.md)
