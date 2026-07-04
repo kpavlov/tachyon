@@ -7,6 +7,7 @@ package dev.tachyonmcp.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -45,24 +46,23 @@ class SseRetryTest extends AbstractMcpE2eTest {
                     .getBytes(StandardCharsets.UTF_8);
             socket.getOutputStream().write(req);
             socket.getOutputStream().flush();
+            socket.setSoTimeout(50);
 
+            var sb = new StringBuilder();
             var buf = new byte[512];
-            var total = 0;
             var deadline = System.currentTimeMillis() + 5000;
-            while (total < buf.length && System.currentTimeMillis() < deadline) {
-                if (socket.getInputStream().available() > 0) {
-                    var n = socket.getInputStream().read(buf, total, buf.length - total);
-                    if (n > 0) {
-                        total += n;
-                    }
-                } else {
-                    Thread.sleep(20);
+            while (System.currentTimeMillis() < deadline) {
+                try {
+                    var n = socket.getInputStream().read(buf);
+                    if (n < 0) break;
+                    if (n > 0) sb.append(new String(buf, 0, n, StandardCharsets.UTF_8));
+                } catch (SocketTimeoutException e) {
+                    // No data this poll; keep reading until the deadline.
                 }
             }
-            assertThat(total).isGreaterThan(0);
-
-            var raw = new String(buf, 0, total, StandardCharsets.UTF_8);
+            var raw = sb.toString();
             assertThat(raw).contains("retry: 3000");
+            assertThat(raw).contains("X-Accel-Buffering: no");
         }
     }
 }

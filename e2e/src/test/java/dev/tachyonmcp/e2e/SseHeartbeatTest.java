@@ -70,6 +70,7 @@ class SseHeartbeatTest {
         var raw = readRawSse(sessionId, READER_IDLE.toMillis() * 5);
 
         assertThat(raw).as("stream must open as text/event-stream").contains("text/event-stream");
+        assertThat(raw).contains("X-Accel-Buffering: no");
         assertThat(countOccurrences(raw, ":\r\n"))
                 .as("reader-idle must drive repeated SSE comment heartbeats (proves timer rescheduling)")
                 .isGreaterThanOrEqualTo(2);
