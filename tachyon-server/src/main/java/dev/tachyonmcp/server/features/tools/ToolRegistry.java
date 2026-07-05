@@ -25,7 +25,9 @@ import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
-/** Registry for tool handlers with input/output schema validation. */
+/**
+ * Registry for tool handlers with input/output schema validation.
+ */
 public class ToolRegistry {
 
     private static final Logger logger = LoggerFactory.getLogger(ToolRegistry.class);
@@ -46,7 +48,9 @@ public class ToolRegistry {
      */
     public static final int MAX_DESCRIPTION_LENGTH = 2048;
 
-    /** Creates a tool registry with the given schema validators and payload serde. */
+    /**
+     * Creates a tool registry with the given schema validators and payload serde.
+     */
     public ToolRegistry(
             JsonSchemaValidator inputValidator,
             JsonSchemaValidator outputValidator,
@@ -68,7 +72,9 @@ public class ToolRegistry {
         }
     }
 
-    /** Registers a tool handler. */
+    /**
+     * Registers a tool handler.
+     */
     public void register(ToolHandler handler) {
         Objects.requireNonNull(handler, "ToolHandler must not be null");
         var descriptor = handler.descriptor();
@@ -120,30 +126,40 @@ public class ToolRegistry {
 
     private static final Pattern VALID_NAME_PATTERN = Pattern.compile("[a-zA-Z0-9_\\-./]+");
 
-    /** Removes the tool with the given name. */
+    /**
+     * Removes the tool with the given name.
+     */
     public void remove(String name) {
         if (handlers.remove(name) != null) {
             fireOnChange();
         }
     }
 
-    /** Returns the tool handler by name. */
+    /**
+     * Returns the tool handler by name.
+     */
     public @Nullable ToolHandler get(String name) {
         return handlers.get(name);
     }
 
-    /** Returns the tool descriptor by name. */
+    /**
+     * Returns the tool descriptor by name.
+     */
     public @Nullable ToolDescriptor getDescriptor(String name) {
         var handler = handlers.get(name);
         return handler != null ? handler.descriptor() : null;
     }
 
-    /** Returns all registered tool handlers. */
+    /**
+     * Returns all registered tool handlers.
+     */
     public Collection<ToolHandler> getAll() {
         return handlers.values();
     }
 
-    /** Returns whether the registry is empty. */
+    /**
+     * Returns whether the registry is empty.
+     */
     public boolean isEmpty() {
         return handlers.isEmpty();
     }
@@ -250,9 +266,26 @@ public class ToolRegistry {
             return "tools/call";
         }
 
+        /**
+         * Dispatch uses handleAsync; interruptible get on VT is safe.
+         */
         @Override
         public Object handle(DispatchContext context, Object params) {
-            return handleAsync(context, params).toCompletableFuture().join();
+            try {
+                return handleAsync(context, params).toCompletableFuture().get();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
+            } catch (ExecutionException e) {
+                var cause = e.getCause();
+                if (cause instanceof RuntimeException re) {
+                    throw re;
+                }
+                if (cause instanceof Error err) {
+                    throw err;
+                }
+                throw new CompletionException(cause);
+            }
         }
 
         @Override
@@ -287,31 +320,33 @@ public class ToolRegistry {
 
             CompletionStage<? extends ToolResult> toolStage;
             try {
-                toolStage = handler.handle(context, request);
+                toolStage = handler.handleAsync(context, request);
+            } catch (InvalidArgumentException e) {
+                return CompletableFuture.completedFuture(
+                        invalidRequest("invalid argument '" + e.argName() + "': " + e.getMessage()));
             } catch (Exception e) {
-                return CompletableFuture.completedFuture(wrapToolError(e));
+                return CompletableFuture.failedFuture(e);
             }
 
-            return toolStage
-                    .thenApply(toolResult -> {
+            // isDone fast-path: if already complete, skip executor re-dispatch (inline on current thread).
+            // A stage completing after this check merely takes the executor hop — benign, not a TOCTOU race.
+            var done = toolStage.toCompletableFuture().isDone();
+            var executor = done ? (Executor) Runnable::run : context.server().executor();
+            return toolStage.handleAsync(
+                    (toolResult, e) -> {
+                        if (e != null) {
+                            var cause =
+                                    e instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : e;
+                            if (cause instanceof InvalidArgumentException ia) {
+                                return invalidRequest("invalid argument '" + ia.argName() + "': " + ia.getMessage());
+                            }
+                            throw new CompletionException(cause);
+                        }
                         sendLoggingIfEnabled(context, parsed.name(), "completed");
                         validateOutput(handler.descriptor().outputSchema(), toolResult);
                         return context.responseMapper().callToolResult(serializeStructured(toolResult));
-                    })
-                    .exceptionally(e -> {
-                        var cause = e instanceof CompletionException && e.getCause() != null ? e.getCause() : e;
-                        if (cause instanceof InvalidArgumentException ia) {
-                            return invalidRequest("invalid argument '" + ia.argName() + "': " + ia.getMessage());
-                        }
-                        throw new CompletionException(cause);
-                    });
-        }
-
-        private static Object wrapToolError(Exception e) {
-            if (e instanceof InvalidArgumentException ia) {
-                return invalidRequest("invalid argument '" + ia.argName() + "': " + ia.getMessage());
-            }
-            throw new CompletionException(e);
+                    },
+                    executor);
         }
 
         private static @Nullable Object parseProgressToken(@Nullable Map<String, JsonNode> meta) {

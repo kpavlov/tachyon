@@ -14,8 +14,6 @@ import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.DispatchContext;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
@@ -97,7 +95,7 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
     void rejectsToolCallWhileSessionNotYetActive() throws Exception {
         // Deterministic counterpart to the createTaskViaTool flake: initialize a session but
         // deliberately skip notifications/initialized, so it stays INITIALIZING and the
-        // activation gate (McpDispatcher) rejects the tools/call with a JSON-RPC error.
+        // activation gate (RpcDispatcher) rejects the tools/call with a JSON-RPC error.
         // This is the exact response shape the flake produced when activation had not yet
         // completed — and it falsifies the diagnosis if initialize secretly activates.
         try (var client = createTestClient()) {
@@ -180,9 +178,9 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
                     }
 
                     @Override
-                    public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest req) {
+                    public ToolResult handle(InteractionContext ctx, ToolRequest req) throws Exception {
                         ((DispatchContext) ctx).server().tasks().createTask("sync-notif-task", null);
-                        return CompletableFuture.completedFuture(ToolResult.text("ok"));
+                        return ToolResult.text("ok");
                     }
                 })
                 .extension(TasksExtension.instance())

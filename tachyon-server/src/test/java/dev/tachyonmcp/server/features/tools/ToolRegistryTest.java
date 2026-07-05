@@ -481,8 +481,8 @@ class ToolRegistryTest {
             }
 
             @Override
-            public CompletionStage<? extends ToolResult> handle(InteractionContext context, ToolRequest request) {
-                return CompletableFuture.completedFuture(ToolResult.text("x"));
+            public ToolResult handle(InteractionContext context, ToolRequest request) throws Exception {
+                return ToolResult.text("x");
             }
         };
         assertThatThrownBy(() -> registry.register(handler))

@@ -4,7 +4,7 @@
 
 package dev.tachyonmcp.transport.netty;
 
-import dev.tachyonmcp.server.McpDispatcher;
+import dev.tachyonmcp.server.RpcDispatcher;
 import dev.tachyonmcp.server.Server;
 import io.netty.channel.ChannelHandler;
 import java.util.concurrent.Executor;
@@ -16,14 +16,14 @@ public class McpHandlerManager implements ProtocolHandlerManager {
     static final String HANDLER_OPS = "mcp-phase-operations";
 
     private final Server server;
-    private final McpDispatcher dispatcher;
+    private final RpcDispatcher dispatcher;
     private final Executor executor;
 
-    public McpHandlerManager(Server server, McpDispatcher dispatcher) {
+    public McpHandlerManager(Server server, RpcDispatcher dispatcher) {
         this(server, dispatcher, server.executor());
     }
 
-    public McpHandlerManager(Server server, McpDispatcher dispatcher, Executor executor) {
+    public McpHandlerManager(Server server, RpcDispatcher dispatcher, Executor executor) {
         this.server = server;
         this.dispatcher = dispatcher;
         this.executor = executor;

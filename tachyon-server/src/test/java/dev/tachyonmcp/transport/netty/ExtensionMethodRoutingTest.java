@@ -10,10 +10,7 @@ import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.runtime.Session;
-import dev.tachyonmcp.server.McpDispatcher;
-import dev.tachyonmcp.server.RpcMethodHandler;
-import dev.tachyonmcp.server.Server;
-import dev.tachyonmcp.server.TachyonServer;
+import dev.tachyonmcp.server.*;
 import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.session.DefaultMcpContext;
 import dev.tachyonmcp.server.session.DispatchContext;
@@ -29,14 +26,14 @@ class ExtensionMethodRoutingTest {
 
     private Server server;
     private Session session;
-    private McpDispatcher dispatcher;
+    private RpcDispatcher dispatcher;
     private @Nullable DispatchContext context;
 
     @BeforeEach
     void setUp() {
         server = TachyonServer.builder().extension(new TestExtension()).build();
         session = server.createSession("sess_routing");
-        dispatcher = new McpDispatcher(server, server.executor());
+        dispatcher = new RpcDispatcher(server, server.executor());
     }
 
     @Test
@@ -44,7 +41,7 @@ class ExtensionMethodRoutingTest {
         session.activate();
         var ctx = DefaultMcpContext.create(Protocols.versions().get(0), server);
         ctx.setSession(session);
-        var result = (McpDispatcher.DispatchResult.Response) dispatcher
+        var result = (RpcDispatcher.DispatchResult.Response) dispatcher
                 .dispatchRequestAsync(1, "test/ext-method", null, "sess_routing", null, ctx)
                 .join();
         var body = result.responseBody().toString(StandardCharsets.UTF_8);
@@ -57,7 +54,7 @@ class ExtensionMethodRoutingTest {
         negotiateExtension();
         session.activate();
         var params = Map.of("_meta", Map.of("com.test/ext", JsonNodeFactory.instance.objectNode()));
-        var result = (McpDispatcher.DispatchResult.Response) dispatcher
+        var result = (RpcDispatcher.DispatchResult.Response) dispatcher
                 .dispatchRequestAsync(1, "test/ext-method", params, "sess_routing", null, context)
                 .join();
         var body = result.responseBody().toString(StandardCharsets.UTF_8);

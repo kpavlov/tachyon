@@ -4,37 +4,34 @@
 
 package dev.tachyonmcp.server
 
-import dev.tachyonmcp.server.features.tools.ToolArgs
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
+import dev.tachyonmcp.server.features.tools.ToolRequest
 import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.features.tools.asyncHandler
+import dev.tachyonmcp.server.features.tools.toolHandler
 import dev.tachyonmcp.server.session.DefaultMcpContext
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
-import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ExecutionException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
-internal class AsyncHandlerTest {
+internal class ToolHandlerFactoryTest {
     @Test
-    fun `cancelling future cancels coroutine`() {
-        val started = CompletableDeferred<Unit>()
+    fun `interrupt cancels coroutine`() {
+        val started = CountDownLatch(1)
         val cancelled = AtomicBoolean(false)
         val handler =
-            asyncHandler(
-                ToolDescriptor.builder().name("cancel-test").build(),
+            toolHandler(
+                ToolDescriptor.builder().name("interrupt-test").build(),
             ) {
-                started.complete(Unit)
+                started.countDown()
                 try {
-                    delay(100500.minutes)
+                    delay(100500.seconds)
                 } finally {
                     cancelled.set(true)
                 }
@@ -44,25 +41,30 @@ internal class AsyncHandlerTest {
 
         TachyonServer.builder().build().use { server ->
             val ctx = DefaultMcpContext.stateless(server)
-            val future =
-                handler.handleAsync(ctx, ToolArgs()) as CompletableFuture<out ToolResult>
+            val request = ToolRequest.builder().name("interrupt-test").build()
 
-            runBlocking { started.await() }
-            future.cancel(true)
-
-            await().untilTrue(cancelled)
+            val thread =
+                Thread.ofVirtual().start {
+                    try {
+                        handler.handle(ctx, request)
+                    } catch (_: Exception) {
+                        // expected — interrupt propagates
+                    }
+                }
+            started.await(5, TimeUnit.SECONDS) shouldBe true
+            thread.interrupt()
+            thread.join(5_000)
             assertSoftly {
                 cancelled.get() shouldBe true
-                future.isCancelled() shouldBe true
             }
         }
     }
 
     @Test
-    fun `failed invocation does not poison subsequent invocations`() {
+    fun `handler is reusable after exception`() {
         val calls = AtomicInteger(0)
         val handler =
-            asyncHandler(
+            toolHandler(
                 ToolDescriptor.builder().name("supervisor-test").build(),
             ) {
                 if (calls.incrementAndGet() == 1) {
@@ -73,14 +75,14 @@ internal class AsyncHandlerTest {
 
         TachyonServer.builder().build().use { server ->
             val ctx = DefaultMcpContext.stateless(server)
+            val request = ToolRequest.builder().name("supervisor-test").build()
 
-            val first = handler.handleAsync(ctx, ToolArgs()).toCompletableFuture()
-            val failure = shouldThrow<ExecutionException> { first.get() }
+            val failure = shouldThrow<Exception> { handler.handle(ctx, request) }
 
-            val second = handler.handleAsync(ctx, ToolArgs()).toCompletableFuture().get()
+            val second = handler.handle(ctx, request)
 
             assertSoftly {
-                failure.cause?.message shouldBe "boom"
+                failure.message shouldBe "boom"
                 second shouldBe ToolResult.text("ok")
                 calls.get() shouldBe 2
             }

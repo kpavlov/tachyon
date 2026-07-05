@@ -7,8 +7,6 @@ import static dev.tachyonmcp.server.json.JsonSchemaUtils.parseSchema;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
@@ -72,13 +70,8 @@ public interface SyncToolHandler extends ToolHandler {
     }
 
     @Override
-    default CompletionStage<? extends ToolResult> handle(InteractionContext context, ToolRequest request) {
-        try {
-            return CompletableFuture.completedFuture(
-                    handle(context, ToolArgs.of(request.arguments(), request.payloadDeserializer())));
-        } catch (Exception e) {
-            return CompletableFuture.failedFuture(e);
-        }
+    default ToolResult handle(InteractionContext context, ToolRequest request) throws Exception {
+        return handle(context, ToolArgs.of(request.arguments(), request.payloadDeserializer()));
     }
 
     /**

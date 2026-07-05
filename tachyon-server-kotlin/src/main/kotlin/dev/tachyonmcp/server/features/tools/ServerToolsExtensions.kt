@@ -62,7 +62,7 @@ public fun Server.registerTool(
     descriptor: ToolDescriptor,
     block: suspend ToolScope.() -> ToolResult,
 ): Server {
-    this.registerTool(asyncHandler(descriptor, block))
+    this.registerTool(toolHandler(descriptor, block))
     return this
 }
 

@@ -11,7 +11,7 @@ import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.runtime.InteractionEvent;
 import dev.tachyonmcp.runtime.MutableInteractionContext;
 import dev.tachyonmcp.runtime.Session;
-import dev.tachyonmcp.server.McpDispatcher;
+import dev.tachyonmcp.server.RpcDispatcher;
 import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
@@ -47,11 +47,11 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(McpOperationHandler.class);
 
     private final Server server;
-    private final McpDispatcher dispatcher;
+    private final RpcDispatcher dispatcher;
     private final Executor executor;
     private final SseManager sseManager;
 
-    public McpOperationHandler(Server server, McpDispatcher dispatcher, Executor executor) {
+    public McpOperationHandler(Server server, RpcDispatcher dispatcher, Executor executor) {
         this.server = server;
         this.dispatcher = dispatcher;
         this.executor = executor;
@@ -151,7 +151,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             case JsonRpcMessage.Response resp -> handlePostResponse(ctx, resp, origin);
             case JsonRpcMessage.Error err -> handlePostError(ctx, err, origin);
             case JsonRpcMessage.Notification<?> not -> {
-                if (McpDispatcher.NOTIFICATIONS_INITIALIZED.equals(not.method())) {
+                if (RpcDispatcher.NOTIFICATIONS_INITIALIZED.equals(not.method())) {
                     // Activate the session synchronously before acking so a client that waits
                     // for this 202 observes an ACTIVE session on its next request, closing the
                     // INITIALIZING race. Guarded so a handler failure still produces the ack.
@@ -227,7 +227,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             @Nullable String origin,
             PostSseStream postStream,
             long startNs,
-            McpDispatcher.@Nullable DispatchResult result,
+            RpcDispatcher.@Nullable DispatchResult result,
             @Nullable Throwable ex) {
         var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
         if (ex != null) {
@@ -263,7 +263,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         // tool's status notification) cannot open a second response on the pooled socket
         // and corrupt the next request's reuse of it.
         postStream.close();
-        if (result instanceof McpDispatcher.DispatchResult.Accepted) {
+        if (result instanceof RpcDispatcher.DispatchResult.Accepted) {
             sendAccepted(ctx, origin);
             return;
         }
@@ -272,12 +272,12 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         } else {
             logger.debug("POST response: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);
         }
-        var response = (McpDispatcher.DispatchResult.Response) result;
+        var response = (RpcDispatcher.DispatchResult.Response) result;
         sendJsonResponse(ctx, response.responseBody(), response.sessionId(), origin);
     }
 
-    private static void releaseResult(McpDispatcher.@Nullable DispatchResult result) {
-        if (result instanceof McpDispatcher.DispatchResult.Response r) {
+    private static void releaseResult(RpcDispatcher.@Nullable DispatchResult result) {
+        if (result instanceof RpcDispatcher.DispatchResult.Response r) {
             r.responseBody().release();
         }
     }
@@ -286,8 +286,8 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             Object requestId,
             @Nullable String sessionId,
             PostSseStream postStream,
-            McpDispatcher.@Nullable DispatchResult result) {
-        if (!(result instanceof McpDispatcher.DispatchResult.Response response)) {
+            RpcDispatcher.@Nullable DispatchResult result) {
+        if (!(result instanceof RpcDispatcher.DispatchResult.Response response)) {
             postStream.close();
             return;
         }
