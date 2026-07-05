@@ -32,6 +32,9 @@ class SsePollingTest extends AbstractMcpE2eTest {
         var raw = readRawSse(sessionId, 1024, 2000);
         assertThat(raw).contains("retry: 3000");
         assertThat(raw).contains("X-Accel-Buffering: no");
+        assertThat(raw)
+                .as("SSE response must signal Connection: close so the client does not pool the socket")
+                .containsIgnoringCase("connection: close");
     }
 
     @Test

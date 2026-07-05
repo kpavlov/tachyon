@@ -26,15 +26,15 @@ public class ResourceDescriptorScope
         internal fun build(): ResourceDescriptor {
             val n = requireNotNull(name) { "ResourceDescriptor.name is required" }
             val u = requireNotNull(uri) { "ResourceDescriptor.uri is required" }
-            return ResourceDescriptor.of(
-                n,
-                u,
-                description,
-                mimeType,
-                title,
-                annotations,
-                size,
-                icons,
+            return ResourceDescriptor(
+                name = n,
+                uri = u,
+                description = description,
+                mimeType = mimeType,
+                title = title,
+                annotations = annotations,
+                size = size,
+                icons = icons,
             )
         }
     }

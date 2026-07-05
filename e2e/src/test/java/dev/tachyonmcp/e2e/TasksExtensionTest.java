@@ -194,6 +194,10 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
             var response = client.sendRequest(sessionId, """
                     {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create-sync","arguments":{}}}
                     """);
+            assertThat(response.headers().firstValue("content-type").orElse("")).startsWith("text/event-stream");
+            assertThat(response.headers().firstValue("connection"))
+                    .as("POST-SSE response must signal Connection: close so the client does not pool the socket")
+                    .hasValue("close");
             assertThat(response.body()).contains("notifications/tasks/status");
             assertThat(response.body()).contains("\"status\":\"working\"");
             assertThat(response.body()).contains("\"taskId\":\"");

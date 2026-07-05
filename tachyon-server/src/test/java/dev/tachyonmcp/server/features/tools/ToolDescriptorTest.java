@@ -11,14 +11,14 @@ class ToolDescriptorTest {
 
     @Test
     void shouldRejectBlankName() {
-        assertThatThrownBy(() -> ToolDescriptor.builder("").build())
+        assertThatThrownBy(() -> ToolDescriptor.builder().name("").build())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("name");
     }
 
     @Test
     void shouldRejectWhitespaceOnlyName() {
-        assertThatThrownBy(() -> ToolDescriptor.builder("   ").build())
+        assertThatThrownBy(() -> ToolDescriptor.builder().name("   ").build())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("name");
     }

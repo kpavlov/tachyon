@@ -3,61 +3,17 @@
 package dev.tachyonmcp.server.config
 
 import dev.tachyonmcp.runtime.InteractionContext
-import dev.tachyonmcp.server.ServerBuilder
 import dev.tachyonmcp.server.TachyonDsl
 import dev.tachyonmcp.server.features.tools.ToolArgs
-import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.features.tools.asyncHandler
 import dev.tachyonmcp.server.json.RawJson
-import dev.tachyonmcp.server.json.schemas
 import kotlinx.serialization.json.Json
-import tools.jackson.databind.JsonNode
 
 @TachyonDsl
 public class ToolScope
     internal constructor(
         public val ctx: InteractionContext,
         public val args: ToolArgs,
-    )
-
-public fun ServerBuilder.tool(
-    name: String,
-    description: String? = null,
-    inputSchema: JsonNode? = null,
-    outputSchema: JsonNode? = null,
-    handler: suspend ToolScope.() -> ToolResult,
-): ServerBuilder =
-    tool(
-        asyncHandler(
-            ToolDescriptor
-                .builder()
-                .name(name)
-                .description(description)
-                .inputSchema(inputSchema)
-                .outputSchema(outputSchema)
-                .build(),
-            handler,
-        ),
-    )
-
-public fun ServerBuilder.tool(
-    name: String,
-    description: String? = null,
-    inputSchema: String,
-    outputSchema: String? = null,
-    handler: suspend ToolScope.() -> ToolResult,
-): ServerBuilder =
-    tool(
-        asyncHandler(
-            ToolDescriptor
-                .builder()
-                .name(name)
-                .description(description)
-                .schemas(inputSchema, outputSchema, toolName = name)
-                .build(),
-            handler,
-        ),
     )
 
 /**

@@ -27,7 +27,7 @@ fun createServer(port: Int = 0): ServerHandle = TachyonServer(port = port) {
         description = "Demo MCP server — shows all props"
         instructions = "Beep boop. I demo"
         websiteUrl = "https://example.com/mcp"
-        icons += Icon.of("https://example.com/icon.png", "image/png", listOf("64x64"), "white")
+        icons += Icon(src = "https://example.com/icon.png", mimeType = "image/png", sizes = listOf("64x64"), theme = "white")
     }
 
     // ── capabilities — all switches + helpers ─────────────────
@@ -101,7 +101,7 @@ fun createServer(port: Int = 0): ServerHandle = TachyonServer(port = port) {
         description = "Server configuration",
         mimeType = "application/json",
     ) {
-        TextResourceContents.of(uri, "application/json", """{"mode":"production"}""")
+        TextResourceContents(uri = uri, mimeType = "application/json", text = """{"mode":"production"}""")
     }
 
     // ── prompts ───────────────────────────────────────────────

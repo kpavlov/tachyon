@@ -25,17 +25,18 @@ internal class TachyonServerTest {
     @Test
     fun `all DSL parameters`() {
         val appName = "tachyon-e2e"
+        val expectedIcon =
+            Icon(
+                src = "https://example.com/s/icon.png",
+                mimeType = "image/png",
+                sizes = listOf("64x64"),
+                theme = "white",
+            )
         TachyonServer(port = 0) {
             info {
                 name = appName
                 title = "My Test MCP Server"
-                icons +=
-                    Icon.of(
-                        "https://example.com/s/icon.png",
-                        "image/png",
-                        listOf("64x64"),
-                        "white",
-                    )
+                icons += expectedIcon
                 websiteUrl = "https://example.com/mcp"
                 version = "2.0.0"
                 description = "e2e test server"
@@ -81,10 +82,10 @@ internal class TachyonServerTest {
                 description = "App config",
                 mimeType = "text/yaml",
             ) {
-                TextResourceContents.of(uri, "text/yaml", "key: value")
+                TextResourceContents(uri = uri, mimeType = "text/yaml", text = "key: value")
             }
             prompt("greet", "Say hello") {
-                listOf(PromptMessage.user(TextContent.of("Hello, ${it ?: "world"}!")))
+                listOf(PromptMessage.user(TextContent("Hello, ${it ?: "world"}!")))
             }
         }.use { handle ->
             (handle.port() > 0) shouldBe true
@@ -99,15 +100,7 @@ internal class TachyonServerTest {
                 description shouldBe "e2e test server"
                 instructions shouldBe "ignore me"
                 websiteUrl shouldBe "https://example.com/mcp"
-                icons shouldBe
-                    listOf(
-                        Icon.of(
-                            "https://example.com/s/icon.png",
-                            "image/png",
-                            listOf("64x64"),
-                            "white",
-                        ),
-                    )
+                icons shouldBe listOf(expectedIcon)
                 websiteUrl shouldBe "https://example.com/mcp"
             }
 

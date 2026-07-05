@@ -11,11 +11,11 @@ import dev.tachyonmcp.server.features.resources.resourceDescriptor
 
 /** Static resource — plain factory. */
 fun configDescriptor(): ResourceDescriptor =
-    ResourceDescriptor.of(
-        "server-config",
-        "myapp://config",
-        "Server configuration",
-        "application/json",
+    ResourceDescriptor(
+        name = "server-config",
+        uri = "myapp://config",
+        description = "Server configuration",
+        mimeType = "application/json",
     )
 
 /** DSL builder — all properties shown. */
@@ -24,36 +24,36 @@ fun richDescriptor(): ResourceDescriptor =
         description = "Current user profile"
         mimeType = "application/json"
         title = "My Profile"
-        annotations = Annotations.of(null, 0.5, "2026-01-01T00:00:00Z")
+        annotations = Annotations(priority = 0.5, lastModified = "2026-01-01T00:00:00Z")
         size = 1024.0
         icons = listOf(
-            Icon.of("https://example.com/user.png", "image/png", listOf("32x32"), "blue"),
+            Icon(src = "https://example.com/user.png", mimeType = "image/png", sizes = listOf("32x32"), theme = "blue"),
         )
     }
 
 /** URI template — {param} segments captured at runtime. */
 fun userProfileTemplate(): ResourceTemplateEntry =
-    ResourceTemplateEntry.of(
-        "user-profile",
-        "myapp://users/{userId}/profile",
-        "User profile data",
-        "application/json",
+    ResourceTemplateEntry(
+        name = "user-profile",
+        uriTemplate = "myapp://users/{userId}/profile",
+        description = "User profile data",
+        mimeType = "application/json",
     ) { _, uri, params ->
         val userId = params["userId"]
-        TextResourceContents.of(uri, "application/json", """{"userId":"$userId"}""")
+        TextResourceContents(uri = uri, mimeType = "application/json", text = """{"userId":"$userId"}""")
     }
 
 /** URI template — multi-segment with static prefix matching. */
 fun forecastTemplate(): ResourceTemplateEntry =
-    ResourceTemplateEntry.of(
-        "forecast",
-        "weather://forecast/{city}",
-        "Weather forecast for a city",
-        "application/json",
+    ResourceTemplateEntry(
+        name = "forecast",
+        uriTemplate = "weather://forecast/{city}",
+        description = "Weather forecast for a city",
+        mimeType = "application/json",
     ) { _, uri, params ->
-        TextResourceContents.of(
-            uri,
-            "application/json",
-            """{"city":"${params["city"]}","temp":22}""",
+        TextResourceContents(
+            uri = uri,
+            mimeType = "application/json",
+            text = """{"city":"${params["city"]}","temp":22}""",
         )
     }

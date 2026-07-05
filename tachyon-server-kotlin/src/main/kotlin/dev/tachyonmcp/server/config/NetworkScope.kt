@@ -12,16 +12,37 @@ import kotlin.time.toJavaDuration
 public class NetworkScope
     @PublishedApi
     internal constructor() {
+        /** Network interface to bind to. */
         public var host: String? = null
+
+        /** Port to listen on. */
         public var port: Int? = null
+
+        /** Base path for MCP endpoints. */
         public var endpointPath: String? = null
+
+        /** Whether to allow requests with a null Origin header. */
         public var allowNullOrigin: Boolean? = null
+
+        /** Whether to allow connections from private networks. */
         public var allowPrivateNetworks: Boolean? = null
+
+        /** Idle timeout for the reader side of the connection. */
         public var readerIdleTimeout: Duration? = null
+
+        /** Idle timeout for the writer side of the connection. */
         public var writerIdleTimeout: Duration? = null
+
+        /** Maximum allowed content length for incoming requests. */
         public var maxContentLength: Int? = null
+
+        /** Netty I/O engine configuration. */
         public var ioEngine: NettyIoEngine? = null
+
+        /** Allowed CORS origins. */
         public val allowedOrigins: MutableList<String> = mutableListOf()
+
+        /** Allowed CORS headers. */
         public val allowedHeaders: MutableList<String> = mutableListOf()
 
         @PublishedApi internal fun applyTo(builder: NetworkConfig.Builder) {

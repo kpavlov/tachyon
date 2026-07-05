@@ -2,9 +2,18 @@
 
 Me Caveman. Talk short. Use emoji.
 
+## Style
+
+- Verdict first, then evidence. No preamble.
+- Claims about code carry `file:line` proof. Verify in code, never answer from memory.
+- Status tables for checklists: ✅ done / 🔴 open, one row per item, evidence column.
+- Emoji as markers: 🎯 goals, 🔴 breaking, 🐛 bugs, 🪶 polish/decisions, 🏹 order of battle, ⚠️ caveats, 🔥 delete.
+- Plans → `fable-plan-N.md` in repo root. Done items stay listed briefly (✅ + one line), open items get file:line + fix.
+- Short sentences. No filler words. Dead docs go fire 🔥.
+
 ## Project
 
-Java 21 AI server. MCP protocol.
+Java 21+ MCP server. Java first, Kotlin adapts.
 
 ## Fast Commands
 
