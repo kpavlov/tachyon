@@ -120,36 +120,36 @@ abstract class AbstractConformanceServer {
     private static JsonNode buildJsonSchema() {
         // language=json
         return parseJson("""
-                {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "type": "object",
-                    "$defs": {
-                        "address": {
-                            "$anchor": "addressDef",
-                            "type": "object",
-                            "properties": {
-                                "street": {"type": "string"},
-                                "city": {"type": "string"}
-                            }
+            {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "$defs": {
+                    "address": {
+                        "$anchor": "addressDef",
+                        "type": "object",
+                        "properties": {
+                            "street": {"type": "string"},
+                            "city": {"type": "string"}
                         }
-                    },
-                    "properties": {
-                        "name": {"type": "string"},
-                        "address": {"$ref": "#/$defs/address"},
-                        "contactMethod": {"type": "string", "enum": ["phone", "email"]},
-                        "phone": {"type": "string"},
-                        "email": {"type": "string"}
-                    },
-                    "allOf": [{"anyOf": [{"required": ["phone"]}, {"required": ["email"]}]}],
-                    "if": {
-                        "properties": {"contactMethod": {"const": "phone"}},
-                        "required": ["contactMethod"]
-                    },
-                    "then": {"required": ["phone"]},
-                    "else": {"required": ["email"]},
-                    "additionalProperties": false
-                }
-                """);
+                    }
+                },
+                "properties": {
+                    "name": {"type": "string"},
+                    "address": {"$ref": "#/$defs/address"},
+                    "contactMethod": {"type": "string", "enum": ["phone", "email"]},
+                    "phone": {"type": "string"},
+                    "email": {"type": "string"}
+                },
+                "allOf": [{"anyOf": [{"required": ["phone"]}, {"required": ["email"]}]}],
+                "if": {
+                    "properties": {"contactMethod": {"const": "phone"}},
+                    "required": ["contactMethod"]
+                },
+                "then": {"required": ["phone"]},
+                "else": {"required": ["email"]},
+                "additionalProperties": false
+            }
+            """);
     }
 
     private static void delay(long millis) {
@@ -213,7 +213,8 @@ abstract class AbstractConformanceServer {
         server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder("test_tool_with_progress")
+                return ToolDescriptor.builder()
+                        .name("test_tool_with_progress")
                         .description("Tool with progress notifications")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
                         .build();
@@ -236,7 +237,8 @@ abstract class AbstractConformanceServer {
         server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder("test_tool_with_logging")
+                return ToolDescriptor.builder()
+                        .name("test_tool_with_logging")
                         .description("Tool with logging")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
                         .build();
@@ -261,11 +263,7 @@ abstract class AbstractConformanceServer {
                         try {
                             var paramsMap = Map.of(
                                     "messages",
-                                    List.of(Map.of(
-                                            "role",
-                                            "user",
-                                            "content",
-                                            Map.of("type", "text", "text", prompt.toString()))),
+                                    List.of(Map.of("role", "user", "content", Map.of("type", "text", "text", prompt))),
                                     "maxTokens",
                                     100);
                             var responseJson = ctx.sendRequest(
@@ -297,12 +295,14 @@ abstract class AbstractConformanceServer {
                                     message,
                                     "requestedSchema",
                                     Map.of(
-                                            "type", "object",
+                                            "type",
+                                            "object",
                                             "properties",
-                                                    Map.of(
-                                                            "username", Map.of("type", "string"),
-                                                            "email", Map.of("type", "string")),
-                                            "required", List.of("username", "email")));
+                                            Map.of(
+                                                    "username", Map.of("type", "string"),
+                                                    "email", Map.of("type", "string")),
+                                            "required",
+                                            List.of("username", "email")));
                             var responseJson = ctx.sendRequest(
                                             "elicitation/create", JsonRpcCodec.writeValueAsString(paramsMap))
                                     .get(2, TimeUnit.SECONDS);
@@ -323,26 +323,32 @@ abstract class AbstractConformanceServer {
                 "test_elicitation_sep1034_defaults", "Elicitation with defaults", INPUT_SCHEMA_NO_ARGS, (ctx, args) -> {
                     try {
                         var paramsMap = Map.of(
-                                "mode", "form",
-                                "message", "Please provide your details with defaults",
+                                "mode",
+                                "form",
+                                "message",
+                                "Please provide your details with defaults",
                                 "requestedSchema",
-                                        Map.of(
-                                                "type",
-                                                "object",
-                                                "properties",
-                                                Map.<String, Object>of(
-                                                        "name", Map.of("type", "string", "default", "John Doe"),
-                                                        "age", Map.of("type", "integer", "default", 30),
-                                                        "score", Map.of("type", "number", "default", 95.5),
-                                                        "status",
-                                                                Map.of(
-                                                                        "type",
-                                                                        "string",
-                                                                        "enum",
-                                                                        List.of("active", "inactive"),
-                                                                        "default",
-                                                                        "active"),
-                                                        "verified", Map.of("type", "boolean", "default", true))));
+                                Map.of(
+                                        "type",
+                                        "object",
+                                        "properties",
+                                        Map.<String, Object>of(
+                                                "name",
+                                                Map.of("type", "string", "default", "John Doe"),
+                                                "age",
+                                                Map.of("type", "integer", "default", 30),
+                                                "score",
+                                                Map.of("type", "number", "default", 95.5),
+                                                "status",
+                                                Map.of(
+                                                        "type",
+                                                        "string",
+                                                        "enum",
+                                                        List.of("active", "inactive"),
+                                                        "default",
+                                                        "active"),
+                                                "verified",
+                                                Map.of("type", "boolean", "default", true))));
                         var responseJson = ctx.sendRequest(
                                         "elicitation/create", JsonRpcCodec.writeValueAsString(paramsMap))
                                 .get(2, TimeUnit.SECONDS);
@@ -422,7 +428,8 @@ abstract class AbstractConformanceServer {
 
         var inputSchema = buildJsonSchema();
         server.registerTool(
-                new AbstractSyncToolHandler(ToolDescriptor.builder("json_schema_2020_12_tool")
+                new AbstractSyncToolHandler(ToolDescriptor.builder()
+                        .name("json_schema_2020_12_tool")
                         .description("Tool with JSON Schema 2020-12 features")
                         .inputSchema(inputSchema)
                         .build()) {
@@ -453,7 +460,8 @@ abstract class AbstractConformanceServer {
         server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder("test_input_required_result_elicitation")
+                return ToolDescriptor.builder()
+                        .name("test_input_required_result_elicitation")
                         .description("SEP-2322 elicitation InputRequiredResult")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
                         .build();
@@ -478,7 +486,8 @@ abstract class AbstractConformanceServer {
         server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder("test_input_required_result_sampling")
+                return ToolDescriptor.builder()
+                        .name("test_input_required_result_sampling")
                         .description("SEP-2322 sampling InputRequiredResult")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
                         .build();
@@ -502,7 +511,8 @@ abstract class AbstractConformanceServer {
         server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder("test_input_required_result_list_roots")
+                return ToolDescriptor.builder()
+                        .name("test_input_required_result_list_roots")
                         .description("SEP-2322 roots/list InputRequiredResult")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
                         .build();
@@ -522,7 +532,8 @@ abstract class AbstractConformanceServer {
         server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder("test_input_required_result_request_state")
+                return ToolDescriptor.builder()
+                        .name("test_input_required_result_request_state")
                         .description("SEP-2322 requestState round-trip")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
                         .build();
@@ -544,7 +555,8 @@ abstract class AbstractConformanceServer {
         server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder("test_input_required_result_multiple_inputs")
+                return ToolDescriptor.builder()
+                        .name("test_input_required_result_multiple_inputs")
                         .description("SEP-2322 multiple inputRequests")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
                         .build();
@@ -570,7 +582,8 @@ abstract class AbstractConformanceServer {
         server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder("test_input_required_result_multi_round")
+                return ToolDescriptor.builder()
+                        .name("test_input_required_result_multi_round")
                         .description("SEP-2322 multi-round InputRequiredResult")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
                         .build();
@@ -606,7 +619,8 @@ abstract class AbstractConformanceServer {
         server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder("test_input_required_result_tampered_state")
+                return ToolDescriptor.builder()
+                        .name("test_input_required_result_tampered_state")
                         .description("SEP-2322 tampered requestState rejection")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
                         .build();
@@ -631,7 +645,8 @@ abstract class AbstractConformanceServer {
         server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder("test_input_required_result_capabilities")
+                return ToolDescriptor.builder()
+                        .name("test_input_required_result_capabilities")
                         .description("SEP-2322 respect client capabilities")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
                         .build();
@@ -745,7 +760,8 @@ abstract class AbstractConformanceServer {
             """);
 
         EchoToolHandler() {
-            super(ToolDescriptor.builder("echo")
+            super(ToolDescriptor.builder()
+                    .name("echo")
                     .description("Echo back the input message")
                     .inputSchema(INPUT_SCHEMA)
                     .build());
