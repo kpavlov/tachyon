@@ -5,6 +5,7 @@
 package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CompleteResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ElicitRequestFormParams;
@@ -55,7 +56,7 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
 
     @Override
     public boolean supports(String protocolName, String protocolVersion) {
-        return "mcp".equalsIgnoreCase(protocolName) && "2025-11-25".equals(protocolVersion);
+        return "mcp".equalsIgnoreCase(protocolName) && McpProtocol.VERSION.equals(protocolVersion);
     }
 
     @Override

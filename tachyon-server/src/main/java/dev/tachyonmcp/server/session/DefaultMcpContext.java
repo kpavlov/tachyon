@@ -8,6 +8,7 @@ import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.ProtocolMappers;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.Protocols;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.runtime.DefaultInteractionContext;
 import dev.tachyonmcp.runtime.MutableInteractionContext;
 import dev.tachyonmcp.runtime.Notifications;
@@ -254,7 +255,7 @@ public class DefaultMcpContext implements DispatchContext {
 
         @Override
         public ProtocolResponseMapper responseMapper() {
-            return Objects.requireNonNull(ProtocolMappers.getMapper("mcp", "2025-11-25"));
+            return Objects.requireNonNull(ProtocolMappers.getMapper("mcp", McpProtocol.VERSION));
         }
 
         @Override
