@@ -1,17 +1,29 @@
 // Copyright (c) 2026 Konstantin Pavlov.
 
-package dev.tachyonmcp.server
+package dev.tachyonmcp.server.config
 
-import dev.tachyonmcp.server.config.NetworkConfig
+import dev.tachyonmcp.server.Server
+import dev.tachyonmcp.server.ServerBuilder
+import dev.tachyonmcp.server.ServerHandle
+import dev.tachyonmcp.server.TachyonDsl
+import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.ResourceContents
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.server.features.tools.asyncHandler
+import dev.tachyonmcp.server.json.schemas
+import dev.tachyonmcp.server.json.toJacksonNode
+import dev.tachyonmcp.server.json.toJacksonNodeOrNull
 import io.netty.channel.ChannelPipeline
+import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
 import java.util.concurrent.CompletableFuture
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 @TachyonDsl
 public class TachyonServerBuilder
@@ -37,9 +49,11 @@ public class TachyonServerBuilder
             return this
         }
 
+        @OptIn(ExperimentalContracts::class)
         public inline fun network(
             crossinline configure: (@TachyonDsl NetworkScope).() -> Unit,
         ): TachyonServerBuilder {
+            contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
             val scope = NetworkScope()
             scope.configure()
             delegate.network { scope.applyTo(it) }
@@ -74,7 +88,8 @@ public class TachyonServerBuilder
                 delegate.tool(
                     asyncHandler(
                         ToolDescriptor
-                            .builder(name)
+                            .builder()
+                            .name(name)
                             .description(description)
                             .inputSchema(inputSchema)
                             .outputSchema(outputSchema)
@@ -95,7 +110,8 @@ public class TachyonServerBuilder
                 delegate.tool(
                     asyncHandler(
                         ToolDescriptor
-                            .builder(name)
+                            .builder()
+                            .name(name)
                             .description(description)
                             .schemas(inputSchema, outputSchema, toolName = name)
                             .build(),
@@ -128,12 +144,33 @@ public class TachyonServerBuilder
                 delegate.prompt(PromptDescriptor.of(name, description)) { args -> handler(args) }
             }
 
+        /**
+         * Registers a tool using a [kotlinx.serialization.json.JsonObject] input schema.
+         * Requires kotlinx-serialization-json on the classpath.
+         */
+        public fun tool(
+            name: String,
+            description: String? = null,
+            inputSchema: JsonObject,
+            outputSchema: JsonObject? = null,
+            handler: suspend ToolScope.() -> ToolResult,
+        ): TachyonServerBuilder =
+            this.tool(
+                name = name,
+                description = description,
+                inputSchema = inputSchema.toJacksonNode(),
+                outputSchema = outputSchema.toJacksonNodeOrNull(),
+                handler = handler,
+            )
+
         public fun name(name: String): TachyonServerBuilder = this.also { delegate.name(name) }
 
         /** Configures the JSON payload boundary: serde and input/output schema validators. */
+        @OptIn(ExperimentalContracts::class)
         public inline fun json(
             crossinline configure: (@TachyonDsl JsonScope).() -> Unit,
         ): TachyonServerBuilder {
+            contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
             JsonScope().apply(configure).applyTo(delegate)
             return this
         }
@@ -155,7 +192,6 @@ public class TachyonServerBuilder
         @PublishedApi
         internal fun start(): ServerHandle = delegate.start()
 
-        @PublishedApi
         internal fun startAsync(): CompletableFuture<ServerHandle> =
             delegate
                 .startAsync()

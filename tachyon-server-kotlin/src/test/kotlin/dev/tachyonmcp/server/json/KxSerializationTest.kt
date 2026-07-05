@@ -8,14 +8,14 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import org.junit.jupiter.api.Test
 
-internal class KxPayloadSerdeTest {
+internal class KxSerializationTest {
     @Serializable
     data class Payload(
         val message: String,
         val count: Int,
     )
 
-    private val serde = KxPayloadSerde()
+    private val serde = KxSerializationSerde()
 
     @Test
     fun `round-trips a serializable class through String`() {

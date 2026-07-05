@@ -45,7 +45,9 @@ class WeatherServerTest {
         if (clientTransport != null) {
             clientTransport.close();
         }
-        handle.close();
+        if (handle != null) {
+            handle.close();
+        }
     }
 
     @Test

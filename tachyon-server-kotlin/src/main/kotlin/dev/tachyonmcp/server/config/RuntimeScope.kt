@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Konstantin Pavlov.
 
-package dev.tachyonmcp.server
+package dev.tachyonmcp.server.config
 
-import dev.tachyonmcp.server.config.RuntimeConfig
+import dev.tachyonmcp.server.TachyonDsl
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
 

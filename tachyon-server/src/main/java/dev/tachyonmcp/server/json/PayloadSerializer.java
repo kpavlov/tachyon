@@ -12,13 +12,19 @@ package dev.tachyonmcp.server.json;
  * non-Jackson serdes (kotlinx.serialization, gson) emit Strings natively. {@code byte[]} round-trips
  * added conversions without saving any.
  *
- * <p>All parameters are non-null. Passing {@code null} to {@link #serialize(Object)} or
- * {@link #deserialize(String, java.lang.reflect.Type)} is undefined and may throw.
- *
- * <p>Values reaching {@link #serialize(Object)} must be typed the implementation understands.
+ * <p>Values reaching {@link #serialize(Object)} must be types the implementation understands.
  * Jackson {@link tools.jackson.databind.JsonNode} and {@link RawJson} structured values bypass
  * the serde; maps carrying {@code JsonNode} values are serialized with Jackson.
  *
+ * <p>All parameters are non-null. Passing {@code null} to
+ * {@link #serialize(Object)} is undefined and may throw.
+ *
  * @author Konstantin Pavlov
  */
-public interface PayloadSerde extends PayloadSerializer, PayloadDeserializer {}
+public interface PayloadSerializer {
+
+    /**
+     * Serializes a value to its JSON string representation.
+     */
+    <T> String serialize(T value);
+}

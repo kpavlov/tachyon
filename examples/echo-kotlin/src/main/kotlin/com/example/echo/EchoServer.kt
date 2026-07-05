@@ -7,7 +7,7 @@ import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.config.Mode
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.registerTool
+import dev.tachyonmcp.server.features.tools.registerTool
 import tools.jackson.databind.node.JsonNodeFactory
 
 fun createServer(port: Int = 0): ServerHandle {

@@ -1,24 +1,20 @@
 // Copyright (c) 2026 Konstantin Pavlov.
 
-package dev.tachyonmcp.server
+package dev.tachyonmcp.server.json
 
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.json.JsonSchemaUtils.parseSchema
-import dev.tachyonmcp.server.json.JsonUtils
+import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
 
-@PublishedApi
 @Suppress("TooGenericExceptionCaught")
-internal fun String.toJsonNode(): JsonNode {
-//    if (this == null) return null
-    return try {
+internal fun String.toJsonNode(): JsonNode =
+    try {
         JsonUtils.parse(this)
     } catch (e: Exception) {
         throw IllegalArgumentException("Failed to parse JSON schema: '$this'", e)
     }
-}
 
-@PublishedApi
 internal fun ToolDescriptor.Builder.schemas(
     inputSchema: String,
     outputSchema: String?,
@@ -26,3 +22,7 @@ internal fun ToolDescriptor.Builder.schemas(
 ): ToolDescriptor.Builder =
     inputSchema(parseSchema(inputSchema, toolName))
         .outputSchema(outputSchema?.let { parseSchema(it, toolName) })
+
+internal fun JsonObject.toJacksonNode(): JsonNode = toString().toJsonNode()
+
+internal fun JsonObject?.toJacksonNodeOrNull(): JsonNode? = this?.toJacksonNode()

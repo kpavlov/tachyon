@@ -43,7 +43,8 @@ import tools.jackson.databind.node.JsonNodeFactory;
  */
 class McpOperationHandlerRequestTest {
 
-    private static final ToolDescriptor PROGRESS_DESCRIPTOR = ToolDescriptor.builder("progress_tool")
+    private static final ToolDescriptor PROGRESS_DESCRIPTOR = ToolDescriptor.builder()
+            .name("progress_tool")
             .description("emits progress notifications")
             .inputSchema(JsonNodeFactory.instance.objectNode().put("type", "object"))
             .build();
@@ -161,7 +162,8 @@ class McpOperationHandlerRequestTest {
     // emit a comment heartbeat (":\r\n") to keep it alive instead of closing the channel.
     @Test
     void idleOnUpgradedPostSseStreamSendsHeartbeat() throws InterruptedException {
-        var descriptor = ToolDescriptor.builder("stalled_tool")
+        var descriptor = ToolDescriptor.builder()
+                .name("stalled_tool")
                 .description("upgrades to SSE then never completes")
                 .inputSchema(JsonNodeFactory.instance.objectNode().put("type", "object"))
                 .build();

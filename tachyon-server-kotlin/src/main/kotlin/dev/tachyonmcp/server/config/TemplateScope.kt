@@ -1,14 +1,14 @@
 // Copyright (c) 2026 Konstantin Pavlov.
 
-package dev.tachyonmcp.server
-
+package dev.tachyonmcp.server.config
 import dev.tachyonmcp.runtime.InteractionContext
+import dev.tachyonmcp.server.Server
+import dev.tachyonmcp.server.TachyonDsl
 import dev.tachyonmcp.server.domain.ResourceContents
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry
 
 @TachyonDsl
 public class TemplateScope
-    @PublishedApi
     internal constructor(
         public val ctx: InteractionContext,
         public val uri: String,

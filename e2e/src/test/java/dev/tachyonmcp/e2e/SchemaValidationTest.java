@@ -33,7 +33,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldValidateMultipleToolsWithDistinctSchemas() throws Exception {
-        startServer(it -> it.jsonSchemaValidator(VALIDATOR)
+        startServer(it -> it.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR))
                 .tool(new ValidatedToolHandler())
                 .tool(new ValidatedToolHandler2()));
 
@@ -68,7 +68,8 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldAcceptValidToolArguments() throws Exception {
-        startServer(it -> it.jsonSchemaValidator(VALIDATOR).tool(new ValidatedToolHandler()));
+        startServer(it -> it.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR))
+                .tool(new ValidatedToolHandler()));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -87,7 +88,8 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldRejectToolCallWithMissingRequiredField() throws Exception {
-        startServer(it -> it.jsonSchemaValidator(VALIDATOR).tool(new ValidatedToolHandler()));
+        startServer(it -> it.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR))
+                .tool(new ValidatedToolHandler()));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -106,7 +108,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldRejectToolCallWithWrongType() throws Exception {
-        startServer(it -> it.jsonSchemaValidator(VALIDATOR).tool(new ValidatedToolHandler()));
+        startServer(it -> it.json(j -> j.schemaValidator(VALIDATOR)).tool(new ValidatedToolHandler()));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -130,7 +132,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldAcceptValidPromptArguments() throws Exception {
-        startServer(it -> it.jsonSchemaValidator(VALIDATOR));
+        startServer(it -> it.json(j -> j.schemaValidator(VALIDATOR)));
 
         server.prompts()
                 .add(
@@ -165,7 +167,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldRejectPromptWithMissingRequiredField() throws Exception {
-        startServer(it -> it.jsonSchemaValidator(VALIDATOR));
+        startServer(it -> it.json(j -> j.schemaValidator(VALIDATOR)));
 
         server.prompts()
                 .add(

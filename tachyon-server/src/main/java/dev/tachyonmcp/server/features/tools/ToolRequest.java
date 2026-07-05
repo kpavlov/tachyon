@@ -6,7 +6,7 @@ package dev.tachyonmcp.server.features.tools;
 
 import dev.tachyonmcp.runtime.Cancellation;
 import dev.tachyonmcp.server.domain.HasMeta;
-import dev.tachyonmcp.server.json.PayloadSerde;
+import dev.tachyonmcp.server.json.PayloadDeserializer;
 import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
@@ -29,9 +29,9 @@ public interface ToolRequest extends HasMeta {
     @Nullable
     Map<String, JsonNode> meta();
 
-    /** Returns the payload serde configured for this request, or {@code null} if not set. */
+    /** Returns the payload deserializer configured for this request, or {@code null} if not set. */
     @Nullable
-    PayloadSerde payloadSerde();
+    PayloadDeserializer payloadDeserializer();
 
     @Nullable
     Object progressToken();
@@ -56,7 +56,7 @@ public interface ToolRequest extends HasMeta {
 
         Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
 
-        Builder payloadSerde(@Nullable PayloadSerde payloadSerde);
+        Builder payloadDeserializer(@Nullable PayloadDeserializer deserializer);
 
         Builder progressToken(@Nullable Object progressToken);
 

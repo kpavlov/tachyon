@@ -172,7 +172,7 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
         // This test uses a synchronous tool to verify notification delivery.
         startServer(it -> it.tool(new ToolHandler() {
                     private final ToolDescriptor d =
-                            ToolDescriptor.builder("create-sync").build();
+                            ToolDescriptor.builder().name("create-sync").build();
 
                     @Override
                     public ToolDescriptor descriptor() {

@@ -142,7 +142,8 @@ class TaskLifecycleTest extends AbstractMcpE2eTest {
     }
 
     private class SyncTaskCreatorTool implements ToolHandler {
-        private final ToolDescriptor descriptor = ToolDescriptor.builder("create-task-sync")
+        private final ToolDescriptor descriptor = ToolDescriptor.builder()
+                .name("create-task-sync")
                 .description("Creates a task synchronously")
                 .build();
 

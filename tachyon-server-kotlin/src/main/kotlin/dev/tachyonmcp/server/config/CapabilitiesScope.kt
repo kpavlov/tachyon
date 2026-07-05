@@ -1,9 +1,8 @@
 // Copyright (c) 2026 Konstantin Pavlov.
 
-package dev.tachyonmcp.server
+package dev.tachyonmcp.server.config
 
-import dev.tachyonmcp.server.config.CapabilitiesConfig
-import dev.tachyonmcp.server.config.Mode
+import dev.tachyonmcp.server.TachyonDsl
 
 @TachyonDsl
 public class CapabilitiesScope

@@ -2,10 +2,21 @@
 
 package dev.tachyonmcp.server
 
+import dev.tachyonmcp.server.config.ToolScope
+import dev.tachyonmcp.server.config.structured
 import dev.tachyonmcp.server.domain.TextContent
 import dev.tachyonmcp.server.features.tools.ToolArgs
 import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.server.features.tools.boolean
+import dev.tachyonmcp.server.features.tools.booleanOrNull
+import dev.tachyonmcp.server.features.tools.decode
+import dev.tachyonmcp.server.features.tools.double
+import dev.tachyonmcp.server.features.tools.doubleOrNull
+import dev.tachyonmcp.server.features.tools.int
+import dev.tachyonmcp.server.features.tools.intOrNull
+import dev.tachyonmcp.server.features.tools.stringOrNull
 import dev.tachyonmcp.server.json.RawJson
+import dev.tachyonmcp.server.json.toJsonNode
 import dev.tachyonmcp.server.session.DefaultMcpContext
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.nulls.shouldNotBeNull

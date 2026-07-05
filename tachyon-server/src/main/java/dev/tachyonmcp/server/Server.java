@@ -24,7 +24,8 @@ import dev.tachyonmcp.server.handlers.PingHandler;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
-import dev.tachyonmcp.server.json.PayloadSerde;
+import dev.tachyonmcp.server.json.PayloadDeserializer;
+import dev.tachyonmcp.server.json.PayloadSerializer;
 import dev.tachyonmcp.server.session.*;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.io.Closeable;
@@ -56,7 +57,8 @@ public class Server implements Closeable {
     private final AtomicLong eventIdCounter = new AtomicLong(0);
     private final JsonSchemaValidator inputValidator;
     private final JsonSchemaValidator outputValidator;
-    private final PayloadSerde payloadSerde;
+    private final PayloadSerializer payloadSerializer;
+    private final PayloadDeserializer payloadDeserializer;
     private final ToolRegistry toolRegistry;
     private final ResourceRegistry resourceRegistry;
     private final TaskRegistry taskRegistry;
@@ -194,7 +196,8 @@ public class Server implements Closeable {
             ServerConfig config,
             @Nullable JsonSchemaValidator inputValidator,
             @Nullable JsonSchemaValidator outputValidator,
-            @Nullable PayloadSerde payloadSerde,
+            @Nullable PayloadSerializer payloadSerializer,
+            @Nullable PayloadDeserializer payloadDeserializer,
             @Nullable List<ServerExtension> extensions) {
         this.executor = executor;
         this.ownsExecutor = ownsExecutor;
@@ -204,8 +207,11 @@ public class Server implements Closeable {
         this.sessionManager = new SessionManager(sessionStore);
         this.inputValidator = inputValidator != null ? inputValidator : new NetworkntJsonSchemaValidator();
         this.outputValidator = outputValidator != null ? outputValidator : this.inputValidator;
-        this.payloadSerde = payloadSerde != null ? payloadSerde : new JacksonPayloadSerde();
-        this.toolRegistry = new ToolRegistry(this.inputValidator, this.outputValidator, this.payloadSerde);
+        var defaultSerde = new JacksonPayloadSerde();
+        this.payloadSerializer = payloadSerializer != null ? payloadSerializer : defaultSerde;
+        this.payloadDeserializer = payloadDeserializer != null ? payloadDeserializer : defaultSerde;
+        this.toolRegistry = new ToolRegistry(
+                this.inputValidator, this.outputValidator, this.payloadSerializer, this.payloadDeserializer);
         this.resourceRegistry = new ResourceRegistry(this);
         this.taskRegistry = new TaskRegistry(this);
         this.promptRegistry = new PromptRegistry(this.inputValidator);
@@ -227,6 +233,7 @@ public class Server implements Closeable {
                 null,
                 null,
                 null,
+                null,
                 List.of());
     }
 
@@ -240,6 +247,7 @@ public class Server implements Closeable {
                 validator,
                 validator,
                 null,
+                null,
                 List.of());
     }
 
@@ -249,7 +257,8 @@ public class Server implements Closeable {
             ServerConfig config,
             @Nullable JsonSchemaValidator inputValidator,
             @Nullable JsonSchemaValidator outputValidator,
-            @Nullable PayloadSerde payloadSerde,
+            @Nullable PayloadSerializer payloadSerializer,
+            @Nullable PayloadDeserializer payloadDeserializer,
             @Nullable List<ServerExtension> extensions) {
         this(
                 defaultExecutor(),
@@ -259,7 +268,8 @@ public class Server implements Closeable {
                 config,
                 inputValidator,
                 outputValidator,
-                payloadSerde,
+                payloadSerializer,
+                payloadDeserializer,
                 extensions);
     }
 

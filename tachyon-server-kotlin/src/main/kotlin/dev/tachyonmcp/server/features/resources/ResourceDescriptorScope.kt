@@ -1,10 +1,13 @@
 // Copyright (c) 2026 Konstantin Pavlov.
 
-package dev.tachyonmcp.server
+package dev.tachyonmcp.server.features.resources
 
+import dev.tachyonmcp.server.TachyonDsl
 import dev.tachyonmcp.server.domain.Annotations
 import dev.tachyonmcp.server.domain.Icon
-import dev.tachyonmcp.server.features.resources.ResourceDescriptor
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 @TachyonDsl
 public class ResourceDescriptorScope
@@ -36,14 +39,17 @@ public class ResourceDescriptorScope
         }
     }
 
-public fun resourceDescriptor(
+@OptIn(ExperimentalContracts::class)
+public inline fun resourceDescriptor(
     name: String,
     uri: String,
     configure: ResourceDescriptorScope.() -> Unit = {},
-): ResourceDescriptor =
-    ResourceDescriptorScope()
+): ResourceDescriptor {
+    contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
+    return ResourceDescriptorScope()
         .apply {
             this.name = name
             this.uri = uri
             configure()
         }.build()
+}

@@ -2,13 +2,10 @@
  * Copyright (c) 2026 Konstantin Pavlov.
  */
 
-package dev.tachyonmcp.server
+package dev.tachyonmcp.server.features.tools
 
 import dev.tachyonmcp.runtime.InteractionContext
-import dev.tachyonmcp.server.features.tools.AbstractAsyncToolHandler
-import dev.tachyonmcp.server.features.tools.ToolArgs
-import dev.tachyonmcp.server.features.tools.ToolDescriptor
-import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.server.config.ToolScope
 import dev.tachyonmcp.server.session.DispatchContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineName

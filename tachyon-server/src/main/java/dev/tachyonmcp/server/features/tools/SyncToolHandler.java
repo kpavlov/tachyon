@@ -2,6 +2,8 @@
 
 package dev.tachyonmcp.server.features.tools;
 
+import static dev.tachyonmcp.server.json.JsonSchemaUtils.parseSchema;
+
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
@@ -11,10 +13,14 @@ import java.util.function.BiFunction;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
-/** Convenient base for synchronous (blocking) tool handlers. */
+/**
+ * Convenient base for synchronous (blocking) tool handlers.
+ */
 public interface SyncToolHandler extends ToolHandler {
 
-    /** The tool name. */
+    /**
+     * The tool name.
+     */
     String name();
 
     @Nullable
@@ -42,7 +48,9 @@ public interface SyncToolHandler extends ToolHandler {
         return null;
     }
 
-    /** Executes the tool synchronously. */
+    /**
+     * Executes the tool synchronously.
+     */
     ToolResult handle(InteractionContext context, ToolArgs args) throws Exception;
 
     @Nullable
@@ -52,7 +60,8 @@ public interface SyncToolHandler extends ToolHandler {
 
     @Override
     default ToolDescriptor descriptor() {
-        return ToolDescriptor.builder(name())
+        return ToolDescriptor.builder()
+                .name(name())
                 .title(title())
                 .description(description())
                 .inputSchema(inputSchema())
@@ -66,13 +75,15 @@ public interface SyncToolHandler extends ToolHandler {
     default CompletionStage<? extends ToolResult> handle(InteractionContext context, ToolRequest request) {
         try {
             return CompletableFuture.completedFuture(
-                    handle(context, ToolArgs.of(request.arguments(), request.payloadSerde())));
+                    handle(context, ToolArgs.of(request.arguments(), request.payloadDeserializer())));
         } catch (Exception e) {
             return CompletableFuture.failedFuture(e);
         }
     }
 
-    /** Creates a simple SyncToolHandler from a name, description, schema, and function. */
+    /**
+     * Creates a simple SyncToolHandler from a name, description, schema, and function.
+     */
     static SyncToolHandler of(
             String name,
             @Nullable String description,
@@ -97,26 +108,33 @@ public interface SyncToolHandler extends ToolHandler {
             }
 
             @Override
-            public ToolResult handle(InteractionContext ctx, ToolArgs args) throws Exception {
+            public ToolResult handle(InteractionContext ctx, ToolArgs args) {
                 return fn.apply(ctx, args);
             }
         };
     }
 
-    /** Creates a simple SyncToolHandler with JSON string input and output schemas. */
+    /**
+     * Creates a simple SyncToolHandler with JSON string input and output schemas.
+     */
     static SyncToolHandler of(
             String name,
             @Nullable String description,
             @Nullable String inputSchemaJson,
             @Nullable String outputSchemaJson,
             BiFunction<InteractionContext, ToolArgs, ToolResult> fn) {
-        var desc = ToolDescriptor.builder(name, inputSchemaJson, outputSchemaJson)
+        var desc = ToolDescriptor.builder()
+                .name(name)
+                .inputSchema(parseSchema(inputSchemaJson, name))
+                .outputSchema(parseSchema(outputSchemaJson, name))
                 .description(description)
                 .build();
         return fromDescriptor(desc, fn);
     }
 
-    /** Creates a simple SyncToolHandler with {@link JsonNode} input and output schemas. */
+    /**
+     * Creates a simple SyncToolHandler with {@link JsonNode} input and output schemas.
+     */
     static SyncToolHandler of(
             String name,
             @Nullable String description,
@@ -131,7 +149,9 @@ public interface SyncToolHandler extends ToolHandler {
         return fromDescriptor(desc, fn);
     }
 
-    /** Creates a SyncToolHandler from a pre-built descriptor and function. */
+    /**
+     * Creates a SyncToolHandler from a pre-built descriptor and function.
+     */
     static SyncToolHandler fromDescriptor(
             ToolDescriptor desc, BiFunction<InteractionContext, ToolArgs, ToolResult> fn) {
         return new SyncToolHandler() {

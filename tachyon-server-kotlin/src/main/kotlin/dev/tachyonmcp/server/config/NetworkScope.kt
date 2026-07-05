@@ -1,7 +1,8 @@
 // Copyright (c) 2026 Konstantin Pavlov.
 
-package dev.tachyonmcp.server
+package dev.tachyonmcp.server.config
 
+import dev.tachyonmcp.server.TachyonDsl
 import dev.tachyonmcp.server.config.NetworkConfig
 import dev.tachyonmcp.transport.netty.NettyIoEngine
 import kotlin.time.Duration

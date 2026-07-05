@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Konstantin Pavlov.
 
-package dev.tachyonmcp.server
+package dev.tachyonmcp.server.config
 
-import dev.tachyonmcp.server.config.ServerIdentityBuilder
+import dev.tachyonmcp.server.TachyonDsl
 import dev.tachyonmcp.server.domain.Icon
 
 @TachyonDsl

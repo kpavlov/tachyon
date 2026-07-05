@@ -1,8 +1,12 @@
 // Copyright (c) 2026 Konstantin Pavlov.
 
-package dev.tachyonmcp.server
+package dev.tachyonmcp.server.features.prompts
 
+import dev.tachyonmcp.server.TachyonDsl
 import dev.tachyonmcp.server.domain.PromptArgument
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 @TachyonDsl
 public class PromptArgumentScope
@@ -26,8 +30,11 @@ public fun promptArgument(
     required: Boolean? = null,
 ): PromptArgument = PromptArgument.of(name, null, description, required)
 
-public fun promptArgument(configure: PromptArgumentScope.() -> Unit): PromptArgument =
-    PromptArgumentScope()
+@OptIn(ExperimentalContracts::class)
+public inline fun promptArgument(configure: PromptArgumentScope.() -> Unit): PromptArgument {
+    contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
+    return PromptArgumentScope()
         .apply {
             configure()
         }.build()
+}

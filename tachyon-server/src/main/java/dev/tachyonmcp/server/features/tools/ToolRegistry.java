@@ -15,10 +15,7 @@ import dev.tachyonmcp.server.json.*;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -36,7 +33,8 @@ public class ToolRegistry {
     private final ConcurrentHashMap<String, ToolHandler> handlers = new ConcurrentHashMap<>();
     private final JsonSchemaValidator inputValidator;
     private final JsonSchemaValidator outputValidator;
-    private final PayloadSerde payloadSerde;
+    private final PayloadSerializer payloadSerializer;
+    private final PayloadDeserializer payloadDeserializer;
 
     private @Nullable Runnable onChange;
 
@@ -50,10 +48,14 @@ public class ToolRegistry {
 
     /** Creates a tool registry with the given schema validators and payload serde. */
     public ToolRegistry(
-            JsonSchemaValidator inputValidator, JsonSchemaValidator outputValidator, PayloadSerde payloadSerde) {
+            JsonSchemaValidator inputValidator,
+            JsonSchemaValidator outputValidator,
+            PayloadSerializer payloadSerializer,
+            PayloadDeserializer payloadDeserializer) {
         this.inputValidator = inputValidator;
         this.outputValidator = outputValidator;
-        this.payloadSerde = payloadSerde;
+        this.payloadSerializer = payloadSerializer;
+        this.payloadDeserializer = payloadDeserializer;
     }
 
     public void onChange(@Nullable Runnable callback) {
@@ -193,7 +195,9 @@ public class ToolRegistry {
 
     public void registerHandlers(Map<String, RpcMethodHandler> registry) {
         registry.put("tools/list", new ToolsListHandler(this));
-        registry.put("tools/call", new ToolsCallHandler(this, inputValidator, outputValidator, payloadSerde));
+        registry.put(
+                "tools/call",
+                new ToolsCallHandler(this, inputValidator, outputValidator, payloadSerializer, payloadDeserializer));
     }
 
     public static int parseLimit(Object params) {
@@ -237,7 +241,8 @@ public class ToolRegistry {
             ToolRegistry registry,
             JsonSchemaValidator inputValidator,
             JsonSchemaValidator outputValidator,
-            PayloadSerde payloadSerde)
+            PayloadSerializer payloadSerializer,
+            PayloadDeserializer payloadDeserializer)
             implements RpcMethodHandler {
 
         @Override
@@ -275,7 +280,7 @@ public class ToolRegistry {
                     .arguments(parsed.args() != null ? parsed.args() : Collections.emptyMap())
                     .meta(parsed.meta())
                     .progressToken(progressToken)
-                    .payloadSerde(payloadSerde)
+                    .payloadDeserializer(payloadDeserializer)
                     .inputResponses(parsed.inputResponses())
                     .requestState(parsed.requestState())
                     .build();
@@ -378,7 +383,7 @@ public class ToolRegistry {
             if (!(result instanceof ToolResult.Success s)) return result;
             var sv = s.structuredValue();
             if (sv == null || sv instanceof RawJson || sv instanceof JsonNode) return result;
-            var json = containsJsonNodes(sv) ? JsonUtils.writeString(sv) : payloadSerde.serialize(sv);
+            var json = containsJsonNodes(sv) ? JsonUtils.writeString(sv) : payloadSerializer.serialize(sv);
             return new ToolResult.Success(RawJson.of(json), s.content());
         }
 

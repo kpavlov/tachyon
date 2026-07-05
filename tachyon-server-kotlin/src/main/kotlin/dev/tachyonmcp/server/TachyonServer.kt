@@ -2,6 +2,7 @@
 
 package dev.tachyonmcp.server
 
+import dev.tachyonmcp.server.config.TachyonServerBuilder
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract

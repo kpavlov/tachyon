@@ -1,10 +1,14 @@
 // Copyright (c) 2026 Konstantin Pavlov.
 
-package dev.tachyonmcp.server
+package dev.tachyonmcp.server.features.prompts
 
+import dev.tachyonmcp.server.TachyonDsl
 import dev.tachyonmcp.server.domain.PromptArgument
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
 import tools.jackson.databind.JsonNode
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 @TachyonDsl
 public class PromptDescriptorScope
@@ -23,12 +27,15 @@ public class PromptDescriptorScope
         }
     }
 
-public fun promptDescriptor(
+@OptIn(ExperimentalContracts::class)
+public inline fun promptDescriptor(
     name: String,
     configure: PromptDescriptorScope.() -> Unit = {},
-): PromptDescriptor =
-    PromptDescriptorScope()
+): PromptDescriptor {
+    contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
+    return PromptDescriptorScope()
         .apply {
             this.name = name
             configure()
         }.build()
+}

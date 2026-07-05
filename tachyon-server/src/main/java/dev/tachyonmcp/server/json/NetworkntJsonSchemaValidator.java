@@ -23,6 +23,8 @@ public class NetworkntJsonSchemaValidator implements JsonSchemaValidator {
     // keyed by schema content (JsonNode equals/hashCode are structural in Jackson).
     private final ConcurrentMap<JsonNode, Schema> compiledSchemas = new ConcurrentHashMap<>();
 
+    public static final NetworkntJsonSchemaValidator INSTANCE = new NetworkntJsonSchemaValidator();
+
     public NetworkntJsonSchemaValidator() {
         this.registry = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12);
     }

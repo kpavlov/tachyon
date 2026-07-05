@@ -19,9 +19,12 @@ import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
+import dev.tachyonmcp.server.json.JsonConfig;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
+import dev.tachyonmcp.server.json.PayloadDeserializer;
 import dev.tachyonmcp.server.json.PayloadSerde;
+import dev.tachyonmcp.server.json.PayloadSerializer;
 import dev.tachyonmcp.server.session.InMemorySessionLogRouter;
 import dev.tachyonmcp.server.session.InMemorySessionStore;
 import dev.tachyonmcp.transport.netty.NettyServer;
@@ -85,6 +88,26 @@ public final class ServerBuilder {
     /** Configures handler-execution runtime settings (shutdown grace period, etc.). */
     public ServerBuilder runtime(Consumer<RuntimeConfig.Builder> configurer) {
         configurer.accept(runtimeBuilder);
+        return this;
+    }
+
+    /** Configures JSON payload settings (serde, input/output schema validators). */
+    public ServerBuilder json(Consumer<JsonConfig.Builder> configurer) {
+        var builder = JsonConfig.builder();
+        configurer.accept(builder);
+        var config = builder.build();
+        if (config.serializer() != null) {
+            featuresConfig.payloadSerializer = config.serializer();
+        }
+        if (config.deserializer() != null) {
+            featuresConfig.payloadDeserializer = config.deserializer();
+        }
+        if (config.inputValidator() != null) {
+            featuresConfig.inputSchemaValidator = config.inputValidator();
+        }
+        if (config.outputValidator() != null) {
+            featuresConfig.outputSchemaValidator = config.outputValidator();
+        }
         return this;
     }
 
@@ -160,7 +183,14 @@ public final class ServerBuilder {
         return this;
     }
 
-    /** Sets a custom JSON schema validator for both input and output validation. */
+    /**
+     * Sets a custom JSON schema validator for both input and output validation.
+     *
+     * @deprecated Use {@link #json(Consumer)} with
+     * {@link JsonConfig.Builder#inputSchemaValidator(JsonSchemaValidator)} and
+     * {@link JsonConfig.Builder#outputSchemaValidator(JsonSchemaValidator)} instead.
+     */
+    @Deprecated(forRemoval = true, since = "1.0.0-beta.4")
     public ServerBuilder jsonSchemaValidator(JsonSchemaValidator validator) {
         featuresConfig.inputSchemaValidator = validator;
         featuresConfig.outputSchemaValidator = validator;
@@ -173,7 +203,8 @@ public final class ServerBuilder {
      * {@code JsonNode} and {@code RawJson} values bypass it.
      */
     public ServerBuilder payloadSerde(PayloadSerde serde) {
-        featuresConfig.payloadSerde = serde;
+        featuresConfig.payloadSerializer = serde;
+        featuresConfig.payloadDeserializer = serde;
         return this;
     }
 
@@ -252,7 +283,8 @@ public final class ServerBuilder {
                 serverConfig,
                 featuresConfig.inputSchemaValidator,
                 featuresConfig.outputSchemaValidator,
-                featuresConfig.payloadSerde,
+                featuresConfig.payloadSerializer,
+                featuresConfig.payloadDeserializer,
                 allExtensions);
         featuresConfig.tools.forEach(server::registerTool);
         featuresConfig.resources.forEach(r -> {
@@ -317,7 +349,8 @@ public final class ServerBuilder {
 
         JsonSchemaValidator inputSchemaValidator = new NetworkntJsonSchemaValidator();
         JsonSchemaValidator outputSchemaValidator = new NetworkntJsonSchemaValidator();
-        PayloadSerde payloadSerde = new JacksonPayloadSerde();
+        PayloadSerializer payloadSerializer = new JacksonPayloadSerde();
+        PayloadDeserializer payloadDeserializer = new JacksonPayloadSerde();
 
         record PromptRegistration(PromptDescriptor descriptor, PromptHandler handler) {}
 

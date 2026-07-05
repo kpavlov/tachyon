@@ -7,6 +7,7 @@ package dev.tachyonmcp.server
 import dev.tachyonmcp.server.features.tools.ToolArgs
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.server.features.tools.asyncHandler
 import dev.tachyonmcp.server.session.DefaultMcpContext
 import io.kotest.assertions.assertSoftly
 import io.kotest.matchers.shouldBe
@@ -17,6 +18,7 @@ import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration.Companion.minutes
 
 internal class AsyncHandlerTest {
     @Test
@@ -25,11 +27,11 @@ internal class AsyncHandlerTest {
         val cancelled = AtomicBoolean(false)
         val handler =
             asyncHandler(
-                ToolDescriptor.builder("cancel-test").build(),
+                ToolDescriptor.builder().name("cancel-test").build(),
             ) {
                 started.complete(Unit)
                 try {
-                    delay(Long.MAX_VALUE)
+                    delay(100500.minutes)
                 } finally {
                     cancelled.set(true)
                 }

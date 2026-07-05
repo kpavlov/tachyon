@@ -2,11 +2,14 @@
  * Copyright (c) 2026 Konstantin Pavlov.
  */
 
-package dev.tachyonmcp.server
+package dev.tachyonmcp.server.features.tools
 
-import dev.tachyonmcp.server.features.tools.ToolDescriptor
-import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.schemas
+import dev.tachyonmcp.server.Server
+import dev.tachyonmcp.server.config.ToolScope
+import dev.tachyonmcp.server.json.schemas
+import dev.tachyonmcp.server.json.toJacksonNode
+import dev.tachyonmcp.server.json.toJacksonNodeOrNull
+import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
@@ -62,3 +65,23 @@ public fun Server.registerTool(
     this.registerTool(asyncHandler(descriptor, block))
     return this
 }
+
+/**
+ * Registers a tool using a [JsonObject] input schema.
+ * Requires kotlinx-serialization-json on the classpath.
+ */
+@JvmSynthetic
+public fun Server.registerTool(
+    name: String,
+    description: String? = null,
+    inputSchema: JsonObject,
+    outputSchema: JsonObject? = null,
+    block: suspend ToolScope.() -> ToolResult,
+): Server =
+    registerTool(
+        name = name,
+        description = description,
+        inputSchema = inputSchema.toJacksonNode(),
+        outputSchema = outputSchema.toJacksonNodeOrNull(),
+        block = block,
+    )

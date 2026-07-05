@@ -3,7 +3,7 @@
 package dev.tachyonmcp.server.features.tools;
 
 import dev.tachyonmcp.server.json.JsonUtils;
-import dev.tachyonmcp.server.json.PayloadSerde;
+import dev.tachyonmcp.server.json.PayloadDeserializer;
 import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.Map;
@@ -14,19 +14,19 @@ import tools.jackson.databind.JsonNode;
 public final class ToolArgs {
 
     private final Map<String, JsonNode> raw;
-    private final @Nullable PayloadSerde serde;
+    private final @Nullable PayloadDeserializer deserializer;
 
-    private ToolArgs(@Nullable Map<String, JsonNode> raw, @Nullable PayloadSerde serde) {
+    private ToolArgs(@Nullable Map<String, JsonNode> raw, @Nullable PayloadDeserializer deserializer) {
         this.raw = raw == null ? Map.of() : Map.copyOf(raw);
-        this.serde = serde;
+        this.deserializer = deserializer;
     }
 
     public static ToolArgs of(@Nullable Map<String, JsonNode> raw) {
         return new ToolArgs(raw, null);
     }
 
-    public static ToolArgs of(@Nullable Map<String, JsonNode> raw, @Nullable PayloadSerde serde) {
-        return new ToolArgs(raw, serde);
+    public static ToolArgs of(@Nullable Map<String, JsonNode> raw, @Nullable PayloadDeserializer deserializer) {
+        return new ToolArgs(raw, deserializer);
     }
 
     public boolean isEmpty() {
@@ -93,10 +93,10 @@ public final class ToolArgs {
      * @throws IllegalStateException if no serde is configured
      */
     public <T> T decode(Type targetType) {
-        if (serde == null) {
-            throw new IllegalStateException("PayloadSerde is not configured for these args");
+        if (deserializer == null) {
+            throw new IllegalStateException("PayloadDeserializer is not configured for these args");
         }
-        return serde.deserialize(rawJson(), targetType);
+        return deserializer.deserialize(rawJson(), targetType);
     }
 
     /**

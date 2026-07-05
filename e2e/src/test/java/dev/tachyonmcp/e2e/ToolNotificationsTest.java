@@ -51,7 +51,8 @@ class ToolNotificationsTest extends AbstractMcpE2eTest {
     private static class NotifyingToolHandler extends AbstractSyncToolHandler {
 
         NotifyingToolHandler() {
-            super(ToolDescriptor.builder("notifier")
+            super(ToolDescriptor.builder()
+                    .name("notifier")
                     .title("Notifier Tool")
                     .description("Sends notifications and logs during execution")
                     .build());

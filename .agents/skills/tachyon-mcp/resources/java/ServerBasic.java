@@ -11,6 +11,9 @@ import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
 import dev.tachyonmcp.server.features.tools.SyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.json.JacksonPayloadSerde;
+import dev.tachyonmcp.server.json.JsonSchemaValidator;
+import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
 
 import java.util.List;
 import java.util.UUID;
@@ -36,6 +39,17 @@ public final class ServerBasic {
                 .enabled(true)
                 .sessionTtl(ofMinutes(5))
                 .sessionIdGenerator((req) -> "sid_" + UUID.randomUUID())
+            )
+            .json(j ->
+                j
+                    // json schema validator
+                    .schemaValidator(NetworkntJsonSchemaValidator.INSTANCE)
+                    .inputSchemaValidator(NetworkntJsonSchemaValidator.INSTANCE)
+                    .outputSchemaValidator(JsonSchemaValidator.NOOP)
+                    // serializer
+                    .serializer(JacksonPayloadSerde.INSTANCE)
+                    .deserializer(JacksonPayloadSerde.INSTANCE)
+                    .serde(JacksonPayloadSerde.INSTANCE)
             )
             .runtime(r -> r.shutdownGracePeriod(ofSeconds(5)))
             .network(n -> n.allowedOrigins("*").allowNullOrigin(true))

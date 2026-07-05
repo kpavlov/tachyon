@@ -56,6 +56,10 @@ public interface ToolDescriptor {
         return DefaultToolDescriptor.builder();
     }
 
+    /**
+     * @deprecated Use {@link #builder()}
+     */
+    @Deprecated
     static Builder builder(String name) {
         return builder().name(name);
     }
@@ -84,8 +88,6 @@ public interface ToolDescriptor {
         Builder taskSupport(@Nullable TaskSupport taskSupport);
 
         Builder annotations(@Nullable ToolAnnotations annotations);
-
-        //        Builder icons(@Nullable Iterable<? extends Icon> icons);
 
         Builder icons(@Nullable Iterable<? extends Icon> icons);
 

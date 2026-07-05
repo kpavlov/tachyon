@@ -14,9 +14,9 @@ import tools.jackson.databind.ObjectMapper;
  */
 public final class JacksonPayloadSerde implements PayloadSerde {
 
-    private static final int MAX_MESSAGE_PAYLOAD = 200;
-
     private final ObjectMapper mapper;
+
+    public static final JacksonPayloadSerde INSTANCE = new JacksonPayloadSerde();
 
     public JacksonPayloadSerde() {
         this(JsonUtils.mapper());
@@ -42,11 +42,9 @@ public final class JacksonPayloadSerde implements PayloadSerde {
             return mapper.readValue(json, mapper.constructType(targetType));
         } catch (Exception e) {
             throw new IllegalArgumentException(
-                    "Failed to deserialize JSON as " + targetType.getTypeName() + ": " + abbreviate(json), e);
+                    "Failed to deserialize JSON as " + targetType.getTypeName() + " (payload length=" + json.length()
+                            + ")",
+                    e);
         }
-    }
-
-    private static String abbreviate(String json) {
-        return json.length() <= MAX_MESSAGE_PAYLOAD ? json : json.substring(0, MAX_MESSAGE_PAYLOAD) + "…";
     }
 }

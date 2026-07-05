@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Konstantin Pavlov.
 
-package dev.tachyonmcp.server
+package dev.tachyonmcp.server.features.prompts
 
 import dev.tachyonmcp.server.domain.PromptMessage
 
