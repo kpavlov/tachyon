@@ -20,8 +20,6 @@ import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.DispatchContext;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -212,8 +210,8 @@ class ExtensionsTest extends AbstractMcpE2eTest {
                 }
 
                 @Override
-                public CompletionStage<ToolResult> handle(InteractionContext context, ToolRequest request) {
-                    return CompletableFuture.completedFuture(ToolResult.text("ext-tool-result"));
+                public ToolResult handle(InteractionContext context, ToolRequest request) {
+                    return ToolResult.text("ext-tool-result");
                 }
             });
         }

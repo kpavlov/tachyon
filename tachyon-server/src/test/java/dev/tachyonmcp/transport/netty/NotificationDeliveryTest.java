@@ -10,7 +10,7 @@ import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.runtime.SseEvent;
-import dev.tachyonmcp.server.McpDispatcher;
+import dev.tachyonmcp.server.RpcDispatcher;
 import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
@@ -19,8 +19,6 @@ import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,7 +40,7 @@ class NotificationDeliveryTest {
         }
 
         @Override
-        public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest request) {
+        public ToolResult handle(InteractionContext ctx, ToolRequest request) throws Exception {
             var pt = request.progressToken();
             ctx.notifications().progress(pt, 0, 100, "Starting");
             ctx.notifications().progress(pt, 50, 100, "Halfway");
@@ -51,12 +49,12 @@ class NotificationDeliveryTest {
             ctx.notifications().info("tachyon.tools", logData);
             ctx.notifications().info("tachyon.tools", logData);
             ctx.notifications().info("tachyon.tools", logData);
-            return CompletableFuture.completedFuture(ToolResult.text("ok"));
+            return ToolResult.text("ok");
         }
     };
 
     private Server server;
-    private McpDispatcher dispatcher;
+    private RpcDispatcher dispatcher;
     private CollectingConnection testConn;
 
     @BeforeEach
@@ -65,7 +63,7 @@ class NotificationDeliveryTest {
                 .session(s -> s.enabled(true))
                 .tool(PROGRESS_AND_LOG_TOOL)
                 .build();
-        dispatcher = new McpDispatcher(server, server.executor());
+        dispatcher = new RpcDispatcher(server, server.executor());
         testConn = new CollectingConnection();
         Session session = server.createSession("sess_test");
         session.connection(testConn);
@@ -87,8 +85,8 @@ class NotificationDeliveryTest {
                 .dispatchRequestAsync(1, "tools/call", params, "sess_test")
                 .join();
 
-        assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Response.class);
-        assertThat(((McpDispatcher.DispatchResult.Response) result).responseBody())
+        assertThat(result).isInstanceOf(RpcDispatcher.DispatchResult.Response.class);
+        assertThat(((RpcDispatcher.DispatchResult.Response) result).responseBody())
                 .isNotNull();
 
         var progressEvents = testConn.sent.stream()

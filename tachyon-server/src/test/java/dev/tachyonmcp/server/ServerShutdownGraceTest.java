@@ -69,7 +69,7 @@ class ServerShutdownGraceTest {
                 .build();
 
         server.createSession("sess-slow").activate();
-        var dispatcher = new McpDispatcher(server, server.executor());
+        var dispatcher = new RpcDispatcher(server, server.executor());
         dispatcher.dispatchRequestAsync(
                 1, "tools/call", Map.of("name", "slow_probe", "arguments", Map.of()), "sess-slow");
 

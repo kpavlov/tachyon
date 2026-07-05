@@ -7,7 +7,7 @@ package dev.tachyonmcp.transport.netty;
 import static dev.tachyonmcp.transport.netty.InteractionHandler.INTERACTION_CONTEXT_KEY;
 
 import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.McpDispatcher;
+import dev.tachyonmcp.server.RpcDispatcher;
 import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.session.SessionIdGenerator;
 import io.netty.buffer.ByteBuf;
@@ -46,7 +46,7 @@ public final class ChannelHandlerUtils {
         } else {
             snapshot = new DefaultHttpRequest(req.protocolVersion(), req.method(), req.uri(), req.headers());
         }
-        requireInteractionContext(ctx).setAttribute(McpDispatcher.ATTR_INIT_REQUEST, snapshot);
+        requireInteractionContext(ctx).setAttribute(RpcDispatcher.ATTR_INIT_REQUEST, snapshot);
     }
 
     public static void sendAccepted(ChannelHandlerContext ctx, @Nullable String origin) {

@@ -10,18 +10,18 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-class McpDispatcherTest {
+class RpcDispatcherTest {
 
-    private static McpDispatcher.DispatchResult.Response asResponse(McpDispatcher.DispatchResult result) {
-        assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Response.class);
-        return (McpDispatcher.DispatchResult.Response) result;
+    private static RpcDispatcher.DispatchResult.Response asResponse(RpcDispatcher.DispatchResult result) {
+        assertThat(result).isInstanceOf(RpcDispatcher.DispatchResult.Response.class);
+        return (RpcDispatcher.DispatchResult.Response) result;
     }
 
     @Test
     void shouldAllowDifferentIdsInSameSession() {
         try (var server = TachyonServer.builder().build()) {
             server.createSession("sess_diff");
-            var dispatcher = new McpDispatcher(server, server.executor());
+            var dispatcher = new RpcDispatcher(server, server.executor());
 
             var first = asResponse(dispatcher
                     .dispatchRequestAsync(1, "ping", null, "sess_diff")
@@ -40,7 +40,7 @@ class McpDispatcherTest {
         try (var server = TachyonServer.builder().build()) {
             server.createSession("sess_a");
             server.createSession("sess_b");
-            var dispatcher = new McpDispatcher(server, server.executor());
+            var dispatcher = new RpcDispatcher(server, server.executor());
 
             var first = asResponse(
                     dispatcher.dispatchRequestAsync(42, "ping", null, "sess_a").join());
@@ -56,7 +56,7 @@ class McpDispatcherTest {
     void shouldRejectNonInitializeRequestBeforeSessionIsActive() {
         try (var server = TachyonServer.builder().session(s -> s.enabled(true)).build()) {
             server.createSession("sess_init");
-            var dispatcher = new McpDispatcher(server, server.executor());
+            var dispatcher = new RpcDispatcher(server, server.executor());
 
             var result = asResponse(dispatcher
                     .dispatchRequestAsync(1, "tools/list", null, "sess_init")
@@ -71,7 +71,7 @@ class McpDispatcherTest {
     void shouldAcceptPingBeforeSessionIsActive() {
         try (var server = TachyonServer.builder().build()) {
             server.createSession("sess_ping");
-            var dispatcher = new McpDispatcher(server, server.executor());
+            var dispatcher = new RpcDispatcher(server, server.executor());
 
             var result = asResponse(dispatcher
                     .dispatchRequestAsync(1, "ping", null, "sess_ping")
@@ -87,7 +87,7 @@ class McpDispatcherTest {
         try (var server = TachyonServer.builder().build()) {
             var session = server.createSession("sess_active");
             session.activate();
-            var dispatcher = new McpDispatcher(server, server.executor());
+            var dispatcher = new RpcDispatcher(server, server.executor());
 
             var result = asResponse(dispatcher
                     .dispatchRequestAsync(1, "ping", null, "sess_active")
@@ -102,7 +102,7 @@ class McpDispatcherTest {
         try (var server = TachyonServer.builder().session(s -> s.enabled(true)).build()) {
             var session = server.createSession("sess_cancel-pending");
             session.activate();
-            var dispatcher = new McpDispatcher(server, server.executor());
+            var dispatcher = new RpcDispatcher(server, server.executor());
 
             var requestId = "test-req-1";
             var pending = new java.util.concurrent.CompletableFuture<String>();
@@ -110,7 +110,7 @@ class McpDispatcherTest {
 
             var params = Map.of("requestId", requestId, "reason", "User cancelled");
             var result = dispatcher.dispatchNotification("notifications/cancelled", params, "sess_cancel-pending");
-            assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Accepted.class);
+            assertThat(result).isInstanceOf(RpcDispatcher.DispatchResult.Accepted.class);
             assertThat(pending).isCompletedExceptionally();
             assertThat(pending.exceptionNow().getMessage()).contains("Cancelled: User cancelled");
         }
@@ -119,11 +119,11 @@ class McpDispatcherTest {
     @Test
     void cancelsWithoutSessionLogsAndAccepts() {
         try (var server = TachyonServer.builder().build()) {
-            var dispatcher = new McpDispatcher(server, server.executor());
+            var dispatcher = new RpcDispatcher(server, server.executor());
 
             var params = Map.of("requestId", 1, "reason", "no-session");
             var result = dispatcher.dispatchNotification("notifications/cancelled", params, null);
-            assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Accepted.class);
+            assertThat(result).isInstanceOf(RpcDispatcher.DispatchResult.Accepted.class);
         }
     }
 
@@ -132,11 +132,11 @@ class McpDispatcherTest {
         try (var server = TachyonServer.builder().build()) {
             var session = server.createSession("sess_cancel-unknown");
             session.activate();
-            var dispatcher = new McpDispatcher(server, server.executor());
+            var dispatcher = new RpcDispatcher(server, server.executor());
 
             var result = dispatcher.dispatchNotification(
                     "notifications/cancelled", Map.of("requestId", "missing"), "sess_cancel-unknown");
-            assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Accepted.class);
+            assertThat(result).isInstanceOf(RpcDispatcher.DispatchResult.Accepted.class);
         }
     }
 
@@ -144,10 +144,10 @@ class McpDispatcherTest {
     void cancelsWithEmptyParamsIsAccepted() {
         try (var server = TachyonServer.builder().build()) {
             server.createSession("sess_cancel-empty");
-            var dispatcher = new McpDispatcher(server, server.executor());
+            var dispatcher = new RpcDispatcher(server, server.executor());
 
             var result = dispatcher.dispatchNotification("notifications/cancelled", Map.of(), "sess_cancel-empty");
-            assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Accepted.class);
+            assertThat(result).isInstanceOf(RpcDispatcher.DispatchResult.Accepted.class);
         }
     }
 
@@ -155,10 +155,10 @@ class McpDispatcherTest {
     void cancelsWithNullParamsIsAccepted() {
         try (var server = TachyonServer.builder().build()) {
             server.createSession("sess_cancel-null");
-            var dispatcher = new McpDispatcher(server, server.executor());
+            var dispatcher = new RpcDispatcher(server, server.executor());
 
             var result = dispatcher.dispatchNotification("notifications/cancelled", null, "sess_cancel-null");
-            assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Accepted.class);
+            assertThat(result).isInstanceOf(RpcDispatcher.DispatchResult.Accepted.class);
         }
     }
 
@@ -168,7 +168,7 @@ class McpDispatcherTest {
             var session = server.createSession("sess_closed");
             session.activate();
             session.close();
-            var dispatcher = new McpDispatcher(server, server.executor());
+            var dispatcher = new RpcDispatcher(server, server.executor());
 
             var result = asResponse(dispatcher
                     .dispatchRequestAsync(1, "ping", null, "sess_closed")

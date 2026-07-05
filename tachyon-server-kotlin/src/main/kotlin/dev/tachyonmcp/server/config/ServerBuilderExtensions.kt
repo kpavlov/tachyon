@@ -7,7 +7,7 @@ import dev.tachyonmcp.server.domain.ResourceContents
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.features.tools.asyncHandler
+import dev.tachyonmcp.server.features.tools.toolHandler
 import dev.tachyonmcp.server.json.schemas
 import dev.tachyonmcp.server.json.toJacksonNode
 import dev.tachyonmcp.server.json.toJacksonNodeOrNull
@@ -35,7 +35,7 @@ public fun ServerBuilder.tool(
     handler: suspend ToolScope.() -> ToolResult,
 ): ServerBuilder =
     tool(
-        asyncHandler(
+        toolHandler(
             ToolDescriptor
                 .builder()
                 .name(name)
@@ -55,7 +55,7 @@ public fun ServerBuilder.tool(
     handler: suspend ToolScope.() -> ToolResult,
 ): ServerBuilder =
     tool(
-        asyncHandler(
+        toolHandler(
             ToolDescriptor
                 .builder()
                 .name(name)

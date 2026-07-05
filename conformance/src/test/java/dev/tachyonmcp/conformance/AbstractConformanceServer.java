@@ -18,8 +18,6 @@ import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -221,7 +219,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<? extends ToolResult> handle(InteractionContext ctx, ToolRequest request) {
+            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
                 var pt = request.progressToken();
                 if (pt != null) {
                     ctx.notifications().progress(pt, 0, 100, "Starting");
@@ -230,7 +228,7 @@ abstract class AbstractConformanceServer {
                     delay(50);
                     ctx.notifications().progress(pt, 100, 100, "Complete");
                 }
-                return CompletableFuture.completedFuture(ToolResult.text("Tool execution completed"));
+                return ToolResult.text("Tool execution completed");
             }
         });
 
@@ -245,13 +243,13 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<? extends ToolResult> handle(InteractionContext ctx, ToolRequest request) {
+            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
                 ctx.notifications().info("tachyon.tools", Map.of("message", "Tool execution started"));
                 delay(50);
                 ctx.notifications().info("tachyon.tools", Map.of("message", "Tool processing data"));
                 delay(50);
                 ctx.notifications().info("tachyon.tools", Map.of("message", "Tool execution completed"));
-                return CompletableFuture.completedFuture(ToolResult.text("Tool execution completed"));
+                return ToolResult.text("Tool execution completed");
             }
         });
 
@@ -468,18 +466,18 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest request) {
+            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
                 var inputResponses = request.inputResponses();
                 if (inputResponses != null && inputResponses.containsKey("user_name")) {
                     var resp = inputResponses.get("user_name");
                     if (resp != null && resp.isObject()) {
                         var content = resp.path("content");
                         var name = content.has("name") ? content.get("name").asString() : "World";
-                        return CompletableFuture.completedFuture(ToolResult.text("Hello, " + name + "!"));
+                        return ToolResult.text("Hello, " + name + "!");
                     }
                 }
-                return CompletableFuture.completedFuture(ToolResult.inputRequired(
-                        Map.of("user_name", buildFormElicitation("What is your name?", "name", "string")), null));
+                return ToolResult.inputRequired(
+                        Map.of("user_name", buildFormElicitation("What is your name?", "name", "string")), null);
             }
         });
 
@@ -494,17 +492,17 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest request) {
+            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
                 var inputResponses = request.inputResponses();
                 if (inputResponses != null && inputResponses.containsKey("capital_question")) {
                     var resp = inputResponses.get("capital_question");
                     var text = resp != null && resp.path("content").has("text")
                             ? resp.path("content").get("text").asString()
                             : "done";
-                    return CompletableFuture.completedFuture(ToolResult.text(text));
+                    return ToolResult.text(text);
                 }
-                return CompletableFuture.completedFuture(ToolResult.inputRequired(
-                        Map.of("capital_question", buildSamplingRequest("What is the capital of France?")), null));
+                return ToolResult.inputRequired(
+                        Map.of("capital_question", buildSamplingRequest("What is the capital of France?")), null);
             }
         });
 
@@ -519,13 +517,12 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest request) {
+            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
                 var inputResponses = request.inputResponses();
                 if (inputResponses != null && inputResponses.containsKey("client_roots")) {
-                    return CompletableFuture.completedFuture(ToolResult.text("Roots received"));
+                    return ToolResult.text("Roots received");
                 }
-                return CompletableFuture.completedFuture(
-                        ToolResult.inputRequired(Map.of("client_roots", buildRootsListRequest()), null));
+                return ToolResult.inputRequired(Map.of("client_roots", buildRootsListRequest()), null);
             }
         });
 
@@ -540,15 +537,15 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest request) {
+            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
                 var inputResponses = request.inputResponses();
                 var requestState = request.requestState();
                 if (inputResponses != null && inputResponses.containsKey("confirm") && requestState != null) {
-                    return CompletableFuture.completedFuture(ToolResult.text("state-ok"));
+                    return ToolResult.text("state-ok");
                 }
-                return CompletableFuture.completedFuture(ToolResult.inputRequired(
+                return ToolResult.inputRequired(
                         Map.of("confirm", buildFormElicitation("Please confirm", "ok", "boolean")),
-                        "opaque-server-state"));
+                        "opaque-server-state");
             }
         });
 
@@ -563,19 +560,19 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest request) {
+            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
                 var inputResponses = request.inputResponses();
                 if (inputResponses != null
                         && inputResponses.containsKey("user_name")
                         && inputResponses.containsKey("greeting")
                         && inputResponses.containsKey("client_roots")) {
-                    return CompletableFuture.completedFuture(ToolResult.text("All inputs received"));
+                    return ToolResult.text("All inputs received");
                 }
                 var inputRequests = new LinkedHashMap<String, InputRequest>();
                 inputRequests.put("user_name", buildFormElicitation("What is your name?", "name", "string"));
                 inputRequests.put("greeting", buildSamplingRequest("Generate a greeting"));
                 inputRequests.put("client_roots", buildRootsListRequest());
-                return CompletableFuture.completedFuture(ToolResult.inputRequired(inputRequests, "multi-input-state"));
+                return ToolResult.inputRequired(inputRequests, "multi-input-state");
             }
         });
 
@@ -590,7 +587,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest request) {
+            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
                 var inputResponses = request.inputResponses();
                 var requestState = request.requestState();
                 if (inputResponses != null && inputResponses.containsKey("step2")) {
@@ -599,20 +596,20 @@ abstract class AbstractConformanceServer {
                             .path("content")
                             .path("color")
                             .asString("unknown");
-                    return CompletableFuture.completedFuture(ToolResult.text("Done with color: " + color));
+                    return ToolResult.text("Done with color: " + color);
                 }
                 if (inputResponses != null
                         && inputResponses.containsKey("step1")
                         && "state-round-1".equals(requestState)) {
-                    return CompletableFuture.completedFuture(ToolResult.inputRequired(
+                    return ToolResult.inputRequired(
                             Map.of(
                                     "step2",
                                     buildFormElicitation("Step 2: What is your favorite color?", "color", "string")),
-                            "state-round-2"));
+                            "state-round-2");
                 }
-                return CompletableFuture.completedFuture(ToolResult.inputRequired(
+                return ToolResult.inputRequired(
                         Map.of("step1", buildFormElicitation("Step 1: What is your name?", "name", "string")),
-                        "state-round-1"));
+                        "state-round-1");
             }
         });
 
@@ -627,18 +624,18 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest request) {
+            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
                 var inputResponses = request.inputResponses();
                 var requestState = request.requestState();
                 if (inputResponses != null && inputResponses.containsKey("confirm")) {
                     if (requestState == null || !verifyState(requestState)) {
                         throw new IllegalArgumentException("Invalid or tampered requestState");
                     }
-                    return CompletableFuture.completedFuture(ToolResult.text("State verified"));
+                    return ToolResult.text("State verified");
                 }
-                return CompletableFuture.completedFuture(ToolResult.inputRequired(
+                return ToolResult.inputRequired(
                         Map.of("confirm", buildFormElicitation("Please confirm", "ok", "boolean")),
-                        signState("tamper-check")));
+                        signState("tamper-check"));
             }
         });
 
@@ -653,7 +650,7 @@ abstract class AbstractConformanceServer {
             }
 
             @Override
-            public CompletionStage<ToolResult> handle(InteractionContext ctx, ToolRequest request) {
+            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
                 var meta = request.meta();
                 var capabilities = meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
                 var hasSampling =
@@ -668,9 +665,9 @@ abstract class AbstractConformanceServer {
                     inputRequests.put("user_name", buildFormElicitation("What is your name?", "name", "string"));
                 }
                 if (inputRequests.isEmpty()) {
-                    return CompletableFuture.completedFuture(ToolResult.text("No capabilities declared"));
+                    return ToolResult.text("No capabilities declared");
                 }
-                return CompletableFuture.completedFuture(ToolResult.inputRequired(inputRequests, null));
+                return ToolResult.inputRequired(inputRequests, null);
             }
         });
     }

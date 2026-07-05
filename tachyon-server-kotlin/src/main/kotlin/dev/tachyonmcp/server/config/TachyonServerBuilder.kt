@@ -13,7 +13,7 @@ import dev.tachyonmcp.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.features.tools.asyncHandler
+import dev.tachyonmcp.server.features.tools.toolHandler
 import dev.tachyonmcp.server.json.schemas
 import dev.tachyonmcp.server.json.toJacksonNode
 import dev.tachyonmcp.server.json.toJacksonNodeOrNull
@@ -102,7 +102,7 @@ public class TachyonServerBuilder
         ): TachyonServerBuilder =
             this.also {
                 delegate.tool(
-                    asyncHandler(
+                    toolHandler(
                         ToolDescriptor
                             .builder()
                             .name(name)
@@ -124,7 +124,7 @@ public class TachyonServerBuilder
         ): TachyonServerBuilder =
             this.also {
                 delegate.tool(
-                    asyncHandler(
+                    toolHandler(
                         ToolDescriptor
                             .builder()
                             .name(name)

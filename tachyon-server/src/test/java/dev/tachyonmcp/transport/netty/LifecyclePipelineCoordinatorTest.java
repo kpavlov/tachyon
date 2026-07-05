@@ -13,7 +13,7 @@ import dev.tachyonmcp.runtime.InteractionContext.Lifecycle;
 import dev.tachyonmcp.runtime.InteractionEvent;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseConnection;
-import dev.tachyonmcp.server.McpDispatcher;
+import dev.tachyonmcp.server.RpcDispatcher;
 import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
 import io.netty.buffer.Unpooled;
@@ -32,7 +32,7 @@ class LifecyclePipelineCoordinatorTest {
     @BeforeEach
     void setUp() {
         server = TachyonServer.builder().build();
-        final var dispatcher = new McpDispatcher(server, Runnable::run);
+        final var dispatcher = new RpcDispatcher(server, Runnable::run);
         channel = new EmbeddedChannel(new InteractionHandler());
         channel.pipeline()
                 .addLast(

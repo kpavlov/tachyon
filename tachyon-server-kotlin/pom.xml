@@ -90,6 +90,7 @@
                     <args>
                         <arg>-Xexplicit-api=strict</arg>
                         <arg>-Werror</arg>
+                        <arg>-Xjsr305=strict</arg>
                     </args>
                     <compilerPlugins>
                         <plugin>kotlinx-serialization</plugin>

@@ -7,7 +7,9 @@ import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
@@ -74,8 +76,22 @@ public interface AsyncToolHandler extends ToolHandler {
     }
 
     @Override
-    default CompletionStage<? extends ToolResult> handle(InteractionContext context, ToolRequest request) {
-        return handleAsync(context, request);
+    default ToolResult handle(InteractionContext context, ToolRequest request) throws Exception {
+        try {
+            return handleAsync(context, request).toCompletableFuture().get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw e;
+        } catch (ExecutionException e) {
+            var cause = e.getCause();
+            if (cause instanceof RuntimeException ex) {
+                throw ex;
+            }
+            if (cause instanceof Error err) {
+                throw err;
+            }
+            throw new CompletionException(cause);
+        }
     }
 
     /**

@@ -189,21 +189,22 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
     private static class InputRequiredTestHandler extends AbstractToolHandler implements ToolHandler {
 
         InputRequiredTestHandler() {
-            super(ToolDescriptor.builder("test_elicitation")
+            super(ToolDescriptor.builder()
+                    .name("test_elicitation")
                     .description("Tests InputRequiredResult flow")
                     .build());
         }
 
         @Override
-        public CompletionStage<ToolResult> handle(InteractionContext context, ToolRequest request) {
+        public ToolResult handle(InteractionContext context, ToolRequest request) {
             var inputResponses = request.inputResponses();
             if (inputResponses != null && inputResponses.containsKey("user_name")) {
                 var resp = inputResponses.get("user_name");
                 var name = resp != null && resp.has("name") ? resp.get("name").asString() : "World";
-                return CompletableFuture.completedFuture(ToolResult.text("Hello, " + name + "!"));
+                return ToolResult.text("Hello, " + name + "!");
             }
             var inputRequests = Map.of("user_name", buildFormElicitation("What is your name?", "name", "string"));
-            return CompletableFuture.completedFuture(ToolResult.inputRequired(inputRequests, null));
+            return ToolResult.inputRequired(inputRequests, null);
         }
     }
 
@@ -224,13 +225,14 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
     private static class MultiRoundTestHandler extends AbstractToolHandler implements ToolHandler {
 
         MultiRoundTestHandler() {
-            super(ToolDescriptor.builder("test_multi_round")
+            super(ToolDescriptor.builder()
+                    .name("test_multi_round")
                     .description("Tests multi-round InputRequiredResult flow")
                     .build());
         }
 
         @Override
-        public CompletionStage<ToolResult> handle(InteractionContext context, ToolRequest request) {
+        public ToolResult handle(InteractionContext context, ToolRequest request) {
             var inputResponses = request.inputResponses();
             var requestState = request.requestState();
 
@@ -239,8 +241,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
                 var color = inputResponses != null && inputResponses.containsKey("step2")
                         ? inputResponses.get("step2").path("color").asString("unknown")
                         : "unknown";
-                return CompletableFuture.completedFuture(
-                        ToolResult.text("Hello, " + name + "! Your favorite color is " + color + "."));
+                return ToolResult.text("Hello, " + name + "! Your favorite color is " + color + ".");
             }
 
             if ("state-round-1".equals(requestState) && inputResponses != null && inputResponses.containsKey("step1")) {
@@ -248,42 +249,47 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
                 var inputRequests = new LinkedHashMap<String, InputRequest>();
                 inputRequests.put(
                         "step2", buildFormElicitation("Step 2: What is your favorite color?", "color", "string"));
-                return CompletableFuture.completedFuture(
-                        ToolResult.inputRequired(inputRequests, "state-round-2:" + name));
+                return ToolResult.inputRequired(inputRequests, "state-round-2:" + name);
             }
 
             var inputRequests = new LinkedHashMap<String, InputRequest>();
             inputRequests.put("step1", buildFormElicitation("Step 1: What is your name?", "name", "string"));
-            return CompletableFuture.completedFuture(ToolResult.inputRequired(inputRequests, "state-round-1"));
+            return ToolResult.inputRequired(inputRequests, "state-round-1");
         }
     }
 
     private static class MetaInputRequiredTestHandler extends AbstractToolHandler implements ToolHandler {
 
         MetaInputRequiredTestHandler() {
-            super(ToolDescriptor.builder("test_meta_elicitation")
+            super(ToolDescriptor.builder()
+                    .name("test_meta_elicitation")
                     .description("Tests InputRequiredResult meta propagation")
                     .build());
         }
 
         @Override
-        public CompletionStage<ToolResult> handle(InteractionContext context, ToolRequest request) {
+        public ToolResult handle(InteractionContext context, ToolRequest request) {
             var inputRequests = Map.of("user_name", buildFormElicitation("What is your name?", "name", "string"));
-            return CompletableFuture.completedFuture(
-                    ToolResult.inputRequired(inputRequests, null).withMeta("trace-id", FACTORY.stringNode("abc-123")));
+            return ToolResult.inputRequired(inputRequests, null).withMeta("trace-id", FACTORY.stringNode("abc-123"));
         }
     }
 
-    private static class UrlElicitationTestHandler extends AbstractToolHandler implements ToolHandler {
+    private static class UrlElicitationTestHandler extends AbstractAsyncToolHandler {
 
         UrlElicitationTestHandler() {
-            super(ToolDescriptor.builder("test_url_elicitation")
+            super(ToolDescriptor.builder()
+                    .name("test_url_elicitation")
                     .description("Tests URL-mode elicitation flow")
                     .build());
         }
 
         @Override
-        public CompletionStage<ToolResult> handle(InteractionContext context, ToolRequest request) {
+        public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolArgs args) {
+            return handleAsync(context, ToolRequest.builder().name(name()).build());
+        }
+
+        @Override
+        public CompletionStage<ToolResult> handleAsync(InteractionContext context, ToolRequest request) {
             var inputResponses = request.inputResponses();
             if (inputResponses != null && inputResponses.containsKey("auth")) {
                 var resp = inputResponses.get("auth");

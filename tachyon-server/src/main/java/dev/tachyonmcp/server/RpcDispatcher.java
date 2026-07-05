@@ -44,9 +44,9 @@ import org.slf4j.LoggerFactory;
  * {@code v2025_11_25} models/codecs. The version-specific call-sites (marked below) move behind an
  * {@code McpDialect} when a second spec version is wired.
  */
-public class McpDispatcher {
+public class RpcDispatcher {
 
-    private static final Logger logger = LoggerFactory.getLogger(McpDispatcher.class);
+    private static final Logger logger = LoggerFactory.getLogger(RpcDispatcher.class);
 
     private static final long SLOW_HANDLER_MS = 200;
 
@@ -74,7 +74,7 @@ public class McpDispatcher {
 
     private final Server server;
 
-    public McpDispatcher(Server server, Executor executor) {
+    public RpcDispatcher(Server server, Executor executor) {
         this.server = server;
         this.executor = executor;
     }
@@ -238,16 +238,14 @@ public class McpDispatcher {
                         },
                         executor)
                 .thenCompose(Function.identity())
-                .handle((result, ex) -> {
-                    if (ex != null) {
-                        return handleHandlerError(id, method, ex);
-                    }
-                    if (result instanceof JsonRpcError error) {
-                        logger.debug("Handler error for {}: {}", method, error.message());
-                        return errorResult(id, error.code(), error.message());
-                    }
-                    return new DispatchResult.Response(encodeResponse(id, result), null);
-                });
+                .handleAsync(
+                        (result, ex) -> {
+                            if (ex != null) {
+                                return handleHandlerError(id, method, ex);
+                            }
+                            return handleSuccessOrJsonRpcError(id, method, result, null);
+                        },
+                        executor);
     }
 
     private DispatchResult handleHandlerError(Object id, String method, Throwable ex) {
@@ -258,6 +256,15 @@ public class McpDispatcher {
         }
         logger.warn("Handler exception: method={}, id={}: {}", method, id, unwrapped.getMessage(), unwrapped);
         return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
+    }
+
+    private DispatchResult handleSuccessOrJsonRpcError(
+            Object id, String method, Object result, @Nullable String sessionId) {
+        if (result instanceof JsonRpcError error) {
+            logger.debug("Handler error for {}: {}", method, error.message());
+            return errorResult(id, error.code(), error.message());
+        }
+        return new DispatchResult.Response(encodeResponse(id, result), sessionId);
     }
 
     public DispatchResult dispatchNotification(String method, @Nullable Object params, @Nullable String sessionId) {
@@ -397,17 +404,15 @@ public class McpDispatcher {
                             },
                             executor)
                     .thenCompose(Function.identity())
-                    .handle((result, ex) -> {
-                        if (ex != null) {
-                            logger.warn("Initialize handler exception (stateless)", ex);
-                            return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
-                        }
-                        if (result instanceof JsonRpcError error) {
-                            logger.debug("Initialize handler error (stateless): {}", error.message());
-                            return errorResult(id, error.code(), error.message());
-                        }
-                        return new DispatchResult.Response(encodeResponse(id, result), null);
-                    });
+                    .handleAsync(
+                            (result, ex) -> {
+                                if (ex != null) {
+                                    logger.warn("Initialize handler exception (stateless)", ex);
+                                    return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
+                                }
+                                return handleSuccessOrJsonRpcError(id, "initialize", result, null);
+                            },
+                            executor);
         }
         return CompletableFuture.supplyAsync(
                         () -> {
@@ -422,18 +427,16 @@ public class McpDispatcher {
                         },
                         executor)
                 .thenCompose(Function.identity())
-                .handle((result, ex) -> {
-                    if (ex != null) {
-                        logger.warn("Initialize handler exception", ex);
-                        return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
-                    }
-                    if (result instanceof JsonRpcError error) {
-                        logger.debug("Initialize handler error: {}", error.message());
-                        return errorResult(id, error.code(), error.message());
-                    }
-                    var sessionId = ic.session() != null ? ic.session().id() : null;
-                    return new DispatchResult.Response(encodeResponse(id, result), sessionId);
-                });
+                .handleAsync(
+                        (result, ex) -> {
+                            if (ex != null) {
+                                logger.warn("Initialize handler exception", ex);
+                                return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
+                            }
+                            var sessionId = ic.session() != null ? ic.session().id() : null;
+                            return handleSuccessOrJsonRpcError(id, "initialize", result, sessionId);
+                        },
+                        executor);
     }
 
     private DispatchResult errorResult(Object id, int code, String message) {
