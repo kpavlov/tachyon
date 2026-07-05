@@ -47,7 +47,7 @@ public fun ServerBuilder.tool(
             ToolDescriptor
                 .builder(name)
                 .description(description)
-                .schemas(inputSchema, outputSchema)
+                .schemas(inputSchema, outputSchema, toolName = name)
                 .build(),
             handler,
         ),

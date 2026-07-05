@@ -65,7 +65,8 @@ public interface SyncToolHandler extends ToolHandler {
     @Override
     default CompletionStage<? extends ToolResult> handle(InteractionContext context, ToolRequest request) {
         try {
-            return CompletableFuture.completedFuture(handle(context, ToolArgs.of(request.arguments())));
+            return CompletableFuture.completedFuture(
+                    handle(context, ToolArgs.of(request.arguments(), request.payloadSerde())));
         } catch (Exception e) {
             return CompletableFuture.failedFuture(e);
         }
@@ -93,6 +94,74 @@ public interface SyncToolHandler extends ToolHandler {
             @Nullable
             public JsonNode inputSchema() {
                 return inputSchema;
+            }
+
+            @Override
+            public ToolResult handle(InteractionContext ctx, ToolArgs args) throws Exception {
+                return fn.apply(ctx, args);
+            }
+        };
+    }
+
+    /** Creates a simple SyncToolHandler with JSON string input and output schemas. */
+    static SyncToolHandler of(
+            String name,
+            @Nullable String description,
+            @Nullable String inputSchemaJson,
+            @Nullable String outputSchemaJson,
+            BiFunction<InteractionContext, ToolArgs, ToolResult> fn) {
+        var desc = ToolDescriptor.builder(name, inputSchemaJson, outputSchemaJson)
+                .description(description)
+                .build();
+        return fromDescriptor(desc, fn);
+    }
+
+    /** Creates a simple SyncToolHandler with {@link JsonNode} input and output schemas. */
+    static SyncToolHandler of(
+            String name,
+            @Nullable String description,
+            @Nullable JsonNode inputSchema,
+            @Nullable JsonNode outputSchema,
+            BiFunction<InteractionContext, ToolArgs, ToolResult> fn) {
+        var desc = ToolDescriptor.builder(name)
+                .description(description)
+                .inputSchema(inputSchema)
+                .outputSchema(outputSchema)
+                .build();
+        return fromDescriptor(desc, fn);
+    }
+
+    /** Creates a SyncToolHandler from a pre-built descriptor and function. */
+    static SyncToolHandler fromDescriptor(
+            ToolDescriptor desc, BiFunction<InteractionContext, ToolArgs, ToolResult> fn) {
+        return new SyncToolHandler() {
+            @Override
+            public String name() {
+                return desc.name();
+            }
+
+            @Override
+            @Nullable
+            public String title() {
+                return desc.title();
+            }
+
+            @Override
+            @Nullable
+            public String description() {
+                return desc.description();
+            }
+
+            @Override
+            @Nullable
+            public JsonNode inputSchema() {
+                return desc.inputSchema();
+            }
+
+            @Override
+            @Nullable
+            public JsonNode outputSchema() {
+                return desc.outputSchema();
             }
 
             @Override

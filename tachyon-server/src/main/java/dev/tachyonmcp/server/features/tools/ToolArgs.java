@@ -2,6 +2,9 @@
 
 package dev.tachyonmcp.server.features.tools;
 
+import dev.tachyonmcp.server.json.JsonUtils;
+import dev.tachyonmcp.server.json.PayloadSerde;
+import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -11,13 +14,19 @@ import tools.jackson.databind.JsonNode;
 public final class ToolArgs {
 
     private final Map<String, JsonNode> raw;
+    private final @Nullable PayloadSerde serde;
 
-    private ToolArgs(@Nullable Map<String, JsonNode> raw) {
-        this.raw = raw == null ? Map.of() : raw;
+    private ToolArgs(@Nullable Map<String, JsonNode> raw, @Nullable PayloadSerde serde) {
+        this.raw = raw == null ? Map.of() : Map.copyOf(raw);
+        this.serde = serde;
     }
 
     public static ToolArgs of(@Nullable Map<String, JsonNode> raw) {
-        return new ToolArgs(raw);
+        return new ToolArgs(raw, null);
+    }
+
+    public static ToolArgs of(@Nullable Map<String, JsonNode> raw, @Nullable PayloadSerde serde) {
+        return new ToolArgs(raw, serde);
     }
 
     public boolean isEmpty() {
@@ -67,6 +76,36 @@ public final class ToolArgs {
 
     public double doubleOr(String key, double fallback) {
         return has(key) ? raw.get(key).asDouble() : fallback;
+    }
+
+    /** Returns the full arguments as a JSON string. */
+    public String rawJson() {
+        try {
+            return JsonUtils.writeString(raw);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to serialize arguments to JSON", e);
+        }
+    }
+
+    /**
+     * Decodes the full arguments into the given type using the configured serde.
+     *
+     * @throws IllegalStateException if no serde is configured
+     */
+    public <T> T decode(Type targetType) {
+        if (serde == null) {
+            throw new IllegalStateException("PayloadSerde is not configured for these args");
+        }
+        return serde.deserialize(rawJson(), targetType);
+    }
+
+    /**
+     * Decodes the full arguments into the given class using the configured serde.
+     *
+     * @throws IllegalStateException if no serde is configured
+     */
+    public <T> T decode(Class<T> targetClass) {
+        return decode((Type) targetClass);
     }
 
     public JsonNode node(String key) {

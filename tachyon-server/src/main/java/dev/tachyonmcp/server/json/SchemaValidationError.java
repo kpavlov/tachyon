@@ -2,7 +2,7 @@
  * Copyright (c) 2026 Konstantin Pavlov.
  */
 
-package dev.tachyonmcp.server;
+package dev.tachyonmcp.server.json;
 
 /**
  * A single schema validation error.

@@ -6,6 +6,7 @@ import dev.tachyonmcp.server.domain.ContentBlock;
 import dev.tachyonmcp.server.domain.InputRequest;
 import dev.tachyonmcp.server.domain.InputRequestBundle;
 import dev.tachyonmcp.server.domain.TextContent;
+import dev.tachyonmcp.server.json.RawJson;
 import java.util.*;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
@@ -84,6 +85,18 @@ public sealed interface ToolResult
 
     static ToolResult empty() {
         return new Success(null, List.of());
+    }
+
+    /**
+     * Creates a success result with a pre-serialized JSON payload. The bytes skip the Jackson
+     * value-to-tree conversion of ordinary structured values and are parsed once at envelope
+     * encoding (plus once more when output schema validation is active).
+     *
+     * @param json a pre-serialized JSON object string
+     * @param text the text content for the content block
+     */
+    static ToolResult raw(String json, String text) {
+        return new Success(RawJson.of(json), List.of(TextContent.of(text)));
     }
 
     static ToolResult inputRequired(Map<String, ? extends InputRequest> reqs, @Nullable String state) {

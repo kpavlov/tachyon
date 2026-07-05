@@ -28,7 +28,7 @@ public final class ContentBlockMappers {
 
     @Nullable
     public static List<dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Icon> toProtocolIcons(
-            @Nullable List<dev.tachyonmcp.server.domain.Icon> domain) {
+            @Nullable List<? extends dev.tachyonmcp.server.domain.Icon> domain) {
         if (domain == null) return null;
         return domain.stream()
                 .map(i -> new dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Icon(

@@ -4,11 +4,9 @@ package dev.tachyonmcp.server
 
 import dev.tachyonmcp.server.features.tools.ToolArgs
 import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.server.json.RawJson
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import tools.jackson.databind.JsonNode
-
-private fun JsonObject.toJacksonNode(): JsonNode = toString().toJsonNode()
 
 /**
  * Registers a tool using a [JsonObject] input schema.
@@ -25,8 +23,8 @@ public fun Server.registerTool(
     registerTool(
         name = name,
         description = description,
-        inputSchema = inputSchema.toJacksonNode(),
-        outputSchema = outputSchema?.toJacksonNode(),
+        inputSchema = inputSchema.toString().toJsonNode(),
+        outputSchema = outputSchema?.toString()?.toJsonNode(),
         block = block,
     )
 
@@ -44,8 +42,8 @@ public fun ServerBuilder.tool(
     this.tool(
         name = name,
         description = description,
-        inputSchema = inputSchema.toJacksonNode(),
-        outputSchema = outputSchema?.toJacksonNode(),
+        inputSchema = inputSchema.toString().toJsonNode(),
+        outputSchema = outputSchema?.toString()?.toJsonNode(),
         handler = handler,
     )
 
@@ -63,25 +61,26 @@ public fun TachyonServerBuilder.tool(
     this.tool(
         name = name,
         description = description,
-        inputSchema = inputSchema.toJacksonNode(),
-        outputSchema = outputSchema?.toJacksonNode(),
+        inputSchema = inputSchema.toString().toJsonNode(),
+        outputSchema = outputSchema?.toString()?.toJsonNode(),
         handler = handler,
     )
 
 /** Sets the input schema from a [JsonObject]. Requires kotlinx-serialization-json on the classpath. */
 public fun ToolDescriptorScope.inputSchema(json: JsonObject) {
-    inputSchema = json.toJacksonNode()
+    inputSchema = json.toString().toJsonNode()
 }
 
 /** Sets the output schema from a [JsonObject]. Requires kotlinx-serialization-json on the classpath. */
 public fun ToolDescriptorScope.outputSchema(json: JsonObject) {
-    outputSchema = json.toJacksonNode()
+    outputSchema = json.toString().toJsonNode()
 }
 
 /**
  * Produces a [ToolResult] with a structured value encoded via kotlinx-serialization.
  * The serialized JSON string serves as the text fallback.
  * The value must encode to a JSON object, as required by the MCP `structuredContent` field.
+ * Uses [RawJson] to avoid a Jackson parse round-trip.
  * Requires kotlinx-serialization-json on the classpath.
  */
 public inline fun <reified T> ToolScope.structured(
@@ -89,11 +88,11 @@ public inline fun <reified T> ToolScope.structured(
     json: Json = Json.Default,
 ): ToolResult {
     val text = json.encodeToString(value)
-    val node: JsonNode = text.toJsonNode()
-    require(node.isObject) {
-        "structuredContent must be a JSON object, got ${node.nodeType}: $text"
+    // kotlinx.serialization never emits leading whitespace, so the first char decides the kind
+    require(text.startsWith("{")) {
+        "structuredContent must be a JSON object, got: $text"
     }
-    return ToolResult.of(node, text)
+    return ToolResult.raw(text, text)
 }
 
 @PublishedApi
@@ -101,10 +100,9 @@ internal val defaultArgsJson: Json = Json { ignoreUnknownKeys = true }
 
 /**
  * Decodes tool arguments into a [T] using kotlinx-serialization.
+ * Uses [ToolArgs.rawJson] to avoid a Jackson round-trip.
  * Unknown keys are ignored by default; pass a custom [json] for strict decoding.
  * Requires kotlinx-serialization-json on the classpath.
  */
-public inline fun <reified T> ToolArgs.decode(json: Json = defaultArgsJson): T {
-    val text = asMap().let { sharedMapper.writeValueAsString(it) }
-    return json.decodeFromString(text)
-}
+public inline fun <reified T> ToolArgs.decode(json: Json = defaultArgsJson): T =
+    json.decodeFromString(rawJson())

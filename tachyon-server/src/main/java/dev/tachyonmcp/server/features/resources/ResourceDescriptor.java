@@ -51,7 +51,7 @@ public interface ResourceDescriptor extends ServerResourceType {
             throw new IllegalArgumentException("size must be >= 0, got: " + size());
     }
 
-    static DefaultResourceDescriptor.Builder builder() {
+    static ResourceDescriptor.Builder builder() {
         return DefaultResourceDescriptor.builder();
     }
 
@@ -69,5 +69,26 @@ public interface ResourceDescriptor extends ServerResourceType {
             @Nullable Double size,
             @Nullable List<Icon> icons) {
         return DefaultResourceDescriptor.of(name, uri, description, mimeType, title, annotations, size, icons, null);
+    }
+
+    interface Builder {
+
+        Builder name(String name);
+
+        Builder uri(String uri);
+
+        Builder description(@Nullable String description);
+
+        Builder mimeType(@Nullable String mimeType);
+
+        Builder title(@Nullable String title);
+
+        Builder annotations(@Nullable Annotations annotations);
+
+        Builder size(@Nullable Double size);
+
+        Builder icons(@Nullable Iterable<? extends Icon> elements);
+
+        Builder extensionId(@Nullable String extensionId);
     }
 }

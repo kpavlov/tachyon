@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server;
 
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.config.*;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.TextResourceContents;
@@ -14,7 +15,13 @@ import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceHandler;
 import dev.tachyonmcp.server.features.tools.AsyncToolHandler;
 import dev.tachyonmcp.server.features.tools.SyncToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.json.JacksonPayloadSerde;
+import dev.tachyonmcp.server.json.JsonSchemaValidator;
+import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
+import dev.tachyonmcp.server.json.PayloadSerde;
 import dev.tachyonmcp.server.session.InMemorySessionLogRouter;
 import dev.tachyonmcp.server.session.InMemorySessionStore;
 import dev.tachyonmcp.transport.netty.NettyServer;
@@ -113,6 +120,16 @@ public final class ServerBuilder {
         return this;
     }
 
+    /** Registers a tool with string JSON schemas and a handler function. */
+    public ServerBuilder tool(
+            String name,
+            @Nullable String description,
+            @Nullable String inputSchemaJson,
+            @Nullable String outputSchemaJson,
+            java.util.function.BiFunction<InteractionContext, ToolArgs, ToolResult> fn) {
+        return tool(SyncToolHandler.of(name, description, inputSchemaJson, outputSchemaJson, fn));
+    }
+
     /** Registers a resource with no read handler (returns empty content). */
     public ServerBuilder resource(ResourceDescriptor descriptor) {
         featuresConfig.resources.add(new FeaturesConfig.ResourceRegistration(descriptor, null));
@@ -143,9 +160,32 @@ public final class ServerBuilder {
         return this;
     }
 
-    /** Sets a custom JSON schema validator. */
+    /** Sets a custom JSON schema validator for both input and output validation. */
     public ServerBuilder jsonSchemaValidator(JsonSchemaValidator validator) {
-        featuresConfig.jsonSchemaValidator = validator;
+        featuresConfig.inputSchemaValidator = validator;
+        featuresConfig.outputSchemaValidator = validator;
+        return this;
+    }
+
+    /**
+     * Sets the payload serializer/deserializer for structured values and tool arguments.
+     * Defaults to Jackson. Structured values must be types the serde understands;
+     * {@code JsonNode} and {@code RawJson} values bypass it.
+     */
+    public ServerBuilder payloadSerde(PayloadSerde serde) {
+        featuresConfig.payloadSerde = serde;
+        return this;
+    }
+
+    /** Sets a separate validator for tool input schema validation. */
+    public ServerBuilder inputSchemaValidator(JsonSchemaValidator validator) {
+        featuresConfig.inputSchemaValidator = validator;
+        return this;
+    }
+
+    /** Sets a separate validator for tool output schema validation. */
+    public ServerBuilder outputSchemaValidator(JsonSchemaValidator validator) {
+        featuresConfig.outputSchemaValidator = validator;
         return this;
     }
 
@@ -210,7 +250,9 @@ public final class ServerBuilder {
                 router,
                 store,
                 serverConfig,
-                featuresConfig.jsonSchemaValidator,
+                featuresConfig.inputSchemaValidator,
+                featuresConfig.outputSchemaValidator,
+                featuresConfig.payloadSerde,
                 allExtensions);
         featuresConfig.tools.forEach(server::registerTool);
         featuresConfig.resources.forEach(r -> {
@@ -273,7 +315,9 @@ public final class ServerBuilder {
         final List<PromptRegistration> prompts = new ArrayList<>();
         final List<ServerExtension> extensions = new ArrayList<>();
 
-        JsonSchemaValidator jsonSchemaValidator = new NetworkntJsonSchemaValidator();
+        JsonSchemaValidator inputSchemaValidator = new NetworkntJsonSchemaValidator();
+        JsonSchemaValidator outputSchemaValidator = new NetworkntJsonSchemaValidator();
+        PayloadSerde payloadSerde = new JacksonPayloadSerde();
 
         record PromptRegistration(PromptDescriptor descriptor, PromptHandler handler) {}
 

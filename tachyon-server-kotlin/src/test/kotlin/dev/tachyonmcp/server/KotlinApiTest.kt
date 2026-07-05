@@ -5,8 +5,10 @@ package dev.tachyonmcp.server
 import dev.tachyonmcp.server.domain.TextContent
 import dev.tachyonmcp.server.features.tools.ToolArgs
 import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.server.json.RawJson
 import dev.tachyonmcp.server.session.DefaultMcpContext
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
@@ -232,17 +234,17 @@ internal class KotlinApiTest {
     }
 
     @Test
-    fun `structured produces ToolResult with json node and text fallback`() {
+    fun `structured produces ToolResult with raw json and text fallback`() {
         val value = GreetingArgs("Charlie", 25)
         TachyonServer.builder().build().use { server ->
             val ctx = DefaultMcpContext.stateless(server)
             val scope = ToolScope(ctx, ToolArgs.of(null))
             val result = scope.structured(value)
             result.shouldBeInstanceOf<ToolResult.Success>()
-            val success = result as ToolResult.Success
-            success.structured() shouldNotBe null
-            success.structured().get().shouldBeInstanceOf<JsonNode>()
-            (success.content().first() as TextContent).text() shouldBe
+            result.structured() shouldNotBeNull {
+                get().shouldBeInstanceOf<RawJson>()
+            }
+            (result.content().first() as TextContent).text() shouldBe
                 """{"name":"Charlie","age":25}"""
         }
     }
@@ -256,9 +258,10 @@ internal class KotlinApiTest {
             val scope = ToolScope(ctx, ToolArgs.of(null))
             val result = scope.structured(value, customJson)
             result.shouldBeInstanceOf<ToolResult.Success>()
-            val success = result as ToolResult.Success
-            success.structured() shouldNotBe null
-            (success.content().first() as TextContent).text() shouldContain "\"name\""
+            result.structured() shouldNotBeNull {
+                get().shouldBeInstanceOf<RawJson>()
+            }
+            (result.content().first() as TextContent).text() shouldContain "\"name\""
         }
     }
 

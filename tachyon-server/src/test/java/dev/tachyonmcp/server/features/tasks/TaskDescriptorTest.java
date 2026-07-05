@@ -12,7 +12,7 @@ class TaskDescriptorTest {
     @ParameterizedTest
     @ValueSource(strings = {"", "  "})
     void shouldRejectBlankName(String name) {
-        assertThatThrownBy(() -> TaskDescriptor.of(name, null))
+        assertThatThrownBy(() -> TaskDescriptor.builder(name).build())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("name");
     }

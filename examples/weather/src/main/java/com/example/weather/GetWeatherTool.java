@@ -3,10 +3,7 @@
  */
 package com.example.weather;
 
-import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.features.tools.*;
 import dev.tachyonmcp.runtime.InteractionContext;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -36,7 +33,8 @@ class GetWeatherTool extends AbstractSyncToolHandler {
         """);
 
     public GetWeatherTool() {
-        super(ToolDescriptor.builder("get-weather")
+        super(ToolDescriptor.builder()
+            .name("get-weather")
             .title("Current Weather")
             .description("Get current weather for a city")
             .inputSchema(INPUT_SCHEMA)

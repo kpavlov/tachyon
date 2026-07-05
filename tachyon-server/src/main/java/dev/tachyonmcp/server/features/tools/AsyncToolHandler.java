@@ -46,7 +46,7 @@ public interface AsyncToolHandler extends ToolHandler {
 
     /** Executes the tool asynchronously with the full request (includes meta/progressToken). */
     default CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolRequest request) {
-        return handleAsync(context, ToolArgs.of(request.arguments()));
+        return handleAsync(context, ToolArgs.of(request.arguments(), request.payloadSerde()));
     }
 
     @Nullable

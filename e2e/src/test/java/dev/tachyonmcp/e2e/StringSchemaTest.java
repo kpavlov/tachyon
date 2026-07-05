@@ -1,0 +1,101 @@
+/*
+ * Copyright (c) 2026 Konstantin Pavlov.
+ */
+
+package dev.tachyonmcp.e2e;
+
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import dev.tachyonmcp.server.features.tools.SyncToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolResult;
+import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+
+class StringSchemaTest extends AbstractMcpE2eTest {
+
+    private static final String INPUT_SCHEMA_JSON =
+            "{\"type\":\"object\",\"properties\":{\"x\":{\"type\":\"string\"}},\"required\":[\"x\"]}";
+
+    private static final String OUTPUT_SCHEMA_JSON =
+            "{\"type\":\"object\",\"properties\":{\"y\":{\"type\":\"integer\"}},\"required\":[\"y\"]}";
+
+    @Test
+    void shouldListToolWithStringSchemas() throws Exception {
+        startServer(it -> it.tool(SyncToolHandler.of(
+                "string-schema-tool",
+                "Tool with string schemas",
+                INPUT_SCHEMA_JSON,
+                OUTPUT_SCHEMA_JSON,
+                (ctx, args) -> ToolResult.text("ok"))));
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+            var response = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
+                """);
+
+            assertThat(response.statusCode()).isEqualTo(200);
+            assertThatJson(response.body())
+                    .inPath("$.result.tools[0].inputSchema")
+                    .isObject()
+                    .containsKey("properties");
+            assertThatJson(response.body())
+                    .inPath("$.result.tools[0].outputSchema")
+                    .isObject()
+                    .containsKey("properties");
+        }
+    }
+
+    @Test
+    void shouldHaveIdenticalResultToJsonNodeSchemas() throws Exception {
+        startServer(it -> {
+            it.tool(SyncToolHandler.of(
+                    "from-string",
+                    "Tool from string",
+                    INPUT_SCHEMA_JSON,
+                    null,
+                    (ctx, args) -> ToolResult.text("string")));
+            var mapper = new ObjectMapper();
+            var jsonNodeSchema = mapper.readTree(INPUT_SCHEMA_JSON);
+            it.tool(SyncToolHandler.of(
+                    "from-node", "Tool from node", jsonNodeSchema, null, (ctx, args) -> ToolResult.text("node")));
+        });
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+            var r1 = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
+                """);
+
+            assertThat(r1.statusCode()).isEqualTo(200);
+            var tools = new ObjectMapper().readTree(r1.body()).path("result").path("tools");
+            JsonNode fromString = null;
+            JsonNode fromNode = null;
+            for (var tool : tools) {
+                if ("from-string".equals(tool.path("name").asString())) fromString = tool.get("inputSchema");
+                if ("from-node".equals(tool.path("name").asString())) fromNode = tool.get("inputSchema");
+            }
+            assertThat(fromString).isNotNull();
+            assertThat(fromNode).isNotNull();
+            assertThat(fromString).isEqualTo(fromNode);
+        }
+    }
+
+    @Test
+    void shouldCallToolWithStringSchema() throws Exception {
+        startServer(it ->
+                it.tool("call-test", "Call test", INPUT_SCHEMA_JSON, null, (ctx, args) -> ToolResult.text("called")));
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+            var response = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"call-test","arguments":{"x":"hello"}}}
+                """);
+
+            assertThat(response.statusCode()).isEqualTo(200);
+            assertThatJson(response.body()).inPath("$.result.content[0].text").isEqualTo("called");
+        }
+    }
+}

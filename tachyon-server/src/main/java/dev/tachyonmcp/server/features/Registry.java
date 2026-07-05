@@ -9,8 +9,10 @@ import dev.tachyonmcp.server.ServerResourceType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
 
@@ -21,11 +23,17 @@ public abstract class Registry<R extends ServerResourceType> {
 
     private static final int DEFAULT_PAGE_SIZE = 50;
 
-    private @Nullable Runnable onChange;
+    private final List<Runnable> onChangeListeners = new CopyOnWriteArrayList<>();
 
     /** Registers a callback invoked when the registry contents change. */
     public void onChange(@Nullable Runnable callback) {
-        this.onChange = callback;
+        if (callback != null) {
+            onChangeListeners.add(callback);
+        }
+    }
+
+    void addChangeListener(Runnable listener) {
+        onChangeListeners.add(listener);
     }
 
     /** Adds or replaces an item by name. */
@@ -43,8 +51,8 @@ public abstract class Registry<R extends ServerResourceType> {
     }
 
     protected void fireOnChange() {
-        if (onChange != null) {
-            onChange.run();
+        for (var listener : onChangeListeners) {
+            listener.run();
         }
     }
 

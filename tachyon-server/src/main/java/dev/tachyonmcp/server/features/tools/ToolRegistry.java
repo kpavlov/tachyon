@@ -9,10 +9,9 @@ import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.methodNotFound;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolRequestParams;
-import dev.tachyonmcp.server.JsonSchemaValidator;
 import dev.tachyonmcp.server.RpcMethodHandler;
-import dev.tachyonmcp.server.SchemaValidationError;
 import dev.tachyonmcp.server.features.PaginatedResult;
+import dev.tachyonmcp.server.json.*;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.*;
@@ -35,7 +34,9 @@ public class ToolRegistry {
     private static final Logger logger = LoggerFactory.getLogger(ToolRegistry.class);
 
     private final ConcurrentHashMap<String, ToolHandler> handlers = new ConcurrentHashMap<>();
-    private final JsonSchemaValidator validator;
+    private final JsonSchemaValidator inputValidator;
+    private final JsonSchemaValidator outputValidator;
+    private final PayloadSerde payloadSerde;
 
     private @Nullable Runnable onChange;
 
@@ -47,9 +48,12 @@ public class ToolRegistry {
      */
     public static final int MAX_DESCRIPTION_LENGTH = 2048;
 
-    /** Creates a tool registry with the given schema validator. */
-    public ToolRegistry(JsonSchemaValidator validator) {
-        this.validator = validator;
+    /** Creates a tool registry with the given schema validators and payload serde. */
+    public ToolRegistry(
+            JsonSchemaValidator inputValidator, JsonSchemaValidator outputValidator, PayloadSerde payloadSerde) {
+        this.inputValidator = inputValidator;
+        this.outputValidator = outputValidator;
+        this.payloadSerde = payloadSerde;
     }
 
     public void onChange(@Nullable Runnable callback) {
@@ -189,7 +193,7 @@ public class ToolRegistry {
 
     public void registerHandlers(Map<String, RpcMethodHandler> registry) {
         registry.put("tools/list", new ToolsListHandler(this));
-        registry.put("tools/call", new ToolsCallHandler(this, validator));
+        registry.put("tools/call", new ToolsCallHandler(this, inputValidator, outputValidator, payloadSerde));
     }
 
     public static int parseLimit(Object params) {
@@ -229,7 +233,12 @@ public class ToolRegistry {
         }
     }
 
-    private record ToolsCallHandler(ToolRegistry registry, JsonSchemaValidator validator) implements RpcMethodHandler {
+    private record ToolsCallHandler(
+            ToolRegistry registry,
+            JsonSchemaValidator inputValidator,
+            JsonSchemaValidator outputValidator,
+            PayloadSerde payloadSerde)
+            implements RpcMethodHandler {
 
         @Override
         public String method() {
@@ -266,6 +275,7 @@ public class ToolRegistry {
                     .arguments(parsed.args() != null ? parsed.args() : Collections.emptyMap())
                     .meta(parsed.meta())
                     .progressToken(progressToken)
+                    .payloadSerde(payloadSerde)
                     .inputResponses(parsed.inputResponses())
                     .requestState(parsed.requestState())
                     .build();
@@ -281,7 +291,7 @@ public class ToolRegistry {
                     .thenApply(toolResult -> {
                         sendLoggingIfEnabled(context, parsed.name(), "completed");
                         validateOutput(handler.descriptor().outputSchema(), toolResult);
-                        return context.responseMapper().callToolResult(toolResult);
+                        return context.responseMapper().callToolResult(serializeStructured(toolResult));
                     })
                     .exceptionally(e -> {
                         var cause = e instanceof CompletionException && e.getCause() != null ? e.getCause() : e;
@@ -349,24 +359,51 @@ public class ToolRegistry {
             if (args != null) {
                 argumentsNode.setAll(args);
             }
-            var errors = validator.validate(schema, argumentsNode);
+            var errors = inputValidator.validate(schema, argumentsNode);
             if (errors.isEmpty()) return null;
             return joinMessages(errors);
         }
 
+        /**
+         * Serializes non-tree structured values into {@link RawJson} via the configured serde,
+         * so response mappers stay serde-free. {@link JsonNode} and {@link RawJson} pass through.
+         * Maps carrying {@link JsonNode} values are serialized with Jackson regardless of the
+         * configured serde — a non-Jackson serde cannot encode Jackson trees.
+         */
+        private ToolResult serializeStructured(ToolResult result) {
+            if (result instanceof ToolResult.WithMeta wm) {
+                var inner = serializeStructured(wm.inner());
+                return inner == wm.inner() ? result : new ToolResult.WithMeta(inner, wm.meta());
+            }
+            if (!(result instanceof ToolResult.Success s)) return result;
+            var sv = s.structuredValue();
+            if (sv == null || sv instanceof RawJson || sv instanceof JsonNode) return result;
+            var json = containsJsonNodes(sv) ? JsonUtils.writeString(sv) : payloadSerde.serialize(sv);
+            return new ToolResult.Success(RawJson.of(json), s.content());
+        }
+
+        private static boolean containsJsonNodes(Object structuredValue) {
+            return structuredValue instanceof Map<?, ?> map
+                    && map.values().stream().anyMatch(v -> v instanceof JsonNode);
+        }
+
         private void validateOutput(@Nullable JsonNode schema, ToolResult result) {
-            if (schema == null) return;
+            if (schema == null || outputValidator == JsonSchemaValidator.NOOP) return;
             var inner = result instanceof ToolResult.WithMeta wm ? wm.inner() : result;
             if (!(inner instanceof ToolResult.Success s)) return;
             var contentNode = structuredValueAsObjectNode(s.structuredValue());
             if (contentNode == null) return;
-            var errors = validator.validate(schema, contentNode);
+            var errors = outputValidator.validate(schema, contentNode);
             if (!errors.isEmpty()) {
                 logger.debug("Tool output failed schema validation (advisory only): {}", joinMessages(errors));
             }
         }
 
-        private static @Nullable JsonNode structuredValueAsObjectNode(@Nullable Object structuredValue) {
+        private @Nullable JsonNode structuredValueAsObjectNode(@Nullable Object structuredValue) {
+            if (structuredValue instanceof RawJson rj) {
+                var node = JsonUtils.parse(rj.json());
+                return node.isObject() ? node : null;
+            }
             if (structuredValue instanceof JsonNode node) {
                 return node.isObject() ? node : null;
             }

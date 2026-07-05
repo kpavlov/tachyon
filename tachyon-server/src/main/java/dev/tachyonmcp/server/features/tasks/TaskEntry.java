@@ -20,11 +20,11 @@ public class TaskEntry implements ServerResourceType {
     private volatile @Nullable String resultJson;
 
     public TaskEntry(String name, String id, @Nullable String description) {
-        this(TaskDescriptor.of(name, description), id, TaskState.WORKING, 0.0);
+        this(TaskDescriptor.builder(name).description(description).build(), id, TaskState.WORKING, 0.0);
     }
 
     public TaskEntry(String name, String id, @Nullable String description, TaskState status, double ttl) {
-        this(TaskDescriptor.of(name, description), id, status, ttl);
+        this(TaskDescriptor.builder(name).description(description).build(), id, status, ttl);
     }
 
     public TaskEntry(TaskDescriptor descriptor, String id, TaskState status, double ttl) {

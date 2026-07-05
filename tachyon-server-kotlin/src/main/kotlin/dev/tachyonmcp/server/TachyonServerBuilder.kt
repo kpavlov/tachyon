@@ -97,7 +97,7 @@ public class TachyonServerBuilder
                         ToolDescriptor
                             .builder(name)
                             .description(description)
-                            .schemas(inputSchema, outputSchema)
+                            .schemas(inputSchema, outputSchema, toolName = name)
                             .build(),
                         handler,
                     ),
@@ -129,6 +129,14 @@ public class TachyonServerBuilder
             }
 
         public fun name(name: String): TachyonServerBuilder = this.also { delegate.name(name) }
+
+        /** Configures the JSON payload boundary: serde and input/output schema validators. */
+        public inline fun json(
+            crossinline configure: (@TachyonDsl JsonScope).() -> Unit,
+        ): TachyonServerBuilder {
+            JsonScope().apply(configure).applyTo(delegate)
+            return this
+        }
 
         public fun pipelineCustomizer(
             customizer: (@TachyonDsl ChannelPipeline).() -> Unit,

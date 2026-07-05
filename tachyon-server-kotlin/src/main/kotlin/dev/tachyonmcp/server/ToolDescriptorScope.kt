@@ -5,6 +5,7 @@ package dev.tachyonmcp.server
 import dev.tachyonmcp.server.domain.ToolAnnotations
 import dev.tachyonmcp.server.features.tasks.TaskSupport
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
+import dev.tachyonmcp.server.json.JsonSchemaUtils.parseSchema
 import tools.jackson.databind.JsonNode
 
 @TachyonDsl
@@ -20,11 +21,11 @@ public class ToolDescriptorScope
         public var annotations: ToolAnnotations? = null
 
         public fun inputSchema(json: String) {
-            inputSchema = json.toJsonNode()
+            inputSchema = parseSchema(json, name ?: "<unknown>")
         }
 
         public fun outputSchema(json: String) {
-            outputSchema = json.toJsonNode()
+            outputSchema = parseSchema(json, name ?: "<unknown>")
         }
 
         @PublishedApi

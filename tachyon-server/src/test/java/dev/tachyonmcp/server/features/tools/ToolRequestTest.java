@@ -76,33 +76,6 @@ class ToolRequestTest {
     }
 
     @Test
-    void ofFactoryWithAllParams() {
-        Map<String, JsonNode> args = Map.of("k", JSON.stringNode("v"));
-        Map<String, JsonNode> meta = Map.of("m", JSON.stringNode("mv"));
-        var req = ToolRequest.of("my-tool", args, meta, 99L, null);
-        assertThat(req.name()).isEqualTo("my-tool");
-        assertThat(req.arguments()).isEqualTo(args);
-        assertThat(req.meta()).isEqualTo(meta);
-        assertThat(req.progressToken()).isEqualTo(99L);
-        assertThat(req.cancellation()).isNull();
-    }
-
-    @Test
-    void ofFactoryWithNullArgumentsDefaultsToEmpty() {
-        var req = ToolRequest.of("my-tool", null, null);
-        assertThat(req.arguments()).isEmpty();
-        assertThat(req.meta()).isNull();
-    }
-
-    @Test
-    void ofFactoryWithThreeParams() {
-        Map<String, JsonNode> args = Map.of("k", JSON.stringNode("v"));
-        var req = ToolRequest.of("my-tool", args, null);
-        assertThat(req.name()).isEqualTo("my-tool");
-        assertThat(req.arguments()).isEqualTo(args);
-    }
-
-    @Test
     void metaIsAccessibleWhenPresent() {
         Map<String, JsonNode> meta = Map.of("k", JSON.stringNode("v"));
         var req = ToolRequest.builder().name("t").meta(meta).build();

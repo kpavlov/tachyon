@@ -6,6 +6,7 @@ package dev.tachyonmcp.server;
 
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.runtime.Backpressure;
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.runtime.SseEvent;
@@ -20,6 +21,10 @@ import dev.tachyonmcp.server.handlers.CompletionHandlers;
 import dev.tachyonmcp.server.handlers.InitializeHandler;
 import dev.tachyonmcp.server.handlers.LoggingHandlers;
 import dev.tachyonmcp.server.handlers.PingHandler;
+import dev.tachyonmcp.server.json.JacksonPayloadSerde;
+import dev.tachyonmcp.server.json.JsonSchemaValidator;
+import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
+import dev.tachyonmcp.server.json.PayloadSerde;
 import dev.tachyonmcp.server.session.*;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.io.Closeable;
@@ -28,6 +33,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiFunction;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +54,9 @@ public class Server implements Closeable {
     private final SessionManager sessionManager;
     private final MessageRouter messageRouter = new OutboundSseStreamMessageRouter();
     private final AtomicLong eventIdCounter = new AtomicLong(0);
-    private final JsonSchemaValidator validator;
+    private final JsonSchemaValidator inputValidator;
+    private final JsonSchemaValidator outputValidator;
+    private final PayloadSerde payloadSerde;
     private final ToolRegistry toolRegistry;
     private final ResourceRegistry resourceRegistry;
     private final TaskRegistry taskRegistry;
@@ -184,7 +192,9 @@ public class Server implements Closeable {
             SessionLogRouter router,
             SessionStore sessionStore,
             ServerConfig config,
-            @Nullable JsonSchemaValidator validator,
+            @Nullable JsonSchemaValidator inputValidator,
+            @Nullable JsonSchemaValidator outputValidator,
+            @Nullable PayloadSerde payloadSerde,
             @Nullable List<ServerExtension> extensions) {
         this.executor = executor;
         this.ownsExecutor = ownsExecutor;
@@ -192,11 +202,13 @@ public class Server implements Closeable {
         this.router = Objects.requireNonNull(router, "router cannot be null");
         this.extensions = extensions != null ? extensions : List.of();
         this.sessionManager = new SessionManager(sessionStore);
-        this.validator = validator != null ? validator : new NetworkntJsonSchemaValidator();
-        this.toolRegistry = new ToolRegistry(this.validator);
+        this.inputValidator = inputValidator != null ? inputValidator : new NetworkntJsonSchemaValidator();
+        this.outputValidator = outputValidator != null ? outputValidator : this.inputValidator;
+        this.payloadSerde = payloadSerde != null ? payloadSerde : new JacksonPayloadSerde();
+        this.toolRegistry = new ToolRegistry(this.inputValidator, this.outputValidator, this.payloadSerde);
         this.resourceRegistry = new ResourceRegistry(this);
         this.taskRegistry = new TaskRegistry(this);
-        this.promptRegistry = new PromptRegistry(this.validator);
+        this.promptRegistry = new PromptRegistry(this.inputValidator);
         registerDefaults();
         bootstrapExtensions();
         setupChangeListeners(config);
@@ -213,20 +225,42 @@ public class Server implements Closeable {
                 new InMemorySessionStore(),
                 ServerConfig.DEFAULT,
                 null,
+                null,
+                null,
                 List.of());
     }
 
     public Server(SessionLogRouter router, SessionStore sessionStore, JsonSchemaValidator validator) {
-        this(defaultExecutor(), true, router, sessionStore, ServerConfig.DEFAULT, validator, List.of());
+        this(
+                defaultExecutor(),
+                true,
+                router,
+                sessionStore,
+                ServerConfig.DEFAULT,
+                validator,
+                validator,
+                null,
+                List.of());
     }
 
     public Server(
             SessionLogRouter router,
             SessionStore sessionStore,
             ServerConfig config,
-            @Nullable JsonSchemaValidator validator,
+            @Nullable JsonSchemaValidator inputValidator,
+            @Nullable JsonSchemaValidator outputValidator,
+            @Nullable PayloadSerde payloadSerde,
             @Nullable List<ServerExtension> extensions) {
-        this(defaultExecutor(), true, router, sessionStore, config, validator, extensions);
+        this(
+                defaultExecutor(),
+                true,
+                router,
+                sessionStore,
+                config,
+                inputValidator,
+                outputValidator,
+                payloadSerde,
+                extensions);
     }
 
     static ExecutorService defaultExecutorForBuilder() {
@@ -330,6 +364,16 @@ public class Server implements Closeable {
     public boolean extensionRequiresMeta(String extensionId) {
         var ext = extensionsById.get(extensionId);
         return ext != null && ext.requiresMetaEnvelope();
+    }
+
+    /** Registers a tool with string JSON schemas and a handler function. */
+    public void registerTool(
+            String name,
+            @Nullable String description,
+            @Nullable String inputSchemaJson,
+            @Nullable String outputSchemaJson,
+            BiFunction<InteractionContext, ToolArgs, ToolResult> fn) {
+        registerTool(SyncToolHandler.of(name, description, inputSchemaJson, outputSchemaJson, fn));
     }
 
     /** Registers a synchronous tool handler. */

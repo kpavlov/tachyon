@@ -2,7 +2,7 @@
  * Copyright (c) 2026 Konstantin Pavlov.
  */
 
-package dev.tachyonmcp.server;
+package dev.tachyonmcp.server.json;
 
 import static dev.tachyonmcp.test.TestUtils.parseJson;
 import static org.assertj.core.api.Assertions.assertThat;

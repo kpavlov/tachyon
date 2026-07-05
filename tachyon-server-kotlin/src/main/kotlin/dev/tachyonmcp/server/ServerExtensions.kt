@@ -4,9 +4,9 @@
 
 package dev.tachyonmcp.server
 
-import dev.tachyonmcp.server.features.tools.DefaultToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.server.schemas
 import tools.jackson.databind.JsonNode
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
@@ -38,13 +38,13 @@ public fun Server.registerTool(
     registerTool(configure = {
         name(name)
         description(description)
-        schemas(inputSchema, outputSchema)
+        schemas(inputSchema, outputSchema, toolName = name)
     }, block = block)
 
 @JvmSynthetic
 @OptIn(ExperimentalContracts::class)
 public inline fun Server.registerTool(
-    configure: DefaultToolDescriptor.Builder.() -> Unit = {},
+    configure: ToolDescriptor.Builder.() -> Unit = {},
     noinline block: suspend ToolScope.() -> ToolResult,
 ): Server {
     contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }

@@ -6,12 +6,12 @@ package dev.tachyonmcp.server.features.prompts;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetPromptRequestParams;
-import dev.tachyonmcp.server.JsonSchemaValidator;
 import dev.tachyonmcp.server.RpcMethodHandler;
-import dev.tachyonmcp.server.SchemaValidationError;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.features.Registry;
 import dev.tachyonmcp.server.features.tools.ToolRegistry;
+import dev.tachyonmcp.server.json.JsonSchemaValidator;
+import dev.tachyonmcp.server.json.SchemaValidationError;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;

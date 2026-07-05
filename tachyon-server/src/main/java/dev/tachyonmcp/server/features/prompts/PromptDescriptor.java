@@ -44,7 +44,7 @@ public interface PromptDescriptor extends ServerResourceType {
         if (name().isBlank()) throw new IllegalArgumentException("name must not be blank");
     }
 
-    static DefaultPromptDescriptor.Builder builder() {
+    static Builder builder() {
         return DefaultPromptDescriptor.builder();
     }
 
@@ -69,5 +69,25 @@ public interface PromptDescriptor extends ServerResourceType {
 
     static PromptDescriptor of(String name, String description) {
         return DefaultPromptDescriptor.of(name, description, null, null, null, null, null);
+    }
+
+    interface Builder {
+        Builder name(String name);
+
+        Builder description(@Nullable String description);
+
+        Builder title(@Nullable String title);
+
+        Builder addArguments(PromptArgument... elements);
+
+        Builder arguments(@Nullable Iterable<? extends PromptArgument> elements);
+
+        Builder inputSchema(@Nullable JsonNode inputSchema);
+
+        Builder icons(@Nullable Iterable<? extends Icon> elements);
+
+        Builder extensionId(@Nullable String extensionId);
+
+        PromptDescriptor build();
     }
 }
