@@ -30,6 +30,8 @@ import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.features.tools.ToolResult.InputRequired;
 import dev.tachyonmcp.server.features.tools.ToolResult.Success;
 import dev.tachyonmcp.server.features.tools.ToolResult.WithMeta;
+import dev.tachyonmcp.server.json.JsonUtils;
+import dev.tachyonmcp.server.json.RawJson;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -39,13 +41,11 @@ import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JsonGenerator;
 import tools.jackson.core.JsonParser;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 public final class McpResponseMapper implements ProtocolResponseMapper {
 
     private static final Object EMPTY = new EmptyResult(null, null);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     static {
         CodecRegistry.registerOverride(InputRequiredPayload.class, new InputRequiredPayloadCodec());
@@ -122,7 +122,12 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
         Map<String, JsonNode> structured = null;
         var sv = s.structuredValue();
         if (sv != null) {
-            JsonNode node = MAPPER.valueToTree(sv);
+            JsonNode node =
+                    switch (sv) {
+                        case RawJson rj -> JsonUtils.parse(rj.json());
+                        case JsonNode n -> n;
+                        default -> JsonUtils.parse(JsonUtils.writeString(sv));
+                    };
             if (!node.isObject()) {
                 throw new IllegalArgumentException(
                         "structuredContent must serialize to a JSON object, got " + node.getNodeType() + ": " + node);

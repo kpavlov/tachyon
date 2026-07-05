@@ -28,7 +28,8 @@ import tools.jackson.databind.node.JsonNodeFactory;
 
 class NotificationDeliveryTest {
 
-    private static final ToolDescriptor TOOL_DESCRIPTOR = ToolDescriptor.builder("test_tool")
+    private static final ToolDescriptor TOOL_DESCRIPTOR = ToolDescriptor.builder()
+            .name("test_tool")
             .description("Test tool")
             .inputSchema(JsonNodeFactory.instance.objectNode().put("type", "object"))
             .build();

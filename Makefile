@@ -18,14 +18,16 @@ package:
 	@mvn install -pl tachyon-server-kotlin -am -DskipTests -Dspotbugs.skip -Dspotless.skip
 
 examples:
-	@echo "🌤️ Building and testing weather example..."
+	@echo "🌤️📡 Building Live examples..."
 	@mvn verify -f examples/weather/pom.xml --no-transfer-progress
 	@mvn verify -f examples/echo-kotlin/pom.xml --no-transfer-progress
+	@echo "✅ Done!"
 
 examples-snapshot: package
-	@echo "🌤️ Building and testing weather example..."
+	@echo "🌤️🎬 Building SNAPSHOT examples..."
 	@mvn verify -f examples/weather/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
 	@mvn verify -f examples/echo-kotlin/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
+	@echo "✅ Done!"
 
 conformance: package
 	@echo "🔄 Running MCP conformance suite..."
@@ -39,6 +41,7 @@ e2e: package
 clean:
 	@echo "🧹 Cleaning..."
 	@find . -type d -name target -exec rm -rf {} +
+	@echo "✅ All clean!"
 
 format:
 	@echo "🎨 Formatting code..."
@@ -48,8 +51,8 @@ format:
 
 lint:
 	@echo "🔍 Linting code..."
-# 	@mvn spotless:check -pl !reports
-# 	@mvn exec:java@detekt -pl tachyon-server-kotlin
+	@mvn spotless:check -pl !reports
+	@mvn exec:java@detekt -pl tachyon-server-kotlin
 	@mvn spotbugs:check -pl !reports,!e2e
 	@echo "✅ Done..."
 

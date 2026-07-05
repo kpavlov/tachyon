@@ -1,0 +1,71 @@
+// Copyright (c) 2026 Konstantin Pavlov.
+
+package dev.tachyonmcp.server.features.tools
+
+import dev.tachyonmcp.server.TachyonDsl
+import dev.tachyonmcp.server.domain.ToolAnnotations
+import dev.tachyonmcp.server.features.tasks.TaskSupport
+import dev.tachyonmcp.server.json.JsonSchemaUtils.parseSchema
+import dev.tachyonmcp.server.json.toJacksonNode
+import kotlinx.serialization.json.JsonObject
+import tools.jackson.databind.JsonNode
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
+
+@TachyonDsl
+public class ToolDescriptorScope
+    @PublishedApi
+    internal constructor() {
+        public var name: String? = null
+        public var title: String? = null
+        public var description: String? = null
+        public var inputSchema: JsonNode? = null
+        public var outputSchema: JsonNode? = null
+        public var taskSupport: TaskSupport? = null
+        public var annotations: ToolAnnotations? = null
+
+        public fun inputSchema(json: String) {
+            inputSchema = parseSchema(json, name ?: "<unknown>")
+        }
+
+        public fun outputSchema(json: String) {
+            outputSchema = parseSchema(json, name ?: "<unknown>")
+        }
+
+        @PublishedApi
+        internal fun build(): ToolDescriptor {
+            val n = requireNotNull(name) { "ToolDescriptor.name is required" }
+            val builder = ToolDescriptor.builder().name(n)
+            title?.let(builder::title)
+            description?.let(builder::description)
+            inputSchema?.let(builder::inputSchema)
+            outputSchema?.let(builder::outputSchema)
+            taskSupport?.let(builder::taskSupport)
+            annotations?.let(builder::annotations)
+            return builder.build()
+        }
+    }
+
+@OptIn(ExperimentalContracts::class)
+public inline fun toolDescriptor(
+    name: String,
+    configure: ToolDescriptorScope.() -> Unit = {},
+): ToolDescriptor {
+    contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
+    return ToolDescriptorScope()
+        .apply {
+            this.name = name
+            configure()
+        }.build()
+}
+
+/** Sets the input schema from a [JsonObject]. Requires kotlinx-serialization-json on the classpath. */
+public fun ToolDescriptorScope.inputSchema(json: JsonObject) {
+    inputSchema = json.toJacksonNode()
+}
+
+/** Sets the output schema from a [JsonObject]. Requires kotlinx-serialization-json on the classpath. */
+public fun ToolDescriptorScope.outputSchema(json: JsonObject) {
+    outputSchema = json.toJacksonNode()
+}

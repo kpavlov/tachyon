@@ -4,15 +4,15 @@ package dev.tachyonmcp.skill
 
 import dev.tachyonmcp.runtime.InteractionContext
 import dev.tachyonmcp.server.Server
-import dev.tachyonmcp.server.TachyonServerBuilder
 import dev.tachyonmcp.server.buildServer
+import dev.tachyonmcp.server.config.TachyonServerBuilder
 import dev.tachyonmcp.server.features.tools.AbstractAsyncToolHandler
 import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler
 import dev.tachyonmcp.server.features.tools.ToolArgs
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.registerTool
-import dev.tachyonmcp.server.toolDescriptor
+import dev.tachyonmcp.server.features.tools.registerTool
+import dev.tachyonmcp.server.features.tools.toolDescriptor
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import tools.jackson.databind.JsonNode
@@ -85,9 +85,8 @@ fun buildWithPostRegistration(): Server {
     server.registerTool(GreetingTool())
     server.registerTool(AsyncGreetingTool())
     server.registerTool(
-        toolDescriptor("post-register") {
-            description = "Added after build"
-        },
+        name = "post-register",
+        description = "Added after build",
     ) {
         ToolResult.text("post-registered")
     }

@@ -2,19 +2,20 @@
 
 package com.example.weather;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import dev.tachyonmcp.server.ServerHandle;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
 import io.modelcontextprotocol.spec.McpSchema;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class WeatherServerTest {
 
@@ -29,8 +30,8 @@ class WeatherServerTest {
         int port = handle.port();
 
         clientTransport = HttpClientStreamableHttpTransport
-                .builder("http://localhost:" + port)
-                .build();
+            .builder("http://localhost:" + port)
+            .build();
         client = McpClient.sync(clientTransport).build();
 
         initResult = client.initialize();
@@ -38,26 +39,32 @@ class WeatherServerTest {
 
     @AfterAll
     static void afterAll() {
-        client.close();
-        clientTransport.close();
-        handle.close();
+        if (client != null) {
+            client.close();
+        }
+        if (clientTransport != null) {
+            clientTransport.close();
+        }
+        if (handle != null) {
+            handle.close();
+        }
     }
 
     @Test
     void shouldServerInfo() {
         assertThat(initResult.serverInfo()).isEqualTo(
-                McpSchema.Implementation.builder("weather-server", "1.0")
-                        .title("Weather Server")
-                        .websiteUrl("http://localhost:8080/mcp")
-                        .description("Weather MCP server")
-                        .build());
+            McpSchema.Implementation.builder("weather-server", "1.0")
+                .title("Weather Server")
+                .websiteUrl("http://localhost:8080/mcp")
+                .description("Weather MCP server")
+                .build());
         assertThat(initResult.protocolVersion()).isEqualTo("2025-11-25");
         assertThat(initResult.instructions()).isEqualTo("Test instructions");
         assertThat(initResult.capabilities()).isEqualTo(McpSchema.ServerCapabilities.builder()
-                .tools(null)
-                .resources(null, null)
-                .prompts(null)
-                .build());
+            .tools(null)
+            .resources(null, null)
+            .prompts(null)
+            .build());
     }
 
     @Test
@@ -70,16 +77,16 @@ class WeatherServerTest {
         assertThat(tool.title()).isEqualTo("Current Weather");
         assertThat(tool.description()).isEqualTo("Get current weather for a city");
         assertThat(tool.inputSchema()).isEqualTo(java.util.Map.of(
-                "type", "object",
-                "required", List.of("city"),
-                "properties", java.util.Map.of(
-                        "city", java.util.Map.of(
-                                "description", "City name (e.g., London, Tokyo, New York)",
-                                "type", "string"),
-                        "units", java.util.Map.of(
-                                "description", "Temperature unit (default: celsius)",
-                                "enum", List.of("celsius", "fahrenheit"),
-                                "type", "string"))));
+            "type", "object",
+            "required", List.of("city"),
+            "properties", java.util.Map.of(
+                "city", java.util.Map.of(
+                    "description", "City name (e.g., London, Tokyo, New York)",
+                    "type", "string"),
+                "units", java.util.Map.of(
+                    "description", "Temperature unit (default: celsius)",
+                    "enum", List.of("celsius", "fahrenheit"),
+                    "type", "string"))));
         assertThat(tool.outputSchema()).isNull();
         assertThat(tool.meta()).isNull();
     }
@@ -87,19 +94,19 @@ class WeatherServerTest {
     @Test
     void shouldCallWeatherTool() {
         final var result = client.callTool(McpSchema.CallToolRequest.builder("get-weather")
-                .arguments(java.util.Map.of("city", "London", "units", "celsius"))
-                .build());
+            .arguments(java.util.Map.of("city", "London", "units", "celsius"))
+            .build());
 
         assertThat(result).isNotNull();
         var content = result.content().getFirst();
         assertThat(content).isInstanceOf(McpSchema.TextContent.class);
         var textContent = ((McpSchema.TextContent) content);
         assertThat(textContent.text())
-                .startsWith("Weather in London:")
-                .contains("Temperature:")
-                .contains("°C")
-                .contains("Humidity:")
-                .contains("Wind:");
+            .startsWith("Weather in London:")
+            .contains("Temperature:")
+            .contains("°C")
+            .contains("Humidity:")
+            .contains("Wind:");
     }
 
     @Test
@@ -123,8 +130,8 @@ class WeatherServerTest {
     void shouldReadTextResource() {
         final var listResult = client.listResources();
         var article = listResult.resources().stream()
-                .filter(r -> r.uri().equals("weather://prediction/article"))
-                .findFirst().orElseThrow();
+            .filter(r -> r.uri().equals("weather://prediction/article"))
+            .findFirst().orElseThrow();
 
         final var result = client.readResource(article);
 
@@ -134,17 +141,17 @@ class WeatherServerTest {
         assertThat(textContents.uri()).isEqualTo("weather://prediction/article");
         assertThat(textContents.mimeType()).isEqualTo("text/markdown");
         assertThat(textContents.text().trim())
-                .startsWith("# Weather Prediction")
-                .endsWith("Published by Tachyon Weather MCP — "
-                        + LocalDate.now().format(DateTimeFormatter.ISO_DATE));
+            .startsWith("# Weather Prediction")
+            .endsWith("Published by Tachyon Weather MCP — "
+                + LocalDate.now().format(DateTimeFormatter.ISO_DATE));
     }
 
     @Test
     void shouldReadBlobResource() {
         final var listResult = client.listResources();
         var image = listResult.resources().stream()
-                .filter(r -> r.uri().equals("weather://current/image"))
-                .findFirst().orElseThrow();
+            .filter(r -> r.uri().equals("weather://current/image"))
+            .findFirst().orElseThrow();
 
         final var result = client.readResource(image);
 
@@ -170,7 +177,7 @@ class WeatherServerTest {
     @Test
     void shouldReadForecastFromTemplate() {
         final var result = client.readResource(
-                McpSchema.ReadResourceRequest.builder("weather://forecast/London").build());
+            McpSchema.ReadResourceRequest.builder("weather://forecast/London").build());
 
         var contents = result.contents().getFirst();
         assertThat(contents).isInstanceOf(McpSchema.TextResourceContents.class);
@@ -193,7 +200,7 @@ class WeatherServerTest {
     @Test
     void shouldGetPrompt() {
         final var result = client.getPrompt(
-                McpSchema.GetPromptRequest.builder("rewrite-forecast").build());
+            McpSchema.GetPromptRequest.builder("rewrite-forecast").build());
 
         assertThat(result).isNotNull();
         assertThat(result.messages()).hasSize(1);

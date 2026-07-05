@@ -8,11 +8,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetPromptResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListPromptsResult;
-import dev.tachyonmcp.server.JsonSchemaValidator;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.PromptArgument;
 import dev.tachyonmcp.server.domain.PromptMessage;
+import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.session.DefaultMcpContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;

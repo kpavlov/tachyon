@@ -6,7 +6,7 @@ package dev.tachyonmcp.server.features.tools;
 
 import dev.tachyonmcp.runtime.Cancellation;
 import dev.tachyonmcp.server.domain.HasMeta;
-import java.util.Collections;
+import dev.tachyonmcp.server.json.PayloadDeserializer;
 import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
@@ -29,6 +29,10 @@ public interface ToolRequest extends HasMeta {
     @Nullable
     Map<String, JsonNode> meta();
 
+    /** Returns the payload deserializer configured for this request, or {@code null} if not set. */
+    @Nullable
+    PayloadDeserializer payloadDeserializer();
+
     @Nullable
     Object progressToken();
 
@@ -41,29 +45,27 @@ public interface ToolRequest extends HasMeta {
     @Nullable
     String requestState();
 
-    static DefaultToolRequest.Builder builder() {
+    static Builder builder() {
         return DefaultToolRequest.builder();
     }
 
-    static ToolRequest of(
-            String name,
-            @Nullable Map<String, JsonNode> arguments,
-            @Nullable Map<String, JsonNode> meta,
-            @Nullable Object progressToken,
-            @Nullable Cancellation cancellation) {
-        return DefaultToolRequest.of(
-                name,
-                arguments != null ? arguments : Collections.emptyMap(),
-                meta,
-                progressToken,
-                cancellation,
-                null,
-                null);
-    }
+    interface Builder {
+        Builder name(String name);
 
-    static ToolRequest of(
-            String name, @Nullable Map<String, JsonNode> arguments, @Nullable Map<String, JsonNode> meta) {
-        return DefaultToolRequest.of(
-                name, arguments != null ? arguments : Collections.emptyMap(), meta, null, null, null, null);
+        Builder arguments(Map<String, ? extends JsonNode> arguments);
+
+        Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
+
+        Builder payloadDeserializer(@Nullable PayloadDeserializer deserializer);
+
+        Builder progressToken(@Nullable Object progressToken);
+
+        Builder cancellation(@Nullable Cancellation cancellation);
+
+        Builder inputResponses(@Nullable Map<String, ? extends JsonNode> inputResponses);
+
+        Builder requestState(@Nullable String requestState);
+
+        ToolRequest build();
     }
 }

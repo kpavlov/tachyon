@@ -95,6 +95,10 @@ public interface ResourceTemplateEntry extends ServerResourceType {
         return Pattern.compile(sb.toString());
     }
 
+    public static Builder builder() {
+        return DefaultResourceTemplateEntry.builder();
+    }
+
     static ResourceTemplateEntry of(
             String name,
             String uriTemplate,
@@ -115,5 +119,11 @@ public interface ResourceTemplateEntry extends ServerResourceType {
             ResourceTemplateHandler handler) {
         return DefaultResourceTemplateEntry.of(
                 name, uriTemplate, description, mimeType, title, annotations, icons, handler);
+    }
+
+    interface Builder {
+        Builder name(String name);
+
+        DefaultResourceTemplateEntry.Builder mimeType(@Nullable String mimeType);
     }
 }

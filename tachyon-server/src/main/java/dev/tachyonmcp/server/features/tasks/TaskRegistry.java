@@ -74,7 +74,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
 
     /** Creates a task with the given name, description, and TTL in seconds (0 = no TTL). */
     public TaskEntry createTask(String name, @Nullable String description, double ttl) {
-        return createTask(TaskDescriptor.of(name, description), ttl);
+        return createTask(TaskDescriptor.builder(name).description(description).build(), ttl);
     }
 
     /** Creates a task from a descriptor (no TTL). */

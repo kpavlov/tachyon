@@ -82,8 +82,11 @@ class TasksBridgeTest extends AbstractMcpE2eTest {
         startServer(it -> it.extension(TasksExtension.instance()));
 
         // Add a task directly to the registry
-        var taskEntry =
-                new TaskEntry(TaskDescriptor.of("test-task", "A test task"), "test-task-1", TaskState.WORKING, 60.0);
+        var taskEntry = new TaskEntry(
+                TaskDescriptor.builder("test-task").description("A test task").build(),
+                "test-task-1",
+                TaskState.WORKING,
+                60.0);
         server.tasks().add(taskEntry);
 
         try (var client = createTestClient()) {

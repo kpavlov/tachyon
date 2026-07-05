@@ -13,12 +13,15 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListToolsResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextContent;
 import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.JsonSchemaValidator;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
+import dev.tachyonmcp.server.json.JacksonPayloadSerde;
+import dev.tachyonmcp.server.json.JsonSchemaValidator;
+import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
+import dev.tachyonmcp.server.json.PayloadSerde;
 import dev.tachyonmcp.server.session.DefaultMcpContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
@@ -46,7 +49,10 @@ class ToolRegistryTest {
         {"type":"object","properties":{"message":{"type":"string"}},"required":["message"]}
         """);
 
-    private final ToolRegistry registry = new ToolRegistry(JsonSchemaValidator.noop());
+    private static final PayloadSerde TEST_SERDE = new JacksonPayloadSerde();
+
+    private final ToolRegistry registry =
+            new ToolRegistry(JsonSchemaValidator.noop(), JsonSchemaValidator.noop(), TEST_SERDE, TEST_SERDE);
 
     @Test
     void listToolsReturnsEmptyListWhenNoToolsRegistered() throws Exception {
@@ -73,7 +79,8 @@ class ToolRegistryTest {
             """);
         var annotations = ToolAnnotations.of(null, true, false, true, false);
         registry.register(
-                new AbstractSyncToolHandler(ToolDescriptor.builder("full-tool")
+                new AbstractSyncToolHandler(ToolDescriptor.builder()
+                        .name("full-tool")
                         .title("Full Tool")
                         .description("Does everything")
                         .inputSchema(TEST_SCHEMA)
@@ -253,8 +260,10 @@ class ToolRegistryTest {
         var handlers = new HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
         registry.register(
-                new AbstractSyncToolHandler(
-                        ToolDescriptor.builder("ts-tool").taskSupport(enumValue).build()) {
+                new AbstractSyncToolHandler(ToolDescriptor.builder()
+                        .name("ts-tool")
+                        .taskSupport(enumValue)
+                        .build()) {
                     @Override
                     public ToolResult handle(InteractionContext context, ToolArgs args) {
                         return ToolResult.text("ok");
@@ -308,7 +317,8 @@ class ToolRegistryTest {
         registry.registerHandlers(handlers);
         var icon = Icon.of("https://example.com/tool-icon.png", "image/png", null, null);
         registry.register(
-                new AbstractSyncToolHandler(ToolDescriptor.builder("icon-tool")
+                new AbstractSyncToolHandler(ToolDescriptor.builder()
+                        .name("icon-tool")
                         .description("Tool with icon")
                         .icons(List.of(icon))
                         .build()) {
@@ -535,7 +545,7 @@ class ToolRegistryTest {
 
             @Override
             public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolArgs args) {
-                return handleAsync(context, ToolRequest.of(name(), null, null));
+                return handleAsync(context, ToolRequest.builder().name(name()).build());
             }
         });
 
@@ -571,7 +581,7 @@ class ToolRegistryTest {
 
             @Override
             public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolArgs args) {
-                return handleAsync(context, ToolRequest.of(name(), null, null));
+                return handleAsync(context, ToolRequest.builder().name(name()).build());
             }
         });
 
@@ -651,7 +661,8 @@ class ToolRegistryTest {
             {"type":"string"}
             """);
         assertThatThrownBy(() -> registry.register(
-                        new AbstractSyncToolHandler(ToolDescriptor.builder("bad-output")
+                        new AbstractSyncToolHandler(ToolDescriptor.builder()
+                                .name("bad-output")
                                 .outputSchema(outputSchema)
                                 .build()) {
                             @Override
@@ -670,7 +681,8 @@ class ToolRegistryTest {
             {"type":"object","properties":{"result":{"type":"string"}}}
             """);
         registry.register(
-                new AbstractSyncToolHandler(ToolDescriptor.builder("valid-output")
+                new AbstractSyncToolHandler(ToolDescriptor.builder()
+                        .name("valid-output")
                         .outputSchema(outputSchema)
                         .build()) {
                     @Override
@@ -691,11 +703,13 @@ class ToolRegistryTest {
         var outputSchema = parseJson("""
             {"type":"object","properties":{"message":{"type":"string"},"count":{"type":"integer"}},"required":["message","count"]}
             """);
-        var registryVal = new ToolRegistry(new dev.tachyonmcp.server.NetworkntJsonSchemaValidator());
+        var registryVal = new ToolRegistry(
+                new NetworkntJsonSchemaValidator(), new NetworkntJsonSchemaValidator(), TEST_SERDE, TEST_SERDE);
         var handlers = new HashMap<String, RpcMethodHandler>();
         registryVal.registerHandlers(handlers);
         var handler =
-                new AbstractSyncToolHandler(ToolDescriptor.builder("structured-out")
+                new AbstractSyncToolHandler(ToolDescriptor.builder()
+                        .name("structured-out")
                         .description("test")
                         .outputSchema(outputSchema)
                         .build()) {
@@ -724,18 +738,22 @@ class ToolRegistryTest {
 
     @Test
     void shouldConvertMixedJavaAndJsonNodeEntries() throws Exception {
-        var registryVal = new ToolRegistry(new dev.tachyonmcp.server.NetworkntJsonSchemaValidator());
+        var registryVal = new ToolRegistry(
+                new NetworkntJsonSchemaValidator(), new NetworkntJsonSchemaValidator(), TEST_SERDE, TEST_SERDE);
         var handlers = new HashMap<String, RpcMethodHandler>();
         registryVal.registerHandlers(handlers);
-        var handler = new AbstractSyncToolHandler(
-                ToolDescriptor.builder("mixed-out").description("test").build()) {
-            @Override
-            public ToolResult handle(InteractionContext context, ToolArgs args) {
-                var jsonNodeVal = tools.jackson.databind.node.JsonNodeFactory.instance.stringNode("json-val");
-                // Mixed map: one JsonNode value, one plain String value
-                return ToolResult.of(Map.of("jsonField", jsonNodeVal, "plainField", "plain-val"), "fallback");
-            }
-        };
+        var handler =
+                new AbstractSyncToolHandler(ToolDescriptor.builder()
+                        .name("mixed-out")
+                        .description("test")
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext context, ToolArgs args) {
+                        var jsonNodeVal = tools.jackson.databind.node.JsonNodeFactory.instance.stringNode("json-val");
+                        // Mixed map: one JsonNode value, one plain String value
+                        return ToolResult.of(Map.of("jsonField", jsonNodeVal, "plainField", "plain-val"), "fallback");
+                    }
+                };
         registryVal.register(handler);
 
         try (var server = TachyonServer.builder().build()) {
@@ -757,7 +775,8 @@ class ToolRegistryTest {
     private static class TestTool extends AbstractSyncToolHandler {
 
         TestTool(String name, @Nullable String description, @Nullable JsonNode schema) {
-            super(ToolDescriptor.builder(name)
+            super(ToolDescriptor.builder()
+                    .name(name)
                     .description(description)
                     .inputSchema(schema)
                     .build());
@@ -767,5 +786,29 @@ class ToolRegistryTest {
         public ToolResult handle(InteractionContext context, ToolArgs args) {
             return ToolResult.text("ok");
         }
+    }
+
+    @Test
+    void shouldRejectRegistrationWithNonObjectStringSchema() {
+        assertThatThrownBy(() -> registry.register(SyncToolHandler.of(
+                        "bad-string",
+                        "desc",
+                        "{\"type\":\"array\"}",
+                        "{\"type\":\"string\"}",
+                        (ctx, args) -> ToolResult.text("x"))))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("inputSchema")
+                .hasMessageContaining("\"type\": \"object\"");
+    }
+
+    @Test
+    void shouldAcceptRegistrationWithValidStringSchemas() {
+        registry.register(SyncToolHandler.of(
+                "good-string",
+                "desc",
+                "{\"type\":\"object\",\"properties\":{\"x\":{\"type\":\"string\"}}}",
+                "{\"type\":\"object\",\"properties\":{\"y\":{\"type\":\"integer\"}}}",
+                (ctx, args) -> ToolResult.text("ok")));
+        assertThat(registry.get("good-string")).isNotNull();
     }
 }

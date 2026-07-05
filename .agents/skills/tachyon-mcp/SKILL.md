@@ -1,8 +1,8 @@
 ---
 name: tachyon-mcp
 description: Build MCP (Model Context Protocol) servers using the [Tachyon MCP](https://github.com/kpavlov/tachyon).
-compatibility: Designed for Claude Code on Java 21 Maven projects
-version: 1.0.0-beta.2
+compatibility: Designed for Claude Code on JDK 21+ projects
+version: 1.0.0-beta.4
 metadata:
     author: Konstantin Pavlov
 ---
