@@ -7,6 +7,7 @@ package dev.tachyonmcp.transport.netty.http;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpUtil;
 import org.jspecify.annotations.Nullable;
 
 public final class HttpHelpers {
@@ -25,15 +26,19 @@ public final class HttpHelpers {
     private HttpHelpers() {}
 
     /**
-     * Set required HTTP headers for SSE stream response
+     * Set required HTTP headers for SSE stream response.
+     *
+     * <p>{@code Connection: close} because the server hard-closes the channel when the stream
+     * ends ({@code PostSseStream}/{@code NettySseConnection}); advertising keep-alive lets
+     * clients pool the socket and race the server's FIN with the next request.
      */
     public static void setSseStreamHeaders(HttpResponse response, @Nullable String origin) {
         response.headers()
                 .set(HttpHeaderNames.CONTENT_TYPE, "text/event-stream")
                 .set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED)
                 .set(HttpHeaderNames.CACHE_CONTROL, "no-cache")
-                .set(HttpHeaderNames.CONNECTION, "keep-alive")
                 .set(X_ACCEL_BUFFERING, "no");
+        HttpUtil.setKeepAlive(response, false);
         if (origin != null) {
             response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
         }
