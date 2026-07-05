@@ -1,3 +1,6 @@
+@file:Suppress("FunctionName")
+@file:JvmName("TachyonServerFactory")
+
 // Copyright (c) 2026 Konstantin Pavlov.
 
 package dev.tachyonmcp.server

@@ -9,12 +9,25 @@ import dev.tachyonmcp.server.domain.Icon
 public class ServerInfoScope
     @PublishedApi
     internal constructor() {
+        /** Server name advertised to clients. */
         public var name: String? = null
+
+        /** Human-readable server title. */
         public var title: String? = null
+
+        /** Server icon set. */
         public val icons: MutableList<Icon> = mutableListOf()
+
+        /** Server version advertised to clients. */
         public var version: String? = null
+
+        /** Human-readable server description. */
         public var description: String? = null
+
+        /** Instructions for how to use the server. */
         public var instructions: String? = null
+
+        /** Server website URL. */
         public var websiteUrl: String? = null
 
         @PublishedApi internal fun applyTo(builder: ServerIdentityBuilder) {

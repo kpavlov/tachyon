@@ -26,3 +26,6 @@ internal fun ToolDescriptor.Builder.schemas(
 internal fun JsonObject.toJacksonNode(): JsonNode = toString().toJsonNode()
 
 internal fun JsonObject?.toJacksonNodeOrNull(): JsonNode? = this?.toJacksonNode()
+
+internal fun Map<String, JsonObject>.toJacksonNodeMap(): Map<String, JsonNode> =
+    mapValues { (_, v) -> v.toJacksonNode() }

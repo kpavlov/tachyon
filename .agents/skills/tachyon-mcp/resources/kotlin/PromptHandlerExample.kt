@@ -11,7 +11,7 @@ import dev.tachyonmcp.server.features.prompts.promptMessagesOf
 
 /** Simplest — name + description. */
 fun simpleDescriptor(): PromptDescriptor =
-    PromptDescriptor.of("rewrite-forecast", "Rewrites a weather forecast in a given style")
+    PromptDescriptor(name = "rewrite-forecast", description = "Rewrites a weather forecast in a given style")
 
 /** DSL — all properties. */
 fun argDescriptor(): PromptDescriptor =

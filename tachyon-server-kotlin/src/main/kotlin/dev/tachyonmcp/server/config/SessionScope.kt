@@ -13,13 +13,22 @@ import kotlin.time.toJavaDuration
 public class SessionScope
     @PublishedApi
     internal constructor() {
+        /** Whether session management is enabled. */
         public var enabled: Boolean = false
+
+        /** Session time-to-live duration. */
         public var sessionTtl: Duration? = null
+
+        /** Custom session store implementation. */
         public var sessionStore: SessionStore? = null
+
+        /** Custom session log router. */
         public var sessionLogRouter: SessionLogRouter? = null
+
+        /** Custom session ID generator function. */
         public var sessionIdGenerator: ((HttpRequest) -> String)? = null
 
-        @Deprecated(message = "Use `enabled`", replaceWith = ReplaceWith("!enabled"))
+        @Deprecated(message = "Use `enabled`")
         public var stateless: Boolean
             get() = !enabled
             set(value) {
@@ -28,7 +37,7 @@ public class SessionScope
 
         /** Lambda-friendly overload: `sessionIdGenerator { it.headers()["X-Tenant-Id"]!! }`. */
         public fun sessionIdGenerator(generator: (HttpRequest) -> String) {
-            sessionIdGenerator = { request -> generator(request) }
+            sessionIdGenerator = generator
         }
 
         @PublishedApi

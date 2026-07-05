@@ -5,6 +5,7 @@ package dev.tachyonmcp.server.config
 import dev.tachyonmcp.server.ServerBuilder
 import dev.tachyonmcp.server.TachyonDsl
 import dev.tachyonmcp.server.json.JsonSchemaValidator
+import dev.tachyonmcp.server.json.KxSerializationSerde
 import dev.tachyonmcp.server.json.PayloadDeserializer
 import dev.tachyonmcp.server.json.PayloadSerde
 import dev.tachyonmcp.server.json.PayloadSerializer
@@ -23,10 +24,10 @@ public class JsonScope
     internal constructor() {
         /**
          * Payload serializer/deserializer for structured values and arguments.
-         * Defaults to Jackson; assign [dev.tachyonmcp.server.json.KxSerializationSerde] for kotlinx.serialization.
+         * Defaults to [KxSerializationSerde] for the Kotlin DSL; set to `null` to restore the Jackson default.
          * Sets both [serializer] and [deserializer] when assigned.
          */
-        public var serde: PayloadSerde? = null
+        public var serde: PayloadSerde? = KxSerializationSerde.Default
 
         /** Payload serializer, or `null` to keep the server default. */
         public var serializer: PayloadSerializer? = null

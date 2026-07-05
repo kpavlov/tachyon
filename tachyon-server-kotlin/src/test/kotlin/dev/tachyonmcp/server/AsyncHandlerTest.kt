@@ -42,7 +42,7 @@ internal class AsyncHandlerTest {
         TachyonServer.builder().build().use { server ->
             val ctx = DefaultMcpContext.stateless(server)
             val future =
-                handler.handleAsync(ctx, ToolArgs.of(null)) as CompletableFuture<out ToolResult>
+                handler.handleAsync(ctx, ToolArgs()) as CompletableFuture<out ToolResult>
 
             runBlocking { started.await() }
             future.cancel(true)

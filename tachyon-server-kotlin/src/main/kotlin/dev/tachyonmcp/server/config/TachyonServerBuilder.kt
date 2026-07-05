@@ -35,17 +35,25 @@ public class TachyonServerBuilder
         @PublishedApi
         internal var networkPortExplicitlySet: Boolean = false
 
+        @OptIn(ExperimentalContracts::class)
         public inline fun info(
             crossinline configure: (@TachyonDsl ServerInfoScope).() -> Unit,
         ): TachyonServerBuilder {
-            delegate.info { ServerInfoScope().apply(configure).applyTo(it) }
+            contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
+            val scope = ServerInfoScope()
+            scope.configure()
+            delegate.info { scope.applyTo(it) }
             return this
         }
 
+        @OptIn(ExperimentalContracts::class)
         public inline fun capabilities(
             crossinline configure: (@TachyonDsl CapabilitiesScope).() -> Unit,
         ): TachyonServerBuilder {
-            delegate.capabilities { CapabilitiesScope().apply(configure).applyTo(it) }
+            contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
+            val scope = CapabilitiesScope()
+            scope.configure()
+            delegate.capabilities { scope.applyTo(it) }
             return this
         }
 
@@ -63,17 +71,25 @@ public class TachyonServerBuilder
             return this
         }
 
+        @OptIn(ExperimentalContracts::class)
         public inline fun session(
             crossinline configure: (@TachyonDsl SessionScope).() -> Unit,
         ): TachyonServerBuilder {
-            delegate.session { SessionScope().apply(configure).applyTo(it) }
+            contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
+            val scope = SessionScope()
+            scope.configure()
+            delegate.session { scope.applyTo(it) }
             return this
         }
 
+        @OptIn(ExperimentalContracts::class)
         public inline fun runtime(
             crossinline configure: (@TachyonDsl RuntimeScope).() -> Unit,
         ): TachyonServerBuilder {
-            delegate.runtime { RuntimeScope().apply(configure).applyTo(it) }
+            contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
+            val scope = RuntimeScope()
+            scope.configure()
+            delegate.runtime { scope.applyTo(it) }
             return this
         }
 
@@ -129,7 +145,12 @@ public class TachyonServerBuilder
         ): TachyonServerBuilder =
             this.also {
                 delegate.resource(
-                    ResourceDescriptor.of(name, uri, description, mimeType),
+                    ResourceDescriptor(
+                        name = name,
+                        uri = uri,
+                        description = description,
+                        mimeType = mimeType,
+                    ),
                 ) { ctx, req ->
                     ResourceScope(ctx, req).handler()
                 }
@@ -141,7 +162,9 @@ public class TachyonServerBuilder
             handler: (arguments: String?) -> List<PromptMessage>,
         ): TachyonServerBuilder =
             this.also {
-                delegate.prompt(PromptDescriptor.of(name, description)) { args -> handler(args) }
+                delegate.prompt(
+                    PromptDescriptor(name = name, description = description),
+                ) { args -> handler(args) }
             }
 
         /**

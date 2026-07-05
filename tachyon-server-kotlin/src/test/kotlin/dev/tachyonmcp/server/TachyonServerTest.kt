@@ -30,11 +30,11 @@ internal class TachyonServerTest {
                 name = appName
                 title = "My Test MCP Server"
                 icons +=
-                    Icon.of(
-                        "https://example.com/s/icon.png",
-                        "image/png",
-                        listOf("64x64"),
-                        "white",
+                    Icon(
+                        src = "https://example.com/s/icon.png",
+                        mimeType = "image/png",
+                        sizes = listOf("64x64"),
+                        theme = "white",
                     )
                 websiteUrl = "https://example.com/mcp"
                 version = "2.0.0"
@@ -81,10 +81,10 @@ internal class TachyonServerTest {
                 description = "App config",
                 mimeType = "text/yaml",
             ) {
-                TextResourceContents.of(uri, "text/yaml", "key: value")
+                TextResourceContents(uri = uri, mimeType = "text/yaml", text = "key: value")
             }
             prompt("greet", "Say hello") {
-                listOf(PromptMessage.user(TextContent.of("Hello, ${it ?: "world"}!")))
+                listOf(PromptMessage.user(TextContent("Hello, ${it ?: "world"}!")))
             }
         }.use { handle ->
             (handle.port() > 0) shouldBe true
@@ -101,11 +101,11 @@ internal class TachyonServerTest {
                 websiteUrl shouldBe "https://example.com/mcp"
                 icons shouldBe
                     listOf(
-                        Icon.of(
-                            "https://example.com/s/icon.png",
-                            "image/png",
-                            listOf("64x64"),
-                            "white",
+                        Icon(
+                            src = "https://example.com/s/icon.png",
+                            mimeType = "image/png",
+                            sizes = listOf("64x64"),
+                            theme = "white",
                         ),
                     )
                 websiteUrl shouldBe "https://example.com/mcp"

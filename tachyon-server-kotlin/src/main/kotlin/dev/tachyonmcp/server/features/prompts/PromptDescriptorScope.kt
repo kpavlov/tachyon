@@ -5,6 +5,8 @@ package dev.tachyonmcp.server.features.prompts
 import dev.tachyonmcp.server.TachyonDsl
 import dev.tachyonmcp.server.domain.PromptArgument
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
+import dev.tachyonmcp.server.json.toJacksonNode
+import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
@@ -23,9 +25,20 @@ public class PromptDescriptorScope
         @PublishedApi
         internal fun build(): PromptDescriptor {
             val n = requireNotNull(name) { "PromptDescriptor.name is required" }
-            return PromptDescriptor.of(n, description, title, arguments, inputSchema)
+            return PromptDescriptor(
+                name = n,
+                description = description,
+                title = title,
+                arguments = arguments,
+                inputSchema = inputSchema,
+            )
         }
     }
+
+/** Sets the input schema from a [JsonObject]. Requires kotlinx-serialization-json on the classpath. */
+public fun PromptDescriptorScope.inputSchema(json: JsonObject) {
+    inputSchema = json.toJacksonNode()
+}
 
 @OptIn(ExperimentalContracts::class)
 public inline fun promptDescriptor(

@@ -20,7 +20,12 @@ public class PromptArgumentScope
         @PublishedApi
         internal fun build(): PromptArgument {
             val n = requireNotNull(name) { "PromptArgument.name is required" }
-            return PromptArgument.of(n, title, description, required)
+            return PromptArgument(
+                name = n,
+                title = title,
+                description = description,
+                required = required,
+            )
         }
     }
 
@@ -28,7 +33,7 @@ public fun promptArgument(
     name: String,
     description: String? = null,
     required: Boolean? = null,
-): PromptArgument = PromptArgument.of(name, null, description, required)
+): PromptArgument = PromptArgument(name = name, description = description, required = required)
 
 @OptIn(ExperimentalContracts::class)
 public inline fun promptArgument(configure: PromptArgumentScope.() -> Unit): PromptArgument {

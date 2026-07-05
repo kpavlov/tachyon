@@ -128,49 +128,49 @@ internal class KotlinApiTest {
 
     @Test
     fun `stringOrNull returns value when present`() {
-        val args = ToolArgs.of(mapOf("k" to JsonNodeFactory.instance.stringNode("v")))
+        val args = ToolArgs(raw = mapOf("k" to JsonNodeFactory.instance.stringNode("v")))
         args.stringOrNull("k") shouldBe "v"
     }
 
     @Test
     fun `stringOrNull returns null when missing`() {
-        val args = ToolArgs.of(mapOf())
+        val args = ToolArgs()
         args.stringOrNull("k") shouldBe null
     }
 
     @Test
     fun `intOrNull returns value when present`() {
-        val args = ToolArgs.of(mapOf("k" to JsonNodeFactory.instance.numberNode(42)))
+        val args = ToolArgs(raw = mapOf("k" to JsonNodeFactory.instance.numberNode(42)))
         args.intOrNull("k") shouldBe 42
     }
 
     @Test
     fun `intOrNull returns null when missing`() {
-        val args = ToolArgs.of(mapOf())
+        val args = ToolArgs()
         args.intOrNull("k") shouldBe null
     }
 
     @Test
     fun `booleanOrNull returns value when present`() {
-        val args = ToolArgs.of(mapOf("k" to JsonNodeFactory.instance.booleanNode(true)))
+        val args = ToolArgs(raw = mapOf("k" to JsonNodeFactory.instance.booleanNode(true)))
         args.booleanOrNull("k") shouldBe true
     }
 
     @Test
     fun `booleanOrNull returns null when missing`() {
-        val args = ToolArgs.of(mapOf())
+        val args = ToolArgs()
         args.booleanOrNull("k") shouldBe null
     }
 
     @Test
     fun `doubleOrNull returns value when present`() {
-        val args = ToolArgs.of(mapOf("k" to JsonNodeFactory.instance.numberNode(3.14)))
+        val args = ToolArgs(raw = mapOf("k" to JsonNodeFactory.instance.numberNode(3.14)))
         args.doubleOrNull("k") shouldBe 3.14
     }
 
     @Test
     fun `doubleOrNull returns null when missing`() {
-        val args = ToolArgs.of(mapOf())
+        val args = ToolArgs()
         args.doubleOrNull("k") shouldBe null
     }
 
@@ -180,25 +180,25 @@ internal class KotlinApiTest {
 
     @Test
     fun `boolean with default returns value`() {
-        val args = ToolArgs.of(mapOf("k" to JsonNodeFactory.instance.booleanNode(true)))
+        val args = ToolArgs(raw = mapOf("k" to JsonNodeFactory.instance.booleanNode(true)))
         args.boolean("k", false) shouldBe true
     }
 
     @Test
     fun `boolean with default returns default`() {
-        val args = ToolArgs.of(mapOf())
+        val args = ToolArgs()
         args.boolean("k", true) shouldBe true
     }
 
     @Test
     fun `int with default returns value`() {
-        val args = ToolArgs.of(mapOf("k" to JsonNodeFactory.instance.numberNode(42)))
+        val args = ToolArgs(raw = mapOf("k" to JsonNodeFactory.instance.numberNode(42)))
         args.int("k", 0) shouldBe 42
     }
 
     @Test
     fun `double with default returns value`() {
-        val args = ToolArgs.of(mapOf("k" to JsonNodeFactory.instance.numberNode(3.14)))
+        val args = ToolArgs(raw = mapOf("k" to JsonNodeFactory.instance.numberNode(3.14)))
         args.double("k", 0.0) shouldBe 3.14
     }
 
@@ -219,7 +219,7 @@ internal class KotlinApiTest {
                 "name" to JsonNodeFactory.instance.stringNode("Alice"),
                 "age" to JsonNodeFactory.instance.numberNode(30),
             )
-        val args = ToolArgs.of(raw)
+        val args = ToolArgs(raw = raw)
         val decoded = args.decode<GreetingArgs>()
         decoded shouldBe GreetingArgs("Alice", 30)
     }
@@ -227,7 +227,7 @@ internal class KotlinApiTest {
     @Test
     fun `decode uses default values`() {
         val raw = mapOf("name" to JsonNodeFactory.instance.stringNode("Bob"))
-        val args = ToolArgs.of(raw)
+        val args = ToolArgs(raw = raw)
         val decoded = args.decode<GreetingArgs>()
         decoded shouldBe GreetingArgs("Bob", 0)
     }
@@ -239,7 +239,7 @@ internal class KotlinApiTest {
                 "name" to JsonNodeFactory.instance.stringNode("Eve"),
                 "unexpected" to JsonNodeFactory.instance.stringNode("extra"),
             )
-        val args = ToolArgs.of(raw)
+        val args = ToolArgs(raw = raw)
         val decoded = args.decode<GreetingArgs>()
         decoded shouldBe GreetingArgs("Eve", 0)
     }
@@ -249,7 +249,7 @@ internal class KotlinApiTest {
         val value = GreetingArgs("Charlie", 25)
         TachyonServer.builder().build().use { server ->
             val ctx = DefaultMcpContext.stateless(server)
-            val scope = ToolScope(ctx, ToolArgs.of(null))
+            val scope = ToolScope(ctx, ToolArgs(raw = null))
             val result = scope.structured(value)
             result.shouldBeInstanceOf<ToolResult.Success>()
             result.structured() shouldNotBeNull {
@@ -266,7 +266,7 @@ internal class KotlinApiTest {
         val customJson = Json { prettyPrint = true }
         TachyonServer.builder().build().use { server ->
             val ctx = DefaultMcpContext.stateless(server)
-            val scope = ToolScope(ctx, ToolArgs.of(null))
+            val scope = ToolScope(ctx, ToolArgs(raw = null))
             val result = scope.structured(value, customJson)
             result.shouldBeInstanceOf<ToolResult.Success>()
             result.structured() shouldNotBeNull {
@@ -280,7 +280,7 @@ internal class KotlinApiTest {
     fun `structured rejects non-object payloads`() {
         TachyonServer.builder().build().use { server ->
             val ctx = DefaultMcpContext.stateless(server)
-            val scope = ToolScope(ctx, ToolArgs.of(null))
+            val scope = ToolScope(ctx, ToolArgs(raw = null))
             shouldThrow<IllegalArgumentException> {
                 scope.structured(listOf(1, 2, 3))
             }.message shouldContain "must be a JSON object"

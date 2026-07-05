@@ -8,17 +8,40 @@ import dev.tachyonmcp.server.TachyonDsl
 public class CapabilitiesScope
     @PublishedApi
     internal constructor() {
+        /** Tool capability mode: `ON`, `OFF`, or `AUTO`. */
         public var tools: Mode = Mode.AUTO
+
+        /** Whether to advertise tool list change notifications. */
         public var toolsListChanged: Boolean = false
+
+        /** Whether resources capability is enabled. */
         public var resources: Boolean = false
+
+        /** Whether to support resource subscriptions. */
         public var resourcesSubscribe: Boolean = false
+
+        /** Whether to advertise resource list change notifications. */
         public var resourcesListChanged: Boolean = false
+
+        /** Whether prompts capability is enabled. */
         public var prompts: Boolean = false
+
+        /** Whether to advertise prompt list change notifications. */
         public var promptsListChanged: Boolean = false
+
+        /** Whether tasks capability is enabled. */
         public var tasks: Boolean = false
+
+        /** Whether to support task cancellation. */
         public var tasksCancel: Boolean = false
+
+        /** Whether to support task requests. */
         public var tasksRequests: Boolean = false
+
+        /** Whether completions capability is enabled. */
         public var completions: Boolean = false
+
+        /** Whether logging capability is enabled. */
         public var logging: Boolean = false
 
         public fun tools(listChanged: Boolean = false) {
