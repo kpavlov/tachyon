@@ -15,6 +15,7 @@ import tools.jackson.databind.JsonNode
  *
  * @param method the RPC method to invoke
  * @param params optional parameters for the method; null to omit
+ * @author Konstantin Pavlov
  */
 public fun RpcMethodRequest(
     method: String,
@@ -24,7 +25,10 @@ public fun RpcMethodRequest(
 /**
  * Creates an [RpcMethodRequest] using a kotlinx-serialization [JsonObject] params.
  * Requires kotlinx-serialization-json on the classpath.
+ *
+ * @author Konstantin Pavlov
  */
+@JvmName("rpcMethodRequestWithKxParams")
 public fun RpcMethodRequest(
     method: String,
     params: JsonObject?,
@@ -35,6 +39,7 @@ public fun RpcMethodRequest(
  *
  * @param message         prompt shown to the user
  * @param requestedSchema JSON schema describing the expected form fields
+ * @author Konstantin Pavlov
  */
 public fun FormInputRequest(
     message: String,
@@ -44,6 +49,8 @@ public fun FormInputRequest(
 /**
  * Creates a [FormInputRequest] using a kotlinx-serialization schema map.
  * Requires kotlinx-serialization-json on the classpath.
+ *
+ * @author Konstantin Pavlov
  */
 @JvmName("formInputRequestWithKxSchema")
 public fun FormInputRequest(
@@ -57,6 +64,7 @@ public fun FormInputRequest(
  * @param message       prompt shown to the user
  * @param elicitationId identifier linking the response to the elicitation context
  * @param url           URL to open for user input
+ * @author Konstantin Pavlov
  */
 public fun UrlInputRequest(
     message: String,

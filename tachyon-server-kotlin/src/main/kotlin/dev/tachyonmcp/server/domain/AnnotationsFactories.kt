@@ -11,6 +11,7 @@ package dev.tachyonmcp.server.domain
  * @param audience     intended roles (user, assistant); null when unrestricted
  * @param priority     ordering hint in [0.0, 1.0]; null for default
  * @param lastModified RFC-3339 timestamp of last modification; null when unknown
+ * @author Konstantin Pavlov
  */
 public fun Annotations(
     audience: List<Role>? = null,

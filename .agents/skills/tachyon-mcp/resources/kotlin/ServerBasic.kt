@@ -101,7 +101,7 @@ fun createServer(port: Int = 0): ServerHandle = TachyonServer(port = port) {
         description = "Server configuration",
         mimeType = "application/json",
     ) {
-        TextResourceContents(uri = uri, mimeType = "application/json", text = """{"mode":"production"}""")
+        TextResourceContents(uri = uri, text = """{"mode":"production"}""", mimeType = "application/json")
     }
 
     // ── prompts ───────────────────────────────────────────────

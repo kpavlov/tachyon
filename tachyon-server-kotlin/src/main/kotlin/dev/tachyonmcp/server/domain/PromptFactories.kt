@@ -10,6 +10,7 @@ package dev.tachyonmcp.server.domain
  *
  * @param role    message role (user / assistant)
  * @param content the message content block
+ * @author Konstantin Pavlov
  */
 public fun PromptMessage(
     role: Role,
@@ -23,6 +24,7 @@ public fun PromptMessage(
  * @param title       human-readable title; null to omit
  * @param description description of the argument; null to omit
  * @param required    whether the argument must be provided; null = optional
+ * @author Konstantin Pavlov
  */
 public fun PromptArgument(
     name: String,

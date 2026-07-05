@@ -69,6 +69,8 @@ public fun ServerBuilder.tool(
 /**
  * Registers a tool using a [JsonObject] input schema.
  * Requires kotlinx-serialization-json on the classpath.
+ *
+ * @author Konstantin Pavlov
  */
 public fun ServerBuilder.tool(
     name: String,

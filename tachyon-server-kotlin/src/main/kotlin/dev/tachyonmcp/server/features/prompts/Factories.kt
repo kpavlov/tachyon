@@ -20,6 +20,7 @@ import tools.jackson.databind.JsonNode
  * @param arguments   list of accepted arguments; null for no arguments
  * @param inputSchema JSON schema for the arguments; null to skip schema validation
  * @param icons       list of associated icons; null to omit
+ * @author Konstantin Pavlov
  */
 public fun PromptDescriptor(
     name: String,
@@ -33,7 +34,10 @@ public fun PromptDescriptor(
 /**
  * Creates a [PromptDescriptor] using a [JsonObject] input schema.
  * Requires kotlinx-serialization-json on the classpath.
+ *
+ * @author Konstantin Pavlov
  */
+@JvmName("promptDescriptorWithKxSchema")
 public fun PromptDescriptor(
     name: String,
     description: String? = null,

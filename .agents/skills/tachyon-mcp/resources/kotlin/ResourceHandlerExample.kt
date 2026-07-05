@@ -40,7 +40,7 @@ fun userProfileTemplate(): ResourceTemplateEntry =
         mimeType = "application/json",
     ) { _, uri, params ->
         val userId = params["userId"]
-        TextResourceContents(uri = uri, mimeType = "application/json", text = """{"userId":"$userId"}""")
+        TextResourceContents(uri = uri, text = """{"userId":"$userId"}""", mimeType = "application/json")
     }
 
 /** URI template — multi-segment with static prefix matching. */
@@ -53,7 +53,7 @@ fun forecastTemplate(): ResourceTemplateEntry =
     ) { _, uri, params ->
         TextResourceContents(
             uri = uri,
-            mimeType = "application/json",
             text = """{"city":"${params["city"]}","temp":22}""",
+            mimeType = "application/json",
         )
     }

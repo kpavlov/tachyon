@@ -12,6 +12,7 @@ package dev.tachyonmcp.server.domain
  * @param mimeType image MIME type (e.g. "image/png"); null when unknown
  * @param sizes   conventional size labels (e.g. ["16x16", "32x32"]); null when unspecified
  * @param theme   theme variant ("light", "dark"); null when universal
+ * @author Konstantin Pavlov
  */
 public fun Icon(
     src: String,

@@ -19,6 +19,7 @@ import dev.tachyonmcp.server.domain.Icon
  * @param annotations optional presentation hints
  * @param size        estimated size hint in bytes; null = unknown
  * @param icons       list of associated icons; null to omit
+ * @author Konstantin Pavlov
  */
 public fun ResourceDescriptor(
     name: String,
@@ -43,6 +44,7 @@ public fun ResourceDescriptor(
  * @param annotations optional presentation hints
  * @param icons       list of associated icons; null to omit
  * @param handler     handler invoked with captured template variables
+ * @author Konstantin Pavlov
  */
 public fun ResourceTemplateEntry(
     name: String,
