@@ -5,6 +5,7 @@
 package dev.tachyonmcp.server;
 
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.runtime.Backpressure;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.Session;
@@ -30,7 +31,6 @@ import dev.tachyonmcp.server.session.*;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.io.Closeable;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -83,7 +83,7 @@ public class Server implements Closeable {
     /** Returns the protocol response mapper for the default MCP version. */
     public ProtocolResponseMapper responseMapper() {
         for (var mapper : RESPONSE_MAPPERS) {
-            if (mapper.supports("mcp", "2025-11-25")) {
+            if (mapper.supports("mcp", McpProtocol.VERSION)) {
                 return mapper;
             }
         }
@@ -462,14 +462,7 @@ public class Server implements Closeable {
         if (session.state() == SessionState.CLOSED) {
             return;
         }
-        var paramsStr =
-                switch (params) {
-                    case String s -> s;
-                    case Map<?, ?> m -> JsonRpcCodec.writeValueAsString(m);
-                    case List<?> l -> JsonRpcCodec.writeValueAsString(l);
-                    case null -> "{}";
-                    default -> JsonRpcCodec.writeValueAsString(params);
-                };
+        var paramsStr = JsonRpcCodec.toJsonParams(params);
         var notificationJson = JsonRpcCodec.serializeNotificationAsString(method, paramsStr);
 
         var sseEventId = nextEventId();
@@ -487,8 +480,6 @@ public class Server implements Closeable {
         }
     }
 
-    static final Duration PENDING_REQUEST_TIMEOUT = Duration.ofSeconds(60);
-
     /** Sends a request to the client and returns a future that completes with the response. */
     public CompletableFuture<String> sendRequest(Session session, String method, Object params) {
         return sendRequest(session, method, params, null);
@@ -497,9 +488,7 @@ public class Server implements Closeable {
     /** Sends a request to the client, optionally via a bound outbound SSE stream, and returns a future. */
     public CompletableFuture<String> sendRequest(
             Session session, String method, Object params, @Nullable OutboundSseStream stream) {
-        var paramsStr = params instanceof Map || params instanceof List
-                ? JsonRpcCodec.writeValueAsString(params)
-                : (String) params;
+        var paramsStr = JsonRpcCodec.toJsonParams(params);
         var requestId = UUID.randomUUID().toString();
         var future = new CompletableFuture<String>();
         registerPendingRequest(requestId, future);
@@ -553,14 +542,15 @@ public class Server implements Closeable {
     /** Registers a pending request with a timeout. */
     public void registerPendingRequest(Object requestId, CompletableFuture<String> future) {
         pendingRequests.put(requestId, future);
-        future.orTimeout(PENDING_REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+        var timeout = config.runtime().requestTimeout();
+        future.orTimeout(timeout.toMillis(), TimeUnit.MILLISECONDS);
         future.whenComplete((res, ex) -> {
             if (ex instanceof TimeoutException) {
                 var removed = pendingRequests.remove(requestId);
                 if (removed != null) {
                     logger.debug(
                             "Pending request timed out after {}s: id={}, pendingCount={}\n{}",
-                            PENDING_REQUEST_TIMEOUT.toSeconds(),
+                            timeout.toSeconds(),
                             requestId,
                             pendingRequests.size(),
                             threadDump());

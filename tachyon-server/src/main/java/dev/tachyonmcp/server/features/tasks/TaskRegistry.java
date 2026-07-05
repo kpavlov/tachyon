@@ -6,6 +6,7 @@ package dev.tachyonmcp.server.features.tasks;
 
 import dev.tachyonmcp.protocol.ProtocolMappers;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.Server;
@@ -32,7 +33,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
     private static final long TTL_JANITOR_INTERVAL_SECONDS = 30;
 
     private static final ProtocolResponseMapper mapper =
-            Objects.requireNonNull(ProtocolMappers.getMapper("mcp", "2025-11-25"));
+            Objects.requireNonNull(ProtocolMappers.getMapper("mcp", McpProtocol.VERSION));
 
     private final ConcurrentHashMap<String, TaskEntry> byId = new ConcurrentHashMap<>();
     private final Server server;

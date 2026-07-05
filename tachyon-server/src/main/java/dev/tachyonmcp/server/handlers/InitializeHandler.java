@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.handlers;
 
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.runtime.Extension;
 import dev.tachyonmcp.server.RpcMethodHandler;
@@ -20,7 +21,7 @@ import tools.jackson.databind.ObjectMapper;
 
 public final class InitializeHandler implements RpcMethodHandler {
 
-    private static final String MCP_VERSION = "2025-11-25";
+    private static final String MCP_VERSION = McpProtocol.VERSION;
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final Server server;

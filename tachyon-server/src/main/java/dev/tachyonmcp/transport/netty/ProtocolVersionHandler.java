@@ -7,6 +7,7 @@ package dev.tachyonmcp.transport.netty;
 import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendResponseAndClose;
 
 import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import io.netty.channel.ChannelHandler.Sharable;
@@ -26,7 +27,7 @@ import java.util.Set;
 public class ProtocolVersionHandler extends ChannelInboundHandlerAdapter {
 
     private static final Set<String> SUPPORTED_VERSIONS =
-            Set.of("2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25");
+            Set.of("2024-11-05", "2025-03-26", "2025-06-18", McpProtocol.VERSION);
 
     private final String mcpEndpoint;
 

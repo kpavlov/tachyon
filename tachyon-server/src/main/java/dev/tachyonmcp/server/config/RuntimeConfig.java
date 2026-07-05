@@ -17,17 +17,21 @@ import java.util.Objects;
  *                            {@code Duration.ZERO} interrupts running handlers immediately
  * @author Konstantin Pavlov
  */
-public record RuntimeConfig(Duration shutdownGracePeriod) {
+public record RuntimeConfig(Duration shutdownGracePeriod, Duration requestTimeout) {
 
-    public static final RuntimeConfig DEFAULT = new RuntimeConfig(Duration.ofSeconds(5));
+    public static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(60);
+    public static final RuntimeConfig DEFAULT = new RuntimeConfig(Duration.ofSeconds(5), DEFAULT_REQUEST_TIMEOUT);
 
     public static Builder builder() {
         return new Builder();
     }
 
-    /** Builder for {@link RuntimeConfig}. */
+    /**
+     * Builder for {@link RuntimeConfig}.
+     */
     public static final class Builder {
         private Duration shutdownGracePeriod = DEFAULT.shutdownGracePeriod();
+        private Duration requestTimeout = DEFAULT_REQUEST_TIMEOUT;
 
         private Builder() {
             Objects.requireNonNull(shutdownGracePeriod, "shutdownGracePeriod cannot be null");
@@ -43,9 +47,19 @@ public record RuntimeConfig(Duration shutdownGracePeriod) {
             return this;
         }
 
-        /** Builds the {@link RuntimeConfig}. */
+        /**
+         * Sets the timeout for pending requests sent to the client (default 60s).
+         */
+        public Builder requestTimeout(Duration requestTimeout) {
+            this.requestTimeout = Objects.requireNonNull(requestTimeout, "requestTimeout cannot be null");
+            return this;
+        }
+
+        /**
+         * Builds the {@link RuntimeConfig}.
+         */
         public RuntimeConfig build() {
-            return new RuntimeConfig(shutdownGracePeriod);
+            return new RuntimeConfig(shutdownGracePeriod, requestTimeout);
         }
     }
 }

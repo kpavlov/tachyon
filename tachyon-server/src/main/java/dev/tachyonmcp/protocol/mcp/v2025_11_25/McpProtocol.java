@@ -23,7 +23,7 @@ public final class McpProtocol implements Protocol {
 
     private static final String ENDPOINT = "/mcp";
     private static final String PROTOCOL_NAME = "mcp";
-    private static final String VERSION = "2025-11-25";
+    public static final String VERSION = "2025-11-25";
 
     /** All client-advertised versions this server can handle; negotiates up to VERSION. */
     private static final Set<String> ACCEPTED_CLIENT_VERSIONS = Set.of(
