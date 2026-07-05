@@ -27,8 +27,8 @@ public fun RpcMethodRequest(
  */
 public fun RpcMethodRequest(
     method: String,
-    params: JsonObject?,
-): RpcMethodRequest = RpcMethodRequest.of(method, params?.toJacksonNode())
+    params: JsonObject,
+): RpcMethodRequest = RpcMethodRequest.of(method, params.toJacksonNode())
 
 /**
  * Creates a [FormInputRequest] — requests user input via a form described by a JSON schema.

@@ -25,17 +25,18 @@ internal class TachyonServerTest {
     @Test
     fun `all DSL parameters`() {
         val appName = "tachyon-e2e"
+        val expectedIcon =
+            Icon(
+                src = "https://example.com/s/icon.png",
+                mimeType = "image/png",
+                sizes = listOf("64x64"),
+                theme = "white",
+            )
         TachyonServer(port = 0) {
             info {
                 name = appName
                 title = "My Test MCP Server"
-                icons +=
-                    Icon(
-                        src = "https://example.com/s/icon.png",
-                        mimeType = "image/png",
-                        sizes = listOf("64x64"),
-                        theme = "white",
-                    )
+                icons += expectedIcon
                 websiteUrl = "https://example.com/mcp"
                 version = "2.0.0"
                 description = "e2e test server"
@@ -99,15 +100,7 @@ internal class TachyonServerTest {
                 description shouldBe "e2e test server"
                 instructions shouldBe "ignore me"
                 websiteUrl shouldBe "https://example.com/mcp"
-                icons shouldBe
-                    listOf(
-                        Icon(
-                            src = "https://example.com/s/icon.png",
-                            mimeType = "image/png",
-                            sizes = listOf("64x64"),
-                            theme = "white",
-                        ),
-                    )
+                icons shouldBe listOf(expectedIcon)
                 websiteUrl shouldBe "https://example.com/mcp"
             }
 

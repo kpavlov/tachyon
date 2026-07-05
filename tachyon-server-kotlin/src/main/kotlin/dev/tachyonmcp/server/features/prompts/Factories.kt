@@ -39,7 +39,7 @@ public fun PromptDescriptor(
     description: String? = null,
     title: String? = null,
     arguments: List<PromptArgument>? = null,
-    inputSchema: JsonObject?,
+    inputSchema: JsonObject,
     icons: List<Icon>? = null,
 ): PromptDescriptor =
     PromptDescriptor.of(
@@ -47,6 +47,6 @@ public fun PromptDescriptor(
         description,
         title,
         arguments,
-        inputSchema?.toJacksonNode(),
+        inputSchema.toJacksonNode(),
         icons,
     )
