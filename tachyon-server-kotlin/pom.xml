@@ -151,7 +151,7 @@
                             <arguments>
                                 <argument>--build-upon-default-config</argument>
                                 <argument>--config</argument>
-                                <argument>${project.basedir}/detekt.yml</argument>
+                                <argument>${project.basedir}/../detekt.yml</argument>
                                 <argument>--input</argument>
                                 <argument>${project.basedir}/src/main/kotlin:${project.basedir}/src/test/kotlin</argument>
                                 <argument>--excludes</argument>
@@ -179,7 +179,7 @@
                             <arguments>
                                 <argument>--build-upon-default-config</argument>
                                 <argument>--config</argument>
-                                <argument>${project.basedir}/detekt.yml</argument>
+                                <argument>${project.basedir}/../detekt.yml</argument>
                                 <argument>--input</argument>
                                 <argument>${project.basedir}/src/main/kotlin:${project.basedir}/src/test/kotlin</argument>
                                 <argument>--excludes</argument>

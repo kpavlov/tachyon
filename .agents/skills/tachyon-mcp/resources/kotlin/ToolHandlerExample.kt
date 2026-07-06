@@ -6,13 +6,16 @@ import dev.tachyonmcp.runtime.InteractionContext
 import dev.tachyonmcp.server.Server
 import dev.tachyonmcp.server.buildServer
 import dev.tachyonmcp.server.config.TachyonServerBuilder
+import dev.tachyonmcp.server.config.success
 import dev.tachyonmcp.server.features.tools.AbstractAsyncToolHandler
 import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler
 import dev.tachyonmcp.server.features.tools.ToolArgs
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.server.features.tools.decode
 import dev.tachyonmcp.server.features.tools.registerTool
 import dev.tachyonmcp.server.features.tools.toolDescriptor
+import kotlinx.serialization.Serializable
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import tools.jackson.databind.JsonNode
@@ -22,6 +25,12 @@ private val MAPPER = ObjectMapper()
 private val GREET_SCHEMA: JsonNode = MAPPER.readTree("""
     {"type":"object","properties":{"name":{"type":"string","description":"Name to greet"}},"required":["name"]}
 """)
+
+@Serializable
+data class GreetArgs(val name: String, val greeting: String = "Hello")
+
+@Serializable
+data class GreetReply(val message: String)
 
 /**
  * Registers a simple hello tool via DSL.
@@ -39,6 +48,20 @@ fun TachyonServerBuilder.registerGreeting() {
     tool(name = "greeting", description = "Generates a personalized greeting", inputSchema = GREET_SCHEMA) {
         val name = args.string("name")
         ToolResult.text("Hello, $name!")
+    }
+}
+
+/**
+ * Typed handler using decode + success — honors the configured serde.
+ */
+fun TachyonServerBuilder.registerTypedGreeting() {
+    tool(
+        name = "typed-greeting",
+        description = "Typed greet via configured serde",
+        inputSchema = GREET_SCHEMA,
+    ) {
+        val input = args.decode<GreetArgs>()
+        success(GreetReply("${input.greeting}, ${input.name}!"), "greeting response")
     }
 }
 
@@ -78,6 +101,7 @@ fun buildWithPostRegistration(): Server {
     val server = buildServer {
         registerHello()
         registerGreeting()
+        registerTypedGreeting()
         tool(name = "inline", description = "Registered inline") {
             ToolResult.text("inline result")
         }

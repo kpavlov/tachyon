@@ -224,6 +224,27 @@ val handle = TachyonServer(port = 8080) {
 }
 ```
 
+### Typed decode/result (Kotlin)
+
+`args.decode<T>()` decodes tool arguments through the configured serde (kotlinx by default). Symmetric `success(value)` returns a typed result:
+
+```kotlin
+@Serializable
+data class GreetArgs(val name: String, val greeting: String = "Hello")
+
+@Serializable
+data class GreetReply(val message: String)
+
+tool(name = "greet", description = "Typed greet", inputSchema = ..., outputSchema = ...) {
+    val input = args.decode<GreetArgs>()       // uses configured serde
+    success(GreetReply("${input.greeting}, ${input.name}!"), "custom text")
+}
+```
+
+- `args.decode<T>()` — decodes through the configured serde (kotlinx by default), honors custom `Json` config
+- `scope.success(value)` — mirrors `decode`, defers serialization to the configured serializer
+- `scope.success(value, text)` — structured + human-readable text fallback
+
 Post-build registration with `registerTool`:
 
 ```kotlin

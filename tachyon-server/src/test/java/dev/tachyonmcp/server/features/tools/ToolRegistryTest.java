@@ -594,7 +594,7 @@ class ToolRegistryTest {
             var params = Map.of("name", "invalid-arg-async", "arguments", Map.of());
             var result = callHandler.handle(ctx, params);
             assertThat(result).isInstanceOf(JsonRpcError.class);
-            assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
+            assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_PARAMS);
         }
     }
 

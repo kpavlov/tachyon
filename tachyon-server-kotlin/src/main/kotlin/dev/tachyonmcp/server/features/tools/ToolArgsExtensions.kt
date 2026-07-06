@@ -2,9 +2,6 @@
 
 package dev.tachyonmcp.server.features.tools
 
-import dev.tachyonmcp.server.json.KxSerializationSerde
-import kotlinx.serialization.json.Json
-
 public fun ToolArgs.stringOrNull(key: String): String? = if (has(key)) string(key) else null
 
 public fun ToolArgs.intOrNull(key: String): Int? = if (has(key)) intValue(key) else null
@@ -29,10 +26,12 @@ public fun ToolArgs.double(
 ): Double = doubleOr(key, default)
 
 /**
- * Decodes tool arguments into a [T] using kotlinx-serialization.
- * Uses [ToolArgs.rawJson] to avoid a Jackson round-trip.
- * Unknown keys are ignored by default; pass a custom [json] for strict decoding.
- * Requires kotlinx-serialization-json on the classpath.
+ * Decodes tool arguments into [T] using the deserializer configured in server config
+ * (kotlinx-serialization by default in the Kotlin DSL, or a custom serde). Honors a
+ * custom-configured `Json` — configure it via `json { serde = KxSerializationSerde(Json { … }) }`.
+ * Generic type arguments of containers are erased at runtime — prefer dedicated
+ * [@Serializable][kotlinx.serialization.Serializable] payload classes.
+ *
+ * @throws IllegalStateException if no deserializer is configured for these args.
  */
-public inline fun <reified T> ToolArgs.decode(json: Json = KxSerializationSerde.json): T =
-    json.decodeFromString(rawJson())
+public inline fun <reified T : Any> ToolArgs.decode(): T = decode(T::class.java)

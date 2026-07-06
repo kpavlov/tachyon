@@ -211,6 +211,13 @@
             </dependency>
 
             <dependency>
+                <groupId>io.kotest</groupId>
+                <artifactId>kotest-assertions-json-jvm</artifactId>
+                <version>${kotest.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <dependency>
                 <groupId>net.javacrumbs.json-unit</groupId>
                 <artifactId>json-unit-assertj</artifactId>
                 <version>${json-unit.version}</version>

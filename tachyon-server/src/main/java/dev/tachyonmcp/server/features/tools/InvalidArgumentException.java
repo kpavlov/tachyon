@@ -11,6 +11,11 @@ public final class InvalidArgumentException extends RuntimeException {
         this.argName = argName;
     }
 
+    public InvalidArgumentException(String argName, String message, Throwable cause) {
+        super(message, cause);
+        this.argName = argName;
+    }
+
     public String argName() {
         return argName;
     }
