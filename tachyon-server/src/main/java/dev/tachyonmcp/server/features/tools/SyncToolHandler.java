@@ -134,7 +134,8 @@ public interface SyncToolHandler extends ToolHandler {
             @Nullable JsonNode inputSchema,
             @Nullable JsonNode outputSchema,
             BiFunction<InteractionContext, ToolArgs, ToolResult> fn) {
-        var desc = ToolDescriptor.builder(name)
+        var desc = ToolDescriptor.builder()
+                .name(name)
                 .description(description)
                 .inputSchema(inputSchema)
                 .outputSchema(outputSchema)

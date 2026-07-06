@@ -17,6 +17,18 @@ public class ToolScope
     )
 
 /**
+ * Returns a [ToolResult] whose structured value is [value], serialized to
+ * `structuredContent` by the serde configured in server config at encode time
+ * (symmetric with [decode][dev.tachyonmcp.server.features.tools.decode]).
+ * Text content falls back to `value.toString()`; pass [text] to override.
+ * Unlike [structured], honors a custom-configured serializer.
+ */
+public fun <T : Any> ToolScope.success(
+    value: T,
+    text: String = value.toString(),
+): ToolResult = ToolResult.of(value, text)
+
+/**
  * Produces a [ToolResult] with a structured value encoded via kotlinx-serialization.
  * The serialized JSON string serves as the text fallback.
  * The value must encode to a JSON object, as required by the MCP `structuredContent` field.

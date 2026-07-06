@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.features.tools;
 
+import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidParams;
 import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidRequest;
 import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.methodNotFound;
 
@@ -323,7 +324,7 @@ public class ToolRegistry {
                 toolStage = handler.handleAsync(context, request);
             } catch (InvalidArgumentException e) {
                 return CompletableFuture.completedFuture(
-                        invalidRequest("invalid argument '" + e.argName() + "': " + e.getMessage()));
+                        invalidParams("invalid argument '" + e.argName() + "': " + e.getMessage()));
             } catch (Exception e) {
                 return CompletableFuture.failedFuture(e);
             }
@@ -338,7 +339,7 @@ public class ToolRegistry {
                             var cause =
                                     e instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : e;
                             if (cause instanceof InvalidArgumentException ia) {
-                                return invalidRequest("invalid argument '" + ia.argName() + "': " + ia.getMessage());
+                                return invalidParams("invalid argument '" + ia.argName() + "': " + ia.getMessage());
                             }
                             throw new CompletionException(cause);
                         }

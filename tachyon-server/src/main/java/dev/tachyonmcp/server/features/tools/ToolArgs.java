@@ -91,12 +91,27 @@ public final class ToolArgs {
      * Decodes the full arguments into the given type using the configured serde.
      *
      * @throws IllegalStateException if no serde is configured
+     * @throws InvalidArgumentException if the arguments cannot be decoded into {@code targetType};
+     *     the dispatcher maps this to an invalid-params error rather than an internal failure
      */
     public <T> T decode(Type targetType) {
         if (deserializer == null) {
             throw new IllegalStateException("PayloadDeserializer is not configured for these args");
         }
-        return deserializer.deserialize(rawJson(), targetType);
+        try {
+            return deserializer.deserialize(rawJson(), targetType);
+        } catch (InvalidArgumentException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            var msg = e.getMessage();
+            if (msg != null) {
+                var nl = msg.indexOf('\n');
+                if (nl >= 0) msg = msg.substring(0, nl);
+                var colon = msg.indexOf(": ");
+                if (colon >= 0) msg = msg.substring(colon + 2);
+            }
+            throw new InvalidArgumentException("arguments", "could not be decoded: " + msg, e);
+        }
     }
 
     /**

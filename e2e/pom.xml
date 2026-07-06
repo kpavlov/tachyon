@@ -44,6 +44,12 @@
             <version>${kotlinx-coroutines.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlinx</groupId>
+            <artifactId>kotlinx-serialization-json</artifactId>
+            <version>${kotlinx-serialization-json.version}</version>
+            <scope>test</scope>
+        </dependency>
 
         <!-- MCP SDK (Jackson 2 variant) -->
         <dependency>
@@ -71,6 +77,11 @@
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.kotest</groupId>
+            <artifactId>kotest-assertions-json-jvm</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -114,6 +125,7 @@
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-maven-plugin</artifactId>
                 <version>${kotlin.version}</version>
+                <extensions>true</extensions>
                 <executions>
                     <execution>
                         <id>compile-skill</id>
@@ -123,6 +135,7 @@
                         <configuration>
                             <sourceDirs>
                                 <sourceDir>${project.basedir}/../.agents/skills/tachyon-mcp/resources/kotlin</sourceDir>
+                                <sourceDir>${project.basedir}/src/test/kotlin</sourceDir>
                             </sourceDirs>
                         </configuration>
                     </execution>
@@ -130,7 +143,17 @@
                 <configuration>
                     <javaParameters>true</javaParameters>
                     <jvmTarget>${java.version}</jvmTarget>
+                    <compilerPlugins>
+                        <plugin>kotlinx-serialization</plugin>
+                    </compilerPlugins>
                 </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.jetbrains.kotlin</groupId>
+                        <artifactId>kotlin-maven-serialization</artifactId>
+                        <version>${kotlin.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -165,7 +188,76 @@
                             <sources>
                                 <source>${project.basedir}/../.agents/skills/tachyon-mcp/resources/java</source>
                                 <source>${project.basedir}/../.agents/skills/tachyon-mcp/resources/kotlin</source>
+                                <source>${project.basedir}/src/test/kotlin</source>
                             </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <dependencies>
+                    <dependency>
+                        <groupId>dev.detekt</groupId>
+                        <artifactId>detekt-cli</artifactId>
+                        <version>${detekt.version}</version>
+                        <classifier>all</classifier>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <id>detekt</id>
+                        <phase>process-test-classes</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <blockSystemExit>true</blockSystemExit>
+                            <mainClass>dev.detekt.cli.Main</mainClass>
+                            <arguments>
+                                <argument>--build-upon-default-config</argument>
+                                <argument>--config</argument>
+                                <argument>${project.basedir}/../detekt.yml</argument>
+                                <argument>--input</argument>
+                                <argument>${project.basedir}/src/test/kotlin</argument>
+                                <argument>--excludes</argument>
+                                <argument>**/build/**:**/.gradle/**</argument>
+                                <argument>--jvm-target</argument>
+                                <argument>${java.version}</argument>
+                                <argument>--language-version</argument>
+                                <argument>${kotlin-language.version}</argument>
+                                <argument>--report</argument>
+                                <argument>html:${project.build.directory}/detekt/detekt.html</argument>
+                                <argument>--report</argument>
+                                <argument>checkstyle:${project.build.directory}/detekt/detekt.xml</argument>
+                            </arguments>
+                            <includePluginDependencies>true</includePluginDependencies>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>detekt-format</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <blockSystemExit>true</blockSystemExit>
+                            <mainClass>dev.detekt.cli.Main</mainClass>
+                            <arguments>
+                                <argument>--build-upon-default-config</argument>
+                                <argument>--config</argument>
+                                <argument>${project.basedir}/../detekt.yml</argument>
+                                <argument>--input</argument>
+                                <argument>${project.basedir}/src/test/kotlin</argument>
+                                <argument>--excludes</argument>
+                                <argument>**/build/**:**/.gradle/**</argument>
+                                <argument>--jvm-target</argument>
+                                <argument>${java.version}</argument>
+                                <argument>--language-version</argument>
+                                <argument>${kotlin-language.version}</argument>
+                                <argument>--auto-correct</argument>
+                            </arguments>
+                            <includePluginDependencies>true</includePluginDependencies>
                         </configuration>
                     </execution>
                 </executions>

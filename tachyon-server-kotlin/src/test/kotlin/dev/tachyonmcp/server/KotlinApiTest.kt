@@ -4,7 +4,9 @@ package dev.tachyonmcp.server
 
 import dev.tachyonmcp.server.config.ToolScope
 import dev.tachyonmcp.server.config.structured
+import dev.tachyonmcp.server.config.success
 import dev.tachyonmcp.server.domain.TextContent
+import dev.tachyonmcp.server.features.tools.InvalidArgumentException
 import dev.tachyonmcp.server.features.tools.ToolArgs
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.features.tools.boolean
@@ -15,6 +17,7 @@ import dev.tachyonmcp.server.features.tools.doubleOrNull
 import dev.tachyonmcp.server.features.tools.int
 import dev.tachyonmcp.server.features.tools.intOrNull
 import dev.tachyonmcp.server.features.tools.stringOrNull
+import dev.tachyonmcp.server.json.KxSerializationSerde
 import dev.tachyonmcp.server.json.RawJson
 import dev.tachyonmcp.server.json.toJsonNode
 import dev.tachyonmcp.server.session.DefaultMcpContext
@@ -204,22 +207,22 @@ internal class KotlinApiTest {
 
     // endregion
 
-    // region: Kotlinx — decode<T> and structured
-
     @Serializable
     data class GreetingArgs(
         val name: String,
         val age: Int = 0,
     )
 
+    // region: decode — typed via configured serde
+
     @Test
-    fun `decode round-trip with kotlinx`() {
+    fun `decode round-trip via configured serde`() {
         val raw =
             mapOf(
                 "name" to JsonNodeFactory.instance.stringNode("Alice"),
                 "age" to JsonNodeFactory.instance.numberNode(30),
             )
-        val args = ToolArgs(raw = raw)
+        val args = ToolArgs(raw = raw, deserializer = KxSerializationSerde.Default)
         val decoded = args.decode<GreetingArgs>()
         decoded shouldBe GreetingArgs("Alice", 30)
     }
@@ -227,22 +230,52 @@ internal class KotlinApiTest {
     @Test
     fun `decode uses default values`() {
         val raw = mapOf("name" to JsonNodeFactory.instance.stringNode("Bob"))
-        val args = ToolArgs(raw = raw)
+        val args = ToolArgs(raw = raw, deserializer = KxSerializationSerde.Default)
         val decoded = args.decode<GreetingArgs>()
         decoded shouldBe GreetingArgs("Bob", 0)
     }
 
     @Test
-    fun `decode ignores unknown keys by default`() {
+    fun `decode ignores unknown keys with default serde`() {
         val raw =
             mapOf(
                 "name" to JsonNodeFactory.instance.stringNode("Eve"),
                 "unexpected" to JsonNodeFactory.instance.stringNode("extra"),
             )
-        val args = ToolArgs(raw = raw)
+        val args = ToolArgs(raw = raw, deserializer = KxSerializationSerde.Default)
         val decoded = args.decode<GreetingArgs>()
         decoded shouldBe GreetingArgs("Eve", 0)
     }
+
+    @Test
+    fun `decode uses configured serde not hardcoded json`() {
+        val raw =
+            mapOf(
+                "name" to JsonNodeFactory.instance.stringNode("Eve"),
+                "age" to JsonNodeFactory.instance.numberNode(25),
+                "unknown" to JsonNodeFactory.instance.stringNode("extra"),
+            )
+        // Default serde ignores unknown keys; a strict serde rejects them — proving the
+        // configured deserializer is used, mapped to InvalidArgumentException (invalid params).
+        val strictSerde = KxSerializationSerde(Json { ignoreUnknownKeys = false })
+        val args = ToolArgs(raw = raw, deserializer = strictSerde)
+        shouldThrow<InvalidArgumentException> {
+            args.decode<GreetingArgs>()
+        }.argName() shouldBe "arguments"
+    }
+
+    @Test
+    fun `decode throws when no deserializer configured`() {
+        val raw = mapOf("name" to JsonNodeFactory.instance.stringNode("Bob"))
+        val args = ToolArgs(raw = raw)
+        shouldThrow<IllegalStateException> {
+            args.decode<GreetingArgs>()
+        }.message shouldContain "PayloadDeserializer is not configured"
+    }
+
+    // endregion
+
+    // region: structured
 
     @Test
     fun `structured produces ToolResult with raw json and text fallback`() {
@@ -284,6 +317,35 @@ internal class KotlinApiTest {
             shouldThrow<IllegalArgumentException> {
                 scope.structured(listOf(1, 2, 3))
             }.message shouldContain "must be a JSON object"
+        }
+    }
+
+    // endregion
+
+    // region: success — typed result via configured serde
+
+    @Test
+    fun `success returns ToolResult with raw value`() {
+        val value = GreetingArgs("Charlie", 25)
+        TachyonServer.builder().build().use { server ->
+            val ctx = DefaultMcpContext.stateless(server)
+            val scope = ToolScope(ctx, ToolArgs(raw = null))
+            val result = scope.success(value)
+            result.shouldBeInstanceOf<ToolResult.Success>()
+            result.structured().get() shouldBe value
+        }
+    }
+
+    @Test
+    fun `success with text sets content text`() {
+        val value = GreetingArgs("Dave", 50)
+        TachyonServer.builder().build().use { server ->
+            val ctx = DefaultMcpContext.stateless(server)
+            val scope = ToolScope(ctx, ToolArgs(raw = null))
+            val result = scope.success(value, "custom text")
+            result.shouldBeInstanceOf<ToolResult.Success>()
+            result.structured().get() shouldBe value
+            (result.content().first() as TextContent).text() shouldBe "custom text"
         }
     }
 

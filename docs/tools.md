@@ -118,6 +118,21 @@ tool(name = "reverse", description = "Reverse a string") {
 }
 ```
 
+### Typed decode/result
+
+```kotlin
+@Serializable data class Args(val message: String)
+@Serializable data class Reply(val echo: String)
+
+tool("echo", inputSchema = ..., outputSchema = ...) {
+    val input = args.decode<Args>()     // via configured serde
+    success(Reply(input.message))       // symmetric typed result
+}
+```
+
+- `args.decode<T>()` — honors configured serde (kotlinx by default, ignores unknown keys)
+- `scope.success(value)` / `scope.success(value, text)` — symmetric typed result via configured serializer
+
 See [kotlin.md](kotlin.md) for the full Kotlin DSL reference.
 
 ---

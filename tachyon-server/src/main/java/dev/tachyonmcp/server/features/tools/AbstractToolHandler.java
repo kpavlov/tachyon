@@ -14,7 +14,7 @@ public abstract class AbstractToolHandler implements ToolHandler {
     }
 
     public AbstractToolHandler(String name) {
-        this(ToolDescriptor.builder(name).build());
+        this(ToolDescriptor.builder().name(name).build());
     }
 
     public ToolDescriptor descriptor() {

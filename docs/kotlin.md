@@ -113,7 +113,7 @@ clients may truncate them.
 ## kotlinx.serialization integration
 
 `kotlinx-serialization-json` is an **optional** dependency of `tachyon-server-kotlin`.
-Add it to use `JsonObject` schemas, `args.decode<T>()`, and `structured(value)`:
+Add it to use `JsonObject` schemas, `args.decode<T>()`, and `structured(value)` / `success(value)`:
 
 ```xml
 <dependency>
@@ -132,14 +132,39 @@ tool(
     inputSchema = """{"type":"object","properties":{"message":{"type":"string"}}}""",
     outputSchema = """{"type":"object","properties":{"echo":{"type":"string"}}}""",
 ) {
-    val input = args.decode<EchoArgs>() // typed decode, unknown keys ignored
+    val input = args.decode<EchoArgs>() // typed decode via configured serde
     structured(EchoReply(input.message)) // structuredContent + JSON text fallback
 }
 ```
 
-`decode` ignores unknown keys by default; pass a custom `Json` instance for strict decoding.
+The default kotlinx serde ignores unknown keys; configure a strict `Json` via
+`json { serde = KxSerializationSerde(Json { ignoreUnknownKeys = false }) }`.
 `structured(value)` requires the value to encode to a JSON object and pairs with the
 declared `outputSchema`.
+
+### Typed decode/result via configured serde
+
+Kotlin extensions bridge the gap between the existing Java typed API and the
+configured serde in the Kotlin DSL:
+
+| Method | Routes through | Behaviour |
+|---|---|---|
+| `args.decode<T>()` | server-configured `PayloadDeserializer` | Honors custom `Json` config |
+| `scope.success(value)` | server-configured `PayloadSerializer` | Deferred serialization at encode time |
+| `scope.success(value, text)` | server-configured `PayloadSerializer` | Structured + human-readable text |
+
+`decode<T>` uses `T::class.java → ToolArgs.decode(Class<T>)`, which routes
+through the deserializer set in `json { serde = ... }`.
+
+```kotlin
+@Serializable data class GreetArgs(val name: String, val greeting: String = "Hello")
+@Serializable data class GreetReply(val message: String)
+
+tool(name = "greet", inputSchema = ..., outputSchema = ...) {
+    val input = args.decode<GreetArgs>()          // honors configured serde
+    success(GreetReply("${input.greeting}, ${input.name}!"), "greeting response")  // symmetric typed result
+}
+```
 
 ## ToolArgs accessors
 
@@ -148,7 +173,7 @@ declared `outputSchema`.
 | `args.string("k")` / `intValue` / `boolValue` / `doubleValue` | Required — throws when missing |
 | `args.stringOrNull("k")` / `intOrNull` / `booleanOrNull` / `doubleOrNull` | Returns `null` when missing |
 | `args.stringOr("k", "d")` / `int("k", 0)` / `boolean("k", true)` / `double("k", 0.0)` | Falls back to default |
-| `args.decode<T>()` | kotlinx decode into a `@Serializable` class |
+| `args.decode<T>()` | typed decode via configured serde (default kotlinx ignores unknown keys) |
 
 ## Scope reference
 

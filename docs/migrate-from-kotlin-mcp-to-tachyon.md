@@ -117,15 +117,15 @@ warns when a description exceeds 2048 chars (clients truncate there) pays off ac
 
 `ToolScope.args` replaces digging through a `JsonObject`:
 
-| Old                                                 | New                                                                  |
-|-----------------------------------------------------|----------------------------------------------------------------------|
-| `arguments["k"]?.jsonPrimitive?.content` (required) | `args.string("k")` — throws if missing                               |
-| same, optional                                      | `args.stringOrNull("k")`                                             |
-| with a default                                      | `args.stringOr("k", "d")`                                            |
-| `…?.int` etc.                                       | `args.intValue/boolValue/doubleValue` (+ `…OrNull`, `…(k, default)`) |
-| raw element                                         | `args.raw("k"): JsonNode?` → `.asString()`                           |
-| membership                                          | `args.has("k")`                                                      |
-| decode whole object                                 | `args.decode<MyArgs>()` (kotlinx; ignores unknown keys)              |
+| Old                                                 | New                                                                                  |
+|-----------------------------------------------------|--------------------------------------------------------------------------------------|
+| `arguments["k"]?.jsonPrimitive?.content` (required) | `args.string("k")` — throws if missing                                               |
+| same, optional                                      | `args.stringOrNull("k")`                                                             |
+| with a default                                      | `args.stringOr("k", "d")`                                                            |
+| `…?.int` etc.                                       | `args.intValue/boolValue/doubleValue` (+ `…OrNull`, `…(k, default)`)                 |
+| raw element                                         | `args.raw("k"): JsonNode?` → `.asString()`                                           |
+| membership                                          | `args.has("k")`                                                                      |
+| decode whole object                                 | `args.decode<MyArgs>()` (via configured serde; kotlinx default ignores unknown keys) |
 
 ## 5. Results — `ToolResult`
 

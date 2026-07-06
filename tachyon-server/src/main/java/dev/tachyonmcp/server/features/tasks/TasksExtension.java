@@ -50,7 +50,8 @@ public class TasksExtension implements ServerExtension {
 
     @Override
     public void bootstrap(Server server) {
-        var descriptor = ToolDescriptor.builder("create_task")
+        var descriptor = ToolDescriptor.builder()
+                .name("create_task")
                 .description("Create a new task")
                 .inputSchema(CREATE_TASK_SCHEMA)
                 .extensionId(ID)
