@@ -10,10 +10,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.domain.TextResourceContents;
+import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.tools.SyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -104,6 +107,44 @@ class ResourceTest extends AbstractMcpE2eTest {
                   ]
                 }
                 """);
+        }
+    }
+
+    @Test
+    void shouldReadResourceFromAsyncHandler() throws Exception {
+        var descriptor = ResourceDescriptor.of("async-doc", "resource://async-doc", "Async document", "text/plain");
+        AsyncResourceHandler handler = (ctx, req) -> CompletableFuture.supplyAsync(
+                () -> TextResourceContents.of("resource://async-doc", "text/plain", "async content"),
+                CompletableFuture.delayedExecutor(100, TimeUnit.MILLISECONDS));
+        startEmptyServer();
+        server.resources().add(descriptor, handler);
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+            var response = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://async-doc"}}
+                """);
+
+            assertThatJson(response.body()).inPath("$.result.contents[0].uri").isEqualTo("resource://async-doc");
+            assertThatJson(response.body()).inPath("$.result.contents[0].text").isEqualTo("async content");
+        }
+    }
+
+    @Test
+    void shouldReturnErrorWhenAsyncHandlerFails() throws Exception {
+        var descriptor = ResourceDescriptor.of("failing", "resource://failing", "Failing resource", "text/plain");
+        AsyncResourceHandler handler =
+                (ctx, req) -> CompletableFuture.failedFuture(new IllegalStateException("backend down"));
+        startEmptyServer();
+        server.resources().add(descriptor, handler);
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+            var response = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://failing"}}
+                """);
+
+            assertThatJson(response.body()).inPath("$.error.message").isEqualTo("Resource handler failed");
         }
     }
 

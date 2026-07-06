@@ -17,6 +17,7 @@ import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.features.prompts.PromptRegistry;
 import dev.tachyonmcp.server.features.resources.ResourceRegistry;
 import dev.tachyonmcp.server.features.tasks.TaskRegistry;
+import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.features.tools.*;
 import dev.tachyonmcp.server.handlers.CompletionHandlers;
 import dev.tachyonmcp.server.handlers.InitializeHandler;
@@ -145,11 +146,14 @@ public class Server implements Closeable {
         builder.logging(capabilitiesConfig.logging());
         builder.completions(capabilitiesConfig.completions());
 
-        if (capabilitiesConfig.tasksList() || capabilitiesConfig.tasksRequests()) {
+        var hasTaskAugmentedTools = toolRegistry.getAll().stream()
+                .anyMatch(h ->
+                        h.descriptor().taskSupport() != null && h.descriptor().taskSupport() != TaskSupport.FORBIDDEN);
+        if (capabilitiesConfig.tasksList() || capabilitiesConfig.tasksRequests() || hasTaskAugmentedTools) {
             builder.tasks(new ServerCapabilities.Tasks(
                     capabilitiesConfig.tasksList(),
                     capabilitiesConfig.tasksCancel(),
-                    capabilitiesConfig.tasksRequests()));
+                    capabilitiesConfig.tasksRequests() || hasTaskAugmentedTools));
         }
 
         switch (capabilitiesConfig.toolsMode()) {

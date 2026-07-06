@@ -6,7 +6,6 @@ package dev.tachyonmcp.server.features;
 
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.ServerResourceType;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -79,34 +78,11 @@ public abstract class Registry<R extends ServerResourceType> {
     }
 
     public PaginatedResult<R> list(int limit, @Nullable String cursor, int defaultLimit, Predicate<R> filter) {
-        if (limit <= 0) {
-            limit = defaultLimit;
-        }
         var all = items.values().stream()
                 .filter(filter)
                 .sorted(Comparator.comparing(ServerResourceType::name))
                 .toList();
-        var result = new ArrayList<R>();
-        boolean pastCursor = cursor == null;
-        for (var item : all) {
-            if (!pastCursor) {
-                if (item.name().equals(cursor)) {
-                    pastCursor = true;
-                }
-                continue;
-            }
-            result.add(item);
-            if (result.size() >= limit) break;
-        }
-        String nextCursor = null;
-        if (result.size() >= limit) {
-            var lastItem = result.getLast();
-            int lastIdx = all.indexOf(lastItem);
-            if (lastIdx >= 0 && lastIdx < all.size() - 1) {
-                nextCursor = lastItem.name();
-            }
-        }
-        return PaginatedResult.of(result, nextCursor);
+        return Pagination.paginate(all, limit, cursor, defaultLimit, ServerResourceType::name);
     }
 
     public abstract void registerHandlers(Map<String, RpcMethodHandler> registry);

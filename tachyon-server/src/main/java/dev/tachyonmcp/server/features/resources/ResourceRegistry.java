@@ -10,15 +10,23 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.UnsubscribeRequestParams;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.domain.ReadResourceRequest;
+import dev.tachyonmcp.server.domain.ResourceContents;
+import dev.tachyonmcp.server.features.HandlerFutures;
+import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.features.PaginatedResult;
-import dev.tachyonmcp.server.features.tools.ToolRegistry;
+import dev.tachyonmcp.server.features.Pagination;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Registry for resources, templates, and subscriptions. */
 public class ResourceRegistry {
@@ -93,37 +101,12 @@ public class ResourceRegistry {
 
     public PaginatedResult<ResourceDescriptor> list(
             int limit, @Nullable String cursor, int defaultLimit, Predicate<ResourceDescriptor> filter) {
-        if (limit <= 0) {
-            limit = defaultLimit;
-        }
         var all = byName.values().stream()
                 .map(ResourceEntry::descriptor)
                 .filter(filter)
                 .sorted(Comparator.comparing(ResourceDescriptor::name))
                 .toList();
-        var result = new ArrayList<ResourceDescriptor>();
-        boolean pastCursor = cursor == null;
-        for (var item : all) {
-            if (!pastCursor) {
-                if (item.name().equals(cursor)) {
-                    pastCursor = true;
-                }
-                continue;
-            }
-            result.add(item);
-            if (result.size() >= limit) {
-                break;
-            }
-        }
-        String nextCursor = null;
-        if (result.size() >= limit) {
-            var lastItem = result.getLast();
-            int lastIdx = all.indexOf(lastItem);
-            if (lastIdx >= 0 && lastIdx < all.size() - 1) {
-                nextCursor = lastItem.name();
-            }
-        }
-        return PaginatedResult.of(result, nextCursor);
+        return Pagination.paginate(all, limit, cursor, defaultLimit, ResourceDescriptor::name);
     }
 
     @Nullable
@@ -207,8 +190,8 @@ public class ResourceRegistry {
 
         @Override
         public Object handle(DispatchContext context, Object params) {
-            var limit = ToolRegistry.parseLimit(params);
-            var cursor = ToolRegistry.parseCursor(params);
+            var limit = ListRequests.parseLimit(params);
+            var cursor = ListRequests.parseCursor(params);
             var paginated = registry.list(limit, cursor, e -> {
                 var extId = e.extensionId();
                 return extId == null || context.isExtensionEnabled(extId);
@@ -234,6 +217,8 @@ public class ResourceRegistry {
 
     private record ResourcesReadHandler(ResourceRegistry registry) implements RpcMethodHandler {
 
+        private static final Logger logger = LoggerFactory.getLogger(ResourcesReadHandler.class);
+
         @Override
         public String method() {
             return "resources/read";
@@ -241,28 +226,65 @@ public class ResourceRegistry {
 
         @Override
         public Object handle(DispatchContext context, Object params) {
+            try {
+                return HandlerFutures.joinInterruptibly(handleAsync(context, params));
+            } catch (RuntimeException | Error e) {
+                throw e;
+            } catch (Exception e) {
+                throw new CompletionException(e);
+            }
+        }
+
+        @Override
+        public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
             var readParams = toReadParams(params);
             if (readParams == null) {
-                return JsonRpcErrors.invalidRequest("Missing resource URI");
+                return CompletableFuture.completedFuture(JsonRpcErrors.invalidRequest("Missing resource URI"));
             }
             var uri = readParams.uri();
             var entry = registry.getByUri(uri);
             if (entry != null) {
                 var extId = entry.descriptor().extensionId();
                 if (extId != null && !context.isExtensionEnabled(extId)) {
-                    return JsonRpcErrors.resourceNotFound("Resource not found");
+                    return CompletableFuture.completedFuture(JsonRpcErrors.resourceNotFound("Resource not found"));
                 }
             }
             if (entry == null) {
                 var match = registry.matchTemplate(uri);
                 if (match != null) {
-                    var content = match.entry().handler().read(context, uri, match.params());
-                    return context.responseMapper().readResourceResult(List.of(content));
+                    try {
+                        var stage = match.entry().handler().readAsync(context, uri, match.params());
+                        return completeReadStage(stage, context, "Resource template handler", uri);
+                    } catch (Exception e) {
+                        logger.error("Resource template handler error for '{}'", uri, e);
+                        return CompletableFuture.completedFuture(
+                                JsonRpcErrors.internalError("Resource handler failed"));
+                    }
                 }
-                return JsonRpcErrors.resourceNotFound("Resource not found");
+                return CompletableFuture.completedFuture(JsonRpcErrors.resourceNotFound("Resource not found"));
             }
-            var contents = entry.handler().read(context, readParams);
-            return context.responseMapper().readResourceResult(List.of(contents));
+            CompletionStage<? extends ResourceContents> stage;
+            try {
+                stage = entry.handler().readAsync(context, readParams);
+            } catch (Exception e) {
+                logger.error("Resource handler error for '{}'", uri, e);
+                return CompletableFuture.completedFuture(JsonRpcErrors.internalError("Resource handler failed"));
+            }
+            return completeReadStage(stage, context, "Resource handler", uri);
+        }
+
+        private CompletionStage<Object> completeReadStage(
+                CompletionStage<? extends ResourceContents> stage,
+                DispatchContext context,
+                String logLabel,
+                String uri) {
+            return HandlerFutures.completeOn(stage, context, (result, e) -> {
+                if (e != null) {
+                    logger.error("{} error for '{}'", logLabel, uri, e);
+                    return JsonRpcErrors.internalError("Resource handler failed");
+                }
+                return context.responseMapper().readResourceResult(List.of((ResourceContents) result));
+            });
         }
 
         private static @Nullable ReadResourceRequest toReadParams(Object params) {

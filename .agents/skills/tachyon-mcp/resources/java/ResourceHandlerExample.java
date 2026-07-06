@@ -5,6 +5,7 @@
 import dev.tachyonmcp.server.domain.BlobResourceContents;
 import dev.tachyonmcp.server.domain.ReadResourceRequest;
 import dev.tachyonmcp.server.domain.TextResourceContents;
+import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
@@ -62,5 +63,15 @@ final class ResourceHandlerExample {
             (ctx, uri, params) -> TextResourceContents.of(
                 uri, "application/json",
                 "{\"city\":\"" + params.get("city") + "\",\"temp\":22}"));
+    }
+
+    /**
+     * Async resource — returns a CompletionStage for non-blocking backends.
+     * Blocking handlers run on virtual threads, so prefer plain ResourceHandler unless
+     * integrating an already-async client.
+     */
+    static AsyncResourceHandler asyncConfigHandler() {
+        return (ctx, req) -> java.util.concurrent.CompletableFuture.supplyAsync(
+            () -> TextResourceContents.of(req.uri(), "application/json", "{\"mode\":\"production\"}"));
     }
 }

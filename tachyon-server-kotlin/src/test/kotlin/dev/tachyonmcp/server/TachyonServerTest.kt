@@ -85,7 +85,7 @@ internal class TachyonServerTest {
                 TextResourceContents(uri = uri, mimeType = "text/yaml", text = "key: value")
             }
             prompt("greet", "Say hello") {
-                listOf(PromptMessage.user(TextContent("Hello, ${it ?: "world"}!")))
+                listOf(PromptMessage.user(TextContent("Hello, ${arguments ?: "world"}!")))
             }
         }.use { handle ->
             (handle.port() > 0) shouldBe true

@@ -68,6 +68,10 @@ final class McpTaskMapper {
                 null);
     }
 
+    static CreateTaskResult toCreateTaskResult(TaskEntry entry) {
+        return new CreateTaskResult(toTaskProto(entry), null, null);
+    }
+
     static TaskStatusNotificationParams toStatusNotification(TaskEntry entry) {
         return new TaskStatusNotificationParams(
                 null,

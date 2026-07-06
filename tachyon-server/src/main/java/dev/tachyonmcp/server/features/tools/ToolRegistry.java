@@ -10,13 +10,23 @@ import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.methodNotFound;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolRequestParams;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskMetadata;
+import dev.tachyonmcp.server.OutboundSseStreamMessageRouter;
 import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.features.HandlerFutures;
+import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.features.PaginatedResult;
+import dev.tachyonmcp.server.features.Pagination;
+import dev.tachyonmcp.server.features.tasks.TaskEntry;
+import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.json.*;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -179,35 +189,12 @@ public class ToolRegistry {
 
     public PaginatedResult<ToolDescriptor> list(
             int limit, @Nullable String cursor, int defaultLimit, Predicate<ToolDescriptor> filter) {
-        if (limit <= 0) {
-            limit = defaultLimit;
-        }
         var all = handlers.values().stream()
                 .map(ToolHandler::descriptor)
                 .filter(filter)
                 .sorted(Comparator.comparing(ToolDescriptor::name))
                 .toList();
-        var result = new ArrayList<ToolDescriptor>();
-        boolean pastCursor = cursor == null;
-        for (var item : all) {
-            if (!pastCursor) {
-                if (item.name().equals(cursor)) {
-                    pastCursor = true;
-                }
-                continue;
-            }
-            result.add(item);
-            if (result.size() >= limit) break;
-        }
-        String nextCursor = null;
-        if (result.size() >= limit) {
-            var lastItem = result.getLast();
-            int lastIdx = all.indexOf(lastItem);
-            if (lastIdx >= 0 && lastIdx < all.size() - 1) {
-                nextCursor = lastItem.name();
-            }
-        }
-        return PaginatedResult.of(result, nextCursor);
+        return Pagination.paginate(all, limit, cursor, defaultLimit, ToolDescriptor::name);
     }
 
     public void registerHandlers(Map<String, RpcMethodHandler> registry) {
@@ -215,20 +202,6 @@ public class ToolRegistry {
         registry.put(
                 "tools/call",
                 new ToolsCallHandler(this, inputValidator, outputValidator, payloadSerializer, payloadDeserializer));
-    }
-
-    public static int parseLimit(Object params) {
-        if (params instanceof Map<?, ?> map && map.get("limit") instanceof Number n) {
-            return n.intValue();
-        }
-        return 0;
-    }
-
-    public static @Nullable String parseCursor(Object params) {
-        if (params instanceof Map<?, ?> map && map.get("cursor") instanceof String s) {
-            return s;
-        }
-        return null;
     }
 
     private record ToolsListHandler(ToolRegistry registry) implements RpcMethodHandler {
@@ -240,12 +213,8 @@ public class ToolRegistry {
 
         @Override
         public Object handle(DispatchContext context, Object params) {
-            int limit = 0;
-            String cursor = null;
-            if (params instanceof Map<?, ?> map) {
-                if (map.get("limit") instanceof Number n) limit = n.intValue();
-                if (map.get("cursor") instanceof String s) cursor = s;
-            }
+            var limit = ListRequests.parseLimit(params);
+            var cursor = ListRequests.parseCursor(params);
             var paginated = registry.list(limit, cursor, d -> {
                 var extId = d.extensionId();
                 return extId == null || context.isExtensionEnabled(extId);
@@ -273,19 +242,11 @@ public class ToolRegistry {
         @Override
         public Object handle(DispatchContext context, Object params) {
             try {
-                return handleAsync(context, params).toCompletableFuture().get();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException(e);
-            } catch (ExecutionException e) {
-                var cause = e.getCause();
-                if (cause instanceof RuntimeException re) {
-                    throw re;
-                }
-                if (cause instanceof Error err) {
-                    throw err;
-                }
-                throw new CompletionException(cause);
+                return HandlerFutures.joinInterruptibly(handleAsync(context, params));
+            } catch (RuntimeException | Error e) {
+                throw e;
+            } catch (Exception e) {
+                throw new CompletionException(e);
             }
         }
 
@@ -306,7 +267,17 @@ public class ToolRegistry {
             var validationError = validateInput(handler.descriptor().inputSchema(), parsed.args());
             if (validationError != null) return CompletableFuture.completedFuture(invalidRequest(validationError));
 
-            sendLoggingIfEnabled(context, parsed.name(), "started");
+            var taskSupport = handler.descriptor().taskSupport();
+            if (taskSupport == null) taskSupport = TaskSupport.FORBIDDEN;
+            var taskMeta = parsed.task();
+
+            if (taskSupport == TaskSupport.FORBIDDEN && taskMeta != null) {
+                return CompletableFuture.completedFuture(
+                        invalidRequest("Task augmentation not supported for this tool"));
+            }
+            if (taskSupport == TaskSupport.REQUIRED && taskMeta == null) {
+                return CompletableFuture.completedFuture(invalidRequest("Task augmentation required for this tool"));
+            }
 
             var progressToken = parseProgressToken(parsed.meta());
             var request = ToolRequest.builder()
@@ -319,6 +290,45 @@ public class ToolRegistry {
                     .requestState(parsed.requestState())
                     .build();
 
+            // Task-augmented path: branch BEFORE invoking handler so the dispatch thread
+            // returns CreateTaskResult immediately (even for sync/suspend handlers).
+            if (taskMeta != null) {
+                sendLoggingIfEnabled(context, parsed.name(), "started");
+                var ttl = taskMeta.ttl() != null ? taskMeta.ttl() / 1000.0 : 0.0;
+                final var server = context.server();
+                var tasks = server.tasks();
+                var taskEntry =
+                        tasks.createTask(parsed.name(), handler.descriptor().description(), ttl);
+                var sessionId = OutboundSseStreamMessageRouter.currentSessionId();
+                var outboundStream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
+                var taskFuture = server.executor().submit(() -> {
+                    try {
+                        OutboundSseStreamMessageRouter.withDispatchContext(sessionId, outboundStream, () -> {
+                            var toolResult = HandlerFutures.joinInterruptibly(handler.handleAsync(context, request));
+                            sendLoggingIfEnabled(context, parsed.name(), "completed");
+                            validateOutput(handler.descriptor().outputSchema(), toolResult);
+                            var resultJson = JsonRpcCodec.writeValueAsString(
+                                    context.responseMapper().callToolResult(serializeStructured(toolResult)));
+                            tasks.completeTask(taskEntry.id(), resultJson);
+                            return null;
+                        });
+                    } catch (Exception e) {
+                        handleTaskError(context, taskEntry, e);
+                    }
+                    return null;
+                });
+                tasks.registerRunning(taskEntry.id(), taskFuture);
+                // The handler may reach a terminal state before registerRunning; drop the entry
+                // here so completed futures do not accumulate in the running map.
+                if (!taskEntry.status().isActive()) {
+                    tasks.unregisterRunning(taskEntry.id());
+                }
+                return CompletableFuture.completedFuture(
+                        context.responseMapper().createTaskResult(taskEntry));
+            }
+
+            // Non-task path: existing sync/async dispatch
+            sendLoggingIfEnabled(context, parsed.name(), "started");
             CompletionStage<? extends ToolResult> toolStage;
             try {
                 toolStage = handler.handleAsync(context, request);
@@ -329,25 +339,18 @@ public class ToolRegistry {
                 return CompletableFuture.failedFuture(e);
             }
 
-            // isDone fast-path: if already complete, skip executor re-dispatch (inline on current thread).
-            // A stage completing after this check merely takes the executor hop — benign, not a TOCTOU race.
-            var done = toolStage.toCompletableFuture().isDone();
-            var executor = done ? (Executor) Runnable::run : context.server().executor();
-            return toolStage.handleAsync(
-                    (toolResult, e) -> {
-                        if (e != null) {
-                            var cause =
-                                    e instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : e;
-                            if (cause instanceof InvalidArgumentException ia) {
-                                return invalidParams("invalid argument '" + ia.argName() + "': " + ia.getMessage());
-                            }
-                            throw new CompletionException(cause);
-                        }
-                        sendLoggingIfEnabled(context, parsed.name(), "completed");
-                        validateOutput(handler.descriptor().outputSchema(), toolResult);
-                        return context.responseMapper().callToolResult(serializeStructured(toolResult));
-                    },
-                    executor);
+            return HandlerFutures.completeOn(toolStage, context, (result, e) -> {
+                if (e != null) {
+                    if (e instanceof InvalidArgumentException ia) {
+                        return invalidParams("invalid argument '" + ia.argName() + "': " + ia.getMessage());
+                    }
+                    throw new CompletionException(e);
+                }
+                sendLoggingIfEnabled(context, parsed.name(), "completed");
+                var toolResult = (ToolResult) result;
+                validateOutput(handler.descriptor().outputSchema(), toolResult);
+                return context.responseMapper().callToolResult(serializeStructured(toolResult));
+            });
         }
 
         private static @Nullable Object parseProgressToken(@Nullable Map<String, JsonNode> meta) {
@@ -363,7 +366,8 @@ public class ToolRegistry {
                 @Nullable Map<String, JsonNode> args,
                 @Nullable Map<String, JsonNode> meta,
                 @Nullable Map<String, JsonNode> inputResponses,
-                @Nullable String requestState) {}
+                @Nullable String requestState,
+                @Nullable TaskMetadata task) {}
 
         private @Nullable CallParams parseCallParams(Object params) {
             if (params instanceof Map<?, ?> map) {
@@ -373,12 +377,13 @@ public class ToolRegistry {
                 if (name == null) return null;
                 var inputResponses = extractInputResponsesFromMap(map.get("inputResponses"));
                 var requestState = map.get("requestState") instanceof String s ? s : null;
-                return new CallParams(name, typed.arguments(), typed._meta(), inputResponses, requestState);
+                return new CallParams(
+                        name, typed.arguments(), typed._meta(), inputResponses, requestState, typed.task());
             }
             if (params instanceof CallToolRequestParams p) {
                 var name = p.name();
                 if (name == null) return null;
-                return new CallParams(name, p.arguments(), p._meta(), p.inputResponses(), p.requestState());
+                return new CallParams(name, p.arguments(), p._meta(), p.inputResponses(), p.requestState(), p.task());
             }
             return null;
         }
@@ -467,6 +472,17 @@ public class ToolRegistry {
 
         private static String joinMessages(List<SchemaValidationError> errors) {
             return errors.stream().map(SchemaValidationError::message).collect(Collectors.joining("; "));
+        }
+
+        private void handleTaskError(DispatchContext context, TaskEntry taskEntry, Exception e) {
+            var cause = e instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : e;
+            logger.error("Task handler error for '{}'", taskEntry.name(), cause);
+            try {
+                var errorJson = JsonRpcCodec.writeValueAsString(Map.of("error", "Internal server error"));
+                context.server().tasks().failTask(taskEntry.id(), errorJson);
+            } catch (Exception ex) {
+                logger.error("Failed to record task failure for {}", taskEntry.id(), ex);
+            }
         }
 
         private void sendLoggingIfEnabled(DispatchContext context, String toolName, String status) {

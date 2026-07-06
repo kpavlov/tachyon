@@ -63,8 +63,8 @@ val handle = TachyonServer(port = 8080) {
     ) {
         TextResourceContents.of(uri, "application/json", """{"env":"prod"}""")
     }
-    prompt(name = "greet", description = "Greeting prompt") { _ ->
-        listOf(PromptMessage.user("Say hello"))
+    prompt(name = "greet", description = "Greeting prompt") {
+        listOf(PromptMessage.user("Say hello, ${arguments ?: "world"}"))
     }
 }
 ```
@@ -84,6 +84,30 @@ tool(name = "reverse", description = "Reverse a string") {
 ```
 
 For class-based handlers, extend `AbstractSyncToolHandler` or `AbstractAsyncToolHandler` from `tachyon-server` — they work unchanged from Kotlin.
+
+## Resource & prompt handlers
+
+Resource and prompt lambdas are `suspend` functions too — call suspending APIs directly:
+
+```kotlin
+resource(name = "config", uri = "demo://config") {
+    // this: ResourceScope — ctx, request, uri
+    val config = fetchConfig()  // suspend call
+    TextResourceContents.of(uri, "application/json", config)
+}
+
+prompt(name = "greet", description = "Greeting prompt") {
+    // this: PromptScope — ctx, request, arguments
+    listOf(PromptMessage.user("Hello, ${arguments ?: "world"}"))
+}
+```
+
+Handlers run via `runBlocking` on a virtual thread; cancellation is delivered by thread
+interruption (e.g. from `tasks/cancel`), which cancels the coroutine.
+
+> **Breaking (beta.5):** resource/prompt handler lambdas became `suspend` and the prompt
+> lambda receiver changed from `(String?) -> List<PromptMessage>` to
+> `suspend PromptScope.() -> List<PromptMessage>` — replace `it` with `arguments`.
 
 ## Tool schemas
 
@@ -186,6 +210,7 @@ tool(name = "greet", inputSchema = ..., outputSchema = ...) {
 | `RuntimeScope` | `runtime { }` | `shutdownGracePeriod` |
 | `ToolScope` | tool lambda | `ctx`, `args` |
 | `ResourceScope` | resource lambda | `ctx`, `request`, `uri` |
+| `PromptScope` | prompt lambda | `ctx`, `request`, `arguments` |
 
 ## Post-build registration
 

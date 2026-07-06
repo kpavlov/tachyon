@@ -105,7 +105,7 @@ fun createServer(port: Int = 0): ServerHandle = TachyonServer(port = port) {
     }
 
     // ── prompts ───────────────────────────────────────────────
-    prompt(name = "greet", description = "Generates a greeting") { _ ->
+    prompt(name = "greet", description = "Generates a greeting") {
         promptMessagesOf(PromptMessage.user("Say hello"))
     }
 

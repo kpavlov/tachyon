@@ -8,8 +8,9 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetPromptRequestParams;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.domain.PromptMessage;
+import dev.tachyonmcp.server.features.HandlerFutures;
+import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.features.Registry;
-import dev.tachyonmcp.server.features.tools.ToolRegistry;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.SchemaValidationError;
 import dev.tachyonmcp.server.session.DispatchContext;
@@ -18,6 +19,9 @@ import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -59,8 +63,8 @@ public class PromptRegistry extends Registry<PromptEntry> {
 
         @Override
         public Object handle(DispatchContext context, Object params) {
-            var limit = ToolRegistry.parseLimit(params);
-            var cursor = ToolRegistry.parseCursor(params);
+            var limit = ListRequests.parseLimit(params);
+            var cursor = ListRequests.parseCursor(params);
             var paginated = registry.list(limit, cursor, e -> {
                 var extId = e.descriptor().extensionId();
                 return extId == null || context.isExtensionEnabled(extId);
@@ -84,17 +88,28 @@ public class PromptRegistry extends Registry<PromptEntry> {
 
         @Override
         public Object handle(DispatchContext context, Object params) {
+            try {
+                return HandlerFutures.joinInterruptibly(handleAsync(context, params));
+            } catch (RuntimeException | Error e) {
+                throw e;
+            } catch (Exception e) {
+                throw new CompletionException(e);
+            }
+        }
+
+        @Override
+        public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
             var name = extractParamName(params);
             if (name == null) {
-                return JsonRpcErrors.invalidRequest("Missing prompt name");
+                return CompletableFuture.completedFuture(JsonRpcErrors.invalidRequest("Missing prompt name"));
             }
             var entry = registry.get(name);
             if (entry == null) {
-                return JsonRpcErrors.invalidRequest("Prompt not found");
+                return CompletableFuture.completedFuture(JsonRpcErrors.invalidRequest("Prompt not found"));
             }
             var extId = entry.descriptor().extensionId();
             if (extId != null && !context.isExtensionEnabled(extId)) {
-                return JsonRpcErrors.invalidRequest("Prompt not found");
+                return CompletableFuture.completedFuture(JsonRpcErrors.invalidRequest("Prompt not found"));
             }
             var inputSchema = entry.descriptor().inputSchema();
             if (inputSchema != null) {
@@ -103,38 +118,45 @@ public class PromptRegistry extends Registry<PromptEntry> {
                 try {
                     argsMap = extractArgumentsMap(params);
                 } catch (RuntimeException e) {
-                    return JsonRpcErrors.invalidParams("Invalid arguments");
+                    return CompletableFuture.completedFuture(JsonRpcErrors.invalidParams("Invalid arguments"));
                 }
                 if (argsMap != null) {
                     argsMap.forEach(argsNode::set);
                 }
                 var errors = validator.validate(inputSchema, argsNode);
                 if (!errors.isEmpty()) {
-                    return JsonRpcErrors.invalidParams(
-                            errors.stream().map(SchemaValidationError::message).collect(Collectors.joining("; ")));
+                    return CompletableFuture.completedFuture(JsonRpcErrors.invalidParams(
+                            errors.stream().map(SchemaValidationError::message).collect(Collectors.joining("; "))));
                 }
             }
 
-            var inputResponses = extractInputResponsesFromParams(params);
-            var requestState = extractRequestStateFromParams(params);
+            var request = new PromptRequest(
+                    extractArguments(params),
+                    extractInputResponsesFromParams(params),
+                    extractRequestStateFromParams(params));
 
-            PromptHandlerResult result;
+            CompletionStage<? extends PromptHandlerResult> stage;
             try {
-                result = entry.handler().handle(extractArguments(params), inputResponses, requestState);
+                stage = entry.handler().handleAsync(context, request);
             } catch (Exception e) {
                 logger.error("Prompt handler error for '{}'", name, e);
-                return JsonRpcErrors.internalError("Prompt handler failed");
+                return CompletableFuture.completedFuture(JsonRpcErrors.internalError("Prompt handler failed"));
             }
-
-            return switch (result) {
-                case PromptHandlerResult.Messages m -> {
-                    var messages = m.messages() != null ? m.messages() : List.<PromptMessage>of();
-                    yield context.responseMapper()
-                            .getPromptResult(entry.descriptor().description(), messages);
+            return HandlerFutures.completeOn(stage, context, (result, e) -> {
+                if (e != null) {
+                    logger.error("Prompt handler error for '{}'", name, e);
+                    return JsonRpcErrors.internalError("Prompt handler failed");
                 }
-                case PromptHandlerResult.InputRequired ir ->
-                    context.responseMapper().inputRequiredResult(ir.inputRequests(), ir.requestState());
-            };
+                return switch ((PromptHandlerResult) result) {
+                    case PromptHandlerResult.Messages m -> {
+                        var messages = m.messages() != null ? m.messages() : List.<PromptMessage>of();
+                        yield context.responseMapper()
+                                .getPromptResult(entry.descriptor().description(), messages);
+                    }
+                    case PromptHandlerResult.InputRequired ir ->
+                        context.responseMapper().inputRequiredResult(ir.inputRequests(), ir.requestState());
+                };
+            });
         }
 
         private static @Nullable String extractArguments(Object params) {
