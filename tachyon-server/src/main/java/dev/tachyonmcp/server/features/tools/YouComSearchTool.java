@@ -14,6 +14,9 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ArrayNode;
@@ -22,15 +25,15 @@ public final class YouComSearchTool extends AbstractSyncToolHandler {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final URI DEFAULT_ENDPOINT = URI.create("https://ydc-index.io/v1/search");
 
-    private final HttpClient client;
-    private final String apiKey;
-    private final URI endpoint;
+    private final @NonNull HttpClient client;
+    private final @NonNull String apiKey;
+    private final @NonNull URI endpoint;
 
-    public YouComSearchTool(String apiKey) {
+    public YouComSearchTool(@NonNull String apiKey) {
         this(apiKey, DEFAULT_ENDPOINT, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build());
     }
 
-    YouComSearchTool(String apiKey, URI endpoint, HttpClient client) {
+    YouComSearchTool(@NonNull String apiKey, @NonNull URI endpoint, @NonNull HttpClient client) {
         super(ToolDescriptor.builder()
                 .name("youcom_search")
                 .title("You.com Search")
@@ -42,14 +45,14 @@ public final class YouComSearchTool extends AbstractSyncToolHandler {
         this.client = Objects.requireNonNull(client, "client");
     }
 
-    public static Optional<YouComSearchTool> fromEnv(Map<String, String> env) {
+    public static @NonNull Optional<YouComSearchTool> fromEnv(@NonNull Map<String, String> env) {
         var key = env.get("YDC_API_KEY");
         if (key == null || key.isBlank()) return Optional.empty();
         return Optional.of(new YouComSearchTool(key));
     }
 
     @Override
-    public ToolResult handle(InteractionContext context, ToolArgs args) {
+    public @NonNull ToolResult handle(@NonNull InteractionContext context, @NonNull ToolArgs args) {
         var query = args.stringOpt("query").orElse("").trim();
         var count = Math.max(1, Math.min(args.intOr("count", 5), 10));
         if (query.isBlank()) return ToolResult.error("query is required");
@@ -70,6 +73,8 @@ public final class YouComSearchTool extends AbstractSyncToolHandler {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return ToolResult.error("You.com search was interrupted");
+        } catch (JacksonException e) {
+            return ToolResult.error("You.com search returned invalid JSON: " + e.getMessage());
         } catch (IOException e) {
             return ToolResult.error("You.com search request failed: " + e.getMessage());
         }

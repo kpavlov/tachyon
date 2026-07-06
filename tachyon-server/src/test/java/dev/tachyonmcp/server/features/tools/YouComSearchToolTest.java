@@ -25,7 +25,8 @@ class YouComSearchToolTest {
 
     @Test
     void handlesSearchResults() throws Exception {
-        try (var server = HttpServer.create(new InetSocketAddress(0), 0)) {
+        var server = HttpServer.create(new InetSocketAddress(0), 0);
+        try {
             server.createContext("/v1/search", exchange -> {
                 assertThat(exchange.getRequestHeaders().getFirst("X-API-Key")).isEqualTo("test-key");
                 var body = "{\"results\":{\"web\":[{\"title\":\"Example\",\"url\":\"https://example.com\",\"description\":\"Snippet\"}]}}";
@@ -46,6 +47,8 @@ class YouComSearchToolTest {
             assertThat(result).isInstanceOf(ToolResult.Success.class);
             assertThat(result).isInstanceOfSatisfying(ToolResult.Success.class, success ->
                     assertThat(success.content().toString()).contains("Example", "https://example.com", "Snippet"));
+        } finally {
+            server.stop(0);
         }
     }
 
