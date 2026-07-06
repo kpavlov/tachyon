@@ -79,9 +79,22 @@ public class TaskEntry implements ServerResourceType {
     }
 
     public boolean transitionTo(TaskState newStatus) {
+        return transitionTo(newStatus, null);
+    }
+
+    /**
+     * Transitions to {@code newStatus}, publishing {@code resultJson} (when non-null) <em>before</em>
+     * the new state becomes visible. This ordering guarantees a reader that observes the terminal
+     * state via {@link #status()} also observes the result via {@link #resultJson()} — the volatile
+     * write happens-before the {@code compareAndSet} that flips the state.
+     */
+    public boolean transitionTo(TaskState newStatus, @Nullable String resultJson) {
         var current = status.get();
         if (!current.canTransitionTo(newStatus)) {
             return false;
+        }
+        if (resultJson != null) {
+            this.resultJson = resultJson;
         }
         if (status.compareAndSet(current, newStatus)) {
             this.lastUpdatedAt = System.currentTimeMillis();

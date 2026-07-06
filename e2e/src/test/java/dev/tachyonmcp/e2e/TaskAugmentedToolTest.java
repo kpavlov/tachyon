@@ -10,12 +10,7 @@ import static org.awaitility.Awaitility.await;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
-import dev.tachyonmcp.server.features.tools.SyncToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolRequest;
-import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.features.tools.*;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -63,8 +58,8 @@ class TaskAugmentedToolTest extends AbstractMcpE2eTest {
                     .pollInterval(Duration.ofMillis(100))
                     .until(() -> {
                         var getJson = rpc(client.httpClient(), port, sessionId, """
-                            {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
-                            """.formatted(taskId));
+                        {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
+                        """.formatted(taskId));
                         return getJson.contains("\"completed\"");
                     });
 
@@ -82,7 +77,8 @@ class TaskAugmentedToolTest extends AbstractMcpE2eTest {
         var latch = new CountDownLatch(1);
 
         var handler = new SyncToolHandler() {
-            private final ToolDescriptor d = ToolDescriptor.builder("blocking")
+            private final ToolDescriptor d = ToolDescriptor.builder()
+                    .name("blocking")
                     .taskSupport(TaskSupport.OPTIONAL)
                     .build();
 
@@ -97,7 +93,7 @@ class TaskAugmentedToolTest extends AbstractMcpE2eTest {
             }
 
             @Override
-            public ToolResult handle(InteractionContext context, ToolArgs arguments) throws Exception {
+            public ToolResult handle(InteractionContext context, ToolArgs arguments) {
                 try {
                     latch.countDown();
                     Thread.sleep(30000);
@@ -139,7 +135,8 @@ class TaskAugmentedToolTest extends AbstractMcpE2eTest {
     @Test
     void taskResultSurfacesErrorMessageWithSpecialChars() throws Exception {
         var handler = new SyncToolHandler() {
-            private final ToolDescriptor d = ToolDescriptor.builder("thrower")
+            private final ToolDescriptor d = ToolDescriptor.builder()
+                    .name("thrower")
                     .taskSupport(TaskSupport.OPTIONAL)
                     .build();
 
@@ -172,8 +169,8 @@ class TaskAugmentedToolTest extends AbstractMcpE2eTest {
                     .pollInterval(Duration.ofMillis(100))
                     .until(() -> {
                         var getJson = rpc(client.httpClient(), port, sessionId, """
-                            {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
-                            """.formatted(taskId));
+                        {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
+                        """.formatted(taskId));
                         return getJson.contains("\"failed\"");
                     });
 
@@ -188,14 +185,15 @@ class TaskAugmentedToolTest extends AbstractMcpE2eTest {
         try {
             var mapper = new tools.jackson.databind.ObjectMapper();
             var node = mapper.readTree(json);
-            return node.get("result").get("task").get("taskId").asText();
+            return node.get("result").get("task").get("taskId").asString();
         } catch (Exception e) {
             throw new RuntimeException("Failed to extract taskId from: " + json, e);
         }
     }
 
     private record SleepingSyncTool(int sleepMs) implements ToolHandler {
-        private static final ToolDescriptor D = ToolDescriptor.builder("sleep")
+        private static final ToolDescriptor D = ToolDescriptor.builder()
+                .name("sleep")
                 .taskSupport(TaskSupport.OPTIONAL)
                 .build();
 

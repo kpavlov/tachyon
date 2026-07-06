@@ -28,6 +28,7 @@ import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
@@ -224,16 +225,18 @@ public class RpcDispatcher {
 
                             var watchdog = HandlerWatchdog.watch(method, id, startNs, SLOW_HANDLER_MS);
                             try {
-                                return OutboundSseStreamMessageRouter.withDispatchContext(
+                                CompletionStage<Object> stage = OutboundSseStreamMessageRouter.withDispatchContext(
                                         session != null ? session.id() : null, outboundSseStream, () -> {
                                             try {
                                                 return handler.handleAsync(context, params);
                                             } catch (Exception e) {
-                                                return CompletableFuture.failedFuture(e);
+                                                return CompletableFuture.<Object>failedFuture(e);
                                             }
                                         });
+                                return stage.whenComplete((r, e) -> watchdog.cancel(false));
                             } catch (Exception e) {
-                                return CompletableFuture.failedFuture(e);
+                                watchdog.cancel(false);
+                                return CompletableFuture.<Object>failedFuture(e);
                             }
                         },
                         executor)
