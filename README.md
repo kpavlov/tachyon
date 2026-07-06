@@ -3,6 +3,7 @@
 [![Build](https://github.com/kpavlov/tachyon/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/kpavlov/tachyon/actions/workflows/build.yml)
 [![Conformance: v0.1.16](https://img.shields.io/badge/Conformance-v0.1.16-green?logo=modelcontextprotocol)](https://github.com/modelcontextprotocol/conformance)
 [![codecov](https://codecov.io/gh/kpavlov/tachyon/graph/badge.svg?token=WUMD9A8T2T)](https://codecov.io/gh/kpavlov/tachyon)
+[![Docs](https://img.shields.io/badge/Docs-blue?logo=github)](https://github.com/kpavlov/tachyon/blob/main/docs/README.md)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/kpavlov/tachyon)
 <img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=fd923998-7054-4524-b014-cd368cfba9fc" />
 
