@@ -40,12 +40,13 @@ public final class ChannelHandlerUtils {
         if (server.isStateless() || server.sessionIdGenerator() == SessionIdGenerator.DEFAULT) {
             return;
         }
-        final DefaultHttpRequest snapshot;
-        if (req instanceof DefaultHttpRequest defaultHttpRequest) {
-            snapshot = defaultHttpRequest;
-        } else {
-            snapshot = new DefaultHttpRequest(req.protocolVersion(), req.method(), req.uri(), req.headers());
-        }
+        // Always build a fresh metadata-only snapshot. The aggregated request is a pooled
+        // DefaultFullHttpRequest (a DefaultHttpRequest subclass): stashing it — or its headers
+        // collection — aliases state that is released and recycled before the async dispatch reads
+        // it. Copy the request line and headers into a detached request; the body is intentionally
+        // dropped (a session-id generator reads headers/URI, and the pooled body is already gone).
+        var headers = new DefaultHttpHeaders().set(req.headers());
+        var snapshot = new DefaultHttpRequest(req.protocolVersion(), req.method(), req.uri(), headers);
         requireInteractionContext(ctx).setAttribute(RpcDispatcher.ATTR_INIT_REQUEST, snapshot);
     }
 

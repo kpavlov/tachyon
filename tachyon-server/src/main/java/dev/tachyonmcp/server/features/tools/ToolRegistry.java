@@ -18,6 +18,7 @@ import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.features.PaginatedResult;
 import dev.tachyonmcp.server.features.Pagination;
 import dev.tachyonmcp.server.features.tasks.TaskEntry;
+import dev.tachyonmcp.server.features.tasks.TaskState;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.json.*;
 import dev.tachyonmcp.server.session.DispatchContext;
@@ -27,6 +28,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -49,7 +51,7 @@ public class ToolRegistry {
     private final PayloadSerializer payloadSerializer;
     private final PayloadDeserializer payloadDeserializer;
 
-    private @Nullable Runnable onChange;
+    private final List<Runnable> onChangeListeners = new CopyOnWriteArrayList<>();
 
     private static final int DEFAULT_PAGE_SIZE = 50;
 
@@ -74,12 +76,14 @@ public class ToolRegistry {
     }
 
     public void onChange(@Nullable Runnable callback) {
-        this.onChange = callback;
+        if (callback != null) {
+            onChangeListeners.add(callback);
+        }
     }
 
     private void fireOnChange() {
-        if (onChange != null) {
-            onChange.run();
+        for (var listener : onChangeListeners) {
+            listener.run();
         }
     }
 
@@ -318,10 +322,15 @@ public class ToolRegistry {
                     return null;
                 });
                 tasks.registerRunning(taskEntry.id(), taskFuture);
-                // The handler may reach a terminal state before registerRunning; drop the entry
-                // here so completed futures do not accumulate in the running map.
+                // The task may reach a terminal state before registerRunning: either the handler
+                // finished, or a tasks/cancel arrived in the window (which flips state but finds no
+                // future to interrupt). Drop the now-untracked future, and if the terminal state was
+                // a cancellation, interrupt the still-running handler ourselves.
                 if (!taskEntry.status().isActive()) {
                     tasks.unregisterRunning(taskEntry.id());
+                    if (taskEntry.status() == TaskState.CANCELLED) {
+                        taskFuture.cancel(true);
+                    }
                 }
                 return CompletableFuture.completedFuture(
                         context.responseMapper().createTaskResult(taskEntry));

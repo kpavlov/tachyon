@@ -79,12 +79,19 @@ public class SessionManager implements AutoCloseable {
         final var ttlNanos = ttl.toNanos();
         janitor.scheduleWithFixedDelay(
                 () -> {
-                    long deadline = System.nanoTime() - ttlNanos;
+                    long now = System.nanoTime();
                     for (var session : store.values()) {
-                        if (session.state() == SessionState.CLOSED || session.lastActivityNanos() < deadline) {
+                        // Elapsed-based comparison, not `lastActivity < now - ttl`: the latter breaks
+                        // across nanoTime's sign wraparound.
+                        var expired = now - session.lastActivityNanos() > ttlNanos;
+                        if (session.state() == SessionState.CLOSED || expired) {
                             session.close();
-                            store.remove(session.id());
-                            logger.debug("Janitor removed session: {}", session.id());
+                            // Only evict if this exact session is still mapped: a replacement created
+                            // with the same id (custom SessionIdGenerator) must not be removed.
+                            if (store.get(session.id()).orElse(null) == session) {
+                                store.remove(session.id());
+                                logger.debug("Janitor removed session: {}", session.id());
+                            }
                         }
                     }
                 },

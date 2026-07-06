@@ -35,7 +35,8 @@ public final class InMemorySessionLogRouter implements SessionLogRouter {
     @Override
     public long pump(String sessionId, long cursor, Predicate<SessionEvent> processor) {
         var snap = events.toArray();
-        int start = cursor < 0 ? 0 : (int) Math.min(cursor, snap.length);
+        // cursor is the last index already processed; resume at the next one to avoid re-delivering it.
+        int start = cursor < 0 ? 0 : (int) Math.min(cursor + 1, snap.length);
         long lastIndex = cursor < 0 ? -1 : cursor;
         for (int i = start; i < snap.length; i++) {
             var event = (SessionEvent) snap[i];

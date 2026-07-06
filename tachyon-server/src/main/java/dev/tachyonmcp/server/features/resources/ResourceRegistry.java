@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
@@ -37,7 +38,7 @@ public class ResourceRegistry {
     private final ConcurrentHashMap<String, Set<String>> subscriptions = new ConcurrentHashMap<>();
     private final Server server;
 
-    private @Nullable Runnable onChange;
+    private final List<Runnable> onChangeListeners = new CopyOnWriteArrayList<>();
 
     private static final int DEFAULT_PAGE_SIZE = 50;
 
@@ -47,12 +48,14 @@ public class ResourceRegistry {
     }
 
     public void onChange(@Nullable Runnable callback) {
-        this.onChange = callback;
+        if (callback != null) {
+            onChangeListeners.add(callback);
+        }
     }
 
     private void fireOnChange() {
-        if (onChange != null) {
-            onChange.run();
+        for (var listener : onChangeListeners) {
+            listener.run();
         }
     }
 
@@ -354,10 +357,10 @@ public class ResourceRegistry {
             }
             var subs = registry.subscriptions.get(uri);
             if (subs != null) {
+                // Do not prune an emptied set from the map: a concurrent subscribe may hold a
+                // reference to it via computeIfAbsent and be about to add() — removing the entry
+                // here would strand that subscription. An empty per-URI set is negligible.
                 subs.remove(session.id());
-                if (subs.isEmpty()) {
-                    registry.subscriptions.remove(uri);
-                }
             }
             return context.responseMapper().emptyResult();
         }

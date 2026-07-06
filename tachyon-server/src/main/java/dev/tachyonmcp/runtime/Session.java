@@ -70,14 +70,37 @@ public class Session {
         return connection.get();
     }
 
-    /** Replaces the SSE connection (e.g. after reconnection). */
+    /**
+     * Replaces the SSE connection (e.g. after reconnection). Closes the previously attached
+     * connection so a superseded channel is not left open (and kept alive by SSE heartbeats).
+     * If the session is (or becomes) {@link SessionState#CLOSED}, the incoming connection is
+     * closed instead of attached.
+     */
     public void connection(SseConnection connection) {
+        Objects.requireNonNull(connection, "connection");
         if (state.get() == SessionState.CLOSED) {
             connection.close();
             return;
         }
-        this.connection.set(Objects.requireNonNull(connection, "connection"));
+        var previous = this.connection.getAndSet(connection);
         this.lastActivityNanos = System.nanoTime();
+        if (previous != connection && previous != SseConnection.NOOP) {
+            previous.close();
+        }
+        // A concurrent close() may have transitioned to CLOSED after the guard above; if so, detach
+        // and close the connection we just attached so a CLOSED session never holds a live channel.
+        if (state.get() == SessionState.CLOSED && this.connection.compareAndSet(connection, SseConnection.NOOP)) {
+            connection.close();
+        }
+    }
+
+    /**
+     * Detaches {@code expected} if it is still the current connection, resetting to
+     * {@link SseConnection#NOOP}. Returns {@code true} if it was detached. Used by a channel's
+     * close listener so a superseded connection's close does not wipe a newer one.
+     */
+    public boolean clearConnection(SseConnection expected) {
+        return connection.compareAndSet(expected, SseConnection.NOOP);
     }
 
     /** Returns the current backpressure state. */

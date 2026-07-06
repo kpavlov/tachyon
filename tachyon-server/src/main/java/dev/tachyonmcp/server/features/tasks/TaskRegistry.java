@@ -46,23 +46,36 @@ public class TaskRegistry extends Registry<TaskEntry> {
         this.server = server;
     }
 
+    // Tasks are keyed by their unique id, not by tool name: many concurrent tasks may share the
+    // same tool name, so routing through the name-keyed base store would let one clobber another.
+    // byId is the single source of truth; add/remove/getAll/list are overridden to use it.
+
     @Override
     public void add(TaskEntry item) {
-        var previous = get(item.name());
-        super.add(item);
-        if (previous != null && !previous.id().equals(item.id())) {
-            byId.remove(previous.id());
-        }
         byId.put(item.id(), item);
+        fireOnChange();
     }
 
     @Override
-    public void remove(String name) {
-        var removed = get(name);
-        super.remove(name);
-        if (removed != null) {
-            byId.remove(removed.id());
+    public void remove(String taskId) {
+        if (byId.remove(taskId) != null) {
+            fireOnChange();
         }
+    }
+
+    @Override
+    public java.util.Collection<TaskEntry> getAll() {
+        return byId.values();
+    }
+
+    @Override
+    public dev.tachyonmcp.server.features.PaginatedResult<TaskEntry> list(
+            int limit, @Nullable String cursor, int defaultLimit, java.util.function.Predicate<TaskEntry> filter) {
+        var all = byId.values().stream()
+                .filter(filter)
+                .sorted(java.util.Comparator.comparing(TaskEntry::id))
+                .toList();
+        return dev.tachyonmcp.server.features.Pagination.paginate(all, limit, cursor, defaultLimit, TaskEntry::id);
     }
 
     /** Returns the task with the given unique ID. */
@@ -135,10 +148,9 @@ public class TaskRegistry extends Registry<TaskEntry> {
         if (entry == null) {
             return false;
         }
-        if (!entry.transitionTo(TaskState.COMPLETED)) {
+        if (!entry.transitionTo(TaskState.COMPLETED, resultJson)) {
             return false;
         }
-        entry.resultJson(resultJson);
         running.remove(taskId);
         fireStatusNotification(entry);
         fireOnChange();
@@ -151,10 +163,9 @@ public class TaskRegistry extends Registry<TaskEntry> {
         if (entry == null) {
             return false;
         }
-        if (!entry.transitionTo(TaskState.FAILED)) {
+        if (!entry.transitionTo(TaskState.FAILED, resultJson)) {
             return false;
         }
-        entry.resultJson(resultJson);
         running.remove(taskId);
         fireStatusNotification(entry);
         fireOnChange();
@@ -173,12 +184,9 @@ public class TaskRegistry extends Registry<TaskEntry> {
             logger.debug("No status provided for task {}", taskId);
             return false;
         }
-        if (!entry.transitionTo(newStatus)) {
+        if (!entry.transitionTo(newStatus, statusMessage)) {
             logger.debug("Invalid status transition from {} to {} for task {}", entry.status(), newStatus, taskId);
             return false;
-        }
-        if (statusMessage != null) {
-            entry.resultJson(statusMessage);
         }
         fireStatusNotification(entry);
         return true;
@@ -214,8 +222,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
         for (var entry : byId.values()) {
             if (entry.status().isActive() && entry.isExpired()) {
                 logger.info("Task expired: id={}, name={}", entry.id(), entry.name());
-                if (entry.transitionTo(TaskState.FAILED)) {
-                    entry.resultJson("{\"error\":\"Task expired\"}");
+                if (entry.transitionTo(TaskState.FAILED, "{\"error\":\"Task expired\"}")) {
                     fireStatusNotification(entry);
                     fireOnChange();
                 }

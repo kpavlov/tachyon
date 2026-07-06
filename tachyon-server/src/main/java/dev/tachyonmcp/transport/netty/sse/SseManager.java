@@ -5,7 +5,6 @@
 package dev.tachyonmcp.transport.netty.sse;
 
 import dev.tachyonmcp.runtime.Session;
-import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.transport.netty.http.HttpHelpers;
@@ -35,11 +34,16 @@ public class SseManager {
 
     public void openStream(
             ChannelHandlerContext ctx, Session session, @Nullable String lastEventId, @Nullable String origin) {
+        var holder = new NettySseConnection[1];
         var connection = new NettySseConnection(ctx.channel(), () -> {
-            session.connection(SseConnection.NOOP);
-            session.touch();
-            logger.debug("SSE connection closed for session={}", session.id());
+            // Only reset the session if THIS connection is still the current one. A reconnect may
+            // have already replaced it; wiping to NOOP here would orphan the newer channel.
+            if (session.clearConnection(holder[0])) {
+                session.touch();
+                logger.debug("SSE connection closed for session={}", session.id());
+            }
         });
+        holder[0] = connection;
         session.connection(connection);
 
         writeOpeningFrames(ctx, origin, connection);

@@ -267,7 +267,7 @@ class TaskRegistryTest {
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
-        registry.remove("task-x");
+        registry.remove("id-x");
 
         assertThat(callCount).hasValue(1);
     }
@@ -283,15 +283,17 @@ class TaskRegistryTest {
     }
 
     @Test
-    void shouldEvictOldByIdEntryWhenTaskWithSameNameAdded() {
+    void shouldKeepBothTasksWhenTwoShareTheSameName() {
         var first = new TaskEntry("worker", "id-first", "First");
         var second = new TaskEntry("worker", "id-second", "Second");
 
         registry.add(first);
         registry.add(second);
 
-        assertThat(registry.getById("id-first")).isNull();
+        // Tasks are keyed by unique id, not by tool name: two concurrent tasks for the same tool
+        // must coexist, each independently retrievable and terminable.
+        assertThat(registry.getById("id-first")).isNotNull();
         assertThat(registry.getById("id-second")).isNotNull();
-        assertThat(registry.getAll()).hasSize(1);
+        assertThat(registry.getAll()).hasSize(2);
     }
 }
