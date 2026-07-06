@@ -9,8 +9,10 @@ import dev.tachyonmcp.server.config.*;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.extensions.ServerExtension;
+import dev.tachyonmcp.server.features.prompts.InputRequiredPromptHandler;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptHandler;
+import dev.tachyonmcp.server.features.prompts.PromptHandlerResult;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceHandler;
 import dev.tachyonmcp.server.features.tools.*;
@@ -186,16 +188,26 @@ public final class ServerBuilder {
      * Registers a prompt with static messages (no handler, messages provided directly).
      */
     public ServerBuilder prompt(PromptDescriptor descriptor, List<PromptMessage> messages) {
-        featuresConfig.prompts.add(new FeaturesConfig.PromptRegistration(descriptor, args -> messages));
-        return this;
+        return prompt(descriptor, toInputRequiredHandler(args -> messages));
     }
 
     /**
-     * Registers a prompt with a dynamic handler.
+     * Registers a prompt with a dynamic handler (simple messages only).
      */
     public ServerBuilder prompt(PromptDescriptor descriptor, PromptHandler handler) {
+        return prompt(descriptor, toInputRequiredHandler(handler));
+    }
+
+    /**
+     * Registers a prompt with an input-required (MRTR) handler.
+     */
+    public ServerBuilder prompt(PromptDescriptor descriptor, InputRequiredPromptHandler handler) {
         featuresConfig.prompts.add(new FeaturesConfig.PromptRegistration(descriptor, handler));
         return this;
+    }
+
+    private static InputRequiredPromptHandler toInputRequiredHandler(PromptHandler handler) {
+        return (ctx, request) -> PromptHandlerResult.messages(handler.getMessages(request.arguments()));
     }
 
     /**
@@ -421,7 +433,7 @@ public final class ServerBuilder {
         PayloadSerializer payloadSerializer = new JacksonPayloadSerde();
         PayloadDeserializer payloadDeserializer = new JacksonPayloadSerde();
 
-        record PromptRegistration(PromptDescriptor descriptor, PromptHandler handler) {}
+        record PromptRegistration(PromptDescriptor descriptor, InputRequiredPromptHandler handler) {}
 
         record ResourceRegistration(
                 ResourceDescriptor descriptor, @Nullable ResourceHandler handler) {}

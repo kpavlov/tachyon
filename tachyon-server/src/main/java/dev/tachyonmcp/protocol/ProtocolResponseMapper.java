@@ -69,6 +69,9 @@ public interface ProtocolResponseMapper {
     /** Maps a single task entry (get result) into protocol-specific shape. */
     Object getTaskResult(TaskEntry entry);
 
+    /** Maps a newly created task entry into a CreateTaskResult (for task-augmented requests). */
+    Object createTaskResult(TaskEntry entry);
+
     /** Maps a cancelled task entry into protocol-specific shape. */
     Object cancelTaskResult(TaskEntry entry);
 

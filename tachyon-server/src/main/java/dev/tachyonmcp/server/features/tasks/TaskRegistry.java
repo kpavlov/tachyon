@@ -10,8 +10,8 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.Server;
+import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.features.Registry;
-import dev.tachyonmcp.server.features.tools.ToolRegistry;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.Map;
@@ -19,6 +19,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -36,6 +37,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
             Objects.requireNonNull(ProtocolMappers.getMapper("mcp", McpProtocol.VERSION));
 
     private final ConcurrentHashMap<String, TaskEntry> byId = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Future<?>> running = new ConcurrentHashMap<>();
     private final Server server;
     private volatile @Nullable ScheduledExecutorService ttlJanitor;
 
@@ -92,7 +94,24 @@ public class TaskRegistry extends Registry<TaskEntry> {
         return entry;
     }
 
-    /** Cancels the task with the given ID. */
+    /**
+     * Registers an in-flight future for cancellation support.
+     */
+    public void registerRunning(String taskId, Future<?> future) {
+        running.put(taskId, future);
+    }
+
+    /**
+     * Unregisters a completed/failed future.
+     */
+    public void unregisterRunning(String taskId) {
+        running.remove(taskId);
+    }
+
+    /**
+     * Cancels the task with the given ID. Propagates cancellation to any in-flight future,
+     * which interrupts the virtual thread and cancels suspend handlers via runBlocking.
+     */
     public boolean cancelTask(String taskId) {
         var entry = byId.get(taskId);
         if (entry == null) {
@@ -100,6 +119,10 @@ public class TaskRegistry extends Registry<TaskEntry> {
         }
         if (!entry.transitionTo(TaskState.CANCELLED)) {
             return false;
+        }
+        var future = running.remove(taskId);
+        if (future != null) {
+            future.cancel(true);
         }
         fireStatusNotification(entry);
         fireOnChange();
@@ -116,6 +139,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
             return false;
         }
         entry.resultJson(resultJson);
+        running.remove(taskId);
         fireStatusNotification(entry);
         fireOnChange();
         return true;
@@ -131,6 +155,7 @@ public class TaskRegistry extends Registry<TaskEntry> {
             return false;
         }
         entry.resultJson(resultJson);
+        running.remove(taskId);
         fireStatusNotification(entry);
         fireOnChange();
         return true;
@@ -218,8 +243,8 @@ public class TaskRegistry extends Registry<TaskEntry> {
 
         @Override
         public Object handle(DispatchContext context, Object params) {
-            var limit = ToolRegistry.parseLimit(params);
-            var cursor = ToolRegistry.parseCursor(params);
+            var limit = ListRequests.parseLimit(params);
+            var cursor = ListRequests.parseCursor(params);
             var paginated = registry.list(limit, cursor);
 
             return context.responseMapper().listTasksResult(paginated.items(), paginated.nextCursor());

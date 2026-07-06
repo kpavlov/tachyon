@@ -6,8 +6,8 @@ package dev.tachyonmcp.server.features.tools
 
 import dev.tachyonmcp.runtime.InteractionContext
 import dev.tachyonmcp.server.config.ToolScope
+import dev.tachyonmcp.server.features.runSuspendHandler
 import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.runBlocking
 
 /**
  * Wraps a suspend tool lambda into a blocking [AbstractToolHandler].
@@ -18,18 +18,18 @@ import kotlinx.coroutines.runBlocking
 internal fun toolHandler(
     descriptor: ToolDescriptor,
     block: suspend ToolScope.() -> ToolResult,
-): AbstractToolHandler =
-    object : AbstractToolHandler(descriptor) {
-        private val coroutineName = CoroutineName("tool:${descriptor.name()}")
-
+): AbstractToolHandler {
+    val coroutineName = CoroutineName("tool:${descriptor.name()}")
+    return object : AbstractToolHandler(descriptor) {
         override fun handle(
             context: InteractionContext,
             request: ToolRequest,
         ): ToolResult =
-            runBlocking(coroutineName) {
+            runSuspendHandler(coroutineName) {
                 ToolScope(
                     context,
                     ToolArgs.of(request.arguments(), request.payloadDeserializer()),
                 ).block()
             }
     }
+}

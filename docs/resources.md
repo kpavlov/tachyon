@@ -44,6 +44,30 @@ handle.server().resources()
         }));
 ```
 
+## Async handler
+
+Handlers are blocking-first and run on virtual threads — blocking is fine. To integrate
+non-blocking services, implement `AsyncResourceHandler` (or `AsyncResourceTemplateHandler`)
+and return a `CompletionStage`:
+
+```java
+import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
+import java.net.URI;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse.BodyHandlers;
+
+AsyncResourceHandler handler = (ctx, req) ->
+    httpClient.sendAsync(
+            HttpRequest.newBuilder(URI.create(req.uri())).GET().build(),
+            BodyHandlers.ofString())
+        .thenApply(rsp -> TextResourceContents.of(req.uri(), "application/json", rsp.body()));
+
+.resource(descriptor, handler)
+```
+
+Prompts follow the same pattern with `AsyncPromptHandler`. In Kotlin, resource and prompt
+lambdas are `suspend` — see [Kotlin DSL](kotlin.md).
+
 ## Blob resources
 
 Return binary content with `BlobResourceContents`:

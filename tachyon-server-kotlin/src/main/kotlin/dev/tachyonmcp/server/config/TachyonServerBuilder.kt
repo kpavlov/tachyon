@@ -10,7 +10,9 @@ import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.ResourceContents
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
+import dev.tachyonmcp.server.features.prompts.promptHandler
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor
+import dev.tachyonmcp.server.features.resources.resourceHandler
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.features.tools.toolHandler
@@ -141,30 +143,27 @@ public class TachyonServerBuilder
             uri: String,
             description: String? = null,
             mimeType: String = "application/json",
-            handler: ResourceScope.() -> ResourceContents,
+            handler: suspend ResourceScope.() -> ResourceContents,
         ): TachyonServerBuilder =
             this.also {
-                delegate.resource(
+                val descriptor =
                     ResourceDescriptor(
                         name = name,
                         uri = uri,
                         description = description,
                         mimeType = mimeType,
-                    ),
-                ) { ctx, req ->
-                    ResourceScope(ctx, req).handler()
-                }
+                    )
+                delegate.resource(descriptor, resourceHandler(descriptor, handler))
             }
 
         public fun prompt(
             name: String,
             description: String,
-            handler: (arguments: String?) -> List<PromptMessage>,
+            handler: suspend PromptScope.() -> List<PromptMessage>,
         ): TachyonServerBuilder =
             this.also {
-                delegate.prompt(
-                    PromptDescriptor(name = name, description = description),
-                ) { args -> handler(args) }
+                val descriptor = PromptDescriptor(name = name, description = description)
+                delegate.prompt(descriptor, promptHandler(descriptor, handler))
             }
 
         /**

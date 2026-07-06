@@ -190,6 +190,11 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
     }
 
     @Override
+    public Object createTaskResult(TaskEntry entry) {
+        return McpTaskMapper.toCreateTaskResult(entry);
+    }
+
+    @Override
     public Object cancelTaskResult(TaskEntry entry) {
         return McpTaskMapper.toCancelTaskResult(entry);
     }

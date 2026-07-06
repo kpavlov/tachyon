@@ -732,7 +732,8 @@ abstract class AbstractConformanceServer {
                 .add(
                         PromptDescriptor.of(
                                 "test_input_required_result_prompt", "Prompt requiring elicitation input (SEP-2322)"),
-                        (args, inputResponses, requestState) -> {
+                        (ctx, request) -> {
+                            var inputResponses = request.inputResponses();
                             if (inputResponses != null && inputResponses.containsKey("user_context")) {
                                 return PromptHandlerResult.messages(List.of(PromptMessage.user("Context received")));
                             }

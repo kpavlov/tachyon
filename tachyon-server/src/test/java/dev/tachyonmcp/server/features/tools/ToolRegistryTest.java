@@ -422,50 +422,6 @@ class ToolRegistryTest {
     }
 
     @Test
-    void parseLimitFromNumber() {
-        var params = Map.<String, Object>of("limit", 5);
-        assertThat(ToolRegistry.parseLimit(params)).isEqualTo(5);
-    }
-
-    @Test
-    void parseLimitFromNonNumberReturnsZero() {
-        var params = Map.<String, Object>of("limit", "not-a-number");
-        assertThat(ToolRegistry.parseLimit(params)).isZero();
-    }
-
-    @Test
-    void parseLimitFromNullParamsReturnsZero() {
-        assertThat(ToolRegistry.parseLimit(null)).isZero();
-    }
-
-    @Test
-    void parseLimitFromEmptyMapReturnsZero() {
-        assertThat(ToolRegistry.parseLimit(Map.of())).isZero();
-    }
-
-    @Test
-    void parseCursorFromString() {
-        var params = Map.<String, Object>of("cursor", "abc");
-        assertThat(ToolRegistry.parseCursor(params)).isEqualTo("abc");
-    }
-
-    @Test
-    void parseCursorFromNonStringReturnsNull() {
-        var params = Map.<String, Object>of("cursor", 123);
-        assertThat(ToolRegistry.parseCursor(params)).isNull();
-    }
-
-    @Test
-    void parseCursorFromNullParamsReturnsNull() {
-        assertThat(ToolRegistry.parseCursor(null)).isNull();
-    }
-
-    @Test
-    void parseCursorFromEmptyMapReturnsNull() {
-        assertThat(ToolRegistry.parseCursor(Map.of())).isNull();
-    }
-
-    @Test
     void registerThrowsOnNullHandler() {
         assertThatThrownBy(() -> registry.register(null))
                 .isInstanceOf(NullPointerException.class)

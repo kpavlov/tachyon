@@ -5,6 +5,7 @@ package dev.tachyonmcp.server.config
 import dev.tachyonmcp.server.ServerBuilder
 import dev.tachyonmcp.server.domain.ResourceContents
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor
+import dev.tachyonmcp.server.features.resources.resourceHandler
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.features.tools.toolHandler
@@ -19,13 +20,12 @@ public fun ServerBuilder.resource(
     uri: String,
     description: String? = null,
     mimeType: String = "application/json",
-    handler: ResourceScope.() -> ResourceContents,
-): ServerBuilder =
-    resource(
-        ResourceDescriptor(name = name, uri = uri, description = description, mimeType = mimeType),
-    ) { ctx, req ->
-        ResourceScope(ctx, req).handler()
-    }
+    handler: suspend ResourceScope.() -> ResourceContents,
+): ServerBuilder {
+    val descriptor =
+        ResourceDescriptor(name = name, uri = uri, description = description, mimeType = mimeType)
+    return resource(descriptor, resourceHandler(descriptor, handler))
+}
 
 public fun ServerBuilder.tool(
     name: String,

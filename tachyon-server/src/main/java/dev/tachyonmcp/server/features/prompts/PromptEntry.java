@@ -11,8 +11,7 @@ public record PromptEntry(PromptDescriptor descriptor, InputRequiredPromptHandle
 
     static PromptEntry of(PromptDescriptor descriptor, PromptHandler simple) {
         return new PromptEntry(
-                descriptor,
-                (args, inputResponses, requestState) -> PromptHandlerResult.messages(simple.getMessages(args)));
+                descriptor, (ctx, request) -> PromptHandlerResult.messages(simple.getMessages(request.arguments())));
     }
 
     @Override
