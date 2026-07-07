@@ -99,5 +99,6 @@ class SessionManagerTest {
         manager.sweep(Long.MAX_VALUE);
 
         assertThat(backing.get("s1")).contains(replacement);
+        assertThat(replacement.state()).isNotEqualTo(SessionState.CLOSED);
     }
 }
