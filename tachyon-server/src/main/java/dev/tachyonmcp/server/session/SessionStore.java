@@ -29,4 +29,19 @@ public interface SessionStore extends AutoCloseable {
     /** Removes and returns the session for the given ID. */
     @Nullable
     Session remove(String sessionId);
+
+    /**
+     * Removes the session for the given ID only if the stored instance is {@code expected},
+     * returning whether it was removed. Used by expiry sweeps so a replacement session created
+     * under the same ID between the expiry check and the removal is never evicted. This default
+     * is check-then-act; implementations backed by an atomic store should override it (see
+     * {@code InMemorySessionStore}).
+     */
+    default boolean remove(String sessionId, Session expected) {
+        if (get(sessionId).orElse(null) == expected) {
+            remove(sessionId);
+            return true;
+        }
+        return false;
+    }
 }
