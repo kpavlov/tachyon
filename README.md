@@ -25,7 +25,7 @@
     <dependency>
         <groupId>dev.tachyonmcp</groupId>
         <artifactId>tachyon-server</artifactId>
-        <version>1.0.0-beta.4</version>
+        <version>1.0.0-beta.6</version>
     </dependency>
     ```
 

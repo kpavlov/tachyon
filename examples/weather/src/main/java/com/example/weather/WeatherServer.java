@@ -2,6 +2,7 @@
 
 package com.example.weather;
 
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.ServerHandle;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.PromptMessage;
@@ -9,15 +10,16 @@ import dev.tachyonmcp.server.domain.ReadResourceRequest;
 import dev.tachyonmcp.server.domain.ResourceContents;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
-import dev.tachyonmcp.runtime.InteractionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 public final class WeatherServer {
 
@@ -38,7 +40,7 @@ public final class WeatherServer {
                         .websiteUrl("http://localhost:8080/mcp")
                         .instructions("Test instructions")
                         .version("1.0"))
-                .session(s->s.stateless(true))
+                .session(s -> s.enabled(false))
                 .tool(new GetWeatherTool())
                 .resource(
                         ResourceDescriptor.of(
@@ -53,7 +55,9 @@ public final class WeatherServer {
                                 "weather://current/image",
                                 "Current weather icon",
                                 "image/png"),
-                        (ctx, req) -> WeatherImageResource.read())
+                        // Async resource handler — returns a CompletionStage (beta.5+)
+                        (AsyncResourceHandler) (ctx, req) ->
+                                CompletableFuture.supplyAsync(WeatherImageResource::read))
                 .prompt(
                         PromptDescriptor.of("rewrite-forecast", "Rewrites a weather forecast in a given style"),
                     WeatherServer::handleRewriteForecast)

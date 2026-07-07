@@ -8,7 +8,6 @@ import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.ReadResourceRequest;
 import dev.tachyonmcp.server.domain.ResourceContents;
 import dev.tachyonmcp.server.features.HandlerFutures;
-import java.util.Objects;
 import java.util.concurrent.CompletionStage;
 
 /**
@@ -24,13 +23,5 @@ public interface AsyncResourceHandler extends ResourceHandler {
     @Override
     default ResourceContents read(InteractionContext context, ReadResourceRequest request) throws Exception {
         return HandlerFutures.joinInterruptibly(readAsync(context, request));
-    }
-
-    /**
-     * Wraps a synchronous resource handler as an async one.
-     */
-    static AsyncResourceHandler adapt(ResourceHandler sync) {
-        Objects.requireNonNull(sync, "sync");
-        return sync::readAsync;
     }
 }

@@ -2,7 +2,7 @@
 name: tachyon-mcp
 description: Build MCP (Model Context Protocol) servers using the [Tachyon MCP](https://github.com/kpavlov/tachyon).
 compatibility: Designed for Claude Code on JDK 21+ projects
-version: 1.0.0-beta.4
+version: 1.0.0-beta.6
 metadata:
     author: Konstantin Pavlov
 ---
@@ -13,10 +13,10 @@ Make **Java 21+** MCP server. Tachyon lib. Transport = Streamable HTTP (Netty).
 ## Core
 
 - `TachyonServer.builder()` → `ServerBuilder`. Start here.
-- `.start()` (blocking) / `.startAsync()` (non-blocking) → build `McpServer` + Netty transport → `McpServerHandle` (`Closeable`).
-- `.build()` → `McpServer` only, no transport.
-- `McpServerHandle`: `.server()`, `.port()`.
-- `McpContext` → session + notifications + server ctx. Every handler gets it.
+- `.start()` (blocking) / `.startAsync()` (non-blocking) → build `Server` + Netty transport → `ServerHandle` (`Closeable`).
+- `.build()` → `Server` only, no transport.
+- `ServerHandle`: `.server()`, `.port()`.
+- `InteractionContext` → session + notifications + server ctx. Every handler gets it (`dev.tachyonmcp.runtime.InteractionContext`).
 
 ## Quickstart
 
@@ -40,10 +40,12 @@ var handle = TachyonServer.builder()
 | `.runtime(cfg)` | shutdownGracePeriod |
 | `.name(s)` `.port(p)` | shorthands |
 | `.tool(handler)` | Sync/Async/ToolHandler |
-| `.resource(descriptor[, handler])` | static resource (no handler = external URI) |
-| `.prompt(descriptor, handler\|messages)` | prompt |
-| `.extension(ext)` | McpExtension plugin |
-| `.jsonSchemaValidator(v)` | custom validator (default Networknt) |
+| `.tool(name, desc, inJson, outJson, fn)` | shorthand — JSON **string** schemas + lambda |
+| `.resource(descriptor[, handler])` | static resource (no handler = external URI); handler is Sync `ResourceHandler` or `AsyncResourceHandler` |
+| `.prompt(descriptor, handler\|messages)` | `PromptHandler` (simple), `InputRequiredPromptHandler` (sync/MRTR), or `AsyncPromptHandler` |
+| `.extension(ext)` | `ServerExtension` plugin |
+| `.json(cfg)` | serde + input/output schema validators |
+| `.jsonSchemaValidator(v)` | ⚠️ deprecated (removal) → `.json(cfg)` / `.inputSchemaValidator` / `.outputSchemaValidator` |
 | `.pipelineCustomizer(c)` | raw Netty pipeline escape hatch |
 
 ## Tools 🔧
@@ -55,13 +57,14 @@ Class — extend `AbstractSyncToolHandler`:
 ```java
 class MyTool extends AbstractSyncToolHandler {
     public MyTool() {
-        super(ToolDescriptor.builder("my-tool")
+        super(ToolDescriptor.builder()
+            .name("my-tool")
             .description("Does something useful")
             .inputSchema(jsonSchema)
             .build());
     }
     @Override
-    public ToolResult handle(McpContext ctx, ToolArgs args) throws Exception {
+    public ToolResult handle(InteractionContext ctx, ToolArgs args) throws Exception {
         return ToolResult.text("result");
     }
 }
@@ -73,6 +76,20 @@ Lambda — `SyncToolHandler.of(name, description, inputSchema, (ctx, args) -> ..
 .tool(SyncToolHandler.of("hello", "Say hello", null,
     (ctx, args) -> ToolResult.text("Hello, world!")))
 ```
+
+Schema arg can be a `JsonNode` **or** a raw JSON `String` (parsed for you). String overload
+takes input + output schemas; there's a matching `.tool(name, desc, inJson, outJson, fn)` shorthand:
+
+```java
+.tool("hello", "Say hello",
+    """
+    {"type":"object","properties":{"name":{"type":"string"}}}
+    """, null,                          // inputSchemaJson, outputSchemaJson
+    (ctx, args) -> ToolResult.text("Hello, " + args.stringOr("name", "world")))
+```
+
+Async — implement `AsyncToolHandler` (or extend `AbstractAsyncToolHandler`), return a
+`CompletionStage<ToolResult>`.
 
 `ToolResult` (not generic): `.text(t)` · `.error(msg)` (isError=true) · `.blocks(ContentBlock...)` · `.of(payload)` (structuredContent via Jackson) · `.of(payload, text)` · `.empty()`
 
@@ -100,14 +117,36 @@ handle.server().resources()
         }));
 ```
 
+Async — return a `CompletionStage`: implement `AsyncResourceHandler` (static resource) or
+`AsyncResourceTemplateHandler` (template). Sync `ResourceHandler`/`ResourceTemplateHandler`
+run blocking-first on virtual threads.
+
+```java
+AsyncResourceHandler h = (ctx, req) ->
+    httpClient.sendAsync(request, BodyHandlers.ofString())
+        .thenApply(rsp -> TextResourceContents.of(req.uri(), "application/json", rsp.body()));
+.resource(descriptor, h)
+```
+
 Full: `resources/java/ResourceHandlerExample.java`
 
 ## Prompts
+
+Simple — `PromptHandler.getMessages(arguments)` returns messages:
 
 ```java
 .prompt(
     PromptDescriptor.of("rewrite-forecast", "Rewrites a forecast in a given style"),
     args -> List.of(PromptMessage.user("Rewrite this in pirate style.")))
+```
+
+Sync/async/MRTR — `InputRequiredPromptHandler.handle(ctx, PromptRequest)` returns a
+`PromptHandlerResult` (`.messages(list)` or `.inputRequired(reqs, state)`); `AsyncPromptHandler`
+returns a `CompletionStage`.
+
+```java
+.prompt(descriptor, (ctx, request) ->
+    PromptHandlerResult.messages(List.of(PromptMessage.user("Rewrite: " + request.arguments()))))
 ```
 
 Full: `resources/java/PromptHandlerExample.java`
@@ -168,16 +207,21 @@ private static final JsonNode INPUT_SCHEMA = MAPPER.readTree("""
     """);
 ```
 
-→ `ToolDescriptor.builder("name").inputSchema(INPUT_SCHEMA).build()`
+→ `ToolDescriptor.builder().name("name").inputSchema(INPUT_SCHEMA).build()`
+(`builder(name)` and `builder(name, inJson, outJson)` still exist but are deprecated.)
+
+Or skip the `JsonNode` — pass the schema as a raw JSON `String` to
+`SyncToolHandler.of(name, desc, inputSchemaJson, outputSchemaJson, fn)` or
+`.tool(name, desc, inJson, outJson, fn)`; Tachyon parses it.
 
 ## Extensions
 
 ```java
-public interface McpExtension extends Extension<McpContext> {
+public interface ServerExtension extends Extension<MutableInteractionContext> {
     default JsonNode serverSettings() { return JsonNodeFactory.instance.objectNode(); }
     default Set<String> methods() { return Set.of(); }
-    default void bootstrap(McpServer server) {}
-    default void onConnectionInit(McpContext context, Map<String, JsonNode> clientSettings) {}
+    default void bootstrap(Server server) {}
+    default void onConnectionInit(MutableInteractionContext context, Map<String, JsonNode> clientSettings) {}
 }
 ```
 
@@ -191,11 +235,13 @@ Register: `.extension(myExtension)`
 
 ## Kotlin DSL
 
-Also available — Kotlin DSL with suspend tool handlers, `buildServer { }`, and `TachyonServer { }`.
+Also available — Kotlin DSL with **suspend** tool/resource/prompt handlers, `buildServer { }`, and `TachyonServer { }`.
+Handler lambdas are `suspend` receivers — call suspending APIs directly, no `it` parameter.
+The prompt lambda exposes `arguments` (renamed from `it` in beta.5).
 
 ```kotlin
-// buildServer {} → McpServer without transport
-// TachyonServer(port) {} → McpServerHandle with Netty transport
+// buildServer {} → Server without transport
+// TachyonServer(port) {} → ServerHandle with Netty transport
 
 val handle = TachyonServer(port = 8080) {
     info {
@@ -218,11 +264,13 @@ val handle = TachyonServer(port = 8080) {
     ) {
         TextResourceContents.of(uri, "application/json", """{"mode":"production"}""")
     }
-    prompt(name = "greet", description = "Generates a greeting") { _ ->
-        listOf(PromptMessage.user("Say hello"))
+    prompt(name = "greet", description = "Generates a greeting") {
+        listOf(PromptMessage.user("Say hello, ${arguments ?: "friend"}"))
     }
 }
 ```
+
+`tool(inputSchema = ...)` accepts a `JsonNode`, a raw JSON `String`, or a kotlinx `JsonObject`.
 
 ### Typed decode/result (Kotlin)
 

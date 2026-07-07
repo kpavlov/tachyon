@@ -13,7 +13,7 @@ Build and run an MCP server in under 5 minutes.
 <dependency>
     <groupId>dev.tachyonmcp</groupId>
     <artifactId>tachyon-server</artifactId>
-    <version>1.0.0-beta.4</version>
+    <version>1.0.0-beta.6</version>
 </dependency>
 ```
 
@@ -27,18 +27,19 @@ import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.runtime.InteractionContext;
 
 void main() {
     TachyonServer.builder()
         .name("my-server")
         .version("1.0")
         .tool(new AbstractSyncToolHandler(
-            ToolDescriptor.builder("greet")
+            ToolDescriptor.builder()
+                .name("greet")
                 .description("Say hello")
                 .build()) {
             @Override
-            public ToolResult handle(McpContext ctx, ToolArgs args) {
+            public ToolResult handle(InteractionContext ctx, ToolArgs args) {
                 return ToolResult.text("Hello!");
             }
         })

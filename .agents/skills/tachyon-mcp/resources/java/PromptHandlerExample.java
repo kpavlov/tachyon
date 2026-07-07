@@ -4,12 +4,20 @@
 
 import dev.tachyonmcp.server.domain.PromptArgument;
 import dev.tachyonmcp.server.domain.PromptMessage;
+import dev.tachyonmcp.server.features.prompts.AsyncPromptHandler;
+import dev.tachyonmcp.server.features.prompts.InputRequiredPromptHandler;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptHandler;
+import dev.tachyonmcp.server.features.prompts.PromptHandlerResult;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Demonstrates prompt descriptor and handler patterns.
+ *
+ * <p>Three handler flavors: {@link PromptHandler} (simple, messages only),
+ * {@link InputRequiredPromptHandler} (sync, returns {@link PromptHandlerResult} — messages
+ * or an input-required/MRTR round-trip), and {@link AsyncPromptHandler} (non-blocking).
  */
 final class PromptHandlerExample {
 
@@ -50,5 +58,17 @@ final class PromptHandlerExample {
                 .title("Format Tool")
                 .addArguments(PromptArgument.of("input", null, "Input data", true))
                 .build();
+    }
+
+    /** Sync handler with request context — returns a PromptHandlerResult. */
+    static InputRequiredPromptHandler syncHandler() {
+        return (ctx, request) ->
+                PromptHandlerResult.messages(List.of(PromptMessage.user("Rewrite: " + request.arguments())));
+    }
+
+    /** Async handler — returns a CompletionStage for non-blocking backends. */
+    static AsyncPromptHandler asyncHandler() {
+        return (ctx, request) -> CompletableFuture.supplyAsync(
+                () -> PromptHandlerResult.messages(List.of(PromptMessage.user("Rewrite: " + request.arguments()))));
     }
 }
