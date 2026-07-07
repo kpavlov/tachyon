@@ -88,8 +88,8 @@ public final class YouComSearchTool extends AbstractSyncToolHandler {
         var items = MAPPER.createArrayNode();
         for (JsonNode node : results) {
             var item = MAPPER.createObjectNode();
-            item.put("title", node.path("title").asText(""));
-            item.put("url", node.path("url").asText(""));
+            item.put("title", node.path("title").asString(""));
+            item.put("url", node.path("url").asString(""));
             item.put("snippet", firstText(node, "description", "snippet", "content"));
             items.add(item);
         }
@@ -101,7 +101,7 @@ public final class YouComSearchTool extends AbstractSyncToolHandler {
 
     private static String firstText(JsonNode node, String... fields) {
         for (String field : fields) {
-            var value = node.path(field).asText("");
+            var value = node.path(field).asString("");
             if (!value.isBlank()) return value;
         }
         return "";
@@ -120,11 +120,11 @@ public final class YouComSearchTool extends AbstractSyncToolHandler {
         for (int i = 0; i < items.size(); i++) {
             var item = items.get(i);
             out.append(i + 1).append(". ")
-                    .append(item.path("title").asText("(untitled)"))
+                    .append(item.path("title").asString("(untitled)"))
                     .append("\n")
-                    .append(item.path("url").asText(""))
+                    .append(item.path("url").asString(""))
                     .append("\n")
-                    .append(item.path("snippet").asText(""))
+                    .append(item.path("snippet").asString(""))
                     .append("\n\n");
         }
         return out.toString().trim();
