@@ -4,11 +4,11 @@
 
 package dev.tachyonmcp.server.session;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseConnection;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class InMemorySessionStoreTest {
 

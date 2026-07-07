@@ -80,7 +80,8 @@ public final class InMemorySessionLogRouter implements SessionLogRouter {
     public List<SessionEvent> replay(String sessionId, long lastSeq) {
         var snap = snapshot();
         var result = new ArrayList<SessionEvent>();
-        int start = lastSeq < 0 ? 0 : Math.clamp(lastSeq - snap.firstIndex(), 0, snap.events().length);
+        // Contract: events with sequence number GREATER THAN lastSeq — resume after it, like pump.
+        int start = lastSeq < 0 ? 0 : Math.clamp(lastSeq + 1 - snap.firstIndex(), 0, snap.events().length);
         for (int i = start; i < snap.events().length; i++) {
             var event = snap.events()[i];
             if (event.sessionId().equals(sessionId)) {
