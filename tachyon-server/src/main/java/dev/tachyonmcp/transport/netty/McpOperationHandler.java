@@ -297,7 +297,12 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             if (!server.isStateless()) {
                 var resultJson = responseBody.toString(StandardCharsets.UTF_8);
                 server.appendEvent(new SessionEvent.ResponseEvent(
-                        sessionId, requestId, resultJson, System.currentTimeMillis(), sseEventId));
+                        sessionId,
+                        requestId,
+                        resultJson,
+                        System.currentTimeMillis(),
+                        sseEventId,
+                        postStream.streamKey()));
             }
             postStream.writeEvent(sseEventId, responseBody);
             responseBody = null;

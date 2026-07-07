@@ -23,12 +23,13 @@ class McpSessionEventTest {
 
     @Test
     void responseEvent() {
-        var event = new SessionEvent.ResponseEvent("sess_1", 1, "{\"result\":\"ok\"}", 2000L);
+        var event = new SessionEvent.ResponseEvent("sess_1", 1, "{\"result\":\"ok\"}", 2000L, -1, null);
 
         assertThat(event.sessionId()).isEqualTo("sess_1");
         assertThat(event.requestId()).isEqualTo(1);
         assertThat(event.resultJson()).isEqualTo("{\"result\":\"ok\"}");
         assertThat(event.timestamp()).isEqualTo(2000L);
+        assertThat(event.streamKey()).isNull();
     }
 
     @Test
@@ -43,7 +44,7 @@ class McpSessionEventTest {
     @Test
     void outboundRequestEvent() {
         var event = new SessionEvent.OutboundRequestEvent(
-                "sess_1", "uuid-123", "sampling/createMessage", "{\"prompt\":\"hi\"}", 5000L, 42L);
+                "sess_1", "uuid-123", "sampling/createMessage", "{\"prompt\":\"hi\"}", 5000L, 42L, "17");
 
         assertThat(event.sessionId()).isEqualTo("sess_1");
         assertThat(event.requestId()).isEqualTo("uuid-123");
@@ -51,14 +52,15 @@ class McpSessionEventTest {
         assertThat(event.paramsJson()).isEqualTo("{\"prompt\":\"hi\"}");
         assertThat(event.timestamp()).isEqualTo(5000L);
         assertThat(event.sseEventId()).isEqualTo(42L);
+        assertThat(event.streamKey()).isEqualTo("17");
     }
 
     @Test
     void allEventsAreSealed() {
         var request = new SessionEvent.RequestEvent("a", 1, "m", "{}", 1L);
-        var response = new SessionEvent.ResponseEvent("a", 2, "{}", 2L);
+        var response = new SessionEvent.ResponseEvent("a", 2, "{}", 2L, -1, null);
         var cancel = new SessionEvent.CancelEvent("a", 3, 3L);
-        var outbound = new SessionEvent.OutboundRequestEvent("a", 5, "m", "{}", 5L, 5L);
+        var outbound = new SessionEvent.OutboundRequestEvent("a", 5, "m", "{}", 5L, 5L, null);
 
         assertThat(request).isInstanceOf(SessionEvent.class);
         assertThat(response).isInstanceOf(SessionEvent.class);

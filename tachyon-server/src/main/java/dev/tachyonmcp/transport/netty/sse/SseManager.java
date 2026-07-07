@@ -77,13 +77,22 @@ public class SseManager {
         connection.send(primeSse);
     }
 
+    /**
+     * Replays the missed events of ONE stream, identified by the {@code Last-Event-ID}: a plain
+     * numeric id resumes the session's GET stream, {@code <n>#<key>} resumes the POST-SSE stream
+     * with that key. Events of other streams are never replayed (MCP Streamable HTTP: "the server
+     * MUST NOT replay messages that would have been sent on a different stream").
+     */
     void replayEvents(Session session, String lastEventId) {
         try {
-            var lastSseId = Long.parseLong(lastEventId);
+            var hash = lastEventId.indexOf('#');
+            var lastSseId = Long.parseLong(hash < 0 ? lastEventId : lastEventId.substring(0, hash));
+            var targetStreamKey = hash < 0 ? null : lastEventId.substring(hash + 1);
             var replayed = server.replay(session.id(), -1);
             for (var event : replayed) {
                 var sseId = event.sseEventId();
                 if (sseId < 0 || sseId <= lastSseId) continue;
+                if (!java.util.Objects.equals(event.streamKey(), targetStreamKey)) continue;
                 var sseEvent = Server.toSseEvent(event);
                 if (sseEvent == null) continue;
                 if (!session.send(sseEvent)) break; // session closed or throttled mid-replay

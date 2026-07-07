@@ -35,7 +35,7 @@ public class ResourceRegistry {
     private final ConcurrentHashMap<String, ResourceEntry> byName = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ResourceEntry> byUri = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ResourceTemplateEntry> templates = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Set<String>> subscriptions = new ConcurrentHashMap<>();
+    final ConcurrentHashMap<String, Set<String>> subscriptions = new ConcurrentHashMap<>();
     private final Server server;
 
     private final List<Runnable> onChangeListeners = new CopyOnWriteArrayList<>();
@@ -143,7 +143,7 @@ public class ResourceRegistry {
                         .thenComparing(ResourceTemplateEntry::name))
                 .map(template -> {
                     var matcher = template.compiledPattern().matcher(uri);
-                    if (!matcher.matches()) return (TemplateMatch) null;
+                    if (!matcher.matches()) return null;
                     var params = new LinkedHashMap<String, String>();
                     for (var name : template.paramNames()) {
                         params.put(name, matcher.group(name));
@@ -169,6 +169,29 @@ public class ResourceRegistry {
         return subs != null && subs.contains(sessionId);
     }
 
+    /**
+     * Subscribes the session to the resource URI. Add and removal both run inside the map's
+     * per-key operation ({@code compute}/{@code computeIfPresent}), so a subscribe can never land
+     * in a set that a concurrent unsubscribe has already unlinked from the map.
+     */
+    void subscribe(String uri, String sessionId) {
+        subscriptions.compute(uri, (k, set) -> {
+            if (set == null) {
+                set = new CopyOnWriteArraySet<>();
+            }
+            set.add(sessionId);
+            return set;
+        });
+    }
+
+    /** Removes the session's subscription to the URI, pruning the map entry when it empties. */
+    void unsubscribe(String uri, String sessionId) {
+        subscriptions.computeIfPresent(uri, (k, set) -> {
+            set.remove(sessionId);
+            return set.isEmpty() ? null : set;
+        });
+    }
+
     /** Notifies all subscribed sessions that a resource has been updated. */
     public void notifyResourceUpdated(String uri) {
         var subscribedSessionIds = subscriptions.get(uri);
@@ -179,8 +202,12 @@ public class ResourceRegistry {
         paramsMap.put("uri", uri);
         for (var sessionId : subscribedSessionIds) {
             server.getSession(sessionId)
-                    .ifPresent(
-                            session -> server.sendNotification(session, "notifications/resources/updated", paramsMap));
+                    .ifPresentOrElse(
+                            session -> server.sendNotification(session, "notifications/resources/updated", paramsMap),
+                            // Session is gone (closed/expired) — nothing ever sweeps its
+                            // subscriptions, so drop it lazily here to stop the set growing
+                            // with dead ids. Safe while iterating: COW set snapshot.
+                            () -> unsubscribe(uri, sessionId));
         }
     }
 
@@ -318,9 +345,7 @@ public class ResourceRegistry {
             if (session == null) {
                 return JsonRpcErrors.invalidRequest("resources/subscribe requires a session");
             }
-            registry.subscriptions
-                    .computeIfAbsent(uri, k -> new CopyOnWriteArraySet<>())
-                    .add(session.id());
+            registry.subscribe(uri, session.id());
             return context.responseMapper().emptyResult();
         }
 
@@ -355,13 +380,7 @@ public class ResourceRegistry {
             if (session == null) {
                 return JsonRpcErrors.invalidRequest("resources/unsubscribe requires a session");
             }
-            var subs = registry.subscriptions.get(uri);
-            if (subs != null) {
-                // Do not prune an emptied set from the map: a concurrent subscribe may hold a
-                // reference to it via computeIfAbsent and be about to add() — removing the entry
-                // here would strand that subscription. An empty per-URI set is negligible.
-                subs.remove(session.id());
-            }
+            registry.unsubscribe(uri, session.id());
             return context.responseMapper().emptyResult();
         }
 

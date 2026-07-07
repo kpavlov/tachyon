@@ -53,7 +53,7 @@ class ServerTest {
         try (var server = TachyonServer.builder().build()) {
             var session = server.createSession("sess_1");
 
-            var response = new SessionEvent.ResponseEvent("sess_1", 1, "{\"ok\":true}", 1000L);
+            var response = new SessionEvent.ResponseEvent("sess_1", 1, "{\"ok\":true}", 1000L, -1, null);
             var sseEvent = server.appendResponse(session, response);
 
             assertThat(sseEvent.event()).isEqualTo("message");
@@ -69,9 +69,9 @@ class ServerTest {
         try (var server = TachyonServer.builder().build()) {
             server.createSession("sess_1");
 
-            server.appendEvent(new SessionEvent.ResponseEvent("sess_1", 1, "{\"a\":1}", 100L));
-            server.appendEvent(new SessionEvent.ResponseEvent("sess_1", 2, "{\"b\":2}", 200L));
-            server.appendEvent(new SessionEvent.ResponseEvent("sess_1", 3, "{\"c\":3}", 300L));
+            server.appendEvent(new SessionEvent.ResponseEvent("sess_1", 1, "{\"a\":1}", 100L, -1, null));
+            server.appendEvent(new SessionEvent.ResponseEvent("sess_1", 2, "{\"b\":2}", 200L, -1, null));
+            server.appendEvent(new SessionEvent.ResponseEvent("sess_1", 3, "{\"c\":3}", 300L, -1, null));
 
             var replayed = server.replay("sess_1", -1);
             assertThat(replayed).hasSize(3);
@@ -100,8 +100,9 @@ class ServerTest {
             var session = server.createSession("sess_1");
             session.connection(conn);
 
-            server.appendEvent(new SessionEvent.ResponseEvent("sess_1", 1, "{\"a\":1}", 100L));
-            server.appendEvent(new SessionEvent.NotificationEvent("sess_1", "notifications/message", "{}", 200L));
+            server.appendEvent(new SessionEvent.ResponseEvent("sess_1", 1, "{\"a\":1}", 100L, -1, null));
+            server.appendEvent(
+                    new SessionEvent.NotificationEvent("sess_1", "notifications/message", "{}", 200L, -1, null));
 
             server.pumpChronicle(session);
 
@@ -142,7 +143,7 @@ class ServerTest {
     @Test
     void toSseEventConvertsOutboundRequestEvent() {
         var event = new SessionEvent.OutboundRequestEvent(
-                "s", "req-1", "sampling/createMessage", "{\"p\":\"v\"}", 100L, 7L);
+                "s", "req-1", "sampling/createMessage", "{\"p\":\"v\"}", 100L, 7L, null);
 
         var sseEvent = Server.toSseEvent(event);
 
@@ -166,8 +167,9 @@ class ServerTest {
 
     @Test
     void toSseEventConvertsResponseAndNotificationEvents() {
-        var response = new SessionEvent.ResponseEvent("s", 1, "{\"ok\":true}", 100L, 5L);
-        var notification = new SessionEvent.NotificationEvent("s", "notifications/tools/list_changed", "{}", 100L, 7L);
+        var response = new SessionEvent.ResponseEvent("s", 1, "{\"ok\":true}", 100L, 5L, null);
+        var notification =
+                new SessionEvent.NotificationEvent("s", "notifications/tools/list_changed", "{}", 100L, 7L, null);
 
         var ssResponse = Server.toSseEvent(response);
         assertThat(ssResponse).isNotNull();
@@ -187,7 +189,7 @@ class ServerTest {
             server.createSession("sess_replay");
 
             server.appendEvent(new SessionEvent.RequestEvent("sess_replay", 1, "ping", "{}", 100L));
-            server.appendEvent(new SessionEvent.ResponseEvent("sess_replay", 1, "{\"pong\":true}", 200L));
+            server.appendEvent(new SessionEvent.ResponseEvent("sess_replay", 1, "{\"pong\":true}", 200L, -1, null));
             server.appendEvent(new SessionEvent.CancelEvent("sess_replay", 2, 300L));
 
             var allEvents = server.replay("sess_replay", -1);
