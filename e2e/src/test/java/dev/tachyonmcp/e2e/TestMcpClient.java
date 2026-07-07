@@ -96,8 +96,7 @@ public record TestMcpClient(int serverPort, HttpClient httpClient) implements Cl
         var builder = baseRequest();
         if (sessionId != null) builder.header("MCP-Session-Id", sessionId);
         return httpClient.send(
-                builder.POST(HttpRequest.BodyPublishers.ofString(body)).build(),
-                HttpResponse.BodyHandlers.ofLines());
+                builder.POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofLines());
     }
 
     public HttpResponse<String> delete(String sessionId) throws Exception {

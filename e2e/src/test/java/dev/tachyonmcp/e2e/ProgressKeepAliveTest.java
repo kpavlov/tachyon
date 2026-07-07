@@ -114,10 +114,8 @@ class ProgressKeepAliveTest {
             var sessionId = client.initialize();
             var response = client.sendStreamingRequest(sessionId, TOOL_CALL);
             assertThat(response.statusCode()).isEqualTo(200);
-            assertThat(response.headers().firstValue("content-type").orElse(""))
-                    .startsWith("text/event-stream");
-            var consume = CompletableFuture.runAsync(
-                    () -> response.body().forEach(lines::add));
+            assertThat(response.headers().firstValue("content-type").orElse("")).startsWith("text/event-stream");
+            var consume = CompletableFuture.runAsync(() -> response.body().forEach(lines::add));
             await().atMost(Duration.ofSeconds(10))
                     .untilAsserted(() -> assertThat(lines)
                             .as("reader-idle must emit an SSE comment heartbeat, not close the channel")
