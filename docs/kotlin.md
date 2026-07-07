@@ -22,7 +22,7 @@ val handle = TachyonServer(port = 8080) { /* configure */ }
 val handle = tachyonServer(port = 8080) { /* configure */ }
 
 // Server logic only, no transport — for testing
-val server: McpServer = buildServer { /* configure */ }
+val server: Server = buildServer { /* configure */ }
 ```
 
 ## Full example
@@ -76,7 +76,7 @@ Tool lambdas are `suspend` functions with access to `ToolScope`:
 ```kotlin
 tool(name = "reverse", description = "Reverse a string") {
     // this: ToolScope
-    // ctx: McpContext
+    // ctx: InteractionContext
     // args: ToolArgs
     val msg = args.string("message")
     ToolResult.text(msg.reversed())

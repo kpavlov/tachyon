@@ -14,6 +14,18 @@ import dev.tachyonmcp.server.features.tools.ToolResult;
     (ctx, args) -> ToolResult.text("Hello!")))
 ```
 
+The schema argument may be a Jackson `JsonNode` **or** a raw JSON `String` — an overload
+parses it for you (input and output schemas):
+
+```java
+.tool(SyncToolHandler.of("hello", "Say hello",
+    """
+    {"type":"object","properties":{"name":{"type":"string"}}}
+    """,   // inputSchemaJson
+    null,  // outputSchemaJson
+    (ctx, args) -> ToolResult.text("Hello, " + args.stringOr("name", "world") + "!")))
+```
+
 ### Class (recommended for complex tools)
 
 ```java
@@ -21,7 +33,7 @@ import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.runtime.InteractionContext;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
@@ -36,14 +48,15 @@ class WeatherTool extends AbstractSyncToolHandler {
     }
 
     WeatherTool() {
-        super(ToolDescriptor.builder("get_weather")
+        super(ToolDescriptor.builder()
+            .name("get_weather")
             .description("Get current weather for a city")
             .inputSchema(SCHEMA)
             .build());
     }
 
     @Override
-    public ToolResult handle(McpContext ctx, ToolArgs args) {
+    public ToolResult handle(InteractionContext ctx, ToolArgs args) {
         String city = args.string("city");
         return ToolResult.text("☀️ 22°C in " + city);
     }
@@ -62,7 +75,7 @@ class AsyncWeatherTool extends AbstractAsyncToolHandler {
     AsyncWeatherTool() { super(descriptor); }
 
     @Override
-    public CompletionStage<ToolResult> handleAsync(McpContext ctx, ToolArgs args) {
+    public CompletionStage<ToolResult> handleAsync(InteractionContext ctx, ToolArgs args) {
         return fetchWeather(args.string("city"))
             .thenApply(w -> ToolResult.text(w.summary()));
     }
@@ -73,13 +86,16 @@ class AsyncWeatherTool extends AbstractAsyncToolHandler {
 
 `ToolArgs` wraps the raw `Map<String, JsonNode>` with typed accessors:
 
-| Method                | Returns    |
-|-----------------------|------------|
-| `args.string("key")`  | `String`   |
-| `args.integer("key")` | `int`      |
-| `args.bool("key")`    | `boolean`  |
-| `args.node("key")`    | `JsonNode` |
-| `args.has("key")`     | `boolean`  |
+| Method                    | Returns    |
+|---------------------------|------------|
+| `args.string("key")`      | `String`   |
+| `args.intValue("key")`    | `int`      |
+| `args.boolValue("key")`   | `boolean`  |
+| `args.doubleValue("key")` | `double`   |
+| `args.node("key")`        | `JsonNode` |
+| `args.has("key")`         | `boolean`  |
+
+`*Or(key, fallback)` and `stringOpt(key)` variants avoid throwing on missing keys.
 
 ## Return results
 

@@ -33,7 +33,7 @@ Tachyon enforces valid transitions. Invalid moves throw `IllegalStateException`.
 import dev.tachyonmcp.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.server.features.tasks.TaskState;
 
-McpServer server = handle.server();
+Server server = handle.server();
 
 // Create
 TaskEntry task = server.tasks().create("task-001", "Processing...", null);

@@ -81,7 +81,10 @@ public interface AsyncToolHandler extends ToolHandler {
 
     /**
      * Wraps a synchronous tool handler as an async one.
+     *
+     * @deprecated Use {@link SyncToolHandler} directly
      */
+    @Deprecated
     static AsyncToolHandler adapt(SyncToolHandler sync) {
         Objects.requireNonNull(sync, "sync");
         return new AsyncToolHandler() {

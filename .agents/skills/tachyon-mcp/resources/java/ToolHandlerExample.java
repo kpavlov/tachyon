@@ -2,13 +2,15 @@
  * Copyright (c) 2026 Konstantin Pavlov.
  */
 
-import dev.tachyonmcp.server.features.tools.*;
 import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
+import dev.tachyonmcp.server.features.tools.SyncToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolArgs;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 import org.jspecify.annotations.NonNull;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
-
-import java.util.Map;
 
 /**
  * Demonstrates the two tool-handler patterns:
@@ -56,7 +58,8 @@ final class ToolHandlerExample {
      */
     static final class GreetingTool extends AbstractSyncToolHandler {
         GreetingTool() {
-            super(ToolDescriptor.builder("greeting")
+            super(ToolDescriptor.builder()
+                    .name("greeting")
                     .title("Greeting")
                     .description("Generates a personalized greeting")
                     .inputSchema(GREET_SCHEMA)

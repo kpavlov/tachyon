@@ -6,7 +6,6 @@ package dev.tachyonmcp.server.features.prompts;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.features.HandlerFutures;
-import java.util.Objects;
 import java.util.concurrent.CompletionStage;
 
 /**
@@ -22,13 +21,5 @@ public interface AsyncPromptHandler extends InputRequiredPromptHandler {
     @Override
     default PromptHandlerResult handle(InteractionContext ctx, PromptRequest request) throws Exception {
         return HandlerFutures.joinInterruptibly(handleAsync(ctx, request));
-    }
-
-    /**
-     * Wraps a synchronous prompt handler as an async one.
-     */
-    static AsyncPromptHandler adapt(InputRequiredPromptHandler sync) {
-        Objects.requireNonNull(sync, "sync");
-        return sync::handleAsync;
     }
 }

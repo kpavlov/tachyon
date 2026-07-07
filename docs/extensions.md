@@ -2,18 +2,18 @@
 
 Extensions add custom MCP methods and negotiate capabilities with clients via the `initialize` handshake. They implement [SEP-2133](https://modelcontextprotocol.io/seps/2133-extensions).
 
-## The McpExtension interface
+## The ServerExtension interface
 
 ```java
-import dev.tachyonmcp.server.extensions.McpExtension;
-import dev.tachyonmcp.server.McpServer;
-import dev.tachyonmcp.server.session.McpContext;
+import dev.tachyonmcp.server.extensions.ServerExtension;
+import dev.tachyonmcp.server.Server;
+import dev.tachyonmcp.runtime.MutableInteractionContext;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import java.util.Map;
 import java.util.Set;
 
-public class AuditExtension implements McpExtension {
+public class AuditExtension implements ServerExtension {
 
     @Override
     public String extensionId() {
@@ -26,7 +26,7 @@ public class AuditExtension implements McpExtension {
     }
 
     @Override
-    public void bootstrap(McpServer server) {
+    public void bootstrap(Server server) {
         server.registerHandler("audit/log", (ctx, params) -> {
             // handle audit/log method
             return server.responseMapper().emptyResult();
@@ -34,7 +34,7 @@ public class AuditExtension implements McpExtension {
     }
 
     @Override
-    public void onConnectionInit(McpContext ctx, Map<String, JsonNode> clientSettings) {
+    public void onConnectionInit(MutableInteractionContext ctx, Map<String, JsonNode> clientSettings) {
         // called when a client negotiates this extension
     }
 
