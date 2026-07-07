@@ -15,6 +15,7 @@ import java.net.http.HttpClient;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 class YouComSearchToolTest {
@@ -24,11 +25,17 @@ class YouComSearchToolTest {
     }
 
     @Test
+    void fromEnvSkipsBlankKey() {
+        assertThat(YouComSearchTool.fromEnv(Map.of("YDC_API_KEY", "   "))).isEmpty();
+    }
+
+    @Test
     void handlesSearchResults() throws Exception {
         var server = HttpServer.create(new InetSocketAddress(0), 0);
+        var header = new AtomicReference<String>();
         try {
             server.createContext("/v1/search", exchange -> {
-                assertThat(exchange.getRequestHeaders().getFirst("X-API-Key")).isEqualTo("test-key");
+                header.set(exchange.getRequestHeaders().getFirst("X-API-Key"));
                 var body = "{\"results\":{\"web\":[{\"title\":\"Example\",\"url\":\"https://example.com\",\"description\":\"Snippet\"}]}}";
                 exchange.sendResponseHeaders(200, body.getBytes().length);
                 try (var os = exchange.getResponseBody()) {
@@ -44,9 +51,63 @@ class YouComSearchToolTest {
                     HttpClient.newHttpClient());
             var result = tool.handle(noopContext(), new ToolArgs(Map.of("query", "playwright", "count", 3)));
 
+            assertThat(header.get()).isEqualTo("test-key");
             assertThat(result).isInstanceOf(ToolResult.Success.class);
             assertThat(result).isInstanceOfSatisfying(ToolResult.Success.class, success ->
                     assertThat(success.content().toString()).contains("Example", "https://example.com", "Snippet"));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void returnsErrorForNon2xxResponse() throws Exception {
+        var server = HttpServer.create(new InetSocketAddress(0), 0);
+        try {
+            server.createContext("/v1/search", exchange -> {
+                var body = "upstream unavailable";
+                exchange.sendResponseHeaders(503, body.getBytes().length);
+                try (var os = exchange.getResponseBody()) {
+                    os.write(body.getBytes());
+                }
+            });
+            server.setExecutor(Executors.newSingleThreadExecutor());
+            server.start();
+
+            var tool = new YouComSearchTool(
+                    "test-key",
+                    URI.create("http://localhost:" + server.getAddress().getPort() + "/v1/search"),
+                    HttpClient.newHttpClient());
+            var result = tool.handle(noopContext(), new ToolArgs(Map.of("query", "playwright")));
+
+            assertThat(result).isInstanceOf(ToolResult.ErrorResult.class);
+            assertThat(result.toString()).contains("HTTP 503");
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void returnsErrorForInvalidJson() throws Exception {
+        var server = HttpServer.create(new InetSocketAddress(0), 0);
+        try {
+            server.createContext("/v1/search", exchange -> {
+                var body = "not-json";
+                exchange.sendResponseHeaders(200, body.getBytes().length);
+                try (var os = exchange.getResponseBody()) {
+                    os.write(body.getBytes());
+                }
+            });
+            server.setExecutor(Executors.newSingleThreadExecutor());
+            server.start();
+
+            var tool = new YouComSearchTool(
+                    "test-key",
+                    URI.create("http://localhost:" + server.getAddress().getPort() + "/v1/search"),
+                    HttpClient.newHttpClient());
+            var result = tool.handle(noopContext(), new ToolArgs(Map.of("query", "playwright")));
+
+            assertThat(result).isInstanceOf(ToolResult.ErrorResult.class);
         } finally {
             server.stop(0);
         }
