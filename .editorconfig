@@ -29,7 +29,8 @@ trim_trailing_whitespace = false
 [*.java]
 indent_size = tab
 tab_width = 4
-ij_java_names_count_to_use_import_on_demand = 2147483647
+ij_java_class_count_to_use_import_on_demand = 99999
+ij_java_names_count_to_use_import_on_demand = 99999
 ij_java_packages_to_use_import_on_demand = unset
 
 # noinspection EditorConfigKeyCorrectness

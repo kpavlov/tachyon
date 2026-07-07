@@ -77,7 +77,17 @@ public class SessionManager implements AutoCloseable {
     /** Starts the background janitor that closes expired sessions. */
     public void startJanitor(Duration ttl) {
         final var ttlNanos = ttl.toNanos();
-        janitor.scheduleWithFixedDelay(() -> sweep(ttlNanos), 5, 5, TimeUnit.SECONDS);
+        janitor.scheduleWithFixedDelay(
+                () -> {
+                    try {
+                        sweep(ttlNanos);
+                    } catch (Exception e) {
+                        logger.warn("Janitor sweep failed", e);
+                    }
+                },
+                5,
+                5,
+                TimeUnit.SECONDS);
         logger.debug("Session janitor started (interval=5s, ttl={}ms)", ttlNanos / 1_000_000);
     }
 
@@ -85,16 +95,20 @@ public class SessionManager implements AutoCloseable {
     void sweep(long ttlNanos) {
         long now = System.nanoTime();
         for (var session : store.values()) {
-            // Elapsed-based comparison, not `lastActivity < now - ttl`: the latter breaks
-            // across nanoTime's sign wraparound.
-            var expired = now - session.lastActivityNanos() > ttlNanos;
-            if (session.state() == SessionState.CLOSED || expired) {
-                session.close();
-                // Atomic conditional remove: a replacement session created under the
-                // same id (custom SessionIdGenerator) must never be evicted.
-                if (store.remove(session.id(), session)) {
-                    logger.debug("Janitor removed session: {}", session.id());
+            try {
+                // Elapsed-based comparison, not `lastActivity < now - ttl`: the latter breaks
+                // across nanoTime's sign wraparound.
+                var expired = now - session.lastActivityNanos() > ttlNanos;
+                if (session.state() == SessionState.CLOSED || expired) {
+                    session.close();
+                    // Atomic conditional remove: a replacement session created under the
+                    // same id (custom SessionIdGenerator) must never be evicted.
+                    if (store.remove(session.id(), session)) {
+                        logger.debug("Janitor removed session: {}", session.id());
+                    }
                 }
+            } catch (Exception e) {
+                logger.warn("Error while sweeping session: {}", session.id(), e);
             }
         }
     }
