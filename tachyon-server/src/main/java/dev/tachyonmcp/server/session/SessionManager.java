@@ -77,28 +77,26 @@ public class SessionManager implements AutoCloseable {
     /** Starts the background janitor that closes expired sessions. */
     public void startJanitor(Duration ttl) {
         final var ttlNanos = ttl.toNanos();
-        janitor.scheduleWithFixedDelay(
-                () -> {
-                    long now = System.nanoTime();
-                    for (var session : store.values()) {
-                        // Elapsed-based comparison, not `lastActivity < now - ttl`: the latter breaks
-                        // across nanoTime's sign wraparound.
-                        var expired = now - session.lastActivityNanos() > ttlNanos;
-                        if (session.state() == SessionState.CLOSED || expired) {
-                            session.close();
-                            // Only evict if this exact session is still mapped: a replacement created
-                            // with the same id (custom SessionIdGenerator) must not be removed.
-                            if (store.get(session.id()).orElse(null) == session) {
-                                store.remove(session.id());
-                                logger.debug("Janitor removed session: {}", session.id());
-                            }
-                        }
-                    }
-                },
-                5,
-                5,
-                TimeUnit.SECONDS);
+        janitor.scheduleWithFixedDelay(() -> sweep(ttlNanos), 5, 5, TimeUnit.SECONDS);
         logger.debug("Session janitor started (interval=5s, ttl={}ms)", ttlNanos / 1_000_000);
+    }
+
+    /** One janitor pass: closes and evicts sessions that are CLOSED or idle beyond the TTL. */
+    void sweep(long ttlNanos) {
+        long now = System.nanoTime();
+        for (var session : store.values()) {
+            // Elapsed-based comparison, not `lastActivity < now - ttl`: the latter breaks
+            // across nanoTime's sign wraparound.
+            var expired = now - session.lastActivityNanos() > ttlNanos;
+            if (session.state() == SessionState.CLOSED || expired) {
+                session.close();
+                // Atomic conditional remove: a replacement session created under the
+                // same id (custom SessionIdGenerator) must never be evicted.
+                if (store.remove(session.id(), session)) {
+                    logger.debug("Janitor removed session: {}", session.id());
+                }
+            }
+        }
     }
 
     public void close() {

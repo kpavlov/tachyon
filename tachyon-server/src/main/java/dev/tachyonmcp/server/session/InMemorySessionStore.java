@@ -41,6 +41,22 @@ public class InMemorySessionStore implements SessionStore {
     }
 
     @Override
+    public boolean remove(String sessionId, Session expected) {
+        // Not sessions.remove(key, value): that compares by equals, and Session.equals is
+        // id-based — it would match (and evict) a replacement instance under the same id.
+        // computeIfPresent gives an atomic identity-conditional remove.
+        var removed = new boolean[1];
+        sessions.computeIfPresent(sessionId, (id, current) -> {
+            if (current == expected) {
+                removed[0] = true;
+                return null;
+            }
+            return current;
+        });
+        return removed[0];
+    }
+
+    @Override
     public void close() {
         sessions.clear();
     }
