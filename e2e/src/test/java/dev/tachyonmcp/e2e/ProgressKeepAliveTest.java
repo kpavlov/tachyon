@@ -5,6 +5,7 @@
 package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.Server;
@@ -18,6 +19,9 @@ import dev.tachyonmcp.transport.netty.NettyIoEngine;
 import dev.tachyonmcp.transport.netty.NettyServer;
 import dev.tachyonmcp.transport.netty.NettyServerConfig;
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -105,12 +109,24 @@ class ProgressKeepAliveTest {
 
     @Test
     void progressKeepAliveSurvivesReaderIdle() throws Exception {
-        // slow-progress runs ~2s; READER_IDLE=250ms fires ~8 times, so at least one heartbeat is
-        // emitted onto the still-open stream instead of the channel being reaped.
-        var body = callSlowProgressAndAssertSse();
-        assertThat(body)
-                .as("reader-idle must emit an SSE comment heartbeat, not close the channel")
-                .contains(":\r\n");
+        var lines = new CopyOnWriteArrayList<String>();
+        try (var client = new TestMcpClient(port)) {
+            var sessionId = client.initialize();
+            var response = client.sendStreamingRequest(sessionId, TOOL_CALL);
+            assertThat(response.statusCode()).isEqualTo(200);
+            assertThat(response.headers().firstValue("content-type").orElse(""))
+                    .startsWith("text/event-stream");
+            var consume = CompletableFuture.runAsync(
+                    () -> response.body().forEach(lines::add));
+            await().atMost(Duration.ofSeconds(10))
+                    .untilAsserted(() -> assertThat(lines)
+                            .as("reader-idle must emit an SSE comment heartbeat, not close the channel")
+                            .anyMatch(l -> l.startsWith(":")));
+            consume.get(10, TimeUnit.SECONDS);
+            var body = String.join("\n", lines);
+            assertThat(body).contains("notifications/progress");
+            assertThat(body).contains("done");
+        }
     }
 
     /**

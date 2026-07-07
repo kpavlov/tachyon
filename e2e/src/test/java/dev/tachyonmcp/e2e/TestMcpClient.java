@@ -9,6 +9,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
 public record TestMcpClient(int serverPort, HttpClient httpClient) implements Closeable {
@@ -89,6 +90,14 @@ public record TestMcpClient(int serverPort, HttpClient httpClient) implements Cl
 
     public HttpResponse<String> sendRequest(String sessionId, String body) throws Exception {
         return post(sessionId, body);
+    }
+
+    public HttpResponse<Stream<String>> sendStreamingRequest(String sessionId, String body) throws Exception {
+        var builder = baseRequest();
+        if (sessionId != null) builder.header("MCP-Session-Id", sessionId);
+        return httpClient.send(
+                builder.POST(HttpRequest.BodyPublishers.ofString(body)).build(),
+                HttpResponse.BodyHandlers.ofLines());
     }
 
     public HttpResponse<String> delete(String sessionId) throws Exception {
