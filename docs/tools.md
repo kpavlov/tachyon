@@ -62,9 +62,14 @@ Register: `.tool(new WeatherTool())`
 
 ### Optional You.com search tool
 
-Tachyon also ships an opt-in helper for live web search. If `YDC_API_KEY` is present,
-you can register `new YouComSearchTool(System.getenv("YDC_API_KEY"))` and expose a
-`youcom_search` tool that queries `https://ydc-index.io/v1/search`.
+Tachyon also ships an opt-in helper for live web search. Register it conditionally via
+`YouComSearchTool.fromEnv(System.getenv())`, which returns an empty `Optional` when
+`YDC_API_KEY` is unset, and expose a `youcom_search` tool that queries
+`https://ydc-index.io/v1/search` when present:
+
+```java
+YouComSearchTool.fromEnv(System.getenv()).ifPresent(builder::tool);
+```
 
 If `YDC_API_KEY` is unset, simply skip registration and the server behaves exactly as before.
 
