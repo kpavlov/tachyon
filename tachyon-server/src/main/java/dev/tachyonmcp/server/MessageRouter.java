@@ -5,7 +5,7 @@
 package dev.tachyonmcp.server;
 
 import dev.tachyonmcp.runtime.Session;
-import dev.tachyonmcp.runtime.SseEvent;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Routes server-to-client SSE events to the appropriate transport channel.
@@ -21,13 +21,15 @@ import dev.tachyonmcp.runtime.SseEvent;
 public interface MessageRouter {
 
     /**
-     * Attempts to route the given event via a bound {@link OutboundSseStream}.
+     * Resolves the {@link OutboundSseStream} bound in the current dispatch context for the given
+     * session, if any. The caller needs the stream <em>before</em> building the event (its
+     * {@link OutboundSseStream#streamKey()} goes into the SSE event id and the event log), so
+     * resolution and delivery are separate steps.
      *
      * @param session the target session for the event
-     * @param event   the SSE event to deliver
-     * @return {@code true} if the event was written to an {@link OutboundSseStream} (caller
-     *         should NOT fall through to GET-SSE); {@code false} otherwise (caller should buffer
-     *         + flush via the session's connection)
+     * @return the bound stream to deliver on, or {@code null} to fall through to the session's
+     *         GET-SSE connection
      */
-    boolean tryRoute(Session session, SseEvent event);
+    @Nullable
+    OutboundSseStream resolve(Session session);
 }

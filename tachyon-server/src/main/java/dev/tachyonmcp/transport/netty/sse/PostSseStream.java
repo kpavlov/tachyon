@@ -8,6 +8,7 @@ import static dev.tachyonmcp.transport.netty.sse.SseManager.SSE_RETRY_DELAY_MS;
 
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.OutboundSseStream;
+import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.transport.netty.http.HttpHelpers;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -38,6 +39,7 @@ public final class PostSseStream implements OutboundSseStream {
     private final Channel channel;
     private final @Nullable String origin;
     private final LongSupplier eventIdSupplier;
+    private final String streamKey;
     private final List<SseEvent> queued = new ArrayList<>();
     private volatile boolean started = false;
     private boolean closed = false;
@@ -46,6 +48,15 @@ public final class PostSseStream implements OutboundSseStream {
         this.channel = channel;
         this.origin = origin;
         this.eventIdSupplier = eventIdSupplier;
+        // Session-unique key (one counter draw per POST) tagging this stream's events in the log
+        // and suffixing its SSE ids, so Last-Event-ID resolves to THIS stream on replay. Not the
+        // JSON-RPC request id — clients may reuse those across sequential requests.
+        this.streamKey = String.valueOf(eventIdSupplier.getAsLong());
+    }
+
+    @Override
+    public String streamKey() {
+        return streamKey;
     }
 
     @Override
@@ -101,8 +112,9 @@ public final class PostSseStream implements OutboundSseStream {
                 new DefaultHttpContent(ByteBufUtil.writeUtf8(channel.alloc(), "retry: " + SSE_RETRY_DELAY_MS + "\n")));
         SseHeartbeat.enable(channel);
         // Priming event: gives the client a Last-Event-ID baseline for reconnection (SEP-1699).
+        // Carries this stream's key so a resume from the priming id replays only this stream.
         var primingId = eventIdSupplier.getAsLong();
-        var priming = new SseEvent(String.valueOf(primingId), "message", "");
+        var priming = new SseEvent(Server.wireEventId(primingId, streamKey), "message", "");
         channel.write(new DefaultHttpContent(SseSerializer.encode(channel.alloc(), priming)));
         logger.trace("POST-SSE stream started, priming event id={}, channel={}", primingId, channel.id());
         for (var event : queued) {
@@ -143,14 +155,17 @@ public final class PostSseStream implements OutboundSseStream {
             // Stream not yet upgraded — fall back to the String path; rare path, OK to decode here.
             try {
                 queued.add(new SseEvent(
-                        String.valueOf(sseEventId), "message", body.toString(java.nio.charset.StandardCharsets.UTF_8)));
+                        Server.wireEventId(sseEventId, streamKey),
+                        "message",
+                        body.toString(java.nio.charset.StandardCharsets.UTF_8)));
             } finally {
                 body.release();
             }
             return;
         }
         var alloc = channel.alloc();
-        var prefix = ByteBufUtil.writeAscii(alloc, "id: " + sseEventId + "\nevent: message\ndata: ");
+        var prefix = ByteBufUtil.writeAscii(
+                alloc, "id: " + Server.wireEventId(sseEventId, streamKey) + "\nevent: message\ndata: ");
         var suffix = ByteBufUtil.writeAscii(alloc, "\n\n");
         var frame = alloc.compositeBuffer(3)
                 .addComponent(true, prefix)

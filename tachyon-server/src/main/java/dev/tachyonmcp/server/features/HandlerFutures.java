@@ -9,8 +9,11 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.function.BiFunction;
+import org.jspecify.annotations.Nullable;
 
-/** Static utilities for common CompletionStage patterns. */
+/**
+ * Static utilities for common CompletionStage patterns.
+ */
 public final class HandlerFutures {
 
     private HandlerFutures() {}
@@ -47,7 +50,9 @@ public final class HandlerFutures {
      * — benign, not a race.
      */
     public static CompletionStage<Object> completeOn(
-            CompletionStage<?> stage, DispatchContext ctx, BiFunction<Object, Throwable, Object> transformer) {
+            CompletionStage<?> stage,
+            DispatchContext ctx,
+            BiFunction<@Nullable Object, @Nullable Throwable, Object> transformer) {
         var done = stage.toCompletableFuture().isDone();
         var executor = done
                 ? (java.util.concurrent.Executor) Runnable::run
@@ -57,8 +62,9 @@ public final class HandlerFutures {
                     if (e != null) {
                         var cause = e instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : e;
                         return transformer.apply(null, cause);
+                    } else {
+                        return transformer.apply(result, null);
                     }
-                    return transformer.apply(result, null);
                 },
                 executor);
     }

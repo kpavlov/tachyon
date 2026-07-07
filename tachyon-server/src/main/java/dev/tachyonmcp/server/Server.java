@@ -6,11 +6,7 @@ package dev.tachyonmcp.server;
 
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
-import dev.tachyonmcp.runtime.Backpressure;
-import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.runtime.Session;
-import dev.tachyonmcp.runtime.SessionState;
-import dev.tachyonmcp.runtime.SseEvent;
+import dev.tachyonmcp.runtime.*;
 import dev.tachyonmcp.server.config.ServerConfig;
 import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.extensions.ServerExtension;
@@ -23,11 +19,7 @@ import dev.tachyonmcp.server.handlers.CompletionHandlers;
 import dev.tachyonmcp.server.handlers.InitializeHandler;
 import dev.tachyonmcp.server.handlers.LoggingHandlers;
 import dev.tachyonmcp.server.handlers.PingHandler;
-import dev.tachyonmcp.server.json.JacksonPayloadSerde;
-import dev.tachyonmcp.server.json.JsonSchemaValidator;
-import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
-import dev.tachyonmcp.server.json.PayloadDeserializer;
-import dev.tachyonmcp.server.json.PayloadSerializer;
+import dev.tachyonmcp.server.json.*;
 import dev.tachyonmcp.server.session.*;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.io.Closeable;
@@ -56,10 +48,6 @@ public class Server implements Closeable {
     private final SessionManager sessionManager;
     private final MessageRouter messageRouter = new OutboundSseStreamMessageRouter();
     private final AtomicLong eventIdCounter = new AtomicLong(0);
-    private final JsonSchemaValidator inputValidator;
-    private final JsonSchemaValidator outputValidator;
-    private final PayloadSerializer payloadSerializer;
-    private final PayloadDeserializer payloadDeserializer;
     private final ToolRegistry toolRegistry;
     private final ResourceRegistry resourceRegistry;
     private final TaskRegistry taskRegistry;
@@ -81,7 +69,9 @@ public class Server implements Closeable {
         RESPONSE_MAPPERS = List.copyOf(mappers);
     }
 
-    /** Returns the protocol response mapper for the default MCP version. */
+    /**
+     * Returns the protocol response mapper for the default MCP version.
+     */
     public ProtocolResponseMapper responseMapper() {
         for (var mapper : RESPONSE_MAPPERS) {
             if (mapper.supports("mcp", McpProtocol.VERSION)) {
@@ -91,32 +81,44 @@ public class Server implements Closeable {
         throw new IllegalStateException("No protocol response mapper found");
     }
 
-    /** Returns the server configuration. */
+    /**
+     * Returns the server configuration.
+     */
     public ServerConfig config() {
         return config;
     }
 
-    /** Returns {@code true} when running in stateless mode (no session persistence). */
+    /**
+     * Returns {@code true} when running in stateless mode (no session persistence).
+     */
     public boolean isStateless() {
         return !config.session().enabled();
     }
 
-    /** Returns the configured session id generator (defaults to {@link SessionIdGenerator#DEFAULT}). */
+    /**
+     * Returns the configured session id generator (defaults to {@link SessionIdGenerator#DEFAULT}).
+     */
     public SessionIdGenerator sessionIdGenerator() {
         return config.session().sessionIdGenerator();
     }
 
-    /** Returns the executor used for handler dispatch. */
+    /**
+     * Returns the executor used for handler dispatch.
+     */
     public ExecutorService executor() {
         return executor;
     }
 
-    /** Sets the logging level for a session. */
+    /**
+     * Sets the logging level for a session.
+     */
     public void setLoggingLevel(String sessionId, LoggingLevel level) {
         loggingLevels.put(sessionId, level);
     }
 
-    /** Returns the logging level for a session, or {@code null} if not set. */
+    /**
+     * Returns the logging level for a session, or {@code null} if not set.
+     */
     public LoggingLevel getLoggingLevel(String sessionId) {
         return loggingLevels.get(sessionId);
     }
@@ -137,7 +139,9 @@ public class Server implements Closeable {
         return requested.ordinal() >= configured.ordinal();
     }
 
-    /** Resolves effective capabilities based on configuration and registered features. */
+    /**
+     * Resolves effective capabilities based on configuration and registered features.
+     */
     public ServerCapabilities resolveCapabilities() {
         final var builder = ServerCapabilities.builder();
 
@@ -209,16 +213,18 @@ public class Server implements Closeable {
         this.router = Objects.requireNonNull(router, "router cannot be null");
         this.extensions = extensions != null ? extensions : List.of();
         this.sessionManager = new SessionManager(sessionStore);
-        this.inputValidator = inputValidator != null ? inputValidator : new NetworkntJsonSchemaValidator();
-        this.outputValidator = outputValidator != null ? outputValidator : this.inputValidator;
+        final JsonSchemaValidator inputValidator1 =
+                inputValidator != null ? inputValidator : new NetworkntJsonSchemaValidator();
+        final JsonSchemaValidator outputValidator1 = outputValidator != null ? outputValidator : inputValidator1;
         var defaultSerde = new JacksonPayloadSerde();
-        this.payloadSerializer = payloadSerializer != null ? payloadSerializer : defaultSerde;
-        this.payloadDeserializer = payloadDeserializer != null ? payloadDeserializer : defaultSerde;
-        this.toolRegistry = new ToolRegistry(
-                this.inputValidator, this.outputValidator, this.payloadSerializer, this.payloadDeserializer);
+        final PayloadSerializer payloadSerializer1 = payloadSerializer != null ? payloadSerializer : defaultSerde;
+        final PayloadDeserializer payloadDeserializer1 =
+                payloadDeserializer != null ? payloadDeserializer : defaultSerde;
+        this.toolRegistry =
+                new ToolRegistry(inputValidator1, outputValidator1, payloadSerializer1, payloadDeserializer1);
         this.resourceRegistry = new ResourceRegistry(this);
         this.taskRegistry = new TaskRegistry(this);
-        this.promptRegistry = new PromptRegistry(this.inputValidator);
+        this.promptRegistry = new PromptRegistry(inputValidator1);
         registerDefaults();
         bootstrapExtensions();
         setupChangeListeners(config);
@@ -306,7 +312,9 @@ public class Server implements Closeable {
         broadcastNotification(method, java.util.Map.of());
     }
 
-    /** Sends a notification to all active sessions. */
+    /**
+     * Sends a notification to all active sessions.
+     */
     public void broadcastNotification(String method, Object params) {
         // Serialize once — the payload is identical for every session.
         var paramsStr = JsonRpcCodec.toJsonParams(params);
@@ -329,19 +337,25 @@ public class Server implements Closeable {
         CompletionHandlers.register(methodHandlers);
     }
 
-    /** Registers a method handler keyed by its own method name. */
+    /**
+     * Registers a method handler keyed by its own method name.
+     */
     public void registerHandler(RpcMethodHandler handler) {
         methodHandlers.put(handler.method(), handler);
         logger.info("Handler registered: {}", handler.method());
     }
 
-    /** Registers a method handler with an explicit method name. */
+    /**
+     * Registers a method handler with an explicit method name.
+     */
     public void registerHandler(String method, RpcMethodHandler handler) {
         methodHandlers.put(method, handler);
         logger.info("Handler registered: {}", method);
     }
 
-    /** Returns the handler for a method, or {@code null} if not registered. */
+    /**
+     * Returns the handler for a method, or {@code null} if not registered.
+     */
     @Nullable
     public RpcMethodHandler getHandler(String method) {
         return methodHandlers.get(method);
@@ -367,23 +381,31 @@ public class Server implements Closeable {
         }
     }
 
-    /** Returns the registered extensions. */
+    /**
+     * Returns the registered extensions.
+     */
     public List<ServerExtension> extensions() {
         return Collections.unmodifiableList(extensions);
     }
 
-    /** Returns the extension ID that owns the given method, or {@code null} if none. */
+    /**
+     * Returns the extension ID that owns the given method, or {@code null} if none.
+     */
     public @Nullable String extensionForMethod(String method) {
         return extensionMethodOwners.get(method);
     }
 
-    /** Returns {@code true} if the given extension requires the meta envelope for its methods. */
+    /**
+     * Returns {@code true} if the given extension requires the meta envelope for its methods.
+     */
     public boolean extensionRequiresMeta(String extensionId) {
         var ext = extensionsById.get(extensionId);
         return ext != null && ext.requiresMetaEnvelope();
     }
 
-    /** Registers a tool with string JSON schemas and a handler function. */
+    /**
+     * Registers a tool with string JSON schemas and a handler function.
+     */
     public void registerTool(
             String name,
             @Nullable String description,
@@ -393,55 +415,75 @@ public class Server implements Closeable {
         registerTool(SyncToolHandler.of(name, description, inputSchemaJson, outputSchemaJson, fn));
     }
 
-    /** Registers a synchronous tool handler. */
+    /**
+     * Registers a synchronous tool handler.
+     */
     public void registerTool(SyncToolHandler handler) {
         toolRegistry.register(handler);
         logger.info("Tool registered: {}", handler.name());
     }
 
-    /** Registers an asynchronous tool handler. */
+    /**
+     * Registers an asynchronous tool handler.
+     */
     public void registerTool(AsyncToolHandler handler) {
         toolRegistry.register(handler);
         logger.info("Tool registered: {}", handler.name());
     }
 
-    /** Registers a tool handler. */
+    /**
+     * Registers a tool handler.
+     */
     public void registerTool(ToolHandler handler) {
         toolRegistry.register(handler);
         logger.info("Tool registered: {}", handler.descriptor().name());
     }
 
-    /** Returns the descriptor for a tool by name, or {@code null} if not registered. */
+    /**
+     * Returns the descriptor for a tool by name, or {@code null} if not registered.
+     */
     public @Nullable ToolDescriptor getTool(String name) {
         return toolRegistry.getDescriptor(name);
     }
 
-    /** Returns the resource registry. */
+    /**
+     * Returns the resource registry.
+     */
     public ResourceRegistry resources() {
         return resourceRegistry;
     }
 
-    /** Returns the prompt registry. */
+    /**
+     * Returns the prompt registry.
+     */
     public PromptRegistry prompts() {
         return promptRegistry;
     }
 
-    /** Returns the task registry. */
+    /**
+     * Returns the task registry.
+     */
     public TaskRegistry tasks() {
         return taskRegistry;
     }
 
-    /** Creates and registers a new session with the given ID. */
+    /**
+     * Creates and registers a new session with the given ID.
+     */
     public Session createSession(String sessionId) {
         return sessionManager.createSession(sessionId);
     }
 
-    /** Returns the session with the given ID, if present. */
+    /**
+     * Returns the session with the given ID, if present.
+     */
     public Optional<Session> getSession(String sessionId) {
         return sessionManager.getSession(sessionId);
     }
 
-    /** Removes and closes the session with the given ID. */
+    /**
+     * Removes and closes the session with the given ID.
+     */
     public void removeSession(String sessionId) {
         sessionManager.removeSession(sessionId);
     }
@@ -449,7 +491,7 @@ public class Server implements Closeable {
     SseEvent appendResponse(Session session, SessionEvent.ResponseEvent event) {
         var sseEventId = nextEventId();
         var enriched = new SessionEvent.ResponseEvent(
-                event.sessionId(), event.requestId(), event.resultJson(), event.timestamp(), sseEventId);
+                event.sessionId(), event.requestId(), event.resultJson(), event.timestamp(), sseEventId, null);
         router.append(enriched);
 
         var sseEvent = new SseEvent(String.valueOf(sseEventId), "message", event.resultJson());
@@ -458,12 +500,16 @@ public class Server implements Closeable {
         return sseEvent;
     }
 
-    /** Sends a notification to the given session. */
+    /**
+     * Sends a notification to the given session.
+     */
     public void sendNotification(Session session, String method, Object params) {
         sendNotification(session, method, params, null);
     }
 
-    /** Sends a notification to the given session, optionally via a bound outbound SSE stream. */
+    /**
+     * Sends a notification to the given session, optionally via a bound outbound SSE stream.
+     */
     public void sendNotification(
             Session session, String method, @Nullable Object params, @Nullable OutboundSseStream stream) {
         var paramsStr = JsonRpcCodec.toJsonParams(params);
@@ -480,27 +526,43 @@ public class Server implements Closeable {
         if (session.state() == SessionState.CLOSED) {
             return;
         }
+        // Resolve the delivery stream BEFORE building the event: its key goes into the event log
+        // and the SSE id so replay stays per-stream (spec: no cross-stream redelivery).
+        var target = stream != null ? stream : messageRouter.resolve(session);
+        var streamKey = target != null ? target.streamKey() : null;
         var sseEventId = nextEventId();
         var notificationEvent = new SessionEvent.NotificationEvent(
-                session.id(), method, paramsStr, System.currentTimeMillis(), sseEventId);
+                session.id(), method, paramsStr, System.currentTimeMillis(), sseEventId, streamKey);
         router.append(notificationEvent);
 
-        var sseEvent = new SseEvent(String.valueOf(sseEventId), "message", notificationJson);
+        var sseEvent = new SseEvent(wireEventId(sseEventId, streamKey), "message", notificationJson);
 
-        if (stream != null) {
-            stream.start();
-            stream.writeEvent(sseEvent);
-        } else if (!messageRouter.tryRoute(session, sseEvent)) {
+        if (target != null) {
+            target.start();
+            target.writeEvent(sseEvent);
+        } else {
             session.send(sseEvent);
         }
     }
 
-    /** Sends a request to the client and returns a future that completes with the response. */
+    /**
+     * Formats an SSE wire event id: the global counter value, suffixed with {@code #<streamKey>}
+     * for POST-SSE streams so a {@code Last-Event-ID} identifies its originating stream.
+     */
+    public static String wireEventId(long sseEventId, @Nullable String streamKey) {
+        return streamKey == null ? String.valueOf(sseEventId) : sseEventId + "#" + streamKey;
+    }
+
+    /**
+     * Sends a request to the client and returns a future that completes with the response.
+     */
     public CompletableFuture<String> sendRequest(Session session, String method, Object params) {
         return sendRequest(session, method, params, null);
     }
 
-    /** Sends a request to the client, optionally via a bound outbound SSE stream, and returns a future. */
+    /**
+     * Sends a request to the client, optionally via a bound outbound SSE stream, and returns a future.
+     */
     public CompletableFuture<String> sendRequest(
             Session session, String method, Object params, @Nullable OutboundSseStream stream) {
         var paramsStr = JsonRpcCodec.toJsonParams(params);
@@ -509,32 +571,33 @@ public class Server implements Closeable {
         registerPendingRequest(requestId, future);
 
         var requestJson = JsonRpcCodec.serializeRequestAsString(requestId, method, paramsStr);
+        var target = stream != null ? stream : messageRouter.resolve(session);
+        var streamKey = target != null ? target.streamKey() : null;
         var sseEventId = nextEventId();
 
         var outboundEvent = new SessionEvent.OutboundRequestEvent(
-                session.id(), requestId, method, paramsStr, System.currentTimeMillis(), sseEventId);
+                session.id(), requestId, method, paramsStr, System.currentTimeMillis(), sseEventId, streamKey);
         router.append(outboundEvent);
 
-        var sseEvent = new SseEvent(String.valueOf(sseEventId), "message", requestJson);
+        var sseEvent = new SseEvent(wireEventId(sseEventId, streamKey), "message", requestJson);
 
-        if (stream != null) {
-            stream.start();
-            stream.writeEvent(sseEvent);
+        if (target != null) {
+            target.start();
+            target.writeEvent(sseEvent);
         } else {
-            var routed = messageRouter.tryRoute(session, sseEvent);
-            if (!routed) {
-                logger.trace(
-                        "sendRequest fallback session.send: method={}, session={}, conn={}",
-                        method,
-                        session.id(),
-                        session.connection());
-                session.send(sseEvent);
-            }
+            logger.trace(
+                    "sendRequest fallback session.send: method={}, session={}, conn={}",
+                    method,
+                    session.id(),
+                    session.connection());
+            session.send(sseEvent);
         }
         return future;
     }
 
-    /** Completes a pending client request with the given result JSON. */
+    /**
+     * Completes a pending client request with the given result JSON.
+     */
     public boolean completePendingRequest(Object requestId, String resultJson) {
         var future = pendingRequests.remove(requestId);
         if (future != null) {
@@ -544,7 +607,9 @@ public class Server implements Closeable {
         return false;
     }
 
-    /** Fails a pending client request with the given error message. */
+    /**
+     * Fails a pending client request with the given error message.
+     */
     public boolean failPendingRequest(Object requestId, String message) {
         var future = pendingRequests.remove(requestId);
         if (future != null) {
@@ -554,7 +619,9 @@ public class Server implements Closeable {
         return false;
     }
 
-    /** Registers a pending request with a timeout. */
+    /**
+     * Registers a pending request with a timeout.
+     */
     public void registerPendingRequest(Object requestId, CompletableFuture<String> future) {
         pendingRequests.put(requestId, future);
         var timeout = config.runtime().requestTimeout();
@@ -595,17 +662,23 @@ public class Server implements Closeable {
         return sb.toString();
     }
 
-    /** Appends an event to the session log. */
+    /**
+     * Appends an event to the session log.
+     */
     public void appendEvent(SessionEvent event) {
         router.append(event);
     }
 
-    /** Replays session events after the given sequence number. */
+    /**
+     * Replays session events after the given sequence number.
+     */
     public List<SessionEvent> replay(String sessionId, long lastSeq) {
         return router.replay(sessionId, lastSeq);
     }
 
-    /** Returns and increments the event ID counter. */
+    /**
+     * Returns and increments the event ID counter.
+     */
     public long nextEventId() {
         return eventIdCounter.incrementAndGet();
     }
@@ -634,14 +707,14 @@ public class Server implements Closeable {
     public static @Nullable SseEvent toSseEvent(SessionEvent event) {
         return switch (event) {
             case SessionEvent.ResponseEvent r ->
-                new SseEvent(String.valueOf(r.sseEventId()), "message", r.resultJson());
+                new SseEvent(wireEventId(r.sseEventId(), r.streamKey()), "message", r.resultJson());
             case SessionEvent.NotificationEvent n -> {
                 var json = JsonRpcCodec.serializeNotificationAsString(n.method(), n.paramsJson());
-                yield new SseEvent(String.valueOf(n.sseEventId()), "message", json);
+                yield new SseEvent(wireEventId(n.sseEventId(), n.streamKey()), "message", json);
             }
             case SessionEvent.OutboundRequestEvent o -> {
                 var json = JsonRpcCodec.serializeRequestAsString(o.requestId(), o.method(), o.paramsJson());
-                yield new SseEvent(String.valueOf(o.sseEventId()), "message", json);
+                yield new SseEvent(wireEventId(o.sseEventId(), o.streamKey()), "message", json);
             }
             case SessionEvent.RequestEvent ignored -> null;
             case SessionEvent.CancelEvent ignored -> null;

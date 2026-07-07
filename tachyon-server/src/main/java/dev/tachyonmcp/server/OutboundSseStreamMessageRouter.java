@@ -5,7 +5,6 @@
 package dev.tachyonmcp.server;
 
 import dev.tachyonmcp.runtime.Session;
-import dev.tachyonmcp.runtime.SseEvent;
 import java.util.concurrent.Callable;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -48,18 +47,15 @@ public final class OutboundSseStreamMessageRouter implements MessageRouter {
     }
 
     @Override
-    public boolean tryRoute(Session session, SseEvent event) {
+    public @Nullable OutboundSseStream resolve(Session session) {
         var outboundStream = OUTBOUND_SSE_STREAM.get();
-        logger.trace("tryRoute: session={}, outboundStream={}", session.id(), outboundStream);
-        if (outboundStream == null) return false;
+        logger.trace("resolve: session={}, outboundStream={}", session.id(), outboundStream);
+        if (outboundStream == null) return null;
         var currentSessionId = DISPATCH_SESSION_ID.get();
         if (currentSessionId == null || !currentSessionId.equals(session.id())) {
-            logger.trace("tryRoute sessionId mismatch: current={}, expected={}", currentSessionId, session.id());
-            return false;
+            logger.trace("resolve sessionId mismatch: current={}, expected={}", currentSessionId, session.id());
+            return null;
         }
-        outboundStream.start();
-        outboundStream.writeEvent(event);
-        logger.trace("tryRoute ROUTED");
-        return true;
+        return outboundStream;
     }
 }

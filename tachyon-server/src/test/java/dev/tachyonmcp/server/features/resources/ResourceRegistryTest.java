@@ -144,6 +144,67 @@ class ResourceRegistryTest {
     }
 
     @Test
+    void shouldPruneMapEntryWhenLastSubscriberLeaves() {
+        registry.subscribe("test://resource/1", "s1");
+        registry.subscribe("test://resource/1", "s2");
+
+        registry.unsubscribe("test://resource/1", "s1");
+        assertThat(registry.subscriptions).containsKey("test://resource/1");
+
+        registry.unsubscribe("test://resource/1", "s2");
+        assertThat(registry.subscriptions).doesNotContainKey("test://resource/1");
+    }
+
+    @Test
+    void concurrentSubscribeSurvivesUnsubscribePruning() throws Exception {
+        // Race under test: unsubscribe empties the set and prunes the map entry while a
+        // concurrent subscribe is adding to it. With add/remove outside the map operation the
+        // subscribe could land in the pruned (stranded) set and be silently lost; compute-based
+        // mutation serializes both on the map's per-key lock, so the subscription must survive.
+        var uri = "test://resource/race";
+        int iterations = 1_000;
+        try (var exec = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            for (int i = 0; i < iterations; i++) {
+                registry.subscribe(uri, "leaver");
+                var start = new java.util.concurrent.CountDownLatch(1);
+                var unsub = exec.submit(() -> {
+                    start.await();
+                    registry.unsubscribe(uri, "leaver");
+                    return null;
+                });
+                var sub = exec.submit(() -> {
+                    start.await();
+                    registry.subscribe(uri, "joiner");
+                    return null;
+                });
+                start.countDown();
+                unsub.get();
+                sub.get();
+
+                assertThat(registry.isSubscribed(uri, "joiner"))
+                        .as("iteration %d: concurrent subscribe lost to pruning", i)
+                        .isTrue();
+                registry.unsubscribe(uri, "joiner");
+            }
+        }
+    }
+
+    @Test
+    void notifyResourceUpdatedDropsDeadSessionSubscriptions() {
+        var live = server.createSession("live-session");
+        live.connection(new CollectingConnection());
+        live.activate();
+
+        registry.subscribe("test://resource/1", "live-session");
+        registry.subscribe("test://resource/1", "dead-session"); // no such session on the server
+
+        registry.notifyResourceUpdated("test://resource/1");
+
+        assertThat(registry.isSubscribed("test://resource/1", "live-session")).isTrue();
+        assertThat(registry.isSubscribed("test://resource/1", "dead-session")).isFalse();
+    }
+
+    @Test
     void shouldSendUpdatedNotificationToSubscribedSession() throws Exception {
         var conn = new CollectingConnection();
         var sess = server.createSession("notify-test");

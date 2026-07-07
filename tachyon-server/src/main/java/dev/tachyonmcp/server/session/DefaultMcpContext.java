@@ -188,7 +188,8 @@ public class DefaultMcpContext implements DispatchContext {
             }
             var json = JsonRpcCodec.serializeNotificationAsString(method, JsonRpcCodec.toJsonParams(params));
             stream.start();
-            stream.writeEvent(new SseEvent(String.valueOf(server.nextEventId()), "message", json));
+            stream.writeEvent(
+                    new SseEvent(Server.wireEventId(server.nextEventId(), stream.streamKey()), "message", json));
         }
 
         @Override
