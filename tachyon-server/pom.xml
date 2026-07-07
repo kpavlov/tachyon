@@ -124,6 +124,26 @@
                         </configuration>
                     </execution>
                     <execution>
+                        <id>detekt</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <skip>true</skip>
+                            <mainClass>skip</mainClass>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>detekt-format</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <skip>true</skip>
+                            <mainClass>skip</mainClass>
+                        </configuration>
+                    </execution>
+                    <execution>
                         <id>generate-mcp-2026-07-28</id>
                         <phase>generate-sources</phase>
                         <goals>
