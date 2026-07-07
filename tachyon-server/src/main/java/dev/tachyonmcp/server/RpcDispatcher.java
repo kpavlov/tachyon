@@ -241,14 +241,14 @@ public class RpcDispatcher {
                         },
                         executor)
                 .thenCompose(Function.identity())
-                .handleAsync(
-                        (result, ex) -> {
-                            if (ex != null) {
-                                return handleHandlerError(id, method, ex);
-                            }
-                            return handleSuccessOrJsonRpcError(id, method, result, null);
-                        },
-                        executor);
+                // handle(), not handleAsync(executor): encoding is a cheap ByteBuf serialize and the
+                // completing thread is never the event loop — no need to burn a VT per request on it.
+                .handle((result, ex) -> {
+                    if (ex != null) {
+                        return handleHandlerError(id, method, ex);
+                    }
+                    return handleSuccessOrJsonRpcError(id, method, result, null);
+                });
     }
 
     private DispatchResult handleHandlerError(Object id, String method, Throwable ex) {
@@ -407,15 +407,13 @@ public class RpcDispatcher {
                             },
                             executor)
                     .thenCompose(Function.identity())
-                    .handleAsync(
-                            (result, ex) -> {
-                                if (ex != null) {
-                                    logger.warn("Initialize handler exception (stateless)", ex);
-                                    return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
-                                }
-                                return handleSuccessOrJsonRpcError(id, "initialize", result, null);
-                            },
-                            executor);
+                    .handle((result, ex) -> {
+                        if (ex != null) {
+                            logger.warn("Initialize handler exception (stateless)", ex);
+                            return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
+                        }
+                        return handleSuccessOrJsonRpcError(id, "initialize", result, null);
+                    });
         }
         return CompletableFuture.supplyAsync(
                         () -> {
@@ -430,16 +428,14 @@ public class RpcDispatcher {
                         },
                         executor)
                 .thenCompose(Function.identity())
-                .handleAsync(
-                        (result, ex) -> {
-                            if (ex != null) {
-                                logger.warn("Initialize handler exception", ex);
-                                return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
-                            }
-                            var sessionId = ic.session() != null ? ic.session().id() : null;
-                            return handleSuccessOrJsonRpcError(id, "initialize", result, sessionId);
-                        },
-                        executor);
+                .handle((result, ex) -> {
+                    if (ex != null) {
+                        logger.warn("Initialize handler exception", ex);
+                        return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
+                    }
+                    var sessionId = ic.session() != null ? ic.session().id() : null;
+                    return handleSuccessOrJsonRpcError(id, "initialize", result, sessionId);
+                });
     }
 
     private DispatchResult errorResult(Object id, int code, String message) {

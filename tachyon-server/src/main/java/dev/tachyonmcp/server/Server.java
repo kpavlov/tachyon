@@ -308,9 +308,12 @@ public class Server implements Closeable {
 
     /** Sends a notification to all active sessions. */
     public void broadcastNotification(String method, Object params) {
+        // Serialize once — the payload is identical for every session.
+        var paramsStr = JsonRpcCodec.toJsonParams(params);
+        var notificationJson = JsonRpcCodec.serializeNotificationAsString(method, paramsStr);
         for (var entry : sessionManager.allSessions()) {
             if (entry.state() == SessionState.ACTIVE) {
-                sendNotification(entry, method, params);
+                sendSerializedNotification(entry, method, paramsStr, notificationJson, null);
             }
         }
     }
@@ -463,12 +466,20 @@ public class Server implements Closeable {
     /** Sends a notification to the given session, optionally via a bound outbound SSE stream. */
     public void sendNotification(
             Session session, String method, @Nullable Object params, @Nullable OutboundSseStream stream) {
+        var paramsStr = JsonRpcCodec.toJsonParams(params);
+        var notificationJson = JsonRpcCodec.serializeNotificationAsString(method, paramsStr);
+        sendSerializedNotification(session, method, paramsStr, notificationJson, stream);
+    }
+
+    private void sendSerializedNotification(
+            Session session,
+            String method,
+            String paramsStr,
+            String notificationJson,
+            @Nullable OutboundSseStream stream) {
         if (session.state() == SessionState.CLOSED) {
             return;
         }
-        var paramsStr = JsonRpcCodec.toJsonParams(params);
-        var notificationJson = JsonRpcCodec.serializeNotificationAsString(method, paramsStr);
-
         var sseEventId = nextEventId();
         var notificationEvent = new SessionEvent.NotificationEvent(
                 session.id(), method, paramsStr, System.currentTimeMillis(), sseEventId);
@@ -553,11 +564,15 @@ public class Server implements Closeable {
                 var removed = pendingRequests.remove(requestId);
                 if (removed != null) {
                     logger.debug(
-                            "Pending request timed out after {}s: id={}, pendingCount={}\n{}",
+                            "Pending request timed out after {}s: id={}, pendingCount={}",
                             timeout.toSeconds(),
                             requestId,
-                            pendingRequests.size(),
-                            threadDump());
+                            pendingRequests.size());
+                    // getAllStackTraces() forces a global safepoint and walks every platform AND
+                    // virtual thread stack — never evaluate it unless the dump will actually be logged.
+                    if (logger.isTraceEnabled()) {
+                        logger.trace("{}", threadDump());
+                    }
                 }
             }
         });

@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
@@ -26,13 +27,20 @@ public final class HandlerWatchdog {
         return t;
     });
 
+    private static final Future<?> NOOP = CompletableFuture.completedFuture(null);
+
     private HandlerWatchdog() {}
 
     /**
      * Schedules a watchdog that fires after {@code delayMs} milliseconds and logs a warning.
      * Cancel the returned {@link Future} (with {@code cancel(false)}) when the handler completes normally.
+     * When debug logging is disabled the output can never be seen, so no timer is scheduled at
+     * all — avoids per-request schedule/cancel churn on the single timer thread.
      */
     public static Future<?> watch(Object method, Object id, long startNs, long delayMs) {
+        if (!logger.isDebugEnabled()) {
+            return NOOP;
+        }
         return SCHEDULER.schedule(() -> fire(method, id, startNs), delayMs, TimeUnit.MILLISECONDS);
     }
 

@@ -65,7 +65,13 @@ public final class PostSseStream implements OutboundSseStream {
     }
 
     public void writeEvent(long sseEventId, ByteBuf body) {
-        runOnEventLoop(() -> doWriteEvent(sseEventId, body));
+        // The task owns `body`; if the event loop is shutting down and rejects it, the release
+        // inside doWriteEvent never runs — release here instead of leaking.
+        try {
+            runOnEventLoop(() -> doWriteEvent(sseEventId, body));
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            body.release();
+        }
     }
 
     @Override

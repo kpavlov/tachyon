@@ -9,7 +9,7 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.CodecRegistry;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.PooledByteBufAllocator;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
@@ -378,7 +378,9 @@ public final class JsonRpcCodec {
     }
 
     private static ByteBuf serialize(JsonWriter writer) {
-        var buf = Unpooled.buffer(256);
+        // Pooled heap, matching the channel allocator: an Unpooled body would be garbage per
+        // response and copied into a pooled direct buffer again at channel-write time.
+        var buf = PooledByteBufAllocator.DEFAULT.heapBuffer(256);
         try (var out = new ByteBufOutputStream(buf)) {
             try (JsonGenerator gen = FACTORY.createGenerator(ObjectWriteContext.empty(), out, JsonEncoding.UTF8)) {
                 writer.write(gen);
