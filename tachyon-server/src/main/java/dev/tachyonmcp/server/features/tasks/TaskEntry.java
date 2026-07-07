@@ -13,6 +13,7 @@ public class TaskEntry implements ServerResourceType {
 
     private final TaskDescriptor descriptor;
     private final String id;
+    private final @Nullable String sessionId;
     private final AtomicReference<TaskState> status;
     private final long createdAt;
     private final double ttl;
@@ -28,12 +29,22 @@ public class TaskEntry implements ServerResourceType {
     }
 
     public TaskEntry(TaskDescriptor descriptor, String id, TaskState status, double ttl) {
+        this(descriptor, id, status, ttl, null);
+    }
+
+    public TaskEntry(TaskDescriptor descriptor, String id, TaskState status, double ttl, @Nullable String sessionId) {
         this.descriptor = descriptor;
         this.id = id;
+        this.sessionId = sessionId;
         this.status = new AtomicReference<>(status);
         this.createdAt = System.currentTimeMillis();
         this.lastUpdatedAt = this.createdAt;
         this.ttl = ttl;
+    }
+
+    /** The session that created this task, or {@code null} for programmatic/server-global tasks. */
+    public @Nullable String sessionId() {
+        return sessionId;
     }
 
     public TaskDescriptor descriptor() {

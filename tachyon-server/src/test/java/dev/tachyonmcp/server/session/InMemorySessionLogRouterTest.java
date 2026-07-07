@@ -6,6 +6,7 @@ package dev.tachyonmcp.server.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -21,15 +22,17 @@ class InMemorySessionLogRouterTest {
 
     @Test
     void appendAndReplay() {
-        var router = new InMemorySessionLogRouter();
-        router.append(requestEvent("s1", 1));
-        router.append(requestEvent("s1", 2));
-        router.append(requestEvent("s2", 3));
+        List<SessionEvent> s2;
+        try (var router = new InMemorySessionLogRouter()) {
+            router.append(requestEvent("s1", 1));
+            router.append(requestEvent("s1", 2));
+            router.append(requestEvent("s2", 3));
 
-        var s1 = router.replay("s1", -1);
-        assertThat(s1).hasSize(2).allMatch(e -> e.sessionId().equals("s1"));
+            var s1 = router.replay("s1", -1);
+            assertThat(s1).hasSize(2).allMatch(e -> e.sessionId().equals("s1"));
 
-        var s2 = router.replay("s2", -1);
+            s2 = router.replay("s2", -1);
+        }
         assertThat(s2).hasSize(1).allMatch(e -> e.sessionId().equals("s2"));
     }
 
@@ -125,9 +128,50 @@ class InMemorySessionLogRouterTest {
         }
 
         assertThat(totalAppended.get()).isEqualTo((long) threads * eventsPerThread);
+
+        // The log is bounded: 80k appends against a 10k window retain exactly the newest window.
+        // Concurrent correctness for a bounded log means: nothing torn or duplicated, and each
+        // session's surviving events are an ordered suffix of what that session appended.
+        // A session may retain NOTHING (it finished early and later appends evicted its whole
+        // tail) — but if anything survives, eviction is oldest-first, so the survivors must be
+        // the contiguous tail ending at that session's final event.
+        var totalRetained = 0;
         for (int t = 0; t < threads; t++) {
             var result = router.replay("sess_" + t, -1);
-            assertThat(result).hasSize(eventsPerThread);
+            totalRetained += result.size();
+            if (result.isEmpty()) {
+                continue;
+            }
+            var ids = result.stream()
+                    .map(e -> (int) (Integer) ((SessionEvent.RequestEvent) e).requestId())
+                    .toList();
+            assertThat(ids.getLast()).isEqualTo(eventsPerThread - 1);
+            for (int i = 1; i < ids.size(); i++) {
+                assertThat(ids.get(i)).isEqualTo(ids.get(i - 1) + 1);
+            }
         }
+        assertThat(totalRetained).isEqualTo(router.maxEvents);
+    }
+
+    @Test
+    void trimDropsOldestAndKeepsCursorSemantics() {
+        var router = new InMemorySessionLogRouter();
+        int overflow = 100;
+        int total = router.maxEvents + overflow;
+        for (int i = 0; i < total; i++) {
+            router.append(requestEvent("s1", i));
+        }
+
+        var all = router.replay("s1", -1);
+        assertThat(all).hasSize(router.maxEvents);
+        var first = (SessionEvent.RequestEvent) all.getFirst();
+        assertThat((Integer) first.requestId()).isEqualTo(overflow);
+
+        // Global-index cursor from before the window is clamped, not misaligned:
+        // replaying from an index inside the window resumes at the right event.
+        var tail = router.replay("s1", total - 5);
+        assertThat(tail).hasSize(5);
+        var tailFirst = (SessionEvent.RequestEvent) tail.getFirst();
+        assertThat((Integer) tailFirst.requestId()).isEqualTo(total - 5);
     }
 }

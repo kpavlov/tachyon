@@ -17,6 +17,7 @@ import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.features.PaginatedResult;
 import dev.tachyonmcp.server.features.Pagination;
+import dev.tachyonmcp.server.features.tasks.TaskDescriptor;
 import dev.tachyonmcp.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.server.features.tasks.TaskState;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
@@ -301,10 +302,12 @@ public class ToolRegistry {
                 var ttl = taskMeta.ttl() != null ? taskMeta.ttl() / 1000.0 : 0.0;
                 final var server = context.server();
                 var tasks = server.tasks();
-                var taskEntry =
-                        tasks.createTask(parsed.name(), handler.descriptor().description(), ttl);
                 var sessionId = OutboundSseStreamMessageRouter.currentSessionId();
                 var outboundStream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
+                var descriptor = TaskDescriptor.builder(parsed.name())
+                        .description(handler.descriptor().description())
+                        .build();
+                var taskEntry = tasks.createTask(descriptor, ttl, sessionId);
                 var taskFuture = server.executor().submit(() -> {
                     try {
                         OutboundSseStreamMessageRouter.withDispatchContext(sessionId, outboundStream, () -> {

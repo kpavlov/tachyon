@@ -100,8 +100,18 @@ public class TaskRegistry extends Registry<TaskEntry> {
 
     /** Creates a task from a descriptor with the given TTL in seconds (0 = no TTL). */
     public TaskEntry createTask(TaskDescriptor descriptor, double ttl) {
+        return createTask(descriptor, ttl, null);
+    }
+
+    /**
+     * Creates a task owned by the given session (0 TTL = no TTL). Status notifications for a
+     * session-owned task go only to that session; a {@code null} sessionId keeps the task
+     * server-global (broadcast). The owner must be fixed at construction — the creation
+     * notification below fires before the caller could set it.
+     */
+    public TaskEntry createTask(TaskDescriptor descriptor, double ttl, @Nullable String sessionId) {
         var id = UUID.randomUUID().toString();
-        var entry = new TaskEntry(descriptor, id, TaskState.WORKING, ttl);
+        var entry = new TaskEntry(descriptor, id, TaskState.WORKING, ttl, sessionId);
         add(entry);
         fireStatusNotification(entry);
         return entry;
@@ -231,7 +241,15 @@ public class TaskRegistry extends Registry<TaskEntry> {
     }
 
     private void fireStatusNotification(TaskEntry entry) {
-        server.broadcastNotification("notifications/tasks/status", mapper.taskStatusNotificationParams(entry));
+        var params = mapper.taskStatusNotificationParams(entry);
+        var sessionId = entry.sessionId();
+        if (sessionId != null) {
+            // Session-owned task: notify only the owner — other sessions must not see it.
+            server.getSession(sessionId)
+                    .ifPresent(s -> server.sendNotification(s, "notifications/tasks/status", params));
+            return;
+        }
+        server.broadcastNotification("notifications/tasks/status", params);
     }
 
     public void registerHandlers(Map<String, RpcMethodHandler> registry) {

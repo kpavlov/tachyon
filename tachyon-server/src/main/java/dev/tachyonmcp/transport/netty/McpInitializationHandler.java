@@ -235,6 +235,9 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
             var opCtx = ctx.pipeline().context(McpHandlerManager.HANDLER_OPS);
             if (opCtx != null) {
                 ctx.pipeline().get(McpOperationHandler.class).channelRead(opCtx, req);
+            } else {
+                logger.warn("Operation handler missing after phase transition; dropping request");
+                req.release();
             }
         } catch (Exception e) {
             if (req.refCnt() > 0) {
