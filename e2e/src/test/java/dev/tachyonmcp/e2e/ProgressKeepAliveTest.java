@@ -26,6 +26,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Verifies the lazy SSE upgrade and keep-alive path exercised when a tool emits
@@ -34,10 +35,11 @@ import org.junit.jupiter.api.TestInstance;
  * than closing the channel.
  *
  * <p>The SSE upgrade is asynchronous — the tool runs off the event loop and {@code SseHeartbeat} is
- * only armed once its first {@code progress()} reaches {@code PostSseStream.doStart}. A cold JVM can
- * lose the race against the reader-idle timer, so {@link #warmUp()} JIT-warms the whole dispatch
- * path before any timed assertion and the reader-idle window is kept comfortably below the tool's
- * runtime.
+ * only armed once its first {@code progress()} reaches {@code PostSseStream.doStart}. Once armed, a
+ * fixed-rate scheduler (not reader-idle) emits the heartbeats at {@code network().heartbeatInterval()}.
+ * {@link #warmUp()} JIT-warms the whole dispatch path so the first {@code progress()} flushes
+ * sub-millisecond and the heartbeat is armed well before the tool finishes. The heartbeat interval is
+ * kept far below the tool runtime so several heartbeats fire even on a slow CI runner.
  *
  * @author Konstantin Pavlov
  */
@@ -45,6 +47,7 @@ import org.junit.jupiter.api.TestInstance;
 class ProgressKeepAliveTest {
 
     private static final Duration READER_IDLE = Duration.ofMillis(250);
+    private static final Duration HEARTBEAT = Duration.ofMillis(250);
     private static final long SLOW_SLEEP_MS = 2_000L;
 
     private static final String TOOL_CALL = // language=JSON
@@ -53,17 +56,18 @@ class ProgressKeepAliveTest {
              "params":{"name":"slow-progress","arguments":{}}}
             """;
 
-    private Server server;
+    private final Server server = TachyonServer.builder()
+        .session(s -> s.enabled(true))
+        .network(n -> n.heartbeatInterval(HEARTBEAT))
+        .tool(new ProgressHandler("warmup", 0))
+        .tool(new ProgressHandler("slow-progress", SLOW_SLEEP_MS))
+        .build();
+
     private NettyServer nettyServer;
     private int port;
 
     @BeforeAll
     void startServer() throws Exception {
-        server = TachyonServer.builder()
-                .session(s -> s.enabled(true))
-                .tool(new ProgressHandler("warmup", 0))
-                .tool(new ProgressHandler("slow-progress", SLOW_SLEEP_MS))
-                .build();
         var config = new NettyServerConfig(
                 "127.0.0.1",
                 0,
@@ -81,8 +85,8 @@ class ProgressKeepAliveTest {
 
     @AfterAll
     void stopServer() {
-        if (nettyServer != null) nettyServer.close();
-        if (server != null) server.close();
+        nettyServer.close();
+        server.close();
     }
 
     /**
@@ -108,7 +112,8 @@ class ProgressKeepAliveTest {
     }
 
     @Test
-    void progressKeepAliveSurvivesReaderIdle() throws Exception {
+    @Timeout(30)
+    void progressKeepAliveEmitsHeartbeat() throws Exception {
         var lines = new CopyOnWriteArrayList<String>();
         try (var client = new TestMcpClient(port)) {
             var sessionId = client.initialize();
@@ -118,9 +123,9 @@ class ProgressKeepAliveTest {
             var consume = CompletableFuture.runAsync(() -> response.body().forEach(lines::add));
             await().atMost(Duration.ofSeconds(10))
                     .untilAsserted(() -> assertThat(lines)
-                            .as("reader-idle must emit an SSE comment heartbeat, not close the channel")
+                            .as("scheduler must emit an SSE comment heartbeat, not close the channel")
                             .anyMatch(l -> l.startsWith(":")));
-            consume.get(10, TimeUnit.SECONDS);
+            consume.get(15, TimeUnit.SECONDS);
             var body = String.join("\n", lines);
             assertThat(body).contains("notifications/progress");
             assertThat(body).contains("done");
@@ -131,7 +136,7 @@ class ProgressKeepAliveTest {
      * Calls {@code slow-progress}, asserts the shared SSE-upgrade contract (200, event-stream
      * content type, progress notification, tool result) and returns the accumulated SSE body.
      */
-    private String callSlowProgressAndAssertSse() throws Exception {
+    private void callSlowProgressAndAssertSse() throws Exception {
         try (var client = new TestMcpClient(port)) {
             var sessionId = client.initialize();
             var response = client.sendRequest(sessionId, TOOL_CALL);
@@ -141,7 +146,6 @@ class ProgressKeepAliveTest {
             var body = response.body();
             assertThat(body).contains("notifications/progress");
             assertThat(body).contains("done");
-            return body;
         }
     }
 
