@@ -9,15 +9,19 @@
 
 **Tachyon MCP** is a Java 21 [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server built on [Netty](https://netty.io). Implements the **2025-11-25** Streamable HTTP transport, protocol extensions, and stateless mode.
 
-## Why Tachyon?
+## 💫 Why Tachyon?
 
-1. **MCP Spec Compliant** — All official conformance tests green on the current **2025-11-25** spec; tools, resources, prompts, tasks, elicitation, sampling, and extensions (SEP-1686, SEP-2133) in one artifact.
-2. **Your handlers outlive the spec** — MCP moves fast; Tachyon's stable domain types (`ToolHandler`, `ResourceHandler`, `PromptHandler`, Task support) absorb protocol changes in an internal mapper layer, so version bumps don't touch your code.
-3. **Write blocking code, get async runtime** — handlers run on Java 21 virtual threads off the Netty event loop; plain synchronous logic scales without thread pools, reactive chains, or `CompletableFuture` gymnastics. Coroutine-first Kotlin DSL included.
-4. **Serverless-ready** — stateless by default, so each request is independent for AWS Lambda and friends; opt into full session mode (`.session(s -> s.enabled(true))`) for SSE resumability, Last-Event-ID replay, TTL + janitor, and a customizable session-id generator.
-5. **Production-grade transport** — Netty core with backpressure watermarks, graceful shutdown, DNS-rebinding protection, and auto-detected native transports (io_uring / epoll / kqueue) when you want the extra speed.
+✅ **MCP spec compliant** -- Passes all official conformance tests for the **2025-11-25** specification, including tools, resources, prompts, tasks, elicitation, sampling, and extensions (SEP-1686, SEP-2133).
 
-**TL;DR**
+🛡️ **Stable APIs across spec changes** -- MCP evolves quickly. Stable domain APIs (`ToolHandler`, `ResourceHandler`, `PromptHandler`, task support) isolate protocol changes behind an internal mapping layer, so upgrades rarely affect application code.
+
+🧵 **Synchronous code, asynchronous runtime** -- Write blocking handlers while Java 21 virtual threads run them off the Netty event loop. No thread pools, reactive pipelines, or `CompletableFuture` boilerplate. Includes a coroutine-first Kotlin DSL.
+
+☁️ **Serverless by default** -- Stateless request handling works out of the box for AWS Lambda and similar platforms. Enable sessions (`.session(s -> s.enabled(true))`) for SSE resumability, `Last-Event-ID` replay, TTL cleanup, and customizable session IDs.
+
+🚄 **Production-ready transport** — Built on Netty with backpressure, graceful shutdown, DNS rebinding protection, and automatic native transport support (`io_uring`, `epoll`, `kqueue`) where available.
+
+## TL;DR
 
 1. Add dependency:
 
@@ -25,40 +29,40 @@
     <dependency>
         <groupId>dev.tachyonmcp</groupId>
         <artifactId>tachyon-server</artifactId>
-        <version>1.0.0-beta.6</version>
+        <version>1.0.0-beta.7</version>
     </dependency>
     ```
 
-   2. Create MCP server:
+2. Create MCP server:
 
-       ```java
-       import dev.tachyonmcp.server.TachyonServer;
-       import dev.tachyonmcp.runtime.InteractionContext;
-       import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
-       import dev.tachyonmcp.server.features.tools.ToolArgs;
-       import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-       import dev.tachyonmcp.server.features.tools.ToolResult;
+    ```java
+    import dev.tachyonmcp.server.TachyonServer;
+    import dev.tachyonmcp.runtime.InteractionContext;
+    import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
+    import dev.tachyonmcp.server.features.tools.ToolArgs;
+    import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+    import dev.tachyonmcp.server.features.tools.ToolResult;
 
-       void main() {
-           TachyonServer.builder()
-               .name("weather-mcp")
-               .tool(new AbstractSyncToolHandler(
-                   ToolDescriptor.builder("get_forecast")
-                       .description("Get weather forecast")  
-                       .inputSchema("""
-                       {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
-                       """)
-                       .build()) {
+    void main() {
+        TachyonServer.builder()
+            .name("weather-mcp")
+            .tool(new AbstractSyncToolHandler(
+                ToolDescriptor.builder("get_forecast")
+                    .description("Get weather forecast")  
+                    .inputSchema("""
+                    {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
+                    """)
+                    .build()) {
 
-                   @Override
-                   public ToolResult handle(InteractionContext ctx, ToolArgs args) {
-                       return ToolResult.text("☀️ 22°C");
-                   }
-               })
-               .port(8080)
-               .start();
-       }
-       ```
+                @Override
+                public ToolResult handle(InteractionContext ctx, ToolArgs args) {
+                    return ToolResult.text("☀️ 22°C");
+                }
+            })
+            .port(8080)
+            .start();
+    }
+    ```
 
 ## Documentation
 
