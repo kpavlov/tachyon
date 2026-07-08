@@ -1,6 +1,6 @@
 /* Copyright (c) 2026 Konstantin Pavlov. */
 
-package dev.tachyonmcp.server.features.tools;
+package dev.tachyonmcp.extensions.tools.youcom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -9,6 +9,8 @@ import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.Notifications;
 import dev.tachyonmcp.protocol.Protocol;
+import dev.tachyonmcp.server.features.tools.ToolArgs;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;

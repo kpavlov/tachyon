@@ -1,6 +1,11 @@
 /* Copyright (c) 2026 Konstantin Pavlov. */
 
-package dev.tachyonmcp.server.features.tools;
+package dev.tachyonmcp.extensions.tools.youcom;
+
+import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolArgs;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import java.io.IOException;
