@@ -11,8 +11,8 @@ import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.features.Registry;
+import dev.tachyonmcp.server.json.JsonSchemaUtils;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
-import dev.tachyonmcp.server.json.SchemaValidationError;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
@@ -22,12 +22,10 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
-import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 public class PromptRegistry extends Registry<PromptEntry> {
 
@@ -113,21 +111,14 @@ public class PromptRegistry extends Registry<PromptEntry> {
             }
             var inputSchema = entry.descriptor().inputSchema();
             if (inputSchema != null) {
-                var argsNode = JsonNodeFactory.instance.objectNode();
                 Map<String, JsonNode> argsMap;
                 try {
                     argsMap = extractArgumentsMap(params);
                 } catch (RuntimeException e) {
                     return CompletableFuture.completedFuture(JsonRpcErrors.invalidParams("Invalid arguments"));
                 }
-                if (argsMap != null) {
-                    argsMap.forEach(argsNode::set);
-                }
-                var errors = validator.validate(inputSchema, argsNode);
-                if (!errors.isEmpty()) {
-                    return CompletableFuture.completedFuture(JsonRpcErrors.invalidParams(
-                            errors.stream().map(SchemaValidationError::message).collect(Collectors.joining("; "))));
-                }
+                var error = JsonSchemaUtils.validateArguments(validator, inputSchema, argsMap);
+                if (error != null) return CompletableFuture.completedFuture(JsonRpcErrors.invalidParams(error));
             }
 
             var request = new PromptRequest(

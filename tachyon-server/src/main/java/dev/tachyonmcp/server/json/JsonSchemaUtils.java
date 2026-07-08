@@ -3,8 +3,11 @@
  */
 package dev.tachyonmcp.server.json;
 
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 
 public class JsonSchemaUtils {
     private JsonSchemaUtils() {
@@ -33,5 +36,19 @@ public class JsonSchemaUtils {
         } catch (Exception e) {
             throw new IllegalArgumentException("Tool '" + toolName + "' schema is not valid JSON: " + json, e);
         }
+    }
+
+    /**
+     * Validates args against schema; returns a joined error message, or null when valid / no schema.
+     */
+    public static @Nullable String validateArguments(
+            JsonSchemaValidator validator, @Nullable JsonNode schema, @Nullable Map<String, JsonNode> args) {
+        if (schema == null) return null;
+        var node = JsonNodeFactory.instance.objectNode();
+        if (args != null) node.setAll(args);
+        var errors = validator.validate(schema, node);
+        return errors.isEmpty()
+                ? null
+                : errors.stream().map(SchemaValidationError::message).collect(Collectors.joining("; "));
     }
 }

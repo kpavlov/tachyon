@@ -66,7 +66,6 @@ class EchoServerTest {
                       "message"
                     ]
                   }
-
                 }
                           ]}}
                 """.trimIndent()
@@ -162,7 +161,7 @@ class EchoServerTest {
                   "jsonrpc": "2.0",
                   "id": 1,
                   "error": {
-                    "code": -32600,
+                    "code": -32602,
                     "message": "required property 'message' not found"
                   }
                 }
