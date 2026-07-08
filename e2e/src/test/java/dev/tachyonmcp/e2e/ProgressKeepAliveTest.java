@@ -57,11 +57,11 @@ class ProgressKeepAliveTest {
             """;
 
     private final Server server = TachyonServer.builder()
-        .session(s -> s.enabled(true))
-        .network(n -> n.heartbeatInterval(HEARTBEAT))
-        .tool(new ProgressHandler("warmup", 0))
-        .tool(new ProgressHandler("slow-progress", SLOW_SLEEP_MS))
-        .build();
+            .session(s -> s.enabled(true))
+            .network(n -> n.heartbeatInterval(HEARTBEAT))
+            .tool(new ProgressHandler("warmup", 0))
+            .tool(new ProgressHandler("slow-progress", SLOW_SLEEP_MS))
+            .build();
 
     private NettyServer nettyServer;
     private int port;
@@ -76,7 +76,7 @@ class ProgressKeepAliveTest {
                 Duration.ofMinutes(5),
                 McpChannelInitializer.DEFAULT_MAX_CONTENT_LENGTH,
                 NettyServerConfig.buildCorsConfig(null, false, false, null),
-                NettyIoEngine.AUTO,
+                NettyIoEngine.NIO,
                 null);
         nettyServer = new NettyServer(server, config);
         port = nettyServer.port();
