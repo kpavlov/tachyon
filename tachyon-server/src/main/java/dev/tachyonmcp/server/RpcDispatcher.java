@@ -396,31 +396,15 @@ public class RpcDispatcher {
             return CompletableFuture.completedFuture(
                     errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found: initialize"));
         }
-        if (server.isStateless()) {
-            return CompletableFuture.supplyAsync(
-                            () -> {
-                                try {
-                                    return handler.handleAsync(ic, rawParams);
-                                } catch (Exception e) {
-                                    return CompletableFuture.failedFuture(e);
-                                }
-                            },
-                            executor)
-                    .thenCompose(Function.identity())
-                    .handle((result, ex) -> {
-                        if (ex != null) {
-                            logger.warn("Initialize handler exception (stateless)", ex);
-                            return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
-                        }
-                        return handleSuccessOrJsonRpcError(id, "initialize", result, null);
-                    });
-        }
+        // Stateful init creates the session before invoking the handler; stateless skips it. Both
+        // then share one async pipeline — the response sessionId falls out of ic.session() (null
+        // when stateless, since no session was set).
         return CompletableFuture.supplyAsync(
                         () -> {
                             try {
-                                var sessionId = generateSessionId(channelContext);
-                                var session = server.createSession(sessionId);
-                                ic.setSession(session);
+                                if (!server.isStateless()) {
+                                    ic.setSession(server.createSession(generateSessionId(channelContext)));
+                                }
                                 return handler.handleAsync(ic, rawParams);
                             } catch (Exception e) {
                                 return CompletableFuture.failedFuture(e);

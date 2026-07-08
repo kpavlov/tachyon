@@ -17,6 +17,7 @@ Make **Java 21+** MCP server. Tachyon lib. Transport = Streamable HTTP (Netty).
 - `.build()` → `Server` only, no transport.
 - `ServerHandle`: `.server()`, `.port()`.
 - `InteractionContext` → session + notifications + server ctx. Every handler gets it (`dev.tachyonmcp.runtime.InteractionContext`).
+- ⚡ **Virtual threads**: All handlers (`ToolHandler`, `ResourceHandler`, `PromptHandler`) run on a virtual thread per request. Blocking for I/O is fine — never use `synchronized` (pins carrier thread). Use `ReentrantLock` instead. CPU-bound work → offload to `context.server().executor()`. See `RpcMethodHandler.java` javadoc.
 
 ## Quickstart
 

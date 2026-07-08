@@ -4,7 +4,6 @@
 package dev.tachyonmcp.server.json;
 
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -47,8 +46,6 @@ public class JsonSchemaUtils {
         var node = JsonNodeFactory.instance.objectNode();
         if (args != null) node.setAll(args);
         var errors = validator.validate(schema, node);
-        return errors.isEmpty()
-                ? null
-                : errors.stream().map(SchemaValidationError::message).collect(Collectors.joining("; "));
+        return errors.isEmpty() ? null : SchemaValidationError.join(errors);
     }
 }

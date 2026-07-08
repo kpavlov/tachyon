@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.features.tools;
 
+import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.internalError;
 import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidParams;
 import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidRequest;
 import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.methodNotFound;
@@ -13,6 +14,7 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskMetadata;
 import dev.tachyonmcp.server.OutboundSseStreamMessageRouter;
 import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.features.ChangeSupport;
 import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.features.PaginatedResult;
@@ -25,14 +27,10 @@ import dev.tachyonmcp.server.json.*;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,9 +50,7 @@ public class ToolRegistry {
     private final PayloadSerializer payloadSerializer;
     private final PayloadDeserializer payloadDeserializer;
 
-    private final List<Runnable> onChangeListeners = new CopyOnWriteArrayList<>();
-
-    private static final int DEFAULT_PAGE_SIZE = 50;
+    private final ChangeSupport changes = new ChangeSupport();
 
     /**
      * Maximum description length before a warning is logged. MCP clients may truncate
@@ -76,16 +72,12 @@ public class ToolRegistry {
         this.payloadDeserializer = payloadDeserializer;
     }
 
-    public void onChange(@Nullable Runnable callback) {
-        if (callback != null) {
-            onChangeListeners.add(callback);
-        }
+    public void onChange(Runnable callback) {
+        changes.onChange(callback);
     }
 
     private void fireOnChange() {
-        for (var listener : onChangeListeners) {
-            listener.run();
-        }
+        changes.fireOnChange();
     }
 
     /**
@@ -181,11 +173,11 @@ public class ToolRegistry {
     }
 
     public PaginatedResult<ToolDescriptor> list(int limit, @Nullable String cursor) {
-        return list(limit, cursor, DEFAULT_PAGE_SIZE, descriptor -> true);
+        return list(limit, cursor, Pagination.DEFAULT_PAGE_SIZE, descriptor -> true);
     }
 
     public PaginatedResult<ToolDescriptor> list(int limit, @Nullable String cursor, Predicate<ToolDescriptor> filter) {
-        return list(limit, cursor, DEFAULT_PAGE_SIZE, filter);
+        return list(limit, cursor, Pagination.DEFAULT_PAGE_SIZE, filter);
     }
 
     public PaginatedResult<ToolDescriptor> list(int limit, @Nullable String cursor, int defaultLimit) {
@@ -242,54 +234,39 @@ public class ToolRegistry {
         }
 
         /**
-         * Dispatch uses handleAsync; interruptible get on VT is safe.
+         * Runs on the dispatcher's virtual thread; blocking to join the handler is the SPI contract.
          */
         @Override
-        public Object handle(DispatchContext context, Object params) {
-            try {
-                return HandlerFutures.joinInterruptibly(handleAsync(context, params));
-            } catch (RuntimeException | Error e) {
-                throw e;
-            } catch (Exception e) {
-                throw new CompletionException(e);
-            }
-        }
-
-        @Override
-        public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
+        public Object handle(DispatchContext context, Object params) throws Exception {
             var parsed = parseCallParams(params);
-            if (parsed == null) return CompletableFuture.completedFuture(invalidRequest("Invalid params"));
-            if (parsed.name().isBlank()) return CompletableFuture.completedFuture(invalidRequest("Missing tool name"));
-            if (parsed.name().length() > 64)
-                return CompletableFuture.completedFuture(invalidRequest("Tool name exceeds maximum length (SEP-986)"));
+            if (parsed == null) return invalidRequest("Invalid params");
+            if (parsed.name().isBlank()) return invalidRequest("Missing tool name");
+            if (parsed.name().length() > 64) return invalidRequest("Tool name exceeds maximum length (SEP-986)");
 
             var handler = registry.get(parsed.name());
-            if (handler == null) return CompletableFuture.completedFuture(methodNotFound("Method not found"));
+            if (handler == null) return methodNotFound("Method not found");
             var extId = handler.descriptor().extensionId();
-            if (extId != null && !context.isExtensionEnabled(extId))
-                return CompletableFuture.completedFuture(methodNotFound("Method not found"));
+            if (extId != null && !context.isExtensionEnabled(extId)) return methodNotFound("Method not found");
 
             var validationError = validateInput(handler.descriptor().inputSchema(), parsed.args());
-            if (validationError != null) return CompletableFuture.completedFuture(invalidParams(validationError));
+            if (validationError != null) return invalidParams(validationError);
 
             var taskSupport = handler.descriptor().taskSupport();
             if (taskSupport == null) taskSupport = TaskSupport.FORBIDDEN;
             var taskMeta = parsed.task();
 
             if (taskSupport == TaskSupport.FORBIDDEN && taskMeta != null) {
-                return CompletableFuture.completedFuture(
-                        invalidRequest("Task augmentation not supported for this tool"));
+                return invalidRequest("Task augmentation not supported for this tool");
             }
             if (taskSupport == TaskSupport.REQUIRED && taskMeta == null) {
-                return CompletableFuture.completedFuture(invalidRequest("Task augmentation required for this tool"));
+                return invalidRequest("Task augmentation required for this tool");
             }
 
-            var progressToken = parseProgressToken(parsed.meta());
             var request = ToolRequest.builder()
                     .name(parsed.name())
                     .arguments(parsed.args() != null ? parsed.args() : Collections.emptyMap())
                     .meta(parsed.meta())
-                    .progressToken(progressToken)
+                    .progressToken(parseProgressToken(parsed.meta()))
                     .payloadDeserializer(payloadDeserializer)
                     .inputResponses(parsed.inputResponses())
                     .requestState(parsed.requestState())
@@ -298,71 +275,65 @@ public class ToolRegistry {
             // Task-augmented path: branch BEFORE invoking handler so the dispatch thread
             // returns CreateTaskResult immediately (even for sync/suspend handlers).
             if (taskMeta != null) {
-                sendLoggingIfEnabled(context, parsed.name(), "started");
-                var ttl = taskMeta.ttl() != null ? taskMeta.ttl() / 1000.0 : 0.0;
-                final var server = context.server();
-                var tasks = server.tasks();
-                var sessionId = OutboundSseStreamMessageRouter.currentSessionId();
-                var outboundStream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
-                var descriptor = TaskDescriptor.builder(parsed.name())
-                        .description(handler.descriptor().description())
-                        .build();
-                var taskEntry = tasks.createTask(descriptor, ttl, sessionId);
-                var taskFuture = server.executor().submit(() -> {
-                    try {
-                        OutboundSseStreamMessageRouter.withDispatchContext(sessionId, outboundStream, () -> {
-                            var toolResult = HandlerFutures.joinInterruptibly(handler.handleAsync(context, request));
-                            sendLoggingIfEnabled(context, parsed.name(), "completed");
-                            validateOutput(handler.descriptor().outputSchema(), toolResult);
-                            var resultJson = JsonRpcCodec.writeValueAsString(
-                                    context.responseMapper().callToolResult(serializeStructured(toolResult)));
-                            tasks.completeTask(taskEntry.id(), resultJson);
-                            return null;
-                        });
-                    } catch (Exception e) {
-                        handleTaskError(context, taskEntry, e);
-                    }
-                    return null;
-                });
-                tasks.registerRunning(taskEntry.id(), taskFuture);
-                // The task may reach a terminal state before registerRunning: either the handler
-                // finished, or a tasks/cancel arrived in the window (which flips state but finds no
-                // future to interrupt). Drop the now-untracked future, and if the terminal state was
-                // a cancellation, interrupt the still-running handler ourselves.
-                if (!taskEntry.status().isActive()) {
-                    tasks.unregisterRunning(taskEntry.id());
-                    if (taskEntry.status() == TaskState.CANCELLED) {
-                        taskFuture.cancel(true);
-                    }
-                }
-                return CompletableFuture.completedFuture(
-                        context.responseMapper().createTaskResult(taskEntry));
+                return dispatchTaskAugmented(context, handler, request, parsed.name(), taskMeta);
             }
 
-            // Non-task path: existing sync/async dispatch
+            // Non-task path: run the handler on this virtual thread, blocking as the SPI allows.
             sendLoggingIfEnabled(context, parsed.name(), "started");
-            CompletionStage<? extends ToolResult> toolStage;
+            ToolResult toolResult;
             try {
-                toolStage = handler.handleAsync(context, request);
+                toolResult = HandlerFutures.joinInterruptibly(handler.handleAsync(context, request));
             } catch (InvalidArgumentException e) {
-                return CompletableFuture.completedFuture(
-                        invalidParams("invalid argument '" + e.argName() + "': " + e.getMessage()));
+                return invalidParams("invalid argument '" + e.argName() + "': " + e.getMessage());
             } catch (Exception e) {
-                return CompletableFuture.failedFuture(e);
+                logger.error("Tool handler error for '{}'", parsed.name(), e);
+                return internalError("Tool handler failed");
             }
+            sendLoggingIfEnabled(context, parsed.name(), "completed");
+            validateOutput(handler.descriptor().outputSchema(), toolResult);
+            return context.responseMapper().callToolResult(serializeStructured(toolResult));
+        }
 
-            return HandlerFutures.completeOn(toolStage, context, (result, e) -> {
-                if (e != null) {
-                    if (e instanceof InvalidArgumentException ia) {
-                        return invalidParams("invalid argument '" + ia.argName() + "': " + ia.getMessage());
-                    }
-                    throw new CompletionException(e);
+        private Object dispatchTaskAugmented(
+                DispatchContext context, ToolHandler handler, ToolRequest request, String name, TaskMetadata taskMeta) {
+            sendLoggingIfEnabled(context, name, "started");
+            var ttl = taskMeta.ttl() != null ? taskMeta.ttl() / 1000.0 : 0.0;
+            var server = context.server();
+            var tasks = server.tasks();
+            var sessionId = OutboundSseStreamMessageRouter.currentSessionId();
+            var outboundStream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
+            var descriptor = TaskDescriptor.builder(name)
+                    .description(handler.descriptor().description())
+                    .build();
+            var taskEntry = tasks.createTask(descriptor, ttl, sessionId);
+            var taskFuture = server.executor().submit(() -> {
+                try {
+                    OutboundSseStreamMessageRouter.withDispatchContext(sessionId, outboundStream, () -> {
+                        var toolResult = HandlerFutures.joinInterruptibly(handler.handleAsync(context, request));
+                        sendLoggingIfEnabled(context, name, "completed");
+                        validateOutput(handler.descriptor().outputSchema(), toolResult);
+                        var resultJson = JsonRpcCodec.writeValueAsString(
+                                context.responseMapper().callToolResult(serializeStructured(toolResult)));
+                        tasks.completeTask(taskEntry.id(), resultJson);
+                        return null;
+                    });
+                } catch (Exception e) {
+                    handleTaskError(context, taskEntry, e);
                 }
-                sendLoggingIfEnabled(context, parsed.name(), "completed");
-                var toolResult = (ToolResult) result;
-                validateOutput(handler.descriptor().outputSchema(), toolResult);
-                return context.responseMapper().callToolResult(serializeStructured(toolResult));
+                return null;
             });
+            tasks.registerRunning(taskEntry.id(), taskFuture);
+            // The task may reach a terminal state before registerRunning: either the handler
+            // finished, or a tasks/cancel arrived in the window (which flips state but finds no
+            // future to interrupt). Drop the now-untracked future, and if the terminal state was
+            // a cancellation, interrupt the still-running handler ourselves.
+            if (!taskEntry.status().isActive()) {
+                tasks.unregisterRunning(taskEntry.id());
+                if (taskEntry.status() == TaskState.CANCELLED) {
+                    taskFuture.cancel(true);
+                }
+            }
+            return context.responseMapper().createTaskResult(taskEntry);
         }
 
         private static @Nullable Object parseProgressToken(@Nullable Map<String, JsonNode> meta) {
@@ -387,7 +358,7 @@ public class ToolRegistry {
                 var typed = ProtocolCodecUtil.decodeWithCodec(json, CallToolRequestParams.class);
                 var name = typed.name();
                 if (name == null) return null;
-                var inputResponses = extractInputResponsesFromMap(map.get("inputResponses"));
+                var inputResponses = ListRequests.extractInputResponses(map.get("inputResponses"));
                 var requestState = map.get("requestState") instanceof String s ? s : null;
                 return new CallParams(
                         name, typed.arguments(), typed._meta(), inputResponses, requestState, typed.task());
@@ -398,17 +369,6 @@ public class ToolRegistry {
                 return new CallParams(name, p.arguments(), p._meta(), p.inputResponses(), p.requestState(), p.task());
             }
             return null;
-        }
-
-        private static @Nullable Map<String, JsonNode> extractInputResponsesFromMap(@Nullable Object raw) {
-            if (!(raw instanceof Map<?, ?> rawMap) || rawMap.isEmpty()) return null;
-            var result = new java.util.LinkedHashMap<String, JsonNode>();
-            for (var entry : rawMap.entrySet()) {
-                if (entry.getKey() instanceof String k) {
-                    result.put(k, ProtocolCodecUtil.parseJsonNode(JsonRpcCodec.writeValueAsString(entry.getValue())));
-                }
-            }
-            return result.isEmpty() ? null : result;
         }
 
         private @Nullable String validateInput(@Nullable JsonNode schema, @Nullable Map<String, JsonNode> args) {
@@ -446,7 +406,8 @@ public class ToolRegistry {
             if (contentNode == null) return;
             var errors = outputValidator.validate(schema, contentNode);
             if (!errors.isEmpty()) {
-                logger.debug("Tool output failed schema validation (advisory only): {}", joinMessages(errors));
+                logger.debug(
+                        "Tool output failed schema validation (advisory only): {}", SchemaValidationError.join(errors));
             }
         }
 
@@ -473,10 +434,6 @@ public class ToolRegistry {
                 return contentNode;
             }
             return null;
-        }
-
-        private static String joinMessages(List<SchemaValidationError> errors) {
-            return errors.stream().map(SchemaValidationError::message).collect(Collectors.joining("; "));
         }
 
         private void handleTaskError(DispatchContext context, TaskEntry taskEntry, Exception e) {

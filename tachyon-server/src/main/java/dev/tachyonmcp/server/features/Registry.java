@@ -8,10 +8,8 @@ import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.ServerResourceType;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
 
@@ -20,19 +18,11 @@ public abstract class Registry<R extends ServerResourceType> {
 
     private final ConcurrentHashMap<String, R> items = new ConcurrentHashMap<>();
 
-    private static final int DEFAULT_PAGE_SIZE = 50;
-
-    private final List<Runnable> onChangeListeners = new CopyOnWriteArrayList<>();
+    private final ChangeSupport changes = new ChangeSupport();
 
     /** Registers a callback invoked when the registry contents change. */
-    public void onChange(@Nullable Runnable callback) {
-        if (callback != null) {
-            onChangeListeners.add(callback);
-        }
-    }
-
-    void addChangeListener(Runnable listener) {
-        onChangeListeners.add(listener);
+    public void onChange(Runnable callback) {
+        changes.onChange(callback);
     }
 
     /** Adds or replaces an item by name. */
@@ -50,9 +40,7 @@ public abstract class Registry<R extends ServerResourceType> {
     }
 
     protected void fireOnChange() {
-        for (var listener : onChangeListeners) {
-            listener.run();
-        }
+        changes.fireOnChange();
     }
 
     /** Returns the item by name, or {@code null} if not found. */
@@ -66,11 +54,11 @@ public abstract class Registry<R extends ServerResourceType> {
     }
 
     public PaginatedResult<R> list(int limit, @Nullable String cursor) {
-        return list(limit, cursor, DEFAULT_PAGE_SIZE, r -> true);
+        return list(limit, cursor, Pagination.DEFAULT_PAGE_SIZE, r -> true);
     }
 
     public PaginatedResult<R> list(int limit, @Nullable String cursor, Predicate<R> filter) {
-        return list(limit, cursor, DEFAULT_PAGE_SIZE, filter);
+        return list(limit, cursor, Pagination.DEFAULT_PAGE_SIZE, filter);
     }
 
     public PaginatedResult<R> list(int limit, @Nullable String cursor, int defaultLimit) {

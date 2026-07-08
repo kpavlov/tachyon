@@ -27,14 +27,16 @@ class ToolErrorTest extends AbstractMcpE2eTest {
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
             var body = """
-                    {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"boom","arguments":{}}}
-                    """;
+                {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"boom","arguments":{}}}
+                """;
             var response = client.sendRequest(sessionId, body);
 
             assertThat(response.statusCode()).isEqualTo(200);
             assertThat(response.body()).contains("notifications/before-boom");
-            assertThat(response.body()).contains("-32603");
-            assertThat(response.body()).contains("Internal error");
+            // language=json
+            assertThat(response.body()).contains("""
+                {"jsonrpc":"2.0","id":1,"error":{"code":-32603,"message":"Tool handler failed"}}
+                """.trim());
         }
     }
 

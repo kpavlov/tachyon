@@ -4,6 +4,9 @@
 
 package dev.tachyonmcp.server.json;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
  * A single schema validation error.
  *
@@ -11,4 +14,10 @@ package dev.tachyonmcp.server.json;
  * @param keyword the validation keyword that failed
  * @param message human-readable error description
  */
-public record SchemaValidationError(String path, String keyword, String message) {}
+public record SchemaValidationError(String path, String keyword, String message) {
+
+    /** Joins the messages of several errors into one {@code "; "}-separated string. */
+    public static String join(List<SchemaValidationError> errors) {
+        return errors.stream().map(SchemaValidationError::message).collect(Collectors.joining("; "));
+    }
+}

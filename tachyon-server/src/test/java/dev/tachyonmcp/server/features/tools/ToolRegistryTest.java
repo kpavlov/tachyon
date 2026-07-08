@@ -555,6 +555,50 @@ class ToolRegistryTest {
     }
 
     @Test
+    void syncToolHandlerReturnsResultThroughHandle() throws Exception {
+        var handlers = new HashMap<String, RpcMethodHandler>();
+        registry.registerHandlers(handlers);
+        registry.register(SyncToolHandler.of("sync-handle", "sync", TEST_SCHEMA, (ctx, args) -> {
+            var msg = args.string("message");
+            return ToolResult.text(msg);
+        }));
+
+        try (var server = TachyonServer.builder().build()) {
+            var session = server.createSession("s-sync-handle");
+            session.activate();
+            var callHandler = handlers.get("tools/call");
+            var ctx = DefaultMcpContext.create(Protocols.versions().getFirst(), server);
+            ctx.setSession(session);
+            var params = Map.of("name", "sync-handle", "arguments", Map.of("message", "hello-sync"));
+            var result = callHandler.handle(ctx, params);
+            assertThat(result).isInstanceOf(CallToolResult.class);
+            var content = ((CallToolResult) result).content();
+            assertThat(((TextContent) content.getFirst()).text()).isEqualTo("hello-sync");
+        }
+    }
+
+    @Test
+    void syncToolHandlerExceptionMapsToInternalError() throws Exception {
+        var handlers = new HashMap<String, RpcMethodHandler>();
+        registry.registerHandlers(handlers);
+        registry.register(SyncToolHandler.of("sync-fail", "sync", null, (ctx, args) -> {
+            throw new IllegalStateException("boom");
+        }));
+
+        try (var server = TachyonServer.builder().build()) {
+            var session = server.createSession("s-sync-fail");
+            session.activate();
+            var callHandler = handlers.get("tools/call");
+            var ctx = DefaultMcpContext.create(Protocols.versions().getFirst(), server);
+            ctx.setSession(session);
+            var params = Map.of("name", "sync-fail", "arguments", Map.of());
+            var result = callHandler.handle(ctx, params);
+            assertThat(result).isInstanceOf(JsonRpcError.class);
+            assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INTERNAL_ERROR);
+        }
+    }
+
+    @Test
     void shouldFireOnChangeWhenToolReRegistered() {
         registry.register(new TestTool("re-register", null, null));
 
