@@ -8,7 +8,7 @@ Kotlin coroutine-first DSL for [Tachyon MCP](../README.md). Wraps the Java `Serv
 <dependency>
     <groupId>dev.tachyonmcp</groupId>
     <artifactId>tachyon-server-kotlin</artifactId>
-    <version>1.0.0-beta.6</version>
+    <version>1.0.0-beta.7</version>
 </dependency>
 ```
 
