@@ -7,19 +7,17 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/kpavlov/tachyon)
 <img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=fd923998-7054-4524-b014-cd368cfba9fc" />
 
-**Tachyon MCP** is a Java 21 [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server built on [Netty](https://netty.io). Implements the **2025-11-25** Streamable HTTP transport, protocol extensions, and stateless mode.
+**Tachyon MCP** is a Java 21 [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server built on [Netty](https://netty.io). It implements the **2025-11-25** Streamable HTTP transport, passes all official conformance tests, and runs stateless by default.
 
 ## 💫 Why Tachyon?
 
-✅ **MCP spec compliant** -- Passes all official conformance tests for the **2025-11-25** specification, including tools, resources, prompts, tasks, elicitation, sampling, and extensions (SEP-1686, SEP-2133).
+🧵 **Synchronous code, asynchronous runtime** — write blocking handlers; Java 21 virtual threads run them off the Netty event loop. No thread pools, reactive pipelines, or `CompletableFuture` boilerplate. Coroutine-first Kotlin DSL included.
 
-🛡️ **Stable APIs across spec changes** -- MCP evolves quickly. Stable domain APIs (`ToolHandler`, `ResourceHandler`, `PromptHandler`, task support) isolate protocol changes behind an internal mapping layer, so upgrades rarely affect application code.
+🛡️ **Stable APIs across spec changes** — domain types (`ToolHandler`, `ResourceHandler`, `PromptHandler`, tasks) sit behind an internal protocol mapper. Spec upgrades change the mapper, not your handlers.
 
-🧵 **Synchronous code, asynchronous runtime** -- Write blocking handlers while Java 21 virtual threads run them off the Netty event loop. No thread pools, reactive pipelines, or `CompletableFuture` boilerplate. Includes a coroutine-first Kotlin DSL.
+☁️ **Serverless by default** — stateless request handling works out of the box on AWS Lambda and similar. Opt into sessions (`.session(s -> s.enabled(true))`) for SSE resumability, `Last-Event-ID` replay, and TTL cleanup.
 
-☁️ **Serverless by default** -- Stateless request handling works out of the box for AWS Lambda and similar platforms. Enable sessions (`.session(s -> s.enabled(true))`) for SSE resumability, `Last-Event-ID` replay, TTL cleanup, and customizable session IDs.
-
-🚄 **Production-ready transport** — Built on Netty with backpressure, graceful shutdown, DNS rebinding protection, and automatic native transport support (`io_uring`, `epoll`, `kqueue`) where available.
+🚄 **Production transport** — Netty with backpressure, graceful shutdown, DNS rebinding protection, and native transport auto-detection (`io_uring` → `epoll` → `kqueue` → NIO).
 
 ## TL;DR
 
@@ -47,7 +45,8 @@
         TachyonServer.builder()
             .name("weather-mcp")
             .tool(new AbstractSyncToolHandler(
-                ToolDescriptor.builder("get_forecast")
+                ToolDescriptor.builder()
+                    .name("get_forecast")
                     .description("Get weather forecast")  
                     .inputSchema("""
                     {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
@@ -92,102 +91,39 @@ Check out [Skills CLI](https://github.com/vercel-labs/skills) for more options.
 
 ## Features
 
-### Core Protocol (46/46 conformance tests passing)
+Full **2025-11-25** MCP surface over Streamable HTTP, verified by the official conformance suite:
 
-- JSON-RPC 2.0 — request/response/error/notification
-- Streamable HTTP — POST, GET (SSE), DELETE, OPTIONS
-- Lifecycle — initialize → initialized → ACTIVE
-- Pagination — cursor-based across all list methods
-- Session state machine — INITIALIZING → ACTIVE → CLOSED
-- CORS & origin validation
-- DNS rebinding protection
-- Accept header strict validation (406)
-- Pending request timeout (60s)
-- Extensions ([SEP-2133](https://modelcontextprotocol.io/seps/2133-extensions))
+| Area | What you get |
+|---|---|
+| **Tools** | Sync & async handlers, JSON Schema 2020-12 input/output validation, `outputSchema`, annotations, per-tool `taskSupport`, `list_changed` |
+| **Resources** | Static + dynamic handlers, URI templates, subscribe/unsubscribe with `updated` notifications, text & blob content |
+| **Prompts** | List/get with resolver handlers, input-required (MRTR) flow, `list_changed` |
+| **Tasks** | Full `tasks/*` lifecycle with enforced state machine, status broadcast, stale-task janitor, `TasksExtension` (SEP-1686) |
+| **Client calls** | `sampling/createMessage`, elicitation (form **and** URL modes), bidirectional `cancelled` |
+| **Sessions** | Stateless by default; opt-in SSE resumability, `Last-Event-ID` replay, TTL janitor, pluggable store/ID generator |
+| **Transport** | Native transport auto-detect, backpressure watermarks, graceful drain-on-shutdown, CORS + origin/DNS-rebinding protection |
+| **Extensions** | Negotiable protocol extensions (SEP-2133) with extension-gated tool visibility |
 
-### Tools
+<details>
+<summary>Detailed method-by-method breakdown</summary>
 
-- `tools/list` — paginated with `nextCursor`
-- `tools/call` — returns `CallToolResult` with `isError`
-- `outputSchema` in listing
-- `annotations` field
-- `execution.taskSupport` (forbidden/optional/required)
-- Synchronous & asynchronous handler interfaces
-- Tool name validation ([SEP-986](https://modelcontextprotocol.io/seps/986-specify-format-for-tool-names))
-- `notifications/tools/list_changed` on add/remove
-- Inline notifications + logging during tool call
-- Input JSON Schema 2020-12 validation ([SEP-1613](https://modelcontextprotocol.io/seps/1613-establish-json-schema-2020-12-as-default-dialect-f))
+**Core** — JSON-RPC 2.0; Streamable HTTP (POST/GET-SSE/DELETE/OPTIONS); lifecycle `initialize → initialized → ACTIVE`; cursor pagination on all list methods; strict `Accept` validation (406); pending-request timeout.
 
-### Resources
+**Tools** — `tools/list` (paginated), `tools/call` (`isError`), `outputSchema` + `annotations`, sync/async handlers, name validation ([SEP-986](https://modelcontextprotocol.io/seps/986-specify-format-for-tool-names)), inline notifications/logging mid-call, JSON Schema 2020-12 validation ([SEP-1613](https://modelcontextprotocol.io/seps/1613-establish-json-schema-2020-12-as-default-dialect-f)), `notifications/tools/list_changed`.
 
-- `resources/list` — paginated
-- `resources/read` — text & blob content
-- `resources/templates/list` — URI templates
-- `resources/subscribe` / `unsubscribe`
-- `notifications/resources/list_changed`
-- `notifications/resources/updated` to subscribers
-- Dynamic content via `ResourceHandler` interface
+**Resources** — `resources/list`, `resources/read` (text & blob), `resources/templates/list`, `subscribe`/`unsubscribe`, `list_changed` + `updated` notifications, dynamic `ResourceHandler`.
 
-### Prompts
+**Prompts** — `prompts/list` (paginated), `prompts/get`, input-required flow, `list_changed`.
 
-- `prompts/list` — paginated with `nextCursor`
-- `prompts/get` — invokes prompt resolver
-- `notifications/prompts/list_changed`
+**Tasks** — `tasks/list|get|cancel|result`; state machine `SUBMITTED → WORKING → INPUT_REQUIRED → COMPLETED/FAILED/CANCELLED` (+ `REJECTED`/`AUTH_REQUIRED`); `notifications/tasks/status` on every transition; stale-task janitor; per-tool `execution.taskSupport`; `TasksExtension` ([SEP-1686](https://modelcontextprotocol.io/seps/1686-tasks)) exposing `create_task` + `task://{id}`, hidden from clients that don't negotiate it.
 
-### Tasks
+**Logging & client calls** — `logging/setLevel` per session, `notifications/message` above threshold, progress notifications; `sampling/createMessage`; elicitation form + URL modes; bidirectional `notifications/cancelled`.
 
-- `tasks/list`, `tasks/get`, `tasks/cancel`, `tasks/result`
-- State machine enforcement — SUBMITTED → WORKING → INPUT_REQUIRED → COMPLETED/FAILED/CANCELLED, plus REJECTED/AUTH_REQUIRED
-- `notifications/tasks/status` broadcast on every transition
-- Task Janitor for stale tasks
-- `execution.taskSupport` per tool (forbidden/optional/required)
-- `TasksExtension` ([SEP-1686](https://modelcontextprotocol.io/seps/1686-tasks)) — negotiable extension exposing `create_task` tool + `task://{id}` resource template
-- Extension-gated tool visibility (hidden from un-negotiated clients)
+**Transport & sessions** — Netty 4.2, `io_uring`/`epoll`/`kqueue`/NIO auto-detect, platform-thread event loops + virtual-thread handlers, writability backpressure, configurable idle timeouts; stateless or in-memory sessions, 5s janitor / 30s TTL, SSE disconnect survives (event-log replay on reconnect), graceful drain (`shutdownGracePeriod`, default 5s) before force-interrupt.
 
-### Logging & Observability
-
-- `logging/setLevel` per session
-- `notifications/message` emitted above threshold
-- Progress notifications
-
-### Client Communication
-
-- `sampling/createMessage` — server → client request
-- Elicitation — ✅ form mode; ❌ url mode
-- `notifications/cancelled` — bidirectional
-- `notifications/tasks/status` from client
-
-### Transport & I/O
-
-- Netty 4.2
-- io_uring / epoll / kqueue / nio auto-detection
-- Platform-thread event loops + virtual-thread handlers
-- TCP_NODELAY, SO_KEEPALIVE
-- Channel writability backpressure (`setAutoRead`)
-- Configurable idle timeouts (reader/writer)
-
-### Session Management
-
-- SSE resumability via Last-Event-ID
-- **Stateless mode** — skip sessions for serverless
-- IN_MEMORY session store (ConcurrentHashMap)
-- Session Janitor — 5s sweep, 30s TTL
-- SSE disconnect ≠ session removal (supports reconnect)
-- Event log replay on reconnection
-- Graceful shutdown — drains in-flight handlers for `shutdownGracePeriod` (default 5s) before force-interrupt
+</details>
 
 ---
-
-## Installation
-
-**Requirements**: JDK 21+
-
-### Build from source
-```bash
-git clone https://github.com/kpavlov/tachyon.git
-cd tachyon
-mvn install -pl tachyon-server -DskipTests
-```
 
 ## Quick Start
 
@@ -210,18 +146,18 @@ Handler interfaces (`ToolHandler`, `ResourceHandler`, `PromptHandler`) and descr
 
 ## Performance
 
-- **Native transports** — io_uring > epoll > kqueue > NIO auto-detect
-- **Write buffer watermarks** — 32 KB low / 128 KB high, backpressure wired
-- **Batch flushing** — `ctx.write()` accumulates, single `ctx.flush()` on boundary
-- **Minimal allocations** — `McpEndpointHandler` is `@Sharable`, no per-request handler creation
-- **Virtual threads** — handlers offloaded from event loop, no manual thread pools
-- **JSON-RPC** — Jackson streaming codec, no ObjectMapper.
+- **Native transports** — `io_uring` → `epoll` → `kqueue` → NIO auto-detect
+- **Write-buffer watermarks** — 32 KB low / 128 KB high, backpressure wired end to end
+- **Batch flushing** — `ctx.write()` accumulates, one `ctx.flush()` per boundary
+- **Sharable handlers** — `@Sharable` pipeline handlers, no per-request allocation
+- **Virtual threads** — handlers offloaded from the event loop, no manual pools
+- **Streaming JSON-RPC** — Jackson streaming codec, no or limited `ObjectMapper` tree round-trips
 
-## Gaps & Limitations
+## Not yet supported
 
-- [ ] **Rate limiting** — Not yet implemented
-- [ ] **2026-07-28 draft protocol version** — High priority
-- [ ] **Stale session on re-initialize** — 30s TTL lingering, affects reconnect only
+- **HTTP/2** — transport is HTTP/1.1
+- **Rate limiting**
+- **2026-07-28 protocol version** — domain types already track its shape; negotiation pending
 
 ---
 
@@ -229,9 +165,6 @@ Handler interfaces (`ToolHandler`, `ResourceHandler`, `PromptHandler`) and descr
 
 ### Can I deploy to AWS Lambda?
 Yes. Servers are stateless by default, so each invocation processes one request independently. Enable sessions with `.session(cfg -> cfg.enabled(true))` when you need SSE resumability or replay.
-
-### Does it support HTTP/2?
-Not yet. The current transport targets HTTP/1.1.
 
 ### How do I write a tool?
 See [docs/tools.md](docs/tools.md) — covers lambda and class-based handlers, input schema, and `ToolResult` factories.
