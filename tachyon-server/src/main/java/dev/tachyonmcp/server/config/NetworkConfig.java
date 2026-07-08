@@ -44,14 +44,28 @@ public record NetworkConfig(
         NettyIoEngine ioEngine,
         Duration heartbeatInterval) {
 
+    public NetworkConfig {
+        if (allowedOrigins != null) {
+            allowedOrigins = List.copyOf(allowedOrigins);
+        }
+        if (allowedHeaders != null) {
+            allowedHeaders = List.copyOf(allowedHeaders);
+        }
+    }
+
+    public static final String DEFAULT_HOST = "127.0.0.1";
+    public static final int UNSET_PORT = -1;
+    public static final String DEFAULT_ENDPOINT_PATH = "/mcp";
+    public static final Duration DEFAULT_READER_IDLE_TIMEOUT = Duration.ofSeconds(60);
+    public static final Duration DEFAULT_WRITER_IDLE_TIMEOUT = Duration.ofMinutes(5);
     public static final Duration DEFAULT_HEARTBEAT_INTERVAL = Duration.ofSeconds(15);
 
     public static final NetworkConfig DEFAULT = new NetworkConfig(
-            "127.0.0.1",
-            -1,
-            "/mcp",
-            Duration.ofSeconds(60),
-            Duration.ofMinutes(5),
+            DEFAULT_HOST,
+            UNSET_PORT,
+            DEFAULT_ENDPOINT_PATH,
+            DEFAULT_READER_IDLE_TIMEOUT,
+            DEFAULT_WRITER_IDLE_TIMEOUT,
             McpChannelInitializer.DEFAULT_MAX_CONTENT_LENGTH,
             null,
             false,
@@ -66,11 +80,11 @@ public record NetworkConfig(
 
     /** Builder for {@link NetworkConfig}. */
     public static final class Builder {
-        private String host = "127.0.0.1";
-        private int port = -1;
-        private String endpointPath = "/mcp";
-        private Duration readerIdleTimeout = Duration.ofSeconds(60);
-        private Duration writerIdleTimeout = Duration.ofMinutes(5);
+        private String host = DEFAULT_HOST;
+        private int port = UNSET_PORT;
+        private String endpointPath = DEFAULT_ENDPOINT_PATH;
+        private Duration readerIdleTimeout = DEFAULT_READER_IDLE_TIMEOUT;
+        private Duration writerIdleTimeout = DEFAULT_WRITER_IDLE_TIMEOUT;
         private int maxContentLength = McpChannelInitializer.DEFAULT_MAX_CONTENT_LENGTH;
         private @Nullable List<String> allowedOrigins;
         private boolean allowNullOrigin;

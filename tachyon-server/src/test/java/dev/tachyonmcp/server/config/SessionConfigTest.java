@@ -15,8 +15,9 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Verifies {@link SessionConfig} defaults (stateless, default id generator) and the fail-fast
- * rejection of session options configured while sessions are disabled — {@code enabled} cannot be
- * flipped after construction, so the contradiction is definitive.
+ * rejection of session options configured while sessions are disabled — compact constructor
+ * resolves value defaults ({@code sessionTtl}, {@code janitorInterval},
+ * {@code sessionIdGenerator}) when {@code enabled=true}.
  *
  * @author Konstantin Pavlov
  */
@@ -30,6 +31,28 @@ class SessionConfigTest {
         assertThat(config.sessionIdGenerator()).isNull();
         assertThat(config.sessionStore()).isNull();
         assertThat(config.sessionLogRouter()).isNull();
+    }
+
+    @Test
+    void resolvesDefaultTtlWhenEnabled() {
+        var config = SessionConfig.builder().enabled(true).build();
+
+        assertThat(config.enabled()).isTrue();
+        assertThat(config.sessionTtl()).isEqualTo(SessionConfig.DEFAULT_SESSION_TTL);
+    }
+
+    @Test
+    void resolvesDefaultJanitorIntervalWhenEnabled() {
+        var config = SessionConfig.builder().enabled(true).build();
+
+        assertThat(config.janitorInterval()).isEqualTo(SessionConfig.DEFAULT_JANITOR_INTERVAL);
+    }
+
+    @Test
+    void resolvesDefaultSessionIdGeneratorWhenEnabled() {
+        var config = SessionConfig.builder().enabled(true).build();
+
+        assertThat(config.sessionIdGenerator()).isSameAs(SessionIdGenerator.DEFAULT);
     }
 
     @Test
