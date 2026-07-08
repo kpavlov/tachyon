@@ -17,24 +17,29 @@ import org.jspecify.annotations.Nullable;
  * @param sessionLogRouter   optional custom event log router; {@code null} uses in-memory default
  * @param sessionStore       optional custom session store; {@code null} uses in-memory default
  * @param sessionIdGenerator session id generator; defaults to {@link SessionIdGenerator#DEFAULT}
+ * @param janitorInterval    interval between janitor sweeps (default 5s);
+ *                           {@code null} uses the default
  */
 public record SessionConfig(
         boolean enabled,
         @Nullable Duration sessionTtl,
         @Nullable SessionLogRouter sessionLogRouter,
         @Nullable SessionStore sessionStore,
-        @Nullable SessionIdGenerator sessionIdGenerator) {
+        @Nullable SessionIdGenerator sessionIdGenerator,
+        @Nullable Duration janitorInterval) {
 
     public static final Duration DEFAULT_SESSION_TTL = Duration.ofSeconds(30);
+    public static final Duration DEFAULT_JANITOR_INTERVAL = Duration.ofSeconds(5);
 
-    public static final SessionConfig STATELESS = new SessionConfig(false, null, null, null, null);
+    public static final SessionConfig STATELESS = new SessionConfig(false, null, null, null, null, null);
 
     public SessionConfig {
         if (!enabled
                 && (sessionIdGenerator != null
                         || sessionStore != null
                         || sessionLogRouter != null
-                        || sessionTtl != null)) {
+                        || sessionTtl != null
+                        || janitorInterval != null)) {
             throw new IllegalStateException("Session options require sessions to be enabled — call enabled(true)");
         }
     }
@@ -49,6 +54,7 @@ public record SessionConfig(
     public static final class Builder {
         private boolean enabled = false;
         private @Nullable Duration sessionTtl;
+        private @Nullable Duration janitorInterval;
         private @Nullable SessionLogRouter sessionLogRouter;
         private @Nullable SessionStore sessionStore;
         private @Nullable SessionIdGenerator sessionIdGenerator;
@@ -80,6 +86,14 @@ public record SessionConfig(
          */
         public Builder sessionTtl(Duration sessionTtl) {
             this.sessionTtl = sessionTtl;
+            return this;
+        }
+
+        /**
+         * Sets the janitor sweep interval.
+         */
+        public Builder janitorInterval(Duration janitorInterval) {
+            this.janitorInterval = janitorInterval;
             return this;
         }
 
@@ -116,7 +130,8 @@ public record SessionConfig(
                 if (sessionIdGenerator != null
                         || sessionStore != null
                         || sessionLogRouter != null
-                        || sessionTtl != null) {
+                        || sessionTtl != null
+                        || janitorInterval != null) {
                     throw new IllegalStateException(
                             "Session options require sessions to be enabled — call enabled(true)");
                 }
@@ -128,7 +143,8 @@ public record SessionConfig(
                         sessionTtl != null ? sessionTtl : DEFAULT_SESSION_TTL,
                         sessionLogRouter != null ? sessionLogRouter : new InMemorySessionLogRouter(),
                         sessionStore != null ? sessionStore : new InMemorySessionStore(),
-                        sessionIdGenerator != null ? sessionIdGenerator : SessionIdGenerator.DEFAULT);
+                        sessionIdGenerator != null ? sessionIdGenerator : SessionIdGenerator.DEFAULT,
+                        janitorInterval != null ? janitorInterval : DEFAULT_JANITOR_INTERVAL);
             }
         }
     }

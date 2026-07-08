@@ -160,10 +160,10 @@ class McpOperationHandlerRequestTest {
         }
     }
 
-    // Once a tool upgrades the POST response to SSE, the stream is long-lived: an idle tick must
-    // emit a comment heartbeat (":\r\n") to keep it alive instead of closing the channel.
+    // Once a tool upgrades the POST response to SSE, the stream is long-lived: an idle tick is a
+    // no-op — the scheduler drives heartbeats. The channel stays open but no heartbeat is emitted.
     @Test
-    void idleOnUpgradedPostSseStreamSendsHeartbeat() throws InterruptedException {
+    void idleOnUpgradedPostSseStreamIsNoOp() throws InterruptedException {
         var descriptor = ToolDescriptor.builder()
                 .name("stalled_tool")
                 .description("upgrades to SSE then never completes")
@@ -225,14 +225,9 @@ class McpOperationHandlerRequestTest {
             assertThat(ch.isOpen())
                     .as("upgraded POST-SSE stream must survive an idle tick")
                     .isTrue();
-            var heartbeat = ch.readOutbound();
-            assertThat(heartbeat).isInstanceOf(HttpContent.class);
-            var content = (HttpContent) heartbeat;
-            try {
-                assertThat(content.content().toString(StandardCharsets.UTF_8)).isEqualTo(":\r\n");
-            } finally {
-                content.release();
-            }
+            assertThat((Object) ch.readOutbound())
+                    .as("idle tick must NOT emit a heartbeat (scheduler-driven)")
+                    .isNull();
         } finally {
             neverComplete.cancel(true);
             ch.close();

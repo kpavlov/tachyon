@@ -75,8 +75,9 @@ public class SessionManager implements AutoCloseable {
     }
 
     /** Starts the background janitor that closes expired sessions. */
-    public void startJanitor(Duration ttl) {
+    public void startJanitor(Duration ttl, Duration interval) {
         final var ttlNanos = ttl.toNanos();
+        final var intervalMs = interval.toMillis();
         janitor.scheduleWithFixedDelay(
                 () -> {
                     try {
@@ -85,10 +86,10 @@ public class SessionManager implements AutoCloseable {
                         logger.warn("Janitor sweep failed", e);
                     }
                 },
-                5,
-                5,
-                TimeUnit.SECONDS);
-        logger.debug("Session janitor started (interval=5s, ttl={}ms)", ttlNanos / 1_000_000);
+                intervalMs,
+                intervalMs,
+                TimeUnit.MILLISECONDS);
+        logger.debug("Session janitor started (interval={}ms, ttl={}ms)", intervalMs, ttlNanos / 1_000_000);
     }
 
     /** One janitor pass: closes and evicts sessions that are CLOSED or idle beyond the TTL. */

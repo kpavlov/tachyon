@@ -7,6 +7,7 @@ package dev.tachyonmcp.transport.netty.sse;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.Server;
+import dev.tachyonmcp.transport.netty.ChannelHandlerUtils;
 import dev.tachyonmcp.transport.netty.http.HttpHelpers;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
@@ -45,6 +46,7 @@ public class SseManager {
         });
         holder[0] = connection;
         session.connection(connection);
+        ChannelHandlerUtils.setSession(ctx, session);
 
         writeOpeningFrames(ctx, origin, connection);
 
@@ -72,7 +74,7 @@ public class SseManager {
         ctx.write(response);
         ctx.writeAndFlush(
                 new DefaultHttpContent(ByteBufUtil.writeUtf8(ctx.alloc(), "retry: " + SSE_RETRY_DELAY_MS + "\n")));
-        SseHeartbeat.enable(ctx.channel());
+        SseHeartbeat.enable(ctx.channel(), server.config().network().heartbeatInterval());
         var primeSse = new SseEvent(String.valueOf(server.nextEventId()), "message", "");
         connection.send(primeSse);
     }

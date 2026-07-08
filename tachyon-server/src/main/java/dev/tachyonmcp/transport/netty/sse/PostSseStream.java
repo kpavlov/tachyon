@@ -15,6 +15,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http.*;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.LongSupplier;
@@ -40,14 +41,17 @@ public final class PostSseStream implements OutboundSseStream {
     private final @Nullable String origin;
     private final LongSupplier eventIdSupplier;
     private final String streamKey;
+    private final Duration heartbeatInterval;
     private final List<SseEvent> queued = new ArrayList<>();
     private volatile boolean started = false;
     private boolean closed = false;
 
-    public PostSseStream(Channel channel, @Nullable String origin, LongSupplier eventIdSupplier) {
+    public PostSseStream(
+            Channel channel, @Nullable String origin, LongSupplier eventIdSupplier, Duration heartbeatInterval) {
         this.channel = channel;
         this.origin = origin;
         this.eventIdSupplier = eventIdSupplier;
+        this.heartbeatInterval = heartbeatInterval;
         // Session-unique key (one counter draw per POST) tagging this stream's events in the log
         // and suffixing its SSE ids, so Last-Event-ID resolves to THIS stream on replay. Not the
         // JSON-RPC request id — clients may reuse those across sequential requests.
@@ -110,7 +114,7 @@ public final class PostSseStream implements OutboundSseStream {
         channel.write(response);
         channel.write(
                 new DefaultHttpContent(ByteBufUtil.writeUtf8(channel.alloc(), "retry: " + SSE_RETRY_DELAY_MS + "\n")));
-        SseHeartbeat.enable(channel);
+        SseHeartbeat.enable(channel, heartbeatInterval);
         // Priming event: gives the client a Last-Event-ID baseline for reconnection (SEP-1699).
         // Carries this stream's key so a resume from the priming id replays only this stream.
         var primingId = eventIdSupplier.getAsLong();

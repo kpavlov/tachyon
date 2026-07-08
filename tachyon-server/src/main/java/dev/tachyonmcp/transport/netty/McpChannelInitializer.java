@@ -110,6 +110,9 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
         }
         p.addLast("http", new HttpServerCodec());
 
+        // SessionTouchHandler is installed lazily at session-bind time (see SessionTouchHandler#install).
+        // During initialization, no session is bound to the channel, so no touch is needed.
+
         // Idiomatic keep-alive management: inspects each request's Connection intent and either
         // keeps the socket alive or appends `Connection: close` and closes after the final content.
         // Placed right after the codec so it governs responses from ALL downstream handlers
@@ -133,10 +136,9 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
         // always acking 100 Continue upstream of the aggregator.
         p.addLast("http-aggregator", new HttpObjectAggregator(maxContentLength));
         // On a plain HTTP keep-alive socket an idle tick closes the connection. On a channel carrying
-        // an open SSE stream (marked via SseHeartbeat) McpOperationHandler instead emits a comment
-        // heartbeat, so the idle interval doubles as the SSE keep-alive cadence: an SSE client only
-        // reads, so reader-idle keeps firing and drives the heartbeat. Lower readerIdleTimeout below
-        // any intermediary proxy's idle timeout (commonly 60s) to keep streams from being reaped.
+        // an open SSE stream the SseHeartbeat scheduler drives heartbeats independently, so idle ticks
+        // are a no-op for SSE channels. Lower readerIdleTimeout below any intermediary proxy's idle
+        // timeout (commonly 60s) to keep non-SSE keep-alive sockets from being reaped.
         if (!readerIdleTimeout.isZero() || !writerIdleTimeout.isZero()) {
             p.addLast(
                     "idle",

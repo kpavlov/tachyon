@@ -19,6 +19,9 @@ public class SessionScope
         /** Session time-to-live duration. */
         public var sessionTtl: Duration? = null
 
+        /** Janitor sweep interval. */
+        public var janitorInterval: Duration? = null
+
         /** Custom session store implementation. */
         public var sessionStore: SessionStore? = null
 
@@ -44,6 +47,7 @@ public class SessionScope
         internal fun applyTo(builder: SessionConfig.Builder) {
             builder.enabled(enabled)
             sessionTtl?.let { builder.sessionTtl(it.toJavaDuration()) }
+            janitorInterval?.let { builder.janitorInterval(it.toJavaDuration()) }
             sessionStore?.let(builder::sessionStore)
             sessionLogRouter?.let(builder::sessionLogRouter)
             sessionIdGenerator.let { builder.sessionIdGenerator(it) }

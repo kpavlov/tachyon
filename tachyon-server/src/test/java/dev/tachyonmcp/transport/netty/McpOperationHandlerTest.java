@@ -105,7 +105,7 @@ class McpOperationHandlerTest {
     }
 
     @Test
-    void idleOnSseStreamSendsHeartbeatAndKeepsChannelOpen() {
+    void idleOnSseStreamIsNoOp() {
         server.createSession("sess-hb").activate();
 
         var request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/mcp");
@@ -117,20 +117,14 @@ class McpOperationHandlerTest {
         channel.runPendingTasks();
         drainOutbound();
 
+        // SSE channels: idle tick is a no-op — the scheduler drives heartbeats.
         channel.pipeline().fireUserEventTriggered(IdleStateEvent.FIRST_READER_IDLE_STATE_EVENT);
         channel.runPendingTasks();
 
         assertThat(channel.isOpen()).as("SSE stream must survive an idle tick").isTrue();
-        assertThat(readComment())
-                .as("idle tick must emit an SSE comment heartbeat")
-                .isEqualTo(":\r\n");
-
-        // A second idle event produces another heartbeat (the handler is stateless across ticks).
-        // Real-timer rescheduling is proven by SseHeartbeatE2eTest, not here.
-        channel.pipeline().fireUserEventTriggered(IdleStateEvent.READER_IDLE_STATE_EVENT);
-        channel.runPendingTasks();
-        assertThat(channel.isOpen()).isTrue();
-        assertThat(readComment()).isEqualTo(":\r\n");
+        assertThat((Object) channel.readOutbound())
+                .as("idle tick must NOT emit a heartbeat (scheduler-driven)")
+                .isNull();
     }
 
     @Test
