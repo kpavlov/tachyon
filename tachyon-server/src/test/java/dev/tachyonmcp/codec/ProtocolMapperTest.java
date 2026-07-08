@@ -52,16 +52,7 @@ class ProtocolMapperTest {
 
     @Test
     void serializeListToolsResult() {
-        var tool = new Tool(
-                "My tool",
-                JsonNodeFactory.instance.objectNode().put("type", "object"),
-                null,
-                null,
-                null,
-                null,
-                "my-tool",
-                null,
-                null);
+        var tool = new Tool("My tool", "{\"type\":\"object\"}", null, null, null, null, "my-tool", null, null);
         var result = new ListToolsResult(List.of(tool), null, null, null);
 
         var bytes = CodecRegistry.codecFor(ListToolsResult.class).encodeToBytes(result);

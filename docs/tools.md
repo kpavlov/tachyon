@@ -28,24 +28,19 @@ parses it for you (input and output schemas):
 
 ### Class (recommended for complex tools)
 
+`ToolDescriptor.builder().inputSchema(...)` / `.outputSchema(...)` take a raw JSON `String` or a Jackson `JsonNode`:
+
 ```java
 import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.runtime.InteractionContext;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 class WeatherTool extends AbstractSyncToolHandler {
-    private static final JsonNode SCHEMA;
-    static {
-        var s = JsonNodeFactory.instance.objectNode();
-        s.put("type", "object");
-        s.putObject("properties").putObject("city").put("type", "string");
-        s.putArray("required").add("city");
-        SCHEMA = s;
-    }
+    private static final String SCHEMA = """
+        {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
+        """;
 
     WeatherTool() {
         super(ToolDescriptor.builder()

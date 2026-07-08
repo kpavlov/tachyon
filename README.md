@@ -29,39 +29,36 @@
     </dependency>
     ```
 
-2. Create MCP server:
+   2. Create MCP server:
 
-    ```java
-    import dev.tachyonmcp.server.TachyonServer;
-    import dev.tachyonmcp.runtime.InteractionContext;
-    import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
-    import dev.tachyonmcp.server.features.tools.ToolArgs;
-    import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-    import dev.tachyonmcp.server.features.tools.ToolResult;
-    import tools.jackson.databind.node.JsonNodeFactory;
+       ```java
+       import dev.tachyonmcp.server.TachyonServer;
+       import dev.tachyonmcp.runtime.InteractionContext;
+       import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
+       import dev.tachyonmcp.server.features.tools.ToolArgs;
+       import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+       import dev.tachyonmcp.server.features.tools.ToolResult;
 
-    void main() {
-        var schema = JsonNodeFactory.instance.objectNode();
-        schema.put("type", "object");
-        schema.putObject("properties").putObject("city").put("type", "string");
+       void main() {
+           TachyonServer.builder()
+               .name("weather-mcp")
+               .tool(new AbstractSyncToolHandler(
+                   ToolDescriptor.builder("get_forecast")
+                       .description("Get weather forecast")  
+                       .inputSchema("""
+                       {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
+                       """)
+                       .build()) {
 
-        TachyonServer.builder()
-            .name("weather-mcp")
-            .tool(new AbstractSyncToolHandler(
-                ToolDescriptor.builder("get_forecast")
-                    .description("Get weather forecast")
-                    .inputSchema(schema)
-                    .build()) {
-
-                @Override
-                public ToolResult handle(InteractionContext ctx, ToolArgs args) {
-                    return ToolResult.text("☀️ 22°C");
-                }
-            })
-            .port(8080)
-            .start();
-    }
-    ```
+                   @Override
+                   public ToolResult handle(InteractionContext ctx, ToolArgs args) {
+                       return ToolResult.text("☀️ 22°C");
+                   }
+               })
+               .port(8080)
+               .start();
+       }
+       ```
 
 ## Documentation
 

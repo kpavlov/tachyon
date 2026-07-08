@@ -7,6 +7,7 @@ package dev.tachyonmcp.server.features.prompts;
 import dev.tachyonmcp.server.ServerResourceType;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.PromptArgument;
+import dev.tachyonmcp.server.json.JsonSchemaUtils;
 import java.util.List;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
@@ -83,6 +84,10 @@ public interface PromptDescriptor extends ServerResourceType {
         Builder arguments(@Nullable Iterable<? extends PromptArgument> elements);
 
         Builder inputSchema(@Nullable JsonNode inputSchema);
+
+        default Builder inputSchema(@Nullable String inputSchema) {
+            return inputSchema(JsonSchemaUtils.parseSchema(inputSchema));
+        }
 
         Builder icons(@Nullable Iterable<? extends Icon> elements);
 

@@ -85,6 +85,14 @@ public interface ToolDescriptor {
 
         Builder outputSchema(@Nullable JsonNode outputSchema);
 
+        default Builder inputSchema(@Nullable String inputSchema) {
+            return inputSchema(parseSchema(inputSchema));
+        }
+
+        default Builder outputSchema(@Nullable String outputSchema) {
+            return outputSchema(parseSchema(outputSchema));
+        }
+
         Builder taskSupport(@Nullable TaskSupport taskSupport);
 
         Builder annotations(@Nullable ToolAnnotations annotations);

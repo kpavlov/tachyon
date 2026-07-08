@@ -201,20 +201,23 @@ Native transports need optional runtime jars (`netty-transport-native-epoll` / `
 
 > ⚠️ **Jackson 3** — `tools.jackson:jackson-databind:3.x`, NOT Jackson 2. Import `tools.jackson.databind.{ObjectMapper,JsonNode}` (**not** `com.fasterxml.jackson.*`). Use `JsonNode.asString()` (**not** `asText()`).
 
+`ToolDescriptor.builder().inputSchema(...)` / `.outputSchema(...)` accept a raw JSON `String`
+**or** a Jackson `JsonNode` (same for `PromptDescriptor.builder().inputSchema(...)`):
+
 ```java
-private static final JsonNode INPUT_SCHEMA = MAPPER.readTree("""
-    { "type": "object",
-      "properties": { "city": { "type": "string", "description": "City name" } },
-      "required": ["city"] }
-    """);
+ToolDescriptor.builder()
+    .name("get_weather")
+    .inputSchema("""
+        { "type": "object",
+          "properties": { "city": { "type": "string", "description": "City name" } },
+          "required": ["city"] }
+        """)
+    .build();
 ```
 
-→ `ToolDescriptor.builder().name("name").inputSchema(INPUT_SCHEMA).build()`
 (`builder(name)` and `builder(name, inJson, outJson)` still exist but are deprecated.)
-
-Or skip the `JsonNode` — pass the schema as a raw JSON `String` to
-`SyncToolHandler.of(name, desc, inputSchemaJson, outputSchemaJson, fn)` or
-`.tool(name, desc, inJson, outJson, fn)`; Tachyon parses it.
+The lambda shorthands `SyncToolHandler.of(name, desc, inJson, outJson, fn)` and
+`.tool(name, desc, inJson, outJson, fn)` also take String schemas.
 
 ## Extensions
 

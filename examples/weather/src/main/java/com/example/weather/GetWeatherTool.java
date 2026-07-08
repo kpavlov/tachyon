@@ -5,8 +5,6 @@ package com.example.weather;
 
 import dev.tachyonmcp.server.features.tools.*;
 import dev.tachyonmcp.runtime.InteractionContext;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.random.RandomGenerator;
@@ -14,7 +12,7 @@ import java.util.random.RandomGenerator;
 class GetWeatherTool extends AbstractSyncToolHandler {
     private static final RandomGenerator RANDOM = RandomGenerator.getDefault();
     // language=json
-    private static final JsonNode INPUT_SCHEMA = new ObjectMapper().readTree("""
+    private static final String INPUT_SCHEMA = """
         {
           "type": "object",
           "properties": {
@@ -30,7 +28,7 @@ class GetWeatherTool extends AbstractSyncToolHandler {
           },
           "required": ["city"]
         }
-        """);
+        """;
 
     public GetWeatherTool() {
         super(ToolDescriptor.builder()

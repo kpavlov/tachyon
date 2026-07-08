@@ -276,7 +276,9 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
                     gen.writeName("params");
                     var paramsCodec = CodecRegistry.codecFor(ElicitRequestParams.class);
                     paramsCodec.encode(
-                            gen, new ElicitRequestFormParams(null, f.message(), f.requestedSchema(), null, null));
+                            gen,
+                            new ElicitRequestFormParams(
+                                    null, f.message(), JsonUtils.writeString(f.requestedSchema()), null, null));
                 }
                 case UrlInputRequest u -> {
                     gen.writeStringProperty("method", "elicitation/create");

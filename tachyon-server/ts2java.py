@@ -1512,7 +1512,11 @@ class Generator:
 
         for typ, fname, optional, _, json_name in regular:
             out.append(f'                case "{json_name}" -> {{\n')
-            if typ == "String":
+            if typ == "String" and self.field_type_mappings.get(f"{model_name}.{json_name}") == "String":
+                out.append(
+                    f"                    {fname} = parser.readValueAsTree().toString();\n"
+                )
+            elif typ == "String":
                 out.append(f"                    {fname} = parser.getString();\n")
             elif typ in ("boolean", "Boolean"):
                 out.append(f"                    {fname} = parser.getBooleanValue();\n")
@@ -1635,7 +1639,10 @@ class Generator:
                 ind = "            "
             else:
                 ind = "        "
-            if typ == "String":
+            if typ == "String" and self.field_type_mappings.get(f"{model_name}.{json_name}") == "String":
+                out.append(f'{ind}gen.writeName("{json_name}");\n')
+                out.append(f"{ind}gen.writeRawValue({acc});\n")
+            elif typ == "String":
                 out.append(f'{ind}gen.writeStringProperty("{json_name}", {acc});\n')
             elif typ in ("boolean", "Boolean"):
                 out.append(f'{ind}gen.writeBooleanProperty("{json_name}", {acc});\n')

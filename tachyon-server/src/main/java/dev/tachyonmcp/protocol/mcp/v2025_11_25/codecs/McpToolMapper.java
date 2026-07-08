@@ -39,9 +39,9 @@ final class McpToolMapper {
         }
         return new Tool(
                 d.description(),
-                schema,
+                schema.toString(),
                 execution,
-                d.outputSchema(),
+                d.outputSchema() != null ? d.outputSchema().toString() : null,
                 toProtocolToolAnnotations(d.annotations()),
                 null,
                 d.name(),
