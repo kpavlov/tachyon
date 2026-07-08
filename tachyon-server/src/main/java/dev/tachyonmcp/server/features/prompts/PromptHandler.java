@@ -8,7 +8,13 @@ import dev.tachyonmcp.server.domain.PromptMessage;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-/** Generates prompt messages from optional arguments. */
+/**
+ * Generates prompt messages from optional arguments.
+ *
+ * <p>{@link #getMessages} runs on a virtual thread — blocking for I/O is the intended contract.
+ * Never use {@code synchronized} or call native methods (pins the carrier thread).
+ * Use {@link java.util.concurrent.locks.ReentrantLock} instead.
+ */
 @FunctionalInterface
 public interface PromptHandler {
 

@@ -12,7 +12,8 @@ import org.jspecify.annotations.Nullable;
 /** Static pagination utility shared by registries. */
 public final class Pagination {
 
-    private static final int DEFAULT_PAGE_SIZE = 50;
+    /** Default page size used when a request omits (or non-positively sizes) its limit. */
+    public static final int DEFAULT_PAGE_SIZE = 50;
 
     private Pagination() {}
 

@@ -8,6 +8,12 @@ import java.util.concurrent.CompletionStage;
 
 /**
  * Handles tool execution. One handler per tool.
+ *
+ * <p>{@link #handle} runs on a virtual thread — blocking for I/O is the intended contract.
+ * Never use {@code synchronized} or call native methods (pins the carrier thread).
+ * Use {@link java.util.concurrent.locks.ReentrantLock} instead. For CPU-bound work or
+ * third-party code that may synchronize, offload to
+ * {@code context.server().executor()}.
  */
 public interface ToolHandler {
 
@@ -18,8 +24,6 @@ public interface ToolHandler {
 
     /**
      * Executes the tool with the given context and request.
-     * Runs on the server executor which must be thread-per-task (e.g. virtual threads).
-     * Blocking is expected and fine; bounded pools deadlock with this contract.
      */
     ToolResult handle(InteractionContext context, ToolRequest request) throws Exception;
 

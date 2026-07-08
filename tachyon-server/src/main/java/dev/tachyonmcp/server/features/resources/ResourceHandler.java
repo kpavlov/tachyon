@@ -10,7 +10,13 @@ import dev.tachyonmcp.server.domain.ResourceContents;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
-/** Reads a resource's contents. One handler per resource. */
+/**
+ * Reads a resource's contents. One handler per resource.
+ *
+ * <p>{@link #read} runs on a virtual thread — blocking for I/O is the intended contract.
+ * Never use {@code synchronized} or call native methods (pins the carrier thread).
+ * Use {@link java.util.concurrent.locks.ReentrantLock} instead.
+ */
 @FunctionalInterface
 public interface ResourceHandler {
 

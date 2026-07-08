@@ -100,7 +100,7 @@
             --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens
             java.base/java.io=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens
             java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.base/java.nio.channels.spi=ALL-UNNAMED
-            -Dio.netty.leakDetection.level=PARANOID
+            -Dio.netty.leakDetection.level=PARANOID -Djdk.tracePinnedThreads=short
         </argLine>
         <kotlinx-coroutines.version>1.11.0</kotlinx-coroutines.version>
         <kotlinx-serialization-json.version>1.11.0</kotlinx-serialization-json.version>

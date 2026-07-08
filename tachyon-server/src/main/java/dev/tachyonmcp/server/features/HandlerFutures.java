@@ -4,12 +4,9 @@
 
 package dev.tachyonmcp.server.features;
 
-import dev.tachyonmcp.server.session.DispatchContext;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
-import java.util.function.BiFunction;
-import org.jspecify.annotations.Nullable;
 
 /**
  * Static utilities for common CompletionStage patterns.
@@ -38,34 +35,5 @@ public final class HandlerFutures {
             }
             throw new CompletionException(cause);
         }
-    }
-
-    /**
-     * Wraps a CompletionStage with an isDone fast-path and CompletionException unwrapping:
-     * if already complete, runs the transformer inline (Runnable::run); otherwise hops to the
-     * server executor. The transformer receives the unwrapped result and any exception cause
-     * (CompletionException already unwrapped).
-     *
-     * <p>TOCTOU note: a stage completing after the isDone check merely takes the executor hop
-     * — benign, not a race.
-     */
-    public static CompletionStage<Object> completeOn(
-            CompletionStage<?> stage,
-            DispatchContext ctx,
-            BiFunction<@Nullable Object, @Nullable Throwable, Object> transformer) {
-        var done = stage.toCompletableFuture().isDone();
-        var executor = done
-                ? (java.util.concurrent.Executor) Runnable::run
-                : ctx.server().executor();
-        return stage.handleAsync(
-                (result, e) -> {
-                    if (e != null) {
-                        var cause = e instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : e;
-                        return transformer.apply(null, cause);
-                    } else {
-                        return transformer.apply(result, null);
-                    }
-                },
-                executor);
     }
 }

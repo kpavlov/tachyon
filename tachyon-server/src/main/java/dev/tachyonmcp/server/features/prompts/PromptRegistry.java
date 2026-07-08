@@ -16,12 +16,8 @@ import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,29 +81,14 @@ public class PromptRegistry extends Registry<PromptEntry> {
         }
 
         @Override
-        public Object handle(DispatchContext context, Object params) {
-            try {
-                return HandlerFutures.joinInterruptibly(handleAsync(context, params));
-            } catch (RuntimeException | Error e) {
-                throw e;
-            } catch (Exception e) {
-                throw new CompletionException(e);
-            }
-        }
-
-        @Override
-        public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
+        public Object handle(DispatchContext context, Object params) throws Exception {
             var name = extractParamName(params);
-            if (name == null) {
-                return CompletableFuture.completedFuture(JsonRpcErrors.invalidRequest("Missing prompt name"));
-            }
+            if (name == null) return JsonRpcErrors.invalidRequest("Missing prompt name");
             var entry = registry.get(name);
-            if (entry == null) {
-                return CompletableFuture.completedFuture(JsonRpcErrors.invalidRequest("Prompt not found"));
-            }
+            if (entry == null) return JsonRpcErrors.invalidRequest("Prompt not found");
             var extId = entry.descriptor().extensionId();
             if (extId != null && !context.isExtensionEnabled(extId)) {
-                return CompletableFuture.completedFuture(JsonRpcErrors.invalidRequest("Prompt not found"));
+                return JsonRpcErrors.invalidRequest("Prompt not found");
             }
             var inputSchema = entry.descriptor().inputSchema();
             if (inputSchema != null) {
@@ -115,10 +96,10 @@ public class PromptRegistry extends Registry<PromptEntry> {
                 try {
                     argsMap = extractArgumentsMap(params);
                 } catch (RuntimeException e) {
-                    return CompletableFuture.completedFuture(JsonRpcErrors.invalidParams("Invalid arguments"));
+                    return JsonRpcErrors.invalidParams("Invalid arguments");
                 }
                 var error = JsonSchemaUtils.validateArguments(validator, inputSchema, argsMap);
-                if (error != null) return CompletableFuture.completedFuture(JsonRpcErrors.invalidParams(error));
+                if (error != null) return JsonRpcErrors.invalidParams(error);
             }
 
             var request = new PromptRequest(
@@ -126,28 +107,23 @@ public class PromptRegistry extends Registry<PromptEntry> {
                     extractInputResponsesFromParams(params),
                     extractRequestStateFromParams(params));
 
-            CompletionStage<? extends PromptHandlerResult> stage;
+            // Runs on the dispatcher's virtual thread; blocking to join the handler is the SPI contract.
+            PromptHandlerResult result;
             try {
-                stage = entry.handler().handleAsync(context, request);
+                result = HandlerFutures.joinInterruptibly(entry.handler().handleAsync(context, request));
             } catch (Exception e) {
                 logger.error("Prompt handler error for '{}'", name, e);
-                return CompletableFuture.completedFuture(JsonRpcErrors.internalError("Prompt handler failed"));
+                return JsonRpcErrors.internalError("Prompt handler failed");
             }
-            return HandlerFutures.completeOn(stage, context, (result, e) -> {
-                if (e != null) {
-                    logger.error("Prompt handler error for '{}'", name, e);
-                    return JsonRpcErrors.internalError("Prompt handler failed");
+            return switch (result) {
+                case PromptHandlerResult.Messages m -> {
+                    var messages = m.messages() != null ? m.messages() : List.<PromptMessage>of();
+                    yield context.responseMapper()
+                            .getPromptResult(entry.descriptor().description(), messages);
                 }
-                return switch ((PromptHandlerResult) result) {
-                    case PromptHandlerResult.Messages m -> {
-                        var messages = m.messages() != null ? m.messages() : List.<PromptMessage>of();
-                        yield context.responseMapper()
-                                .getPromptResult(entry.descriptor().description(), messages);
-                    }
-                    case PromptHandlerResult.InputRequired ir ->
-                        context.responseMapper().inputRequiredResult(ir.inputRequests(), ir.requestState());
-                };
-            });
+                case PromptHandlerResult.InputRequired ir ->
+                    context.responseMapper().inputRequiredResult(ir.inputRequests(), ir.requestState());
+            };
         }
 
         private static @Nullable String extractArguments(Object params) {
@@ -182,16 +158,9 @@ public class PromptRegistry extends Registry<PromptEntry> {
         }
 
         private static @Nullable Map<String, JsonNode> extractInputResponsesFromParams(Object params) {
-            if (!(params instanceof Map<?, ?> map)) return null;
-            var raw = map.get("inputResponses");
-            if (!(raw instanceof Map<?, ?> rawMap) || rawMap.isEmpty()) return null;
-            var result = new LinkedHashMap<String, JsonNode>();
-            for (var entry : rawMap.entrySet()) {
-                if (entry.getKey() instanceof String k) {
-                    result.put(k, ProtocolCodecUtil.parseJsonNode(JsonRpcCodec.writeValueAsString(entry.getValue())));
-                }
-            }
-            return result.isEmpty() ? null : result;
+            return params instanceof Map<?, ?> map
+                    ? ListRequests.extractInputResponses(map.get("inputResponses"))
+                    : null;
         }
 
         private static @Nullable String extractRequestStateFromParams(Object params) {

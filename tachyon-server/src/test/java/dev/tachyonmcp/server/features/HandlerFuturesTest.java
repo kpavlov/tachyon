@@ -7,15 +7,11 @@ package dev.tachyonmcp.server.features;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import dev.tachyonmcp.server.session.DefaultMcpContext;
-import dev.tachyonmcp.server.session.DispatchContext;
-import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
 import org.junit.jupiter.api.Test;
 
 class HandlerFuturesTest {
@@ -42,30 +38,6 @@ class HandlerFuturesTest {
         assertThatThrownBy(() -> HandlerFutures.joinInterruptibly(future))
                 .isInstanceOf(CompletionException.class)
                 .hasCause(cause);
-    }
-
-    @Test
-    void shouldCompleteOnAlreadyCompleteStage() {
-        var future = CompletableFuture.completedFuture("done");
-        BiFunction<Object, Throwable, Object> transform = (result, e) -> "transformed:" + result;
-        var result = HandlerFutures.completeOn(future, noopContext(), transform);
-        assertThat(result).succeedsWithin(Duration.ofSeconds(1)).isEqualTo("transformed:done");
-    }
-
-    @Test
-    void shouldCompleteOnWithException() {
-        var future = CompletableFuture.failedFuture(new RuntimeException("boom"));
-        BiFunction<Object, Throwable, Object> transform = (result, e) -> "error:" + e.getMessage();
-        var result = HandlerFutures.completeOn(future, noopContext(), transform);
-        assertThat(result).succeedsWithin(Duration.ofSeconds(1)).isEqualTo("error:boom");
-    }
-
-    @Test
-    void shouldCompleteOnUnwrapsCompletionException() {
-        var future = CompletableFuture.failedFuture(new CompletionException(new RuntimeException("wrapped")));
-        BiFunction<Object, Throwable, Object> transform = (result, e) -> "error:" + e.getMessage();
-        var result = HandlerFutures.completeOn(future, noopContext(), transform);
-        assertThat(result).succeedsWithin(Duration.ofSeconds(1)).isEqualTo("error:wrapped");
     }
 
     @Test
@@ -98,9 +70,5 @@ class HandlerFuturesTest {
 
         assertThat(exRef.get()).isInstanceOf(InterruptedException.class);
         assertThat(t.isInterrupted()).isTrue();
-    }
-
-    private static DispatchContext noopContext() {
-        return DefaultMcpContext.noop();
     }
 }

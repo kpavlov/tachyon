@@ -11,25 +11,32 @@ import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.domain.ReadResourceRequest;
 import dev.tachyonmcp.server.domain.ResourceContents;
+import dev.tachyonmcp.server.features.ChangeSupport;
 import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.features.PaginatedResult;
 import dev.tachyonmcp.server.features.Pagination;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Registry for resources, templates, and subscriptions. */
+/**
+ * Registry for resources, templates, and subscriptions.
+ */
 public class ResourceRegistry {
 
     private final ConcurrentHashMap<String, ResourceEntry> byName = new ConcurrentHashMap<>();
@@ -38,25 +45,21 @@ public class ResourceRegistry {
     final ConcurrentHashMap<String, Set<String>> subscriptions = new ConcurrentHashMap<>();
     private final Server server;
 
-    private final List<Runnable> onChangeListeners = new CopyOnWriteArrayList<>();
+    private final ChangeSupport changes = new ChangeSupport();
 
-    private static final int DEFAULT_PAGE_SIZE = 50;
-
-    /** Creates a resource registry bound to the given server (for broadcasting subscription notifications). */
+    /**
+     * Creates a resource registry bound to the given server (for broadcasting subscription notifications).
+     */
     public ResourceRegistry(Server server) {
         this.server = server;
     }
 
-    public void onChange(@Nullable Runnable callback) {
-        if (callback != null) {
-            onChangeListeners.add(callback);
-        }
+    public void onChange(Runnable callback) {
+        changes.onChange(callback);
     }
 
     private void fireOnChange() {
-        for (var listener : onChangeListeners) {
-            listener.run();
-        }
+        changes.fireOnChange();
     }
 
     public ResourceRegistry add(ResourceDescriptor descriptor, ResourceHandler handler) {
@@ -79,7 +82,9 @@ public class ResourceRegistry {
         return this;
     }
 
-    /** Returns the resource descriptor by name. */
+    /**
+     * Returns the resource descriptor by name.
+     */
     public @Nullable ResourceDescriptor get(String name) {
         var entry = byName.get(name);
         return entry != null ? entry.descriptor() : null;
@@ -90,12 +95,12 @@ public class ResourceRegistry {
     }
 
     public PaginatedResult<ResourceDescriptor> list(int limit, @Nullable String cursor) {
-        return list(limit, cursor, DEFAULT_PAGE_SIZE, descriptor -> true);
+        return list(limit, cursor, Pagination.DEFAULT_PAGE_SIZE, descriptor -> true);
     }
 
     public PaginatedResult<ResourceDescriptor> list(
             int limit, @Nullable String cursor, Predicate<ResourceDescriptor> filter) {
-        return list(limit, cursor, DEFAULT_PAGE_SIZE, filter);
+        return list(limit, cursor, Pagination.DEFAULT_PAGE_SIZE, filter);
     }
 
     public PaginatedResult<ResourceDescriptor> list(int limit, @Nullable String cursor, int defaultLimit) {
@@ -163,7 +168,9 @@ public class ResourceRegistry {
         registry.put("resources/unsubscribe", new ResourcesUnsubscribeHandler(this));
     }
 
-    /** Returns whether the given session is subscribed to the resource URI. */
+    /**
+     * Returns whether the given session is subscribed to the resource URI.
+     */
     public boolean isSubscribed(String uri, String sessionId) {
         var subs = subscriptions.get(uri);
         return subs != null && subs.contains(sessionId);
@@ -184,7 +191,9 @@ public class ResourceRegistry {
         });
     }
 
-    /** Removes the session's subscription to the URI, pruning the map entry when it empties. */
+    /**
+     * Removes the session's subscription to the URI, pruning the map entry when it empties.
+     */
     void unsubscribe(String uri, String sessionId) {
         subscriptions.computeIfPresent(uri, (k, set) -> {
             set.remove(sessionId);
@@ -192,7 +201,9 @@ public class ResourceRegistry {
         });
     }
 
-    /** Notifies all subscribed sessions that a resource has been updated. */
+    /**
+     * Notifies all subscribed sessions that a resource has been updated.
+     */
     public void notifyResourceUpdated(String uri) {
         var subscribedSessionIds = subscriptions.get(uri);
         if (subscribedSessionIds == null || subscribedSessionIds.isEmpty()) {
@@ -254,67 +265,37 @@ public class ResourceRegistry {
             return "resources/read";
         }
 
+        /**
+         * Runs on the dispatcher's virtual thread; blocking to join the handler is the SPI contract.
+         */
         @Override
-        public Object handle(DispatchContext context, Object params) {
-            try {
-                return HandlerFutures.joinInterruptibly(handleAsync(context, params));
-            } catch (RuntimeException | Error e) {
-                throw e;
-            } catch (Exception e) {
-                throw new CompletionException(e);
-            }
-        }
-
-        @Override
-        public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
+        public Object handle(DispatchContext context, Object params) throws Exception {
             var readParams = toReadParams(params);
-            if (readParams == null) {
-                return CompletableFuture.completedFuture(JsonRpcErrors.invalidRequest("Missing resource URI"));
-            }
+            if (readParams == null) return JsonRpcErrors.invalidRequest("Missing resource URI");
             var uri = readParams.uri();
             var entry = registry.getByUri(uri);
             if (entry != null) {
                 var extId = entry.descriptor().extensionId();
                 if (extId != null && !context.isExtensionEnabled(extId)) {
-                    return CompletableFuture.completedFuture(JsonRpcErrors.resourceNotFound("Resource not found"));
+                    return JsonRpcErrors.resourceNotFound("Resource not found");
                 }
+                return readResult(context, uri, () -> entry.handler().readAsync(context, readParams));
             }
-            if (entry == null) {
-                var match = registry.matchTemplate(uri);
-                if (match != null) {
-                    try {
-                        var stage = match.entry().handler().readAsync(context, uri, match.params());
-                        return completeReadStage(stage, context, "Resource template handler", uri);
-                    } catch (Exception e) {
-                        logger.error("Resource template handler error for '{}'", uri, e);
-                        return CompletableFuture.completedFuture(
-                                JsonRpcErrors.internalError("Resource handler failed"));
-                    }
-                }
-                return CompletableFuture.completedFuture(JsonRpcErrors.resourceNotFound("Resource not found"));
-            }
-            CompletionStage<? extends ResourceContents> stage;
-            try {
-                stage = entry.handler().readAsync(context, readParams);
-            } catch (Exception e) {
-                logger.error("Resource handler error for '{}'", uri, e);
-                return CompletableFuture.completedFuture(JsonRpcErrors.internalError("Resource handler failed"));
-            }
-            return completeReadStage(stage, context, "Resource handler", uri);
+            var match = registry.matchTemplate(uri);
+            if (match == null) return JsonRpcErrors.resourceNotFound("Resource not found");
+            return readResult(context, uri, () -> match.entry().handler().readAsync(context, uri, match.params()));
         }
 
-        private CompletionStage<Object> completeReadStage(
-                CompletionStage<? extends ResourceContents> stage,
-                DispatchContext context,
-                String logLabel,
-                String uri) {
-            return HandlerFutures.completeOn(stage, context, (result, e) -> {
-                if (e != null) {
-                    logger.error("{} error for '{}'", logLabel, uri, e);
-                    return JsonRpcErrors.internalError("Resource handler failed");
-                }
-                return context.responseMapper().readResourceResult(List.of((ResourceContents) result));
-            });
+        private Object readResult(
+                DispatchContext context, String uri, Callable<CompletionStage<? extends ResourceContents>> invoker) {
+            ResourceContents contents;
+            try {
+                contents = HandlerFutures.joinInterruptibly(invoker.call());
+            } catch (Exception e) {
+                logger.error("Resource handler error for '{}'", uri, e);
+                return JsonRpcErrors.internalError("Resource handler failed");
+            }
+            return context.responseMapper().readResourceResult(List.of(contents));
         }
 
         private static @Nullable ReadResourceRequest toReadParams(Object params) {

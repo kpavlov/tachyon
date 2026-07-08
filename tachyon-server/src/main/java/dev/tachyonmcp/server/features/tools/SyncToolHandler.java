@@ -13,6 +13,9 @@ import tools.jackson.databind.JsonNode;
 
 /**
  * Convenient base for synchronous (blocking) tool handlers.
+ *
+ * <p>See {@link ToolHandler} for the virtual-thread contract — {@link #handle} runs on a VT,
+ * never use {@code synchronized}, use {@link java.util.concurrent.locks.ReentrantLock} instead.
  */
 public interface SyncToolHandler extends ToolHandler {
 

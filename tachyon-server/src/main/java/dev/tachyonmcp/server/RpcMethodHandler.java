@@ -11,6 +11,18 @@ import java.util.concurrent.CompletionStage;
 /**
  * Handles a single JSON-RPC method. Internal/advanced SPI — receives the rich
  * {@link DispatchContext} (server, response mapper, outbound stream).
+ *
+ * <p>{@link #handle} runs on a <b>virtual thread</b> per request. Handler code may block for I/O
+ * — that is the intended VT contract — but must <b>never</b> use {@code synchronized}, call native
+ * methods, or otherwise pin the carrier thread.
+ * Use {@link java.util.concurrent.locks.ReentrantLock} over {@code synchronized} for mutual
+ * exclusion. For CPU-bound work or third-party code that may synchronize, offload to
+ * {@code context.server().executor()} and join the result:
+ * <pre>{@code
+ * var future = CompletableFuture.supplyAsync(
+ *         () -> heavyWork(), context.server().executor());
+ * return HandlerFutures.joinInterruptibly(future);
+ * }</pre>
  */
 public interface RpcMethodHandler {
 
