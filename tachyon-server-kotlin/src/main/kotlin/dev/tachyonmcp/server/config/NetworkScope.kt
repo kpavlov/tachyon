@@ -33,6 +33,9 @@ public class NetworkScope
         /** Idle timeout for the writer side of the connection. */
         public var writerIdleTimeout: Duration? = null
 
+        /** SSE heartbeat interval for silent listening streams. */
+        public var heartbeatInterval: Duration? = null
+
         /** Maximum allowed content length for incoming requests. */
         public var maxContentLength: Int? = null
 
@@ -55,6 +58,7 @@ public class NetworkScope
             if (allowedHeaders.isNotEmpty()) builder.allowedHeaders(*allowedHeaders.toTypedArray())
             readerIdleTimeout?.let { builder.readerIdleTimeout(it.toJavaDuration()) }
             writerIdleTimeout?.let { builder.writerIdleTimeout(it.toJavaDuration()) }
+            heartbeatInterval?.let { builder.heartbeatInterval(it.toJavaDuration()) }
             maxContentLength?.let(builder::maxContentLength)
             ioEngine?.let(builder::ioEngine)
         }

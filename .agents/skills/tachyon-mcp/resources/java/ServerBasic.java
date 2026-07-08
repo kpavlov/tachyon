@@ -38,6 +38,7 @@ public final class ServerBasic {
             .session(s -> s
                 .enabled(true)
                 .sessionTtl(ofMinutes(5))
+                .janitorInterval(ofSeconds(5))
                 .sessionIdGenerator((req) -> "sid_" + UUID.randomUUID())
             )
             .json(j ->

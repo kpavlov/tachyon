@@ -172,6 +172,7 @@ Default `AUTO` → advertised only when registered. Force with `Mode.ON` / `Mode
 | `.port(p)` | **required** before `start()` |
 | `.endpointPath(p)` | `/mcp` |
 | `.readerIdleTimeout(d)` / `.writerIdleTimeout(d)` | 60s / 5min |
+| `.heartbeatInterval(d)` | 15s (`<= 0` disables) |
 | `.maxContentLength(b)` | 1MB |
 | `.allowedOrigins(...)` | none (all denied) |
 | `.allowNullOrigin(b)` / `.allowPrivateNetworks(b)` | false |
@@ -186,6 +187,7 @@ Native transports need optional runtime jars (`netty-transport-native-epoll` / `
 |---|---|
 | `.enabled(b)` | false (stateless) |
 | `.sessionTtl(d)` | 30s |
+| `.janitorInterval(d)` | 5s |
 | `.sessionIdGenerator(g)` | `sess_<uuid8>` (derives id from initialize `HttpRequest`) |
 | `.sessionLogRouter(r)` / `.sessionStore(s)` | null (in-memory) |
 

@@ -27,6 +27,8 @@ import org.jspecify.annotations.Nullable;
  * @param allowPrivateNetworks whether to allow private network CORS
  * @param allowedHeaders     additional allowed CORS headers
  * @param ioEngine           Netty I/O engine; defaults to {@link NettyIoEngine#AUTO}
+ * @param heartbeatInterval  SSE heartbeat interval for silent listening streams (default 15s);
+ *                           {@code <= 0} disables heartbeats
  */
 public record NetworkConfig(
         String host,
@@ -39,7 +41,10 @@ public record NetworkConfig(
         boolean allowNullOrigin,
         boolean allowPrivateNetworks,
         @Nullable List<String> allowedHeaders,
-        NettyIoEngine ioEngine) {
+        NettyIoEngine ioEngine,
+        Duration heartbeatInterval) {
+
+    public static final Duration DEFAULT_HEARTBEAT_INTERVAL = Duration.ofSeconds(15);
 
     public static final NetworkConfig DEFAULT = new NetworkConfig(
             "127.0.0.1",
@@ -52,7 +57,8 @@ public record NetworkConfig(
             false,
             false,
             null,
-            NettyIoEngine.AUTO);
+            NettyIoEngine.AUTO,
+            DEFAULT_HEARTBEAT_INTERVAL);
 
     public static Builder builder() {
         return new Builder();
@@ -71,6 +77,7 @@ public record NetworkConfig(
         private boolean allowPrivateNetworks;
         private @Nullable List<String> allowedHeaders;
         private NettyIoEngine ioEngine = NettyIoEngine.AUTO;
+        private Duration heartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
         private boolean hostPortExplicitlySet;
         private boolean addressExplicitlySet;
 
@@ -166,6 +173,17 @@ public record NetworkConfig(
             return this;
         }
 
+        /**
+         * Sets the SSE heartbeat interval for silent listening streams.
+         * {@code <= 0} ({@link Duration#ZERO} or negative) disables heartbeats.
+         * Default is 15s. Must be below the session TTL (default 30s) to keep a listening
+         * client alive out of the box.
+         */
+        public Builder heartbeatInterval(Duration heartbeatInterval) {
+            this.heartbeatInterval = heartbeatInterval;
+            return this;
+        }
+
         /** Builds the {@link NetworkConfig}. */
         public NetworkConfig build() {
             return new NetworkConfig(
@@ -179,7 +197,8 @@ public record NetworkConfig(
                     allowNullOrigin,
                     allowPrivateNetworks,
                     allowedHeaders,
-                    ioEngine);
+                    ioEngine,
+                    heartbeatInterval);
         }
     }
 }

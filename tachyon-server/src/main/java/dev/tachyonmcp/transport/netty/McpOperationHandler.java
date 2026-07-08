@@ -10,7 +10,6 @@ import static dev.tachyonmcp.transport.netty.McpResponseWriter.*;
 import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.runtime.InteractionEvent;
 import dev.tachyonmcp.runtime.MutableInteractionContext;
-import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.server.RpcDispatcher;
 import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.session.SessionEvent;
@@ -99,7 +98,9 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
     private void handlePost(ChannelHandlerContext ctx, FullHttpRequest req, @Nullable String origin) {
         var sessionId = req.headers().get(McpHeaderNames.MCP_SESSION_ID);
         if (sessionId != null) {
-            server.getSession(sessionId).ifPresent(Session::touch);
+            server.getSession(sessionId).ifPresent(s -> {
+                setSession(ctx, s);
+            });
         } else {
             // A session-less POST may be an initialize (e.g. on a keep-alive channel already in
             // the operation phase); preserve the request for a custom SessionIdGenerator.
@@ -197,7 +198,8 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             @Nullable String sessionId,
             JsonRpcMessage.Request req,
             @Nullable String origin) {
-        var postStream = new PostSseStream(ctx.channel(), origin, server::nextEventId);
+        var heartbeatInterval = server.config().network().heartbeatInterval();
+        var postStream = new PostSseStream(ctx.channel(), origin, server::nextEventId, heartbeatInterval);
         final var requestId = req.id();
         final var method = req.method();
         final var startNs = System.nanoTime();
@@ -362,15 +364,11 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof IdleStateEvent) {
-            if (SseHeartbeat.isEnabled(ctx.channel())) {
-                // Long-lived SSE stream: a silent client is normal (it only reads), so an idle tick
-                // means "keep alive", not "dead". Emit a comment heartbeat instead of closing; a
-                // failed heartbeat write reaps a genuinely dead client.
-                SseHeartbeat.send(ctx.channel());
-            } else {
+            if (!SseHeartbeat.isEnabled(ctx.channel())) {
                 logger.debug("Idle timeout, closing channel: {}", ctx.channel().remoteAddress());
                 ctx.close();
             }
+            // SSE channels: idle tick is a no-op — the scheduler drives heartbeats.
         } else {
             ctx.fireUserEventTriggered(evt);
         }

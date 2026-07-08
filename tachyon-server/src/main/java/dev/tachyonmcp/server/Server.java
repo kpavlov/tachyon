@@ -12,6 +12,7 @@ import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.config.ServerConfig;
+import dev.tachyonmcp.server.config.SessionConfig;
 import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.features.prompts.PromptRegistry;
@@ -261,7 +262,12 @@ public class Server implements Closeable {
         bootstrapExtensions();
         setupChangeListeners(config);
         if (config.session().enabled()) {
-            sessionManager.startJanitor(config.session().sessionTtl());
+            var session = config.session();
+            var ttl = session.sessionTtl() != null ? session.sessionTtl() : SessionConfig.DEFAULT_SESSION_TTL;
+            var interval = session.janitorInterval() != null
+                    ? session.janitorInterval()
+                    : SessionConfig.DEFAULT_JANITOR_INTERVAL;
+            sessionManager.startJanitor(ttl, interval);
         }
     }
 

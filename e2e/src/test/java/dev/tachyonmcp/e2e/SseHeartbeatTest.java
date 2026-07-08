@@ -26,14 +26,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 /**
- * Verifies that a silent SSE stream is kept alive by periodic comment heartbeats rather than being
- * reaped on idle. Uses a short reader-idle timeout so the real {@link io.netty.handler.timeout.IdleStateHandler}
- * fires repeatedly within the test window — proving both the heartbeat write and the timer rescheduling.
+ * Verifies that a silent SSE stream is kept alive by periodic scheduler-driven comment heartbeats
+ * rather than being reaped on idle. Uses a short heartbeat interval so beats arrive within the
+ * test window, proving the scheduler runs independently of the reader-idle timeout.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SseHeartbeatTest {
 
-    private static final Duration READER_IDLE = Duration.ofMillis(150);
+    private static final Duration HEARTBEAT_INTERVAL = Duration.ofMillis(150);
 
     private Server server;
     private NettyServer nettyServer;
@@ -41,12 +41,17 @@ class SseHeartbeatTest {
 
     @BeforeAll
     void startServer() {
-        server = TachyonServer.builder().session(s -> s.enabled(true)).build();
+        server = TachyonServer.builder()
+                .session(s -> s.enabled(true))
+                .network(n -> n.heartbeatInterval(HEARTBEAT_INTERVAL)
+                        // Keep reader-idle longer than the test window so idle never fires
+                        .readerIdleTimeout(Duration.ofMinutes(5)))
+                .build();
         var config = new NettyServerConfig(
                 "127.0.0.1",
                 0,
                 "/mcp",
-                READER_IDLE,
+                Duration.ofMinutes(5),
                 Duration.ofMinutes(5),
                 McpChannelInitializer.DEFAULT_MAX_CONTENT_LENGTH,
                 NettyServerConfig.buildCorsConfig(null, false, false, null),
@@ -66,13 +71,13 @@ class SseHeartbeatTest {
     void idleSseStreamReceivesRepeatedHeartbeats() throws Exception {
         var sessionId = initializeSession();
 
-        // Read for ~5 reader-idle intervals; a 150ms idle should yield several ":\r\n" comments.
-        var raw = readRawSse(sessionId, READER_IDLE.toMillis() * 5);
+        // Read for ~5 heartbeat intervals; a 150ms interval should yield several ":\r\n" comments.
+        var raw = readRawSse(sessionId, HEARTBEAT_INTERVAL.toMillis() * 5);
 
         assertThat(raw).as("stream must open as text/event-stream").contains("text/event-stream");
         assertThat(raw).contains("X-Accel-Buffering: no");
         assertThat(countOccurrences(raw, ":\r\n"))
-                .as("reader-idle must drive repeated SSE comment heartbeats (proves timer rescheduling)")
+                .as("scheduler must drive repeated SSE comment heartbeats")
                 .isGreaterThanOrEqualTo(2);
     }
 

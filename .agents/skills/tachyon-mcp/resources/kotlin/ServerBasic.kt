@@ -54,6 +54,7 @@ fun createServer(port: Int = 0): ServerHandle = TachyonServer(port = port) {
     session {
         enabled = true
         sessionTtl = 5.minutes
+        janitorInterval = 5.seconds
         sessionStore = null   // default: InMemorySessionStore
         sessionLogRouter = null // default: InMemorySessionLogRouter
         // lambda DSL
@@ -78,6 +79,7 @@ fun createServer(port: Int = 0): ServerHandle = TachyonServer(port = port) {
         allowPrivateNetworks = true
         readerIdleTimeout = 5.minutes
         writerIdleTimeout = 60.seconds
+        heartbeatInterval = 15.seconds
         maxContentLength = 1_000_000
         ioEngine = NettyIoEngine.AUTO
     }

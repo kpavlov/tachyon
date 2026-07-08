@@ -60,6 +60,7 @@ final class ConfigReference {
             .endpointPath("/mcp")
             .readerIdleTimeout(Duration.ofSeconds(30))
             .writerIdleTimeout(Duration.ofMinutes(2))
+            .heartbeatInterval(Duration.ofSeconds(15)) // SSE heartbeat for silent listeners; <= 0 disables
             .maxContentLength(65536) // 64KB
             .allowedOrigins("https://app.example.com")
             .allowNullOrigin(false)
@@ -79,6 +80,7 @@ final class ConfigReference {
             .sessionLogRouter(new InMemorySessionLogRouter())
             .sessionStore(new InMemorySessionStore())
             .sessionTtl(Duration.ofMinutes(10))
+            .janitorInterval(Duration.ofSeconds(5))
             .build();
     }
 

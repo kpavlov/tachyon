@@ -149,7 +149,8 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
             ctx.executor().execute(() -> sendAccepted(ctx, origin));
             return;
         }
-        var postStream = new PostSseStream(ctx.channel(), origin, server::nextEventId);
+        var heartbeatInterval = server.config().network().heartbeatInterval();
+        var postStream = new PostSseStream(ctx.channel(), origin, server::nextEventId, heartbeatInterval);
         dispatcher
                 .dispatchRequestAsync(id, method, params, null, postStream, null)
                 .whenComplete((result, ex) -> ctx.executor().execute(() -> {
@@ -176,7 +177,8 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void handleInitialize(ChannelHandlerContext ctx, Object id, Object params, @Nullable String origin) {
-        var postStream = new PostSseStream(ctx.channel(), origin, server::nextEventId);
+        var heartbeatInterval = server.config().network().heartbeatInterval();
+        var postStream = new PostSseStream(ctx.channel(), origin, server::nextEventId, heartbeatInterval);
         final var startNs = System.nanoTime();
         logger.debug("Initialize request: id={}", id);
 

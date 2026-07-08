@@ -7,20 +7,39 @@ package dev.tachyonmcp.transport.netty;
 import static dev.tachyonmcp.transport.netty.InteractionHandler.INTERACTION_CONTEXT_KEY;
 
 import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.server.RpcDispatcher;
 import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.session.SessionIdGenerator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
+import io.netty.util.AttributeKey;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 public final class ChannelHandlerUtils {
 
+    private static final AttributeKey<Session> SESSION_KEY = AttributeKey.valueOf("tachyonSession");
+
     private ChannelHandlerUtils() {}
+
+    /**
+     * Binds a session to the channel and installs the {@link SessionTouchHandler} if not already
+     * present. Every outbound byte written to this channel will refresh the session's liveness.
+     */
+    public static void setSession(ChannelHandlerContext ctx, Session session) {
+        SessionTouchHandler.install(ctx);
+        ctx.channel().attr(SESSION_KEY).set(session);
+    }
+
+    /** Returns the session bound to this channel, or {@code null}. */
+    public static @Nullable Session getSession(Channel channel) {
+        return channel.attr(SESSION_KEY).get();
+    }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static <T extends InteractionContext> T requireInteractionContext(ChannelHandlerContext ctx) {
