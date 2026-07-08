@@ -16,10 +16,22 @@ import org.jspecify.annotations.Nullable;
 /**
  * Network-level server configuration.
  *
+ * <p><b>Keep-alive for long-running tools.</b> {@code readerIdleTimeout} closes any connection
+ * that receives no <em>inbound</em> bytes for its duration. A client that has finished sending a
+ * request stays silent while awaiting the reply, so this timer also runs while a handler is
+ * computing — a tool slower than {@code readerIdleTimeout} is reaped before it can respond. The
+ * remedy is not a larger timeout but SSE keep-alive: when a handler emits a server→client message
+ * (e.g. {@code progress(...)}), the response upgrades to {@code text/event-stream} and a scheduler
+ * emits a {@code :} comment heartbeat every {@code heartbeatInterval}, after which
+ * {@code readerIdleTimeout} is a no-op on that stream. Keep
+ * {@code heartbeatInterval < readerIdleTimeout}, and size {@code readerIdleTimeout} for dead-peer
+ * detection rather than tool runtime.
+ *
  * @param host               bind address (default {@code "127.0.0.1"})
  * @param port               listen port (must be set before {@code bind()})
  * @param endpointPath       HTTP path for MCP endpoints (default {@code "/mcp"})
- * @param readerIdleTimeout  idle timeout for reading (default 60s)
+ * @param readerIdleTimeout  close connections with no inbound traffic for this long (default 60s);
+ *                           long-running tools stay alive via SSE heartbeats, not a larger value
  * @param writerIdleTimeout  idle timeout for writing (default 5min)
  * @param maxContentLength   maximum HTTP body size in bytes
  * @param allowedOrigins     CORS allowed origins ({@code null} = defaults)
@@ -27,8 +39,8 @@ import org.jspecify.annotations.Nullable;
  * @param allowPrivateNetworks whether to allow private network CORS
  * @param allowedHeaders     additional allowed CORS headers
  * @param ioEngine           Netty I/O engine; defaults to {@link NettyIoEngine#AUTO}
- * @param heartbeatInterval  SSE heartbeat interval for silent listening streams (default 15s);
- *                           {@code <= 0} disables heartbeats
+ * @param heartbeatInterval  SSE heartbeat interval that keeps an upgraded stream alive (default
+ *                           15s); keep below {@code readerIdleTimeout}; {@code <= 0} disables
  */
 public record NetworkConfig(
         String host,

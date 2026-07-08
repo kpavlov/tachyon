@@ -58,9 +58,15 @@ final class ConfigReference {
             .host("127.0.0.1")
             .port(8080)
             .endpointPath("/mcp")
-            .readerIdleTimeout(Duration.ofSeconds(30))
+            // Closes a connection with no INBOUND bytes for this long. A client awaiting a reply
+            // sends none, so a tool slower than this is reaped mid-compute — keep long tools alive
+            // by emitting progress (upgrades POST → SSE), not by inflating this. Size for dead-peer
+            // detection. Must stay > heartbeatInterval.
+            .readerIdleTimeout(Duration.ofSeconds(60))
             .writerIdleTimeout(Duration.ofMinutes(2))
-            .heartbeatInterval(Duration.ofSeconds(15)) // SSE heartbeat for silent listeners; <= 0 disables
+            // Once a POST upgrades to SSE (handler emits progress), a scheduler sends `:` heartbeats
+            // at this interval so the stream never looks idle. Keep < readerIdleTimeout. <= 0 disables.
+            .heartbeatInterval(Duration.ofSeconds(15))
             .maxContentLength(65536) // 64KB
             .allowedOrigins("https://app.example.com")
             .allowNullOrigin(false)

@@ -30,7 +30,17 @@ public interface Notifications {
     /** Sends a generic notification with the given method and params. */
     void send(String method, Object params);
 
-    /** Sends a progress notification. */
+    /**
+     * Sends a progress notification.
+     *
+     * <p>The first server→client message on a POST also upgrades its response to an SSE stream and
+     * arms the heartbeat, keeping the connection alive past {@code readerIdleTimeout} — so emitting
+     * an early {@code progress(...)} is the keep-alive mechanism for long-running tools.
+     *
+     * <p>{@code progressToken} should be the client's request {@code _meta.progressToken}
+     * (e.g. {@code ToolRequest.progressToken()}); a {@code null} token is discarded — the
+     * notification is not sent and no SSE upgrade occurs.
+     */
     void progress(@Nullable Object progressToken, double progress, double total, String message);
 
     /** Sends an info-level log message. */

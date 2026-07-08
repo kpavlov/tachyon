@@ -182,6 +182,8 @@ Default `AUTO` → advertised only when registered. Force with `Mode.ON` / `Mode
 
 Native transports need optional runtime jars (`netty-transport-native-epoll` / `-kqueue` / `-io_uring` with `${os.detected.classifier}`); without them `AUTO` falls back to NIO. Explicit unavailable engine throws `UnsupportedOperationException`. See `docs/configuration.md`.
 
+⏳ **Keep-alive for long tools** — `readerIdleTimeout` (60s) closes any connection with no **inbound** bytes for that long, and a client waiting for a reply sends none — so a tool slower than 60s gets reaped mid-compute. Don't just raise the timeout. Emit an early `ctx.notifications().progress(token, ...)`: the POST upgrades to SSE and a scheduler sends `:\r\n` heartbeats every `heartbeatInterval` (15s), keeping the stream alive for the whole run. Rule: **long task ⇒ emit progress first**; keep `heartbeatInterval < readerIdleTimeout`; size `readerIdleTimeout` for dead-peer detection, not tool runtime.
+
 ### Session `session(cfg -> ...)`
 
 | Method | Default |
@@ -317,7 +319,7 @@ server.registerTool(
 Load on demand (next to this skill):
 
 - [resources/java/ServerBasic.java](resources/java/ServerBasic.java) — full server, all features
-- `resources/java/ToolHandlerExample.java` — `ToolDescriptor`, `SyncToolHandler.of()`, `AbstractSyncToolHandler`
+- `resources/java/ToolHandlerExample.java` — `ToolDescriptor`, `SyncToolHandler.of()`, `AbstractSyncToolHandler`, long-running keep-alive (`ToolHandler` + `progress()`)
 - `resources/java/ResourceHandlerExample.java` — `ResourceDescriptor`, `ResourceTemplateEntry`, `ResourceHandler`
 - `resources/java/PromptHandlerExample.java` — `PromptDescriptor`, `PromptArgument`, `PromptHandler`
 - `resources/java/ConfigReference.java` — `CapabilitiesConfig.Builder`, `NetworkConfig.Builder`, `SessionConfig.Builder`
