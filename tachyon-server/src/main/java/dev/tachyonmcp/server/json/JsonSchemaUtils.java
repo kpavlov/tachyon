@@ -12,6 +12,18 @@ public class JsonSchemaUtils {
     }
 
     /**
+     * Parses a JSON schema string, returning {@code null} for null input.
+     */
+    public static @Nullable JsonNode parseSchema(@Nullable String json) {
+        if (json == null) return null;
+        try {
+            return JsonUtils.parse(json);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Schema is not valid JSON: " + json, e);
+        }
+    }
+
+    /**
      * Parses a JSON schema string, failing fast with the tool name on invalid JSON.
      */
     public static @Nullable JsonNode parseSchema(@Nullable String json, String toolName) {

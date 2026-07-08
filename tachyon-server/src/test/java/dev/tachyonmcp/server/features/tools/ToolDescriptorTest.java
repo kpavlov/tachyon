@@ -43,8 +43,8 @@ class ToolDescriptorTest {
     void shouldAcceptNullStringSchemas() {
         var desc = ToolDescriptor.builder()
                 .name("test")
-                .inputSchema(null)
-                .outputSchema(null)
+                .inputSchema((String) null)
+                .outputSchema((String) null)
                 .build();
         assertThat(desc.inputSchema()).isNull();
         assertThat(desc.outputSchema()).isNull();

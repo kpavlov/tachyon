@@ -103,7 +103,7 @@ class ToolRegistryTest {
                 .orElseThrow();
         assertThat(minimal.title()).isNull();
         assertThat(minimal.description()).isNull();
-        assertThat(minimal.inputSchema())
+        assertThat(parseJson(minimal.inputSchema()))
                 .isEqualTo(parseJson("""
                 {"type":"object"}
                 """)); // defaulted by McpToolMapper when handler returns null
@@ -116,8 +116,8 @@ class ToolRegistryTest {
                 .orElseThrow();
         assertThat(full.title()).isEqualTo("Full Tool");
         assertThat(full.description()).isEqualTo("Does everything");
-        assertThat(full.inputSchema()).isEqualTo(TEST_SCHEMA);
-        assertThat(full.outputSchema()).isEqualTo(outputSchema);
+        assertThat(parseJson(full.inputSchema())).isEqualTo(TEST_SCHEMA);
+        assertThat(parseJson(full.outputSchema())).isEqualTo(outputSchema);
         assertThat(full.execution()).isNotNull();
         assertThat(full.execution().taskSupport()).isEqualTo("optional");
         assertThat(full.annotations()).isNotNull();
