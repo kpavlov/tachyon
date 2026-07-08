@@ -270,7 +270,7 @@ public class ToolRegistry {
                 return CompletableFuture.completedFuture(methodNotFound("Method not found"));
 
             var validationError = validateInput(handler.descriptor().inputSchema(), parsed.args());
-            if (validationError != null) return CompletableFuture.completedFuture(invalidRequest(validationError));
+            if (validationError != null) return CompletableFuture.completedFuture(invalidParams(validationError));
 
             var taskSupport = handler.descriptor().taskSupport();
             if (taskSupport == null) taskSupport = TaskSupport.FORBIDDEN;
@@ -412,14 +412,7 @@ public class ToolRegistry {
         }
 
         private @Nullable String validateInput(@Nullable JsonNode schema, @Nullable Map<String, JsonNode> args) {
-            if (schema == null) return null;
-            var argumentsNode = JsonNodeFactory.instance.objectNode();
-            if (args != null) {
-                argumentsNode.setAll(args);
-            }
-            var errors = inputValidator.validate(schema, argumentsNode);
-            if (errors.isEmpty()) return null;
-            return joinMessages(errors);
+            return JsonSchemaUtils.validateArguments(inputValidator, schema, args);
         }
 
         /**

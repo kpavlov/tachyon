@@ -100,7 +100,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
             assertThat(response.statusCode()).isEqualTo(200);
             // language=JSON
             var expected = """
-                {"jsonrpc":"2.0","id":2,"error":{"code":-32600,"message":"required property 'name' not found"}}
+                {"jsonrpc":"2.0","id":2,"error":{"code":-32602,"message":"required property 'name' not found"}}
                 """;
             assertThatJson(response.body()).isEqualTo(expected);
         }
@@ -120,7 +120,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
 
             // language=JSON
             var expected = """
-                {"jsonrpc":"2.0","id":2,"error":{"code":-32600,"message":"integer found, string expected"}}
+                {"jsonrpc":"2.0","id":2,"error":{"code":-32602,"message":"integer found, string expected"}}
                 """;
             assertThatJson(response.body()).isEqualTo(expected);
         }
