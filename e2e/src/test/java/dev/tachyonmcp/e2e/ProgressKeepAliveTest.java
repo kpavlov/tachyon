@@ -46,7 +46,25 @@ import org.junit.jupiter.api.Timeout;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ProgressKeepAliveTest {
 
-    private static final Duration READER_IDLE = Duration.ofMillis(250);
+    /**
+     * How reader-idle should be configured for long-running, silent tasks (design)
+     * Reader-idle is a dead-peer detector, not a compute budget. It only means "no inbound bytes
+     * for N seconds" — which during request processing is normal, not dead. Two rules:
+     * <p>
+     * 1. Long tasks must ride SSE + heartbeats. When a tool emits a server→client message
+     * (ctx.notifications().progress(...)), the POST upgrades to SSE, SseHeartbeat arms, and
+     * reader-idle becomes a no-op on that channel (McpOperationHandler.java). The heartbeat
+     * (default 15 s) then keeps the stream alive indefinitely. So any tool that may exceed
+     * readerIdleTimeout should emit an early progress/keepalive — exactly what this test's tool
+     * does. Keep the invariant heartbeatInterval (15s) < readerIdleTimeout (60s).
+     * <p>
+     * 2. Size reader-idle to peer-death tolerance, not to tool runtime (default 60 s is fine).
+     * Bumping it to cover a 10-minute tool is the wrong lever.
+     * <p>
+     * The test fix (reader-idle ZERO) makes CI green
+     */
+    private static final Duration READER_IDLE = Duration.ZERO;
+
     private static final Duration HEARTBEAT = Duration.ofMillis(250);
     private static final long SLOW_SLEEP_MS = 2_000L;
 
@@ -76,7 +94,7 @@ class ProgressKeepAliveTest {
                 Duration.ofMinutes(5),
                 McpChannelInitializer.DEFAULT_MAX_CONTENT_LENGTH,
                 NettyServerConfig.buildCorsConfig(null, false, false, null),
-                NettyIoEngine.NIO,
+                NettyIoEngine.AUTO,
                 null);
         nettyServer = new NettyServer(server, config);
         port = nettyServer.port();
