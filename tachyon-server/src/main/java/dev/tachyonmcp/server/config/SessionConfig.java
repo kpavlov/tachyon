@@ -34,13 +34,18 @@ public record SessionConfig(
     public static final SessionConfig STATELESS = new SessionConfig(false, null, null, null, null, null);
 
     public SessionConfig {
-        if (!enabled
-                && (sessionIdGenerator != null
-                        || sessionStore != null
-                        || sessionLogRouter != null
-                        || sessionTtl != null
-                        || janitorInterval != null)) {
-            throw new IllegalStateException("Session options require sessions to be enabled — call enabled(true)");
+        if (!enabled) {
+            if (sessionIdGenerator != null
+                    || sessionStore != null
+                    || sessionLogRouter != null
+                    || sessionTtl != null
+                    || janitorInterval != null) {
+                throw new IllegalStateException("Session options require sessions to be enabled — call enabled(true)");
+            }
+        } else {
+            if (sessionTtl == null) sessionTtl = DEFAULT_SESSION_TTL;
+            if (janitorInterval == null) janitorInterval = DEFAULT_JANITOR_INTERVAL;
+            if (sessionIdGenerator == null) sessionIdGenerator = SessionIdGenerator.DEFAULT;
         }
     }
 
@@ -140,11 +145,11 @@ public record SessionConfig(
             } else {
                 return new SessionConfig(
                         enabled,
-                        sessionTtl != null ? sessionTtl : DEFAULT_SESSION_TTL,
+                        sessionTtl,
                         sessionLogRouter != null ? sessionLogRouter : new InMemorySessionLogRouter(),
                         sessionStore != null ? sessionStore : new InMemorySessionStore(),
-                        sessionIdGenerator != null ? sessionIdGenerator : SessionIdGenerator.DEFAULT,
-                        janitorInterval != null ? janitorInterval : DEFAULT_JANITOR_INTERVAL);
+                        sessionIdGenerator,
+                        janitorInterval);
             }
         }
     }

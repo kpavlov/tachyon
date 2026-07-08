@@ -37,6 +37,9 @@ public record ServerIdentity(
     public ServerIdentity {
         Objects.requireNonNull(name, "name cannot be null");
         Objects.requireNonNull(version, "version cannot be null");
+        if (icons != null) {
+            icons = List.copyOf(icons);
+        }
     }
 
     public static ServerIdentityBuilder builder() {

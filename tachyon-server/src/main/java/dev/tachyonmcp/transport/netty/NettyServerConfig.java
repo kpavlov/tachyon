@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.transport.netty;
 
+import dev.tachyonmcp.server.config.NetworkConfig;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.cors.CorsConfig;
 import io.netty.handler.codec.http.cors.CorsConfigBuilder;
@@ -46,25 +47,16 @@ public record NettyServerConfig(
     }
 
     static NettyServerConfig defaults(int port) {
-        return new NettyServerConfig(
-                "127.0.0.1",
-                port,
-                "/mcp",
-                Duration.ofSeconds(60),
-                Duration.ofMinutes(5),
-                McpChannelInitializer.DEFAULT_MAX_CONTENT_LENGTH,
-                buildCorsConfig(null, false, false, null),
-                NettyIoEngine.AUTO,
-                null);
+        return defaults(NetworkConfig.DEFAULT_HOST, port);
     }
 
     static NettyServerConfig defaults(String host, int port) {
         return new NettyServerConfig(
                 host,
                 port,
-                "/mcp",
-                Duration.ofSeconds(60),
-                Duration.ofMinutes(5),
+                NetworkConfig.DEFAULT_ENDPOINT_PATH,
+                NetworkConfig.DEFAULT_READER_IDLE_TIMEOUT,
+                NetworkConfig.DEFAULT_WRITER_IDLE_TIMEOUT,
                 McpChannelInitializer.DEFAULT_MAX_CONTENT_LENGTH,
                 buildCorsConfig(null, false, false, null),
                 NettyIoEngine.AUTO,
