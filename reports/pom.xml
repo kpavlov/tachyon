@@ -35,6 +35,16 @@
             <artifactId>tachyon-server-kotlin</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>e2e</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>conformance</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
