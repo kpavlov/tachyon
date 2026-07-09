@@ -10,7 +10,6 @@ import dev.tachyonmcp.server.config.NetworkConfig;
 import dev.tachyonmcp.server.config.RuntimeConfig;
 import dev.tachyonmcp.server.config.ServerConfig;
 import dev.tachyonmcp.server.config.ServerIdentity;
-import dev.tachyonmcp.server.config.ServerIdentityBuilder;
 import dev.tachyonmcp.server.config.SessionConfig;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.TextResourceContents;
@@ -30,7 +29,6 @@ import dev.tachyonmcp.server.json.JsonConfig;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
 import dev.tachyonmcp.server.json.PayloadDeserializer;
-import dev.tachyonmcp.server.json.PayloadSerde;
 import dev.tachyonmcp.server.json.PayloadSerializer;
 import dev.tachyonmcp.server.session.InMemorySessionLogRouter;
 import dev.tachyonmcp.server.session.InMemorySessionStore;
@@ -53,8 +51,7 @@ import org.jspecify.annotations.Nullable;
  */
 public final class ServerBuilder {
 
-    private final ServerIdentityBuilder identityBuilder =
-            ServerIdentity.builder().from(ServerIdentity.DEFAULT);
+    private final ServerIdentity.Builder identityBuilder = ServerIdentity.builder();
     private final CapabilitiesConfig.Builder capabilitiesConfig = CapabilitiesConfig.builder();
     private final FeaturesConfig featuresConfig = new FeaturesConfig();
     private final SessionConfig.Builder sessionBuilder = SessionConfig.builder();
@@ -74,7 +71,7 @@ public final class ServerBuilder {
     /**
      * Configures server identity (name, version, etc.).
      */
-    public ServerBuilder info(Consumer<ServerIdentityBuilder> configurer) {
+    public ServerBuilder info(Consumer<ServerIdentity.Builder> configurer) {
         configurer.accept(identityBuilder);
         return this;
     }
@@ -149,10 +146,31 @@ public final class ServerBuilder {
         return this;
     }
 
+    /**
+     * Sets the server version (shorthand for {@code info(b -> b.version(version))}).
+     */
+    public ServerBuilder version(String version) {
+        identityBuilder.version(version);
+        return this;
+    }
+
+    /**
+     * Sets the bind address (shorthand for {@code network(b -> b.host(host))}).
+     */
+    public ServerBuilder host(String host) {
+        networkBuilder.host(host);
+        return this;
+    }
+
     // === Feature registration ===
 
     /**
-     * Registers a tool handler.
+     * Registers a tool handler at build time (DSL registration).
+     *
+     * <p><b>Intentional naming difference:</b> this is {@code tool()} (build-time DSL noun),
+     * while {@link TachyonServer#registerTool(ToolHandler)} is
+     * {@code registerTool()} (post-start dynamic registration). They serve different lifecycle
+     * phases and are intentionally named differently.
      */
     public ServerBuilder tool(ToolHandler handler) {
         featuresConfig.tools.add(handler);
@@ -160,7 +178,12 @@ public final class ServerBuilder {
     }
 
     /**
-     * Registers a tool with string JSON schemas and a handler function.
+     * Registers a tool with string JSON schemas and a handler function (build-time DSL).
+     *
+     * <p><b>Intentional naming difference:</b> this is {@code tool()} (build-time),
+     * while {@link TachyonServer#registerTool(String, String, String, String, java.util.function.BiFunction)}
+     * is {@code registerTool()} (post-start). They serve different lifecycle phases and are
+     * intentionally named differently.
      */
     public ServerBuilder tool(
             String name,
@@ -235,33 +258,6 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the payload serializer/deserializer for structured values and tool arguments.
-     * Defaults to Jackson. Structured values must be types the serde understands;
-     * {@code JsonNode} and {@code RawJson} values bypass it.
-     */
-    public ServerBuilder payloadSerde(PayloadSerde serde) {
-        featuresConfig.payloadSerializer = serde;
-        featuresConfig.payloadDeserializer = serde;
-        return this;
-    }
-
-    /**
-     * Sets a separate validator for tool input schema validation.
-     */
-    public ServerBuilder inputSchemaValidator(JsonSchemaValidator validator) {
-        featuresConfig.inputSchemaValidator = validator;
-        return this;
-    }
-
-    /**
-     * Sets a separate validator for tool output schema validation.
-     */
-    public ServerBuilder outputSchemaValidator(JsonSchemaValidator validator) {
-        featuresConfig.outputSchemaValidator = validator;
-        return this;
-    }
-
-    /**
      * Sets a caller-owned executor for handler dispatch. The server will not shut it down on close.
      * Must be thread-per-task (each task starts on a new thread); bounded pools deadlock with
      * the blocking-first dispatch contract. Mutually exclusive with {@link #threadFactory}.
@@ -330,6 +326,10 @@ public final class ServerBuilder {
 
     /**
      * Builds the {@link TachyonServer} without binding a transport.
+     *
+     * <p>Values returned by {@link TachyonServer#port()} and {@link TachyonServer#host()} are
+     * meaningful only after {@link #start()}. On a build()-only server, {@code port()} returns 0
+     * and {@code host()} returns the configured host.
      */
     public TachyonServer build() {
         var sessionConfig = sessionBuilder.build();

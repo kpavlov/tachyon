@@ -19,7 +19,7 @@ public class ResourceDescriptorScope
         public var mimeType: String? = null
         public var title: String? = null
         public var annotations: Annotations? = null
-        public var size: Double? = null
+        public var size: Long? = null
         public var icons: List<Icon>? = null
 
         @PublishedApi

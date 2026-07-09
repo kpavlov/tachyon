@@ -134,7 +134,7 @@ clients may truncate them.
 ## kotlinx.serialization integration
 
 `kotlinx-serialization-json` is an **optional** dependency of `tachyon-server-kotlin`.
-Add it to use `JsonObject` schemas, `args.decode<T>()`, and `structured(value)` / `success(value)`:
+Add it to use `JsonObject` schemas, `args.decode<T>()`, and `success(value)`:
 
 ```xml
 <dependency>
@@ -154,14 +154,15 @@ tool(
     outputSchema = """{"type":"object","properties":{"echo":{"type":"string"}}}""",
 ) {
     val input = args.decode<EchoArgs>() // typed decode via configured serde
-    structured(EchoReply(input.message)) // structuredContent + JSON text fallback
+    success(EchoReply(input.message)) // structuredContent via configured serde
 }
 ```
 
 The default kotlinx serde ignores unknown keys; configure a strict `Json` via
 `json { serde = KxSerializationSerde(Json { ignoreUnknownKeys = false }) }`.
-`structured(value)` requires the value to encode to a JSON object and pairs with the
-declared `outputSchema`.
+`success(value)` encodes via the configured serde; the value must encode to a JSON
+object and pairs with the declared `outputSchema`. For a pre-serialized JSON payload
+that bypasses the serde, use `ToolResult.raw(json, text)`.
 
 ### Typed decode/result via configured serde
 
@@ -245,8 +246,9 @@ TachyonServer(port = 8080) {
 
 `structuredContent` requires a JSON object shape. Tachyon rejects primitives and arrays at runtime.
 
-With kotlinx-serialization on the classpath, prefer `structured(value)` inside a tool lambda —
-it encodes any `@Serializable` value and emits both `structuredContent` and the JSON text fallback.
+With kotlinx-serialization on the classpath, prefer `success(value)` inside a tool lambda —
+the configured serde encodes the value into `structuredContent`, with `value.toString()`
+(or an explicit `text` argument) as the text fallback.
 
 ## Testing
 

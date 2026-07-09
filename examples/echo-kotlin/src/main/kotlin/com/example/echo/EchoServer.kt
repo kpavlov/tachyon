@@ -30,7 +30,7 @@ fun createServer(port: Int = 0): TachyonServer {
                 description = "Echo message",
                 inputSchema = inputSchema,
             ) {
-                ToolResult.text(args.string("message"))
+                ToolResult.text(args.stringValue("message"))
             }
         }
 
@@ -42,7 +42,7 @@ fun createServer(port: Int = 0): TachyonServer {
             .inputSchema(inputSchema)
             .build(),
     ) {
-        val message = args.string("message")
+        val message = args.stringValue("message")
         ToolResult.text(message.reversed())
     }
     return server

@@ -40,9 +40,9 @@ class ToolArgsTest {
     }
 
     @Test
-    void stringReturnsValue() {
+    void stringValueReturnsValue() {
         var args = ToolArgs.of(Map.of("k", JSON.stringNode("hello")));
-        assertThat(args.string("k")).isEqualTo("hello");
+        assertThat(args.stringValue("k")).isEqualTo("hello");
     }
 
     @Test

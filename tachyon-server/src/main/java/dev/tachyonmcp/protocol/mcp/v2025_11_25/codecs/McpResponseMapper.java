@@ -105,7 +105,7 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
         final var resolvedMeta = meta;
         return switch (unwrapped) {
             case InputRequired ir -> new InputRequiredPayload(ir.inputRequests(), ir.requestState(), resolvedMeta);
-            case ToolResult.ErrorResult er ->
+            case ToolResult.Error er ->
                 new CallToolResult(
                         List.of(McpToolMapper.toProtocolContentBlock(TextContent.of(er.message()))),
                         null,
@@ -118,8 +118,8 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
     }
 
     private Object wireSuccess(Success s, @Nullable Map<String, JsonNode> meta) {
-        var blocks =
-                s.content().stream().map(McpToolMapper::toProtocolContentBlock).toList();
+        var blocks = new java.util.ArrayList<>(
+                s.content().stream().map(McpToolMapper::toProtocolContentBlock).toList());
         Map<String, JsonNode> structured = null;
         var sv = s.structuredValue();
         if (sv != null) {
@@ -139,6 +139,12 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
                 map.put(entry.getKey(), entry.getValue());
             }
             structured = map;
+            // MCP: a tool returning structured content SHOULD also return the serialized JSON in a
+            // text block (backwards-compat). Inject it when the handler supplied no text block.
+            var hasText = s.content().stream().anyMatch(c -> c instanceof TextContent);
+            if (!hasText) {
+                blocks.add(McpToolMapper.toProtocolContentBlock(TextContent.of(objNode.toString())));
+            }
         }
         return new CallToolResult(blocks, structured, null, meta, null);
     }

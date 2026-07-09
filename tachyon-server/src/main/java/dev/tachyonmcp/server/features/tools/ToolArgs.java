@@ -42,7 +42,7 @@ public final class ToolArgs {
         return Collections.unmodifiableMap(raw);
     }
 
-    public String string(String key) {
+    public String stringValue(String key) {
         return node(key).asString();
     }
 
@@ -123,12 +123,21 @@ public final class ToolArgs {
         return decode((Type) targetClass);
     }
 
+    /**
+     * Returns the argument {@code key} as a {@link JsonNode}, throwing if missing.
+     *
+     * @throws InvalidArgumentException if the key is not present
+     */
     public JsonNode node(String key) {
         var n = raw.get(key);
         if (n == null) throw new InvalidArgumentException(key, "required argument missing");
         return n;
     }
 
+    /**
+     * Returns the argument {@code key} as a {@link JsonNode}, or {@code null} if missing.
+     * Unlike {@link #node(String)} this never throws — use when the key is optional.
+     */
     @Nullable
     public JsonNode raw(String key) {
         return raw.get(key);

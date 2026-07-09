@@ -46,10 +46,10 @@ internal class TachyonServerTest {
             capabilities {
                 tools = Mode.ON
                 toolsListChanged = true
-                resources = true
+                resources = Mode.ON
                 resourcesSubscribe = true
                 resourcesListChanged = true
-                prompts = true
+                prompts = Mode.ON
                 promptsListChanged = true
                 tasks = true
                 tasksCancel = true
@@ -165,6 +165,17 @@ internal class TachyonServerTest {
             }
         server.getTool("build") shouldNotBe null
         server.close()
+    }
+
+    @Test
+    fun `network port set via DSL without factory port parameter`() {
+        TachyonServer {
+            name("dsl-port-test")
+            session { enabled = true }
+            network { port = 0 }
+        }.use { handle ->
+            (handle.port() > 0) shouldBe true
+        }
     }
 
     @Test

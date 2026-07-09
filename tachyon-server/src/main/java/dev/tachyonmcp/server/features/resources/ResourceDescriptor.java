@@ -20,22 +20,22 @@ public interface ResourceDescriptor extends ServerResourceType {
 
     String name();
 
-    String uri();
+    @Nullable
+    String title();
 
     @Nullable
     String description();
+
+    String uri();
 
     @Nullable
     String mimeType();
 
     @Nullable
-    String title();
-
-    @Nullable
     Annotations annotations();
 
     @Nullable
-    Double size();
+    Long size();
 
     @Nullable
     List<Icon> icons();
@@ -47,8 +47,7 @@ public interface ResourceDescriptor extends ServerResourceType {
     default void check() {
         if (name().isBlank()) throw new IllegalArgumentException("name must not be blank");
         if (uri().isBlank()) throw new IllegalArgumentException("uri must not be blank");
-        if (size() != null && (Double.isNaN(size()) || size() < 0))
-            throw new IllegalArgumentException("size must be >= 0, got: " + size());
+        if (size() != null && size() < 0) throw new IllegalArgumentException("size must be >= 0, got: " + size());
     }
 
     static ResourceDescriptor.Builder builder() {
@@ -56,7 +55,7 @@ public interface ResourceDescriptor extends ServerResourceType {
     }
 
     static ResourceDescriptor of(String name, String uri, @Nullable String description, @Nullable String mimeType) {
-        return DefaultResourceDescriptor.of(name, uri, description, mimeType, null, null, null, null, null);
+        return DefaultResourceDescriptor.of(name, null, description, uri, mimeType, null, null, null, null);
     }
 
     static ResourceDescriptor of(
@@ -66,29 +65,31 @@ public interface ResourceDescriptor extends ServerResourceType {
             @Nullable String mimeType,
             @Nullable String title,
             @Nullable Annotations annotations,
-            @Nullable Double size,
+            @Nullable Long size,
             @Nullable List<Icon> icons) {
-        return DefaultResourceDescriptor.of(name, uri, description, mimeType, title, annotations, size, icons, null);
+        return DefaultResourceDescriptor.of(name, title, description, uri, mimeType, annotations, size, icons, null);
     }
 
     interface Builder {
 
         Builder name(String name);
 
-        Builder uri(String uri);
+        Builder title(@Nullable String title);
 
         Builder description(@Nullable String description);
 
-        Builder mimeType(@Nullable String mimeType);
+        Builder uri(String uri);
 
-        Builder title(@Nullable String title);
+        Builder mimeType(@Nullable String mimeType);
 
         Builder annotations(@Nullable Annotations annotations);
 
-        Builder size(@Nullable Double size);
+        Builder size(@Nullable Long size);
 
         Builder icons(@Nullable Iterable<? extends Icon> elements);
 
         Builder extensionId(@Nullable String extensionId);
+
+        ResourceDescriptor build();
     }
 }

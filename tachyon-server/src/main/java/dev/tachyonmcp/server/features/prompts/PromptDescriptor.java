@@ -23,10 +23,10 @@ public interface PromptDescriptor extends ServerResourceType {
     String name();
 
     @Nullable
-    String description();
+    String title();
 
     @Nullable
-    String title();
+    String description();
 
     @Nullable
     List<PromptArgument> arguments();
@@ -55,7 +55,7 @@ public interface PromptDescriptor extends ServerResourceType {
             @Nullable String title,
             @Nullable List<PromptArgument> arguments,
             @Nullable JsonNode inputSchema) {
-        return DefaultPromptDescriptor.of(name, description, title, arguments, inputSchema, null, null);
+        return DefaultPromptDescriptor.of(name, title, description, arguments, inputSchema, null, null);
     }
 
     static PromptDescriptor of(
@@ -65,19 +65,19 @@ public interface PromptDescriptor extends ServerResourceType {
             @Nullable List<PromptArgument> arguments,
             @Nullable JsonNode inputSchema,
             @Nullable List<Icon> icons) {
-        return DefaultPromptDescriptor.of(name, description, title, arguments, inputSchema, icons, null);
+        return DefaultPromptDescriptor.of(name, title, description, arguments, inputSchema, icons, null);
     }
 
     static PromptDescriptor of(String name, String description) {
-        return DefaultPromptDescriptor.of(name, description, null, null, null, null, null);
+        return DefaultPromptDescriptor.of(name, null, description, null, null, null, null);
     }
 
     interface Builder {
         Builder name(String name);
 
-        Builder description(@Nullable String description);
-
         Builder title(@Nullable String title);
+
+        Builder description(@Nullable String description);
 
         Builder addArguments(PromptArgument... elements);
 

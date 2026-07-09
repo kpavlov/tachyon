@@ -20,7 +20,7 @@ class ServerInfoTest extends AbstractMcpE2eTest {
                         .title("Test Server")
                         .websiteUrl("https://example.com/mcp")
                         .instructions("Test instructions")
-                        .addIcons(Icon.of("https://example.com/icon.png", "image/png", List.of("32x32"), "light")))
+                        .icons(Icon.of("https://example.com/icon.png", "image/png", List.of("32x32"), "light")))
                 .capabilities(c -> c.completions()
                         .logging()
                         .prompts(true)

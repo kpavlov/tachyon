@@ -15,8 +15,16 @@ import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.config.ServerConfig;
 import dev.tachyonmcp.server.domain.LoggingLevel;
+import dev.tachyonmcp.server.domain.PromptMessage;
+import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.extensions.ServerExtension;
+import dev.tachyonmcp.server.features.prompts.InputRequiredPromptHandler;
+import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.server.features.prompts.PromptHandler;
+import dev.tachyonmcp.server.features.prompts.PromptHandlerResult;
 import dev.tachyonmcp.server.features.prompts.PromptRegistry;
+import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
+import dev.tachyonmcp.server.features.resources.ResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceRegistry;
 import dev.tachyonmcp.server.features.tasks.TaskRegistry;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
@@ -392,6 +400,34 @@ final class DefaultTachyonServer implements ServerEngine {
     public void registerTool(ToolHandler handler) {
         toolRegistry.register(handler);
         logger.debug("Tool registered: {}", handler.descriptor().name());
+    }
+
+    @Override
+    public void registerResource(ResourceDescriptor descriptor) {
+        registerResource(
+                descriptor, (ctx, req) -> TextResourceContents.of(descriptor.uri(), descriptor.mimeType(), "", null));
+    }
+
+    @Override
+    public void registerResource(ResourceDescriptor descriptor, ResourceHandler handler) {
+        resourceRegistry.add(descriptor, handler);
+    }
+
+    @Override
+    public void registerPrompt(PromptDescriptor descriptor, List<PromptMessage> messages) {
+        registerPrompt(
+                descriptor, (InputRequiredPromptHandler) (ctx, request) -> PromptHandlerResult.messages(messages));
+    }
+
+    @Override
+    public void registerPrompt(PromptDescriptor descriptor, PromptHandler handler) {
+        registerPrompt(descriptor, (InputRequiredPromptHandler)
+                (ctx, request) -> PromptHandlerResult.messages(handler.getMessages(request.arguments())));
+    }
+
+    @Override
+    public void registerPrompt(PromptDescriptor descriptor, InputRequiredPromptHandler handler) {
+        promptRegistry.add(descriptor, handler);
     }
 
     @Override

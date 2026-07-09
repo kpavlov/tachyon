@@ -19,7 +19,7 @@ fail to compile and won't show up until a client hits them.
 | Register a tool | `server.addTool(name, desc, inputSchema: ToolSchema, outputSchema, handler)` | `server.registerTool(name, desc, inputSchema, outputSchema) { }` |
 | Handler receiver | `suspend ClientConnection.(CallToolRequest) -> CallToolResult` | `suspend ToolScope.() -> ToolResult` |
 | Read arguments | `request.arguments: JsonObject` | `args: ToolArgs` (typed accessors) |
-| Tool result | `CallToolResult(content = listOf(TextContent(x)), isError)` | `ToolResult.text(x)` / `.error(x)` / `structured(v)` |
+| Tool result | `CallToolResult(content = listOf(TextContent(x)), isError)` | `ToolResult.text(x)` / `.error(x)` / `success(v)` |
 | Schema type | `ToolSchema(properties, required)` | `String` **or** Jackson `JsonNode` **or** kotlinx `JsonObject` |
 | Logging | `server.sendLoggingMessage(LoggingMessageNotification(...))` | `server.log(session, level, logger, data: JsonNode)` |
 | Log level | `LoggingLevel.Info/Debug/Error` (PascalCase) | `LoggingLevel.INFO/DEBUG/ERROR` (UPPER) |
@@ -30,8 +30,8 @@ fail to compile and won't show up until a client hits them.
 ## 1. Dependencies
 
 Swap the SDK for Tachyon's Kotlin module. Keep `kotlinx-serialization-json` — it's an
-*optional* Tachyon dependency, and you need it for `JsonObject` schemas, `args.decode<T>()`,
-and `structured(value)`. Jackson 3 (`tools.jackson.*`) arrives transitively.
+*optional* Tachyon dependency, and you need it for `JsonObject` schemas and
+`args.decode<T>()`. Jackson 3 (`tools.jackson.*`) arrives transitively.
 
 ```toml
 # out: io.modelcontextprotocol:kotlin-sdk
@@ -132,8 +132,8 @@ warns when a description exceeds 2048 chars (clients truncate there) pays off ac
 ```kotlin
 CallToolResult(content = listOf(TextContent(json)))               → ToolResult.text(json)
 CallToolResult(content = listOf(TextContent(json)), isError=true) → ToolResult.error(json)
-ToolResult.raw(textFallback, structuredJson)                     // manual structured content
-structured(EchoReply(...))                                       // kotlinx: encodes + validates object root
+ToolResult.raw(structuredJson, textFallback)                    // pre-serialized JSON, skips serde
+success(EchoReply(...))                                         // configured serde → structuredContent
 ToolResult.of(pojo)                                             // Jackson: POJO → structuredContent
 ```
 

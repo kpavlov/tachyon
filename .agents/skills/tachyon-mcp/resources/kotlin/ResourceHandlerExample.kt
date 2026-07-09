@@ -25,7 +25,7 @@ fun richDescriptor(): ResourceDescriptor =
         mimeType = "application/json"
         title = "My Profile"
         annotations = Annotations(priority = 0.5, lastModified = "2026-01-01T00:00:00Z")
-        size = 1024.0
+        size = 1024
         icons = listOf(
             Icon(src = "https://example.com/user.png", mimeType = "image/png", sizes = listOf("32x32"), theme = "blue"),
         )

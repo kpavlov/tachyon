@@ -3,6 +3,7 @@
 package dev.tachyonmcp.server.features.tools
 
 import dev.tachyonmcp.server.TachyonDsl
+import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.ToolAnnotations
 import dev.tachyonmcp.server.features.tasks.TaskSupport
 import dev.tachyonmcp.server.json.JsonSchemaUtils.parseSchema
@@ -24,6 +25,8 @@ public class ToolDescriptorScope
         public var outputSchema: JsonNode? = null
         public var taskSupport: TaskSupport? = null
         public var annotations: ToolAnnotations? = null
+        public var icons: List<Icon>? = null
+        public var extensionId: String? = null
 
         public fun inputSchema(json: String) {
             inputSchema = parseSchema(json)
@@ -43,6 +46,8 @@ public class ToolDescriptorScope
             outputSchema?.let(builder::outputSchema)
             taskSupport?.let(builder::taskSupport)
             annotations?.let(builder::annotations)
+            icons?.let(builder::icons)
+            extensionId?.let(builder::extensionId)
             return builder.build()
         }
     }

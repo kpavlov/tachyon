@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -369,7 +370,7 @@ class ResourceRegistryTest {
                 "text/plain",
                 "Full Title",
                 annotations,
-                1024.0,
+                1024L,
                 List.of(icon));
         registry.add(descriptor, (ctx, req) -> TextResourceContents.of("test://full", "text/plain", "content"));
 
@@ -387,7 +388,7 @@ class ResourceRegistryTest {
                 .containsExactly(dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Role.USER);
         assertThat(resource.annotations().priority()).isEqualTo(annotations.priority());
         assertThat(resource.annotations().lastModified()).isEqualTo(annotations.lastModified());
-        assertThat(resource.size()).isEqualTo(1024.0);
+        assertThat(resource.size()).isEqualTo(1024L);
         assertThat(resource.icons()).hasSize(1);
         assertThat(resource.icons().getFirst().src()).isEqualTo("https://example.com/icon.png");
     }
@@ -466,7 +467,7 @@ class ResourceRegistryTest {
 
     @Test
     void shouldPreferMoreSpecificTemplateOnOverlap() throws Exception {
-        var matched = new AtomicReference<String>();
+        var matched = new AtomicReference<@Nullable String>();
         registry.addTemplate(
                 ResourceTemplateEntry.of("generic", "resource://{type}/{id}", null, null, (ctx, uri, params) -> {
                     matched.set("generic");
@@ -519,7 +520,7 @@ class ResourceRegistryTest {
     void shouldReportResourceSizeWithoutLoadingContent() throws Exception {
         // size is declared upfront; content is loaded lazily via handler only on resources/read
         var descriptor = ResourceDescriptor.of(
-                "sized-resource", "test://sized", "A resource", "application/octet-stream", null, null, 4096.0, null);
+                "sized-resource", "test://sized", "A resource", "application/octet-stream", null, null, 4096L, null);
         var contentLoaded = new java.util.concurrent.atomic.AtomicBoolean(false);
         registry.add(descriptor, (ctx, req) -> {
             contentLoaded.set(true);
@@ -529,7 +530,7 @@ class ResourceRegistryTest {
         // resources/list returns size WITHOUT loading content
         var listResult =
                 (ListResourcesResult) handlers.get("resources/list").handle(DefaultDispatchContext.noop(), null);
-        assertThat(listResult.resources().getFirst().size()).isEqualTo(4096.0);
+        assertThat(listResult.resources().getFirst().size()).isEqualTo(4096L);
         assertThat(contentLoaded).isFalse();
 
         // resources/read triggers lazy content load

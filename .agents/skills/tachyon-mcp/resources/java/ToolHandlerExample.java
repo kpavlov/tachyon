@@ -49,7 +49,7 @@ final class ToolHandlerExample {
                 .description("Generates a personalized greeting")
                 .inputSchema(GREET_SCHEMA),
             (@NonNull InteractionContext ctx, ToolArgs args) -> {
-                String name = args.string("name");
+                String name = args.stringValue("name");
                 return ToolResult.text("Hello, " + name + "!");
             });
     }
@@ -64,7 +64,7 @@ final class ToolHandlerExample {
                 .description("Generates a personalized greeting")
                 .inputSchema(GREET_SCHEMA),
             (ctx, args) -> {
-                var name = args.string("name");
+                var name = args.stringValue("name");
                 return ToolResult.text("Hello, " + name + "!");
             });
     }

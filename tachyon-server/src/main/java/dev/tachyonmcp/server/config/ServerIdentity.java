@@ -7,7 +7,6 @@ package dev.tachyonmcp.server.config;
 import dev.tachyonmcp.server.domain.Icon;
 import java.util.List;
 import java.util.Objects;
-import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -21,8 +20,6 @@ import org.jspecify.annotations.Nullable;
  * @param instructions optional instructions for how to use the server
  * @param icons        optional list of icon entries
  */
-@Value.Builder
-@Value.Style(visibility = Value.Style.ImplementationVisibility.PACKAGE, typeImmutable = "Default*")
 public record ServerIdentity(
         String name,
         String version,
@@ -42,7 +39,64 @@ public record ServerIdentity(
         }
     }
 
-    public static ServerIdentityBuilder builder() {
-        return new ServerIdentityBuilder();
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /** Builder for {@link ServerIdentity}. */
+    public static final class Builder {
+        private String name = "tachyon-mcp";
+        private String version = "0.1";
+        private @Nullable String description;
+        private @Nullable String title;
+        private @Nullable String websiteUrl;
+        private @Nullable String instructions;
+        private @Nullable List<Icon> icons;
+
+        private Builder() {}
+
+        public Builder name(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public Builder version(String version) {
+            this.version = version;
+            return this;
+        }
+
+        public Builder description(@Nullable String description) {
+            this.description = description;
+            return this;
+        }
+
+        public Builder title(@Nullable String title) {
+            this.title = title;
+            return this;
+        }
+
+        public Builder websiteUrl(@Nullable String websiteUrl) {
+            this.websiteUrl = websiteUrl;
+            return this;
+        }
+
+        public Builder instructions(@Nullable String instructions) {
+            this.instructions = instructions;
+            return this;
+        }
+
+        public Builder icons(@Nullable List<Icon> icons) {
+            this.icons = icons;
+            return this;
+        }
+
+        public Builder icons(Icon... icons) {
+            this.icons = List.of(icons);
+            return this;
+        }
+
+        public ServerIdentity build() {
+            return new ServerIdentity(name, version, description, title, websiteUrl, instructions, icons);
+        }
     }
 }

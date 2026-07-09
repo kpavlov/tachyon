@@ -12,7 +12,7 @@ import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
 public sealed interface ToolResult
-        permits ToolResult.Success, ToolResult.ErrorResult, ToolResult.WithMeta, ToolResult.InputRequired {
+        permits ToolResult.Success, ToolResult.Error, ToolResult.WithMeta, ToolResult.InputRequired {
 
     record Success(@Nullable Object structuredValue, List<ContentBlock> content) implements ToolResult {
         public Success {
@@ -25,7 +25,7 @@ public sealed interface ToolResult
         }
     }
 
-    record ErrorResult(String message) implements ToolResult {}
+    record Error(String message) implements ToolResult {}
 
     record WithMeta(ToolResult inner, Map<String, JsonNode> meta) implements ToolResult {
         public WithMeta {
@@ -75,12 +75,19 @@ public sealed interface ToolResult
         return new Success(payload, List.of(TextContent.of(text)));
     }
 
+    /**
+     * Creates a success result carrying {@code payload} as structured content with no text block.
+     *
+     * <p>The server emits the serialized JSON of {@code payload} as the text content at encode
+     * time (MCP backwards-compat for structured results). Use {@link #of(Object, String)} to
+     * supply an explicit human-readable text block instead.
+     */
     static ToolResult of(Object payload) {
-        return new Success(payload, List.of(TextContent.of(Objects.toString(payload))));
+        return new Success(payload, List.of());
     }
 
     static ToolResult error(String message) {
-        return new ErrorResult(message);
+        return new Error(message);
     }
 
     static ToolResult empty() {

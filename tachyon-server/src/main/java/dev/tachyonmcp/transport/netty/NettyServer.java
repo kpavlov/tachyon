@@ -51,16 +51,11 @@ public final class NettyServer implements Closeable {
         this(server, NettyServerConfig.defaults(port));
     }
 
-    public NettyServer(String host, int port, ServerEngine server) {
-        this(server, NettyServerConfig.defaults(host, port));
-    }
-
     public NettyServer(ServerEngine server, NettyServerConfig config) {
         var engine = config.ioEngine();
         if (engine == NettyIoEngine.AUTO) {
             engine = NettyIoEngine.detect();
         }
-        logger.info("Netty I/O engine: {}", engine);
 
         // Event loops run on PLATFORM threads. Netty I/O loops never voluntarily
         // yield (they spin in epoll_wait / io_uring_enter / Selector.select), and
@@ -93,7 +88,7 @@ public final class NettyServer implements Closeable {
         try {
             this.serverChannel =
                     bootstrap.bind(config.host(), config.port()).sync().channel();
-            logger.info("TachyonMCP Server started on {}", serverChannel.localAddress());
+            logger.info("TachyonMCP Server (Netty I/O: {}) started on {}", engine, serverChannel.localAddress());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Failed to start Netty server on " + config.host() + ":" + config.port(), e);

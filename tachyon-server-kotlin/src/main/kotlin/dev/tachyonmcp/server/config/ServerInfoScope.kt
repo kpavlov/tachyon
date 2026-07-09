@@ -30,7 +30,7 @@ public class ServerInfoScope
         /** Server website URL. */
         public var websiteUrl: String? = null
 
-        @PublishedApi internal fun applyTo(builder: ServerIdentityBuilder) {
+        @PublishedApi internal fun applyTo(builder: ServerIdentity.Builder) {
             name?.let(builder::name)
             version?.let(builder::version)
             description?.let(builder::description)

@@ -98,14 +98,14 @@ public class YouComSearchToolTest {
     void handleReturnsErrorForEmptyQuery() {
         var tool = new YouComSearchTool(YouComSearchConfig.builder().build());
         var args = ToolArgs.of(Map.of("query", JsonNodeFactory.instance.stringNode("")));
-        assertThat(tool.handle(NOOP_CTX, args)).isInstanceOf(ToolResult.ErrorResult.class);
+        assertThat(tool.handle(NOOP_CTX, args)).isInstanceOf(ToolResult.Error.class);
     }
 
     @Test
     void handleReturnsErrorWhenMissingQuery() {
         var tool = new YouComSearchTool(YouComSearchConfig.builder().build());
         var args = ToolArgs.of(Map.of());
-        assertThat(tool.handle(NOOP_CTX, args)).isInstanceOf(ToolResult.ErrorResult.class);
+        assertThat(tool.handle(NOOP_CTX, args)).isInstanceOf(ToolResult.Error.class);
     }
 
     @Test

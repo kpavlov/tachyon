@@ -9,23 +9,31 @@ import java.util.List;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
+/**
+ * A paginated result with an optional cursor for the next page.
+ */
 @InternalApi
 @Value.Immutable
 @Value.Style(
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
         typeImmutable = "Default*")
-/** A paginated result with an optional cursor for the next page. */
 public interface PaginatedResult<R> {
 
-    /** The items on this page. */
+    /**
+     * The items on this page.
+     */
     List<R> items();
 
-    /** Cursor for the next page, or {@code null} if this is the last page. */
+    /**
+     * Cursor for the next page, or {@code null} if this is the last page.
+     */
     @Nullable
     String nextCursor();
 
-    /** Returns {@code true} if there are more items beyond this page. */
+    /**
+     * Returns {@code true} if there are more items beyond this page.
+     */
     default boolean hasMore() {
         return nextCursor() != null;
     }

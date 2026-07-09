@@ -40,7 +40,7 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
             }
         };
 
-        startServer(it -> it.payloadSerde(gsonSerde)
+        startServer(it -> it.json(j -> j.serde(gsonSerde))
                 .tool(ToolHandler.of(
                         "gson-tool",
                         "Gson tool",
@@ -98,8 +98,8 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
         var req = outputSchema.putArray("required");
         req.add("message");
 
-        startServer(it -> it.inputSchemaValidator(JsonSchemaValidator.noop())
-                .outputSchemaValidator(new NetworkntJsonSchemaValidator())
+        startServer(it -> it.json(j -> j.inputSchemaValidator(JsonSchemaValidator.noop())
+                        .outputSchemaValidator(new NetworkntJsonSchemaValidator()))
                 .tool(ToolHandler.of(
                         ToolDescriptor.builder()
                                 .name("validated-output")
@@ -140,10 +140,11 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
             }
         };
 
-        startServer(it -> it.payloadSerde(gsonSerde).tool(ToolHandler.of("decode-tool", "Decode tool", (ctx, args) -> {
-            var decoded = args.decode(Map.class);
-            return ToolResult.text("decoded: " + decoded);
-        })));
+        startServer(it -> it.json(j -> j.serde(gsonSerde))
+                .tool(ToolHandler.of("decode-tool", "Decode tool", (ctx, args) -> {
+                    var decoded = args.decode(Map.class);
+                    return ToolResult.text("decoded: " + decoded);
+                })));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();

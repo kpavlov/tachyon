@@ -19,7 +19,7 @@ public fun ServerBuilder.resource(
     name: String,
     uri: String,
     description: String? = null,
-    mimeType: String = "application/json",
+    mimeType: String? = null,
     handler: suspend ResourceScope.() -> ResourceContents,
 ): ServerBuilder {
     val descriptor =

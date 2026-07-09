@@ -2,7 +2,7 @@
 
 package dev.tachyonmcp.server.features.tools
 
-public fun ToolArgs.stringOrNull(key: String): String? = if (has(key)) string(key) else null
+public fun ToolArgs.stringOrNull(key: String): String? = if (has(key)) stringValue(key) else null
 
 public fun ToolArgs.intOrNull(key: String): Int? = if (has(key)) intValue(key) else null
 
