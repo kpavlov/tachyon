@@ -3,6 +3,7 @@
 package dev.tachyonmcp.server.features.tools;
 
 import java.util.Objects;
+import java.util.function.Consumer;
 
 public abstract class AbstractToolHandler implements ToolHandler {
 
@@ -11,6 +12,16 @@ public abstract class AbstractToolHandler implements ToolHandler {
     public AbstractToolHandler(ToolDescriptor descriptor) {
         Objects.requireNonNull(descriptor, "ToolDescriptor must not be null");
         this.descriptor = descriptor;
+    }
+
+    public AbstractToolHandler(Consumer<ToolDescriptor.Builder> descriptorConfigurer) {
+        this(configure(descriptorConfigurer));
+    }
+
+    private static ToolDescriptor configure(Consumer<ToolDescriptor.Builder> descriptorConfigurer) {
+        final var builder = ToolDescriptor.builder();
+        descriptorConfigurer.accept(builder);
+        return builder.build();
     }
 
     public AbstractToolHandler(String name) {

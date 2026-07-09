@@ -86,6 +86,7 @@ public interface SyncToolHandler extends ToolHandler {
             @Nullable JsonNode inputSchema,
             BiFunction<InteractionContext, ToolArgs, ToolResult> fn) {
         return new SyncToolHandler() {
+
             @Override
             public String name() {
                 return name;

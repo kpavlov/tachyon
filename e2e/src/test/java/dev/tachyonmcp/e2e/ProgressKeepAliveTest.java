@@ -1,0 +1,276 @@
+/*
+ * Copyright (c) 2026 Konstantin Pavlov and contributors.
+ */
+
+package dev.tachyonmcp.e2e;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
+import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.Server;
+import dev.tachyonmcp.server.TachyonServer;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolRequest;
+import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.transport.netty.McpChannelInitializer;
+import dev.tachyonmcp.transport.netty.NettyIoEngine;
+import dev.tachyonmcp.transport.netty.NettyServer;
+import dev.tachyonmcp.transport.netty.NettyServerConfig;
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.Timeout;
+
+/**
+ * Verifies the lazy SSE upgrade and keep-alive paths for a long-running POST. Two triggers upgrade
+ * the buffered JSON response to {@code text/event-stream} and arm the {@code SseHeartbeat} scheduler:
+ *
+ * <ul>
+ *   <li>token-driven — a tool emits {@code notifications/progress} using the client's
+ *       {@code _meta.progressToken} ({@link ProgressHandler});
+ *   <li>token-free — a tool emits an empty SSE comment via {@code ctx.notifications().comment(null)}
+ *       ({@link CommentHandler}), for when no progress token is available.
+ * </ul>
+ *
+ * <p>Once upgraded, a fixed-rate scheduler (not reader-idle) emits {@code :\r\n} heartbeats at
+ * {@code network().heartbeatInterval()} so the stream stays open. {@link #warmUp()} JIT-warms both
+ * dispatch paths so the first server→client byte flushes sub-millisecond. The heartbeat interval is
+ * kept far below the tool runtime so several heartbeats fire even on a slow CI runner.
+ *
+ * @author Konstantin Pavlov
+ */
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class ProgressKeepAliveTest {
+
+    /**
+     * How reader-idle should be configured for long-running, silent tasks (design)
+     * Reader-idle is a dead-peer detector, not a compute budget. It only means "no inbound bytes
+     * for N seconds" — which during request processing is normal, not dead. Two rules:
+     * <p>
+     * 1. Long tasks must ride SSE + heartbeats. When a tool emits a server→client message
+     * (ctx.notifications().progress(...)), the POST upgrades to SSE, SseHeartbeat arms, and
+     * reader-idle becomes a no-op on that channel (McpOperationHandler.java). The heartbeat
+     * (default 15 s) then keeps the stream alive indefinitely. So any tool that may exceed
+     * readerIdleTimeout should emit an early progress/keepalive — exactly what this test's tool
+     * does. Keep the invariant heartbeatInterval (15s) < readerIdleTimeout (60s).
+     * <p>
+     * 2. Size reader-idle to peer-death tolerance, not to tool runtime (default 60 s is fine).
+     * Bumping it to cover a 10-minute tool is the wrong lever.
+     * <p>
+     * The test fix (reader-idle ZERO) makes CI green
+     */
+    private static final Duration READER_IDLE = Duration.ZERO;
+
+    private static final Duration HEARTBEAT = Duration.ofMillis(250);
+    private static final long SLOW_SLEEP_MS = 2_000L;
+
+    // slow-progress request asks for progress: the client supplies _meta.progressToken, which the
+    // handler forwards to ctx.notifications().progress(...). This is the token-driven keep-alive.
+    private static final String TOOL_CALL = // language=JSON
+            """
+            {"jsonrpc":"2.0","id":1,"method":"tools/call",
+             "params":{"name":"slow-progress","arguments":{},"_meta":{"progressToken":"tok-1"}}}
+            """;
+
+    // silent-comment request carries NO progress token — the handler keeps the connection alive
+    // with ctx.notifications().comment(...), the token-free keep-alive.
+    private static final String COMMENT_CALL = // language=JSON
+            """
+            {"jsonrpc":"2.0","id":1,"method":"tools/call",
+             "params":{"name":"silent-comment","arguments":{}}}
+            """;
+
+    private final Server server = TachyonServer.builder()
+            .session(s -> s.enabled(true))
+            .network(n -> n.heartbeatInterval(HEARTBEAT))
+            .tool(new ProgressHandler("warmup", 0))
+            .tool(new ProgressHandler("slow-progress", SLOW_SLEEP_MS))
+            .tool(new CommentHandler("warmup-comment", 0))
+            .tool(new CommentHandler("silent-comment", SLOW_SLEEP_MS))
+            .build();
+
+    private NettyServer nettyServer;
+    private int port;
+
+    @BeforeAll
+    void startServer() throws Exception {
+        var config = new NettyServerConfig(
+                "127.0.0.1",
+                0,
+                "/mcp",
+                READER_IDLE,
+                Duration.ofMinutes(5),
+                McpChannelInitializer.DEFAULT_MAX_CONTENT_LENGTH,
+                NettyServerConfig.buildCorsConfig(null, false, false, null),
+                NettyIoEngine.AUTO,
+                null);
+        nettyServer = new NettyServer(server, config);
+        port = nettyServer.port();
+        warmUp();
+    }
+
+    @AfterAll
+    void stopServer() {
+        nettyServer.close();
+        server.close();
+    }
+
+    /**
+     * JIT-warms the POST → dispatch → {@code doStart} → {@code SseHeartbeat.enable} path so the
+     * timed tests flush their first progress event sub-millisecond and never lose the race against
+     * the reader-idle timer.
+     */
+    private void warmUp() throws Exception {
+        try (var client = new TestMcpClient(port)) {
+            var sessionId = client.initialize();
+            client.sendRequest(
+                    sessionId, // language=JSON
+                    """
+                    {"jsonrpc":"2.0","id":1,"method":"tools/call",
+                     "params":{"name":"warmup","arguments":{},"_meta":{"progressToken":"warmup"}}}
+                    """);
+            client.sendRequest(
+                    sessionId, // language=JSON
+                    """
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call",
+                     "params":{"name":"warmup-comment","arguments":{}}}
+                    """);
+        }
+    }
+
+    @Test
+    void progressNotificationUpgradesPostToSSE() throws Exception {
+        callSlowProgressAndAssertSse();
+    }
+
+    @Test
+    @Timeout(30)
+    void progressKeepAliveEmitsHeartbeat() throws Exception {
+        var lines = new CopyOnWriteArrayList<String>();
+        try (var client = new TestMcpClient(port)) {
+            var sessionId = client.initialize();
+            var response = client.sendStreamingRequest(sessionId, TOOL_CALL);
+            assertThat(response.statusCode()).isEqualTo(200);
+            assertThat(response.headers().firstValue("content-type").orElse("")).startsWith("text/event-stream");
+            var consume = CompletableFuture.runAsync(() -> response.body().forEach(lines::add));
+            await().atMost(Duration.ofSeconds(10))
+                    .untilAsserted(() -> assertThat(lines)
+                            .as("scheduler must emit an SSE comment heartbeat, not close the channel")
+                            .anyMatch(l -> l.startsWith(":")));
+            consume.get(15, TimeUnit.SECONDS);
+            var body = String.join("\n", lines);
+            assertThat(body).contains("notifications/progress");
+            assertThat(body).contains("done");
+        }
+    }
+
+    @Test
+    @Timeout(30)
+    void commentKeepAliveUpgradesWithoutProgressToken() throws Exception {
+        var lines = new CopyOnWriteArrayList<String>();
+        try (var client = new TestMcpClient(port)) {
+            var sessionId = client.initialize();
+            var response = client.sendStreamingRequest(sessionId, COMMENT_CALL);
+            assertThat(response.statusCode()).isEqualTo(200);
+            assertThat(response.headers().firstValue("content-type").orElse("")).startsWith("text/event-stream");
+            var consume = CompletableFuture.runAsync(() -> response.body().forEach(lines::add));
+            await().atMost(Duration.ofSeconds(10))
+                    .untilAsserted(() -> assertThat(lines)
+                            .as("an empty SSE comment must upgrade the POST and keep it alive with no progress token")
+                            .anyMatch(l -> l.startsWith(":")));
+            consume.get(15, TimeUnit.SECONDS);
+            var body = String.join("\n", lines);
+            assertThat(body).contains("done");
+            // No progress token was sent, so no progress notification should appear — the comment
+            // alone drove the upgrade and keep-alive.
+            assertThat(body).doesNotContain("notifications/progress");
+        }
+    }
+
+    /**
+     * Calls {@code slow-progress}, asserts the shared SSE-upgrade contract (200, event-stream
+     * content type, progress notification, tool result) and returns the accumulated SSE body.
+     */
+    private void callSlowProgressAndAssertSse() throws Exception {
+        try (var client = new TestMcpClient(port)) {
+            var sessionId = client.initialize();
+            var response = client.sendRequest(sessionId, TOOL_CALL);
+
+            assertThat(response.statusCode()).isEqualTo(200);
+            assertThat(response.headers().firstValue("content-type").orElse("")).startsWith("text/event-stream");
+            var body = response.body();
+            assertThat(body).contains("notifications/progress");
+            assertThat(body).contains("done");
+        }
+    }
+
+    /**
+     * Token-driven keep-alive: forwards the client's {@code _meta.progressToken} to {@code progress()}.
+     */
+    private static class ProgressHandler implements ToolHandler {
+
+        private final ToolDescriptor descriptor;
+        private final long sleepMs;
+
+        ProgressHandler(String name, long sleepMs) {
+            this.descriptor = ToolDescriptor.builder()
+                    .name(name)
+                    .description("Emits a progress notification then completes")
+                    .build();
+            this.sleepMs = sleepMs;
+        }
+
+        @Override
+        public ToolDescriptor descriptor() {
+            return descriptor;
+        }
+
+        @Override
+        public ToolResult handle(InteractionContext ctx, ToolRequest request) throws Exception {
+            // Forward the client's requested progress token (request _meta.progressToken). progress()
+            // requires a non-null token; the request supplies one. This server->client message
+            // upgrades the POST to SSE so reader-idle can no longer reap it.
+            ctx.notifications().progress(request.progressToken(), 1, 1, "tick");
+            if (sleepMs > 0) Thread.sleep(sleepMs);
+            return ToolResult.text("done");
+        }
+    }
+
+    /**
+     * Token-free keep-alive: emits an empty SSE comment, which upgrades the POST with no token.
+     */
+    private static class CommentHandler implements ToolHandler {
+
+        private final ToolDescriptor descriptor;
+        private final long sleepMs;
+
+        CommentHandler(String name, long sleepMs) {
+            this.descriptor = ToolDescriptor.builder()
+                    .name(name)
+                    .description("Emits an empty SSE comment then completes")
+                    .build();
+            this.sleepMs = sleepMs;
+        }
+
+        @Override
+        public ToolDescriptor descriptor() {
+            return descriptor;
+        }
+
+        @Override
+        public ToolResult handle(InteractionContext ctx, ToolRequest request) throws Exception {
+            // No progress token needed: an empty comment (: line) upgrades the POST to SSE and arms
+            // the heartbeat, keeping the stream alive for the whole run.
+            ctx.notifications().comment();
+            if (sleepMs > 0) Thread.sleep(sleepMs);
+            return ToolResult.text("done");
+        }
+    }
+}

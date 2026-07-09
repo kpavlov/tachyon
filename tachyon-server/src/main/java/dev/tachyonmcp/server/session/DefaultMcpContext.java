@@ -18,7 +18,6 @@ import dev.tachyonmcp.server.OutboundSseStream;
 import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -48,14 +47,18 @@ public class DefaultMcpContext implements DispatchContext {
         this.server = server;
     }
 
-    /** Convenience factory: creates a channel context from protocol, then wraps it with server. */
+    /**
+     * Convenience factory: creates a channel context from protocol, then wraps it with server.
+     */
     public static DispatchContext create(Protocol protocol, Server server) {
         return new DefaultMcpContext(protocol.createInteractionContext(), server);
     }
 
-    /** Context without a session, decorating fresh channel state for the default protocol. */
+    /**
+     * Context without a session, decorating fresh channel state for the default protocol.
+     */
     public static DispatchContext stateless(Server server) {
-        return new DefaultMcpContext(Protocols.versions().get(0).createInteractionContext(), server);
+        return new DefaultMcpContext(Protocols.versions().getFirst().createInteractionContext(), server);
     }
 
     public static DispatchContext noop() {
@@ -193,14 +196,26 @@ public class DefaultMcpContext implements DispatchContext {
         }
 
         @Override
-        public void progress(@Nullable Object progressToken, double progress, double total, String message) {
-            if (progressToken == null) return;
-            var paramsMap = new LinkedHashMap<String, Object>();
-            paramsMap.put("progressToken", progressToken);
-            paramsMap.put("progress", progress);
-            paramsMap.put("total", total);
-            paramsMap.put("message", message);
+        public void progress(Object progressToken, double progress, double total, String message) {
+            Objects.requireNonNull(progressToken, "Progress token is required");
+            var paramsMap = Map.of(
+                    "progressToken", progressToken,
+                    "progress", progress,
+                    "total", total,
+                    "message", message);
             send("notifications/progress", paramsMap);
+        }
+
+        @Override
+        public void comment(@Nullable String message) {
+            // Transport-level keep-alive: no MCP message, no session routing, no progress token —
+            // just an SSE comment on the bound stream (which self-upgrades the POST to SSE).
+            var stream = outboundStream();
+            if (stream == null) {
+                logger.debug("Dropping SSE comment: no outbound stream bound");
+                return;
+            }
+            stream.comment(message);
         }
 
         @Override
@@ -219,7 +234,9 @@ public class DefaultMcpContext implements DispatchContext {
         }
     }
 
-    /** Synthetic context for registry-level tests: no server, no protocol, no session. */
+    /**
+     * Synthetic context for registry-level tests: no server, no protocol, no session.
+     */
     private static final class NoopContext extends DefaultInteractionContext implements DispatchContext {
 
         static final NoopContext INSTANCE = new NoopContext();
