@@ -9,7 +9,7 @@ import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
-import dev.tachyonmcp.server.features.tools.SyncToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
@@ -46,7 +46,7 @@ public final class ServerBasic {
             )
             .runtime(r -> r.shutdownGracePeriod(ofSeconds(5)))
             .network(n -> n.allowedOrigins("*").allowNullOrigin(true))
-            .tool(SyncToolHandler.of("ping", null, null, (ctx, args) -> ToolResult.text("pong")))
+            .tool(ToolHandler.of(b -> b.name("ping"), (ctx, args) -> ToolResult.text("pong")))
             .resource(
                 ResourceDescriptor.of(
                     "config", "demo://config",

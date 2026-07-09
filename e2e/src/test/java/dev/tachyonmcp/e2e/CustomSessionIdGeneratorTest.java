@@ -37,7 +37,7 @@ class CustomSessionIdGeneratorTest {
     @BeforeAll
     void beforeAll() {
         serverHandle = TachyonServer.builder()
-                .tool(new EchoToolHandler())
+                .tool(EchoToolHandler.create())
                 .session(s -> s.enabled(true)
                         .sessionIdGenerator(
                                 request -> "tenant-" + request.headers().get(TENANT_HEADER)))

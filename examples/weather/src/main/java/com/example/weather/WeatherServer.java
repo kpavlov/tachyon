@@ -41,7 +41,7 @@ public final class WeatherServer {
                         .instructions("Test instructions")
                         .version("1.0"))
                 .session(s -> s.enabled(false))
-                .tool(new GetWeatherTool())
+                .tool(GetWeatherTool.create())
                 .resource(
                         ResourceDescriptor.of(
                                 "prediction-article",

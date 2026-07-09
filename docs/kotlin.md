@@ -83,7 +83,7 @@ tool(name = "reverse", description = "Reverse a string") {
 }
 ```
 
-For class-based handlers, extend `AbstractSyncToolHandler` or `AbstractAsyncToolHandler` from `tachyon-server` — they work unchanged from Kotlin.
+For class-based handlers, implement `ToolHandler` from `tachyon-server` — override `handle(ctx, args)` (sync) or `handleAsync(ctx, args)` (async); they work unchanged from Kotlin.
 
 ## Resource & prompt handlers
 

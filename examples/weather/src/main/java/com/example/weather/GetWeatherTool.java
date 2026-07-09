@@ -3,13 +3,13 @@
  */
 package com.example.weather;
 
-import dev.tachyonmcp.server.features.tools.*;
-import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 
 import java.util.List;
 import java.util.random.RandomGenerator;
 
-class GetWeatherTool extends AbstractSyncToolHandler {
+class GetWeatherTool {
     private static final RandomGenerator RANDOM = RandomGenerator.getDefault();
     // language=json
     private static final String INPUT_SCHEMA = """
@@ -30,21 +30,17 @@ class GetWeatherTool extends AbstractSyncToolHandler {
         }
         """;
 
-    public GetWeatherTool() {
-        super(ToolDescriptor.builder()
-            .name("get-weather")
-            .title("Current Weather")
-            .description("Get current weather for a city")
-            .inputSchema(INPUT_SCHEMA)
-            .build());
-    }
-
-
-    @Override
-    public ToolResult handle(InteractionContext context, ToolArgs args) {
-        var city = args.string("city");
-        var units = args.stringOr("units", "celsius");
-        return ToolResult.text(generateWeather(city, units));
+    static ToolHandler create() {
+        return ToolHandler.of(b -> b
+                .name("get-weather")
+                .title("Current Weather")
+                .description("Get current weather for a city")
+                .inputSchema(INPUT_SCHEMA),
+            (ctx, args) -> {
+                var city = args.string("city");
+                var units = args.stringOr("units", "celsius");
+                return ToolResult.text(generateWeather(city, units));
+            });
     }
 
     private static String generateWeather(String city, String units) {

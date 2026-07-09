@@ -18,8 +18,6 @@ import dev.tachyonmcp.server.features.prompts.PromptRegistry;
 import dev.tachyonmcp.server.features.resources.ResourceRegistry;
 import dev.tachyonmcp.server.features.tasks.TaskRegistry;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
-import dev.tachyonmcp.server.features.tools.AsyncToolHandler;
-import dev.tachyonmcp.server.features.tools.SyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
@@ -447,23 +445,12 @@ public class Server implements Closeable {
             @Nullable String inputSchemaJson,
             @Nullable String outputSchemaJson,
             BiFunction<InteractionContext, ToolArgs, ToolResult> fn) {
-        registerTool(SyncToolHandler.of(name, description, inputSchemaJson, outputSchemaJson, fn));
-    }
-
-    /**
-     * Registers a synchronous tool handler.
-     */
-    public void registerTool(SyncToolHandler handler) {
-        toolRegistry.register(handler);
-        logger.info("Tool registered: {}", handler.name());
-    }
-
-    /**
-     * Registers an asynchronous tool handler.
-     */
-    public void registerTool(AsyncToolHandler handler) {
-        toolRegistry.register(handler);
-        logger.info("Tool registered: {}", handler.name());
+        registerTool(ToolHandler.of(
+                b -> b.name(name)
+                        .description(description)
+                        .inputSchema(inputSchemaJson)
+                        .outputSchema(outputSchemaJson),
+                fn));
     }
 
     /**

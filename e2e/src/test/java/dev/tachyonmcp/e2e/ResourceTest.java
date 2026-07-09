@@ -7,13 +7,11 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.server.features.tools.SyncToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -197,7 +195,7 @@ class ResourceTest extends AbstractMcpE2eTest {
         """)
     void shouldNotifyListChanged(String toolName, String action) throws Exception {
         startServer(builder -> {
-            builder.capabilities(c -> c.resourcesListChanged(true)).tool(new NotifyListChangedToolHandler(action));
+            builder.capabilities(c -> c.resourcesListChanged(true)).tool(notifyListChangedTool(action));
             if ("remove".equals(action)) {
                 builder.resource(ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"));
             }
@@ -216,7 +214,7 @@ class ResourceTest extends AbstractMcpE2eTest {
     @Test
     void shouldNotifyResourceUpdated() throws Exception {
         startServer(it -> it.resource(ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"))
-                .tool(new NotifyUpdatedToolHandler()));
+                .tool(notifyUpdatedTool()));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -237,53 +235,27 @@ class ResourceTest extends AbstractMcpE2eTest {
 
     // ---- Tool handler implementations ----
 
-    private class NotifyListChangedToolHandler implements SyncToolHandler {
-        private final String action;
-
-        NotifyListChangedToolHandler(String action) {
-            this.action = action;
-        }
-
-        @Override
-        public String name() {
-            return "notify-list-changed";
-        }
-
-        @Override
-        public String description() {
-            return "Notifies resources/list_changed";
-        }
-
-        @Override
-        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-            var resources = server.resources();
-            if ("add".equals(action)) {
-                resources.add(
-                        ResourceDescriptor.of("added-resource", "resource://added", "Added by handler", "text/plain"),
-                        (ctx, params) -> TextResourceContents.of("resource://added", "text/plain", "content"));
-            } else {
-                resources.remove("doc");
-            }
-            return ToolResult.blocks(TextContent.of("done"));
-        }
+    private ToolHandler notifyListChangedTool(String action) {
+        return ToolHandler.of(
+                b -> b.name("notify-list-changed").description("Notifies resources/list_changed"), (context, args) -> {
+                    var resources = server.resources();
+                    if ("add".equals(action)) {
+                        resources.add(
+                                ResourceDescriptor.of(
+                                        "added-resource", "resource://added", "Added by handler", "text/plain"),
+                                (ctx, params) -> TextResourceContents.of("resource://added", "text/plain", "content"));
+                    } else {
+                        resources.remove("doc");
+                    }
+                    return ToolResult.blocks(TextContent.of("done"));
+                });
     }
 
-    private class NotifyUpdatedToolHandler implements SyncToolHandler {
-
-        @Override
-        public String name() {
-            return "notify-update";
-        }
-
-        @Override
-        public String description() {
-            return "Triggers resource updated notification";
-        }
-
-        @Override
-        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-            server.resources().notifyResourceUpdated("resource://doc");
-            return ToolResult.blocks(TextContent.of("notified"));
-        }
+    private ToolHandler notifyUpdatedTool() {
+        return ToolHandler.of(
+                b -> b.name("notify-update").description("Triggers resource updated notification"), (context, args) -> {
+                    server.resources().notifyResourceUpdated("resource://doc");
+                    return ToolResult.blocks(TextContent.of("notified"));
+                });
     }
 }

@@ -22,7 +22,7 @@ final class SharedE2eServer {
         }
         handle = TachyonServer.builder()
                 .capabilities(c -> c.tools())
-                .tool(new EchoToolHandler())
+                .tool(EchoToolHandler.create())
                 .session(s -> s.enabled(true))
                 .network(n -> n.port(0))
                 .start();

@@ -6,10 +6,8 @@ package dev.tachyonmcp.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.config.RuntimeConfig;
-import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.time.Duration;
 import java.util.Map;
@@ -53,19 +51,16 @@ class ServerShutdownGraceTest {
 
         var server = TachyonServer.builder()
                 .runtime(r -> r.shutdownGracePeriod(Duration.ofMillis(400)))
-                .tool(new AbstractSyncToolHandler("slow_probe") {
-                    @Override
-                    public ToolResult handle(InteractionContext context, ToolArgs args) {
-                        started.countDown();
-                        try {
-                            new CountDownLatch(1).await(30, TimeUnit.SECONDS);
-                        } catch (InterruptedException e) {
-                            interrupted.countDown();
-                            Thread.currentThread().interrupt();
-                        }
-                        return ToolResult.empty();
+                .tool(ToolHandler.of("slow_probe", (context, args) -> {
+                    started.countDown();
+                    try {
+                        new CountDownLatch(1).await(30, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
+                        interrupted.countDown();
+                        Thread.currentThread().interrupt();
                     }
-                })
+                    return ToolResult.empty();
+                }))
                 .build();
 
         server.createSession("sess-slow").activate();

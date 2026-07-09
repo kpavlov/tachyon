@@ -8,11 +8,8 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.gson.Gson;
-import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
-import dev.tachyonmcp.server.features.tools.SyncToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
@@ -44,10 +41,9 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
         };
 
         startServer(it -> it.payloadSerde(gsonSerde)
-                .tool(SyncToolHandler.of(
+                .tool(ToolHandler.of(
                         "gson-tool",
                         "Gson tool",
-                        null,
                         (ctx, args) -> ToolResult.of(Map.of("message", "hello from Gson"), "text fallback"))));
 
         try (var client = createTestClient()) {
@@ -71,11 +67,8 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldPassthroughRawJson() throws Exception {
-        startServer(it -> it.tool(SyncToolHandler.of(
-                "raw-tool",
-                "Raw JSON tool",
-                null,
-                (ctx, args) -> ToolResult.raw("{\"echo\":\"exact\"}", "raw fallback"))));
+        startServer(it -> it.tool(ToolHandler.of(
+                "raw-tool", "Raw JSON tool", (ctx, args) -> ToolResult.raw("{\"echo\":\"exact\"}", "raw fallback"))));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -107,16 +100,12 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
 
         startServer(it -> it.inputSchemaValidator(JsonSchemaValidator.noop())
                 .outputSchemaValidator(new NetworkntJsonSchemaValidator())
-                .tool(
-                        new AbstractSyncToolHandler(ToolDescriptor.builder("validated-output")
+                .tool(ToolHandler.of(
+                        ToolDescriptor.builder("validated-output")
                                 .description("Validated output")
                                 .outputSchema(outputSchema)
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolArgs args) {
-                                return ToolResult.of(Map.of("message", "valid", "extra", 42), "ok");
-                            }
-                        }));
+                                .build(),
+                        (ctx, args) -> ToolResult.of(Map.of("message", "valid", "extra", 42), "ok"))));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -150,11 +139,10 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
             }
         };
 
-        startServer(it -> it.payloadSerde(gsonSerde)
-                .tool(SyncToolHandler.of("decode-tool", "Decode tool", null, (ctx, args) -> {
-                    var decoded = args.decode(Map.class);
-                    return ToolResult.text("decoded: " + decoded);
-                })));
+        startServer(it -> it.payloadSerde(gsonSerde).tool(ToolHandler.of("decode-tool", "Decode tool", (ctx, args) -> {
+            var decoded = args.decode(Map.class);
+            return ToolResult.text("decoded: " + decoded);
+        })));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();

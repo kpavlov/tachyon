@@ -11,7 +11,12 @@ import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.FormInputRequest;
 import dev.tachyonmcp.server.domain.InputRequest;
 import dev.tachyonmcp.server.domain.UrlInputRequest;
-import dev.tachyonmcp.server.features.tools.*;
+import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolArgs;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolRequest;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -274,18 +279,22 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
         }
     }
 
-    private static class UrlElicitationTestHandler extends AbstractAsyncToolHandler {
+    private static class UrlElicitationTestHandler implements ToolHandler {
 
-        UrlElicitationTestHandler() {
-            super(ToolDescriptor.builder()
-                    .name("test_url_elicitation")
-                    .description("Tests URL-mode elicitation flow")
-                    .build());
+        private final ToolDescriptor descriptor = ToolDescriptor.builder()
+                .name("test_url_elicitation")
+                .description("Tests URL-mode elicitation flow")
+                .build();
+
+        @Override
+        public ToolDescriptor descriptor() {
+            return descriptor;
         }
 
         @Override
         public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolArgs args) {
-            return handleAsync(context, ToolRequest.builder().name(name()).build());
+            return handleAsync(
+                    context, ToolRequest.builder().name(descriptor.name()).build());
         }
 
         @Override

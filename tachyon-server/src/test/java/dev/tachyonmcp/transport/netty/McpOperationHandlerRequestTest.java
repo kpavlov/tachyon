@@ -10,15 +10,20 @@ import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.RpcDispatcher;
 import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.features.tools.AsyncToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.ReferenceCountUtil;
 import java.net.SocketException;
@@ -171,20 +176,11 @@ class McpOperationHandlerRequestTest {
                 .build();
         var upgraded = new CountDownLatch(1);
         var neverComplete = new CompletableFuture<ToolResult>();
-        AsyncToolHandler stalledTool = new AsyncToolHandler() {
-            @Override
-            public String name() {
-                return descriptor.name();
-            }
+        ToolHandler stalledTool = new ToolHandler() {
 
             @Override
             public ToolDescriptor descriptor() {
                 return descriptor;
-            }
-
-            @Override
-            public CompletionStage<? extends ToolResult> handleAsync(InteractionContext ctx, ToolArgs args) {
-                return handleAsync(ctx, ToolRequest.builder().name(name()).build());
             }
 
             @Override

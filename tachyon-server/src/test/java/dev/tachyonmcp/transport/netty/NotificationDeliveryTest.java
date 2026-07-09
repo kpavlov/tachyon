@@ -6,7 +6,6 @@ package dev.tachyonmcp.transport.netty;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.runtime.SseEvent;
@@ -15,7 +14,6 @@ import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.ArrayList;
 import java.util.Map;
@@ -32,26 +30,20 @@ class NotificationDeliveryTest {
             .inputSchema(JsonNodeFactory.instance.objectNode().put("type", "object"))
             .build();
 
-    /** Emits 3 progress events and 3 log events per invocation (plus 2 automatic lifecycle logs from ToolsCallHandler). */
-    private static final ToolHandler PROGRESS_AND_LOG_TOOL = new ToolHandler() {
-        @Override
-        public ToolDescriptor descriptor() {
-            return TOOL_DESCRIPTOR;
-        }
-
-        @Override
-        public ToolResult handle(InteractionContext ctx, ToolRequest request) throws Exception {
-            var pt = request.progressToken();
-            ctx.notifications().progress(pt, 0, 100, "Starting");
-            ctx.notifications().progress(pt, 50, 100, "Halfway");
-            ctx.notifications().progress(pt, 100, 100, "Complete");
-            var logData = Map.of("tool", request.name(), "message", "tool log");
-            ctx.notifications().info("tachyon.tools", logData);
-            ctx.notifications().info("tachyon.tools", logData);
-            ctx.notifications().info("tachyon.tools", logData);
-            return ToolResult.text("ok");
-        }
-    };
+    /**
+     * Emits 3 progress events and 3 log events per invocation (plus 2 automatic lifecycle logs from ToolsCallHandler).
+     */
+    private static final ToolHandler PROGRESS_AND_LOG_TOOL = ToolHandler.ofRequest(TOOL_DESCRIPTOR, (ctx, request) -> {
+        var pt = request.progressToken();
+        ctx.notifications().progress(pt, 0, 100, "Starting");
+        ctx.notifications().progress(pt, 50, 100, "Halfway");
+        ctx.notifications().progress(pt, 100, 100, "Complete");
+        var logData = Map.of("tool", request.name(), "message", "tool log");
+        ctx.notifications().info("tachyon.tools", logData);
+        ctx.notifications().info("tachyon.tools", logData);
+        ctx.notifications().info("tachyon.tools", logData);
+        return ToolResult.text("ok");
+    });
 
     private Server server;
     private RpcDispatcher dispatcher;

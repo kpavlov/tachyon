@@ -7,47 +7,49 @@ Tools are the primary way clients invoke server-side logic. Tachyon validates in
 ### Lambda (simple)
 
 ```java
-import dev.tachyonmcp.server.features.tools.SyncToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 
-.tool(SyncToolHandler.of("hello", "Say hello", null,
+.tool(ToolHandler.of("hello", "Say hello",
     (ctx, args) -> ToolResult.text("Hello!")))
 ```
 
-The schema argument may be a Jackson `JsonNode` **or** a raw JSON `String` — an overload
-parses it for you (input and output schemas):
+Need an input schema? Configure the descriptor with the builder overload. `.inputSchema(...)` /
+`.outputSchema(...)` take a raw JSON `String` **or** a Jackson `JsonNode`:
 
 ```java
-.tool(SyncToolHandler.of("hello", "Say hello",
-    """
-    {"type":"object","properties":{"name":{"type":"string"}}}
-    """,   // inputSchemaJson
-    null,  // outputSchemaJson
+.tool(ToolHandler.of(
+    b -> b.name("hello")
+        .description("Say hello")
+        .inputSchema("""
+        {"type":"object","properties":{"name":{"type":"string"}}}
+        """),
     (ctx, args) -> ToolResult.text("Hello, " + args.stringOr("name", "world") + "!")))
 ```
 
 ### Class (recommended for complex tools)
 
-`ToolDescriptor.builder().inputSchema(...)` / `.outputSchema(...)` take a raw JSON `String` or a Jackson `JsonNode`:
+Implement `ToolHandler` directly: return a `descriptor()` and override `handle(ctx, ToolArgs)`.
 
 ```java
-import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.runtime.InteractionContext;
 
-class WeatherTool extends AbstractSyncToolHandler {
+class WeatherTool implements ToolHandler {
     private static final String SCHEMA = """
         {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
         """;
 
-    WeatherTool() {
-        super(ToolDescriptor.builder()
+    @Override
+    public ToolDescriptor descriptor() {
+        return ToolDescriptor.builder()
             .name("get_weather")
             .description("Get current weather for a city")
             .inputSchema(SCHEMA)
-            .build());
+            .build();
     }
 
     @Override
@@ -62,20 +64,24 @@ Register: `.tool(new WeatherTool())`
 
 ### Async tool
 
+Blocking handlers run on a virtual thread, so most tools need no async plumbing. When you already
+hold a `CompletionStage` (a non-blocking client, another async service), return it directly:
+lambda via `ToolHandler.ofAsync`, or override `handleAsync(ctx, ToolArgs)`. Async handlers stay
+async — they are not funneled through the blocking path.
+
 ```java
-import dev.tachyonmcp.server.features.tools.AbstractAsyncToolHandler;
-import java.util.concurrent.CompletionStage;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
 
-class AsyncWeatherTool extends AbstractAsyncToolHandler {
-    AsyncWeatherTool() { super(descriptor); }
-
-    @Override
-    public CompletionStage<ToolResult> handleAsync(InteractionContext ctx, ToolArgs args) {
-        return fetchWeather(args.string("city"))
-            .thenApply(w -> ToolResult.text(w.summary()));
-    }
-}
+.tool(ToolHandler.ofAsync("get_weather_async",
+    (ctx, args) -> fetchWeather(args.string("city"))
+        .thenApply(w -> ToolResult.text(w.summary()))))
 ```
+
+### Progress token / full request
+
+`ToolArgs` carries only the parsed arguments. When you need the request `_meta` — a progress token,
+input responses — override the request-level method instead: `handle(ctx, ToolRequest)` (sync) or
+`ToolHandler.ofRequest(descriptor, (ctx, request) -> ...)` / `handleAsync(ctx, ToolRequest)` (async).
 
 ## Read arguments
 

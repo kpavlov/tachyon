@@ -5,6 +5,11 @@ package dev.tachyonmcp.server.features.tools;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+/**
+ * Base {@link ToolHandler} implementation
+ *
+ * @author Konstantin Pavlov
+ */
 public abstract class AbstractToolHandler implements ToolHandler {
 
     private final ToolDescriptor descriptor;
@@ -30,9 +35,5 @@ public abstract class AbstractToolHandler implements ToolHandler {
 
     public ToolDescriptor descriptor() {
         return descriptor;
-    }
-
-    public String name() {
-        return descriptor.name();
     }
 }

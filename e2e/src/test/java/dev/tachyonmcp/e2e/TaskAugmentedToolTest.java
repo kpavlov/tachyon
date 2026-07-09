@@ -10,7 +10,10 @@ import static org.awaitility.Awaitility.await;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
-import dev.tachyonmcp.server.features.tools.*;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolRequest;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -76,34 +79,16 @@ class TaskAugmentedToolTest extends AbstractMcpE2eTest {
         var interrupted = new AtomicBoolean(false);
         var latch = new CountDownLatch(1);
 
-        var handler = new SyncToolHandler() {
-            private final ToolDescriptor d = ToolDescriptor.builder()
-                    .name("blocking")
-                    .taskSupport(TaskSupport.OPTIONAL)
-                    .build();
-
-            @Override
-            public ToolDescriptor descriptor() {
-                return d;
+        var handler = ToolHandler.of(b -> b.name("blocking").taskSupport(TaskSupport.OPTIONAL), (context, args) -> {
+            try {
+                latch.countDown();
+                Thread.sleep(30000);
+            } catch (InterruptedException e) {
+                interrupted.set(true);
+                Thread.currentThread().interrupt();
             }
-
-            @Override
-            public String name() {
-                return "blocking";
-            }
-
-            @Override
-            public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-                try {
-                    latch.countDown();
-                    Thread.sleep(30000);
-                } catch (InterruptedException e) {
-                    interrupted.set(true);
-                    Thread.currentThread().interrupt();
-                }
-                return ToolResult.text("done");
-            }
-        };
+            return ToolResult.text("done");
+        });
 
         startServer(it -> it.tool(handler));
         try (var client = createTestClient()) {
@@ -134,27 +119,9 @@ class TaskAugmentedToolTest extends AbstractMcpE2eTest {
 
     @Test
     void taskResultSurfacesErrorMessageWithSpecialChars() throws Exception {
-        var handler = new SyncToolHandler() {
-            private final ToolDescriptor d = ToolDescriptor.builder()
-                    .name("thrower")
-                    .taskSupport(TaskSupport.OPTIONAL)
-                    .build();
-
-            @Override
-            public ToolDescriptor descriptor() {
-                return d;
-            }
-
-            @Override
-            public String name() {
-                return "thrower";
-            }
-
-            @Override
-            public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-                throw new RuntimeException("boom \"quoted\"");
-            }
-        };
+        var handler = ToolHandler.of(b -> b.name("thrower").taskSupport(TaskSupport.OPTIONAL), (context, args) -> {
+            throw new RuntimeException("boom \"quoted\"");
+        });
 
         startServer(it -> it.tool(handler));
         try (var client = createTestClient()) {

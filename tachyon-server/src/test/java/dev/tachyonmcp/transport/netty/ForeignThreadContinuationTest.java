@@ -6,17 +6,14 @@ package dev.tachyonmcp.transport.netty;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.RpcDispatcher;
 import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.features.tools.AsyncToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
@@ -47,27 +44,14 @@ class ForeignThreadContinuationTest {
                 .outputSchema(outputSchema)
                 .build();
 
-        var handler = new AsyncToolHandler() {
-            @Override
-            public String name() {
-                return descriptor.name();
-            }
-
-            @Override
-            public ToolDescriptor descriptor() {
-                return descriptor;
-            }
-
-            @Override
-            public CompletionStage<? extends ToolResult> handleAsync(InteractionContext ctx, ToolArgs args) {
-                var future = new CompletableFuture<ToolResult>();
-                var completer = new Thread(
-                        () -> future.complete(ToolResult.of(Map.of("result", "from-foreign"), "from-foreign")),
-                        "foreign-completer");
-                completer.start();
-                return future;
-            }
-        };
+        var handler = ToolHandler.ofAsync(descriptor, (ctx, args) -> {
+            var future = new CompletableFuture<ToolResult>();
+            var completer = new Thread(
+                    () -> future.complete(ToolResult.of(Map.of("result", "from-foreign"), "from-foreign")),
+                    "foreign-completer");
+            completer.start();
+            return future;
+        });
 
         var recordingValidator = (JsonSchemaValidator) (schema, arguments) -> {
             capturedThread.complete(Thread.currentThread().getName() + " virtual:"

@@ -7,11 +7,8 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
-import dev.tachyonmcp.server.features.tools.SyncToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.stream.Stream;
@@ -36,9 +33,9 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
     void shouldIncludeOutputSchema(String toolName, boolean hasSchema, String schemaType) throws Exception {
         ToolHandler handler;
         if (hasSchema) {
-            handler = new OutputSchemaToolHandler(OUTPUT_SCHEMA);
+            handler = outputSchemaToolHandler(OUTPUT_SCHEMA);
         } else {
-            handler = new SimpleToolHandler(toolName, "A " + toolName + " tool");
+            handler = simpleToolHandler(toolName, "A " + toolName + " tool");
         }
         startServer(it -> it.tool(handler));
 
@@ -109,9 +106,9 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldIncludeMultipleToolsWithMixedOutputSchemas() throws Exception {
-        startServer(it -> it.tool(new SimpleToolHandler("tool-a", "Tool A"))
-                .tool(new OutputSchemaToolHandler(OUTPUT_SCHEMA))
-                .tool(new SimpleToolHandler("tool-b", "Tool B")));
+        startServer(it -> it.tool(simpleToolHandler("tool-a", "Tool A"))
+                .tool(outputSchemaToolHandler(OUTPUT_SCHEMA))
+                .tool(simpleToolHandler("tool-b", "Tool B")));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -170,8 +167,8 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
 
     static Stream<Arguments> shouldIncludeExecutionTaskSupport() {
         return Stream.of(
-                Arguments.of("task-aware-tool", true, new TaskAwareToolHandler(TaskSupport.OPTIONAL)),
-                Arguments.of("simple", false, new SimpleToolHandler("simple", "A simple tool")));
+                Arguments.of("task-aware-tool", true, taskAwareToolHandler(TaskSupport.OPTIONAL)),
+                Arguments.of("simple", false, simpleToolHandler("simple", "A simple tool")));
     }
 
     // endregion
@@ -181,17 +178,7 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
     @Test
     void shouldRegisterWithMinimalDescriptor() throws Exception {
         startEmptyServer();
-        server.registerTool(new SyncToolHandler() {
-            @Override
-            public String name() {
-                return "minimal-tool";
-            }
-
-            @Override
-            public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-                return ToolResult.text("ok");
-            }
-        });
+        server.registerTool(ToolHandler.of("minimal-tool", (ctx, args) -> ToolResult.text("ok")));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -211,7 +198,7 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldReturnStructuredContentAndTextFallback() throws Exception {
-        startServer(it -> it.tool(new StructuredToolHandler()));
+        startServer(it -> it.tool(structuredToolHandler()));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -234,47 +221,15 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
     void shouldRegisterWithFullDescriptor() throws Exception {
         var annotations = ToolAnnotations.of(null, true, false, null, null);
         startEmptyServer();
-        server.registerTool(new SyncToolHandler() {
-            @Override
-            public String name() {
-                return "full-tool";
-            }
-
-            @Override
-            public String title() {
-                return "Full Tool";
-            }
-
-            @Override
-            public String description() {
-                return "A tool with all metadata";
-            }
-
-            @Override
-            public JsonNode inputSchema() {
-                return INPUT_SCHEMA;
-            }
-
-            @Override
-            public JsonNode outputSchema() {
-                return OUTPUT_SCHEMA;
-            }
-
-            @Override
-            public TaskSupport taskSupport() {
-                return TaskSupport.OPTIONAL;
-            }
-
-            @Override
-            public ToolAnnotations annotations() {
-                return annotations;
-            }
-
-            @Override
-            public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-                return ToolResult.text("ok");
-            }
-        });
+        server.registerTool(ToolHandler.of(
+                b -> b.name("full-tool")
+                        .title("Full Tool")
+                        .description("A tool with all metadata")
+                        .inputSchema(INPUT_SCHEMA)
+                        .outputSchema(OUTPUT_SCHEMA)
+                        .taskSupport(TaskSupport.OPTIONAL)
+                        .annotations(annotations),
+                (ctx, args) -> ToolResult.text("ok")));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -293,104 +248,40 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
 
     // region: Tool Handler Implementations
 
-    private record OutputSchemaToolHandler(JsonNode outputSchemaNode) implements SyncToolHandler {
-        @Override
-        public String name() {
-            return "output-schema-tool";
-        }
-
-        @Override
-        public String description() {
-            return "A tool with output schema";
-        }
-
-        @Override
-        public JsonNode inputSchema() {
-            return INPUT_SCHEMA;
-        }
-
-        @Override
-        public JsonNode outputSchema() {
-            return outputSchemaNode;
-        }
-
-        @Override
-        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-            return ToolResult.text("ok");
-        }
+    private static ToolHandler outputSchemaToolHandler(JsonNode outputSchemaNode) {
+        return ToolHandler.of(
+                b -> b.name("output-schema-tool")
+                        .description("A tool with output schema")
+                        .inputSchema(INPUT_SCHEMA)
+                        .outputSchema(outputSchemaNode),
+                (ctx, args) -> ToolResult.text("ok"));
     }
 
-    private record SimpleToolHandler(String name, String description) implements SyncToolHandler {
-        @Override
-        public String name() {
-            return name;
-        }
-
-        @Override
-        public String description() {
-            return description;
-        }
-
-        @Override
-        public JsonNode inputSchema() {
-            return INPUT_SCHEMA;
-        }
-
-        @Override
-        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-            return ToolResult.text("ok");
-        }
+    private static ToolHandler simpleToolHandler(String name, String description) {
+        return ToolHandler.of(
+                b -> b.name(name).description(description).inputSchema(INPUT_SCHEMA),
+                (ctx, args) -> ToolResult.text("ok"));
     }
 
-    private record TaskAwareToolHandler(TaskSupport taskSupport) implements SyncToolHandler {
-        @Override
-        public String name() {
-            return "task-aware-tool";
-        }
-
-        @Override
-        public String description() {
-            return "A task-aware tool";
-        }
-
-        @Override
-        public JsonNode inputSchema() {
-            return INPUT_SCHEMA;
-        }
-
-        @Override
-        public TaskSupport taskSupport() {
-            return taskSupport;
-        }
-
-        @Override
-        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-            return ToolResult.text("ok");
-        }
+    private static ToolHandler taskAwareToolHandler(TaskSupport taskSupport) {
+        return ToolHandler.of(
+                b -> b.name("task-aware-tool")
+                        .description("A task-aware tool")
+                        .inputSchema(INPUT_SCHEMA)
+                        .taskSupport(taskSupport),
+                (ctx, args) -> ToolResult.text("ok"));
     }
 
-    private static class StructuredToolHandler implements SyncToolHandler {
-        @Override
-        public String name() {
-            return "structured";
-        }
-
-        @Override
-        public String description() {
-            return "Returns structured content";
-        }
-
-        @Override
-        public JsonNode inputSchema() {
-            return INPUT_SCHEMA;
-        }
-
-        @Override
-        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-            var msg = arguments.string("message");
-            var echo = JsonNodeFactory.instance.objectNode().put("echo", msg);
-            return ToolResult.of(echo, "Echo: " + msg);
-        }
+    private static ToolHandler structuredToolHandler() {
+        return ToolHandler.of(
+                b -> b.name("structured")
+                        .description("Returns structured content")
+                        .inputSchema(INPUT_SCHEMA),
+                (ctx, args) -> {
+                    var msg = args.string("message");
+                    var echo = JsonNodeFactory.instance.objectNode().put("echo", msg);
+                    return ToolResult.of(echo, "Echo: " + msg);
+                });
     }
 
     // ---- JSON schemas ----

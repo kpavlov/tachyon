@@ -10,9 +10,9 @@ import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
-import dev.tachyonmcp.server.features.tools.AbstractAsyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -69,15 +69,21 @@ public class TasksExtension implements ServerExtension {
                         }));
     }
 
-    private static final class CreateTaskHandler extends AbstractAsyncToolHandler {
+    private static final class CreateTaskHandler implements ToolHandler {
 
+        private final ToolDescriptor descriptor;
         private final TaskRegistry tasks;
         private final Executor executor;
 
         CreateTaskHandler(ToolDescriptor descriptor, Server server) {
-            super(descriptor);
+            this.descriptor = descriptor;
             this.tasks = server.tasks();
             this.executor = server.executor();
+        }
+
+        @Override
+        public ToolDescriptor descriptor() {
+            return descriptor;
         }
 
         @Override

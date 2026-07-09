@@ -6,12 +6,10 @@ package dev.tachyonmcp.transport.netty;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.RpcDispatcher;
 import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -30,15 +28,11 @@ class NettyServerThreadingTest {
         var handlerThread = new CompletableFuture<String>();
 
         try (Server server = TachyonServer.builder()
-                        .tool(new AbstractSyncToolHandler("thread_probe") {
-
-                            @Override
-                            public ToolResult handle(InteractionContext context, ToolArgs args) {
-                                Thread thread = Thread.currentThread();
-                                handlerThread.complete(thread.getName() + " virtual:" + thread.isVirtual());
-                                return ToolResult.empty();
-                            }
-                        })
+                        .tool(ToolHandler.of("thread_probe", (ctx, args) -> {
+                            Thread thread = Thread.currentThread();
+                            handlerThread.complete(thread.getName() + " virtual:" + thread.isVirtual());
+                            return ToolResult.empty();
+                        }))
                         .build();
                 var netty = new NettyServer(0, server)) {
             Callable<Thread> probe = Thread::currentThread;
@@ -72,13 +66,10 @@ class NettyServerThreadingTest {
 
         try (Server server = TachyonServer.builder()
                 .threadFactory(Thread.ofVirtual().name("tenant-", 0).factory())
-                .tool(new AbstractSyncToolHandler("name_probe") {
-                    @Override
-                    public ToolResult handle(InteractionContext context, ToolArgs args) {
-                        handlerThreadName.complete(Thread.currentThread().getName());
-                        return ToolResult.empty();
-                    }
-                })
+                .tool(ToolHandler.of("name_probe", (ctx, args) -> {
+                    handlerThreadName.complete(Thread.currentThread().getName());
+                    return ToolResult.empty();
+                }))
                 .build()) {
             server.createSession("sess-name").activate();
             var dispatcher = new RpcDispatcher(server, server.executor());
@@ -102,12 +93,7 @@ class NettyServerThreadingTest {
 
         var server = TachyonServer.builder()
                 .executor(executor)
-                .tool(new AbstractSyncToolHandler("exec_probe") {
-                    @Override
-                    public ToolResult handle(InteractionContext context, ToolArgs args) {
-                        return ToolResult.empty();
-                    }
-                })
+                .tool(ToolHandler.of("exec_probe", (ctx, args) -> ToolResult.empty()))
                 .build();
         server.close();
 

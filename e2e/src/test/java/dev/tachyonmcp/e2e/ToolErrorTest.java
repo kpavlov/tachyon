@@ -6,20 +6,15 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.features.tools.SyncToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
-import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 class ToolErrorTest extends AbstractMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServer(it -> it.tool(new ThrowingToolHandler()));
+        startServer(it -> it.tool(throwingTool()));
     }
 
     @Test
@@ -40,27 +35,11 @@ class ToolErrorTest extends AbstractMcpE2eTest {
         }
     }
 
-    private static class ThrowingToolHandler implements SyncToolHandler {
-
-        @Override
-        public String name() {
-            return "boom";
-        }
-
-        @Override
-        public String description() {
-            return "Throws after sending a notification";
-        }
-
-        @Override
-        public JsonNode inputSchema() {
-            return JsonNodeFactory.instance.objectNode().put("type", "object");
-        }
-
-        @Override
-        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-            context.notifications().send("notifications/before-boom", Map.of());
-            throw new RuntimeException("Simulated handler failure. Ignore it");
-        }
+    private static ToolHandler throwingTool() {
+        return ToolHandler.of(
+                b -> b.name("boom").description("Throws after sending a notification"), (context, args) -> {
+                    context.notifications().send("notifications/before-boom", Map.of());
+                    throw new RuntimeException("Simulated handler failure. Ignore it");
+                });
     }
 }
