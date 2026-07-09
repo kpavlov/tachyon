@@ -38,25 +38,43 @@ Configured via `network { }` / `NetworkConfig.Builder`.
 
 ### Keep-alive for long-running tools
 
+```mermaid
+sequenceDiagram
+  participant McpClient
+  participant TachyonServer
+  participant LongRunningHandler
+
+  McpClient->>TachyonServer: POST /mcp
+  TachyonServer->>LongRunningHandler: invoke slow-progress tool
+  LongRunningHandler->>TachyonServer: ctx.notifications().progress(...)/.comment()
+  TachyonServer-->>McpClient: text/event-stream response
+  TachyonServer-->>McpClient: SSE heartbeat comments
+  LongRunningHandler->>TachyonServer: ToolResult.text("done")
+  TachyonServer->>McpClient: tool-call result: "done"
+```
+
 `readerIdleTimeout` closes any connection that receives **no inbound bytes** for its duration.
 After a client finishes sending a request it stays silent while waiting for the reply, so this
 timer also runs while your handler is computing — a tool that takes longer than
 `readerIdleTimeout` (default `60s`) to respond has its connection reaped before it can answer.
 
-The fix is not a bigger timeout — it is to keep the stream alive with **SSE + heartbeats**:
+> [!NOTE]
+> 💡 Set `readerIdleTimeout` to `Duration.ZERO` to disable closing connections on idle inbound stream.
 
-- When a handler emits a server→client message (`ctx.notifications().progress(...)`), the POST
-  response upgrades from buffered JSON to `text/event-stream`. From then on the connection is a
-  live SSE stream and `readerIdleTimeout` is a **no-op** on it — a fixed-rate scheduler emits a
-  `:\r\n` comment every `heartbeatInterval` (default `15s`) so the stream never looks idle.
-- So: **any tool that may run longer than `readerIdleTimeout` should emit an early
-  `progress(...)`** (a keep-alive tick). Everything after it — further progress, the final
-  result — flows over the same stream, kept open by heartbeats for as long as the work runs.
+The fix is not a bigger timeout — it is to keep the stream alive with **SSE + heartbeats**. Any
+server→client message on the POST upgrades the response from buffered JSON to `text/event-stream`;
+from then on the connection is a live SSE stream, `readerIdleTimeout` is a **no-op** on it, and a
+fixed-rate scheduler emits a `:\r\n` comment every `heartbeatInterval` (default `15s`) so the
+stream never looks idle. There are two ways to trigger the upgrade:
 
-The progress token comes from the client's request `_meta.progressToken`, exposed as
-`ToolRequest.progressToken()`. Forward it — so emit progress from the request-level handler
-(`ToolHandler`), where the token is reachable (`SyncToolHandler`'s `ToolArgs` convenience
-overload does not carry it):
+- **`progress(token, ...)`** — when the client requested progress (sent `_meta.progressToken`).
+  Forward that token, exposed as `ToolRequest.progressToken()`. A `null` token **throws**, so use
+  this path only when a token is present.
+- **`comment(msg)`** — a token-free SSE comment (`: msg`). Use it to keep alive when no progress
+  token is available. `comment()` emits a bare `:` heartbeat.
+
+Both are reachable only from the request-level `ToolHandler` (the `SyncToolHandler`/`ToolArgs`
+convenience overload carries neither the token nor a stream handle):
 
 ```java
 class SlowTool implements ToolHandler {
@@ -64,12 +82,16 @@ class SlowTool implements ToolHandler {
         return ToolDescriptor.builder().name("slow-task").description("Long task, kept alive").build();
     }
 
-    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-        var token = request.progressToken();               // client _meta.progressToken; null if absent
-        ctx.notifications().progress(token, 0, total, "starting"); // upgrades POST → SSE, arms heartbeat
+    public ToolResult handle(InteractionContext ctx, ToolRequest request) throws Exception {
+        var token = request.progressToken();          // client _meta.progressToken; null if absent
         for (int i = 0; i < total; i++) {
+            // First call upgrades POST → SSE and arms the heartbeat.
+            if (token != null) {
+                ctx.notifications().progress(token, i, total, "step " + i);
+            } else {
+                ctx.notifications().comment("step " + i);   // token-free keep-alive
+            }
             doSlowStep(i);
-            ctx.notifications().progress(token, i + 1, total, "step " + (i + 1));
         }
         return ToolResult.text("done");
     }
@@ -78,10 +100,8 @@ class SlowTool implements ToolHandler {
 
 Guidance:
 
-- The keep-alive engages only when the **client supplied a progress token** — `progress(...)`
-  with a `null` token is a no-op and does not upgrade to SSE. Clients that want progress send
-  `_meta.progressToken`; a tool that must stay alive regardless can also emit progress with any
-  non-null token to force the upgrade.
+- No token available? Use `comment(...)` — it upgrades and keeps the stream alive without one.
+  `progress(...)` requires a non-null token and throws otherwise.
 - Keep `heartbeatInterval < readerIdleTimeout` (default `15s < 60s`) so a live stream's own
   heartbeats always beat the reader-idle deadline.
 - Size `readerIdleTimeout` for **dead-peer detection** (how long a silent connection may live),

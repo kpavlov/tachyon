@@ -52,6 +52,17 @@ public interface OutboundSseStream {
     void writeEvent(@Nullable SseEvent event);
 
     /**
+     * Writes an SSE comment line ({@code : message\r\n}), upgrading the stream via {@link #start()}
+     * first if it has not started. A comment carries no event data — it exists to keep the
+     * connection alive without a progress token. A {@code null} or blank message emits a bare
+     * {@code :\r\n}. May be called from any thread. Default is a no-op for transports that do not
+     * support raw comments.
+     *
+     * @param message comment text (a single line; embedded line breaks are flattened), or {@code null}
+     */
+    default void comment(@Nullable String message) {}
+
+    /**
      * Closes the SSE stream. Idempotent — subsequent calls are no-ops.
      */
     void close();

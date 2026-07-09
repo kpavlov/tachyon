@@ -15,6 +15,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http.*;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -90,6 +91,16 @@ public final class PostSseStream implements OutboundSseStream {
     }
 
     @Override
+    public void comment(@Nullable String message) {
+        // Self-starting: a comment upgrades the buffered POST to SSE even when no event was written
+        // yet — this is the token-free keep-alive path. doStart is idempotent.
+        runOnEventLoop(() -> {
+            doStart();
+            doWriteComment(message);
+        });
+    }
+
+    @Override
     public void close() {
         runOnEventLoop(this::doClose);
     }
@@ -159,9 +170,7 @@ public final class PostSseStream implements OutboundSseStream {
             // Stream not yet upgraded — fall back to the String path; rare path, OK to decode here.
             try {
                 queued.add(new SseEvent(
-                        Server.wireEventId(sseEventId, streamKey),
-                        "message",
-                        body.toString(java.nio.charset.StandardCharsets.UTF_8)));
+                        Server.wireEventId(sseEventId, streamKey), "message", body.toString(StandardCharsets.UTF_8)));
             } finally {
                 body.release();
             }
@@ -176,6 +185,19 @@ public final class PostSseStream implements OutboundSseStream {
                 .addComponent(true, body)
                 .addComponent(true, suffix);
         channel.writeAndFlush(new DefaultHttpContent(frame)).addListener((ChannelFutureListener) f -> {
+            if (!f.isSuccess()) channel.close();
+        });
+    }
+
+    private void doWriteComment(@Nullable String message) {
+        if (closed || !channel.isActive() || !started) return;
+        // SSE comment = a line starting with ':'. Flatten embedded line breaks so the message
+        // cannot inject extra SSE lines/events. Blank/null → bare ':' heartbeat.
+        String line = message == null || message.isBlank()
+                ? ":\r\n"
+                : ": " + message.replace('\r', ' ').replace('\n', ' ') + "\r\n";
+        var buf = ByteBufUtil.writeUtf8(channel.alloc(), line);
+        channel.writeAndFlush(new DefaultHttpContent(buf)).addListener((ChannelFutureListener) f -> {
             if (!f.isSuccess()) channel.close();
         });
     }

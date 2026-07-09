@@ -23,8 +23,7 @@ Make **Java 21+** MCP server. Tachyon lib. Transport = Streamable HTTP (Netty).
 
 ```java
 var handle = TachyonServer.builder()
-    .name("my-server")
-    .version("1.0")
+    .info(b -> b.name("my-server").version("1.0"))
     .port(8080)
     .start();
 // handle.port() → real bound port (matters when port=0)
@@ -92,7 +91,7 @@ takes input + output schemas; there's a matching `.tool(name, desc, inJson, outJ
 Async — implement `AsyncToolHandler` (or extend `AbstractAsyncToolHandler`), return a
 `CompletionStage<ToolResult>`.
 
-`ToolResult` (not generic): `.text(t)` · `.error(msg)` (isError=true) · `.blocks(ContentBlock...)` · `.of(payload)` (structuredContent via Jackson) · `.of(payload, text)` · `.empty()`
+`ToolResult` (not generic): `.text(t)` · `.error(msg)` (isError=true) · `.blocks(ContentBlock...)` · `.of(payload)` (structuredContent via Jackson) · `.of(payload, text)` · `.raw(json, text)` (pre-serialized JSON) · `.inputRequired(reqs, state)` · `.empty()` · `.withMeta(map)` / `.withMeta(key, value)`
 
 Full: `resources/java/ToolHandlerExample.java`
 
@@ -182,7 +181,11 @@ Default `AUTO` → advertised only when registered. Force with `Mode.ON` / `Mode
 
 Native transports need optional runtime jars (`netty-transport-native-epoll` / `-kqueue` / `-io_uring` with `${os.detected.classifier}`); without them `AUTO` falls back to NIO. Explicit unavailable engine throws `UnsupportedOperationException`. See `docs/configuration.md`.
 
-⏳ **Keep-alive for long tools** — `readerIdleTimeout` (60s) closes any connection with no **inbound** bytes for that long, and a client waiting for a reply sends none — so a tool slower than 60s gets reaped mid-compute. Don't just raise the timeout. Emit an early `ctx.notifications().progress(token, ...)`: the POST upgrades to SSE and a scheduler sends `:\r\n` heartbeats every `heartbeatInterval` (15s), keeping the stream alive for the whole run. Rule: **long task ⇒ emit progress first**; keep `heartbeatInterval < readerIdleTimeout`; size `readerIdleTimeout` for dead-peer detection, not tool runtime.
+⏳ **Keep-alive for long tools** — `readerIdleTimeout` (60s) closes any connection with no **inbound** bytes for that long, and a client waiting for a reply sends none — so a tool slower than 60s gets reaped mid-compute. Set `readerIdleTimeout` to `Duration.ZERO` to disable closing idle inbound stream. Don't just raise the timeout. Emit an early server→client message: the POST upgrades to SSE and a scheduler sends `:\r\n` heartbeats every `heartbeatInterval` (15s), keeping the stream alive for the whole run. Two triggers (request-level `ToolHandler` only — `ToolArgs` carries neither):
+- `ctx.notifications().progress(token, ...)` — forward the client's `ToolRequest.progressToken()`; **null token throws**.
+- `ctx.notifications().comment(msg)` — token-free SSE comment (`: msg`); `comment()` = bare `:` heartbeat. Use when no progress token.
+
+Rule: **long task ⇒ emit progress or comment first**; keep `heartbeatInterval < readerIdleTimeout`; size `readerIdleTimeout` for dead-peer detection, not tool runtime.
 
 ### Session `session(cfg -> ...)`
 
@@ -199,6 +202,7 @@ Native transports need optional runtime jars (`netty-transport-native-epoll` / `
 | Method | Default |
 |---|---|
 | `.shutdownGracePeriod(d)` | 5s (drain in-flight handlers on close; `ZERO` = interrupt now) |
+| `.requestTimeout(d)` | 60s (timeout for pending requests sent to client) |
 
 ## JSON Schema
 
@@ -228,6 +232,7 @@ The lambda shorthands `SyncToolHandler.of(name, desc, inJson, outJson, fn)` and
 public interface ServerExtension extends Extension<MutableInteractionContext> {
     default JsonNode serverSettings() { return JsonNodeFactory.instance.objectNode(); }
     default Set<String> methods() { return Set.of(); }
+    default boolean requiresMetaEnvelope() { return true; }
     default void bootstrap(Server server) {}
     default void onConnectionInit(MutableInteractionContext context, Map<String, JsonNode> clientSettings) {}
 }
@@ -305,7 +310,8 @@ Post-build registration with `registerTool`:
 
 ```kotlin
 server.registerTool(
-    ToolDescriptor.builder("reverse-echo")
+    ToolDescriptor.builder()
+        .name("reverse-echo")
         .description("Echo reversed message")
         .inputSchema(schema)
         .build(),
