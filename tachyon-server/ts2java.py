@@ -4,7 +4,7 @@ Generate Java records + Jackson Streaming codecs from TypeScript spec.
 Output: <BASE>/java/<PACKAGE_PATH>/ (models/, codecs/, protocol/)
 """
 
-#  Copyright (c) 2026 Konstantin Pavlov.
+#  Copyright (c) 2026 Konstantin Pavlov and contributors.
 
 import argparse
 import json
