@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.features.prompts;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetPromptRequestParams;
 import dev.tachyonmcp.server.RpcMethodHandler;
@@ -23,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
 
+@InternalApi
 public class PromptRegistry extends Registry<PromptEntry> {
 
     private final JsonSchemaValidator validator;

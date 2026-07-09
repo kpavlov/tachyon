@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.features.tools;
 
+import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static dev.tachyonmcp.test.TestUtils.parseJson;
 import static dev.tachyonmcp.test.VirtualThreads.runInVirtualThread;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -15,15 +16,15 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListToolsResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextContent;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.RpcMethodHandler;
-import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
 import dev.tachyonmcp.server.json.PayloadSerde;
-import dev.tachyonmcp.server.session.DefaultMcpContext;
+import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.HashMap;
@@ -59,7 +60,7 @@ class ToolRegistryTest {
         var handlers = new HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
         var listHandler = handlers.get("tools/list");
-        var result = listHandler.handle(DefaultMcpContext.noop(), null);
+        var result = listHandler.handle(DefaultDispatchContext.noop(), null);
         assertThat(result).isInstanceOf(ListToolsResult.class);
         assertThat(((ListToolsResult) result).tools()).isEmpty();
     }
@@ -90,7 +91,7 @@ class ToolRegistryTest {
                         .build(),
                 (context, args) -> ToolResult.text("ok")));
 
-        var listResult = (ListToolsResult) handlers.get("tools/list").handle(DefaultMcpContext.noop(), null);
+        var listResult = (ListToolsResult) handlers.get("tools/list").handle(DefaultDispatchContext.noop(), null);
         assertThat(listResult.tools()).hasSize(2);
 
         var minimal = listResult.tools().stream()
@@ -131,7 +132,7 @@ class ToolRegistryTest {
         var callHandler = handlers.get("tools/call");
         var params = Map.<String, Object>of("name", "nonexistent");
 
-        var result = callHandler.handle(DefaultMcpContext.noop(), params);
+        var result = callHandler.handle(DefaultDispatchContext.noop(), params);
         assertThat(result).isInstanceOf(JsonRpcError.class);
         var err = (JsonRpcError) result;
         assertThat(err.code()).isEqualTo(JsonRpcErrors.METHOD_NOT_FOUND);
@@ -144,7 +145,7 @@ class ToolRegistryTest {
 
         var callHandler = handlers.get("tools/call");
 
-        var result = callHandler.handle(DefaultMcpContext.noop(), Map.of());
+        var result = callHandler.handle(DefaultDispatchContext.noop(), Map.of());
         assertThat(result).isInstanceOf(JsonRpcError.class);
         var err = (JsonRpcError) result;
         assertThat(err.code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
@@ -157,7 +158,7 @@ class ToolRegistryTest {
 
         var callHandler = handlers.get("tools/call");
 
-        var result = callHandler.handle(DefaultMcpContext.noop(), null);
+        var result = callHandler.handle(DefaultDispatchContext.noop(), null);
         assertThat(result).isInstanceOf(JsonRpcError.class);
         var err = (JsonRpcError) result;
         assertThat(err.code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
@@ -165,7 +166,7 @@ class ToolRegistryTest {
 
     @Test
     void callToolReturnsResult() throws Exception {
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             var session = server.createSession("test");
             session.activate();
             var handlers = new HashMap<String, RpcMethodHandler>();
@@ -175,7 +176,7 @@ class ToolRegistryTest {
             var callHandler = handlers.get("tools/call");
             var params = Map.of("name", "echo", "arguments", Map.of("message", "hello"));
 
-            var ctx = DefaultMcpContext.create(Protocols.versions().getFirst(), server);
+            var ctx = DefaultDispatchContext.create(Protocols.list().getFirst(), server);
             ctx.setSession(session);
             var result = runInVirtualThread(() -> callHandler.handle(ctx, params));
             assertThat(result).isInstanceOf(CallToolResult.class);
@@ -258,7 +259,7 @@ class ToolRegistryTest {
                 ToolDescriptor.builder().name("ts-tool").taskSupport(enumValue).build(),
                 (context, args) -> ToolResult.text("ok")));
 
-        var result = (ListToolsResult) handlers.get("tools/list").handle(DefaultMcpContext.noop(), null);
+        var result = (ListToolsResult) handlers.get("tools/list").handle(DefaultDispatchContext.noop(), null);
         var tool = result.tools().stream()
                 .filter(t -> "ts-tool".equals(t.name()))
                 .findFirst()
@@ -312,7 +313,7 @@ class ToolRegistryTest {
                         .build(),
                 (context, args) -> ToolResult.text("ok")));
 
-        var listResult = (ListToolsResult) handlers.get("tools/list").handle(DefaultMcpContext.noop(), null);
+        var listResult = (ListToolsResult) handlers.get("tools/list").handle(DefaultDispatchContext.noop(), null);
         var tool = listResult.tools().stream()
                 .filter(t -> "icon-tool".equals(t.name()))
                 .findFirst()
@@ -476,11 +477,11 @@ class ToolRegistryTest {
                 "async-thread",
                 (ctx, args) -> CompletableFuture.supplyAsync(() -> ToolResult.text("from-thread"), executor)));
 
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             var session = server.createSession("s-async-thread");
             session.activate();
             var callHandler = handlers.get("tools/call");
-            var ctx = DefaultMcpContext.create(Protocols.versions().getFirst(), server);
+            var ctx = DefaultDispatchContext.create(Protocols.list().getFirst(), server);
             ctx.setSession(session);
             var params = Map.of("name", "async-thread", "arguments", Map.of());
             var stage = callHandler.handleAsync(ctx, params);
@@ -499,11 +500,11 @@ class ToolRegistryTest {
                 "invalid-arg-async",
                 (ctx, args) -> CompletableFuture.failedFuture(new InvalidArgumentException("arg", "bad input"))));
 
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             var session = server.createSession("s-inv-arg");
             session.activate();
             var callHandler = handlers.get("tools/call");
-            var ctx = DefaultMcpContext.create(Protocols.versions().getFirst(), server);
+            var ctx = DefaultDispatchContext.create(Protocols.list().getFirst(), server);
             ctx.setSession(session);
             var params = Map.of("name", "invalid-arg-async", "arguments", Map.of());
             var result = runInVirtualThread(() -> callHandler.handle(ctx, params));
@@ -523,11 +524,11 @@ class ToolRegistryTest {
                     return ToolResult.text(msg);
                 }));
 
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             var session = server.createSession("s-sync-handle");
             session.activate();
             var callHandler = handlers.get("tools/call");
-            var ctx = DefaultMcpContext.create(Protocols.versions().getFirst(), server);
+            var ctx = DefaultDispatchContext.create(Protocols.list().getFirst(), server);
             ctx.setSession(session);
             var params = Map.of("name", "sync-handle", "arguments", Map.of("message", "hello-sync"));
             var result = runInVirtualThread(() -> callHandler.handle(ctx, params));
@@ -545,11 +546,11 @@ class ToolRegistryTest {
             throw new IllegalStateException("boom");
         }));
 
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             var session = server.createSession("s-sync-fail");
             session.activate();
             var callHandler = handlers.get("tools/call");
-            var ctx = DefaultMcpContext.create(Protocols.versions().getFirst(), server);
+            var ctx = DefaultDispatchContext.create(Protocols.list().getFirst(), server);
             ctx.setSession(session);
             var params = Map.of("name", "sync-fail", "arguments", Map.of());
             var result = runInVirtualThread(() -> callHandler.handle(ctx, params));
@@ -671,11 +672,11 @@ class ToolRegistryTest {
                 });
         registryVal.register(handler);
 
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             var session = server.createSession("s-struct-out");
             session.activate();
             var callHandler = handlers.get("tools/call");
-            var ctx = DefaultMcpContext.create(Protocols.versions().getFirst(), server);
+            var ctx = DefaultDispatchContext.create(Protocols.list().getFirst(), server);
             ctx.setSession(session);
             var params = Map.of("name", "structured-out", "arguments", Map.of());
             var result = runInVirtualThread(() -> callHandler.handle(ctx, params));
@@ -700,11 +701,11 @@ class ToolRegistryTest {
                 });
         registryVal.register(handler);
 
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             var session = server.createSession("s-mixed");
             session.activate();
             var callHandler = handlers.get("tools/call");
-            var ctx = DefaultMcpContext.create(Protocols.versions().getFirst(), server);
+            var ctx = DefaultDispatchContext.create(Protocols.list().getFirst(), server);
             ctx.setSession(session);
             var params = Map.of("name", "mixed-out", "arguments", Map.of());
             var result = runInVirtualThread(() -> callHandler.handle(ctx, params));

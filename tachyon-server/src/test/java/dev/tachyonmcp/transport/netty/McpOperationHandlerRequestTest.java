@@ -4,16 +4,16 @@
 
 package dev.tachyonmcp.transport.netty;
 
+import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.RpcDispatcher;
-import dev.tachyonmcp.server.Server;
-import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -72,15 +72,12 @@ class McpOperationHandlerRequestTest {
         }
     };
 
-    private Server server;
+    private ServerEngine server;
     private EmbeddedChannel channel;
 
     @BeforeEach
     void setUp() {
-        server = TachyonServer.builder()
-                .session(s -> s.enabled(true))
-                .tool(PROGRESS_TOOL)
-                .build();
+        server = newEngine(b -> b.session(s -> s.enabled(true)).tool(PROGRESS_TOOL));
         var dispatcher = new RpcDispatcher(server, Runnable::run);
         channel = new EmbeddedChannel(
                 new InteractionHandler(), new McpOperationHandler(server, dispatcher, Runnable::run));
@@ -190,7 +187,7 @@ class McpOperationHandlerRequestTest {
                 return neverComplete;
             }
         };
-        var srv = TachyonServer.builder().tool(stalledTool).build();
+        var srv = newEngine(b -> b.tool(stalledTool));
         ExecutorService pool = Executors.newSingleThreadExecutor();
         var ch = new EmbeddedChannel(
                 new InteractionHandler(),
@@ -275,7 +272,7 @@ class McpOperationHandlerRequestTest {
     // In stateless mode a GET opens an SSE stream without requiring a session.
     @Test
     void statelessGetOpensSseStream() {
-        var statelessServer = TachyonServer.builder().build();
+        var statelessServer = newEngine(b -> {});
         var ch = new EmbeddedChannel(
                 new InteractionHandler(),
                 new McpOperationHandler(
@@ -306,10 +303,8 @@ class McpOperationHandlerRequestTest {
     // channel already in the operation phase (keep-alive reuse) — not only via the init handler.
     @Test
     void initializeOnOperationChannelUsesCustomSessionIdGenerator() {
-        var customServer = TachyonServer.builder()
-                .session(s -> s.enabled(true)
-                        .sessionIdGenerator(req -> "tenant-" + req.headers().get("X-Tenant-Id")))
-                .build();
+        var customServer = newEngine(b -> b.session(s -> s.enabled(true)
+                .sessionIdGenerator(req -> "tenant-" + req.headers().get("X-Tenant-Id"))));
         var ch = new EmbeddedChannel(
                 new InteractionHandler(),
                 new McpOperationHandler(customServer, new RpcDispatcher(customServer, Runnable::run), Runnable::run));

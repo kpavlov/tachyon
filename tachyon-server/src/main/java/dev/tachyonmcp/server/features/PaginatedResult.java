@@ -4,10 +4,12 @@
 
 package dev.tachyonmcp.server.features;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import java.util.List;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
+@InternalApi
 @Value.Immutable
 @Value.Style(
         allParameters = true,

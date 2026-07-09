@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.runtime.Session;
 import org.jspecify.annotations.Nullable;
 
@@ -15,9 +16,10 @@ import org.jspecify.annotations.Nullable;
  * to that stream (lazy SSE upgrade of the transport response). Events for any other session
  * continue through the standard GET-SSE pipeline (hot buffer + flush).
  *
- * <p>This abstraction keeps {@link Server#sendRequest} / {@link Server#sendNotification}
+ * <p>This abstraction keeps {@link TachyonServer} / {@link RpcDispatcher}
  * free of transport-aware branching.
  */
+@InternalApi
 public interface MessageRouter {
 
     /**

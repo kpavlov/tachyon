@@ -16,7 +16,7 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>This interface deliberately exposes <em>no</em> mutators — handlers may read state and use the
  * {@link #attributes() attribute} scratch space, but lifecycle/session/extension mutation lives on
- * {@link MutableInteractionContext}, handed to extension and dispatch code only.
+ * {@link ChannelContext}, handed to extension and dispatch code only.
  */
 public interface InteractionContext {
     enum Lifecycle {
@@ -25,14 +25,14 @@ public interface InteractionContext {
         SHUTDOWN
     }
 
-    Protocol getProtocol();
+    Protocol protocol();
 
-    default String getProtocolVersion() {
-        return getProtocol().versionString();
+    default String protocolVersion() {
+        return protocol().versionString();
     }
 
     @Nullable
-    Lifecycle getLifecycle();
+    Lifecycle lifecycle();
 
     /**
      * Optional Session. Session is <code>null</code> in stateless mode.
@@ -53,7 +53,7 @@ public interface InteractionContext {
 
     Map<String, Object> attributes();
 
-    void setAttribute(String name, Object value);
+    <T> void setAttribute(String name, T value);
 
     <T> @Nullable T getAttribute(String name);
 }

@@ -2,7 +2,6 @@
  * Copyright (c) 2026 Konstantin Pavlov and contributors.
  */
 
-import dev.tachyonmcp.server.ServerHandle;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.TextResourceContents;
@@ -26,12 +25,12 @@ import static java.time.Duration.ofSeconds;
 public final class ServerBasic {
 
     public static void main(String... args) {
-        var handle = createServer(8080);
-        System.out.println("MCP server on http://localhost:" + handle.port() + "/mcp");
+        var server = createServer(8080);
+        System.out.println("MCP server on http://localhost:" + server.port() + "/mcp");
     }
 
-    static ServerHandle createServer(int port) {
-        var handle = TachyonServer.builder()
+    static TachyonServer createServer(int port) {
+        var server = TachyonServer.builder()
             .info(it -> it.name("demo-server").version("1.0").description("Demo MCP server"))
             .capabilities(c -> c.tools(true).resources(true, true).prompts(true))
             .session(s -> s
@@ -56,12 +55,7 @@ public final class ServerBasic {
             .prompt(
                 PromptDescriptor.of("greet", "Generates a greeting"),
                 args -> List.of(PromptMessage.user("Say hello")))
-            .port(port)
-            .start();
-
-        handle.server()
-            .resources()
-            .addTemplate(ResourceTemplateEntry.of(
+            .resourceTemplate(ResourceTemplateEntry.of(
                 "user-profile",
                 "demo://users/{userId}/profile",
                 "User profile data",
@@ -70,9 +64,11 @@ public final class ServerBasic {
                     var userId = params.get("userId");
                     return TextResourceContents.of(
                         uri, "application/json", "{\"userId\":\"" + userId + "\",\"name\":\"User\"}");
-                }));
+                }))
+            .port(port)
+            .start();
 
-        return handle;
+        return server;
     }
 
     private ServerBasic() {

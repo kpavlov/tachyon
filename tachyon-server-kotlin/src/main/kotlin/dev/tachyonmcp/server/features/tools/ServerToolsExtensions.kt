@@ -4,7 +4,7 @@
 
 package dev.tachyonmcp.server.features.tools
 
-import dev.tachyonmcp.server.Server
+import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.config.ToolScope
 import dev.tachyonmcp.server.json.schemas
 import dev.tachyonmcp.server.json.toJacksonNode
@@ -16,13 +16,13 @@ import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
 @JvmSynthetic
-public fun Server.registerTool(
+public fun TachyonServer.registerTool(
     name: String,
     description: String? = null,
     inputSchema: JsonNode? = null,
     outputSchema: JsonNode? = null,
     block: suspend ToolScope.() -> ToolResult,
-): Server =
+): TachyonServer =
     registerTool(configure = {
         name(name)
         description(description)
@@ -31,13 +31,13 @@ public fun Server.registerTool(
     }, block = block)
 
 @JvmSynthetic
-public fun Server.registerTool(
+public fun TachyonServer.registerTool(
     name: String,
     description: String? = null,
     inputSchema: String,
     outputSchema: String? = null,
     block: suspend ToolScope.() -> ToolResult,
-): Server =
+): TachyonServer =
     registerTool(configure = {
         name(name)
         description(description)
@@ -46,10 +46,10 @@ public fun Server.registerTool(
 
 @JvmSynthetic
 @OptIn(ExperimentalContracts::class)
-public inline fun Server.registerTool(
+public inline fun TachyonServer.registerTool(
     configure: ToolDescriptor.Builder.() -> Unit = {},
     noinline block: suspend ToolScope.() -> ToolResult,
-): Server {
+): TachyonServer {
     contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
     return registerTool(
         descriptor = ToolDescriptor.builder().apply(configure).build(),
@@ -58,10 +58,10 @@ public inline fun Server.registerTool(
 }
 
 @JvmSynthetic
-public fun Server.registerTool(
+public fun TachyonServer.registerTool(
     descriptor: ToolDescriptor,
     block: suspend ToolScope.() -> ToolResult,
-): Server {
+): TachyonServer {
     this.registerTool(toolHandler(descriptor, block))
     return this
 }
@@ -71,13 +71,13 @@ public fun Server.registerTool(
  * Requires kotlinx-serialization-json on the classpath.
  */
 @JvmSynthetic
-public fun Server.registerTool(
+public fun TachyonServer.registerTool(
     name: String,
     description: String? = null,
     inputSchema: JsonObject,
     outputSchema: JsonObject? = null,
     block: suspend ToolScope.() -> ToolResult,
-): Server =
+): TachyonServer =
     registerTool(
         name = name,
         description = description,

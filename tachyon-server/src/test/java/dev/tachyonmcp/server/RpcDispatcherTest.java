@@ -4,10 +4,13 @@
 
 package dev.tachyonmcp.server;
 
+import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.server.internal.ServerEngine;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 
 class RpcDispatcherTest {
@@ -17,9 +20,15 @@ class RpcDispatcherTest {
         return (RpcDispatcher.DispatchResult.Response) result;
     }
 
+    private static ServerEngine newEngine(Consumer<ServerBuilder> configurer) {
+        var builder = TachyonServer.builder();
+        configurer.accept(builder);
+        return (ServerEngine) builder.build();
+    }
+
     @Test
     void shouldAllowDifferentIdsInSameSession() {
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             server.createSession("sess_diff");
             var dispatcher = new RpcDispatcher(server, server.executor());
 
@@ -37,7 +46,7 @@ class RpcDispatcherTest {
 
     @Test
     void shouldAllowSameIdInDifferentSessions() {
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             server.createSession("sess_a");
             server.createSession("sess_b");
             var dispatcher = new RpcDispatcher(server, server.executor());
@@ -54,7 +63,8 @@ class RpcDispatcherTest {
 
     @Test
     void shouldRejectNonInitializeRequestBeforeSessionIsActive() {
-        try (var server = TachyonServer.builder().session(s -> s.enabled(true)).build()) {
+        try (ServerEngine server = (ServerEngine)
+                TachyonServer.builder().session(s -> s.enabled(true)).build()) {
             server.createSession("sess_init");
             var dispatcher = new RpcDispatcher(server, server.executor());
 
@@ -69,7 +79,7 @@ class RpcDispatcherTest {
 
     @Test
     void shouldAcceptPingBeforeSessionIsActive() {
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             server.createSession("sess_ping");
             var dispatcher = new RpcDispatcher(server, server.executor());
 
@@ -84,7 +94,7 @@ class RpcDispatcherTest {
 
     @Test
     void shouldAcceptRequestAfterSessionIsActive() {
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             var session = server.createSession("sess_active");
             session.activate();
             var dispatcher = new RpcDispatcher(server, server.executor());
@@ -99,7 +109,8 @@ class RpcDispatcherTest {
 
     @Test
     void cancelsPendingRequestWithMatchingId() {
-        try (var server = TachyonServer.builder().session(s -> s.enabled(true)).build()) {
+        try (ServerEngine server = (ServerEngine)
+                TachyonServer.builder().session(s -> s.enabled(true)).build()) {
             var session = server.createSession("sess_cancel-pending");
             session.activate();
             var dispatcher = new RpcDispatcher(server, server.executor());
@@ -118,7 +129,7 @@ class RpcDispatcherTest {
 
     @Test
     void cancelsWithoutSessionLogsAndAccepts() {
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             var dispatcher = new RpcDispatcher(server, server.executor());
 
             var params = Map.of("requestId", 1, "reason", "no-session");
@@ -129,7 +140,7 @@ class RpcDispatcherTest {
 
     @Test
     void cancelsWithUnknownRequestIdIsAccepted() {
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             var session = server.createSession("sess_cancel-unknown");
             session.activate();
             var dispatcher = new RpcDispatcher(server, server.executor());
@@ -142,7 +153,7 @@ class RpcDispatcherTest {
 
     @Test
     void cancelsWithEmptyParamsIsAccepted() {
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             server.createSession("sess_cancel-empty");
             var dispatcher = new RpcDispatcher(server, server.executor());
 
@@ -153,7 +164,7 @@ class RpcDispatcherTest {
 
     @Test
     void cancelsWithNullParamsIsAccepted() {
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             server.createSession("sess_cancel-null");
             var dispatcher = new RpcDispatcher(server, server.executor());
 
@@ -164,7 +175,8 @@ class RpcDispatcherTest {
 
     @Test
     void shouldRejectRequestAfterSessionIsClosed() {
-        try (var server = TachyonServer.builder().session(s -> s.enabled(true)).build()) {
+        try (ServerEngine server = (ServerEngine)
+                TachyonServer.builder().session(s -> s.enabled(true)).build()) {
             var session = server.createSession("sess_closed");
             session.activate();
             session.close();

@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.session;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.runtime.SseConnection;
@@ -18,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Manages the lifecycle of MCP sessions. */
+@InternalApi
 public class SessionManager implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(SessionManager.class);

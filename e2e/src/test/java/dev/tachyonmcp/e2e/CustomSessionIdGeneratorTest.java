@@ -7,7 +7,6 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.ServerHandle;
 import dev.tachyonmcp.server.TachyonServer;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -31,7 +30,7 @@ class CustomSessionIdGeneratorTest {
 
     private static final String TENANT_HEADER = "X-Tenant-Id";
 
-    private ServerHandle serverHandle;
+    private TachyonServer serverHandle;
     private int port;
 
     @BeforeAll

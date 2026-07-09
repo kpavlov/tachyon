@@ -13,7 +13,7 @@ import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.PromptArgument;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
-import dev.tachyonmcp.server.session.DefaultMcpContext;
+import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.HashMap;
@@ -35,7 +35,7 @@ class PromptRegistryTest {
 
     @Test
     void shouldReturnEmptyListWhenNoPromptsRegistered() throws Exception {
-        var result = handlers.get("prompts/list").handle(DefaultMcpContext.noop(), null);
+        var result = handlers.get("prompts/list").handle(DefaultDispatchContext.noop(), null);
 
         assertThat(result).isInstanceOf(ListPromptsResult.class);
         assertThat(((ListPromptsResult) result).prompts()).isEmpty();
@@ -43,7 +43,7 @@ class PromptRegistryTest {
 
     @Test
     void shouldReturnErrorWhenPromptNotFound() throws Exception {
-        var result = handlers.get("prompts/get").handle(DefaultMcpContext.noop(), Map.of("name", "nonexistent"));
+        var result = handlers.get("prompts/get").handle(DefaultDispatchContext.noop(), Map.of("name", "nonexistent"));
 
         assertThat(result).isInstanceOf(JsonRpcError.class);
         assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
@@ -51,7 +51,7 @@ class PromptRegistryTest {
 
     @Test
     void shouldReturnErrorWhenPromptNameMissing() throws Exception {
-        var result = handlers.get("prompts/get").handle(DefaultMcpContext.noop(), Map.of());
+        var result = handlers.get("prompts/get").handle(DefaultDispatchContext.noop(), Map.of());
 
         assertThat(result).isInstanceOf(JsonRpcError.class);
     }
@@ -60,7 +60,7 @@ class PromptRegistryTest {
     void shouldReturnPromptByName() throws Exception {
         registry.add(PromptDescriptor.of("greeting", "A greeting prompt"), List.of(PromptMessage.user("Hello!")));
 
-        var result = handlers.get("prompts/get").handle(DefaultMcpContext.noop(), Map.of("name", "greeting"));
+        var result = handlers.get("prompts/get").handle(DefaultDispatchContext.noop(), Map.of("name", "greeting"));
 
         assertThat(result).isInstanceOf(GetPromptResult.class);
         assertThat(((GetPromptResult) result).description()).isEqualTo("A greeting prompt");
@@ -71,7 +71,7 @@ class PromptRegistryTest {
         registry.add(PromptDescriptor.of("prompt-1", "First prompt"), List.of());
         registry.add(PromptDescriptor.of("prompt-2", "Second prompt"), List.of());
 
-        var result = (ListPromptsResult) handlers.get("prompts/list").handle(DefaultMcpContext.noop(), null);
+        var result = (ListPromptsResult) handlers.get("prompts/list").handle(DefaultDispatchContext.noop(), null);
 
         assertThat(result.prompts()).hasSize(2);
     }
@@ -131,7 +131,7 @@ class PromptRegistryTest {
         registry.add(descriptor, List.of(PromptMessage.user("Hello")));
 
         var result = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListPromptsResult)
-                handlers.get("prompts/list").handle(DefaultMcpContext.noop(), null);
+                handlers.get("prompts/list").handle(DefaultDispatchContext.noop(), null);
         var prompt = result.prompts().getFirst();
 
         assertThat(prompt.name()).isEqualTo("full-prompt");
@@ -150,7 +150,7 @@ class PromptRegistryTest {
                 PromptDescriptor.of("dynamic", "Dynamic prompt"), args -> List.of(PromptMessage.user("args=" + args)));
 
         var result = (GetPromptResult)
-                handlers.get("prompts/get").handle(DefaultMcpContext.noop(), Map.of("name", "dynamic"));
+                handlers.get("prompts/get").handle(DefaultDispatchContext.noop(), Map.of("name", "dynamic"));
 
         assertThat(result.messages()).hasSize(1);
         assertThat(result.messages().getFirst().content().toString()).contains("args=");

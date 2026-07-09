@@ -8,6 +8,7 @@ import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.TextContent
 import dev.tachyonmcp.server.domain.TextResourceContents
 import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.server.internal.ServerEngine
 import dev.tachyonmcp.server.session.InMemorySessionLogRouter
 import dev.tachyonmcp.server.session.InMemorySessionStore
 import dev.tachyonmcp.server.session.SessionIdGenerator
@@ -89,8 +90,8 @@ internal class TachyonServerTest {
             }
         }.use { handle ->
             (handle.port() > 0) shouldBe true
-            val server = handle.server()
-            val config = server.config()
+            handle.host() shouldBe "127.0.0.1"
+            val config = handle.config()
 
             // identity
             with(config.identity) {
@@ -137,9 +138,10 @@ internal class TachyonServerTest {
             }
 
             // registered features
-            server.getTool("ping") shouldNotBe null
-            server.prompts()["greet"] shouldNotBe null
-            server.resources()["config"] shouldNotBe null
+            handle.getTool("ping") shouldNotBe null
+            var engine = handle as ServerEngine
+            engine.prompts()["greet"] shouldNotBe null
+            engine.resources()["config"] shouldNotBe null
 
             // MCP initialize
             McpProbe(handle.port()).use { probe ->
@@ -221,7 +223,7 @@ internal class TachyonServerTest {
                 ToolResult.text("ok")
             }
         }.use { handle ->
-            handle.server().getTool("string-schema") shouldNotBe null
+            handle.getTool("string-schema") shouldNotBe null
         }
     }
 

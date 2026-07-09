@@ -4,12 +4,14 @@
 
 package dev.tachyonmcp.server.features;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 
 /** Static pagination utility shared by registries. */
+@InternalApi
 public final class Pagination {
 
     /** Default page size used when a request omits (or non-positively sizes) its limit. */

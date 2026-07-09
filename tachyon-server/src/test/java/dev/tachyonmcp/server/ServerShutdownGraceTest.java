@@ -4,11 +4,13 @@
 
 package dev.tachyonmcp.server;
 
+import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.config.RuntimeConfig;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -18,7 +20,7 @@ import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 
 /**
- * Verifies that {@link Server#close()} drains in-flight handlers for the configured
+ * Verifies that {@link TachyonServer#close()} drains in-flight handlers for the configured
  * {@code shutdownGracePeriod} before force-interrupting them.
  *
  * @author Konstantin Pavlov
@@ -49,8 +51,7 @@ class ServerShutdownGraceTest {
         var started = new CountDownLatch(1);
         var interrupted = new CountDownLatch(1);
 
-        var server = TachyonServer.builder()
-                .runtime(r -> r.shutdownGracePeriod(Duration.ofMillis(400)))
+        ServerEngine server = newEngine(b -> b.runtime(r -> r.shutdownGracePeriod(Duration.ofMillis(400)))
                 .tool(ToolHandler.of("slow_probe", (context, args) -> {
                     started.countDown();
                     try {
@@ -60,8 +61,7 @@ class ServerShutdownGraceTest {
                         Thread.currentThread().interrupt();
                     }
                     return ToolResult.empty();
-                }))
-                .build();
+                })));
 
         server.createSession("sess-slow").activate();
         var dispatcher = new RpcDispatcher(server, server.executor());

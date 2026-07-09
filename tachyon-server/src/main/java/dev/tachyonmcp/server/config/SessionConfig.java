@@ -76,17 +76,6 @@ public record SessionConfig(
         }
 
         /**
-         * Enables stateless mode (no session persistence).
-         *
-         * @deprecated Use {@link #enabled(boolean)}
-         */
-        @Deprecated
-        public Builder stateless(boolean stateless) {
-            this.enabled = !stateless;
-            return this;
-        }
-
-        /**
          * Sets the session TTL (idle sessions are evicted after this duration).
          */
         public Builder sessionTtl(Duration sessionTtl) {

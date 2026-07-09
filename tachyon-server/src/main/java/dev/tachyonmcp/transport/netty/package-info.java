@@ -3,6 +3,8 @@
  */
 
 @NullMarked
+@InternalApi
 package dev.tachyonmcp.transport.netty;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import org.jspecify.annotations.NullMarked;

@@ -11,12 +11,12 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.RpcMethodHandler;
-import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DispatchContext;
 import java.util.Map;
 import java.util.Set;
@@ -174,7 +174,7 @@ class ExtensionsTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public void bootstrap(Server server) {
+        public void bootstrap(ServerEngine server) {
             server.registerHandler(new RpcMethodHandler() {
                 @Override
                 public String method() {
@@ -197,7 +197,7 @@ class ExtensionsTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public void bootstrap(Server server) {
+        public void bootstrap(ServerEngine server) {
             server.registerTool(new ToolHandler() {
                 private final ToolDescriptor descriptor = ToolDescriptor.builder()
                         .name("ext-tool")

@@ -9,6 +9,7 @@ import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidParams;
 import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidRequest;
 import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.methodNotFound;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskMetadata;
@@ -28,14 +29,12 @@ import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.JsonUtils;
 import dev.tachyonmcp.server.json.PayloadDeserializer;
 import dev.tachyonmcp.server.json.PayloadSerializer;
-import dev.tachyonmcp.server.json.RawJson;
 import dev.tachyonmcp.server.json.SchemaValidationError;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletionException;
@@ -46,11 +45,11 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 /**
  * Registry for tool handlers with input/output schema validation.
  */
+@InternalApi
 public class ToolRegistry {
 
     private static final Logger logger = LoggerFactory.getLogger(ToolRegistry.class);
@@ -302,29 +301,30 @@ public class ToolRegistry {
             }
             sendLoggingIfEnabled(context, parsed.name(), "completed");
             validateOutput(handler.descriptor().outputSchema(), toolResult);
-            return context.responseMapper().callToolResult(serializeStructured(toolResult));
+            return context.responseMapper()
+                    .callToolResult(JsonUtils.serializeStructured(toolResult, payloadSerializer));
         }
 
         private Object dispatchTaskAugmented(
                 DispatchContext context, ToolHandler handler, ToolRequest request, String name, TaskMetadata taskMeta) {
             sendLoggingIfEnabled(context, name, "started");
             var ttl = taskMeta.ttl() != null ? taskMeta.ttl() / 1000.0 : 0.0;
-            var server = context.server();
-            var tasks = server.tasks();
+            var engine = context.engine();
+            var tasks = engine.tasks();
             var sessionId = OutboundSseStreamMessageRouter.currentSessionId();
             var outboundStream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
             var descriptor = TaskDescriptor.builder(name)
                     .description(handler.descriptor().description())
                     .build();
             var taskEntry = tasks.createTask(descriptor, ttl, sessionId);
-            var taskFuture = server.executor().submit(() -> {
+            var taskFuture = engine.executor().submit(() -> {
                 try {
                     OutboundSseStreamMessageRouter.withDispatchContext(sessionId, outboundStream, () -> {
                         var toolResult = HandlerFutures.joinInterruptibly(handler.handleAsync(context, request));
                         sendLoggingIfEnabled(context, name, "completed");
                         validateOutput(handler.descriptor().outputSchema(), toolResult);
-                        var resultJson = JsonRpcCodec.writeValueAsString(
-                                context.responseMapper().callToolResult(serializeStructured(toolResult)));
+                        var resultJson = JsonRpcCodec.writeValueAsString(context.responseMapper()
+                                .callToolResult(JsonUtils.serializeStructured(toolResult, payloadSerializer)));
                         tasks.completeTask(taskEntry.id(), resultJson);
                         return null;
                     });
@@ -386,35 +386,11 @@ public class ToolRegistry {
             return JsonSchemaUtils.validateArguments(inputValidator, schema, args);
         }
 
-        /**
-         * Serializes non-tree structured values into {@link RawJson} via the configured serde,
-         * so response mappers stay serde-free. {@link JsonNode} and {@link RawJson} pass through.
-         * Maps carrying {@link JsonNode} values are serialized with Jackson regardless of the
-         * configured serde — a non-Jackson serde cannot encode Jackson trees.
-         */
-        private ToolResult serializeStructured(ToolResult result) {
-            if (result instanceof ToolResult.WithMeta(ToolResult inner1, Map<String, JsonNode> meta)) {
-                var inner = serializeStructured(inner1);
-                return inner == inner1 ? result : new ToolResult.WithMeta(inner, meta);
-            }
-            if (!(result
-                    instanceof ToolResult.Success(Object sv, List<dev.tachyonmcp.server.domain.ContentBlock> content)))
-                return result;
-            if (sv == null || sv instanceof RawJson || sv instanceof JsonNode) return result;
-            var json = containsJsonNodes(sv) ? JsonUtils.writeString(sv) : payloadSerializer.serialize(sv);
-            return new ToolResult.Success(RawJson.of(json), content);
-        }
-
-        private static boolean containsJsonNodes(Object structuredValue) {
-            return structuredValue instanceof Map<?, ?> map
-                    && map.values().stream().anyMatch(v -> v instanceof JsonNode);
-        }
-
         private void validateOutput(@Nullable JsonNode schema, ToolResult result) {
             if (schema == null || outputValidator == JsonSchemaValidator.NOOP) return;
             var inner = result instanceof ToolResult.WithMeta wm ? wm.inner() : result;
             if (!(inner instanceof ToolResult.Success s)) return;
-            var contentNode = structuredValueAsObjectNode(s.structuredValue());
+            var contentNode = JsonUtils.valueToObjectNode(s.structuredValue(), payloadSerializer);
             if (contentNode == null) return;
             var errors = outputValidator.validate(schema, contentNode);
             if (!errors.isEmpty()) {
@@ -423,37 +399,12 @@ public class ToolRegistry {
             }
         }
 
-        private @Nullable JsonNode structuredValueAsObjectNode(@Nullable Object structuredValue) {
-            if (structuredValue instanceof RawJson(String json)) {
-                var node = JsonUtils.parse(json);
-                return node.isObject() ? node : null;
-            }
-            if (structuredValue instanceof JsonNode node) {
-                return node.isObject() ? node : null;
-            }
-            if (structuredValue instanceof java.util.Map<?, ?> map) {
-                var contentNode = JsonNodeFactory.instance.objectNode();
-                for (var entry : map.entrySet()) {
-                    if (entry.getKey() instanceof String k) {
-                        var v = entry.getValue();
-                        if (v instanceof JsonNode jn) {
-                            contentNode.set(k, jn);
-                        } else if (v != null) {
-                            contentNode.set(k, ProtocolCodecUtil.parseJsonNode(JsonRpcCodec.writeValueAsString(v)));
-                        }
-                    }
-                }
-                return contentNode;
-            }
-            return null;
-        }
-
         private void handleTaskError(DispatchContext context, TaskEntry taskEntry, Exception e) {
             var cause = e instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : e;
             logger.error("Task handler error for '{}'", taskEntry.name(), cause);
             try {
                 var errorJson = JsonRpcCodec.writeValueAsString(Map.of("error", "Internal server error"));
-                context.server().tasks().failTask(taskEntry.id(), errorJson);
+                context.engine().tasks().failTask(taskEntry.id(), errorJson);
             } catch (Exception ex) {
                 logger.error("Failed to record task failure for {}", taskEntry.id(), ex);
             }
@@ -464,7 +415,7 @@ public class ToolRegistry {
             if (session == null) return;
             var level = context.getLoggingLevel();
             if (level == null) return;
-            context.server().log(session, level, "tachyon.tools", Map.of("tool", toolName, "status", status));
+            context.engine().log(session, level, "tachyon.tools", Map.of("tool", toolName, "status", status));
         }
     }
 }

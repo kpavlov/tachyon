@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.runtime.SseEvent;
 import org.jspecify.annotations.Nullable;
 
@@ -20,6 +21,7 @@ import org.jspecify.annotations.Nullable;
  * <p>Implementations are transport-specific. The Netty implementation ({@code PostSseStream}) ties
  * this to the HTTP POST response channel; other transports may bind it differently.
  */
+@InternalApi
 public interface OutboundSseStream {
 
     /**

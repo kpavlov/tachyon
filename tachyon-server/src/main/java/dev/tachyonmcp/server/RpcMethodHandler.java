@@ -17,10 +17,10 @@ import java.util.concurrent.CompletionStage;
  * methods, or otherwise pin the carrier thread.
  * Use {@link java.util.concurrent.locks.ReentrantLock} over {@code synchronized} for mutual
  * exclusion. For CPU-bound work or third-party code that may synchronize, offload to
- * {@code context.server().executor()} and join the result:
+ * {@code context.engine().executor()} and join the result:
  * <pre>{@code
  * var future = CompletableFuture.supplyAsync(
- *         () -> heavyWork(), context.server().executor());
+ *         () -> heavyWork(), context.engine().executor());
  * return HandlerFutures.joinInterruptibly(future);
  * }</pre>
  */

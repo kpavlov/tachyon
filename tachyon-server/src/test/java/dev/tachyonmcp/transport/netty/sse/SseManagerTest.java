@@ -4,11 +4,12 @@
 
 package dev.tachyonmcp.transport.netty.sse;
 
+import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.runtime.SseEvent;
-import dev.tachyonmcp.server.TachyonServer;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.SessionEvent;
 import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,7 @@ class SseManagerTest {
 
     @Test
     void replayWithLastEventIdReturnsOnlyNewerEvents() {
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             var conn = new TrackingConnection();
             var session = server.createSession("sess_replay");
             session.connection(conn);
@@ -37,7 +38,7 @@ class SseManagerTest {
 
     @Test
     void replayWithInvalidLastEventIdSkipsReplay() {
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             var conn = new TrackingConnection();
             var session = server.createSession("sess_bad");
             session.connection(conn);
@@ -52,7 +53,7 @@ class SseManagerTest {
 
     @Test
     void replayWithFutureLastEventIdSkipsAll() {
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             var conn = new TrackingConnection();
             var session = server.createSession("sess_future");
             session.connection(conn);
@@ -69,7 +70,7 @@ class SseManagerTest {
 
     @Test
     void replayWithZeroLastEventIdReturnsAllSseEvents() {
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             var conn = new TrackingConnection();
             var session = server.createSession("sess_zero");
             session.connection(conn);
@@ -89,7 +90,7 @@ class SseManagerTest {
 
     @Test
     void replayMixedEventTypesSkipsNonSseEvents() {
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             var conn = new TrackingConnection();
             var session = server.createSession("sess_mixed");
             session.connection(conn);

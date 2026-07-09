@@ -4,13 +4,14 @@
 
 package dev.tachyonmcp.transport.netty;
 
+import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.RpcDispatcher;
-import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -59,10 +60,8 @@ class ForeignThreadContinuationTest {
             return java.util.List.of();
         };
 
-        try (var server = TachyonServer.builder()
-                .outputSchemaValidator(recordingValidator)
-                .tool(handler)
-                .build()) {
+        try (ServerEngine server =
+                newEngine(b -> b.outputSchemaValidator(recordingValidator).tool(handler))) {
             var session = server.createSession("sess-foreign");
             session.activate();
             var dispatcher = new RpcDispatcher(server, server.executor());

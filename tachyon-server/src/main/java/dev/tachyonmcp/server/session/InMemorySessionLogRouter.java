@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.session;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +24,7 @@ import java.util.function.Predicate;
  * and on Java 21 a VT contending on a monitor pins its carrier thread (fixed only in JEP 491 /
  * Java 24). A j.u.c lock parks the virtual thread instead and frees the carrier.
  */
+@InternalApi
 public final class InMemorySessionLogRouter implements SessionLogRouter {
 
     static final int DEFAULT_MAX_EVENTS = 10_000;

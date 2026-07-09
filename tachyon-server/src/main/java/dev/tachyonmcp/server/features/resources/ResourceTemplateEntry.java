@@ -124,6 +124,20 @@ public interface ResourceTemplateEntry extends ServerResourceType {
     interface Builder {
         Builder name(String name);
 
-        DefaultResourceTemplateEntry.Builder mimeType(@Nullable String mimeType);
+        Builder uriTemplate(String uriTemplate);
+
+        Builder description(@Nullable String description);
+
+        Builder mimeType(@Nullable String mimeType);
+
+        Builder title(@Nullable String title);
+
+        Builder annotations(@Nullable Annotations annotations);
+
+        Builder icons(@Nullable Iterable<? extends Icon> elements);
+
+        Builder handler(ResourceTemplateHandler handler);
+
+        ResourceTemplateEntry build();
     }
 }

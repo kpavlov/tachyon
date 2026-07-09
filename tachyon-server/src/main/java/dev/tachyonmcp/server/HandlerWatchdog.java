@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -17,6 +18,7 @@ import org.slf4j.LoggerFactory;
  * Does not capture a thread reference — suitable for async handler pipelines where the
  * continuation may run on any thread.
  */
+@InternalApi
 public final class HandlerWatchdog {
 
     private static final Logger logger = LoggerFactory.getLogger(HandlerWatchdog.class);

@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.runtime;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.Protocol;
 import java.util.Collections;
 import java.util.Map;
@@ -13,11 +14,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Per-channel mutable context tracking the interaction lifecycle phase, the bound
- * {@link Session}, and protocol version.
- */
-public class DefaultInteractionContext implements MutableInteractionContext {
+@InternalApi
+public class DefaultChannelContext implements ChannelContext {
 
     private final Protocol protocol;
 
@@ -28,17 +26,17 @@ public class DefaultInteractionContext implements MutableInteractionContext {
 
     private final AtomicReference<@Nullable Session> sessionHolder = new AtomicReference<>();
 
-    public DefaultInteractionContext(Protocol protocol) {
+    public DefaultChannelContext(Protocol protocol) {
         this.protocol = protocol;
     }
 
     @Override
-    public Protocol getProtocol() {
+    public Protocol protocol() {
         return protocol;
     }
 
     @Override
-    public Lifecycle getLifecycle() {
+    public Lifecycle lifecycle() {
         return lifecycle;
     }
 
@@ -85,7 +83,7 @@ public class DefaultInteractionContext implements MutableInteractionContext {
     }
 
     @Override
-    public void setAttribute(String name, Object value) {
+    public <T> void setAttribute(String name, T value) {
         attributes.put(name, value);
     }
 

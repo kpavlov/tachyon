@@ -2,9 +2,7 @@
 
 package dev.tachyonmcp.server.config
 
-import dev.tachyonmcp.server.Server
 import dev.tachyonmcp.server.ServerBuilder
-import dev.tachyonmcp.server.ServerHandle
 import dev.tachyonmcp.server.TachyonDsl
 import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.domain.PromptMessage
@@ -12,6 +10,7 @@ import dev.tachyonmcp.server.domain.ResourceContents
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.server.features.prompts.promptHandler
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor
+import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry
 import dev.tachyonmcp.server.features.resources.resourceHandler
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
@@ -22,7 +21,6 @@ import dev.tachyonmcp.server.json.toJacksonNodeOrNull
 import io.netty.channel.ChannelPipeline
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
-import java.util.concurrent.CompletableFuture
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -166,6 +164,9 @@ public class TachyonServerBuilder
                 delegate.prompt(descriptor, promptHandler(descriptor, handler))
             }
 
+        public fun resourceTemplate(template: ResourceTemplateEntry): TachyonServerBuilder =
+            this.also { delegate.resourceTemplate(template) }
+
         /**
          * Registers a tool using a [kotlinx.serialization.json.JsonObject] input schema.
          * Requires kotlinx-serialization-json on the classpath.
@@ -212,12 +213,8 @@ public class TachyonServerBuilder
             }
 
         @PublishedApi
-        internal fun start(): ServerHandle = delegate.start()
-
-        internal fun startAsync(): CompletableFuture<ServerHandle> =
-            delegate
-                .startAsync()
+        internal fun start(): TachyonServer = delegate.start()
 
         @PublishedApi
-        internal fun build(): Server = delegate.build()
+        internal fun build(): TachyonServer = delegate.build()
     }

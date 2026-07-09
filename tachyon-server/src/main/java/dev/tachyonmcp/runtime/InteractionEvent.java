@@ -4,8 +4,10 @@
 
 package dev.tachyonmcp.runtime;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import org.jspecify.annotations.Nullable;
 
+@InternalApi
 public sealed interface InteractionEvent {
 
     /** INITIALIZATION → OPERATION: protocol negotiation complete. */

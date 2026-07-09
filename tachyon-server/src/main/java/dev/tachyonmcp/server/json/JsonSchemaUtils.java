@@ -3,11 +3,13 @@
  */
 package dev.tachyonmcp.server.json;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
+@InternalApi
 public class JsonSchemaUtils {
     private JsonSchemaUtils() {
         // noop

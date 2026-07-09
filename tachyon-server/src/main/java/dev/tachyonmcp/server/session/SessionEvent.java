@@ -4,9 +4,11 @@
 
 package dev.tachyonmcp.server.session;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import org.jspecify.annotations.Nullable;
 
 /** A recorded session event — request, response, notification, or cancellation. */
+@InternalApi
 public sealed interface SessionEvent {
 
     /** The session this event belongs to. */

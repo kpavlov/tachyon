@@ -6,8 +6,8 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.netty.McpChannelInitializer;
 import dev.tachyonmcp.transport.netty.NettyIoEngine;
 import dev.tachyonmcp.transport.netty.NettyServer;
@@ -35,13 +35,13 @@ class SseHeartbeatTest {
 
     private static final Duration HEARTBEAT_INTERVAL = Duration.ofMillis(150);
 
-    private Server server;
+    private ServerEngine server;
     private NettyServer nettyServer;
     private int port;
 
     @BeforeAll
     void startServer() {
-        server = TachyonServer.builder()
+        server = (ServerEngine) TachyonServer.builder()
                 .session(s -> s.enabled(true))
                 .network(n -> n.heartbeatInterval(HEARTBEAT_INTERVAL)
                         // Keep reader-idle longer than the test window so idle never fires

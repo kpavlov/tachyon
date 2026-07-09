@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.features;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.ServerResourceType;
 import java.util.Collection;
@@ -14,6 +15,7 @@ import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
 
 /** Base registry for named, paginated MCP resource types. */
+@InternalApi
 public abstract class Registry<R extends ServerResourceType> {
 
     private final ConcurrentHashMap<String, R> items = new ConcurrentHashMap<>();

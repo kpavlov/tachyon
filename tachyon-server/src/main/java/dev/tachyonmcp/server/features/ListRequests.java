@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.features;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.LinkedHashMap;
@@ -12,6 +13,7 @@ import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
 /** Shared parsing of limit/cursor from JSON-RPC request params. */
+@InternalApi
 public final class ListRequests {
 
     private ListRequests() {}

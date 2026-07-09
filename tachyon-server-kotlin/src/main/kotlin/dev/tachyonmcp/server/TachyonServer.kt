@@ -5,6 +5,7 @@
 
 package dev.tachyonmcp.server
 
+import dev.tachyonmcp.server.config.NetworkConfig
 import dev.tachyonmcp.server.config.TachyonServerBuilder
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
@@ -13,28 +14,21 @@ import kotlin.contracts.contract
 @Suppress("FunctionName")
 @OptIn(ExperimentalContracts::class)
 public inline fun TachyonServer(
-    port: Int? = null,
+    port: Int = NetworkConfig.DEFAULT.port(),
     configure: (@TachyonDsl TachyonServerBuilder).() -> Unit = {},
-): ServerHandle {
-    contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
-    return tachyonServer(port, configure)
-}
-
-@OptIn(ExperimentalContracts::class)
-public inline fun tachyonServer(
-    port: Int? = null,
-    configure: (@TachyonDsl TachyonServerBuilder).() -> Unit = {},
-): ServerHandle {
+): TachyonServer {
     contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
     val builder = TachyonServerBuilder().apply(configure)
     builder.applyPort(port)
     return builder.start()
 }
 
+@Suppress("FunctionName")
 @OptIn(ExperimentalContracts::class)
 public inline fun buildServer(
     configure: (@TachyonDsl TachyonServerBuilder).() -> Unit = {},
-): Server {
+): TachyonServer {
     contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
-    return TachyonServerBuilder().apply(configure).build()
+    val builder = TachyonServerBuilder().apply(configure)
+    return builder.build()
 }

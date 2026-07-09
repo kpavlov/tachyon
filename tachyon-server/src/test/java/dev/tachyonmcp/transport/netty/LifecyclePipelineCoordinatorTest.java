@@ -4,18 +4,18 @@
 
 package dev.tachyonmcp.transport.netty;
 
+import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static dev.tachyonmcp.transport.netty.InteractionHandler.INTERACTION_CONTEXT_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.protocol.Protocols;
-import dev.tachyonmcp.runtime.DefaultInteractionContext;
+import dev.tachyonmcp.runtime.DefaultChannelContext;
 import dev.tachyonmcp.runtime.InteractionContext.Lifecycle;
 import dev.tachyonmcp.runtime.InteractionEvent;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.server.RpcDispatcher;
-import dev.tachyonmcp.server.Server;
-import dev.tachyonmcp.server.TachyonServer;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.*;
@@ -26,12 +26,12 @@ import org.junit.jupiter.api.Test;
 
 class LifecyclePipelineCoordinatorTest {
 
-    private Server server;
+    private ServerEngine server;
     private EmbeddedChannel channel;
 
     @BeforeEach
     void setUp() {
-        server = TachyonServer.builder().build();
+        server = newEngine(b -> {});
         final var dispatcher = new RpcDispatcher(server, Runnable::run);
         channel = new EmbeddedChannel(new InteractionHandler());
         channel.pipeline()
@@ -96,20 +96,20 @@ class LifecyclePipelineCoordinatorTest {
 
     @Test
     void interactionContextLifecycleTransitionsViaEvents() {
-        var protocol = Protocols.versions().get(0);
-        channel.attr(INTERACTION_CONTEXT_KEY).set(new DefaultInteractionContext(protocol));
+        var protocol = Protocols.list().get(0);
+        channel.attr(INTERACTION_CONTEXT_KEY).set(new DefaultChannelContext(protocol));
 
         var ic = channel.attr(INTERACTION_CONTEXT_KEY).get();
         assertThat(ic).isNotNull();
-        assertThat(ic.getLifecycle()).isEqualTo(Lifecycle.INITIALIZATION);
-        assertThat(ic.getProtocol().familyName()).isEqualTo("mcp");
+        assertThat(ic.lifecycle()).isEqualTo(Lifecycle.INITIALIZATION);
+        assertThat(ic.protocol().familyName()).isEqualTo("mcp");
 
         // OperationStarted
         channel.pipeline()
                 .fireUserEventTriggered(new InteractionEvent.OperationStarted(new Session("s1", SseConnection.NOOP)));
         ic = channel.attr(INTERACTION_CONTEXT_KEY).get();
         assertThat(ic).isNotNull();
-        assertThat(ic.getLifecycle()).isEqualTo(Lifecycle.OPERATION);
+        assertThat(ic.lifecycle()).isEqualTo(Lifecycle.OPERATION);
         assertThat(ic.session()).isNotNull();
 
         // ShutdownStarted does not throw

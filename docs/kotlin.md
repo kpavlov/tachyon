@@ -15,14 +15,11 @@ The `tachyon-server-kotlin` module wraps `ServerBuilder` with a coroutine-first 
 ## Entry points
 
 ```kotlin
-// Start Netty transport — returns McpServerHandle
-val handle = TachyonServer(port = 8080) { /* configure */ }
-
-// Lowercase alias — identical behaviour
-val handle = tachyonServer(port = 8080) { /* configure */ }
+// Start Netty transport — returns TachyonServer
+val server = TachyonServer(port = 8080) { /* configure */ }
 
 // Server logic only, no transport — for testing
-val server: Server = buildServer { /* configure */ }
+val server: TachyonServer = buildServer { /* configure */ }
 ```
 
 ## Full example
@@ -253,12 +250,11 @@ it encodes any `@Serializable` value and emits both `structuredContent` and the 
 
 ## Testing
 
-Use `buildServer { }` with `port = 0` for zero-setup E2E tests:
+Use `TachyonServer(port = 0) { }` for zero-setup E2E tests — it starts Netty on an ephemeral port:
 
 ```kotlin
-val server = buildServer { tool("ping") { ToolResult.text("pong") } }
-val transport = NettyServerTransport.start(server, 0)
-// transport.port() → ephemeral port
+val server = TachyonServer(port = 0) { tool("ping") { ToolResult.text("pong") } }
+// server.host() → bound host, server.port() → ephemeral port
 ```
 
 Run Kotlin tests only:
