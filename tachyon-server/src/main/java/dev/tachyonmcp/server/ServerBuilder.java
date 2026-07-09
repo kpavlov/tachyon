@@ -227,20 +227,6 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets a custom JSON schema validator for both input and output validation.
-     *
-     * @deprecated Use {@link #json(Consumer)} with
-     * {@link JsonConfig.Builder#inputSchemaValidator(JsonSchemaValidator)} and
-     * {@link JsonConfig.Builder#outputSchemaValidator(JsonSchemaValidator)} instead.
-     */
-    @Deprecated(forRemoval = true, since = "1.0.0-beta.4")
-    public ServerBuilder jsonSchemaValidator(JsonSchemaValidator validator) {
-        featuresConfig.inputSchemaValidator = validator;
-        featuresConfig.outputSchemaValidator = validator;
-        return this;
-    }
-
-    /**
      * Sets the payload serializer/deserializer for structured values and tool arguments.
      * Defaults to Jackson. Structured values must be types the serde understands;
      * {@code JsonNode} and {@code RawJson} values bypass it.

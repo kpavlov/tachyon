@@ -26,11 +26,11 @@ public class ToolDescriptorScope
         public var annotations: ToolAnnotations? = null
 
         public fun inputSchema(json: String) {
-            inputSchema = parseSchema(json, name ?: "<unknown>")
+            inputSchema = parseSchema(json)
         }
 
         public fun outputSchema(json: String) {
-            outputSchema = parseSchema(json, name ?: "<unknown>")
+            outputSchema = parseSchema(json)
         }
 
         @PublishedApi

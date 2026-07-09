@@ -199,7 +199,8 @@ class ExtensionsTest extends AbstractMcpE2eTest {
         @Override
         public void bootstrap(Server server) {
             server.registerTool(new ToolHandler() {
-                private final ToolDescriptor descriptor = ToolDescriptor.builder("ext-tool")
+                private final ToolDescriptor descriptor = ToolDescriptor.builder()
+                        .name("ext-tool")
                         .description("Extension-owned tool")
                         .extensionId(TEST_EXT_ID)
                         .build();
