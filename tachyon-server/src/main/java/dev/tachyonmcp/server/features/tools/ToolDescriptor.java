@@ -56,24 +56,6 @@ public interface ToolDescriptor {
         return DefaultToolDescriptor.builder();
     }
 
-    /**
-     * @deprecated Use {@link #builder()}
-     */
-    @Deprecated
-    static Builder builder(String name) {
-        return builder().name(name);
-    }
-
-    /**
-     * @deprecated Use {@link #builder()}
-     */
-    @Deprecated
-    static Builder builder(String name, @Nullable String inputSchemaJson, @Nullable String outputSchemaJson) {
-        return builder(name)
-                .inputSchema(parseSchema(inputSchemaJson, name))
-                .outputSchema(parseSchema(outputSchemaJson, name));
-    }
-
     interface Builder {
         Builder name(String name);
 

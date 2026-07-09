@@ -101,7 +101,8 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
         startServer(it -> it.inputSchemaValidator(JsonSchemaValidator.noop())
                 .outputSchemaValidator(new NetworkntJsonSchemaValidator())
                 .tool(ToolHandler.of(
-                        ToolDescriptor.builder("validated-output")
+                        ToolDescriptor.builder()
+                                .name("validated-output")
                                 .description("Validated output")
                                 .outputSchema(outputSchema)
                                 .build(),

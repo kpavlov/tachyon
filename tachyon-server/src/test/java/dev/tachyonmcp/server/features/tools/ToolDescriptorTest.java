@@ -25,16 +25,21 @@ class ToolDescriptorTest {
 
     @Test
     void shouldRejectMalformedJsonSchema() {
-        assertThatThrownBy(() ->
-                        ToolDescriptor.builder("bad-tool", "not-json", null).build())
+        assertThatThrownBy(() -> ToolDescriptor.builder()
+                        .name("bad-tool")
+                        .inputSchema("not-json")
+                        .build())
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("bad-tool");
+                .hasMessageContaining("not-json");
     }
 
     @Test
     void shouldParseSchemaWithoutObjectType() {
         var schema = "{\"type\":\"array\",\"items\":{\"type\":\"string\"}}";
-        var desc = ToolDescriptor.builder("array-root-schema", schema, null).build();
+        var desc = ToolDescriptor.builder()
+                .name("array-root-schema")
+                .inputSchema(schema)
+                .build();
         assertThat(desc.inputSchema()).isNotNull();
         assertThat(desc.inputSchema().get("type").asString()).isEqualTo("array");
     }

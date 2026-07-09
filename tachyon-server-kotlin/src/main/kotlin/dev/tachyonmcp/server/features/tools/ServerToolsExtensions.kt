@@ -41,7 +41,7 @@ public fun Server.registerTool(
     registerTool(configure = {
         name(name)
         description(description)
-        schemas(inputSchema, outputSchema, toolName = name)
+        schemas(inputSchema, outputSchema)
     }, block = block)
 
 @JvmSynthetic

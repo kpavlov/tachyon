@@ -30,10 +30,9 @@ internal fun String.toJsonNode(): JsonNode =
 internal fun ToolDescriptor.Builder.schemas(
     inputSchema: String,
     outputSchema: String?,
-    toolName: String,
 ): ToolDescriptor.Builder =
-    inputSchema(parseSchema(inputSchema, toolName))
-        .outputSchema(outputSchema?.let { parseSchema(it, toolName) })
+    inputSchema(parseSchema(inputSchema))
+        .outputSchema(outputSchema?.let { parseSchema(it) })
 
 internal fun JsonElement.toJacksonNode(): JsonNode =
     when (this) {
@@ -43,6 +42,7 @@ internal fun JsonElement.toJacksonNode(): JsonNode =
             nodes.arrayNode(size).also { array ->
                 forEach { array.add(it.toJacksonNode()) }
             }
+
         is JsonObject ->
             nodes.objectNode().also { obj ->
                 forEach { (key, value) -> obj.set(key, value.toJacksonNode()) }

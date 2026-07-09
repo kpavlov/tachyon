@@ -60,7 +60,7 @@ public fun ServerBuilder.tool(
                 .builder()
                 .name(name)
                 .description(description)
-                .schemas(inputSchema, outputSchema, toolName = name)
+                .schemas(inputSchema, outputSchema)
                 .build(),
             handler,
         ),

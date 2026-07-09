@@ -26,18 +26,6 @@ public class JsonSchemaUtils {
     }
 
     /**
-     * Parses a JSON schema string, failing fast with the tool name on invalid JSON.
-     */
-    public static @Nullable JsonNode parseSchema(@Nullable String json, String toolName) {
-        if (json == null) return null;
-        try {
-            return JsonUtils.parse(json);
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Tool '" + toolName + "' schema is not valid JSON: " + json, e);
-        }
-    }
-
-    /**
      * Validates args against schema; returns a joined error message, or null when valid / no schema.
      */
     public static @Nullable String validateArguments(
