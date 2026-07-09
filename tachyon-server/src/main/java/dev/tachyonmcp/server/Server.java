@@ -375,7 +375,7 @@ public class Server implements Closeable {
      */
     public void registerHandler(RpcMethodHandler handler) {
         methodHandlers.put(handler.method(), handler);
-        logger.info("Handler registered: {}", handler.method());
+        logger.debug("Handler registered: {}", handler.method());
     }
 
     /**
@@ -383,7 +383,7 @@ public class Server implements Closeable {
      */
     public void registerHandler(String method, RpcMethodHandler handler) {
         methodHandlers.put(method, handler);
-        logger.info("Handler registered: {}", method);
+        logger.debug("Handler registered: {}", method);
     }
 
     /**
@@ -458,7 +458,7 @@ public class Server implements Closeable {
      */
     public void registerTool(ToolHandler handler) {
         toolRegistry.register(handler);
-        logger.info("Tool registered: {}", handler.descriptor().name());
+        logger.debug("Tool registered: {}", handler.descriptor().name());
     }
 
     /**
@@ -746,7 +746,7 @@ public class Server implements Closeable {
     @Override
     public void close() {
         try {
-            logger.info("Shutting down TachyonServer");
+            logger.info("Shutting down TachyonMCP Server");
             shutdownExtensions();
             if (ownsExecutor) {
                 executor.shutdown();

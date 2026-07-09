@@ -86,7 +86,7 @@ public final class NettyServer implements Closeable {
         try {
             this.serverChannel =
                     bootstrap.bind(config.host(), config.port()).sync().channel();
-            logger.info("NettyServer started on {}", serverChannel.localAddress());
+            logger.info("TachyonMCP Server started on {}", serverChannel.localAddress());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Failed to start Netty server on " + config.host() + ":" + config.port(), e);
@@ -108,7 +108,7 @@ public final class NettyServer implements Closeable {
 
     @Override
     public void close() {
-        logger.debug("Shutting down NettyServer");
+        logger.debug("Shutting down TachyonMCP Server");
         try {
             serverChannel.close().sync();
             childChannels.close().sync();
