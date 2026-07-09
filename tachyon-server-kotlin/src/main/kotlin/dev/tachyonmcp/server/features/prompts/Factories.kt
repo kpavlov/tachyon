@@ -1,7 +1,7 @@
 @file:Suppress("FunctionName")
 @file:JvmName("PromptDescriptors")
 
-// Copyright (c) 2026 Konstantin Pavlov.
+// Copyright (c) 2026 Konstantin Pavlov and contributors.
 
 package dev.tachyonmcp.server.features.prompts
 
