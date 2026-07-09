@@ -4,11 +4,11 @@
 
 package dev.tachyonmcp.server.features.resources;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ReadResourceRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.SubscribeRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.UnsubscribeRequestParams;
 import dev.tachyonmcp.server.RpcMethodHandler;
-import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.domain.ReadResourceRequest;
 import dev.tachyonmcp.server.domain.ResourceContents;
 import dev.tachyonmcp.server.features.ChangeSupport;
@@ -16,6 +16,7 @@ import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.features.PaginatedResult;
 import dev.tachyonmcp.server.features.Pagination;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.Collection;
@@ -37,20 +38,21 @@ import org.slf4j.LoggerFactory;
 /**
  * Registry for resources, templates, and subscriptions.
  */
+@InternalApi
 public class ResourceRegistry {
 
     private final ConcurrentHashMap<String, ResourceEntry> byName = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ResourceEntry> byUri = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ResourceTemplateEntry> templates = new ConcurrentHashMap<>();
     final ConcurrentHashMap<String, Set<String>> subscriptions = new ConcurrentHashMap<>();
-    private final Server server;
+    private final ServerEngine server;
 
     private final ChangeSupport changes = new ChangeSupport();
 
     /**
      * Creates a resource registry bound to the given server (for broadcasting subscription notifications).
      */
-    public ResourceRegistry(Server server) {
+    public ResourceRegistry(ServerEngine server) {
         this.server = server;
     }
 

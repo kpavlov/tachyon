@@ -2,7 +2,6 @@
 
 package dev.tachyonmcp.skill
 
-import dev.tachyonmcp.server.ServerHandle
 import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.config.Mode
 import dev.tachyonmcp.server.domain.Icon
@@ -18,7 +17,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.ExperimentalUuidApi
 
 @OptIn(ExperimentalUuidApi::class)
-fun createServer(port: Int = 0): ServerHandle = TachyonServer(port = port) {
+fun createServer(port: Int = 0): TachyonServer = TachyonServer(port = port) {
     // ── identity ──────────────────────────────────────────────
     info {
         name = "demo-server"
@@ -44,10 +43,6 @@ fun createServer(port: Int = 0): ServerHandle = TachyonServer(port = port) {
         tasksRequests = true
         completions = true
         logging = true
-        // helpers — same result shorter:
-        // tools(listChanged = true)
-        // resources(subscribe = true, listChanged = true)
-        // prompts(listChanged = true)
     }
 
     // ── session — stateful or stateless ───────────────────────
@@ -116,6 +111,6 @@ fun createServer(port: Int = 0): ServerHandle = TachyonServer(port = port) {
 }
 
 fun main() {
-    val handle = createServer(8080)
-    println("MCP server on http://localhost:${handle.port()}/mcp")
+    val server = createServer(8080)
+    println("MCP server on http://localhost:${server.port()}/mcp")
 }

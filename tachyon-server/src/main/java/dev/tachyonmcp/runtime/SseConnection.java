@@ -4,7 +4,10 @@
 
 package dev.tachyonmcp.runtime;
 
+import dev.tachyonmcp.annotations.InternalApi;
+
 /** A writable SSE connection to a client. */
+@InternalApi
 public interface SseConnection {
 
     /** Returns {@code true} if the underlying channel is writable. */

@@ -4,11 +4,13 @@
 
 package dev.tachyonmcp.server.features.tasks;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.server.ServerResourceType;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 
+@InternalApi
 public class TaskEntry implements ServerResourceType {
 
     private final TaskDescriptor descriptor;

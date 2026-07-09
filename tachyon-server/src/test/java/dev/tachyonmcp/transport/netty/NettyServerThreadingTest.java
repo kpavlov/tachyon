@@ -4,13 +4,13 @@
 
 package dev.tachyonmcp.transport.netty;
 
+import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.RpcDispatcher;
-import dev.tachyonmcp.server.Server;
-import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -27,13 +27,11 @@ class NettyServerThreadingTest {
     void eventLoopsAreOnPlatformThreadsAndToolHandlerOnVirtualThread() throws Exception {
         var handlerThread = new CompletableFuture<String>();
 
-        try (Server server = TachyonServer.builder()
-                        .tool(ToolHandler.of("thread_probe", (ctx, args) -> {
-                            Thread thread = Thread.currentThread();
-                            handlerThread.complete(thread.getName() + " virtual:" + thread.isVirtual());
-                            return ToolResult.empty();
-                        }))
-                        .build();
+        try (var server = newEngine(b -> b.tool(ToolHandler.of("thread_probe", (ctx, args) -> {
+                    Thread thread = Thread.currentThread();
+                    handlerThread.complete(thread.getName() + " virtual:" + thread.isVirtual());
+                    return ToolResult.empty();
+                })));
                 var netty = new NettyServer(0, server)) {
             Callable<Thread> probe = Thread::currentThread;
 
@@ -64,13 +62,12 @@ class NettyServerThreadingTest {
     void customThreadFactoryAddsNamePrefix() throws Exception {
         var handlerThreadName = new CompletableFuture<String>();
 
-        try (Server server = TachyonServer.builder()
-                .threadFactory(Thread.ofVirtual().name("tenant-", 0).factory())
+        try (ServerEngine server = newEngine(b -> b.threadFactory(
+                        Thread.ofVirtual().name("tenant-", 0).factory())
                 .tool(ToolHandler.of("name_probe", (ctx, args) -> {
                     handlerThreadName.complete(Thread.currentThread().getName());
                     return ToolResult.empty();
-                }))
-                .build()) {
+                })))) {
             server.createSession("sess-name").activate();
             var dispatcher = new RpcDispatcher(server, server.executor());
             dispatcher
@@ -91,10 +88,8 @@ class NettyServerThreadingTest {
         var executor = Executors.newVirtualThreadPerTaskExecutor();
         var closed = new AtomicBoolean(false);
 
-        var server = TachyonServer.builder()
-                .executor(executor)
-                .tool(ToolHandler.of("exec_probe", (ctx, args) -> ToolResult.empty()))
-                .build();
+        var server = newEngine(
+                b -> b.executor(executor).tool(ToolHandler.of("exec_probe", (ctx, args) -> ToolResult.empty())));
         server.close();
 
         // The executor should still be usable (not shut down)

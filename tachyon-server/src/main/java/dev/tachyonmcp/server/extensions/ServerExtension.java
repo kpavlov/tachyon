@@ -4,16 +4,16 @@
 
 package dev.tachyonmcp.server.extensions;
 
+import dev.tachyonmcp.runtime.ChannelContext;
 import dev.tachyonmcp.runtime.Extension;
-import dev.tachyonmcp.runtime.MutableInteractionContext;
-import dev.tachyonmcp.server.Server;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import java.util.Map;
 import java.util.Set;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
 /** Pluggable server extension that can add custom methods, capabilities, and lifecycle hooks. */
-public interface ServerExtension extends Extension<MutableInteractionContext> {
+public interface ServerExtension extends Extension<ChannelContext> {
     /** Returns the server settings to advertise in the initialize response. */
     default JsonNode serverSettings() {
         return JsonNodeFactory.instance.objectNode();
@@ -30,8 +30,8 @@ public interface ServerExtension extends Extension<MutableInteractionContext> {
     }
 
     /** Bootstraps the extension during server startup. */
-    default void bootstrap(Server server) {}
+    default void bootstrap(ServerEngine server) {}
 
     /** Called when a new client connection is initialised with the extension's client settings. */
-    default void onConnectionInit(MutableInteractionContext context, Map<String, JsonNode> clientSettings) {}
+    default void onConnectionInit(ChannelContext context, Map<String, JsonNode> clientSettings) {}
 }

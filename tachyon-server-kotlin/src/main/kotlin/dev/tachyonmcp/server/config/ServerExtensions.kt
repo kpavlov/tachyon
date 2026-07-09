@@ -2,11 +2,11 @@
 
 package dev.tachyonmcp.server.config
 
-import dev.tachyonmcp.server.Server
 import dev.tachyonmcp.server.domain.ResourceContents
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry
+import dev.tachyonmcp.server.internal.ServerEngine
 
-public fun Server.resourceTemplate(
+public fun ServerEngine.resourceTemplate(
     name: String,
     uriTemplate: String,
     description: String? = null,

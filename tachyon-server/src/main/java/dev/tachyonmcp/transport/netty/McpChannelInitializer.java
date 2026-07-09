@@ -5,7 +5,7 @@
 package dev.tachyonmcp.transport.netty;
 
 import dev.tachyonmcp.server.RpcDispatcher;
-import dev.tachyonmcp.server.Server;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.netty.http.AcceptValidationHandler;
 import dev.tachyonmcp.transport.netty.http.DnsRebindingProtectionHandler;
 import dev.tachyonmcp.transport.netty.http.EndpointValidatorHandler;
@@ -66,7 +66,7 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
 
     private static final ChannelHandler statelessValidator = new StatelessValidatorHandler();
 
-    private final Server server;
+    private final ServerEngine server;
     private final RpcDispatcher dispatcher;
 
     @Nullable
@@ -77,7 +77,7 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
     public McpChannelInitializer(
             String endpointPath,
             boolean stateless,
-            Server server,
+            ServerEngine server,
             Duration readerIdleTimeout,
             Duration writerIdleTimeout,
             int maxContentLength,

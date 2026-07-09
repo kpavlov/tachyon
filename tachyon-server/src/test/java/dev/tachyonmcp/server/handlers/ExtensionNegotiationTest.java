@@ -4,17 +4,17 @@
 
 package dev.tachyonmcp.server.handlers;
 
+import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
-import dev.tachyonmcp.runtime.MutableInteractionContext;
+import dev.tachyonmcp.runtime.ChannelContext;
 import dev.tachyonmcp.runtime.Session;
-import dev.tachyonmcp.server.Server;
-import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.extensions.ServerExtension;
-import dev.tachyonmcp.server.session.DefaultMcpContext;
+import dev.tachyonmcp.server.internal.ServerEngine;
+import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.server.session.DispatchContext;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -25,14 +25,14 @@ import tools.jackson.databind.node.JsonNodeFactory;
 
 class ExtensionNegotiationTest {
 
-    private Server server;
+    private ServerEngine server;
     private Session session;
     private TestExtension testExtension;
 
     @BeforeEach
     void setUp() {
         testExtension = new TestExtension();
-        server = TachyonServer.builder().extension(testExtension).build();
+        server = newEngine(b -> b.extension(testExtension));
         session = server.createSession("sess_ext_neg");
     }
 
@@ -76,8 +76,8 @@ class ExtensionNegotiationTest {
         assertThat(testExtension.initCalled.get()).isFalse();
     }
 
-    private static DispatchContext context(Session session, Server server) {
-        var ctx = DefaultMcpContext.create(Protocols.versions().get(0), server);
+    private static DispatchContext context(Session session, ServerEngine server) {
+        var ctx = DefaultDispatchContext.create(Protocols.list().get(0), server);
         ctx.setSession(session);
         return ctx;
     }
@@ -110,7 +110,7 @@ class ExtensionNegotiationTest {
         }
 
         @Override
-        public void onConnectionInit(MutableInteractionContext context, Map<String, JsonNode> clientSettings) {
+        public void onConnectionInit(ChannelContext context, Map<String, JsonNode> clientSettings) {
             initCalled.set(true);
         }
     }

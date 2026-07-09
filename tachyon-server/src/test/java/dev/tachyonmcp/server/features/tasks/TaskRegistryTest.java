@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.features.tasks;
 
+import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CancelTaskResult;
@@ -11,8 +12,7 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetTaskPayloadResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetTaskResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListTasksResult;
 import dev.tachyonmcp.server.RpcMethodHandler;
-import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.session.DefaultMcpContext;
+import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.HashMap;
@@ -23,8 +23,7 @@ import org.junit.jupiter.api.Test;
 
 class TaskRegistryTest {
 
-    private final TaskRegistry registry =
-            new TaskRegistry(TachyonServer.builder().build());
+    private final TaskRegistry registry = new TaskRegistry(newEngine(b -> {}));
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
 
     @BeforeEach
@@ -35,7 +34,7 @@ class TaskRegistryTest {
     @Test
     void listTasksReturnsEmptyList() throws Exception {
         var listHandler = handlers.get("tasks/list");
-        var result = listHandler.handle(DefaultMcpContext.noop(), null);
+        var result = listHandler.handle(DefaultDispatchContext.noop(), null);
         assertThat(result).isInstanceOf(ListTasksResult.class);
         var listResult = (ListTasksResult) result;
         assertThat(listResult.tasks()).isEmpty();
@@ -47,14 +46,14 @@ class TaskRegistryTest {
         registry.add(new TaskEntry("task-2", "2", "Second task"));
 
         var listHandler = handlers.get("tasks/list");
-        var result = (ListTasksResult) listHandler.handle(DefaultMcpContext.noop(), null);
+        var result = (ListTasksResult) listHandler.handle(DefaultDispatchContext.noop(), null);
         assertThat(result.tasks()).hasSize(2);
     }
 
     @Test
     void getTaskNotFound() throws Exception {
         var getHandler = handlers.get("tasks/get");
-        var result = getHandler.handle(DefaultMcpContext.noop(), Map.of("taskId", "nonexistent"));
+        var result = getHandler.handle(DefaultDispatchContext.noop(), Map.of("taskId", "nonexistent"));
         assertThat(result).isInstanceOf(JsonRpcError.class);
         var err = (JsonRpcError) result;
         assertThat(err.code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
@@ -65,7 +64,7 @@ class TaskRegistryTest {
         registry.add(new TaskEntry("my-task", "task-1", "A task"));
 
         var getHandler = handlers.get("tasks/get");
-        var result = getHandler.handle(DefaultMcpContext.noop(), Map.of("taskId", "task-1"));
+        var result = getHandler.handle(DefaultDispatchContext.noop(), Map.of("taskId", "task-1"));
         assertThat(result).isInstanceOf(GetTaskResult.class);
         var getResult = (GetTaskResult) result;
         assertThat(getResult.taskId()).isEqualTo("task-1");
@@ -75,7 +74,7 @@ class TaskRegistryTest {
     @Test
     void getTaskMissingId() throws Exception {
         var getHandler = handlers.get("tasks/get");
-        var result = getHandler.handle(DefaultMcpContext.noop(), Map.of());
+        var result = getHandler.handle(DefaultDispatchContext.noop(), Map.of());
         assertThat(result).isInstanceOf(JsonRpcError.class);
     }
 
@@ -84,7 +83,7 @@ class TaskRegistryTest {
         registry.add(new TaskEntry("my-task", "task-1", "A task"));
 
         var cancelHandler = handlers.get("tasks/cancel");
-        var result = cancelHandler.handle(DefaultMcpContext.noop(), Map.of("taskId", "task-1"));
+        var result = cancelHandler.handle(DefaultDispatchContext.noop(), Map.of("taskId", "task-1"));
         assertThat(result).isInstanceOf(CancelTaskResult.class);
         var cancelResult = (CancelTaskResult) result;
         assertThat(cancelResult.taskId()).isEqualTo("task-1");
@@ -95,14 +94,14 @@ class TaskRegistryTest {
     @Test
     void cancelNonExistentTaskReturnsError() throws Exception {
         var cancelHandler = handlers.get("tasks/cancel");
-        var result = cancelHandler.handle(DefaultMcpContext.noop(), Map.of("taskId", "nonexistent"));
+        var result = cancelHandler.handle(DefaultDispatchContext.noop(), Map.of("taskId", "nonexistent"));
         assertThat(result).isInstanceOf(JsonRpcError.class);
     }
 
     @Test
     void taskResultNotFoundReturnsError() throws Exception {
         var resultHandler = handlers.get("tasks/result");
-        var result = resultHandler.handle(DefaultMcpContext.noop(), Map.of("taskId", "task-1"));
+        var result = resultHandler.handle(DefaultDispatchContext.noop(), Map.of("taskId", "task-1"));
         assertThat(result).isInstanceOf(JsonRpcError.class);
     }
 
@@ -111,7 +110,7 @@ class TaskRegistryTest {
         registry.add(new TaskEntry("my-task", "task-1", "A task"));
 
         var resultHandler = handlers.get("tasks/result");
-        var result = resultHandler.handle(DefaultMcpContext.noop(), Map.of("taskId", "task-1"));
+        var result = resultHandler.handle(DefaultDispatchContext.noop(), Map.of("taskId", "task-1"));
         assertThat(result).isInstanceOf(JsonRpcError.class);
     }
 
@@ -121,7 +120,7 @@ class TaskRegistryTest {
         registry.completeTask("task-1", "{\"result\":\"ok\"}");
 
         var resultHandler = handlers.get("tasks/result");
-        var result = resultHandler.handle(DefaultMcpContext.noop(), Map.of("taskId", "task-1"));
+        var result = resultHandler.handle(DefaultDispatchContext.noop(), Map.of("taskId", "task-1"));
         assertThat(result).isInstanceOf(GetTaskPayloadResult.class);
     }
 
@@ -132,7 +131,7 @@ class TaskRegistryTest {
         assertThat(entry.status()).isEqualTo(TaskState.WORKING);
 
         var listHandler = handlers.get("tasks/list");
-        var listResult = (ListTasksResult) listHandler.handle(DefaultMcpContext.noop(), null);
+        var listResult = (ListTasksResult) listHandler.handle(DefaultDispatchContext.noop(), null);
         assertThat(listResult.tasks()).hasSize(1);
     }
 
@@ -143,7 +142,7 @@ class TaskRegistryTest {
         assertThat(completed).isTrue();
 
         var getHandler = handlers.get("tasks/get");
-        var result = (GetTaskResult) getHandler.handle(DefaultMcpContext.noop(), Map.of("taskId", entry.id()));
+        var result = (GetTaskResult) getHandler.handle(DefaultDispatchContext.noop(), Map.of("taskId", entry.id()));
         assertThat(result.status()).isEqualTo(dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatus.COMPLETED);
     }
 
@@ -154,7 +153,7 @@ class TaskRegistryTest {
         assertThat(failed).isTrue();
 
         var getHandler = handlers.get("tasks/get");
-        var result = (GetTaskResult) getHandler.handle(DefaultMcpContext.noop(), Map.of("taskId", entry.id()));
+        var result = (GetTaskResult) getHandler.handle(DefaultDispatchContext.noop(), Map.of("taskId", entry.id()));
         assertThat(result.status()).isEqualTo(dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatus.FAILED);
     }
 

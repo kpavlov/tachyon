@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.protocol;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import io.netty.handler.codec.http.HttpRequest;
 import java.util.Comparator;
 import java.util.List;
@@ -13,17 +14,18 @@ import java.util.ServiceLoader;
 /**
  * Registry of {@link Protocol} implementations discovered via {@link ServiceLoader}.
  */
+@InternalApi
 public final class Protocols {
 
     private Protocols() {}
 
-    static final List<Protocol> VERSIONS;
+    private static final List<Protocol> PROTOCOLS;
 
     static {
-        VERSIONS = ServiceLoader.load(Protocol.class).stream()
+        PROTOCOLS = ServiceLoader.load(Protocol.class).stream()
                 .map(ServiceLoader.Provider::get)
                 .toList();
-        if (VERSIONS.isEmpty()) {
+        if (PROTOCOLS.isEmpty()) {
             throw new IllegalStateException("No Protocol implementations found.");
         }
     }
@@ -37,15 +39,15 @@ public final class Protocols {
      * newest/highest version in the intersection.
      */
     public static Optional<Protocol> resolve(HttpRequest request) {
-        return VERSIONS.stream()
+        return PROTOCOLS.stream()
                 .filter(pv -> pv.matches(request))
                 .max(Comparator.comparing(Protocol::versionString).thenComparingInt(Protocol::priority));
     }
 
     /**
-     * All registered protocol version implementations.
+     * All registered protocol implementations.
      */
-    public static List<Protocol> versions() {
-        return VERSIONS;
+    public static List<Protocol> list() {
+        return PROTOCOLS;
     }
 }

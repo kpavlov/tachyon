@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.session;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.runtime.Session;
 import java.util.Collection;
 import java.util.Optional;
@@ -11,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 
+@InternalApi
 public class InMemorySessionStore implements SessionStore {
 
     private final ConcurrentHashMap<String, Session> sessions = new ConcurrentHashMap<>();

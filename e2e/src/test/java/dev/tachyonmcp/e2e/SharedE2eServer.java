@@ -4,7 +4,6 @@
 
 package dev.tachyonmcp.e2e;
 
-import dev.tachyonmcp.server.ServerHandle;
 import dev.tachyonmcp.server.TachyonServer;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
@@ -14,9 +13,9 @@ final class SharedE2eServer {
 
     private static final Logger logger = LoggerFactory.getLogger(SharedE2eServer.class);
     private static final AtomicBoolean started = new AtomicBoolean();
-    private static volatile ServerHandle handle;
+    private static volatile TachyonServer handle;
 
-    static synchronized ServerHandle ensureStarted() {
+    static synchronized TachyonServer ensureStarted() {
         if (started.get()) {
             return handle;
         }

@@ -5,9 +5,9 @@
 package dev.tachyonmcp.transport.netty;
 
 import dev.tachyonmcp.protocol.Protocols;
+import dev.tachyonmcp.runtime.ChannelContext;
 import dev.tachyonmcp.runtime.InteractionContext.Lifecycle;
 import dev.tachyonmcp.runtime.InteractionEvent;
-import dev.tachyonmcp.runtime.MutableInteractionContext;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -19,7 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Creates and manages the per-channel {@link MutableInteractionContext} on channel
+ * Creates and manages the per-channel {@link ChannelContext} on channel
  * active/inactive lifecycle events. Must be placed early in the pipeline so
  * downstream handlers can retrieve the context via {@code requireInteractionContext(ctx)}.
  */
@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 public class InteractionHandler extends ChannelDuplexHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(InteractionHandler.class);
-    public static final AttributeKey<@Nullable MutableInteractionContext> INTERACTION_CONTEXT_KEY =
+    public static final AttributeKey<@Nullable ChannelContext> INTERACTION_CONTEXT_KEY =
             AttributeKey.valueOf("interactionContext");
 
     @Override

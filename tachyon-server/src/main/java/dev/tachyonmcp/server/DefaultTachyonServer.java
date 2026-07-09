@@ -4,7 +4,9 @@
 
 package dev.tachyonmcp.server;
 
+import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
+import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.runtime.Backpressure;
 import dev.tachyonmcp.runtime.InteractionContext;
@@ -27,19 +29,19 @@ import dev.tachyonmcp.server.handlers.CompletionHandlers;
 import dev.tachyonmcp.server.handlers.InitializeHandler;
 import dev.tachyonmcp.server.handlers.LoggingHandlers;
 import dev.tachyonmcp.server.handlers.PingHandler;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
 import dev.tachyonmcp.server.json.PayloadDeserializer;
 import dev.tachyonmcp.server.json.PayloadSerializer;
-import dev.tachyonmcp.server.session.InMemorySessionLogRouter;
-import dev.tachyonmcp.server.session.InMemorySessionStore;
 import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.server.session.SessionIdGenerator;
 import dev.tachyonmcp.server.session.SessionLogRouter;
 import dev.tachyonmcp.server.session.SessionManager;
 import dev.tachyonmcp.server.session.SessionStore;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
+import dev.tachyonmcp.transport.netty.NettyServer;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -48,7 +50,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.ServiceLoader;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -62,16 +63,9 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Core MCP server that manages sessions, registries, method handlers, and extension lifecycle.
- * Created via {@link ServerBuilder}.
- *
- * <p>When a second protocol lands, split the feature registries (tools, resources, prompts,
- * tasks) from the session/transport core into a separate abstraction.
- */
-public class Server implements Closeable {
+final class DefaultTachyonServer implements ServerEngine {
 
-    private static final Logger logger = LoggerFactory.getLogger(Server.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultTachyonServer.class);
 
     private final ServerConfig config;
     private final SessionLogRouter router;
@@ -91,17 +85,23 @@ public class Server implements Closeable {
     private final Map<String, String> extensionMethodOwners = new ConcurrentHashMap<>();
     private final Map<String, ServerExtension> extensionsById = new ConcurrentHashMap<>();
 
+    private int port;
+
+    @Nullable
+    private String host;
+
+    @Nullable
+    private Closeable transport;
+
     private static final List<ProtocolResponseMapper> RESPONSE_MAPPERS;
 
     static {
         var mappers = new ArrayList<ProtocolResponseMapper>();
-        ServiceLoader.load(ProtocolResponseMapper.class).forEach(mappers::add);
+        Protocols.list().stream().map(Protocol::responseMapper).forEach(mappers::add);
         RESPONSE_MAPPERS = List.copyOf(mappers);
     }
 
-    /**
-     * Returns the protocol response mapper for the default MCP version.
-     */
+    @Override
     public ProtocolResponseMapper responseMapper() {
         for (var mapper : RESPONSE_MAPPERS) {
             if (mapper.supports("mcp", McpProtocol.VERSION)) {
@@ -111,57 +111,43 @@ public class Server implements Closeable {
         throw new IllegalStateException("No protocol response mapper found");
     }
 
-    /**
-     * Returns the server configuration.
-     */
+    @Override
     public ServerConfig config() {
         return config;
     }
 
-    /**
-     * Returns {@code true} when running in stateless mode (no session persistence).
-     */
+    @Override
     public boolean isStateless() {
         return !config.session().enabled();
     }
 
-    /**
-     * Returns the configured session id generator (defaults to {@link SessionIdGenerator#DEFAULT}).
-     */
+    @Override
     public SessionIdGenerator sessionIdGenerator() {
         return config.session().sessionIdGenerator();
     }
 
-    /**
-     * Returns the executor used for handler dispatch.
-     */
+    @Override
     public ExecutorService executor() {
         return executor;
     }
 
-    /**
-     * Sets the logging level for a session.
-     */
+    @Override
     public void setLoggingLevel(String sessionId, LoggingLevel level) {
         loggingLevels.put(sessionId, level);
     }
 
-    /**
-     * Returns the logging level for a session, or {@code null} if not set.
-     */
+    @Override
+    @Nullable
     public LoggingLevel getLoggingLevel(String sessionId) {
         return loggingLevels.get(sessionId);
     }
 
-    /**
-     * Emits a log notification for the given session if the requested level meets
-     * the configured threshold.
-     */
-    public void log(Session session, LoggingLevel requested, String logger, Object data) {
+    @Override
+    public void log(Session session, LoggingLevel requested, String loggerName, Object data) {
         var configured = loggingLevels.get(session.id());
         if (configured == null) return;
         if (!isLevelEnabled(requested, configured)) return;
-        var params = Map.of("level", requested.getValue(), "logger", logger, "data", data);
+        var params = Map.of("level", requested.getValue(), "logger", loggerName, "data", data);
         sendNotification(session, "notifications/message", params);
     }
 
@@ -169,9 +155,7 @@ public class Server implements Closeable {
         return requested.ordinal() >= configured.ordinal();
     }
 
-    /**
-     * Resolves effective capabilities based on configuration and registered features.
-     */
+    @Override
     public ServerCapabilities resolveCapabilities() {
         final var builder = ServerCapabilities.builder();
 
@@ -226,7 +210,7 @@ public class Server implements Closeable {
         return builder.build();
     }
 
-    Server(
+    DefaultTachyonServer(
             ExecutorService executor,
             boolean ownsExecutor,
             SessionLogRouter router,
@@ -241,6 +225,7 @@ public class Server implements Closeable {
         this.ownsExecutor = ownsExecutor;
         this.config = Objects.requireNonNull(config, "config cannot be null");
         this.router = Objects.requireNonNull(router, "router cannot be null");
+        this.port = config.network().port();
         this.extensions = extensions != null ? extensions : List.of();
         this.sessionManager = new SessionManager(sessionStore);
         final JsonSchemaValidator inputValidator1 =
@@ -266,56 +251,6 @@ public class Server implements Closeable {
         }
     }
 
-    public Server() {
-        this(
-                defaultExecutor(),
-                true,
-                new InMemorySessionLogRouter(),
-                new InMemorySessionStore(),
-                ServerConfig.DEFAULT,
-                null,
-                null,
-                null,
-                null,
-                List.of());
-    }
-
-    public Server(SessionLogRouter router, SessionStore sessionStore, JsonSchemaValidator validator) {
-        this(
-                defaultExecutor(),
-                true,
-                router,
-                sessionStore,
-                ServerConfig.DEFAULT,
-                validator,
-                validator,
-                null,
-                null,
-                List.of());
-    }
-
-    public Server(
-            SessionLogRouter router,
-            SessionStore sessionStore,
-            ServerConfig config,
-            @Nullable JsonSchemaValidator inputValidator,
-            @Nullable JsonSchemaValidator outputValidator,
-            @Nullable PayloadSerializer payloadSerializer,
-            @Nullable PayloadDeserializer payloadDeserializer,
-            @Nullable List<ServerExtension> extensions) {
-        this(
-                defaultExecutor(),
-                true,
-                router,
-                sessionStore,
-                config,
-                inputValidator,
-                outputValidator,
-                payloadSerializer,
-                payloadDeserializer,
-                extensions);
-    }
-
     static ExecutorService defaultExecutorForBuilder() {
         return defaultExecutor();
     }
@@ -323,6 +258,23 @@ public class Server implements Closeable {
     private static ExecutorService defaultExecutor() {
         return Executors.newThreadPerTaskExecutor(
                 Thread.ofVirtual().name("tachyon-", 0).factory());
+    }
+
+    /** Called by ServerBuilder after transport bind to set the actual bound host, port, and transport. */
+    void bind(Closeable transport, String host, int port) {
+        this.transport = transport;
+        this.host = host;
+        this.port = port;
+    }
+
+    @Override
+    public int port() {
+        return port;
+    }
+
+    @Override
+    public String host() {
+        return host != null ? host : config().network().host();
     }
 
     private void setupChangeListeners(ServerConfig config) {
@@ -345,11 +297,8 @@ public class Server implements Closeable {
         broadcastNotification(method, java.util.Map.of());
     }
 
-    /**
-     * Sends a notification to all active sessions.
-     */
+    @Override
     public void broadcastNotification(String method, Object params) {
-        // Serialize once — the payload is identical for every session.
         var paramsStr = JsonRpcCodec.toJsonParams(params);
         var notificationJson = JsonRpcCodec.serializeNotificationAsString(method, paramsStr);
         for (var entry : sessionManager.allSessions()) {
@@ -370,25 +319,19 @@ public class Server implements Closeable {
         CompletionHandlers.register(methodHandlers);
     }
 
-    /**
-     * Registers a method handler keyed by its own method name.
-     */
+    @Override
     public void registerHandler(RpcMethodHandler handler) {
         methodHandlers.put(handler.method(), handler);
         logger.debug("Handler registered: {}", handler.method());
     }
 
-    /**
-     * Registers a method handler with an explicit method name.
-     */
+    @Override
     public void registerHandler(String method, RpcMethodHandler handler) {
         methodHandlers.put(method, handler);
         logger.debug("Handler registered: {}", method);
     }
 
-    /**
-     * Returns the handler for a method, or {@code null} if not registered.
-     */
+    @Override
     @Nullable
     public RpcMethodHandler getHandler(String method) {
         return methodHandlers.get(method);
@@ -414,31 +357,23 @@ public class Server implements Closeable {
         }
     }
 
-    /**
-     * Returns the registered extensions.
-     */
+    @Override
     public List<ServerExtension> extensions() {
         return Collections.unmodifiableList(extensions);
     }
 
-    /**
-     * Returns the extension ID that owns the given method, or {@code null} if none.
-     */
+    @Override
     public @Nullable String extensionForMethod(String method) {
         return extensionMethodOwners.get(method);
     }
 
-    /**
-     * Returns {@code true} if the given extension requires the meta envelope for its methods.
-     */
+    @Override
     public boolean extensionRequiresMeta(String extensionId) {
         var ext = extensionsById.get(extensionId);
         return ext != null && ext.requiresMetaEnvelope();
     }
 
-    /**
-     * Registers a tool with string JSON schemas and a handler function.
-     */
+    @Override
     public void registerTool(
             String name,
             @Nullable String description,
@@ -453,59 +388,43 @@ public class Server implements Closeable {
                 fn));
     }
 
-    /**
-     * Registers a tool handler.
-     */
+    @Override
     public void registerTool(ToolHandler handler) {
         toolRegistry.register(handler);
         logger.debug("Tool registered: {}", handler.descriptor().name());
     }
 
-    /**
-     * Returns the descriptor for a tool by name, or {@code null} if not registered.
-     */
+    @Override
     public @Nullable ToolDescriptor getTool(String name) {
         return toolRegistry.getDescriptor(name);
     }
 
-    /**
-     * Returns the resource registry.
-     */
+    @Override
     public ResourceRegistry resources() {
         return resourceRegistry;
     }
 
-    /**
-     * Returns the prompt registry.
-     */
+    @Override
     public PromptRegistry prompts() {
         return promptRegistry;
     }
 
-    /**
-     * Returns the task registry.
-     */
+    @Override
     public TaskRegistry tasks() {
         return taskRegistry;
     }
 
-    /**
-     * Creates and registers a new session with the given ID.
-     */
+    @Override
     public Session createSession(String sessionId) {
         return sessionManager.createSession(sessionId);
     }
 
-    /**
-     * Returns the session with the given ID, if present.
-     */
+    @Override
     public Optional<Session> getSession(String sessionId) {
         return sessionManager.getSession(sessionId);
     }
 
-    /**
-     * Removes and closes the session with the given ID.
-     */
+    @Override
     public void removeSession(String sessionId) {
         sessionManager.removeSession(sessionId);
     }
@@ -522,16 +441,12 @@ public class Server implements Closeable {
         return sseEvent;
     }
 
-    /**
-     * Sends a notification to the given session.
-     */
+    @Override
     public void sendNotification(Session session, String method, Object params) {
         sendNotification(session, method, params, null);
     }
 
-    /**
-     * Sends a notification to the given session, optionally via a bound outbound SSE stream.
-     */
+    @Override
     public void sendNotification(
             Session session, String method, @Nullable Object params, @Nullable OutboundSseStream stream) {
         var paramsStr = JsonRpcCodec.toJsonParams(params);
@@ -548,8 +463,6 @@ public class Server implements Closeable {
         if (session.state() == SessionState.CLOSED) {
             return;
         }
-        // Resolve the delivery stream BEFORE building the event: its key goes into the event log
-        // and the SSE id so replay stays per-stream (spec: no cross-stream redelivery).
         var target = stream != null ? stream : messageRouter.resolve(session);
         var streamKey = target != null ? target.streamKey() : null;
         var sseEventId = nextEventId();
@@ -557,7 +470,7 @@ public class Server implements Closeable {
                 session.id(), method, paramsStr, System.currentTimeMillis(), sseEventId, streamKey);
         router.append(notificationEvent);
 
-        var sseEvent = new SseEvent(wireEventId(sseEventId, streamKey), "message", notificationJson);
+        var sseEvent = new SseEvent(ServerEngine.wireEventId(sseEventId, streamKey), "message", notificationJson);
 
         if (target != null) {
             target.start();
@@ -567,24 +480,12 @@ public class Server implements Closeable {
         }
     }
 
-    /**
-     * Formats an SSE wire event id: the global counter value, suffixed with {@code #<streamKey>}
-     * for POST-SSE streams so a {@code Last-Event-ID} identifies its originating stream.
-     */
-    public static String wireEventId(long sseEventId, @Nullable String streamKey) {
-        return streamKey == null ? String.valueOf(sseEventId) : sseEventId + "#" + streamKey;
-    }
-
-    /**
-     * Sends a request to the client and returns a future that completes with the response.
-     */
+    @Override
     public CompletableFuture<String> sendRequest(Session session, String method, Object params) {
         return sendRequest(session, method, params, null);
     }
 
-    /**
-     * Sends a request to the client, optionally via a bound outbound SSE stream, and returns a future.
-     */
+    @Override
     public CompletableFuture<String> sendRequest(
             Session session, String method, Object params, @Nullable OutboundSseStream stream) {
         var paramsStr = JsonRpcCodec.toJsonParams(params);
@@ -601,7 +502,7 @@ public class Server implements Closeable {
                 session.id(), requestId, method, paramsStr, System.currentTimeMillis(), sseEventId, streamKey);
         router.append(outboundEvent);
 
-        var sseEvent = new SseEvent(wireEventId(sseEventId, streamKey), "message", requestJson);
+        var sseEvent = new SseEvent(ServerEngine.wireEventId(sseEventId, streamKey), "message", requestJson);
 
         if (target != null) {
             target.start();
@@ -617,9 +518,7 @@ public class Server implements Closeable {
         return future;
     }
 
-    /**
-     * Completes a pending client request with the given result JSON.
-     */
+    @Override
     public boolean completePendingRequest(Object requestId, String resultJson) {
         var future = pendingRequests.remove(requestId);
         if (future != null) {
@@ -629,9 +528,7 @@ public class Server implements Closeable {
         return false;
     }
 
-    /**
-     * Fails a pending client request with the given error message.
-     */
+    @Override
     public boolean failPendingRequest(Object requestId, String message) {
         var future = pendingRequests.remove(requestId);
         if (future != null) {
@@ -641,9 +538,7 @@ public class Server implements Closeable {
         return false;
     }
 
-    /**
-     * Registers a pending request with a timeout.
-     */
+    @Override
     public void registerPendingRequest(Object requestId, CompletableFuture<String> future) {
         pendingRequests.put(requestId, future);
         var timeout = config.runtime().requestTimeout();
@@ -657,8 +552,6 @@ public class Server implements Closeable {
                             timeout.toSeconds(),
                             requestId,
                             pendingRequests.size());
-                    // getAllStackTraces() forces a global safepoint and walks every platform AND
-                    // virtual thread stack — never evaluate it unless the dump will actually be logged.
                     if (logger.isTraceEnabled()) {
                         logger.trace("{}", threadDump());
                     }
@@ -684,23 +577,17 @@ public class Server implements Closeable {
         return sb.toString();
     }
 
-    /**
-     * Appends an event to the session log.
-     */
+    @Override
     public void appendEvent(SessionEvent event) {
         router.append(event);
     }
 
-    /**
-     * Replays session events after the given sequence number.
-     */
+    @Override
     public List<SessionEvent> replay(String sessionId, long lastSeq) {
         return router.replay(sessionId, lastSeq);
     }
 
-    /**
-     * Returns and increments the event ID counter.
-     */
+    @Override
     public long nextEventId() {
         return eventIdCounter.incrementAndGet();
     }
@@ -715,7 +602,7 @@ public class Server implements Closeable {
             if (!session.connection().isWritable()) {
                 return false;
             }
-            var sseEvent = toSseEvent(event);
+            var sseEvent = ServerEngine.toSseEvent(event);
             if (sseEvent == null) return true;
             return session.send(sseEvent);
         });
@@ -726,25 +613,11 @@ public class Server implements Closeable {
         return session.computeBackpressure();
     }
 
-    public static @Nullable SseEvent toSseEvent(SessionEvent event) {
-        return switch (event) {
-            case SessionEvent.ResponseEvent r ->
-                new SseEvent(wireEventId(r.sseEventId(), r.streamKey()), "message", r.resultJson());
-            case SessionEvent.NotificationEvent n -> {
-                var json = JsonRpcCodec.serializeNotificationAsString(n.method(), n.paramsJson());
-                yield new SseEvent(wireEventId(n.sseEventId(), n.streamKey()), "message", json);
-            }
-            case SessionEvent.OutboundRequestEvent o -> {
-                var json = JsonRpcCodec.serializeRequestAsString(o.requestId(), o.method(), o.paramsJson());
-                yield new SseEvent(wireEventId(o.sseEventId(), o.streamKey()), "message", json);
-            }
-            case SessionEvent.RequestEvent ignored -> null;
-            case SessionEvent.CancelEvent ignored -> null;
-        };
-    }
-
     @Override
     public void close() {
+        if (transport instanceof NettyServer netty) {
+            netty.stopAccepting();
+        }
         try {
             logger.info("Shutting down TachyonMCP Server");
             shutdownExtensions();
@@ -765,6 +638,16 @@ public class Server implements Closeable {
             router.close();
         } catch (IOException e) {
             logger.debug("Error while shutting down", e);
+        } finally {
+            if (transport instanceof NettyServer netty) {
+                netty.close();
+            } else if (transport != null) {
+                try {
+                    transport.close();
+                } catch (IOException e) {
+                    logger.debug("Error closing transport", e);
+                }
+            }
         }
     }
 }

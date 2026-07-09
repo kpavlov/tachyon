@@ -9,7 +9,7 @@ import static dev.tachyonmcp.transport.netty.InteractionHandler.INTERACTION_CONT
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.server.RpcDispatcher;
-import dev.tachyonmcp.server.Server;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.SessionIdGenerator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -55,7 +55,7 @@ public final class ChannelHandlerUtils {
      * the generator can read it at session-creation time. A copy is required because the pooled
      * request is released before the async dispatch runs.
      */
-    public static void captureInitRequest(ChannelHandlerContext ctx, HttpRequest req, Server server) {
+    public static void captureInitRequest(ChannelHandlerContext ctx, HttpRequest req, ServerEngine server) {
         if (server.isStateless() || server.sessionIdGenerator() == SessionIdGenerator.DEFAULT) {
             return;
         }

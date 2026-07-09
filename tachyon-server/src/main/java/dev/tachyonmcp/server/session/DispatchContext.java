@@ -4,25 +4,19 @@
 
 package dev.tachyonmcp.server.session;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
-import dev.tachyonmcp.runtime.MutableInteractionContext;
+import dev.tachyonmcp.runtime.ChannelContext;
 import dev.tachyonmcp.server.OutboundSseStream;
-import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.domain.LoggingLevel;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Internal dispatch surface — the rich context handed to dispatch plumbing, {@code RpcMethodHandler}s,
- * and extension lifecycle hooks. It exposes the server, protocol response mapper, and outbound SSE stream
- * on top of {@link MutableInteractionContext}.
- *
- * <p><strong>Not part of the tool-author API.</strong> Tool/resource/prompt handlers receive the narrow
- * {@link dev.tachyonmcp.runtime.InteractionContext}; this type may change without notice.
- */
-public interface DispatchContext extends MutableInteractionContext {
+@InternalApi
+public interface DispatchContext extends ChannelContext {
 
-    /** Returns the owning {@link Server}. */
-    Server server();
+    /** Returns the owning {@link ServerEngine}. */
+    ServerEngine engine();
 
     /** Sets the logging level for the current session; no-op when no session is bound. */
     void setLoggingLevel(LoggingLevel level);

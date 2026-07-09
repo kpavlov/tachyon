@@ -4,13 +4,15 @@
 
 package dev.tachyonmcp.server;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatus;
-import dev.tachyonmcp.runtime.MutableInteractionContext;
+import dev.tachyonmcp.runtime.ChannelContext;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.server.features.tasks.TaskState;
-import dev.tachyonmcp.server.session.DefaultMcpContext;
+import dev.tachyonmcp.server.internal.ServerEngine;
+import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
@@ -38,13 +40,14 @@ import org.slf4j.LoggerFactory;
 /**
  * Orchestrates the MCP server's per-request flow: parses JSON-RPC messages, establishes the session on
  * {@code initialize}, routes to registered handlers (including extension methods), tracks pending
- * requests, and encodes responses. Collaborator of {@link Server} — server holds state/registries,
+ * requests, and encodes responses. Collaborator of {@link DefaultTachyonServer} — server holds state/registries,
  * this drives one request at a time.
  *
  * <p>MCP- and spec-version-specific: it special-cases {@code initialize}/task-status and binds the
  * {@code v2025_11_25} models/codecs. The version-specific call-sites (marked below) move behind an
  * {@code McpDialect} when a second spec version is wired.
  */
+@InternalApi
 public class RpcDispatcher {
 
     private static final Logger logger = LoggerFactory.getLogger(RpcDispatcher.class);
@@ -73,9 +76,9 @@ public class RpcDispatcher {
 
     private final Executor executor;
 
-    private final Server server;
+    private final ServerEngine server;
 
-    public RpcDispatcher(Server server, Executor executor) {
+    public RpcDispatcher(ServerEngine server, Executor executor) {
         this.server = server;
         this.executor = executor;
     }
@@ -84,11 +87,11 @@ public class RpcDispatcher {
      * Decorates the per-channel context with the per-request MCP dispatch surface. Without a channel
      * context (direct invocation, tests), fresh channel state is created for the default protocol.
      */
-    private DispatchContext dispatchContext(@Nullable MutableInteractionContext channelContext) {
+    private DispatchContext dispatchContext(@Nullable ChannelContext channelContext) {
         var channel = channelContext != null
                 ? channelContext
-                : Protocols.versions().getFirst().createInteractionContext();
-        return new DefaultMcpContext(channel, server);
+                : Protocols.list().getFirst().createInteractionContext();
+        return new DefaultDispatchContext(channel, server);
     }
 
     public sealed interface DispatchResult permits DispatchResult.Accepted, DispatchResult.Response {
@@ -126,7 +129,7 @@ public class RpcDispatcher {
             Object params,
             @Nullable String sessionId,
             @Nullable OutboundSseStream outboundSseStream,
-            @Nullable MutableInteractionContext channelContext) {
+            @Nullable ChannelContext channelContext) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(method, "method");
 
@@ -389,7 +392,7 @@ public class RpcDispatcher {
     }
 
     private CompletableFuture<DispatchResult> dispatchInitializeAsync(
-            Object id, Object rawParams, DispatchContext ic, @Nullable MutableInteractionContext channelContext) {
+            Object id, Object rawParams, DispatchContext ic, @Nullable ChannelContext channelContext) {
         logger.debug("Client initialize: id={} stateless={}", id, server.isStateless());
         var handler = server.getHandler("initialize");
         if (handler == null) {
@@ -440,7 +443,7 @@ public class RpcDispatcher {
         }
     }
 
-    private String generateSessionId(@Nullable MutableInteractionContext channelContext) {
+    private String generateSessionId(@Nullable ChannelContext channelContext) {
         var request = channelContext != null ? channelContext.<HttpRequest>getAttribute(ATTR_INIT_REQUEST) : null;
         var generator = server.sessionIdGenerator();
         return generator.generate(request != null ? request : EMPTY_INIT_REQUEST);

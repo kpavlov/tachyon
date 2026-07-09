@@ -7,7 +7,7 @@ Extensions add custom MCP methods and negotiate capabilities with clients via th
 ```java
 import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.Server;
-import dev.tachyonmcp.runtime.MutableInteractionContext;
+import dev.tachyonmcp.runtime.ChannelContext;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import java.util.Map;
@@ -34,7 +34,7 @@ public class AuditExtension implements ServerExtension {
     }
 
     @Override
-    public void onConnectionInit(MutableInteractionContext ctx, Map<String, JsonNode> clientSettings) {
+    public void onConnectionInit(ChannelContext ctx, Map<String, JsonNode> clientSettings) {
         // called when a client negotiates this extension
     }
 

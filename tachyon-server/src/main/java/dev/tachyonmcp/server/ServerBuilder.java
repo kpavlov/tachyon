@@ -21,6 +21,7 @@ import dev.tachyonmcp.server.features.prompts.PromptHandler;
 import dev.tachyonmcp.server.features.prompts.PromptHandlerResult;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceHandler;
+import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
@@ -39,7 +40,6 @@ import io.netty.channel.ChannelPipeline;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -49,7 +49,7 @@ import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Fluent builder for {@link Server}. Supports feature registration and configuration.
+ * Fluent builder for {@link TachyonServer}. Supports feature registration and configuration.
  */
 public final class ServerBuilder {
 
@@ -219,6 +219,14 @@ public final class ServerBuilder {
     }
 
     /**
+     * Registers a resource template.
+     */
+    public ServerBuilder resourceTemplate(ResourceTemplateEntry template) {
+        featuresConfig.templates.add(template);
+        return this;
+    }
+
+    /**
      * Registers a server extension.
      */
     public ServerBuilder extension(ServerExtension extension) {
@@ -321,9 +329,9 @@ public final class ServerBuilder {
     // === Terminal methods ===
 
     /**
-     * Builds the {@link Server} without binding a transport.
+     * Builds the {@link TachyonServer} without binding a transport.
      */
-    public Server build() {
+    public TachyonServer build() {
         var sessionConfig = sessionBuilder.build();
         var router = sessionConfig.sessionLogRouter() != null
                 ? sessionConfig.sessionLogRouter()
@@ -341,10 +349,10 @@ public final class ServerBuilder {
             resolvedExecutor = Executors.newThreadPerTaskExecutor(threadFactory);
             ownsExecutor = true;
         } else {
-            resolvedExecutor = Server.defaultExecutorForBuilder();
+            resolvedExecutor = DefaultTachyonServer.defaultExecutorForBuilder();
             ownsExecutor = true;
         }
-        var server = new Server(
+        var server = new DefaultTachyonServer(
                 resolvedExecutor,
                 ownsExecutor,
                 router,
@@ -366,18 +374,19 @@ public final class ServerBuilder {
                                     : (ctx, req) -> TextResourceContents.of(d.uri(), d.mimeType(), "", null));
         });
         featuresConfig.prompts.forEach(p -> server.prompts().add(p.descriptor(), p.handler()));
+        featuresConfig.templates.forEach(t -> server.resources().addTemplate(t));
         return server;
     }
 
     /**
      * Builds the server and starts the Netty transport (blocking). Requires a port to be set.
      */
-    public ServerHandle start() {
+    public TachyonServer start() {
         var networkConfig = networkBuilder.build();
         if (networkConfig.port() < 0) {
             throw new IllegalStateException("Port must be set before start()");
         }
-        var server = build();
+        var server = (DefaultTachyonServer) build();
         var nettyConfig = new NettyServerConfig(
                 networkConfig.host(),
                 networkConfig.port(),
@@ -393,14 +402,8 @@ public final class ServerBuilder {
                 networkConfig.ioEngine(),
                 pipelineCustomizer);
         var netty = new NettyServer(server, nettyConfig);
-        return new ServerHandle(server, netty.port(), netty);
-    }
-
-    /**
-     * Builds the server and starts the Netty transport (non-blocking).
-     */
-    public CompletableFuture<ServerHandle> startAsync() {
-        return CompletableFuture.supplyAsync(this::start);
+        server.bind(netty, netty.host(), netty.port());
+        return server;
     }
 
     /**
@@ -419,6 +422,7 @@ public final class ServerBuilder {
 
         final List<ToolHandler> tools = new ArrayList<>();
         final List<ResourceRegistration> resources = new ArrayList<>();
+        final List<ResourceTemplateEntry> templates = new ArrayList<>();
         final List<PromptRegistration> prompts = new ArrayList<>();
         final List<ServerExtension> extensions = new ArrayList<>();
 

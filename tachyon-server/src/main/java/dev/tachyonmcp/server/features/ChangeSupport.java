@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.features;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.slf4j.Logger;
@@ -15,6 +16,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Konstantin Pavlov
  */
+@InternalApi
 public final class ChangeSupport {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ChangeSupport.class);

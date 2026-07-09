@@ -4,8 +4,8 @@
 
 package dev.tachyonmcp.protocol;
 
-import dev.tachyonmcp.runtime.DefaultInteractionContext;
-import dev.tachyonmcp.runtime.MutableInteractionContext;
+import dev.tachyonmcp.runtime.ChannelContext;
+import dev.tachyonmcp.runtime.DefaultChannelContext;
 import io.netty.handler.codec.http.HttpRequest;
 
 /**
@@ -46,15 +46,7 @@ public interface Protocol {
     /** Response mapper for this protocol version. */
     ProtocolResponseMapper responseMapper();
 
-    /**
-     * Creates the per-channel {@link MutableInteractionContext} holding channel-scoped protocol
-     * state: protocol identity, lifecycle phase, session slot, attributes, and enabled extensions.
-     *
-     * <p>Dispatch-time collaborators (server access, notifications, outbound streams) are not part
-     * of this context — each dispatcher decorates the channel context with its own per-request
-     * surface. Override only when the protocol carries custom channel state.
-     */
-    default MutableInteractionContext createInteractionContext() {
-        return new DefaultInteractionContext(this);
+    default ChannelContext createInteractionContext() {
+        return new DefaultChannelContext(this);
     }
 }

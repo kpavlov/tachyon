@@ -4,14 +4,15 @@
 
 package dev.tachyonmcp.server.features.tasks;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.ProtocolMappers;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.server.RpcMethodHandler;
-import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.features.Registry;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.Map;
@@ -28,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Registry for long-running tasks with create/cancel/complete lifecycle and TTL janitor. */
+@InternalApi
 public class TaskRegistry extends Registry<TaskEntry> {
 
     private static final Logger logger = LoggerFactory.getLogger(TaskRegistry.class);
@@ -38,11 +40,11 @@ public class TaskRegistry extends Registry<TaskEntry> {
 
     private final ConcurrentHashMap<String, TaskEntry> byId = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Future<?>> running = new ConcurrentHashMap<>();
-    private final Server server;
+    private final ServerEngine server;
     private volatile @Nullable ScheduledExecutorService ttlJanitor;
 
     /** Creates a task registry bound to the given server (for broadcasting status notifications). */
-    public TaskRegistry(Server server) {
+    public TaskRegistry(ServerEngine server) {
         this.server = server;
     }
 

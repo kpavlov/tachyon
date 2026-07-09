@@ -4,17 +4,17 @@
 
 package dev.tachyonmcp.transport.netty;
 
+import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.RpcDispatcher;
-import dev.tachyonmcp.server.Server;
-import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import java.util.ArrayList;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
@@ -45,16 +45,13 @@ class NotificationDeliveryTest {
         return ToolResult.text("ok");
     });
 
-    private Server server;
+    private ServerEngine server;
     private RpcDispatcher dispatcher;
     private CollectingConnection testConn;
 
     @BeforeEach
     void setUp() {
-        server = TachyonServer.builder()
-                .session(s -> s.enabled(true))
-                .tool(PROGRESS_AND_LOG_TOOL)
-                .build();
+        server = newEngine(b -> b.session(s -> s.enabled(true)).tool(PROGRESS_AND_LOG_TOOL));
         dispatcher = new RpcDispatcher(server, server.executor());
         testConn = new CollectingConnection();
         Session session = server.createSession("sess_test");

@@ -4,19 +4,17 @@
 
 package dev.tachyonmcp.server.session;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.Protocol;
-import dev.tachyonmcp.protocol.ProtocolMappers;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.Protocols;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
-import dev.tachyonmcp.runtime.DefaultInteractionContext;
-import dev.tachyonmcp.runtime.MutableInteractionContext;
+import dev.tachyonmcp.runtime.ChannelContext;
 import dev.tachyonmcp.runtime.Notifications;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.OutboundSseStream;
-import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.domain.LoggingLevel;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.Map;
 import java.util.Objects;
@@ -25,56 +23,42 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Per-request MCP dispatch context decorating the per-channel {@link MutableInteractionContext}
- * with the dispatch surface: server access, notifications, outbound SSE stream, and response
- * mapper. Channel-scoped state (protocol, lifecycle, session, attributes, extensions) delegates to
- * the decorated context; one channel is assumed to carry at most one session.
- *
- * <p>In stateless mode {@link #session()} is {@code null}: notifications are written to the bound
- * outbound stream only, and server-to-client requests fail fast.
- */
-public class DefaultMcpContext implements DispatchContext {
+@InternalApi
+public class DefaultDispatchContext implements DispatchContext {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultMcpContext.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultDispatchContext.class);
 
-    private final MutableInteractionContext channel;
-    private final Server server;
+    private final ChannelContext channel;
+    private final ServerEngine server;
     private volatile @Nullable OutboundSseStream outboundStream;
 
-    public DefaultMcpContext(MutableInteractionContext channel, Server server) {
+    public DefaultDispatchContext(ChannelContext channel, ServerEngine server) {
         this.channel = channel;
         this.server = server;
     }
 
-    /**
-     * Convenience factory: creates a channel context from protocol, then wraps it with server.
-     */
-    public static DispatchContext create(Protocol protocol, Server server) {
-        return new DefaultMcpContext(protocol.createInteractionContext(), server);
+    public static DispatchContext create(Protocol protocol, ServerEngine server) {
+        return new DefaultDispatchContext(protocol.createInteractionContext(), server);
     }
 
-    /**
-     * Context without a session, decorating fresh channel state for the default protocol.
-     */
-    public static DispatchContext stateless(Server server) {
-        return new DefaultMcpContext(Protocols.versions().getFirst().createInteractionContext(), server);
+    public static DispatchContext stateless(ServerEngine server) {
+        return new DefaultDispatchContext(Protocols.list().getFirst().createInteractionContext(), server);
     }
 
     public static DispatchContext noop() {
-        return NoopContext.INSTANCE;
+        return NoopInteractionContext.INSTANCE;
     }
 
     // === channel-scoped state, delegated ===
 
     @Override
-    public Protocol getProtocol() {
-        return channel.getProtocol();
+    public Protocol protocol() {
+        return channel.protocol();
     }
 
     @Override
-    public @Nullable Lifecycle getLifecycle() {
-        return channel.getLifecycle();
+    public @Nullable Lifecycle lifecycle() {
+        return channel.lifecycle();
     }
 
     @Override
@@ -98,7 +82,7 @@ public class DefaultMcpContext implements DispatchContext {
     }
 
     @Override
-    public void setAttribute(String name, Object value) {
+    public <T> void setAttribute(String name, T value) {
         channel.setAttribute(name, value);
     }
 
@@ -126,7 +110,7 @@ public class DefaultMcpContext implements DispatchContext {
     // === request-scoped dispatch surface ===
 
     @Override
-    public Server server() {
+    public ServerEngine engine() {
         return server;
     }
 
@@ -172,7 +156,7 @@ public class DefaultMcpContext implements DispatchContext {
 
     @Override
     public ProtocolResponseMapper responseMapper() {
-        return getProtocol().responseMapper();
+        return protocol().responseMapper();
     }
 
     private class NotificationsImpl implements Notifications {
@@ -192,7 +176,7 @@ public class DefaultMcpContext implements DispatchContext {
             var json = JsonRpcCodec.serializeNotificationAsString(method, JsonRpcCodec.toJsonParams(params));
             stream.start();
             stream.writeEvent(
-                    new SseEvent(Server.wireEventId(server.nextEventId(), stream.streamKey()), "message", json));
+                    new SseEvent(ServerEngine.wireEventId(server.nextEventId(), stream.streamKey()), "message", json));
         }
 
         @Override
@@ -208,8 +192,6 @@ public class DefaultMcpContext implements DispatchContext {
 
         @Override
         public void comment(@Nullable String message) {
-            // Transport-level keep-alive: no MCP message, no session routing, no progress token —
-            // just an SSE comment on the bound stream (which self-upgrades the POST to SSE).
             var stream = outboundStream();
             if (stream == null) {
                 logger.debug("Dropping SSE comment: no outbound stream bound");
@@ -231,59 +213,6 @@ public class DefaultMcpContext implements DispatchContext {
         @Override
         public void error(String logger, Object data) {
             send("notifications/message", Map.of("level", "error", "logger", logger, "data", data));
-        }
-    }
-
-    /**
-     * Synthetic context for registry-level tests: no server, no protocol, no session.
-     */
-    private static final class NoopContext extends DefaultInteractionContext implements DispatchContext {
-
-        static final NoopContext INSTANCE = new NoopContext();
-
-        @SuppressWarnings("DataFlowIssue")
-        private NoopContext() {
-            super(null);
-        }
-
-        @Override
-        public Protocol getProtocol() {
-            throw new UnsupportedOperationException("No protocol available");
-        }
-
-        @Override
-        public Lifecycle getLifecycle() {
-            throw new UnsupportedOperationException("No lifecycle available");
-        }
-
-        @Override
-        public Server server() {
-            throw new UnsupportedOperationException("No server available");
-        }
-
-        @Override
-        public void setLoggingLevel(LoggingLevel level) {
-            throw new UnsupportedOperationException("No server available");
-        }
-
-        @Override
-        public @Nullable LoggingLevel getLoggingLevel() {
-            return null;
-        }
-
-        @Override
-        public ProtocolResponseMapper responseMapper() {
-            return Objects.requireNonNull(ProtocolMappers.getMapper("mcp", McpProtocol.VERSION));
-        }
-
-        @Override
-        public @Nullable OutboundSseStream outboundStream() {
-            return null;
-        }
-
-        @Override
-        public void setOutboundStream(@Nullable OutboundSseStream stream) {
-            throw new UnsupportedOperationException("No outbound stream available");
         }
     }
 }

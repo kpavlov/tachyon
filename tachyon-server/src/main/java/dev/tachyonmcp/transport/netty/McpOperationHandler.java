@@ -8,10 +8,10 @@ import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.*;
 import static dev.tachyonmcp.transport.netty.McpResponseWriter.*;
 
 import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
+import dev.tachyonmcp.runtime.ChannelContext;
 import dev.tachyonmcp.runtime.InteractionEvent;
-import dev.tachyonmcp.runtime.MutableInteractionContext;
 import dev.tachyonmcp.server.RpcDispatcher;
-import dev.tachyonmcp.server.Server;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
 import dev.tachyonmcp.transport.netty.sse.PostSseStream;
@@ -45,12 +45,12 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = LoggerFactory.getLogger(McpOperationHandler.class);
 
-    private final Server server;
+    private final ServerEngine server;
     private final RpcDispatcher dispatcher;
     private final Executor executor;
     private final SseManager sseManager;
 
-    public McpOperationHandler(Server server, RpcDispatcher dispatcher, Executor executor) {
+    public McpOperationHandler(ServerEngine server, RpcDispatcher dispatcher, Executor executor) {
         this.server = server;
         this.dispatcher = dispatcher;
         this.executor = executor;
@@ -203,7 +203,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         final var requestId = req.id();
         final var method = req.method();
         final var startNs = System.nanoTime();
-        final MutableInteractionContext ic = ChannelHandlerUtils.requireInteractionContext(ctx);
+        final ChannelContext ic = ChannelHandlerUtils.requireInteractionContext(ctx);
         dispatcher
                 .dispatchRequestAsync(requestId, method, req.params(), sessionId, postStream, ic)
                 .whenComplete((result, ex) -> {

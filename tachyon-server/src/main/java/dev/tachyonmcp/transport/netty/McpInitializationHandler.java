@@ -12,7 +12,7 @@ import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.InteractionEvent;
 import dev.tachyonmcp.server.RpcDispatcher;
-import dev.tachyonmcp.server.Server;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
 import dev.tachyonmcp.transport.netty.sse.PostSseStream;
 import io.netty.channel.ChannelHandlerContext;
@@ -52,11 +52,11 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(McpInitializationHandler.class);
     private static final String METHOD_INITIALIZE = "initialize";
 
-    private final Server server;
+    private final ServerEngine server;
     private final RpcDispatcher dispatcher;
     private final Executor executor;
 
-    public McpInitializationHandler(Server server, RpcDispatcher dispatcher, Executor executor) {
+    public McpInitializationHandler(ServerEngine server, RpcDispatcher dispatcher, Executor executor) {
         this.server = server;
         this.dispatcher = dispatcher;
         this.executor = executor;

@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.features.resources;
 
+import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -16,13 +17,12 @@ import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.RpcMethodHandler;
-import dev.tachyonmcp.server.Server;
-import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.Annotations;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.Role;
 import dev.tachyonmcp.server.domain.TextResourceContents;
-import dev.tachyonmcp.server.session.DefaultMcpContext;
+import dev.tachyonmcp.server.internal.ServerEngine;
+import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
@@ -37,12 +37,12 @@ import org.junit.jupiter.api.Test;
 
 class ResourceRegistryTest {
 
-    private final Server server = TachyonServer.builder().build();
+    private final ServerEngine server = newEngine(b -> {});
     private final ResourceRegistry registry = new ResourceRegistry(server);
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
 
-    private static DispatchContext context(Session session, Server server) {
-        var ctx = DefaultMcpContext.create(Protocols.versions().getFirst(), server);
+    private static DispatchContext context(Session session, ServerEngine server) {
+        var ctx = DefaultDispatchContext.create(Protocols.list().getFirst(), server);
         ctx.setSession(session);
         return ctx;
     }
@@ -54,7 +54,7 @@ class ResourceRegistryTest {
 
     @Test
     void shouldReturnEmptyListWhenNoResourcesRegistered() throws Exception {
-        var result = handlers.get("resources/list").handle(DefaultMcpContext.noop(), null);
+        var result = handlers.get("resources/list").handle(DefaultDispatchContext.noop(), null);
 
         assertThat(result).isInstanceOf(ListResourcesResult.class);
         assertThat(((ListResourcesResult) result).resources()).isEmpty();
@@ -63,7 +63,7 @@ class ResourceRegistryTest {
     @Test
     void shouldReturnErrorWhenResourceNotFound() throws Exception {
         var result = handlers.get("resources/read")
-                .handle(DefaultMcpContext.noop(), Map.<String, Object>of("uri", "test://nonexistent"));
+                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "test://nonexistent"));
 
         assertThat(result).isInstanceOf(JsonRpcError.class);
         assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.RESOURCE_NOT_FOUND);
@@ -71,7 +71,7 @@ class ResourceRegistryTest {
 
     @Test
     void shouldReturnErrorWhenUriMissing() throws Exception {
-        var result = handlers.get("resources/read").handle(DefaultMcpContext.noop(), Map.of());
+        var result = handlers.get("resources/read").handle(DefaultDispatchContext.noop(), Map.of());
 
         assertThat(result).isInstanceOf(JsonRpcError.class);
     }
@@ -82,7 +82,7 @@ class ResourceRegistryTest {
         registry.add(descriptor, (ctx, req) -> TextResourceContents.of("test://resource/1", "text/plain", "content"));
 
         var result = handlers.get("resources/read")
-                .handle(DefaultMcpContext.noop(), Map.<String, Object>of("uri", "test://resource/1"));
+                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "test://resource/1"));
 
         assertThat(result).isInstanceOf(ReadResourceResult.class);
         var readResult = (ReadResourceResult) result;
@@ -92,7 +92,7 @@ class ResourceRegistryTest {
 
     @Test
     void shouldReturnEmptyTemplateList() throws Exception {
-        var result = handlers.get("resources/templates/list").handle(DefaultMcpContext.noop(), null);
+        var result = handlers.get("resources/templates/list").handle(DefaultDispatchContext.noop(), null);
 
         assertThat(result).isInstanceOf(ListResourceTemplatesResult.class);
         assertThat(((ListResourceTemplatesResult) result).resourceTemplates()).isEmpty();
@@ -101,7 +101,7 @@ class ResourceRegistryTest {
     @Test
     void subscribeRejectsNullSession() throws Exception {
         var result = handlers.get("resources/subscribe")
-                .handle(DefaultMcpContext.noop(), Map.of("uri", "test://resource/1"));
+                .handle(DefaultDispatchContext.noop(), Map.of("uri", "test://resource/1"));
 
         assertThat(result).isInstanceOf(JsonRpcError.class);
         assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
@@ -110,7 +110,7 @@ class ResourceRegistryTest {
     @Test
     void unsubscribeRejectsNullSession() throws Exception {
         var result = handlers.get("resources/unsubscribe")
-                .handle(DefaultMcpContext.noop(), Map.of("uri", "test://resource/1"));
+                .handle(DefaultDispatchContext.noop(), Map.of("uri", "test://resource/1"));
 
         assertThat(result).isInstanceOf(JsonRpcError.class);
         assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
@@ -332,12 +332,12 @@ class ResourceRegistryTest {
 
         // old URI must no longer resolve
         var oldUriResult = handlers.get("resources/read")
-                .handle(DefaultMcpContext.noop(), Map.<String, Object>of("uri", "resource://doc-v1"));
+                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "resource://doc-v1"));
         assertThat(oldUriResult).isInstanceOf(JsonRpcError.class);
 
         // new URI must resolve correctly
         var newUriResult = handlers.get("resources/read")
-                .handle(DefaultMcpContext.noop(), Map.<String, Object>of("uri", "resource://doc-v2"));
+                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "resource://doc-v2"));
         assertThat(newUriResult).isInstanceOf(ReadResourceResult.class);
         assertThat(registry.getAll()).hasSize(1);
     }
@@ -373,7 +373,7 @@ class ResourceRegistryTest {
                 List.of(icon));
         registry.add(descriptor, (ctx, req) -> TextResourceContents.of("test://full", "text/plain", "content"));
 
-        var result = (ListResourcesResult) handlers.get("resources/list").handle(DefaultMcpContext.noop(), null);
+        var result = (ListResourcesResult) handlers.get("resources/list").handle(DefaultDispatchContext.noop(), null);
 
         assertThat(result.resources()).hasSize(1);
         var resource = result.resources().getFirst();
@@ -479,7 +479,7 @@ class ResourceRegistryTest {
                 }));
 
         handlers.get("resources/read")
-                .handle(DefaultMcpContext.noop(), Map.<String, Object>of("uri", "resource://users/42"));
+                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "resource://users/42"));
 
         assertThat(matched).hasValue("specific");
     }
@@ -500,7 +500,7 @@ class ResourceRegistryTest {
         registry.addTemplate(entry);
 
         var result = (ListResourceTemplatesResult)
-                handlers.get("resources/templates/list").handle(DefaultMcpContext.noop(), null);
+                handlers.get("resources/templates/list").handle(DefaultDispatchContext.noop(), null);
 
         assertThat(result.resourceTemplates()).hasSize(1);
         var tmpl = result.resourceTemplates().getFirst();
@@ -527,12 +527,14 @@ class ResourceRegistryTest {
         });
 
         // resources/list returns size WITHOUT loading content
-        var listResult = (ListResourcesResult) handlers.get("resources/list").handle(DefaultMcpContext.noop(), null);
+        var listResult =
+                (ListResourcesResult) handlers.get("resources/list").handle(DefaultDispatchContext.noop(), null);
         assertThat(listResult.resources().getFirst().size()).isEqualTo(4096.0);
         assertThat(contentLoaded).isFalse();
 
         // resources/read triggers lazy content load
-        handlers.get("resources/read").handle(DefaultMcpContext.noop(), Map.<String, Object>of("uri", "test://sized"));
+        handlers.get("resources/read")
+                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "test://sized"));
         assertThat(contentLoaded).isTrue();
     }
 

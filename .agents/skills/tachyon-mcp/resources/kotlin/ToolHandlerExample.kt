@@ -3,7 +3,7 @@
 package dev.tachyonmcp.skill
 
 import dev.tachyonmcp.runtime.InteractionContext
-import dev.tachyonmcp.server.Server
+import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.buildServer
 import dev.tachyonmcp.server.config.TachyonServerBuilder
 import dev.tachyonmcp.server.config.success
@@ -116,7 +116,7 @@ class AsyncGreetingTool : ToolHandler {
 }
 
 /** Build a server using the DSL and register tools post-build. */
-fun buildWithPostRegistration(): Server {
+fun buildWithPostRegistration(): TachyonServer {
     val server = buildServer {
         registerHello()
         registerGreeting()

@@ -4,9 +4,12 @@
 
 package dev.tachyonmcp.runtime;
 
+import dev.tachyonmcp.annotations.InternalApi;
+
 /**
  * Tracks whether an operation has been cancelled.
  */
+@InternalApi
 public interface Cancellation {
 
     /**

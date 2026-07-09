@@ -4,14 +4,16 @@
 
 package dev.tachyonmcp.server;
 
+import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.Protocols;
-import dev.tachyonmcp.runtime.DefaultInteractionContext;
-import dev.tachyonmcp.runtime.MutableInteractionContext;
-import dev.tachyonmcp.server.session.DefaultMcpContext;
+import dev.tachyonmcp.runtime.ChannelContext;
+import dev.tachyonmcp.runtime.DefaultChannelContext;
+import dev.tachyonmcp.server.internal.ServerEngine;
+import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.server.session.DispatchContext;
 import io.netty.handler.codec.http.HttpRequest;
 import java.util.Map;
@@ -29,7 +31,7 @@ class RpcDispatcherProtocolContextTest {
     private static final class RecordingProtocol implements Protocol {
 
         final AtomicInteger contextsCreated = new AtomicInteger();
-        final AtomicReference<@Nullable MutableInteractionContext> lastCreated = new AtomicReference<>();
+        final AtomicReference<@Nullable ChannelContext> lastCreated = new AtomicReference<>();
 
         RecordingProtocol() {}
 
@@ -55,13 +57,13 @@ class RpcDispatcherProtocolContextTest {
 
         @Override
         public ProtocolResponseMapper responseMapper() {
-            return Protocols.versions().getFirst().responseMapper();
+            return Protocols.list().getFirst().responseMapper();
         }
 
         @Override
-        public MutableInteractionContext createInteractionContext() {
+        public ChannelContext createInteractionContext() {
             contextsCreated.incrementAndGet();
-            var ic = new DefaultInteractionContext(this);
+            var ic = new DefaultChannelContext(this);
             lastCreated.set(ic);
             return ic;
         }
@@ -69,7 +71,8 @@ class RpcDispatcherProtocolContextTest {
 
     @Test
     void dispatchWrapsChannelContext() throws Exception {
-        try (var server = TachyonServer.builder().session(s -> s.enabled(true)).build()) {
+        try (ServerEngine server = (ServerEngine)
+                TachyonServer.builder().session(s -> s.enabled(true)).build()) {
             var protocol = new RecordingProtocol();
             var session = server.createSession("sess_p1");
             session.activate();
@@ -99,17 +102,17 @@ class RpcDispatcherProtocolContextTest {
             assertThat(handlerContext.get())
                     .as("handler must receive a DispatchContext wrapping the channel context")
                     .isNotNull()
-                    .isInstanceOf(DefaultMcpContext.class);
+                    .isInstanceOf(DefaultDispatchContext.class);
             assertThat(protocol.lastCreated).hasValue(channelContext);
             assertThat(handlerContext.get()).isNotNull();
-            assertThat(handlerContext.get().getProtocol()).isSameAs(protocol);
+            assertThat(handlerContext.get().protocol()).isSameAs(protocol);
             assertThat(handlerContext.get().session()).isSameAs(session);
         }
     }
 
     @Test
     void dispatchWorksWithBareChannelContext() throws Exception {
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             var protocol = new RecordingProtocol();
             server.createSession("sess_p2").activate();
 
@@ -126,7 +129,7 @@ class RpcDispatcherProtocolContextTest {
 
     @Test
     void statelessDispatchHasNoSession() throws Exception {
-        try (var server = TachyonServer.builder().build()) {
+        try (ServerEngine server = newEngine(b -> {})) {
             var handlerContext = new AtomicReference<DispatchContext>();
             server.registerHandler("test/capture", new RpcMethodHandler() {
                 @Override
@@ -154,7 +157,7 @@ class RpcDispatcherProtocolContextTest {
                     .as("stateless dispatch must not fabricate a session")
                     .isNull();
             assertThat(context.getLoggingLevel()).isNull();
-            assertThat(context.getProtocol().familyName()).isEqualTo("mcp");
+            assertThat(context.protocol().familyName()).isEqualTo("mcp");
             assertThat(context.sendRequest("sampling/createMessage", Map.of()))
                     .as("server-to-client requests without a session must fail fast")
                     .isCompletedExceptionally();

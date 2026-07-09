@@ -8,9 +8,9 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.runtime.Extension;
 import dev.tachyonmcp.server.RpcMethodHandler;
-import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.domain.InitializeResponse;
 import dev.tachyonmcp.server.extensions.ServerExtension;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DispatchContext;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -24,10 +24,10 @@ public final class InitializeHandler implements RpcMethodHandler {
     private static final String MCP_VERSION = McpProtocol.VERSION;
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private final Server server;
+    private final ServerEngine server;
     private final List<ServerExtension> extensions;
 
-    public InitializeHandler(Server server, List<ServerExtension> extensions) {
+    public InitializeHandler(ServerEngine server, List<ServerExtension> extensions) {
         this.server = server;
         this.extensions = extensions;
     }

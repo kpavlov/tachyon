@@ -4,18 +4,18 @@ package dev.tachyonmcp.extensions.tools.echo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.extensions.testing.NoopInteractionContext;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.session.NoopInteractionContext;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.JsonNodeFactory;
 
 class EchoToolHandlerTest {
 
-    private static final InteractionContext NOOP_CTX = new NoopInteractionContext();
+    private static final InteractionContext NOOP_CTX = NoopInteractionContext.INSTANCE;
 
     @Test
     void echoReturnsInputMessage() {

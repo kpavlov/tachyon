@@ -4,11 +4,11 @@ package dev.tachyonmcp.extensions.tools.youcom.search;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.extensions.testing.NoopInteractionContext;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.session.NoopInteractionContext;
 import java.net.URI;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -17,7 +17,7 @@ import tools.jackson.databind.node.JsonNodeFactory;
 
 public class YouComSearchToolTest {
 
-    private static final InteractionContext NOOP_CTX = new NoopInteractionContext();
+    private static final InteractionContext NOOP_CTX = NoopInteractionContext.INSTANCE;
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public static void main(String[] args) {
@@ -29,7 +29,7 @@ public class YouComSearchToolTest {
                         .build()))
                 .port(8080)
                 .start()) {
-            System.out.println("Connect your MCP client to http://localhost:" + server.port() + "/mcp\n"
+            System.out.println("Connect your MCP client to http://" + server.host() + ":" + server.port() + "/mcp\n"
                     + "Press Ctrl+C to stop.");
 
             var latch = new java.util.concurrent.CountDownLatch(1);
@@ -215,7 +215,7 @@ public class YouComSearchToolTest {
     @Test
     void extractErrorReturnsMessageFromJsonError() {
         assertThat(YouComSearchTool.extractError("""
-                {"message": "Invalid API key"}""")).isEqualTo("Invalid API key");
+            {"message": "Invalid API key"}""")).isEqualTo("Invalid API key");
     }
 
     @Test
@@ -232,8 +232,8 @@ public class YouComSearchToolTest {
     @Test
     void extractErrorReturnsBodyWhenJsonMissingMessage() {
         assertThat(YouComSearchTool.extractError("""
-                {"error": "something"}""")).isEqualTo("""
-                {"error": "something"}""");
+            {"error": "something"}""")).isEqualTo("""
+            {"error": "something"}""");
     }
 
     @Test

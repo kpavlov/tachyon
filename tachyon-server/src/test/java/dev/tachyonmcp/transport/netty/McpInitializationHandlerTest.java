@@ -8,8 +8,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.server.RpcDispatcher;
-import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.*;
@@ -21,12 +21,13 @@ import org.junit.jupiter.api.Test;
 
 class McpInitializationHandlerTest {
 
-    private Server server;
+    private ServerEngine server;
     private EmbeddedChannel channel;
 
     @BeforeEach
     void setUp() {
-        server = TachyonServer.builder().session(s -> s.enabled(true)).build();
+        server = (ServerEngine)
+                TachyonServer.builder().session(s -> s.enabled(true)).build();
         RpcDispatcher dispatcher = new RpcDispatcher(server, Runnable::run);
         channel = new EmbeddedChannel(new InteractionHandler());
         channel.pipeline()

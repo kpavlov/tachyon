@@ -12,7 +12,8 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.server.*;
 import dev.tachyonmcp.server.extensions.ServerExtension;
-import dev.tachyonmcp.server.session.DefaultMcpContext;
+import dev.tachyonmcp.server.internal.ServerEngine;
+import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.server.session.DispatchContext;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -24,14 +25,15 @@ import tools.jackson.databind.node.JsonNodeFactory;
 
 class ExtensionMethodRoutingTest {
 
-    private Server server;
+    private ServerEngine server;
     private Session session;
     private RpcDispatcher dispatcher;
     private @Nullable DispatchContext context;
 
     @BeforeEach
     void setUp() {
-        server = TachyonServer.builder().extension(new TestExtension()).build();
+        server = (ServerEngine)
+                TachyonServer.builder().extension(new TestExtension()).build();
         session = server.createSession("sess_routing");
         dispatcher = new RpcDispatcher(server, server.executor());
     }
@@ -39,7 +41,7 @@ class ExtensionMethodRoutingTest {
     @Test
     void rejectsExtensionMethodWhenNotNegotiated() {
         session.activate();
-        var ctx = DefaultMcpContext.create(Protocols.versions().get(0), server);
+        var ctx = DefaultDispatchContext.create(Protocols.list().get(0), server);
         ctx.setSession(session);
         var result = (RpcDispatcher.DispatchResult.Response) dispatcher
                 .dispatchRequestAsync(1, "test/ext-method", null, "sess_routing", null, ctx)
@@ -77,7 +79,7 @@ class ExtensionMethodRoutingTest {
                 .protocolVersion("2025-11-25")
                 .capabilities(caps)
                 .build();
-        var ctx = DefaultMcpContext.create(Protocols.versions().get(0), server);
+        var ctx = DefaultDispatchContext.create(Protocols.list().get(0), server);
         ctx.setSession(session);
         handler.handle(ctx, params);
         this.context = ctx;
@@ -101,7 +103,7 @@ class ExtensionMethodRoutingTest {
         }
 
         @Override
-        public void bootstrap(Server server) {
+        public void bootstrap(ServerEngine server) {
             server.registerHandler("test/ext-method", new RpcMethodHandler() {
                 @Override
                 public String method() {

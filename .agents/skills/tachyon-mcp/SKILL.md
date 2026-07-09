@@ -2,7 +2,7 @@
 name: tachyon-mcp
 description: Build MCP (Model Context Protocol) servers using the [Tachyon MCP](https://github.com/kpavlov/tachyon).
 compatibility: Designed for Claude Code on JDK 21+ projects
-version: 1.0.0-beta.8
+version: 1.0.0-SNAPSHOT
 metadata:
     author: Konstantin Pavlov
 ---
@@ -13,20 +13,20 @@ Make **Java 21+** MCP server. Tachyon lib. Transport = Streamable HTTP (Netty).
 ## Core
 
 - `TachyonServer.builder()` → `ServerBuilder`. Start here.
-- `.start()` (blocking) / `.startAsync()` (non-blocking) → build `Server` + Netty transport → `ServerHandle` (`Closeable`).
-- `.build()` → `Server` only, no transport.
-- `ServerHandle`: `.server()`, `.port()`.
+- `.start()` (blocking) → builds `TachyonServer` (`AutoCloseable`) with Netty transport bound.
+- `.build()` → `TachyonServer` only, no transport.
+- `TachyonServer`: `.port()`, `.close()`, `.config()`, `.getTool(name)`, `.registerTool(handler)` (the handler carries its own descriptor).
 - `InteractionContext` → session + notifications + server ctx. Every handler gets it (`dev.tachyonmcp.runtime.InteractionContext`).
 - ⚡ **Virtual threads**: All handlers (`ToolHandler`, `ResourceHandler`, `PromptHandler`) run on a virtual thread per request. Blocking for I/O is fine — never use `synchronized` (pins carrier thread). Use `ReentrantLock` instead. CPU-bound work → offload to `context.server().executor()`. See `RpcMethodHandler.java` javadoc.
 
 ## Quickstart
 
 ```java
-var handle = TachyonServer.builder()
+var server = TachyonServer.builder()
     .info(b -> b.name("my-server").version("1.0"))
     .port(8080)
     .start();
-// handle.port() → real bound port (matters when port=0)
+// server.port() → real bound port (matters when port=0)
 ```
 
 ## `ServerBuilder` methods
@@ -42,6 +42,7 @@ var handle = TachyonServer.builder()
 | `.tool(handler)` | Sync/Async/ToolHandler |
 | `.tool(name, desc, inJson, outJson, fn)` | shorthand — JSON **string** schemas + lambda |
 | `.resource(descriptor[, handler])` | static resource (no handler = external URI); handler is Sync `ResourceHandler` or `AsyncResourceHandler` |
+| `.resourceTemplate(entry)` | URI template (use in builder chain instead of post-start `addTemplate`) |
 | `.prompt(descriptor, handler\|messages)` | `PromptHandler` (simple), `InputRequiredPromptHandler` (sync/MRTR), or `AsyncPromptHandler` |
 | `.extension(ext)` | `ServerExtension` plugin |
 | `.json(cfg)` | serde + input/output schema validators |
@@ -115,16 +116,15 @@ Static (fixed URI):
     (ctx, req) -> TextResourceContents.of(req.uri(), "application/json", jsonData))
 ```
 
-Template (`{param}`, add after bind):
+Template — add via builder:
 
 ```java
-handle.server().resources()
-    .addTemplate(ResourceTemplateEntry.of(
-        "template-name", "myapp://data/{id}", "Description", "application/json",
-        (ctx, uri, params) -> {
-            var id = params.get("id");
-            return TextResourceContents.of(uri, "application/json", data);
-        }));
+.resourceTemplate(ResourceTemplateEntry.of(
+    "template-name", "myapp://data/{id}", "Description", "application/json",
+    (ctx, uri, params) -> {
+        var id = params.get("id");
+        return TextResourceContents.of(uri, "application/json", data);
+    }))
 ```
 
 Async — return a `CompletionStage`: implement `AsyncResourceHandler` (static resource) or
@@ -238,12 +238,12 @@ The `.tool(name, desc, inJson, outJson, fn)` shorthand also takes String schemas
 ## Extensions
 
 ```java
-public interface ServerExtension extends Extension<MutableInteractionContext> {
+public interface ServerExtension extends Extension<ChannelContext> {
     default JsonNode serverSettings() { return JsonNodeFactory.instance.objectNode(); }
     default Set<String> methods() { return Set.of(); }
     default boolean requiresMetaEnvelope() { return true; }
-    default void bootstrap(Server server) {}
-    default void onConnectionInit(MutableInteractionContext context, Map<String, JsonNode> clientSettings) {}
+    default void bootstrap(ServerEngine server) {}
+    default void onConnectionInit(ChannelContext context, Map<String, JsonNode> clientSettings) {}
 }
 ```
 
@@ -262,10 +262,10 @@ Handler lambdas are `suspend` receivers — call suspending APIs directly, no `i
 The prompt lambda exposes `arguments` (renamed from `it` in beta.5).
 
 ```kotlin
-// buildServer {} → Server without transport
-// TachyonServer(port) {} → ServerHandle with Netty transport
+// buildServer {} → TachyonServer without transport
+// TachyonServer(port) {} → TachyonServer with Netty transport
 
-val handle = TachyonServer(port = 8080) {
+val server = TachyonServer(port = 8080) {
     info {
         name = "demo-server"
         version = "1.0"

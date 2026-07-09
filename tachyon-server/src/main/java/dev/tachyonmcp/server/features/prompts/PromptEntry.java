@@ -4,8 +4,10 @@
 
 package dev.tachyonmcp.server.features.prompts;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.server.ServerResourceType;
 
+@InternalApi
 public record PromptEntry(PromptDescriptor descriptor, InputRequiredPromptHandler handler)
         implements ServerResourceType {
 

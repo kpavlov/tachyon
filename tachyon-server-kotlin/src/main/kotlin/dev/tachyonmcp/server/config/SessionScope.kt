@@ -31,13 +31,6 @@ public class SessionScope
         /** Custom session ID generator function. */
         public var sessionIdGenerator: ((HttpRequest) -> String)? = null
 
-        @Deprecated(message = "Use `enabled`")
-        public var stateless: Boolean
-            get() = !enabled
-            set(value) {
-                enabled = !value
-            }
-
         /** Lambda-friendly overload: `sessionIdGenerator { it.headers()["X-Tenant-Id"]!! }`. */
         public fun sessionIdGenerator(generator: (HttpRequest) -> String) {
             sessionIdGenerator = generator

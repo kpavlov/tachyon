@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.features;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
@@ -11,6 +12,7 @@ import java.util.concurrent.ExecutionException;
 /**
  * Static utilities for common CompletionStage patterns.
  */
+@InternalApi
 public final class HandlerFutures {
 
     private HandlerFutures() {}

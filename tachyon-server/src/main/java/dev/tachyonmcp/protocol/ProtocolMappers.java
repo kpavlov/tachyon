@@ -4,13 +4,14 @@
 
 package dev.tachyonmcp.protocol;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import java.util.List;
-import java.util.ServiceLoader;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Registry of {@link ProtocolResponseMapper} implementations discovered via {@link ServiceLoader}.
+ * Registry of {@link ProtocolResponseMapper} implementations built from {@link Protocols#list()}.
  */
+@InternalApi
 public class ProtocolMappers {
 
     private ProtocolMappers() {}
@@ -18,15 +19,15 @@ public class ProtocolMappers {
     static final List<ProtocolResponseMapper> MAPPERS;
 
     static {
-        MAPPERS = ServiceLoader.load(ProtocolResponseMapper.class).stream()
-                .map(ServiceLoader.Provider::get)
-                .toList();
+        MAPPERS = Protocols.list().stream().map(Protocol::responseMapper).toList();
         if (MAPPERS.isEmpty()) {
             throw new IllegalStateException("No ProtocolResponseMapper found.");
         }
     }
 
-    /** Returns the mapper for the given protocol family and version, or {@code null} if none registered. */
+    /**
+     * Returns the mapper for the given protocol family and version, or {@code null} if none registered.
+     */
     @Nullable
     public static ProtocolResponseMapper getMapper(String protocolName, String protocolVersion) {
         for (var mapper : MAPPERS) {

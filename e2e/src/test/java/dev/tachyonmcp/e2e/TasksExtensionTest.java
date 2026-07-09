@@ -179,7 +179,7 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
 
                     @Override
                     public ToolResult handle(InteractionContext ctx, ToolRequest req) throws Exception {
-                        ((DispatchContext) ctx).server().tasks().createTask("sync-notif-task", null);
+                        ((DispatchContext) ctx).engine().tasks().createTask("sync-notif-task", null);
                         return ToolResult.text("ok");
                     }
                 })

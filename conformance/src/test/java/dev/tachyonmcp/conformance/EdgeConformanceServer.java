@@ -4,13 +4,14 @@
 
 package dev.tachyonmcp.conformance;
 
-import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
+import dev.tachyonmcp.server.internal.ServerEngine;
 
 class EdgeConformanceServer extends AbstractConformanceServer {
 
     @Override
-    protected Server createServer(boolean isStateful) {
-        return TachyonServer.builder().session(s -> s.enabled(isStateful)).build();
+    protected ServerEngine createServer(boolean isStateful) {
+        return (ServerEngine)
+                TachyonServer.builder().session(s -> s.enabled(isStateful)).build();
     }
 }

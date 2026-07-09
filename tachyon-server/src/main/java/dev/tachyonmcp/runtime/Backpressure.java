@@ -4,9 +4,12 @@
 
 package dev.tachyonmcp.runtime;
 
+import dev.tachyonmcp.annotations.InternalApi;
+
 /**
  * Represents SSE stream backpressure state.
  */
+@InternalApi
 public enum Backpressure {
     /** Stream is writable. */
     HOT,

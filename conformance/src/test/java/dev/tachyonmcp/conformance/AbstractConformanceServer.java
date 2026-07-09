@@ -6,7 +6,6 @@ package dev.tachyonmcp.conformance;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.OutboundSseStreamMessageRouter;
-import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.domain.AudioContent;
 import dev.tachyonmcp.server.domain.BlobResourceContents;
 import dev.tachyonmcp.server.domain.EmbeddedResource;
@@ -25,6 +24,7 @@ import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.Base64;
 import java.util.LinkedHashMap;
@@ -166,9 +166,9 @@ abstract class AbstractConformanceServer {
         Awaitility.await().timeout(millis, TimeUnit.MILLISECONDS);
     }
 
-    protected abstract Server createServer(boolean isStateful);
+    protected abstract ServerEngine createServer(boolean isStateful);
 
-    Server startServer(boolean isStateful) {
+    ServerEngine startServer(boolean isStateful) {
         var srv = createServer(isStateful);
         registerTools(srv);
         registerResources(srv);
@@ -176,7 +176,7 @@ abstract class AbstractConformanceServer {
         return srv;
     }
 
-    private void registerTools(Server server) {
+    private void registerTools(ServerEngine server) {
         server.registerTool(echoTool());
 
         server.registerTool(ToolHandler.of(
@@ -280,7 +280,7 @@ abstract class AbstractConformanceServer {
                     if (promptOpt.isPresent()) {
                         var prompt = promptOpt.get();
                         try {
-                            var paramsMap = Map.of(
+                            Map<String, Object> paramsMap = Map.of(
                                     "messages",
                                     List.of(Map.of("role", "user", "content", Map.of("type", "text", "text", prompt))),
                                     "maxTokens",
@@ -479,7 +479,7 @@ abstract class AbstractConformanceServer {
         registerInputRequiredTools(server);
     }
 
-    private void registerInputRequiredTools(Server server) {
+    private void registerInputRequiredTools(ServerEngine server) {
         server.registerTool(new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
@@ -697,7 +697,7 @@ abstract class AbstractConformanceServer {
         });
     }
 
-    private void registerResources(Server server) {
+    private void registerResources(ServerEngine server) {
         server.resources()
                 .add(
                         ResourceDescriptor.of("hello", "hello://world", "Hello resource", "text/plain"),
@@ -726,7 +726,7 @@ abstract class AbstractConformanceServer {
                                 uri, "text/plain", "Resource content for id: " + params.get("id"))));
     }
 
-    private void registerPrompts(Server server) {
+    private void registerPrompts(ServerEngine server) {
         server.prompts()
                 .add(PromptDescriptor.of("greeting", "A greeting prompt"), List.of(PromptMessage.user("Hello!")));
 

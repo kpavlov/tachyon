@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.runtime.Session;
 import java.util.concurrent.Callable;
 import org.jspecify.annotations.Nullable;
@@ -15,6 +16,7 @@ import org.slf4j.LoggerFactory;
  * the current dispatch context when the dispatch session matches the target session. Otherwise, lets
  * the caller fall through to the normal GET-SSE path.
  */
+@InternalApi
 public final class OutboundSseStreamMessageRouter implements MessageRouter {
 
     private static final Logger logger = LoggerFactory.getLogger(OutboundSseStreamMessageRouter.class);

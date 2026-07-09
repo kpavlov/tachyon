@@ -10,8 +10,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import dev.tachyonmcp.runtime.SessionState;
-import dev.tachyonmcp.server.ServerHandle;
 import dev.tachyonmcp.server.TachyonServer;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.URI;
@@ -41,7 +41,7 @@ class SessionJanitorOutboundActivityTest {
     private static final Duration JANITOR_INTERVAL = ofMillis(500);
     private static final Duration HEARTBEAT_INTERVAL = ofMillis(500);
 
-    private ServerHandle serverHandle;
+    private TachyonServer serverHandle;
     private int port;
 
     @BeforeAll
@@ -66,7 +66,7 @@ class SessionJanitorOutboundActivityTest {
         try (var reader = drainInBackground(sseSocket, 6000)) {
             // Well past the 2s TTL: the session must survive on heartbeats alone.
             await().atMost(ofSeconds(6)).pollInterval(ofMillis(200)).untilAsserted(() -> {
-                var session = serverHandle.server().getSession(sessionId);
+                var session = ((ServerEngine) serverHandle).getSession(sessionId);
                 assertThat(session).isPresent();
                 assertThat(session.get().state()).isEqualTo(SessionState.ACTIVE);
             });
@@ -94,7 +94,7 @@ class SessionJanitorOutboundActivityTest {
             try (var reader = drainInBackground(sseSocket, 6000)) {
                 await().atMost(ofSeconds(6))
                         .pollInterval(ofMillis(200))
-                        .untilAsserted(() -> assertThat(noHbServer.server().getSession(sessionId))
+                        .untilAsserted(() -> assertThat(((ServerEngine) noHbServer).getSession(sessionId))
                                 .isEmpty());
             } finally {
                 sseSocket.close();

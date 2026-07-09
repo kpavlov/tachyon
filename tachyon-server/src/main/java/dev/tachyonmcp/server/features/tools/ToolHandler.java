@@ -14,9 +14,17 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>{@link #handle} runs on a virtual thread — blocking for I/O is the intended contract.
  * Never use {@code synchronized} or call native methods (pins the carrier thread).
- * Use {@link java.util.concurrent.locks.ReentrantLock} instead. For CPU-bound work or
- * third-party code that may synchronize, offload to
- * {@code context.server().executor()}.
+ * Use {@link java.util.concurrent.locks.ReentrantLock} instead.
+ *
+ * <p>Which method to override — override exactly one:
+ * <ul>
+ *   <li>{@link #handle(InteractionContext, ToolArgs)} — canonical for sync handlers.
+ *   <li>{@link #handleAsync(InteractionContext, ToolArgs)} — when the tool is already async;
+ *       stays async with no virtual-thread detour.
+ *   <li>The {@code ToolRequest} variants ({@link #handle(InteractionContext, ToolRequest)} /
+ *       {@link #handleAsync(InteractionContext, ToolRequest)}) — only when the raw request is
+ *       needed (custom argument deserialization, request metadata).
+ * </ul>
  *
  * @author Konstantin Pavlov
  */

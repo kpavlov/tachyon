@@ -6,7 +6,7 @@ package dev.tachyonmcp.transport.netty.sse;
 
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseEvent;
-import dev.tachyonmcp.server.Server;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.netty.ChannelHandlerUtils;
 import dev.tachyonmcp.transport.netty.http.HttpHelpers;
 import io.netty.buffer.ByteBufUtil;
@@ -27,9 +27,9 @@ public class SseManager {
 
     static final int SSE_RETRY_DELAY_MS = 3000;
 
-    private final Server server;
+    private final ServerEngine server;
 
-    public SseManager(Server server) {
+    public SseManager(ServerEngine server) {
         this.server = server;
     }
 
@@ -95,7 +95,7 @@ public class SseManager {
                 var sseId = event.sseEventId();
                 if (sseId < 0 || sseId <= lastSseId) continue;
                 if (!java.util.Objects.equals(event.streamKey(), targetStreamKey)) continue;
-                var sseEvent = Server.toSseEvent(event);
+                var sseEvent = ServerEngine.toSseEvent(event);
                 if (sseEvent == null) continue;
                 if (!session.send(sseEvent)) break; // session closed or throttled mid-replay
             }

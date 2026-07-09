@@ -17,10 +17,11 @@ import dev.tachyonmcp.server.features.tools.doubleOrNull
 import dev.tachyonmcp.server.features.tools.int
 import dev.tachyonmcp.server.features.tools.intOrNull
 import dev.tachyonmcp.server.features.tools.stringOrNull
+import dev.tachyonmcp.server.internal.ServerEngine
 import dev.tachyonmcp.server.json.KxSerializationSerde
 import dev.tachyonmcp.server.json.RawJson
 import dev.tachyonmcp.server.json.toJsonNode
-import dev.tachyonmcp.server.session.DefaultMcpContext
+import dev.tachyonmcp.server.session.DefaultDispatchContext
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -46,7 +47,7 @@ internal class KotlinApiTest {
             name("test")
             tool("t1", inputSchema = schema) { ToolResult.text("ok") }
         }.use { handle ->
-            handle.server().getTool("t1") shouldNotBe null
+            handle.getTool("t1") shouldNotBe null
         }
     }
 
@@ -57,7 +58,7 @@ internal class KotlinApiTest {
             name("test")
             tool("t2", inputSchema = schema, outputSchema = schema) { ToolResult.text("ok") }
         }.use { handle ->
-            handle.server().getTool("t2") shouldNotBe null
+            handle.getTool("t2") shouldNotBe null
         }
     }
 
@@ -68,7 +69,7 @@ internal class KotlinApiTest {
             name("test")
             tool("t3", inputSchema = json) { ToolResult.text("ok") }
         }.use { handle ->
-            handle.server().getTool("t3") shouldNotBe null
+            handle.getTool("t3") shouldNotBe null
         }
     }
 
@@ -79,7 +80,7 @@ internal class KotlinApiTest {
             name("test")
             tool("t4", inputSchema = json, outputSchema = json) { ToolResult.text("ok") }
         }.use { handle ->
-            handle.server().getTool("t4") shouldNotBe null
+            handle.getTool("t4") shouldNotBe null
         }
     }
 
@@ -90,7 +91,7 @@ internal class KotlinApiTest {
             name("test")
             tool("t5", inputSchema = schema) { ToolResult.text("ok") }
         }.use { handle ->
-            handle.server().getTool("t5") shouldNotBe null
+            handle.getTool("t5") shouldNotBe null
         }
     }
 
@@ -101,7 +102,7 @@ internal class KotlinApiTest {
             name("test")
             tool("t6", inputSchema = schema, outputSchema = schema) { ToolResult.text("ok") }
         }.use { handle ->
-            handle.server().getTool("t6") shouldNotBe null
+            handle.getTool("t6") shouldNotBe null
         }
     }
 
@@ -281,7 +282,7 @@ internal class KotlinApiTest {
     fun `structured produces ToolResult with raw json and text fallback`() {
         val value = GreetingArgs("Charlie", 25)
         TachyonServer.builder().build().use { server ->
-            val ctx = DefaultMcpContext.stateless(server)
+            val ctx = DefaultDispatchContext.stateless(server as ServerEngine)
             val scope = ToolScope(ctx, ToolArgs(raw = null))
             val result = scope.structured(value)
             result.shouldBeInstanceOf<ToolResult.Success>()
@@ -298,7 +299,7 @@ internal class KotlinApiTest {
         val value = GreetingArgs("Dave", 50)
         val customJson = Json { prettyPrint = true }
         TachyonServer.builder().build().use { server ->
-            val ctx = DefaultMcpContext.stateless(server)
+            val ctx = DefaultDispatchContext.stateless(server as ServerEngine)
             val scope = ToolScope(ctx, ToolArgs(raw = null))
             val result = scope.structured(value, customJson)
             result.shouldBeInstanceOf<ToolResult.Success>()
@@ -312,7 +313,7 @@ internal class KotlinApiTest {
     @Test
     fun `structured rejects non-object payloads`() {
         TachyonServer.builder().build().use { server ->
-            val ctx = DefaultMcpContext.stateless(server)
+            val ctx = DefaultDispatchContext.stateless(server as ServerEngine)
             val scope = ToolScope(ctx, ToolArgs(raw = null))
             shouldThrow<IllegalArgumentException> {
                 scope.structured(listOf(1, 2, 3))
@@ -328,7 +329,7 @@ internal class KotlinApiTest {
     fun `success returns ToolResult with raw value`() {
         val value = GreetingArgs("Charlie", 25)
         TachyonServer.builder().build().use { server ->
-            val ctx = DefaultMcpContext.stateless(server)
+            val ctx = DefaultDispatchContext.stateless(server as ServerEngine)
             val scope = ToolScope(ctx, ToolArgs(raw = null))
             val result = scope.success(value)
             result.shouldBeInstanceOf<ToolResult.Success>()
@@ -340,7 +341,7 @@ internal class KotlinApiTest {
     fun `success with text sets content text`() {
         val value = GreetingArgs("Dave", 50)
         TachyonServer.builder().build().use { server ->
-            val ctx = DefaultMcpContext.stateless(server)
+            val ctx = DefaultDispatchContext.stateless(server as ServerEngine)
             val scope = ToolScope(ctx, ToolArgs(raw = null))
             val result = scope.success(value, "custom text")
             result.shouldBeInstanceOf<ToolResult.Success>()

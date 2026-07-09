@@ -8,12 +8,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.netty.McpChannelInitializer;
 import dev.tachyonmcp.transport.netty.NettyIoEngine;
 import dev.tachyonmcp.transport.netty.NettyServer;
@@ -87,7 +87,7 @@ class ProgressKeepAliveTest {
              "params":{"name":"silent-comment","arguments":{}}}
             """;
 
-    private final Server server = TachyonServer.builder()
+    private final ServerEngine server = (ServerEngine) TachyonServer.builder()
             .session(s -> s.enabled(true))
             .network(n -> n.heartbeatInterval(HEARTBEAT))
             .tool(new ProgressHandler("warmup", 0))

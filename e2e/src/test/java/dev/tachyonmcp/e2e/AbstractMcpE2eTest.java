@@ -6,9 +6,9 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.Server;
 import dev.tachyonmcp.server.ServerBuilder;
 import dev.tachyonmcp.server.TachyonServer;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.netty.NettyServer;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -22,7 +22,7 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class AbstractMcpE2eTest {
 
-    protected Server server;
+    protected ServerEngine server;
     protected NettyServer nettyServer;
     protected int port;
     private boolean usingCustomServer;
@@ -51,7 +51,7 @@ abstract class AbstractMcpE2eTest {
 
     protected void startDefaultServer() {
         var h = SharedE2eServer.ensureStarted();
-        this.server = h.server();
+        this.server = (ServerEngine) h;
         this.port = h.port();
         this.usingCustomServer = false;
     }
@@ -66,11 +66,9 @@ abstract class AbstractMcpE2eTest {
             server.close();
         }
         ServerBuilder serverBuilder = TachyonServer.builder();
-        // The E2E suite exercises the stateful session flow; enable sessions by default.
-        // Individual tests may override via their configurer.
         serverBuilder.session(s -> s.enabled(true));
         configurer.accept(serverBuilder);
-        this.server = serverBuilder.build();
+        this.server = (ServerEngine) serverBuilder.build();
         this.nettyServer = new NettyServer(0, server);
         this.port = nettyServer.port();
         this.usingCustomServer = true;

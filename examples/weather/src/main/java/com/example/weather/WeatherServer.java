@@ -3,7 +3,6 @@
 package com.example.weather;
 
 import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.ServerHandle;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.ReadResourceRequest;
@@ -13,6 +12,7 @@ import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
+import dev.tachyonmcp.server.features.resources.ResourceTemplateHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,13 +26,13 @@ public final class WeatherServer {
     private static final Logger log = LoggerFactory.getLogger(WeatherServer.class);
 
     public static void main(String... args) {
-        final var handle = createServer(8080);
-        final var port = handle.port();
+        final var server = createServer(8080);
+        final var port = server.port();
         log.info("Connect your MCP client to http://localhost:{}/mcp", port);
     }
 
-    static ServerHandle createServer(int port) {
-        var handle = TachyonServer.builder()
+    static TachyonServer createServer(int port) {
+        var server = TachyonServer.builder()
                 .info(it -> it
                         .name("weather-server")
                         .title("Weather Server")
@@ -61,18 +61,16 @@ public final class WeatherServer {
                 .prompt(
                         PromptDescriptor.of("rewrite-forecast", "Rewrites a weather forecast in a given style"),
                     WeatherServer::handleRewriteForecast)
-                .port(port)
-                .start();
-
-        handle.server().resources()
-                .addTemplate(ResourceTemplateEntry.of(
+                .resourceTemplate(ResourceTemplateEntry.of(
                         "forecast",
                         "weather://forecast/{city}",
                         "Weather forecast for a city",
                         "application/json",
-                        WeatherServer::handleForecastTemplate));
+                        (ResourceTemplateHandler) WeatherServer::handleForecastTemplate))
+                .port(port)
+                .start();
 
-        return handle;
+        return server;
     }
 
     private WeatherServer() {
