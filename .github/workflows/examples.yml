@@ -42,7 +42,7 @@ jobs:
 
       - name: Verify examples
         working-directory: examples/${{ matrix.example }}
-        run: ./mvnw verify --no-transfer-progress
+        run: ./mvnw clean verify --no-transfer-progress
 
       - name: Publish test results
         uses: mikepenz/action-junit-report@v6
