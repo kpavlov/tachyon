@@ -7,12 +7,24 @@ package dev.tachyonmcp.conformance;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.OutboundSseStreamMessageRouter;
 import dev.tachyonmcp.server.Server;
-import dev.tachyonmcp.server.domain.*;
+import dev.tachyonmcp.server.domain.AudioContent;
+import dev.tachyonmcp.server.domain.BlobResourceContents;
+import dev.tachyonmcp.server.domain.EmbeddedResource;
+import dev.tachyonmcp.server.domain.FormInputRequest;
+import dev.tachyonmcp.server.domain.ImageContent;
+import dev.tachyonmcp.server.domain.InputRequest;
+import dev.tachyonmcp.server.domain.PromptMessage;
+import dev.tachyonmcp.server.domain.RpcMethodRequest;
+import dev.tachyonmcp.server.domain.TextContent;
+import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptHandlerResult;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
-import dev.tachyonmcp.server.features.tools.*;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolRequest;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.Base64;
 import java.util.LinkedHashMap;
@@ -165,35 +177,41 @@ abstract class AbstractConformanceServer {
     }
 
     private void registerTools(Server server) {
-        server.registerTool(new EchoToolHandler());
+        server.registerTool(echoTool());
 
-        server.registerTool(SyncToolHandler.of(
-                "test_simple_text",
-                "Returns simple text",
-                INPUT_SCHEMA_NO_ARGS,
+        server.registerTool(ToolHandler.of(
+                b -> b.name("test_simple_text")
+                        .description("Returns simple text")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS),
                 (ctx, args) -> ToolResult.text("This is a simple text response for testing.")));
 
-        server.registerTool(SyncToolHandler.of(
-                "test_image_content",
-                "Returns image content",
-                INPUT_SCHEMA_NO_ARGS,
+        server.registerTool(ToolHandler.of(
+                b -> b.name("test_image_content")
+                        .description("Returns image content")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS),
                 (ctx, args) -> ToolResult.blocks(ImageContent.of(MINI_PNG_BASE64, "image/png"))));
 
-        server.registerTool(SyncToolHandler.of(
-                "test_audio_content",
-                "Returns audio content",
-                INPUT_SCHEMA_NO_ARGS,
+        server.registerTool(ToolHandler.of(
+                b -> b.name("test_audio_content")
+                        .description("Returns audio content")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS),
                 (ctx, args) -> ToolResult.blocks(AudioContent.of(MINI_WAV_BASE64, "audio/wav"))));
 
-        server.registerTool(SyncToolHandler.of(
-                "test_embedded_resource", "Returns embedded resource", INPUT_SCHEMA_NO_ARGS, (ctx, args) -> {
+        server.registerTool(ToolHandler.of(
+                b -> b.name("test_embedded_resource")
+                        .description("Returns embedded resource")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS),
+                (ctx, args) -> {
                     var res = TextResourceContents.of(
                             "test://embedded-resource", "text/plain", "This is an embedded resource content.");
                     return ToolResult.blocks(EmbeddedResource.of(res));
                 }));
 
-        server.registerTool(SyncToolHandler.of(
-                "test_multiple_content_types", "Returns multiple content types", INPUT_SCHEMA_NO_ARGS, (ctx, args) -> {
+        server.registerTool(ToolHandler.of(
+                b -> b.name("test_multiple_content_types")
+                        .description("Returns multiple content types")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS),
+                (ctx, args) -> {
                     var mixed = TextResourceContents.of(
                             "test://mixed-content-resource", "application/json", "{\"test\":\"data\",\"value\":123}");
                     return ToolResult.blocks(
@@ -202,10 +220,10 @@ abstract class AbstractConformanceServer {
                             EmbeddedResource.of(mixed));
                 }));
 
-        server.registerTool(SyncToolHandler.of(
-                "test_error_handling",
-                "Always returns error",
-                INPUT_SCHEMA_NO_ARGS,
+        server.registerTool(ToolHandler.of(
+                b -> b.name("test_error_handling")
+                        .description("Always returns error")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS),
                 (ctx, args) -> ToolResult.error("This tool intentionally returns an error for testing")));
 
         server.registerTool(new ToolHandler() {
@@ -253,8 +271,11 @@ abstract class AbstractConformanceServer {
             }
         });
 
-        server.registerTool(SyncToolHandler.of(
-                "test_sampling", "Tool that requests sampling", INPUT_SCHEMA_WITH_PROMPT, (ctx, args) -> {
+        server.registerTool(ToolHandler.of(
+                b -> b.name("test_sampling")
+                        .description("Tool that requests sampling")
+                        .inputSchema(INPUT_SCHEMA_WITH_PROMPT),
+                (ctx, args) -> {
                     var promptOpt = args.stringOpt("prompt");
                     if (promptOpt.isPresent()) {
                         var prompt = promptOpt.get();
@@ -280,8 +301,11 @@ abstract class AbstractConformanceServer {
                     return ToolResult.text("sampling not fully implemented");
                 }));
 
-        server.registerTool(SyncToolHandler.of(
-                "test_elicitation", "Tool that requests elicitation", INPUT_SCHEMA_WITH_MESSAGE, (ctx, args) -> {
+        server.registerTool(ToolHandler.of(
+                b -> b.name("test_elicitation")
+                        .description("Tool that requests elicitation")
+                        .inputSchema(INPUT_SCHEMA_WITH_MESSAGE),
+                (ctx, args) -> {
                     var messageOpt = args.stringOpt("message");
                     if (messageOpt.isPresent()) {
                         var message = messageOpt.get();
@@ -317,8 +341,11 @@ abstract class AbstractConformanceServer {
                     return ToolResult.text("elicitation not fully implemented");
                 }));
 
-        server.registerTool(SyncToolHandler.of(
-                "test_elicitation_sep1034_defaults", "Elicitation with defaults", INPUT_SCHEMA_NO_ARGS, (ctx, args) -> {
+        server.registerTool(ToolHandler.of(
+                b -> b.name("test_elicitation_sep1034_defaults")
+                        .description("Elicitation with defaults")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS),
+                (ctx, args) -> {
                     try {
                         var paramsMap = Map.of(
                                 "mode",
@@ -361,8 +388,11 @@ abstract class AbstractConformanceServer {
                     }
                 }));
 
-        server.registerTool(SyncToolHandler.of(
-                "test_elicitation_sep1330_enums", "Elicitation with enums", INPUT_SCHEMA_NO_ARGS, (ctx, args) -> {
+        server.registerTool(ToolHandler.of(
+                b -> b.name("test_elicitation_sep1330_enums")
+                        .description("Elicitation with enums")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS),
+                (ctx, args) -> {
                     try {
                         var props = new LinkedHashMap<String, Object>();
                         props.put(
@@ -425,23 +455,18 @@ abstract class AbstractConformanceServer {
                 }));
 
         var inputSchema = buildJsonSchema();
-        server.registerTool(
-                new AbstractSyncToolHandler(ToolDescriptor.builder()
+        server.registerTool(ToolHandler.of(
+                ToolDescriptor.builder()
                         .name("json_schema_2020_12_tool")
                         .description("Tool with JSON Schema 2020-12 features")
                         .inputSchema(inputSchema)
-                        .build()) {
+                        .build(),
+                (context, args) -> ToolResult.text("JSON Schema 2020-12 tool called")));
 
-                    @Override
-                    public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-                        return ToolResult.text("JSON Schema 2020-12 tool called");
-                    }
-                });
-
-        server.registerTool(SyncToolHandler.of(
-                "test_reconnection",
-                "A tool that triggers SSE stream closure to test client reconnection behavior",
-                INPUT_SCHEMA_NO_ARGS,
+        server.registerTool(ToolHandler.of(
+                b -> b.name("test_reconnection")
+                        .description("A tool that triggers SSE stream closure to test client reconnection behavior")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS),
                 (ctx, args) -> {
                     var stream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
                     if (stream != null) {
@@ -746,29 +771,17 @@ abstract class AbstractConformanceServer {
                         });
     }
 
-    private static class EchoToolHandler extends AbstractSyncToolHandler {
-
+    private static ToolHandler echoTool() {
         // language=json
-        private static final JsonNode INPUT_SCHEMA = parseJson("""
+        var schema = parseJson("""
             {
                 "type": "object",
                 "properties": {"message": {"type": "string", "description": "Message to echo"}},
                 "required": ["message"]
             }
             """);
-
-        EchoToolHandler() {
-            super(ToolDescriptor.builder()
-                    .name("echo")
-                    .description("Echo back the input message")
-                    .inputSchema(INPUT_SCHEMA)
-                    .build());
-        }
-
-        @Override
-        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-            var message = arguments.stringOr("message", "");
-            return ToolResult.text(message);
-        }
+        return ToolHandler.of(
+                b -> b.name("echo").description("Echo back the input message").inputSchema(schema),
+                (ctx, args) -> ToolResult.text(args.stringOr("message", "")));
     }
 }

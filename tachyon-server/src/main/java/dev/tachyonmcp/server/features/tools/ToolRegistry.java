@@ -23,10 +23,21 @@ import dev.tachyonmcp.server.features.tasks.TaskDescriptor;
 import dev.tachyonmcp.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.server.features.tasks.TaskState;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
-import dev.tachyonmcp.server.json.*;
+import dev.tachyonmcp.server.json.JsonSchemaUtils;
+import dev.tachyonmcp.server.json.JsonSchemaValidator;
+import dev.tachyonmcp.server.json.JsonUtils;
+import dev.tachyonmcp.server.json.PayloadDeserializer;
+import dev.tachyonmcp.server.json.PayloadSerializer;
+import dev.tachyonmcp.server.json.RawJson;
+import dev.tachyonmcp.server.json.SchemaValidationError;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
@@ -237,7 +248,7 @@ public class ToolRegistry {
          * Runs on the dispatcher's virtual thread; blocking to join the handler is the SPI contract.
          */
         @Override
-        public Object handle(DispatchContext context, Object params) throws Exception {
+        public Object handle(DispatchContext context, Object params) {
             var parsed = parseCallParams(params);
             if (parsed == null) return invalidRequest("Invalid params");
             if (parsed.name().isBlank()) return invalidRequest("Missing tool name");
@@ -382,15 +393,16 @@ public class ToolRegistry {
          * configured serde — a non-Jackson serde cannot encode Jackson trees.
          */
         private ToolResult serializeStructured(ToolResult result) {
-            if (result instanceof ToolResult.WithMeta wm) {
-                var inner = serializeStructured(wm.inner());
-                return inner == wm.inner() ? result : new ToolResult.WithMeta(inner, wm.meta());
+            if (result instanceof ToolResult.WithMeta(ToolResult inner1, Map<String, JsonNode> meta)) {
+                var inner = serializeStructured(inner1);
+                return inner == inner1 ? result : new ToolResult.WithMeta(inner, meta);
             }
-            if (!(result instanceof ToolResult.Success s)) return result;
-            var sv = s.structuredValue();
+            if (!(result
+                    instanceof ToolResult.Success(Object sv, List<dev.tachyonmcp.server.domain.ContentBlock> content)))
+                return result;
             if (sv == null || sv instanceof RawJson || sv instanceof JsonNode) return result;
             var json = containsJsonNodes(sv) ? JsonUtils.writeString(sv) : payloadSerializer.serialize(sv);
-            return new ToolResult.Success(RawJson.of(json), s.content());
+            return new ToolResult.Success(RawJson.of(json), content);
         }
 
         private static boolean containsJsonNodes(Object structuredValue) {
@@ -412,8 +424,8 @@ public class ToolRegistry {
         }
 
         private @Nullable JsonNode structuredValueAsObjectNode(@Nullable Object structuredValue) {
-            if (structuredValue instanceof RawJson rj) {
-                var node = JsonUtils.parse(rj.json());
+            if (structuredValue instanceof RawJson(String json)) {
+                var node = JsonUtils.parse(json);
                 return node.isObject() ? node : null;
             }
             if (structuredValue instanceof JsonNode node) {

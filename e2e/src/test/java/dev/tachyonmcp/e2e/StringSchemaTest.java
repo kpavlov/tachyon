@@ -7,7 +7,7 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.features.tools.SyncToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -23,11 +23,11 @@ class StringSchemaTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldListToolWithStringSchemas() throws Exception {
-        startServer(it -> it.tool(SyncToolHandler.of(
-                "string-schema-tool",
-                "Tool with string schemas",
-                INPUT_SCHEMA_JSON,
-                OUTPUT_SCHEMA_JSON,
+        startServer(it -> it.tool(ToolHandler.of(
+                b -> b.name("string-schema-tool")
+                        .description("Tool with string schemas")
+                        .inputSchema(INPUT_SCHEMA_JSON)
+                        .outputSchema(OUTPUT_SCHEMA_JSON),
                 (ctx, args) -> ToolResult.text("ok"))));
 
         try (var client = createTestClient()) {
@@ -51,16 +51,14 @@ class StringSchemaTest extends AbstractMcpE2eTest {
     @Test
     void shouldHaveIdenticalResultToJsonNodeSchemas() throws Exception {
         startServer(it -> {
-            it.tool(SyncToolHandler.of(
-                    "from-string",
-                    "Tool from string",
-                    INPUT_SCHEMA_JSON,
-                    null,
+            it.tool(ToolHandler.of(
+                    b -> b.name("from-string").description("Tool from string").inputSchema(INPUT_SCHEMA_JSON),
                     (ctx, args) -> ToolResult.text("string")));
             var mapper = new ObjectMapper();
             var jsonNodeSchema = mapper.readTree(INPUT_SCHEMA_JSON);
-            it.tool(SyncToolHandler.of(
-                    "from-node", "Tool from node", jsonNodeSchema, null, (ctx, args) -> ToolResult.text("node")));
+            it.tool(ToolHandler.of(
+                    b -> b.name("from-node").description("Tool from node").inputSchema(jsonNodeSchema),
+                    (ctx, args) -> ToolResult.text("node")));
         });
 
         try (var client = createTestClient()) {

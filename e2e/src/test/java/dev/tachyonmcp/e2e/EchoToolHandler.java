@@ -2,17 +2,13 @@
 
 package dev.tachyonmcp.e2e;
 
-import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.features.tools.AbstractAsyncToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
-class EchoToolHandler extends AbstractAsyncToolHandler {
+class EchoToolHandler {
 
     static final JsonNode ECHO_INPUT_SCHEMA = buildEchoSchema();
 
@@ -28,15 +24,9 @@ class EchoToolHandler extends AbstractAsyncToolHandler {
         return schema;
     }
 
-    EchoToolHandler() {
-        super(ToolDescriptor.builder("echo")
-                .description("Echo back the input message")
-                .inputSchema(ECHO_INPUT_SCHEMA)
-                .build());
-    }
-
-    @Override
-    public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolArgs args) {
-        return CompletableFuture.supplyAsync(() -> ToolResult.text(args.stringOr("message", "")));
+    static ToolHandler create() {
+        return ToolHandler.ofAsync(
+                b -> b.name("echo").description("Echo back the input message").inputSchema(ECHO_INPUT_SCHEMA),
+                (ctx, args) -> CompletableFuture.supplyAsync(() -> ToolResult.text(args.stringOr("message", ""))));
     }
 }

@@ -8,8 +8,6 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextContent;
-import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class JsonRpcCodecTest {
@@ -98,15 +96,15 @@ class JsonRpcCodecTest {
     @Test
     void toJsonParamsSerializesObject() {
         var json = JsonRpcCodec.toJsonParams(java.util.Map.of("key", "value"));
+        // language=json
         assertThatJson(json).isEqualTo("""
-                {"key":"value"}
-                """);
+            {"key":"value"}
+            """);
     }
 
     @Test
     void writeValueAsStringWithProtocolModelReturnsJsonNotToString() {
-        var content = TextContent.of("ok");
-        var result = new CallToolResult(List.of(content), null, null, null, null);
+        var result = CallToolResult.ofText("ok");
 
         var json = JsonRpcCodec.writeValueAsString(result);
 

@@ -6,10 +6,7 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.io.IOException;
 import java.net.Socket;
@@ -18,7 +15,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.JsonNode;
 
 /**
  * MCP 2025-11-25 Streamable HTTP, Resumability and Redelivery: "The server MUST NOT replay
@@ -35,7 +31,7 @@ class SseReplayPerStreamTest extends AbstractMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServer(it -> it.tool(new NotifyingEchoToolHandler()));
+        startServer(it -> it.tool(notifyingEchoTool()));
     }
 
     @Test
@@ -125,24 +121,18 @@ class SseReplayPerStreamTest extends AbstractMcpE2eTest {
         return sb.toString();
     }
 
-    private static class NotifyingEchoToolHandler extends AbstractSyncToolHandler {
-
-        NotifyingEchoToolHandler() {
-            super(ToolDescriptor.builder()
-                    .name("notifying-echo")
-                    .description("Echoes the message, emitting a notification so the POST upgrades to SSE")
-                    .build());
-        }
-
-        @Override
-        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-            String text = "";
-            var msg = arguments.raw("message");
-            if (msg instanceof JsonNode node) {
-                text = node.asString();
-            }
-            context.notifications().send("notifications/tool/echoed", Map.of("message", text));
-            return ToolResult.text(text);
-        }
+    private static ToolHandler notifyingEchoTool() {
+        return ToolHandler.of(
+                b -> b.name("notifying-echo")
+                        .description("Echoes the message, emitting a notification so the POST upgrades to SSE"),
+                (context, args) -> {
+                    String text = "";
+                    var msg = args.raw("message");
+                    if (msg instanceof tools.jackson.databind.JsonNode node) {
+                        text = node.asString();
+                    }
+                    context.notifications().send("notifications/tool/echoed", Map.of("message", text));
+                    return ToolResult.text(text);
+                });
     }
 }

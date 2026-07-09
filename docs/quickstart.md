@@ -23,26 +23,15 @@ For the Kotlin DSL, add `tachyon-server-kotlin` instead (it includes `tachyon-se
 
 ```java
 import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.runtime.InteractionContext;
 
 void main() {
     TachyonServer.builder()
         .name("my-server")
         .version("1.0")
-        .tool(new AbstractSyncToolHandler(
-            ToolDescriptor.builder()
-                .name("greet")
-                .description("Say hello")
-                .build()) {
-            @Override
-            public ToolResult handle(InteractionContext ctx, ToolArgs args) {
-                return ToolResult.text("Hello!");
-            }
-        })
+        .tool(ToolHandler.of("greet", "Say hello",
+            (ctx, args) -> ToolResult.text("Hello!")))
         .port(8080)
         .start();
 }

@@ -5,7 +5,13 @@
 package dev.tachyonmcp.server;
 
 import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.config.*;
+import dev.tachyonmcp.server.config.CapabilitiesConfig;
+import dev.tachyonmcp.server.config.NetworkConfig;
+import dev.tachyonmcp.server.config.RuntimeConfig;
+import dev.tachyonmcp.server.config.ServerConfig;
+import dev.tachyonmcp.server.config.ServerIdentity;
+import dev.tachyonmcp.server.config.ServerIdentityBuilder;
+import dev.tachyonmcp.server.config.SessionConfig;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.extensions.ServerExtension;
@@ -15,8 +21,16 @@ import dev.tachyonmcp.server.features.prompts.PromptHandler;
 import dev.tachyonmcp.server.features.prompts.PromptHandlerResult;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceHandler;
-import dev.tachyonmcp.server.features.tools.*;
-import dev.tachyonmcp.server.json.*;
+import dev.tachyonmcp.server.features.tools.ToolArgs;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.json.JacksonPayloadSerde;
+import dev.tachyonmcp.server.json.JsonConfig;
+import dev.tachyonmcp.server.json.JsonSchemaValidator;
+import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
+import dev.tachyonmcp.server.json.PayloadDeserializer;
+import dev.tachyonmcp.server.json.PayloadSerde;
+import dev.tachyonmcp.server.json.PayloadSerializer;
 import dev.tachyonmcp.server.session.InMemorySessionLogRouter;
 import dev.tachyonmcp.server.session.InMemorySessionStore;
 import dev.tachyonmcp.transport.netty.NettyServer;
@@ -25,7 +39,12 @@ import io.netty.channel.ChannelPipeline;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 
@@ -141,22 +160,6 @@ public final class ServerBuilder {
     }
 
     /**
-     * Registers a synchronous tool handler.
-     */
-    public ServerBuilder tool(SyncToolHandler handler) {
-        featuresConfig.tools.add(handler);
-        return this;
-    }
-
-    /**
-     * Registers an asynchronous tool handler.
-     */
-    public ServerBuilder tool(AsyncToolHandler handler) {
-        featuresConfig.tools.add(handler);
-        return this;
-    }
-
-    /**
      * Registers a tool with string JSON schemas and a handler function.
      */
     public ServerBuilder tool(
@@ -165,7 +168,12 @@ public final class ServerBuilder {
             @Nullable String inputSchemaJson,
             @Nullable String outputSchemaJson,
             java.util.function.BiFunction<InteractionContext, ToolArgs, ToolResult> fn) {
-        return tool(SyncToolHandler.of(name, description, inputSchemaJson, outputSchemaJson, fn));
+        return tool(ToolHandler.of(
+                b -> b.name(name)
+                        .description(description)
+                        .inputSchema(inputSchemaJson)
+                        .outputSchema(outputSchemaJson),
+                fn));
     }
 
     /**

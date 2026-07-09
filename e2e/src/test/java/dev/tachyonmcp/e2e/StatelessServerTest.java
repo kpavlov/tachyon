@@ -31,7 +31,7 @@ class StatelessServerTest {
     @BeforeAll
     void beforeAll() {
         serverHandle = TachyonServer.builder()
-                .tool(new EchoToolHandler())
+                .tool(EchoToolHandler.create())
                 .network(n -> n.host("localhost").port(0))
                 .start();
         port = serverHandle.port();

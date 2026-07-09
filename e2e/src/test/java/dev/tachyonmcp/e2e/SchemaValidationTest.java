@@ -7,13 +7,11 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.PromptArgument;
 import dev.tachyonmcp.server.domain.Role;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
-import dev.tachyonmcp.server.features.tools.SyncToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
@@ -34,8 +32,8 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
     @Test
     void shouldValidateMultipleToolsWithDistinctSchemas() throws Exception {
         startServer(it -> it.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR))
-                .tool(new ValidatedToolHandler())
-                .tool(new ValidatedToolHandler2()));
+                .tool(validatedTool())
+                .tool(validatedTool2()));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -69,7 +67,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
     @Test
     void shouldAcceptValidToolArguments() throws Exception {
         startServer(it -> it.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR))
-                .tool(new ValidatedToolHandler()));
+                .tool(validatedTool()));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -89,7 +87,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
     @Test
     void shouldRejectToolCallWithMissingRequiredField() throws Exception {
         startServer(it -> it.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR))
-                .tool(new ValidatedToolHandler()));
+                .tool(validatedTool()));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -108,7 +106,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldRejectToolCallWithWrongType() throws Exception {
-        startServer(it -> it.json(j -> j.schemaValidator(VALIDATOR)).tool(new ValidatedToolHandler()));
+        startServer(it -> it.json(j -> j.schemaValidator(VALIDATOR)).tool(validatedTool()));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -199,54 +197,20 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
 
     // region: Tool handler
 
-    private static class ValidatedToolHandler implements SyncToolHandler {
-
-        @Override
-        public String name() {
-            return "validated";
-        }
-
-        @Override
-        public String description() {
-            return "A tool with input schema validation";
-        }
-
-        @Override
-        public JsonNode inputSchema() {
-            return TOOL_SCHEMA;
-        }
-
-        @Override
-        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-            return ToolResult.text("ok");
-        }
+    private static ToolHandler validatedTool() {
+        return ToolHandler.of(
+                b -> b.name("validated")
+                        .description("A tool with input schema validation")
+                        .inputSchema(TOOL_SCHEMA),
+                (context, args) -> ToolResult.text("ok"));
     }
 
-    // endregion
-
-    // region: Schema builders
-
-    private static class ValidatedToolHandler2 implements SyncToolHandler {
-
-        @Override
-        public String name() {
-            return "validated2";
-        }
-
-        @Override
-        public String description() {
-            return "Another tool with a distinct input schema";
-        }
-
-        @Override
-        public JsonNode inputSchema() {
-            return buildToolSchema2();
-        }
-
-        @Override
-        public ToolResult handle(InteractionContext context, ToolArgs arguments) {
-            return ToolResult.text("ok");
-        }
+    private static ToolHandler validatedTool2() {
+        return ToolHandler.of(
+                b -> b.name("validated2")
+                        .description("Another tool with a distinct input schema")
+                        .inputSchema(buildToolSchema2()),
+                (context, args) -> ToolResult.text("ok"));
     }
 
     private static JsonNode buildToolSchema() {

@@ -19,7 +19,7 @@ class TaskLifecycleTest extends AbstractMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServer(it -> it.tool(new EchoToolHandler()));
+        startServer(it -> it.tool(EchoToolHandler.create()));
     }
 
     @Test
@@ -126,7 +126,7 @@ class TaskLifecycleTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldNotifyTaskStatusViaSyncTool() throws Exception {
-        startServer(it -> it.tool(new EchoToolHandler()).tool(new SyncTaskCreatorTool()));
+        startServer(it -> it.tool(EchoToolHandler.create()).tool(new SyncTaskCreatorTool()));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();

@@ -7,7 +7,6 @@ package dev.tachyonmcp.server;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.runtime.Backpressure;
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.runtime.SseEvent;
@@ -15,10 +14,9 @@ import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.server.features.tools.SyncToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.session.*;
+import dev.tachyonmcp.server.session.SessionEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -27,8 +25,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 class ServerTest {
 
@@ -227,27 +223,12 @@ class ServerTest {
             session.connection(conn);
             session.activate();
 
-            server.registerTool(new SyncToolHandler() {
-                @Override
-                public String name() {
-                    return "dynamic-tool";
-                }
-
-                @Override
-                public String description() {
-                    return "Dynamically registered";
-                }
-
-                @Override
-                public JsonNode inputSchema() {
-                    return JsonNodeFactory.instance.objectNode().put("type", "object");
-                }
-
-                @Override
-                public ToolResult handle(InteractionContext context, ToolArgs args) {
-                    return ToolResult.empty();
-                }
-            });
+            server.registerTool(ToolHandler.of(
+                    builder -> builder.name("dynamic-tool")
+                            .description("Dynamically registered")
+                            // language=json
+                            .inputSchema("{\"type\": \"object\"}"),
+                    (context, args) -> ToolResult.empty()));
 
             var listChanged = conn.sent.stream()
                     .filter(e -> e.data().contains("notifications/tools/list_changed"))
@@ -343,27 +324,8 @@ class ServerTest {
             var session = server.createSession("sess_init");
             session.connection(conn);
 
-            server.registerTool(new SyncToolHandler() {
-                @Override
-                public String name() {
-                    return "tool-during-init";
-                }
-
-                @Override
-                public String description() {
-                    return "";
-                }
-
-                @Override
-                public JsonNode inputSchema() {
-                    return JsonNodeFactory.instance.objectNode().put("type", "object");
-                }
-
-                @Override
-                public ToolResult handle(InteractionContext context, ToolArgs args) {
-                    return ToolResult.empty();
-                }
-            });
+            server.registerTool(
+                    ToolHandler.of(builder -> builder.name("tool-during-init"), (context, args) -> ToolResult.empty()));
 
             var listChanged = conn.sent.stream()
                     .filter(e -> e.data().contains("list_changed"))

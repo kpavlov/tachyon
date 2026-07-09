@@ -10,12 +10,12 @@ all: clean format build examples-snapshot examples ## Full build: clean, format,
 ci: clean build ## CI pipeline: clean + build
 
 build: ## Compile, test, verify (mvn verify)
-	@echo "🏗️ Building..."
+	@echo " 🏗️ Building..."
 	@./mvnw -version
 	@./mvnw verify --no-transfer-progress
 
 test: ## Run unit + e2e tests
-	@echo "🧪 Running tests..."
+	@echo " 🧪 Running tests..."
 	@./mvnw test --no-transfer-progress
 
 package: ## Install artifacts to local Maven repo (skip tests)
@@ -24,44 +24,44 @@ package: ## Install artifacts to local Maven repo (skip tests)
 	@./mvnw install -pl tachyon-server-kotlin -am -DskipTests -Dspotbugs.skip -Dspotless.skip
 
 examples: ## Build live examples against published artifacts
-	@echo "🌤️📡 Building Live examples..."
+	@echo "🌤️ 📡  Building LIVE examples..."
 	@./mvnw verify -f examples/weather/pom.xml --no-transfer-progress
 	@./mvnw verify -f examples/echo-kotlin/pom.xml --no-transfer-progress
-	@echo "✅ Done!"
+	@echo " ✅ Done!"
 
 examples-snapshot: package ## Build examples against local SNAPSHOT artifacts
-	@echo "🌤️🎬 Building SNAPSHOT examples..."
+	@echo "🌤️ 🎬 Building SNAPSHOT examples..."
 	@./mvnw verify -f examples/weather/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
 	@./mvnw verify -f examples/echo-kotlin/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
-	@echo "✅ Done!"
+	@echo " ✅  Done!"
 
 conformance: package ## Run MCP conformance suite
-	@echo "🔄 Running MCP conformance suite..."
+	@echo " 🔄  Running MCP conformance suite..."
 	@rm -rf conformance/target/failsafe-reports/conformance-results/**
 	@./mvnw verify -am -pl conformance
 
 e2e: package ## Run end-to-end tests
-	@echo "🔗 Running end-to-end tests..."
+	@echo " 🔗  Running end-to-end tests..."
 	@./mvnw test -pl e2e -am
 
 clean: ## Remove all build artifacts
-	@echo "🧹 Cleaning..."
+	@echo " 🧹  Cleaning..."
 	@find . -type d -name target -exec rm -rf {} +
-	@echo "✅ All clean!"
+	@echo " ✅  All clean!"
 
 format: ## Auto-format code (Spotless + Detekt)
-	@echo "🎨 Formatting code..."
+	@echo " 🎨  Formatting code..."
 	@./mvnw spotless:apply -q
 	@./mvnw install -pl tachyon-server -DskipTests -Dspotbugs.skip -Dspotless.skip -q
 	@./mvnw exec:java@detekt-format -pl tachyon-server-kotlin -am -q
-	@echo "✅ Done..."
+	@echo " ✅  Done..."
 
 lint: ## Check code style and bugs (Spotless + Detekt + SpotBugs)
-	@echo "🔍 Linting code..."
+	@echo " 🔍  Linting code..."
 	@./mvnw spotless:check -pl !reports
 	@./mvnw exec:java@detekt -pl tachyon-server-kotlin
 	@./mvnw spotbugs:check -pl !reports,!e2e
-	@echo "✅ Done..."
+	@echo " ✅  Done..."
 
 inspector: ## Launch MCP Inspector UI
 	@echo "🧐 MCP Inspector"

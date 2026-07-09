@@ -50,18 +50,25 @@ var handle = TachyonServer.builder()
 
 ## Tools 🔧
 
-`SyncToolHandler` (sync, preferred) or `AsyncToolHandler`.
+One interface: `ToolHandler`. Override exactly one method — `handle`/`handleAsync` × `ToolArgs`/`ToolRequest` — or use a `ToolHandler.of*` factory. Dispatch calls `handleAsync(ctx, ToolRequest)`; the defaults route to whichever you provide.
 
-Class — extend `AbstractSyncToolHandler`:
+| Need | Factory | Override |
+|---|---|---|
+| sync, args only | `ToolHandler.of(name, desc, fn)` / `of(configurer, fn)` | `handle(ctx, ToolArgs)` |
+| sync, full request (progress token) | `ToolHandler.ofRequest(descriptor, fn)` | `handle(ctx, ToolRequest)` |
+| async, args only | `ToolHandler.ofAsync(name, fn)` | `handleAsync(ctx, ToolArgs)` |
+| async, full request | `ToolHandler.ofAsyncRequest(descriptor, fn)` | `handleAsync(ctx, ToolRequest)` |
+
+Blocking is fine — sync `handle` runs on a virtual thread. Async handlers stay async (no blocking detour). Only override the request form when you need `_meta` (progress token, input responses); `ToolArgs` carries neither.
+
+Class — implement `ToolHandler`:
 
 ```java
-class MyTool extends AbstractSyncToolHandler {
-    public MyTool() {
-        super(ToolDescriptor.builder()
-            .name("my-tool")
-            .description("Does something useful")
-            .inputSchema(jsonSchema)
-            .build());
+class MyTool implements ToolHandler {
+    @Override
+    public ToolDescriptor descriptor() {
+        return ToolDescriptor.builder()
+            .name("my-tool").description("Does something useful").inputSchema(jsonSchema).build();
     }
     @Override
     public ToolResult handle(InteractionContext ctx, ToolArgs args) throws Exception {
@@ -70,15 +77,19 @@ class MyTool extends AbstractSyncToolHandler {
 }
 ```
 
-Lambda — `SyncToolHandler.of(name, description, inputSchema, (ctx, args) -> ...)`:
+Lambda — `ToolHandler.of(name, description, (ctx, args) -> ...)`, or `of(configurer, fn)` for a schema:
 
 ```java
-.tool(SyncToolHandler.of("hello", "Say hello", null,
+.tool(ToolHandler.of("hello", "Say hello",
     (ctx, args) -> ToolResult.text("Hello, world!")))
+
+.tool(ToolHandler.of(
+    b -> b.name("hello").description("Say hello").inputSchema(schema),
+    (ctx, args) -> ToolResult.text("Hello, " + args.stringOr("name", "world"))))
 ```
 
-Schema arg can be a `JsonNode` **or** a raw JSON `String` (parsed for you). String overload
-takes input + output schemas; there's a matching `.tool(name, desc, inJson, outJson, fn)` shorthand:
+`inputSchema(...)`/`outputSchema(...)` take a `JsonNode` **or** a raw JSON `String`. Shorthand
+`.tool(name, desc, inJson, outJson, fn)` builds the sync handler for you:
 
 ```java
 .tool("hello", "Say hello",
@@ -88,8 +99,7 @@ takes input + output schemas; there's a matching `.tool(name, desc, inJson, outJ
     (ctx, args) -> ToolResult.text("Hello, " + args.stringOr("name", "world")))
 ```
 
-Async — implement `AsyncToolHandler` (or extend `AbstractAsyncToolHandler`), return a
-`CompletionStage<ToolResult>`.
+Async — `ToolHandler.ofAsync(name, (ctx, args) -> CompletionStage<ToolResult>)` (or override `handleAsync`).
 
 `ToolResult` (not generic): `.text(t)` · `.error(msg)` (isError=true) · `.blocks(ContentBlock...)` · `.of(payload)` (structuredContent via Jackson) · `.of(payload, text)` · `.raw(json, text)` (pre-serialized JSON) · `.inputRequired(reqs, state)` · `.empty()` · `.withMeta(map)` / `.withMeta(key, value)`
 
@@ -223,8 +233,7 @@ ToolDescriptor.builder()
 ```
 
 (`builder(name)` and `builder(name, inJson, outJson)` still exist but are deprecated.)
-The lambda shorthands `SyncToolHandler.of(name, desc, inJson, outJson, fn)` and
-`.tool(name, desc, inJson, outJson, fn)` also take String schemas.
+The `.tool(name, desc, inJson, outJson, fn)` shorthand also takes String schemas.
 
 ## Extensions
 
@@ -325,11 +334,11 @@ server.registerTool(
 Load on demand (next to this skill):
 
 - [resources/java/ServerBasic.java](resources/java/ServerBasic.java) — full server, all features
-- `resources/java/ToolHandlerExample.java` — `ToolDescriptor`, `SyncToolHandler.of()`, `AbstractSyncToolHandler`, long-running keep-alive (`ToolHandler` + `progress()`)
-- `resources/java/ResourceHandlerExample.java` — `ResourceDescriptor`, `ResourceTemplateEntry`, `ResourceHandler`
-- `resources/java/PromptHandlerExample.java` — `PromptDescriptor`, `PromptArgument`, `PromptHandler`
-- `resources/java/ConfigReference.java` — `CapabilitiesConfig.Builder`, `NetworkConfig.Builder`, `SessionConfig.Builder`
-- `resources/kotlin/ServerBasic.kt` — full server, all features (Kotlin DSL)
-- `resources/kotlin/ToolHandlerExample.kt` — suspend handler, `AbstractSyncToolHandler`, `AbstractAsyncToolHandler`, `registerTool`
-- `resources/kotlin/ResourceHandlerExample.kt` — static resources, URI templates (Kotlin DSL)
-- `resources/kotlin/PromptHandlerExample.kt` — prompt descriptors and handlers (Kotlin DSL)
+- [resources/java/ToolHandlerExample.java](resources/java/ToolHandlerExample.java) — `ToolDescriptor`, `ToolHandler.of()`, `implements ToolHandler`, long-running keep-alive (`handle(ctx, ToolRequest)` + `progress()`)
+- [resources/java/ResourceHandlerExample.java](resources/java/ResourceHandlerExample.java) — `ResourceDescriptor`, `ResourceTemplateEntry`, `ResourceHandler`
+- [resources/java/PromptHandlerExample.java](resources/java/PromptHandlerExample.java) — `PromptDescriptor`, `PromptArgument`, `PromptHandler`
+- [resources/java/ConfigReference.java](resources/java/ConfigReference.java) — `CapabilitiesConfig.Builder`, `NetworkConfig.Builder`, `SessionConfig.Builder`
+- [resources/kotlin/ServerBasic.kt](resources/kotlin/ServerBasic.kt) — full server, all features (Kotlin DSL)
+- [resources/kotlin/ToolHandlerExample.kt](resources/kotlin/ToolHandlerExample.kt) — suspend handler, `implements ToolHandler` (`handle`/`handleAsync`), `registerTool`
+- [resources/kotlin/ResourceHandlerExample.kt](resources/kotlin/ResourceHandlerExample.kt) — static resources, URI templates (Kotlin DSL)
+- [resources/kotlin/PromptHandlerExample.kt](resources/kotlin/PromptHandlerExample.kt) — prompt descriptors and handlers (Kotlin DSL)

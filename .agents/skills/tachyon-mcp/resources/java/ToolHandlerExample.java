@@ -3,8 +3,6 @@
  */
 
 import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.features.tools.AbstractSyncToolHandler;
-import dev.tachyonmcp.server.features.tools.SyncToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
@@ -15,9 +13,9 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Demonstrates the two tool-handler patterns:
- * 1. SyncToolHandler.of() — inline lambda
- * 2. AbstractSyncToolHandler — reusable class
+ * Demonstrates tool-handler patterns:
+ * 1. ToolHandler.of() — inline lambda
+ * 2. ToolHandler.of() with Consumer&lt;Builder&gt; — reusable config
  * 3. LongRunningTool — keep-alive for tools slower than readerIdleTimeout
  */
 final class ToolHandlerExample {
@@ -36,20 +34,20 @@ final class ToolHandlerExample {
         .set("required", MAPPER.createArrayNode().add("name"));
 
     /**
-     * Lambda-style: use SyncToolHandler.of() inside a builder chain.
+     * Lambda-style: use ToolHandler.of() inside a builder chain.
      */
-    static SyncToolHandler lambdaHello() {
-        return SyncToolHandler.of("hello", "Say hello", null, (ctx, args) -> ToolResult.text("Hello, world!"));
+    static ToolHandler lambdaHello() {
+        return ToolHandler.of("hello", "Say hello", (ctx, args) -> ToolResult.text("Hello, world!"));
     }
 
     /**
      * Lambda with input schema and arguments.
      */
-    static SyncToolHandler lambdaGreet() {
-        return SyncToolHandler.of(
-            "greeting",
-            "Generates a personalized greeting",
-            GREET_SCHEMA,
+    static ToolHandler lambdaGreet() {
+        return ToolHandler.of(
+            b -> b.name("greeting")
+                .description("Generates a personalized greeting")
+                .inputSchema(GREET_SCHEMA),
             (@NonNull InteractionContext ctx, ToolArgs args) -> {
                 String name = args.string("name");
                 return ToolResult.text("Hello, " + name + "!");
@@ -57,24 +55,18 @@ final class ToolHandlerExample {
     }
 
     /**
-     * Class-based: extend AbstractSyncToolHandler.
+     * Reusable ToolHandler via Consumer&lt;Builder&gt;.
      */
-    static final class GreetingTool extends AbstractSyncToolHandler {
-        GreetingTool() {
-            super(builder -> builder
+    static ToolHandler greetingTool() {
+        return ToolHandler.of(b -> b
                 .name("greeting")
                 .title("Greeting")
                 .description("Generates a personalized greeting")
-                .inputSchema(GREET_SCHEMA)
-            );
-        }
-
-        @Override
-        @NonNull
-        public ToolResult handle(InteractionContext ctx, ToolArgs args) {
-            var name = args.string("name");
-            return ToolResult.text("Hello, " + name + "!");
-        }
+                .inputSchema(GREET_SCHEMA),
+            (ctx, args) -> {
+                var name = args.string("name");
+                return ToolResult.text("Hello, " + name + "!");
+            });
     }
 
     /**
