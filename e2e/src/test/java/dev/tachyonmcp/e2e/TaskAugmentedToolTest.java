@@ -10,6 +10,7 @@ import static org.awaitility.Awaitility.await;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
+import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
@@ -158,15 +159,15 @@ class TaskAugmentedToolTest extends AbstractMcpE2eTest {
         }
     }
 
-    private record SleepingSyncTool(int sleepMs) implements ToolHandler {
-        private static final ToolDescriptor D = ToolDescriptor.builder()
-                .name("sleep")
-                .taskSupport(TaskSupport.OPTIONAL)
-                .build();
+    private static final class SleepingSyncTool extends AbstractToolHandler {
+        private final int sleepMs;
 
-        @Override
-        public ToolDescriptor descriptor() {
-            return D;
+        SleepingSyncTool(int sleepMs) {
+            super(ToolDescriptor.builder()
+                    .name("sleep")
+                    .taskSupport(TaskSupport.OPTIONAL)
+                    .build());
+            this.sleepMs = sleepMs;
         }
 
         @Override

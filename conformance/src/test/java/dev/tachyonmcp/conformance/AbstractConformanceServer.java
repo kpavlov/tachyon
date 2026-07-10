@@ -20,6 +20,7 @@ import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptHandlerResult;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
+import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
@@ -226,50 +227,42 @@ abstract class AbstractConformanceServer {
                         .inputSchema(INPUT_SCHEMA_NO_ARGS),
                 (ctx, args) -> ToolResult.error("This tool intentionally returns an error for testing")));
 
-        server.registerTool(new ToolHandler() {
-            @Override
-            public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder()
+        server.registerTool(
+                new AbstractToolHandler(ToolDescriptor.builder()
                         .name("test_tool_with_progress")
                         .description("Tool with progress notifications")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                        .build();
-            }
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                        var pt = request.progressToken();
+                        if (pt != null) {
+                            ctx.notifications().progress(pt, 0, 100, "Starting");
+                            delay(50);
+                            ctx.notifications().progress(pt, 50, 100, "Halfway");
+                            delay(50);
+                            ctx.notifications().progress(pt, 100, 100, "Complete");
+                        }
+                        return ToolResult.text("Tool execution completed");
+                    }
+                });
 
-            @Override
-            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                var pt = request.progressToken();
-                if (pt != null) {
-                    ctx.notifications().progress(pt, 0, 100, "Starting");
-                    delay(50);
-                    ctx.notifications().progress(pt, 50, 100, "Halfway");
-                    delay(50);
-                    ctx.notifications().progress(pt, 100, 100, "Complete");
-                }
-                return ToolResult.text("Tool execution completed");
-            }
-        });
-
-        server.registerTool(new ToolHandler() {
-            @Override
-            public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder()
+        server.registerTool(
+                new AbstractToolHandler(ToolDescriptor.builder()
                         .name("test_tool_with_logging")
                         .description("Tool with logging")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                        .build();
-            }
-
-            @Override
-            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                ctx.notifications().info("tachyon.tools", Map.of("message", "Tool execution started"));
-                delay(50);
-                ctx.notifications().info("tachyon.tools", Map.of("message", "Tool processing data"));
-                delay(50);
-                ctx.notifications().info("tachyon.tools", Map.of("message", "Tool execution completed"));
-                return ToolResult.text("Tool execution completed");
-            }
-        });
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                        ctx.notifications().info("tachyon.tools", Map.of("message", "Tool execution started"));
+                        delay(50);
+                        ctx.notifications().info("tachyon.tools", Map.of("message", "Tool processing data"));
+                        delay(50);
+                        ctx.notifications().info("tachyon.tools", Map.of("message", "Tool execution completed"));
+                        return ToolResult.text("Tool execution completed");
+                    }
+                });
 
         server.registerTool(ToolHandler.of(
                 b -> b.name("test_sampling")
@@ -480,221 +473,195 @@ abstract class AbstractConformanceServer {
     }
 
     private void registerInputRequiredTools(ServerEngine server) {
-        server.registerTool(new ToolHandler() {
-            @Override
-            public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder()
+        server.registerTool(
+                new AbstractToolHandler(ToolDescriptor.builder()
                         .name("test_input_required_result_elicitation")
                         .description("SEP-2322 elicitation InputRequiredResult")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                        .build();
-            }
-
-            @Override
-            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                var inputResponses = request.inputResponses();
-                if (inputResponses != null && inputResponses.containsKey("user_name")) {
-                    var resp = inputResponses.get("user_name");
-                    if (resp != null && resp.isObject()) {
-                        var content = resp.path("content");
-                        var name = content.has("name") ? content.get("name").asString() : "World";
-                        return ToolResult.text("Hello, " + name + "!");
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                        var inputResponses = request.inputResponses();
+                        if (inputResponses != null && inputResponses.containsKey("user_name")) {
+                            var resp = inputResponses.get("user_name");
+                            if (resp != null && resp.isObject()) {
+                                var content = resp.path("content");
+                                var name = content.has("name")
+                                        ? content.get("name").asString()
+                                        : "World";
+                                return ToolResult.text("Hello, " + name + "!");
+                            }
+                        }
+                        return ToolResult.inputRequired(
+                                Map.of("user_name", buildFormElicitation("What is your name?", "name", "string")),
+                                null);
                     }
-                }
-                return ToolResult.inputRequired(
-                        Map.of("user_name", buildFormElicitation("What is your name?", "name", "string")), null);
-            }
-        });
+                });
 
-        server.registerTool(new ToolHandler() {
-            @Override
-            public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder()
+        server.registerTool(
+                new AbstractToolHandler(ToolDescriptor.builder()
                         .name("test_input_required_result_sampling")
                         .description("SEP-2322 sampling InputRequiredResult")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                        .build();
-            }
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                        var inputResponses = request.inputResponses();
+                        if (inputResponses != null && inputResponses.containsKey("capital_question")) {
+                            var resp = inputResponses.get("capital_question");
+                            var text = resp != null && resp.path("content").has("text")
+                                    ? resp.path("content").get("text").asString()
+                                    : "done";
+                            return ToolResult.text(text);
+                        }
+                        return ToolResult.inputRequired(
+                                Map.of("capital_question", buildSamplingRequest("What is the capital of France?")),
+                                null);
+                    }
+                });
 
-            @Override
-            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                var inputResponses = request.inputResponses();
-                if (inputResponses != null && inputResponses.containsKey("capital_question")) {
-                    var resp = inputResponses.get("capital_question");
-                    var text = resp != null && resp.path("content").has("text")
-                            ? resp.path("content").get("text").asString()
-                            : "done";
-                    return ToolResult.text(text);
-                }
-                return ToolResult.inputRequired(
-                        Map.of("capital_question", buildSamplingRequest("What is the capital of France?")), null);
-            }
-        });
-
-        server.registerTool(new ToolHandler() {
-            @Override
-            public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder()
+        server.registerTool(
+                new AbstractToolHandler(ToolDescriptor.builder()
                         .name("test_input_required_result_list_roots")
                         .description("SEP-2322 roots/list InputRequiredResult")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                        .build();
-            }
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                        var inputResponses = request.inputResponses();
+                        if (inputResponses != null && inputResponses.containsKey("client_roots")) {
+                            return ToolResult.text("Roots received");
+                        }
+                        return ToolResult.inputRequired(Map.of("client_roots", buildRootsListRequest()), null);
+                    }
+                });
 
-            @Override
-            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                var inputResponses = request.inputResponses();
-                if (inputResponses != null && inputResponses.containsKey("client_roots")) {
-                    return ToolResult.text("Roots received");
-                }
-                return ToolResult.inputRequired(Map.of("client_roots", buildRootsListRequest()), null);
-            }
-        });
-
-        server.registerTool(new ToolHandler() {
-            @Override
-            public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder()
+        server.registerTool(
+                new AbstractToolHandler(ToolDescriptor.builder()
                         .name("test_input_required_result_request_state")
                         .description("SEP-2322 requestState round-trip")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                        .build();
-            }
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                        var inputResponses = request.inputResponses();
+                        var requestState = request.requestState();
+                        if (inputResponses != null && inputResponses.containsKey("confirm") && requestState != null) {
+                            return ToolResult.text("state-ok");
+                        }
+                        return ToolResult.inputRequired(
+                                Map.of("confirm", buildFormElicitation("Please confirm", "ok", "boolean")),
+                                "opaque-server-state");
+                    }
+                });
 
-            @Override
-            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                var inputResponses = request.inputResponses();
-                var requestState = request.requestState();
-                if (inputResponses != null && inputResponses.containsKey("confirm") && requestState != null) {
-                    return ToolResult.text("state-ok");
-                }
-                return ToolResult.inputRequired(
-                        Map.of("confirm", buildFormElicitation("Please confirm", "ok", "boolean")),
-                        "opaque-server-state");
-            }
-        });
-
-        server.registerTool(new ToolHandler() {
-            @Override
-            public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder()
+        server.registerTool(
+                new AbstractToolHandler(ToolDescriptor.builder()
                         .name("test_input_required_result_multiple_inputs")
                         .description("SEP-2322 multiple inputRequests")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                        .build();
-            }
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                        var inputResponses = request.inputResponses();
+                        if (inputResponses != null
+                                && inputResponses.containsKey("user_name")
+                                && inputResponses.containsKey("greeting")
+                                && inputResponses.containsKey("client_roots")) {
+                            return ToolResult.text("All inputs received");
+                        }
+                        var inputRequests = new LinkedHashMap<String, InputRequest>();
+                        inputRequests.put("user_name", buildFormElicitation("What is your name?", "name", "string"));
+                        inputRequests.put("greeting", buildSamplingRequest("Generate a greeting"));
+                        inputRequests.put("client_roots", buildRootsListRequest());
+                        return ToolResult.inputRequired(inputRequests, "multi-input-state");
+                    }
+                });
 
-            @Override
-            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                var inputResponses = request.inputResponses();
-                if (inputResponses != null
-                        && inputResponses.containsKey("user_name")
-                        && inputResponses.containsKey("greeting")
-                        && inputResponses.containsKey("client_roots")) {
-                    return ToolResult.text("All inputs received");
-                }
-                var inputRequests = new LinkedHashMap<String, InputRequest>();
-                inputRequests.put("user_name", buildFormElicitation("What is your name?", "name", "string"));
-                inputRequests.put("greeting", buildSamplingRequest("Generate a greeting"));
-                inputRequests.put("client_roots", buildRootsListRequest());
-                return ToolResult.inputRequired(inputRequests, "multi-input-state");
-            }
-        });
-
-        server.registerTool(new ToolHandler() {
-            @Override
-            public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder()
+        server.registerTool(
+                new AbstractToolHandler(ToolDescriptor.builder()
                         .name("test_input_required_result_multi_round")
                         .description("SEP-2322 multi-round InputRequiredResult")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                        .build();
-            }
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                        var inputResponses = request.inputResponses();
+                        var requestState = request.requestState();
+                        if (inputResponses != null && inputResponses.containsKey("step2")) {
+                            var color = inputResponses
+                                    .get("step2")
+                                    .path("content")
+                                    .path("color")
+                                    .asString("unknown");
+                            return ToolResult.text("Done with color: " + color);
+                        }
+                        if (inputResponses != null
+                                && inputResponses.containsKey("step1")
+                                && "state-round-1".equals(requestState)) {
+                            return ToolResult.inputRequired(
+                                    Map.of(
+                                            "step2",
+                                            buildFormElicitation(
+                                                    "Step 2: What is your favorite color?", "color", "string")),
+                                    "state-round-2");
+                        }
+                        return ToolResult.inputRequired(
+                                Map.of("step1", buildFormElicitation("Step 1: What is your name?", "name", "string")),
+                                "state-round-1");
+                    }
+                });
 
-            @Override
-            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                var inputResponses = request.inputResponses();
-                var requestState = request.requestState();
-                if (inputResponses != null && inputResponses.containsKey("step2")) {
-                    var color = inputResponses
-                            .get("step2")
-                            .path("content")
-                            .path("color")
-                            .asString("unknown");
-                    return ToolResult.text("Done with color: " + color);
-                }
-                if (inputResponses != null
-                        && inputResponses.containsKey("step1")
-                        && "state-round-1".equals(requestState)) {
-                    return ToolResult.inputRequired(
-                            Map.of(
-                                    "step2",
-                                    buildFormElicitation("Step 2: What is your favorite color?", "color", "string")),
-                            "state-round-2");
-                }
-                return ToolResult.inputRequired(
-                        Map.of("step1", buildFormElicitation("Step 1: What is your name?", "name", "string")),
-                        "state-round-1");
-            }
-        });
-
-        server.registerTool(new ToolHandler() {
-            @Override
-            public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder()
+        server.registerTool(
+                new AbstractToolHandler(ToolDescriptor.builder()
                         .name("test_input_required_result_tampered_state")
                         .description("SEP-2322 tampered requestState rejection")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                        .build();
-            }
-
-            @Override
-            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                var inputResponses = request.inputResponses();
-                var requestState = request.requestState();
-                if (inputResponses != null && inputResponses.containsKey("confirm")) {
-                    if (requestState == null || !verifyState(requestState)) {
-                        throw new IllegalArgumentException("Invalid or tampered requestState");
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                        var inputResponses = request.inputResponses();
+                        var requestState = request.requestState();
+                        if (inputResponses != null && inputResponses.containsKey("confirm")) {
+                            if (requestState == null || !verifyState(requestState)) {
+                                throw new IllegalArgumentException("Invalid or tampered requestState");
+                            }
+                            return ToolResult.text("State verified");
+                        }
+                        return ToolResult.inputRequired(
+                                Map.of("confirm", buildFormElicitation("Please confirm", "ok", "boolean")),
+                                signState("tamper-check"));
                     }
-                    return ToolResult.text("State verified");
-                }
-                return ToolResult.inputRequired(
-                        Map.of("confirm", buildFormElicitation("Please confirm", "ok", "boolean")),
-                        signState("tamper-check"));
-            }
-        });
+                });
 
-        server.registerTool(new ToolHandler() {
-            @Override
-            public ToolDescriptor descriptor() {
-                return ToolDescriptor.builder()
+        server.registerTool(
+                new AbstractToolHandler(ToolDescriptor.builder()
                         .name("test_input_required_result_capabilities")
                         .description("SEP-2322 respect client capabilities")
                         .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                        .build();
-            }
-
-            @Override
-            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                var meta = request.meta();
-                var capabilities = meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
-                var hasSampling =
-                        capabilities != null && !capabilities.path("sampling").isMissingNode();
-                var hasElicitation = capabilities != null
-                        && !capabilities.path("elicitation").isMissingNode();
-                var inputRequests = new LinkedHashMap<String, InputRequest>();
-                if (hasSampling) {
-                    inputRequests.put("ai_response", buildSamplingRequest("Generate a helpful response"));
-                }
-                if (hasElicitation) {
-                    inputRequests.put("user_name", buildFormElicitation("What is your name?", "name", "string"));
-                }
-                if (inputRequests.isEmpty()) {
-                    return ToolResult.text("No capabilities declared");
-                }
-                return ToolResult.inputRequired(inputRequests, null);
-            }
-        });
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                        var meta = request.meta();
+                        var capabilities = meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
+                        var hasSampling = capabilities != null
+                                && !capabilities.path("sampling").isMissingNode();
+                        var hasElicitation = capabilities != null
+                                && !capabilities.path("elicitation").isMissingNode();
+                        var inputRequests = new LinkedHashMap<String, InputRequest>();
+                        if (hasSampling) {
+                            inputRequests.put("ai_response", buildSamplingRequest("Generate a helpful response"));
+                        }
+                        if (hasElicitation) {
+                            inputRequests.put(
+                                    "user_name", buildFormElicitation("What is your name?", "name", "string"));
+                        }
+                        if (inputRequests.isEmpty()) {
+                            return ToolResult.text("No capabilities declared");
+                        }
+                        return ToolResult.inputRequired(inputRequests, null);
+                    }
+                });
     }
 
     private void registerResources(ServerEngine server) {

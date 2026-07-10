@@ -14,7 +14,6 @@ import dev.tachyonmcp.server.domain.UrlInputRequest;
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.time.Duration;
@@ -191,7 +190,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
         }
     }
 
-    private static class InputRequiredTestHandler extends AbstractToolHandler implements ToolHandler {
+    private static class InputRequiredTestHandler extends AbstractToolHandler {
 
         InputRequiredTestHandler() {
             super(ToolDescriptor.builder()
@@ -227,7 +226,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
         return UrlInputRequest.of(message, elicitationId, url);
     }
 
-    private static class MultiRoundTestHandler extends AbstractToolHandler implements ToolHandler {
+    private static class MultiRoundTestHandler extends AbstractToolHandler {
 
         MultiRoundTestHandler() {
             super(ToolDescriptor.builder()
@@ -263,7 +262,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
         }
     }
 
-    private static class MetaInputRequiredTestHandler extends AbstractToolHandler implements ToolHandler {
+    private static class MetaInputRequiredTestHandler extends AbstractToolHandler {
 
         MetaInputRequiredTestHandler() {
             super(ToolDescriptor.builder()
@@ -279,22 +278,19 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
         }
     }
 
-    private static class UrlElicitationTestHandler implements ToolHandler {
+    private static class UrlElicitationTestHandler extends AbstractToolHandler {
 
-        private final ToolDescriptor descriptor = ToolDescriptor.builder()
-                .name("test_url_elicitation")
-                .description("Tests URL-mode elicitation flow")
-                .build();
-
-        @Override
-        public ToolDescriptor descriptor() {
-            return descriptor;
+        UrlElicitationTestHandler() {
+            super(ToolDescriptor.builder()
+                    .name("test_url_elicitation")
+                    .description("Tests URL-mode elicitation flow")
+                    .build());
         }
 
         @Override
         public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolArgs args) {
             return handleAsync(
-                    context, ToolRequest.builder().name(descriptor.name()).build());
+                    context, ToolRequest.builder().name(descriptor().name()).build());
         }
 
         @Override

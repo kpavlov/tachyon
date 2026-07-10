@@ -3,9 +3,9 @@
 package dev.tachyonmcp.extensions.tools.youcom.search;
 
 import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -21,7 +21,7 @@ import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-public class YouComSearchTool implements ToolHandler {
+public class YouComSearchTool extends AbstractToolHandler {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final HttpClient HTTP =
@@ -59,27 +59,21 @@ public class YouComSearchTool implements ToolHandler {
         }
         """;
 
-    private final ToolDescriptor descriptor = ToolDescriptor.builder()
-            .name("you-search")
-            .title("You.com Web Search")
-            .description("Search the web via You.com API. Free tier: 100 queries/day, no API key needed. "
-                    + "For higher limits, set YDC_API_KEY env var.")
-            .inputSchema(INPUT_SCHEMA_JSON)
-            .build();
-
     private final YouComSearchConfig config;
 
     public YouComSearchTool(YouComSearchConfig config) {
+        super(ToolDescriptor.builder()
+                .name("you-search")
+                .title("You.com Web Search")
+                .description("Search the web via You.com API. Free tier: 100 queries/day, no API key needed. "
+                        + "For higher limits, set YDC_API_KEY env var.")
+                .inputSchema(INPUT_SCHEMA_JSON)
+                .build());
         this.config = config;
     }
 
     boolean sendAuth() {
         return !config.isFreeTier() && config.apiKey() != null;
-    }
-
-    @Override
-    public ToolDescriptor descriptor() {
-        return descriptor;
     }
 
     @Override

@@ -2,11 +2,22 @@
 
 package dev.tachyonmcp.server.features.tools;
 
+import dev.tachyonmcp.runtime.InteractionContext;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 
 /**
- * Base {@link ToolHandler} implementation
+ * Base {@link ToolHandler} implementation. Override exactly one of:
+ * <ul>
+ *   <li>{@link #handle(InteractionContext, ToolArgs)} — canonical for sync handlers.
+ *   <li>{@link #handleAsync(InteractionContext, ToolArgs)} — when the tool is already async;
+ *       stays async with no virtual-thread detour.
+ *   <li>The {@code ToolRequest} variants ({@link #handle(InteractionContext, ToolRequest)} /
+ *       {@link #handleAsync(InteractionContext, ToolRequest)}) — only when the raw request is
+ *       needed (custom argument deserialization, request metadata).
+ * </ul>
  *
  * @author Konstantin Pavlov
  */
@@ -33,7 +44,79 @@ public abstract class AbstractToolHandler implements ToolHandler {
         this(ToolDescriptor.builder().name(name).build());
     }
 
+    @Override
     public ToolDescriptor descriptor() {
         return descriptor;
+    }
+
+    /**
+     * Executes the tool asynchronously with the full request — the single method the dispatcher
+     * invokes.
+     *
+     * <p>Reaches whichever override the implementation provides: async handlers override
+     * {@link #handleAsync(InteractionContext, ToolArgs)} (stays async — no sync detour, no
+     * virtual-thread assertion) or this method; sync handlers override a {@code handle} method
+     * and this falls back to running it (blocking) on the virtual dispatch thread.
+     */
+    @Override
+    public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolRequest request) {
+        try {
+            return handleAsync(context, ToolArgs.of(request.arguments(), request.payloadDeserializer()));
+        } catch (NotImplemented noAsyncArgs) {
+            try {
+                return CompletableFuture.completedStage(handle(context, request));
+            } catch (Exception e) {
+                return CompletableFuture.failedFuture(e);
+            }
+        }
+    }
+
+    /**
+     * Executes the tool asynchronously with parsed args. Async handlers override this. The default
+     * signals "not implemented" so {@link #handleAsync(InteractionContext, ToolRequest)} can fall
+     * back to the sync path.
+     */
+    public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolArgs args) {
+        throw NotImplemented.INSTANCE;
+    }
+
+    /**
+     * Executes the tool synchronously with the full request. Default forwards to
+     * {@link #handle(InteractionContext, ToolArgs)}.
+     */
+    public ToolResult handle(InteractionContext context, ToolRequest request) throws Exception {
+        assumeVirtualThread(); // don't remove this guardrail!
+        return handle(context, ToolArgs.of(request.arguments(), request.payloadDeserializer()));
+    }
+
+    /**
+     * Executes the tool synchronously with parsed args. Sync handlers override this.
+     */
+    public ToolResult handle(InteractionContext context, ToolArgs args) throws Exception {
+        assumeVirtualThread(); // don't remove this guardrail!
+        throw NotImplemented.INSTANCE;
+    }
+
+    static void assumeVirtualThread() {
+        assert Thread.currentThread().isVirtual() : "Sync Handler MUST run on virtual thread";
+    }
+
+    /**
+     * Signals that a {@code handle}/{@code handleAsync} default was not overridden, so
+     * {@link #handleAsync(InteractionContext, ToolRequest)} can probe the args override and fall
+     * back. It is a control flow, not an error, and is thrown on every sync-handler dispatch.
+     */
+    static final class NotImplemented extends UnsupportedOperationException {
+
+        static NotImplemented INSTANCE = new NotImplemented();
+
+        private NotImplemented() {
+            super("Implement one of handle/handleAsync(InteractionContext, ToolArgs|ToolRequest)");
+        }
+
+        @Override
+        public synchronized Throwable fillInStackTrace() {
+            return this;
+        }
     }
 }

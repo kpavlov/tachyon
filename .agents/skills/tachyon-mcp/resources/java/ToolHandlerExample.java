@@ -5,6 +5,7 @@
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
@@ -89,15 +90,14 @@ final class ToolHandlerExample {
      *       when no progress token is available.
      * </ul>
      */
-    static final class LongRunningTool implements ToolHandler {
+    static final class LongRunningTool extends AbstractToolHandler {
         private static final int TOTAL = 10;
 
-        @Override
-        public ToolDescriptor descriptor() {
-            return ToolDescriptor.builder()
+        LongRunningTool() {
+            super(ToolDescriptor.builder()
                 .name("slow-task")
                 .description("Long-running task that stays alive via SSE heartbeats")
-                .build();
+                .build());
         }
 
         @Override
