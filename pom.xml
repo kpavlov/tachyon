@@ -67,7 +67,7 @@
         <assertj.version>3.27.7</assertj.version>
         <awaitility.version>4.3.0</awaitility.version>
         <immutables.version>2.12.2</immutables.version>
-        <jackson.version>3.2.0</jackson.version>
+        <jackson.version>3.2.1</jackson.version>
         <java-mcp-sdk.version>2.0.0</java-mcp-sdk.version>
         <json-schema-validator.version>3.0.6</json-schema-validator.version>
         <json-unit.version>6.0.1</json-unit.version>
