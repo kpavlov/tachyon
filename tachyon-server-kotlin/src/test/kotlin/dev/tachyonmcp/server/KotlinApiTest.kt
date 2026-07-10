@@ -3,7 +3,6 @@
 package dev.tachyonmcp.server
 
 import dev.tachyonmcp.server.config.ToolScope
-import dev.tachyonmcp.server.config.structured
 import dev.tachyonmcp.server.config.success
 import dev.tachyonmcp.server.domain.TextContent
 import dev.tachyonmcp.server.features.tools.InvalidArgumentException
@@ -19,11 +18,9 @@ import dev.tachyonmcp.server.features.tools.intOrNull
 import dev.tachyonmcp.server.features.tools.stringOrNull
 import dev.tachyonmcp.server.internal.ServerEngine
 import dev.tachyonmcp.server.json.KxSerializationSerde
-import dev.tachyonmcp.server.json.RawJson
 import dev.tachyonmcp.server.json.toJsonNode
 import dev.tachyonmcp.server.session.DefaultDispatchContext
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
@@ -272,53 +269,6 @@ internal class KotlinApiTest {
         shouldThrow<IllegalStateException> {
             args.decode<GreetingArgs>()
         }.message shouldContain "PayloadDeserializer is not configured"
-    }
-
-    // endregion
-
-    // region: structured
-
-    @Test
-    fun `structured produces ToolResult with raw json and text fallback`() {
-        val value = GreetingArgs("Charlie", 25)
-        TachyonServer.builder().build().use { server ->
-            val ctx = DefaultDispatchContext.stateless(server as ServerEngine)
-            val scope = ToolScope(ctx, ToolArgs(raw = null))
-            val result = scope.structured(value)
-            result.shouldBeInstanceOf<ToolResult.Success>()
-            result.structured() shouldNotBeNull {
-                get().shouldBeInstanceOf<RawJson>()
-            }
-            (result.content().first() as TextContent).text() shouldBe
-                """{"name":"Charlie","age":25}"""
-        }
-    }
-
-    @Test
-    fun `structured uses custom Json instance`() {
-        val value = GreetingArgs("Dave", 50)
-        val customJson = Json { prettyPrint = true }
-        TachyonServer.builder().build().use { server ->
-            val ctx = DefaultDispatchContext.stateless(server as ServerEngine)
-            val scope = ToolScope(ctx, ToolArgs(raw = null))
-            val result = scope.structured(value, customJson)
-            result.shouldBeInstanceOf<ToolResult.Success>()
-            result.structured() shouldNotBeNull {
-                get().shouldBeInstanceOf<RawJson>()
-            }
-            (result.content().first() as TextContent).text() shouldContain "\"name\""
-        }
-    }
-
-    @Test
-    fun `structured rejects non-object payloads`() {
-        TachyonServer.builder().build().use { server ->
-            val ctx = DefaultDispatchContext.stateless(server as ServerEngine)
-            val scope = ToolScope(ctx, ToolArgs(raw = null))
-            shouldThrow<IllegalArgumentException> {
-                scope.structured(listOf(1, 2, 3))
-            }.message shouldContain "must be a JSON object"
-        }
     }
 
     // endregion

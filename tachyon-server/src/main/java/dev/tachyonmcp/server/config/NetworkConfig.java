@@ -71,6 +71,7 @@ public record NetworkConfig(
     public static final Duration DEFAULT_READER_IDLE_TIMEOUT = Duration.ofSeconds(60);
     public static final Duration DEFAULT_WRITER_IDLE_TIMEOUT = Duration.ofMinutes(5);
     public static final Duration DEFAULT_HEARTBEAT_INTERVAL = Duration.ofSeconds(15);
+    public static final int DEFAULT_MAX_CONTENT_LENGTH = 65535;
 
     public static final NetworkConfig DEFAULT = new NetworkConfig(
             DEFAULT_HOST,

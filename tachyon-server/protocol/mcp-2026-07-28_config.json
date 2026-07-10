@@ -6,7 +6,8 @@
     "JSONObject": "tools.jackson.databind.node.ObjectNode",
     "JSONArray": "tools.jackson.databind.node.ArrayNode",
     "Tool.inputSchema": "tools.jackson.databind.JsonNode",
-    "Tool.outputSchema": "tools.jackson.databind.JsonNode"
+    "Tool.outputSchema": "tools.jackson.databind.JsonNode",
+    "Resource.size": "Long"
   },
   "additionalProperties": {
     "ClientCapabilities": [

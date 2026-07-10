@@ -520,7 +520,7 @@ class ToolRegistryTest {
         registry.register(ToolHandler.of(
                 configurer -> configurer.name("sync-handle").description("sync").inputSchema(TEST_SCHEMA),
                 (ctx, args) -> {
-                    var msg = args.string("message");
+                    var msg = args.stringValue("message");
                     return ToolResult.text(msg);
                 }));
 

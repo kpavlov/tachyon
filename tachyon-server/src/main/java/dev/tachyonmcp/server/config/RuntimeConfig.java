@@ -15,7 +15,7 @@ import java.util.Objects;
  * @param shutdownGracePeriod time an owned executor is given to drain in-flight handlers on
  *                            {@code close()} before they are force-interrupted (default 5s);
  *                            {@code Duration.ZERO} interrupts running handlers immediately
- * @author Konstantin Pavlov
+ * @param requestTimeout     timeout for pending requests sent to the client (default 60s)
  */
 public record RuntimeConfig(Duration shutdownGracePeriod, Duration requestTimeout) {
 

@@ -15,6 +15,7 @@ import dev.tachyonmcp.server.features.resources.resourceHandler
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.features.tools.toolHandler
+import dev.tachyonmcp.server.json.KxSerializationSerde
 import dev.tachyonmcp.server.json.schemas
 import dev.tachyonmcp.server.json.toJacksonNode
 import dev.tachyonmcp.server.json.toJacksonNodeOrNull
@@ -30,7 +31,10 @@ public class TachyonServerBuilder
     @PublishedApi
     internal constructor() {
         @PublishedApi
-        internal val delegate: ServerBuilder = TachyonServer.builder()
+        internal val delegate: ServerBuilder =
+            TachyonServer.builder().also {
+                it.json { config -> config.serde(KxSerializationSerde.Default) }
+            }
 
         @PublishedApi
         internal var networkPortExplicitlySet: Boolean = false
@@ -140,7 +144,7 @@ public class TachyonServerBuilder
             name: String,
             uri: String,
             description: String? = null,
-            mimeType: String = "application/json",
+            mimeType: String? = null,
             handler: suspend ResourceScope.() -> ResourceContents,
         ): TachyonServerBuilder =
             this.also {
@@ -156,7 +160,7 @@ public class TachyonServerBuilder
 
         public fun prompt(
             name: String,
-            description: String,
+            description: String? = null,
             handler: suspend PromptScope.() -> List<PromptMessage>,
         ): TachyonServerBuilder =
             this.also {

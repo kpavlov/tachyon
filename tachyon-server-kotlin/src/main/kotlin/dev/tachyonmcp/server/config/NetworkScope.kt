@@ -5,6 +5,7 @@ package dev.tachyonmcp.server.config
 import dev.tachyonmcp.server.TachyonDsl
 import dev.tachyonmcp.server.config.NetworkConfig
 import dev.tachyonmcp.transport.netty.NettyIoEngine
+import java.net.SocketAddress
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
 
@@ -17,6 +18,9 @@ public class NetworkScope
 
         /** Port to listen on. */
         public var port: Int? = null
+
+        /** Bind address and port from a [SocketAddress]. Mutually exclusive with [host]/[port]. */
+        public var address: SocketAddress? = null
 
         /** Base path for MCP endpoints. */
         public var endpointPath: String? = null
@@ -49,8 +53,13 @@ public class NetworkScope
         public val allowedHeaders: MutableList<String> = mutableListOf()
 
         @PublishedApi internal fun applyTo(builder: NetworkConfig.Builder) {
-            host?.let(builder::host)
-            port?.let(builder::port)
+            val addr = address
+            if (addr != null) {
+                builder.address(addr)
+            } else {
+                host?.let(builder::host)
+                port?.let(builder::port)
+            }
             endpointPath?.let(builder::endpointPath)
             if (allowedOrigins.isNotEmpty()) builder.allowedOrigins(*allowedOrigins.toTypedArray())
             allowNullOrigin?.let(builder::allowNullOrigin)

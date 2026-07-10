@@ -46,7 +46,7 @@ fun TachyonServerBuilder.registerHello() {
  */
 fun TachyonServerBuilder.registerGreeting() {
     tool(name = "greeting", description = "Generates a personalized greeting", inputSchema = GREET_SCHEMA) {
-        val name = args.string("name")
+        val name = args.stringValue("name")
         ToolResult.text("Hello, $name!")
     }
 }
@@ -95,7 +95,7 @@ class GreetingTool : ToolHandler {
     }
 
     override fun handle(ctx: InteractionContext, args: ToolArgs): ToolResult {
-        val name = args.string("name")
+        val name = args.stringValue("name")
         return ToolResult.text("Hello, $name!")
     }
 }

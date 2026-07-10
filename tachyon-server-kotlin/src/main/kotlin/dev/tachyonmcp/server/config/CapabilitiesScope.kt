@@ -14,8 +14,8 @@ public class CapabilitiesScope
         /** Whether to advertise tool list change notifications. */
         public var toolsListChanged: Boolean = false
 
-        /** Whether resources capability is enabled. */
-        public var resources: Boolean = false
+        /** Resources capability mode: `ON`, `OFF`, or `AUTO`. */
+        public var resources: Mode = Mode.AUTO
 
         /** Whether to support resource subscriptions. */
         public var resourcesSubscribe: Boolean = false
@@ -23,8 +23,8 @@ public class CapabilitiesScope
         /** Whether to advertise resource list change notifications. */
         public var resourcesListChanged: Boolean = false
 
-        /** Whether prompts capability is enabled. */
-        public var prompts: Boolean = false
+        /** Prompts capability mode: `ON`, `OFF`, or `AUTO`. */
+        public var prompts: Mode = Mode.AUTO
 
         /** Whether to advertise prompt list change notifications. */
         public var promptsListChanged: Boolean = false
@@ -53,24 +53,25 @@ public class CapabilitiesScope
             subscribe: Boolean = false,
             listChanged: Boolean = false,
         ) {
-            resources = true
+            resources = Mode.ON
             resourcesSubscribe = subscribe
             resourcesListChanged = listChanged
         }
 
         public fun prompts(listChanged: Boolean = false) {
-            prompts = true
+            prompts = Mode.ON
             promptsListChanged = listChanged
         }
 
         @PublishedApi
         internal fun applyTo(builder: CapabilitiesConfig.Builder) {
             builder.toolsMode(tools)
-            if (tools != Mode.OFF) {
-                builder.tools(toolsListChanged)
-            }
-            if (resources) builder.resources(resourcesSubscribe, resourcesListChanged)
-            if (prompts) builder.prompts(promptsListChanged)
+            builder.toolsListChanged(toolsListChanged)
+            builder.resourcesMode(resources)
+            builder.resourcesSubscribe(resourcesSubscribe)
+            builder.resourcesListChanged(resourcesListChanged)
+            builder.promptsMode(prompts)
+            builder.promptsListChanged(promptsListChanged)
             if (tasks) builder.tasks(true, tasksCancel, tasksRequests)
             if (completions) builder.completions()
             if (logging) builder.logging()

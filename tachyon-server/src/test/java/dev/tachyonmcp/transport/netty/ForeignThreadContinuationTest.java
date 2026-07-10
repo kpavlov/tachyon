@@ -60,8 +60,8 @@ class ForeignThreadContinuationTest {
             return java.util.List.of();
         };
 
-        try (ServerEngine server =
-                newEngine(b -> b.outputSchemaValidator(recordingValidator).tool(handler))) {
+        try (ServerEngine server = newEngine(
+                b -> b.json(j -> j.outputSchemaValidator(recordingValidator)).tool(handler))) {
             var session = server.createSession("sess-foreign");
             session.activate();
             var dispatcher = new RpcDispatcher(server, server.executor());

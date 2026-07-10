@@ -278,7 +278,7 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
                         .description("Returns structured content")
                         .inputSchema(INPUT_SCHEMA),
                 (ctx, args) -> {
-                    var msg = args.string("message");
+                    var msg = args.stringValue("message");
                     var echo = JsonNodeFactory.instance.objectNode().put("echo", msg);
                     return ToolResult.of(echo, "Echo: " + msg);
                 });

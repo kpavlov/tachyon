@@ -27,7 +27,7 @@ public fun ResourceDescriptor(
     mimeType: String? = null,
     title: String? = null,
     annotations: Annotations? = null,
-    size: Double? = null,
+    size: Long? = null,
     icons: List<Icon>? = null,
 ): ResourceDescriptor =
     ResourceDescriptor.of(name, uri, description, mimeType, title, annotations, size, icons)

@@ -65,6 +65,50 @@ internal class KotlinE2eTest : AbstractMcpE2eTest() {
     }
 
     @Test
+    fun `structured result without text emits serialized JSON text block`() {
+        startServer {
+            it
+                .json { j ->
+                    j.serde(KxSerializationSerde.Default)
+                }.tool(
+                    "greet",
+                    "Typed greet tool",
+                    //language=json
+                    """
+                    {"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}
+                    """.trimIndent(),
+                    // language=json
+                    """{"type":"object"}""",
+                ) { _, args ->
+                    val input = args.decode<GreetArgs>()
+                    ToolResult.of(GreetReply("${input.greeting}, ${input.name}!"))
+                }
+        }
+
+        val client = createTestClient()
+        val sessionId = client.initialize()
+        val response =
+            client.sendRequest(
+                sessionId,
+                """
+                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"greet","arguments":{"name":"World"}}}
+                """.trimIndent(),
+            )
+
+        assert(response.statusCode() == 200) { "Expected 200, got ${response.statusCode()}" }
+        val body = response.body()
+        // structuredContent carries the object (unescaped)
+        assert(
+            body.contains("\"message\":\"Hello, World!\""),
+        ) { "Missing structuredContent in: $body" }
+        // MCP backwards-compat: the serialized JSON is also injected as a text block, where the
+        // object's quotes are escaped inside the text string value.
+        assert(body.contains("{\\\"message\\\":\\\"Hello, World!\\\"}")) {
+            "Missing serialized-JSON text block in: $body"
+        }
+    }
+
+    @Test
     fun `decode with strict serde rejects unknown key as error`() {
         startServer {
             it

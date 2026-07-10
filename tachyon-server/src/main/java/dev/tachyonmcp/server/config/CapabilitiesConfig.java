@@ -2,171 +2,197 @@
 
 package dev.tachyonmcp.server.config;
 
-import org.immutables.value.Value;
+import org.jspecify.annotations.Nullable;
 
-/** Configuration of which MCP capabilities to enable and their behaviour. */
-@Value.Immutable
-@Value.Style(visibility = Value.Style.ImplementationVisibility.PACKAGE)
-public abstract class CapabilitiesConfig {
+/**
+ * Configuration of which MCP capabilities to enable and their behaviour.
+ *
+ * @param toolsMode           controls whether tools are exposed, hidden, or auto-detected
+ * @param toolsListChanged    whether to emit notifications when the tool list changes
+ * @param resourcesMode       controls whether resources are exposed, hidden, or auto-detected
+ * @param resourcesSubscribe  whether clients can subscribe to resource change notifications
+ * @param resourcesListChanged whether to emit notifications when the resource list changes
+ * @param promptsMode         controls whether prompts are exposed, hidden, or auto-detected
+ * @param promptsListChanged  whether to emit notifications when the prompt list changes
+ * @param tasksList           whether the server supports tasks/list
+ * @param tasksCancel         whether the server supports tasks/cancel
+ * @param tasksRequests       whether the server supports task-augmented tool call requests
+ * @param completions         whether the server supports completion
+ * @param logging             whether the server supports logging
+ */
+public record CapabilitiesConfig(
+        Mode toolsMode,
+        boolean toolsListChanged,
+        Mode resourcesMode,
+        boolean resourcesSubscribe,
+        boolean resourcesListChanged,
+        Mode promptsMode,
+        boolean promptsListChanged,
+        boolean tasksList,
+        boolean tasksCancel,
+        boolean tasksRequests,
+        boolean completions,
+        boolean logging) {
 
-    /** Controls whether tools are exposed ({@code ON}), hidden ({@code OFF}), or auto-detected ({@code AUTO}). */
-    @Value.Default
-    public Mode toolsMode() {
-        return Mode.AUTO;
-    }
-
-    /** Whether to emit notifications when the tool list changes. */
-    @Value.Default
-    public boolean toolsListChanged() {
-        return false;
-    }
-
-    /** Controls whether resources are exposed ({@code ON}), hidden ({@code OFF}), or auto-detected ({@code AUTO}). */
-    @Value.Default
-    public Mode resourcesMode() {
-        return Mode.AUTO;
-    }
-
-    /** Whether clients can subscribe to resource change notifications. */
-    @Value.Default
-    public boolean resourcesSubscribe() {
-        return false;
-    }
-
-    /** Whether to emit notifications when the resource list changes. */
-    @Value.Default
-    public boolean resourcesListChanged() {
-        return false;
-    }
-
-    /** Controls whether prompts are exposed ({@code ON}), hidden ({@code OFF}), or auto-detected ({@code AUTO}). */
-    @Value.Default
-    public Mode promptsMode() {
-        return Mode.AUTO;
-    }
-
-    /** Whether to emit notifications when the prompt list changes. */
-    @Value.Default
-    public boolean promptsListChanged() {
-        return false;
-    }
-
-    /** Whether the server supports {@code tasks/list}. */
-    @Value.Default
-    public boolean tasksList() {
-        return false;
-    }
-
-    /** Whether the server supports {@code tasks/cancel}. */
-    @Value.Default
-    public boolean tasksCancel() {
-        return false;
-    }
-
-    /** Whether the server supports task-augmented tool call requests. */
-    @Value.Default
-    public boolean tasksRequests() {
-        return false;
-    }
-
-    /** Whether the server supports completion. */
-    @Value.Default
-    public boolean completions() {
-        return false;
-    }
-
-    /** Whether the server supports logging. */
-    @Value.Default
-    public boolean logging() {
-        return false;
+    public CapabilitiesConfig {
+        if (toolsMode == null) toolsMode = Mode.AUTO;
+        if (resourcesMode == null) resourcesMode = Mode.AUTO;
+        if (promptsMode == null) promptsMode = Mode.AUTO;
     }
 
     /** Default configuration with all capabilities auto-detected and change notifications off. */
     public static final CapabilitiesConfig DEFAULT = builder().build();
 
     public static Builder builder() {
-        return ImmutableCapabilitiesConfig.builder();
+        return new Builder();
     }
 
     /** Builder for {@link CapabilitiesConfig}. */
-    public interface Builder {
+    public static final class Builder {
 
-        Builder toolsMode(Mode mode);
+        private @Nullable Mode toolsMode;
+        private boolean toolsListChanged;
+        private @Nullable Mode resourcesMode;
+        private boolean resourcesSubscribe;
+        private boolean resourcesListChanged;
+        private @Nullable Mode promptsMode;
+        private boolean promptsListChanged;
+        private boolean tasksList;
+        private boolean tasksCancel;
+        private boolean tasksRequests;
+        private boolean completions;
+        private boolean logging;
 
-        Builder toolsListChanged(boolean v);
+        private Builder() {}
 
-        Builder resourcesMode(Mode mode);
+        public Builder toolsMode(Mode mode) {
+            this.toolsMode = mode;
+            return this;
+        }
 
-        Builder resourcesSubscribe(boolean v);
+        public Builder toolsListChanged(boolean listChanged) {
+            this.toolsListChanged = listChanged;
+            return this;
+        }
 
-        Builder resourcesListChanged(boolean v);
+        public Builder resourcesMode(Mode mode) {
+            this.resourcesMode = mode;
+            return this;
+        }
 
-        Builder promptsMode(Mode mode);
+        public Builder resourcesSubscribe(boolean subscribe) {
+            this.resourcesSubscribe = subscribe;
+            return this;
+        }
 
-        Builder promptsListChanged(boolean v);
+        public Builder resourcesListChanged(boolean listChanged) {
+            this.resourcesListChanged = listChanged;
+            return this;
+        }
 
-        Builder tasksList(boolean v);
+        public Builder promptsMode(Mode mode) {
+            this.promptsMode = mode;
+            return this;
+        }
 
-        Builder tasksCancel(boolean v);
+        public Builder promptsListChanged(boolean listChanged) {
+            this.promptsListChanged = listChanged;
+            return this;
+        }
 
-        Builder tasksRequests(boolean v);
+        public Builder tasksList(boolean list) {
+            this.tasksList = list;
+            return this;
+        }
 
-        Builder completions(boolean v);
+        public Builder tasksCancel(boolean cancel) {
+            this.tasksCancel = cancel;
+            return this;
+        }
 
-        Builder logging(boolean v);
+        public Builder tasksRequests(boolean requests) {
+            this.tasksRequests = requests;
+            return this;
+        }
 
-        CapabilitiesConfig build();
+        public Builder completions(boolean enabled) {
+            this.completions = enabled;
+            return this;
+        }
 
-        default Builder completions() {
+        public Builder logging(boolean enabled) {
+            this.logging = enabled;
+            return this;
+        }
+
+        public CapabilitiesConfig build() {
+            return new CapabilitiesConfig(
+                    toolsMode != null ? toolsMode : Mode.AUTO,
+                    toolsListChanged,
+                    resourcesMode != null ? resourcesMode : Mode.AUTO,
+                    resourcesSubscribe,
+                    resourcesListChanged,
+                    promptsMode != null ? promptsMode : Mode.AUTO,
+                    promptsListChanged,
+                    tasksList,
+                    tasksCancel,
+                    tasksRequests,
+                    completions,
+                    logging);
+        }
+
+        // === Convenience defaults ===
+
+        public Builder completions() {
             return completions(true);
         }
 
-        default Builder logging() {
+        public Builder logging() {
             return logging(true);
         }
 
-        default Builder tools() {
+        public Builder tools() {
             return toolsMode(Mode.ON).toolsListChanged(false);
         }
 
-        default Builder tools(boolean listChanged) {
+        public Builder tools(boolean listChanged) {
             return toolsMode(Mode.ON).toolsListChanged(listChanged);
         }
 
-        default Builder noTools() {
+        public Builder noTools() {
             return toolsMode(Mode.OFF);
         }
 
-        default Builder resources() {
+        public Builder resources() {
             return resourcesMode(Mode.ON).resourcesSubscribe(false).resourcesListChanged(false);
         }
 
-        default Builder resources(boolean subscribe, boolean listChanged) {
+        public Builder resources(boolean subscribe, boolean listChanged) {
             return resourcesMode(Mode.ON).resourcesSubscribe(subscribe).resourcesListChanged(listChanged);
         }
 
-        default Builder noResources() {
+        public Builder noResources() {
             return resourcesMode(Mode.OFF);
         }
 
-        default Builder prompts() {
+        public Builder prompts() {
             return promptsMode(Mode.ON).promptsListChanged(false);
         }
 
-        default Builder prompts(boolean listChanged) {
+        public Builder prompts(boolean listChanged) {
             return promptsMode(Mode.ON).promptsListChanged(listChanged);
         }
 
-        default Builder noPrompts() {
+        public Builder noPrompts() {
             return promptsMode(Mode.OFF);
         }
 
-        default Builder tasks() {
+        public Builder tasks() {
             return tasksList(true).tasksCancel(false).tasksRequests(false);
         }
 
-        default Builder tasks(boolean list, boolean cancel, boolean toolCallRequests) {
-            return tasksList(list).tasksCancel(cancel).tasksRequests(toolCallRequests);
+        public Builder tasks(boolean list, boolean cancel, boolean requests) {
+            return tasksList(list).tasksCancel(cancel).tasksRequests(requests);
         }
     }
 }

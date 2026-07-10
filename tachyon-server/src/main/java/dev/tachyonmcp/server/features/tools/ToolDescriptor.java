@@ -56,6 +56,14 @@ public interface ToolDescriptor {
         return DefaultToolDescriptor.builder();
     }
 
+    static ToolDescriptor of(String name) {
+        return DefaultToolDescriptor.of(name, null, null, null, null, null, null, null, null);
+    }
+
+    static ToolDescriptor of(String name, @Nullable String description) {
+        return DefaultToolDescriptor.of(name, null, description, null, null, null, null, null, null);
+    }
+
     interface Builder {
         Builder name(String name);
 

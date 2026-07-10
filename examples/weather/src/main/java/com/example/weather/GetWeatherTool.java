@@ -37,7 +37,7 @@ class GetWeatherTool {
                 .description("Get current weather for a city")
                 .inputSchema(INPUT_SCHEMA),
             (ctx, args) -> {
-                var city = args.string("city");
+                var city = args.stringValue("city");
                 var units = args.stringOr("units", "celsius");
                 return ToolResult.text(generateWeather(city, units));
             });

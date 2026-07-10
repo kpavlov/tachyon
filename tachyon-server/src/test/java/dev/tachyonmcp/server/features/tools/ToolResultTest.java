@@ -99,7 +99,7 @@ class ToolResultTest {
     void errorIsErrorResult() {
         ToolResult err = ToolResult.error("boom");
 
-        assertThat(err).isInstanceOf(ToolResult.ErrorResult.class).hasFieldOrPropertyWithValue("message", "boom");
+        assertThat(err).isInstanceOf(ToolResult.Error.class).hasFieldOrPropertyWithValue("message", "boom");
     }
 
     @Test
@@ -117,7 +117,7 @@ class ToolResultTest {
         ToolResult err = ToolResult.error("oops").withMeta("trace", JSON.stringNode("id-1"));
         assertThat(err).isInstanceOf(ToolResult.WithMeta.class);
         var wm = (ToolResult.WithMeta) err;
-        assertThat(wm.inner()).isInstanceOf(ToolResult.ErrorResult.class);
+        assertThat(wm.inner()).isInstanceOf(ToolResult.Error.class);
         assertThat(wm.meta().get("trace").asString()).isEqualTo("id-1");
     }
 
@@ -146,7 +146,7 @@ class ToolResultTest {
         assertThat(r).isInstanceOf(ToolResult.Success.class);
         var s = (ToolResult.Success) r;
         assertThat(s.structured()).contains(42);
-        assertThat(s.content()).isNotEmpty();
+        assertThat(s.content()).isEmpty();
     }
 
     @Test
