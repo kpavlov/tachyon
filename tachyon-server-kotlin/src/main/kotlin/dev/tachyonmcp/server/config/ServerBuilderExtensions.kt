@@ -5,7 +5,9 @@ package dev.tachyonmcp.server.config
 import dev.tachyonmcp.server.ServerBuilder
 import dev.tachyonmcp.server.domain.ResourceContents
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor
+import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry
 import dev.tachyonmcp.server.features.resources.resourceHandler
+import dev.tachyonmcp.server.features.resources.templateHandler
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.features.tools.toolHandler
@@ -26,6 +28,23 @@ public fun ServerBuilder.resource(
         ResourceDescriptor(name = name, uri = uri, description = description, mimeType = mimeType)
     return resource(descriptor, resourceHandler(descriptor, handler))
 }
+
+public fun ServerBuilder.resourceTemplate(
+    name: String,
+    uriTemplate: String,
+    description: String? = null,
+    mimeType: String? = null,
+    handler: suspend TemplateScope.() -> ResourceContents,
+): ServerBuilder =
+    resourceTemplate(
+        ResourceTemplateEntry(
+            name = name,
+            uriTemplate = uriTemplate,
+            description = description,
+            mimeType = mimeType,
+            handler = templateHandler(name, handler),
+        ),
+    )
 
 public fun ServerBuilder.tool(
     name: String,

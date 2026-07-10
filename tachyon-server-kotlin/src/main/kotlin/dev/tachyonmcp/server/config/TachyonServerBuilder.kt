@@ -9,14 +9,9 @@ import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.ResourceContents
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.server.features.prompts.promptHandler
-import dev.tachyonmcp.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry
-import dev.tachyonmcp.server.features.resources.resourceHandler
-import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.features.tools.toolHandler
 import dev.tachyonmcp.server.json.KxSerializationSerde
-import dev.tachyonmcp.server.json.schemas
 import dev.tachyonmcp.server.json.toJacksonNode
 import dev.tachyonmcp.server.json.toJacksonNodeOrNull
 import io.netty.channel.ChannelPipeline
@@ -104,20 +99,7 @@ public class TachyonServerBuilder
             outputSchema: JsonNode? = null,
             handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
-            this.also {
-                delegate.tool(
-                    toolHandler(
-                        ToolDescriptor
-                            .builder()
-                            .name(name)
-                            .description(description)
-                            .inputSchema(inputSchema)
-                            .outputSchema(outputSchema)
-                            .build(),
-                        handler,
-                    ),
-                )
-            }
+            this.also { delegate.tool(name, description, inputSchema, outputSchema, handler) }
 
         public fun tool(
             name: String,
@@ -126,19 +108,7 @@ public class TachyonServerBuilder
             outputSchema: String? = null,
             handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
-            this.also {
-                delegate.tool(
-                    toolHandler(
-                        ToolDescriptor
-                            .builder()
-                            .name(name)
-                            .description(description)
-                            .schemas(inputSchema, outputSchema)
-                            .build(),
-                        handler,
-                    ),
-                )
-            }
+            this.also { delegate.tool(name, description, inputSchema, outputSchema, handler) }
 
         public fun resource(
             name: String,
@@ -147,16 +117,7 @@ public class TachyonServerBuilder
             mimeType: String? = null,
             handler: suspend ResourceScope.() -> ResourceContents,
         ): TachyonServerBuilder =
-            this.also {
-                val descriptor =
-                    ResourceDescriptor(
-                        name = name,
-                        uri = uri,
-                        description = description,
-                        mimeType = mimeType,
-                    )
-                delegate.resource(descriptor, resourceHandler(descriptor, handler))
-            }
+            this.also { delegate.resource(name, uri, description, mimeType, handler) }
 
         public fun prompt(
             name: String,
@@ -170,6 +131,23 @@ public class TachyonServerBuilder
 
         public fun resourceTemplate(template: ResourceTemplateEntry): TachyonServerBuilder =
             this.also { delegate.resourceTemplate(template) }
+
+        public fun resourceTemplate(
+            name: String,
+            uriTemplate: String,
+            description: String? = null,
+            mimeType: String? = null,
+            handler: suspend TemplateScope.() -> ResourceContents,
+        ): TachyonServerBuilder =
+            this.also {
+                delegate.resourceTemplate(
+                    name,
+                    uriTemplate,
+                    description,
+                    mimeType,
+                    handler,
+                )
+            }
 
         /**
          * Registers a tool using a [kotlinx.serialization.json.JsonObject] input schema.

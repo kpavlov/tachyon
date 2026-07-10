@@ -179,6 +179,36 @@ internal class TachyonServerTest {
     }
 
     @Test
+    fun `name-based suspend resourceTemplate registers and lists template`() {
+        val schema = """{"type":"object"}"""
+        TachyonServer(port = 0) {
+            name("template-test")
+            session { enabled = true }
+            tool("check", inputSchema = schema) { ToolResult.text("ok") }
+            resourceTemplate(
+                name = "user-profile",
+                uriTemplate = "user://{userId}/profile",
+                description = "User profile template",
+                mimeType = "application/json",
+            ) {
+                TextResourceContents(
+                    uri = uri,
+                    mimeType = "application/json",
+                    text = "{\"id\":\"${param("userId")}\"}",
+                )
+            }
+        }.use { handle ->
+            McpProbe(handle.port()).use { probe ->
+                probe.initialize()
+                val response = probe.request(2, "resources/templates/list")
+                response.statusCode() shouldBe 200
+                response.body() shouldContain "user-profile"
+                response.body() shouldContain "user://{userId}/profile"
+            }
+        }
+    }
+
+    @Test
     fun `suspend tool with delay returns correct result`() {
         TachyonServer(port = 0) {
             name("delay-test")
