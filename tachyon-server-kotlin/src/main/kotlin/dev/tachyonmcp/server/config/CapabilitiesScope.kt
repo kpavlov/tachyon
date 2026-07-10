@@ -3,6 +3,7 @@
 package dev.tachyonmcp.server.config
 
 import dev.tachyonmcp.server.TachyonDsl
+import dev.tachyonmcp.server.features.Pagination
 
 @TachyonDsl
 public class CapabilitiesScope
@@ -44,6 +45,18 @@ public class CapabilitiesScope
         /** Whether logging capability is enabled. */
         public var logging: Boolean = false
 
+        /** Default page size for tools/list when limit is omitted. */
+        public var toolsPageSize: Int = Pagination.DEFAULT_PAGE_SIZE
+
+        /** Default page size for resources/list when limit is omitted. */
+        public var resourcesPageSize: Int = Pagination.DEFAULT_PAGE_SIZE
+
+        /** Default page size for prompts/list when limit is omitted. */
+        public var promptsPageSize: Int = Pagination.DEFAULT_PAGE_SIZE
+
+        /** Default page size for tasks/list when limit is omitted. */
+        public var tasksPageSize: Int = Pagination.DEFAULT_PAGE_SIZE
+
         public fun tools(listChanged: Boolean = false) {
             tools = Mode.ON
             toolsListChanged = listChanged
@@ -75,5 +88,9 @@ public class CapabilitiesScope
             if (tasks) builder.tasks(true, tasksCancel, tasksRequests)
             if (completions) builder.completions()
             if (logging) builder.logging()
+            builder.toolsPageSize(toolsPageSize)
+            builder.resourcesPageSize(resourcesPageSize)
+            builder.promptsPageSize(promptsPageSize)
+            builder.tasksPageSize(tasksPageSize)
         }
     }

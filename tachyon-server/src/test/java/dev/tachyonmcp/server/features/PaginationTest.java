@@ -32,12 +32,10 @@ class PaginationTest {
     }
 
     @Test
-    void limitZeroOrLessUsesDefaultLimit() {
+    void limitZeroOrLessFloorsToOne() {
         var items = IntStream.range(0, 55).mapToObj(String::valueOf).toList();
-        var zeroResult = Pagination.paginate(items, 0, null, 50, KEY);
-        var negResult = Pagination.paginate(items, -1, null, 50, KEY);
-        assertThat(zeroResult.items()).hasSize(50);
-        assertThat(negResult.items()).hasSize(50);
+        assertThat(Pagination.paginate(items, 0, null, KEY).items()).hasSize(1);
+        assertThat(Pagination.paginate(items, -1, null, KEY).items()).hasSize(1);
     }
 
     @Test

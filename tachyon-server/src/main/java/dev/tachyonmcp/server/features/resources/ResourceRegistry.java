@@ -46,14 +46,16 @@ public class ResourceRegistry {
     private final ConcurrentHashMap<String, ResourceTemplateEntry> templates = new ConcurrentHashMap<>();
     final ConcurrentHashMap<String, Set<String>> subscriptions = new ConcurrentHashMap<>();
     private final ServerEngine server;
+    private final int defaultPageSize;
 
     private final ChangeSupport changes = new ChangeSupport();
 
     /**
      * Creates a resource registry bound to the given server (for broadcasting subscription notifications).
      */
-    public ResourceRegistry(ServerEngine server) {
+    public ResourceRegistry(ServerEngine server, int defaultPageSize) {
         this.server = server;
+        this.defaultPageSize = defaultPageSize;
     }
 
     public void onChange(Runnable callback) {
@@ -97,26 +99,23 @@ public class ResourceRegistry {
     }
 
     public PaginatedResult<ResourceDescriptor> list(int limit, @Nullable String cursor) {
-        return list(limit, cursor, Pagination.DEFAULT_PAGE_SIZE, descriptor -> true);
+        int lim = limit > 0 ? limit : defaultPageSize;
+        var all = byName.values().stream()
+                .map(ResourceEntry::descriptor)
+                .sorted(Comparator.comparing(ResourceDescriptor::name))
+                .toList();
+        return Pagination.paginate(all, lim, cursor, ResourceDescriptor::name);
     }
 
     public PaginatedResult<ResourceDescriptor> list(
             int limit, @Nullable String cursor, Predicate<ResourceDescriptor> filter) {
-        return list(limit, cursor, Pagination.DEFAULT_PAGE_SIZE, filter);
-    }
-
-    public PaginatedResult<ResourceDescriptor> list(int limit, @Nullable String cursor, int defaultLimit) {
-        return list(limit, cursor, defaultLimit, descriptor -> true);
-    }
-
-    public PaginatedResult<ResourceDescriptor> list(
-            int limit, @Nullable String cursor, int defaultLimit, Predicate<ResourceDescriptor> filter) {
+        int lim = limit > 0 ? limit : defaultPageSize;
         var all = byName.values().stream()
                 .map(ResourceEntry::descriptor)
                 .filter(filter)
                 .sorted(Comparator.comparing(ResourceDescriptor::name))
                 .toList();
-        return Pagination.paginate(all, limit, cursor, defaultLimit, ResourceDescriptor::name);
+        return Pagination.paginate(all, lim, cursor, ResourceDescriptor::name);
     }
 
     @Nullable

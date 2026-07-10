@@ -23,16 +23,12 @@ public final class Pagination {
      * Paginates a sorted list. Items must be sorted in ascending order by the key function.
      *
      * @param sorted the sorted list of items
-     * @param limit requested page size (≤0 means default)
+     * @param limit requested page size (≤0 floors to 1)
      * @param cursor opaque cursor (last item name from previous page, or null for first page)
-     * @param defaultLimit fallback page size when limit ≤ 0
      * @param key extracts the cursor key from each item
      */
     public static <T> PaginatedResult<T> paginate(
-            List<T> sorted, int limit, @Nullable String cursor, int defaultLimit, Function<T, String> key) {
-        if (limit <= 0) {
-            limit = defaultLimit;
-        }
+            List<T> sorted, int limit, @Nullable String cursor, Function<T, String> key) {
         if (limit <= 0) {
             limit = 1;
         }
@@ -59,15 +55,5 @@ public final class Pagination {
             }
         }
         return PaginatedResult.of(result, nextCursor);
-    }
-
-    /**
-     * Paginates with the default page size.
-     *
-     * @see #paginate(List, int, String, int, Function)
-     */
-    public static <T> PaginatedResult<T> paginate(
-            List<T> sorted, int limit, @Nullable String cursor, Function<T, String> key) {
-        return paginate(sorted, limit, cursor, DEFAULT_PAGE_SIZE, key);
     }
 }

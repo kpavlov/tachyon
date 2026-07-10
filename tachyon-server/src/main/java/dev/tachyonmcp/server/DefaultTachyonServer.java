@@ -243,11 +243,12 @@ final class DefaultTachyonServer implements ServerEngine {
         final PayloadSerializer payloadSerializer1 = payloadSerializer != null ? payloadSerializer : defaultSerde;
         final PayloadDeserializer payloadDeserializer1 =
                 payloadDeserializer != null ? payloadDeserializer : defaultSerde;
-        this.toolRegistry =
-                new ToolRegistry(inputValidator1, outputValidator1, payloadSerializer1, payloadDeserializer1);
-        this.resourceRegistry = new ResourceRegistry(this);
-        this.taskRegistry = new TaskRegistry(this);
-        this.promptRegistry = new PromptRegistry(inputValidator1);
+        var caps = config.capabilities();
+        this.toolRegistry = new ToolRegistry(
+                inputValidator1, outputValidator1, payloadSerializer1, payloadDeserializer1, caps.toolsPageSize());
+        this.resourceRegistry = new ResourceRegistry(this, caps.resourcesPageSize());
+        this.taskRegistry = new TaskRegistry(this, caps.tasksPageSize());
+        this.promptRegistry = new PromptRegistry(inputValidator1, caps.promptsPageSize());
         registerDefaults();
         bootstrapExtensions();
         setupChangeListeners(config);

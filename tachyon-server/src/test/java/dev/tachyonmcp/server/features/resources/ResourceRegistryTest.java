@@ -21,6 +21,7 @@ import dev.tachyonmcp.server.domain.Annotations;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.Role;
 import dev.tachyonmcp.server.domain.TextResourceContents;
+import dev.tachyonmcp.server.features.Pagination;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.server.session.DispatchContext;
@@ -39,8 +40,12 @@ import org.junit.jupiter.api.Test;
 class ResourceRegistryTest {
 
     private final ServerEngine server = newEngine(b -> {});
-    private final ResourceRegistry registry = new ResourceRegistry(server);
+    private final ResourceRegistry registry = new ResourceRegistry(server, Pagination.DEFAULT_PAGE_SIZE);
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
+
+    private static ResourceDescriptor resource(String name) {
+        return ResourceDescriptor.of(name, "test://" + name, null, null);
+    }
 
     private static DispatchContext context(Session session, ServerEngine server) {
         var ctx = DefaultDispatchContext.create(Protocols.list().getFirst(), server);
@@ -59,6 +64,49 @@ class ResourceRegistryTest {
 
         assertThat(result).isInstanceOf(ListResourcesResult.class);
         assertThat(((ListResourcesResult) result).resources()).isEmpty();
+    }
+
+    @Test
+    void listWithZeroLimitUsesDefaultPageSize() {
+        registry.add(resource("r1"), (ctx, req) -> null);
+        registry.add(resource("r2"), (ctx, req) -> null);
+        var result = registry.list(0, null);
+        assertThat(result.items()).hasSize(2);
+    }
+
+    @Test
+    void listWithCursorSkipsPastCursor() {
+        registry.add(resource("alpha"), (ctx, req) -> null);
+        registry.add(resource("beta"), (ctx, req) -> null);
+        registry.add(resource("gamma"), (ctx, req) -> null);
+        var result = registry.list(1, "alpha");
+        assertThat(result.items()).hasSize(1);
+        assertThat(result.items().getFirst().name()).isEqualTo("beta");
+    }
+
+    @Test
+    void listReturnsCursorWhenMoreItemsAvailable() {
+        registry.add(resource("a"), (ctx, req) -> null);
+        registry.add(resource("b"), (ctx, req) -> null);
+        var result = registry.list(1, null);
+        assertThat(result.nextCursor()).isEqualTo("a");
+    }
+
+    @Test
+    void listReturnsNullCursorWhenAllItemsReturned() {
+        registry.add(resource("a"), (ctx, req) -> null);
+        var result = registry.list(10, null);
+        assertThat(result.nextCursor()).isNull();
+    }
+
+    @Test
+    void listWithCustomPageSize() {
+        var reg = new ResourceRegistry(server, 1);
+        reg.add(resource("a"), (ctx, req) -> null);
+        reg.add(resource("b"), (ctx, req) -> null);
+        var result = reg.list(0, null);
+        assertThat(result.items()).hasSize(1);
+        assertThat(result.nextCursor()).isEqualTo("a");
     }
 
     @Test

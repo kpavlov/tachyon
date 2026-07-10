@@ -1,0 +1,103 @@
+/*
+ * Copyright (c) 2026 Konstantin Pavlov and contributors.
+ */
+
+package dev.tachyonmcp.e2e;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
+
+class ListPaginationE2eTest extends AbstractMcpE2eTest {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    @Test
+    void resourcesListReturnsConfiguredPageSize() throws Exception {
+        startServer(it -> it.capabilities(c -> c.resources().resourcesPageSize(2))
+                .resource(resource("res-a"))
+                .resource(resource("res-b"))
+                .resource(resource("res-c")));
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+
+            var page1 = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":1,"method":"resources/list"}
+                """);
+            var root1 = MAPPER.readTree(page1.body());
+            assertThat(root1.at("/result/resources").size()).isEqualTo(2);
+            var cursor = root1.at("/result/nextCursor").asText(null);
+            assertThat(cursor).isNotNull();
+
+            var page2 = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"resources/list","params":{"cursor":"%s"}}
+                """.formatted(cursor));
+            var root2 = MAPPER.readTree(page2.body());
+            assertThat(root2.at("/result/resources").size()).isEqualTo(1);
+            assertThat(root2.at("/result/nextCursor").asText(null)).isNull();
+        }
+    }
+
+    @Test
+    void promptsListReturnsConfiguredPageSize() throws Exception {
+        startServer(it -> it.capabilities(c -> c.prompts().promptsPageSize(2))
+                .prompt(PromptDescriptor.of("p-a", null), List.of())
+                .prompt(PromptDescriptor.of("p-b", null), List.of())
+                .prompt(PromptDescriptor.of("p-c", null), List.of()));
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+
+            var page1 = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":1,"method":"prompts/list"}
+                """);
+            var root1 = MAPPER.readTree(page1.body());
+            assertThat(root1.at("/result/prompts").size()).isEqualTo(2);
+            var cursor = root1.at("/result/nextCursor").asText(null);
+            assertThat(cursor).isNotNull();
+
+            var page2 = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"prompts/list","params":{"cursor":"%s"}}
+                """.formatted(cursor));
+            var root2 = MAPPER.readTree(page2.body());
+            assertThat(root2.at("/result/prompts").size()).isEqualTo(1);
+            assertThat(root2.at("/result/nextCursor").asText(null)).isNull();
+        }
+    }
+
+    @Test
+    void tasksListReturnsConfiguredPageSize() throws Exception {
+        startServer(it -> it.capabilities(c -> c.tasks(true, false, false).tasksPageSize(2)));
+        server.tasks().createTask("task-a", "A");
+        server.tasks().createTask("task-b", "B");
+        server.tasks().createTask("task-c", "C");
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+
+            var page1 = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":1,"method":"tasks/list"}
+                """);
+            var root1 = MAPPER.readTree(page1.body());
+            assertThat(root1.at("/result/tasks").size()).isEqualTo(2);
+            var cursor = root1.at("/result/nextCursor").asText(null);
+            assertThat(cursor).isNotNull();
+
+            var page2 = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"tasks/list","params":{"cursor":"%s"}}
+                """.formatted(cursor));
+            var root2 = MAPPER.readTree(page2.body());
+            assertThat(root2.at("/result/tasks").size()).isEqualTo(1);
+            assertThat(root2.at("/result/nextCursor").asText(null)).isNull();
+        }
+    }
+
+    private static ResourceDescriptor resource(String name) {
+        return ResourceDescriptor.of(name, "test://" + name, null, null);
+    }
+}

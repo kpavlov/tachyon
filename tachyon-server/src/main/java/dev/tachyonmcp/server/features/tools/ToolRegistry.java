@@ -59,6 +59,7 @@ public class ToolRegistry {
     private final JsonSchemaValidator outputValidator;
     private final PayloadSerializer payloadSerializer;
     private final PayloadDeserializer payloadDeserializer;
+    private final int defaultPageSize;
 
     private final ChangeSupport changes = new ChangeSupport();
 
@@ -75,11 +76,13 @@ public class ToolRegistry {
             JsonSchemaValidator inputValidator,
             JsonSchemaValidator outputValidator,
             PayloadSerializer payloadSerializer,
-            PayloadDeserializer payloadDeserializer) {
+            PayloadDeserializer payloadDeserializer,
+            int defaultPageSize) {
         this.inputValidator = inputValidator;
         this.outputValidator = outputValidator;
         this.payloadSerializer = payloadSerializer;
         this.payloadDeserializer = payloadDeserializer;
+        this.defaultPageSize = defaultPageSize;
     }
 
     public void onChange(Runnable callback) {
@@ -183,25 +186,22 @@ public class ToolRegistry {
     }
 
     public PaginatedResult<ToolDescriptor> list(int limit, @Nullable String cursor) {
-        return list(limit, cursor, Pagination.DEFAULT_PAGE_SIZE, descriptor -> true);
+        int lim = limit > 0 ? limit : defaultPageSize;
+        var all = handlers.values().stream()
+                .map(ToolHandler::descriptor)
+                .sorted(Comparator.comparing(ToolDescriptor::name))
+                .toList();
+        return Pagination.paginate(all, lim, cursor, ToolDescriptor::name);
     }
 
     public PaginatedResult<ToolDescriptor> list(int limit, @Nullable String cursor, Predicate<ToolDescriptor> filter) {
-        return list(limit, cursor, Pagination.DEFAULT_PAGE_SIZE, filter);
-    }
-
-    public PaginatedResult<ToolDescriptor> list(int limit, @Nullable String cursor, int defaultLimit) {
-        return list(limit, cursor, defaultLimit, descriptor -> true);
-    }
-
-    public PaginatedResult<ToolDescriptor> list(
-            int limit, @Nullable String cursor, int defaultLimit, Predicate<ToolDescriptor> filter) {
+        int lim = limit > 0 ? limit : defaultPageSize;
         var all = handlers.values().stream()
                 .map(ToolHandler::descriptor)
                 .filter(filter)
                 .sorted(Comparator.comparing(ToolDescriptor::name))
                 .toList();
-        return Pagination.paginate(all, limit, cursor, defaultLimit, ToolDescriptor::name);
+        return Pagination.paginate(all, lim, cursor, ToolDescriptor::name);
     }
 
     public void registerHandlers(Map<String, RpcMethodHandler> registry) {
