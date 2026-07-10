@@ -4,7 +4,7 @@
 
 package dev.tachyonmcp.server.features.tasks;
 
-import dev.tachyonmcp.server.ServerResourceType;
+import dev.tachyonmcp.server.ServerFeature;
 import dev.tachyonmcp.server.domain.Icon;
 import java.util.List;
 import org.immutables.value.Value;
@@ -15,7 +15,7 @@ import org.jspecify.annotations.Nullable;
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
         typeImmutable = "Default*")
-public interface TaskDescriptor extends ServerResourceType {
+public interface TaskDescriptor extends ServerFeature {
 
     String name();
 

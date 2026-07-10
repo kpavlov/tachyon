@@ -6,8 +6,6 @@ package dev.tachyonmcp.server.session;
 
 import dev.tachyonmcp.annotations.InternalApi;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 
@@ -16,7 +14,7 @@ import java.util.function.Predicate;
  * (they remain unrecoverable — an SSE client reconnecting with a {@code Last-Event-ID} older than
  * the window simply misses those events, matching typical broker retention semantics).
  *
- * <p>Cursors handed out by {@link #pump} are <em>global</em> append indices, stable across trims
+ * <p>Cursors handed out by {@link #drain} are <em>global</em> append indices, stable across trims
  * via the {@code firstIndex} offset. Reads snapshot the window under the lock and process outside
  * it, so a slow consumer never blocks appends.
  *
@@ -25,7 +23,7 @@ import java.util.function.Predicate;
  * Java 24). A j.u.c lock parks the virtual thread instead and frees the carrier.
  */
 @InternalApi
-public final class InMemorySessionLogRouter implements SessionLogRouter {
+public final class InMemorySessionEventStore implements SessionEventStore {
 
     static final int DEFAULT_MAX_EVENTS = 10_000;
     /**
@@ -44,11 +42,11 @@ public final class InMemorySessionLogRouter implements SessionLogRouter {
 
     private final ArrayDeque<SessionEvent> events = new ArrayDeque<>();
 
-    public InMemorySessionLogRouter() {
+    public InMemorySessionEventStore() {
         this(0, DEFAULT_MAX_EVENTS);
     }
 
-    public InMemorySessionLogRouter(long firstIndex, int maxEvents) {
+    public InMemorySessionEventStore(long firstIndex, int maxEvents) {
         this.firstIndex = firstIndex;
         this.maxEvents = maxEvents;
     }
@@ -79,22 +77,7 @@ public final class InMemorySessionLogRouter implements SessionLogRouter {
     private record Snapshot(SessionEvent[] events, long firstIndex) {}
 
     @Override
-    public List<SessionEvent> replay(String sessionId, long lastSeq) {
-        var snap = snapshot();
-        var result = new ArrayList<SessionEvent>();
-        // Contract: events with sequence number GREATER THAN lastSeq — resume after it, like pump.
-        int start = lastSeq < 0 ? 0 : Math.clamp(lastSeq + 1 - snap.firstIndex(), 0, snap.events().length);
-        for (int i = start; i < snap.events().length; i++) {
-            var event = snap.events()[i];
-            if (event.sessionId().equals(sessionId)) {
-                result.add(event);
-            }
-        }
-        return List.copyOf(result);
-    }
-
-    @Override
-    public long pump(String sessionId, long cursor, Predicate<SessionEvent> processor) {
+    public long drain(String sessionId, long cursor, Predicate<SessionEvent> processor) {
         var snap = snapshot();
         // cursor is the last global index already processed; resume at the next one.
         long next = cursor < 0 ? snap.firstIndex() : cursor + 1;

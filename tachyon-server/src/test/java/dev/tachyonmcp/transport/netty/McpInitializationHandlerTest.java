@@ -7,7 +7,7 @@ package dev.tachyonmcp.transport.netty;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.runtime.Session;
-import dev.tachyonmcp.server.RpcDispatcher;
+import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import io.netty.buffer.Unpooled;
@@ -28,7 +28,7 @@ class McpInitializationHandlerTest {
     void setUp() {
         server = (ServerEngine)
                 TachyonServer.builder().session(s -> s.enabled(true)).build();
-        RpcDispatcher dispatcher = new RpcDispatcher(server, Runnable::run);
+        McpDispatcher dispatcher = new McpDispatcher(server, Runnable::run);
         channel = new EmbeddedChannel(new InteractionHandler());
         channel.pipeline()
                 .addLast(

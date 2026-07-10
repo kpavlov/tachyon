@@ -11,7 +11,7 @@ import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendOptions;
 import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.InteractionEvent;
-import dev.tachyonmcp.server.RpcDispatcher;
+import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
 import dev.tachyonmcp.transport.netty.sse.PostSseStream;
@@ -53,10 +53,10 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
     private static final String METHOD_INITIALIZE = "initialize";
 
     private final ServerEngine server;
-    private final RpcDispatcher dispatcher;
+    private final McpDispatcher dispatcher;
     private final Executor executor;
 
-    public McpInitializationHandler(ServerEngine server, RpcDispatcher dispatcher, Executor executor) {
+    public McpInitializationHandler(ServerEngine server, McpDispatcher dispatcher, Executor executor) {
         this.server = server;
         this.dispatcher = dispatcher;
         this.executor = executor;
@@ -167,11 +167,11 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                                 origin);
                         return;
                     }
-                    if (result instanceof RpcDispatcher.DispatchResult.Accepted) {
+                    if (result instanceof McpDispatcher.DispatchResult.Accepted) {
                         sendAccepted(ctx, origin);
                         return;
                     }
-                    var response = (RpcDispatcher.DispatchResult.Response) result;
+                    var response = (McpDispatcher.DispatchResult.Response) result;
                     sendJsonResponse(ctx, response.responseBody(), response.sessionId(), origin);
                 }));
     }
@@ -207,7 +207,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                     }
                     logger.debug("Initialize response: id={}, elapsed={}ms", id, elapsedMs);
 
-                    var response = (RpcDispatcher.DispatchResult.Response) result;
+                    var response = (McpDispatcher.DispatchResult.Response) result;
                     var resultSessionId = response.sessionId();
 
                     // Fire event with the live Session — InteractionHandler binds it into

@@ -7,7 +7,7 @@ package dev.tachyonmcp.transport.netty;
 import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.RpcDispatcher;
+import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
@@ -45,7 +45,7 @@ class NettyServerThreadingTest {
             // bypassing the HTTP layer to keep the test focused on threading.
             var session = server.createSession("sess_thread-probe");
             session.activate();
-            var dispatcher = new RpcDispatcher(server, server.executor());
+            var dispatcher = new McpDispatcher(server, server.executor());
             var params = java.util.Map.of("name", "thread_probe", "arguments", java.util.Map.of());
             dispatcher
                     .dispatchRequestAsync(1, "tools/call", params, "sess_thread-probe")
@@ -69,7 +69,7 @@ class NettyServerThreadingTest {
                     return ToolResult.empty();
                 })))) {
             server.createSession("sess-name").activate();
-            var dispatcher = new RpcDispatcher(server, server.executor());
+            var dispatcher = new McpDispatcher(server, server.executor());
             dispatcher
                     .dispatchRequestAsync(
                             1,

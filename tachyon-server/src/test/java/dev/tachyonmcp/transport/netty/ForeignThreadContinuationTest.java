@@ -7,7 +7,7 @@ package dev.tachyonmcp.transport.netty;
 import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.RpcDispatcher;
+import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
@@ -64,7 +64,7 @@ class ForeignThreadContinuationTest {
                 b -> b.json(j -> j.outputSchemaValidator(recordingValidator)).tool(handler))) {
             var session = server.createSession("sess-foreign");
             session.activate();
-            var dispatcher = new RpcDispatcher(server, server.executor());
+            var dispatcher = new McpDispatcher(server, server.executor());
             var params = Map.of("name", "foreign-thread-tool", "arguments", Map.of());
             dispatcher
                     .dispatchRequestAsync(1, "tools/call", params, "sess-foreign")

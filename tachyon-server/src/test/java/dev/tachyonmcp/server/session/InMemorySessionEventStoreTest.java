@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 import org.junitpioneer.jupiter.RetryingTest;
 
-class InMemorySessionLogRouterTest {
+class InMemorySessionEventStoreTest {
 
     private static SessionEvent requestEvent(String sessionId, int i) {
         return new SessionEvent.RequestEvent(sessionId, i, "ping", "{}", System.currentTimeMillis());
@@ -23,27 +23,27 @@ class InMemorySessionLogRouterTest {
     @Test
     void appendAndReplay() {
         List<SessionEvent> s2;
-        try (var router = new InMemorySessionLogRouter()) {
-            router.append(requestEvent("s1", 1));
-            router.append(requestEvent("s1", 2));
-            router.append(requestEvent("s2", 3));
+        try (var store = new InMemorySessionEventStore()) {
+            store.append(requestEvent("s1", 1));
+            store.append(requestEvent("s1", 2));
+            store.append(requestEvent("s2", 3));
 
-            var s1 = router.replay("s1", -1);
+            var s1 = store.replay("s1", -1);
             assertThat(s1).hasSize(2).allMatch(e -> e.sessionId().equals("s1"));
 
-            s2 = router.replay("s2", -1);
+            s2 = store.replay("s2", -1);
         }
         assertThat(s2).hasSize(1).allMatch(e -> e.sessionId().equals("s2"));
     }
 
     @Test
     void replayFromOffset() {
-        try (var router = new InMemorySessionLogRouter()) {
+        try (var store = new InMemorySessionEventStore()) {
             for (int i = 0; i < 10; i++) {
-                router.append(requestEvent("s1", i));
+                store.append(requestEvent("s1", i));
             }
             // lastSeq is exclusive: replay(5) resumes AFTER event 5 → events 6..9.
-            var result = router.replay("s1", 5);
+            var result = store.replay("s1", 5);
             assertThat(result).hasSize(4);
             var first = (SessionEvent.RequestEvent) result.getFirst();
             assertThat((Integer) first.requestId()).isEqualTo(6);
@@ -52,10 +52,10 @@ class InMemorySessionLogRouterTest {
 
     @Test
     void closeClears() {
-        var router = new InMemorySessionLogRouter();
-        router.append(requestEvent("s1", 1));
-        router.close();
-        assertThat(router.replay("s1", -1)).isEmpty();
+        var store = new InMemorySessionEventStore();
+        store.append(requestEvent("s1", 1));
+        store.close();
+        assertThat(store.replay("s1", -1)).isEmpty();
     }
 
     @RetryingTest(maxAttempts = 3)
@@ -65,14 +65,14 @@ class InMemorySessionLogRouterTest {
 
         long lockFreeOpsPerSec = measure(threads, eventsPerThread);
 
-        System.out.printf("[InMemorySessionLogRouter]: %,d ops/sec%n", lockFreeOpsPerSec, (double) lockFreeOpsPerSec);
+        System.out.printf("[InMemorySessionEventStore]: %,d ops/sec%n", lockFreeOpsPerSec, (double) lockFreeOpsPerSec);
 
         assertThat(lockFreeOpsPerSec).as("Performance baseline").isGreaterThan(800_000);
     }
 
     private long measure(int threads, int eventsPerThread) throws Exception {
         // AFTER: ConcurrentLinkedQueue — O(1) CAS append
-        try (var router = new InMemorySessionLogRouter()) {
+        try (var store = new InMemorySessionEventStore()) {
             var latch = new CountDownLatch(1);
             var total = new AtomicLong(0);
             int ops = threads * eventsPerThread;
@@ -88,7 +88,7 @@ class InMemorySessionLogRouterTest {
                             return;
                         }
                         for (int i = 0; i < eventsPerThread; i++) {
-                            router.append(requestEvent("sess_" + tid, i));
+                            store.append(requestEvent("sess_" + tid, i));
                             total.incrementAndGet();
                         }
                     });
@@ -105,7 +105,7 @@ class InMemorySessionLogRouterTest {
 
     @Test
     void concurrentAppendCorrectness() throws Exception {
-        try (var router = new InMemorySessionLogRouter()) {
+        try (var store = new InMemorySessionEventStore()) {
             int threads = 8;
             int eventsPerThread = 10_000;
             var latch = new CountDownLatch(1);
@@ -122,7 +122,7 @@ class InMemorySessionLogRouterTest {
                             return;
                         }
                         for (int i = 0; i < eventsPerThread; i++) {
-                            router.append(requestEvent("sess_" + tid, i));
+                            store.append(requestEvent("sess_" + tid, i));
                             totalAppended.incrementAndGet();
                         }
                     });
@@ -142,7 +142,7 @@ class InMemorySessionLogRouterTest {
             // the contiguous tail ending at that session's final event.
             var totalRetained = 0;
             for (int t = 0; t < threads; t++) {
-                var result = router.replay("sess_" + t, -1);
+                var result = store.replay("sess_" + t, -1);
                 totalRetained += result.size();
                 if (result.isEmpty()) {
                     continue;
@@ -155,27 +155,27 @@ class InMemorySessionLogRouterTest {
                     assertThat(ids.get(i)).isEqualTo(ids.get(i - 1) + 1);
                 }
             }
-            assertThat(totalRetained).isEqualTo(router.maxEvents);
+            assertThat(totalRetained).isEqualTo(store.maxEvents);
         }
     }
 
     @Test
     void trimDropsOldestAndKeepsCursorSemantics() {
-        try (var router = new InMemorySessionLogRouter()) {
+        try (var store = new InMemorySessionEventStore()) {
             int overflow = 100;
-            int total = router.maxEvents + overflow;
+            int total = store.maxEvents + overflow;
             for (int i = 0; i < total; i++) {
-                router.append(requestEvent("s1", i));
+                store.append(requestEvent("s1", i));
             }
 
-            var all = router.replay("s1", -1);
-            assertThat(all).hasSize(router.maxEvents);
+            var all = store.replay("s1", -1);
+            assertThat(all).hasSize(store.maxEvents);
             var first = (SessionEvent.RequestEvent) all.getFirst();
             assertThat((Integer) first.requestId()).isEqualTo(overflow);
 
             // Global-index cursor from inside the window is not misaligned by the trim: replay
-            // resumes AFTER lastSeq (exclusive, matching pump).
-            var tail = router.replay("s1", total - 5);
+            // resumes AFTER lastSeq (exclusive, matching drain).
+            var tail = store.replay("s1", total - 5);
             assertThat(tail).hasSize(4);
             var tailFirst = (SessionEvent.RequestEvent) tail.getFirst();
             assertThat((Integer) tailFirst.requestId()).isEqualTo(total - 5 + 1);

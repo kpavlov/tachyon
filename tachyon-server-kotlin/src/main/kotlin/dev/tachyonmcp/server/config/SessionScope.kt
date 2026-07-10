@@ -3,7 +3,7 @@
 package dev.tachyonmcp.server.config
 
 import dev.tachyonmcp.server.TachyonDsl
-import dev.tachyonmcp.server.session.SessionLogRouter
+import dev.tachyonmcp.server.session.SessionEventStore
 import dev.tachyonmcp.server.session.SessionStore
 import io.netty.handler.codec.http.HttpRequest
 import kotlin.time.Duration
@@ -25,8 +25,8 @@ public class SessionScope
         /** Custom session store implementation. */
         public var sessionStore: SessionStore? = null
 
-        /** Custom session log router. */
-        public var sessionLogRouter: SessionLogRouter? = null
+        /** Custom session event store. */
+        public var sessionEventStore: SessionEventStore? = null
 
         /** Custom session ID generator function. */
         public var sessionIdGenerator: ((HttpRequest) -> String)? = null
@@ -42,7 +42,7 @@ public class SessionScope
             sessionTtl?.let { builder.sessionTtl(it.toJavaDuration()) }
             janitorInterval?.let { builder.janitorInterval(it.toJavaDuration()) }
             sessionStore?.let(builder::sessionStore)
-            sessionLogRouter?.let(builder::sessionLogRouter)
+            sessionEventStore?.let(builder::sessionEventStore)
             sessionIdGenerator.let { builder.sessionIdGenerator(it) }
         }
     }

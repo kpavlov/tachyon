@@ -95,7 +95,7 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
     void rejectsToolCallWhileSessionNotYetActive() throws Exception {
         // Deterministic counterpart to the createTaskViaTool flake: initialize a session but
         // deliberately skip notifications/initialized, so it stays INITIALIZING and the
-        // activation gate (RpcDispatcher) rejects the tools/call with a JSON-RPC error.
+        // activation gate (McpDispatcher) rejects the tools/call with a JSON-RPC error.
         // This is the exact response shape the flake produced when activation had not yet
         // completed — and it falsifies the diagnosis if initialize secretly activates.
         try (var client = createTestClient()) {

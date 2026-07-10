@@ -27,7 +27,7 @@ class ExtensionMethodRoutingTest {
 
     private ServerEngine server;
     private Session session;
-    private RpcDispatcher dispatcher;
+    private McpDispatcher dispatcher;
     private @Nullable DispatchContext context;
 
     @BeforeEach
@@ -35,7 +35,7 @@ class ExtensionMethodRoutingTest {
         server = (ServerEngine)
                 TachyonServer.builder().extension(new TestExtension()).build();
         session = server.createSession("sess_routing");
-        dispatcher = new RpcDispatcher(server, server.executor());
+        dispatcher = new McpDispatcher(server, server.executor());
     }
 
     @Test
@@ -43,7 +43,7 @@ class ExtensionMethodRoutingTest {
         session.activate();
         var ctx = DefaultDispatchContext.create(Protocols.list().get(0), server);
         ctx.setSession(session);
-        var result = (RpcDispatcher.DispatchResult.Response) dispatcher
+        var result = (McpDispatcher.DispatchResult.Response) dispatcher
                 .dispatchRequestAsync(1, "test/ext-method", null, "sess_routing", null, ctx)
                 .join();
         var body = result.responseBody().toString(StandardCharsets.UTF_8);
@@ -56,7 +56,7 @@ class ExtensionMethodRoutingTest {
         negotiateExtension();
         session.activate();
         var params = Map.of("_meta", Map.of("com.test/ext", JsonNodeFactory.instance.objectNode()));
-        var result = (RpcDispatcher.DispatchResult.Response) dispatcher
+        var result = (McpDispatcher.DispatchResult.Response) dispatcher
                 .dispatchRequestAsync(1, "test/ext-method", params, "sess_routing", null, context)
                 .join();
         var body = result.responseBody().toString(StandardCharsets.UTF_8);

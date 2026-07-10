@@ -12,12 +12,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Default {@link MessageRouter} that diverts events through an {@link OutboundSseStream} bound in
+ * Default {@link OutboundStreamResolver} that diverts events through an {@link OutboundSseStream} bound in
  * the current dispatch context when the dispatch session matches the target session. Otherwise, lets
  * the caller fall through to the normal GET-SSE path.
  */
 @InternalApi
-public final class OutboundSseStreamMessageRouter implements MessageRouter {
+public final class OutboundSseStreamMessageRouter implements OutboundStreamResolver {
 
     private static final Logger logger = LoggerFactory.getLogger(OutboundSseStreamMessageRouter.class);
     private static final ThreadLocal<@Nullable OutboundSseStream> OUTBOUND_SSE_STREAM = new ThreadLocal<>();

@@ -69,7 +69,7 @@ fun createServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer =
             sessionTtl = 5.minutes
             janitorInterval = 5.seconds
             sessionStore = null // default: InMemorySessionStore
-            sessionLogRouter = null // default: InMemorySessionLogRouter
+            sessionEventStore = null // default: InMemorySessionEventStore
             // lambda DSL
             sessionIdGenerator { it.headers().get("X-Tenant-Id") ?: "anon" }
             // or direct assignment:

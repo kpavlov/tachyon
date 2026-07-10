@@ -17,7 +17,7 @@ Every SSE event carries an id. For a POST-upgraded stream the wire id is `<n>#<k
   of that stream in the event log and suffixes the SSE ids, so a `Last-Event-ID` resolves back to
   *this* stream and no other.
 
-Every emitted event is also appended to the session **event log** (`SessionLogRouter`). If the
+Every emitted event is also appended to the session **event store** (`SessionEventStore`). If the
 connection drops, the client reconnects with `Last-Event-ID: <n>#<key>` and the server replays the
 missed events of **that stream only** — never another stream's (MCP resumability: *"the server MUST
 NOT replay messages that would have been sent on a different stream"*, guarded by
