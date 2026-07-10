@@ -9,18 +9,18 @@ import dev.tachyonmcp.runtime.Session;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Routes server-to-client SSE events to the appropriate transport channel.
+ * Resolves the transport channel server-to-client SSE events should be delivered on.
  *
  * <p>When a request handler is mid-dispatch, an active {@link OutboundSseStream} can be bound
- * in the dispatch context; the router opportunistically diverts events for the dispatched session
- * to that stream (lazy SSE upgrade of the transport response). Events for any other session
- * continue through the standard GET-SSE pipeline (hot buffer + flush).
+ * in the dispatch context; the resolver opportunistically diverts events for the dispatched
+ * session to that stream (lazy SSE upgrade of the transport response). Events for any other
+ * session continue through the standard GET-SSE pipeline (hot buffer + flush).
  *
- * <p>This abstraction keeps {@link TachyonServer} / {@link RpcDispatcher}
+ * <p>This abstraction keeps {@link TachyonServer} / {@link McpDispatcher}
  * free of transport-aware branching.
  */
 @InternalApi
-public interface MessageRouter {
+public interface OutboundStreamResolver {
 
     /**
      * Resolves the {@link OutboundSseStream} bound in the current dispatch context for the given

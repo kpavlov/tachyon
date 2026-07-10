@@ -35,7 +35,7 @@ var server = TachyonServer.builder()
 |---|---|
 | `.info(cfg)` | name, version, description, title, websiteUrl, instructions |
 | `.capabilities(cfg)` | tools/resources/prompts/tasks/completions/logging |
-| `.session(cfg)` | enabled (off by default = stateless), sessionTtl, SessionLogRouter, SessionStore, SessionIdGenerator |
+| `.session(cfg)` | enabled (off by default = stateless), sessionTtl, SessionEventStore, SessionStore, SessionIdGenerator |
 | `.network(cfg)` | host, port, endpointPath, timeouts, CORS, maxContentLength, ioEngine |
 | `.runtime(cfg)` | shutdownGracePeriod |
 | `.monitoring(cfg)` | slow-request diagnostics (off by default) |
@@ -212,7 +212,7 @@ Rule: **long task ⇒ emit progress or comment first**; keep `heartbeatInterval 
 | `.sessionTtl(d)` | 30s |
 | `.janitorInterval(d)` | 5s |
 | `.sessionIdGenerator(g)` | `sess_<uuid8>` (derives id from initialize `HttpRequest`) |
-| `.sessionLogRouter(r)` / `.sessionStore(s)` | null (in-memory) |
+| `.sessionEventStore(r)` / `.sessionStore(s)` | null (in-memory) |
 
 ### Runtime `runtime(cfg -> ...)`
 

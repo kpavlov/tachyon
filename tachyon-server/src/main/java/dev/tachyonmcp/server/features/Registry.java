@@ -6,7 +6,7 @@ package dev.tachyonmcp.server.features;
 
 import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.server.RpcMethodHandler;
-import dev.tachyonmcp.server.ServerResourceType;
+import dev.tachyonmcp.server.ServerFeature;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Map;
@@ -14,9 +14,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
 
-/** Base registry for named, paginated MCP resource types. */
+/** Base registry for named, paginated MCP features. */
 @InternalApi
-public abstract class Registry<R extends ServerResourceType> {
+public abstract class Registry<R extends ServerFeature> {
 
     private final ConcurrentHashMap<String, R> items = new ConcurrentHashMap<>();
 
@@ -69,18 +69,18 @@ public abstract class Registry<R extends ServerResourceType> {
     public PaginatedResult<R> list(int limit, @Nullable String cursor) {
         int lim = limit > 0 ? limit : defaultPageSize;
         var all = items.values().stream()
-                .sorted(Comparator.comparing(ServerResourceType::name))
+                .sorted(Comparator.comparing(ServerFeature::name))
                 .toList();
-        return Pagination.paginate(all, lim, cursor, ServerResourceType::name);
+        return Pagination.paginate(all, lim, cursor, ServerFeature::name);
     }
 
     public PaginatedResult<R> list(int limit, @Nullable String cursor, Predicate<R> filter) {
         int lim = limit > 0 ? limit : defaultPageSize;
         var all = items.values().stream()
                 .filter(filter)
-                .sorted(Comparator.comparing(ServerResourceType::name))
+                .sorted(Comparator.comparing(ServerFeature::name))
                 .toList();
-        return Pagination.paginate(all, lim, cursor, ServerResourceType::name);
+        return Pagination.paginate(all, lim, cursor, ServerFeature::name);
     }
 
     public abstract void registerHandlers(Map<String, RpcMethodHandler> registry);

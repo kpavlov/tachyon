@@ -44,8 +44,8 @@ import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
 import dev.tachyonmcp.server.json.PayloadDeserializer;
 import dev.tachyonmcp.server.json.PayloadSerializer;
 import dev.tachyonmcp.server.session.SessionEvent;
+import dev.tachyonmcp.server.session.SessionEventStore;
 import dev.tachyonmcp.server.session.SessionIdGenerator;
-import dev.tachyonmcp.server.session.SessionLogRouter;
 import dev.tachyonmcp.server.session.SessionManager;
 import dev.tachyonmcp.server.session.SessionStore;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
@@ -76,9 +76,9 @@ final class DefaultTachyonServer implements ServerEngine {
     private static final Logger logger = LoggerFactory.getLogger(DefaultTachyonServer.class);
 
     private final ServerConfig config;
-    private final SessionLogRouter router;
+    private final SessionEventStore sessionEventStore;
     private final SessionManager sessionManager;
-    private final MessageRouter messageRouter = new OutboundSseStreamMessageRouter();
+    private final OutboundStreamResolver outboundStreamResolver = new OutboundSseStreamMessageRouter();
     private final AtomicLong eventIdCounter = new AtomicLong(0);
     private final ToolRegistry toolRegistry;
     private final ResourceRegistry resourceRegistry;
@@ -223,7 +223,7 @@ final class DefaultTachyonServer implements ServerEngine {
     DefaultTachyonServer(
             ExecutorService executor,
             boolean ownsExecutor,
-            SessionLogRouter router,
+            SessionEventStore sessionEventStore,
             SessionStore sessionStore,
             ServerConfig config,
             @Nullable JsonSchemaValidator inputValidator,
@@ -234,7 +234,7 @@ final class DefaultTachyonServer implements ServerEngine {
         this.executor = executor;
         this.ownsExecutor = ownsExecutor;
         this.config = Objects.requireNonNull(config, "config cannot be null");
-        this.router = Objects.requireNonNull(router, "router cannot be null");
+        this.sessionEventStore = Objects.requireNonNull(sessionEventStore, "sessionEventStore cannot be null");
         this.port = config.network().port();
         this.extensions = extensions != null ? extensions : List.of();
         this.sessionManager = new SessionManager(sessionStore);
@@ -419,14 +419,13 @@ final class DefaultTachyonServer implements ServerEngine {
 
     @Override
     public void registerPrompt(PromptDescriptor descriptor, List<PromptMessage> messages) {
-        registerPrompt(
-                descriptor, (InputRequiredPromptHandler) (ctx, request) -> PromptHandlerResult.messages(messages));
+        registerPrompt(descriptor, (ctx, request) -> PromptHandlerResult.messages(messages));
     }
 
     @Override
     public void registerPrompt(PromptDescriptor descriptor, PromptHandler handler) {
-        registerPrompt(descriptor, (InputRequiredPromptHandler)
-                (ctx, request) -> PromptHandlerResult.messages(handler.getMessages(request.arguments())));
+        registerPrompt(
+                descriptor, (ctx, request) -> PromptHandlerResult.messages(handler.getMessages(request.arguments())));
     }
 
     @Override
@@ -473,7 +472,7 @@ final class DefaultTachyonServer implements ServerEngine {
         var sseEventId = nextEventId();
         var enriched = new SessionEvent.ResponseEvent(
                 event.sessionId(), event.requestId(), event.resultJson(), event.timestamp(), sseEventId, null);
-        router.append(enriched);
+        sessionEventStore.append(enriched);
 
         var sseEvent = new SseEvent(String.valueOf(sseEventId), "message", event.resultJson());
 
@@ -503,12 +502,12 @@ final class DefaultTachyonServer implements ServerEngine {
         if (session.state() == SessionState.CLOSED) {
             return;
         }
-        var target = stream != null ? stream : messageRouter.resolve(session);
+        var target = stream != null ? stream : outboundStreamResolver.resolve(session);
         var streamKey = target != null ? target.streamKey() : null;
         var sseEventId = nextEventId();
         var notificationEvent = new SessionEvent.NotificationEvent(
                 session.id(), method, paramsStr, System.currentTimeMillis(), sseEventId, streamKey);
-        router.append(notificationEvent);
+        sessionEventStore.append(notificationEvent);
 
         var sseEvent = new SseEvent(ServerEngine.wireEventId(sseEventId, streamKey), "message", notificationJson);
 
@@ -534,13 +533,13 @@ final class DefaultTachyonServer implements ServerEngine {
         registerPendingRequest(requestId, future);
 
         var requestJson = JsonRpcCodec.serializeRequestAsString(requestId, method, paramsStr);
-        var target = stream != null ? stream : messageRouter.resolve(session);
+        var target = stream != null ? stream : outboundStreamResolver.resolve(session);
         var streamKey = target != null ? target.streamKey() : null;
         var sseEventId = nextEventId();
 
         var outboundEvent = new SessionEvent.OutboundRequestEvent(
                 session.id(), requestId, method, paramsStr, System.currentTimeMillis(), sseEventId, streamKey);
-        router.append(outboundEvent);
+        sessionEventStore.append(outboundEvent);
 
         var sseEvent = new SseEvent(ServerEngine.wireEventId(sseEventId, streamKey), "message", requestJson);
 
@@ -619,12 +618,12 @@ final class DefaultTachyonServer implements ServerEngine {
 
     @Override
     public void appendEvent(SessionEvent event) {
-        router.append(event);
+        sessionEventStore.append(event);
     }
 
     @Override
     public List<SessionEvent> replay(String sessionId, long lastSeq) {
-        return router.replay(sessionId, lastSeq);
+        return sessionEventStore.replay(sessionId, lastSeq);
     }
 
     @Override
@@ -632,13 +631,13 @@ final class DefaultTachyonServer implements ServerEngine {
         return eventIdCounter.incrementAndGet();
     }
 
-    void pumpChronicle(Session session) {
+    void drainEvents(Session session) {
         if (!session.connection().isWritable()) {
             return;
         }
 
         var cursor = session.cursor();
-        var lastIndex = router.pump(session.id(), cursor, event -> {
+        var lastIndex = sessionEventStore.drain(session.id(), cursor, event -> {
             if (!session.connection().isWritable()) {
                 return false;
             }
@@ -675,7 +674,7 @@ final class DefaultTachyonServer implements ServerEngine {
             }
             taskRegistry.stopTtlJanitor();
             sessionManager.close();
-            router.close();
+            sessionEventStore.close();
         } catch (IOException e) {
             logger.debug("Error while shutting down", e);
         } finally {

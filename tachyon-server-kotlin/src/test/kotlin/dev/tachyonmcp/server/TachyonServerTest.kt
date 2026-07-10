@@ -9,7 +9,7 @@ import dev.tachyonmcp.server.domain.TextContent
 import dev.tachyonmcp.server.domain.TextResourceContents
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.internal.ServerEngine
-import dev.tachyonmcp.server.session.InMemorySessionLogRouter
+import dev.tachyonmcp.server.session.InMemorySessionEventStore
 import dev.tachyonmcp.server.session.InMemorySessionStore
 import dev.tachyonmcp.server.session.SessionIdGenerator
 import io.kotest.matchers.shouldBe
@@ -85,7 +85,7 @@ internal class TachyonServerTest {
                 enabled = true
                 sessionTtl = 15.seconds
                 sessionStore = InMemorySessionStore()
-                sessionLogRouter = InMemorySessionLogRouter()
+                sessionEventStore = InMemorySessionEventStore()
                 sessionIdGenerator { it.headers().get("X-Tenant-Id") ?: "anon" }
             }
             monitoring {

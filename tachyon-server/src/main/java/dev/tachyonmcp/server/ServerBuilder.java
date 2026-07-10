@@ -31,7 +31,7 @@ import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
 import dev.tachyonmcp.server.json.PayloadDeserializer;
 import dev.tachyonmcp.server.json.PayloadSerializer;
-import dev.tachyonmcp.server.session.InMemorySessionLogRouter;
+import dev.tachyonmcp.server.session.InMemorySessionEventStore;
 import dev.tachyonmcp.server.session.InMemorySessionStore;
 import dev.tachyonmcp.transport.netty.NettyServer;
 import dev.tachyonmcp.transport.netty.NettyServerConfig;
@@ -343,9 +343,9 @@ public final class ServerBuilder {
      */
     public TachyonServer build() {
         var sessionConfig = sessionBuilder.build();
-        var router = sessionConfig.sessionLogRouter() != null
-                ? sessionConfig.sessionLogRouter()
-                : new InMemorySessionLogRouter();
+        var sessionEventStore = sessionConfig.sessionEventStore() != null
+                ? sessionConfig.sessionEventStore()
+                : new InMemorySessionEventStore();
         var store = sessionConfig.sessionStore() != null ? sessionConfig.sessionStore() : new InMemorySessionStore();
         var allExtensions = Collections.unmodifiableList(featuresConfig.extensions);
         var serverConfig = buildConfig();
@@ -365,7 +365,7 @@ public final class ServerBuilder {
         var server = new DefaultTachyonServer(
                 resolvedExecutor,
                 ownsExecutor,
-                router,
+                sessionEventStore,
                 store,
                 serverConfig,
                 featuresConfig.inputSchemaValidator,

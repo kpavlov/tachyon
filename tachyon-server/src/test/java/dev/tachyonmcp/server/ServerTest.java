@@ -95,7 +95,7 @@ class ServerTest {
     }
 
     @Test
-    void pumpChronicle() {
+    void drainEvents() {
         try (DefaultTachyonServer server =
                 (DefaultTachyonServer) TachyonServer.builder().build()) {
             var conn = new TestConnection();
@@ -106,7 +106,7 @@ class ServerTest {
             server.appendEvent(
                     new SessionEvent.NotificationEvent("sess_1", "notifications/message", "{}", 200L, -1, null));
 
-            server.pumpChronicle(session);
+            server.drainEvents(session);
 
             assertThat(conn.sent).hasSize(2);
         }

@@ -209,7 +209,7 @@ them on a stateless server fails at construction.
 | `enabled` | `false` | Server-side sessions are off by default (stateless). Set `true` to create sessions with TTL tracking |
 | `sessionTtl` | `30s` | Idle sessions are evicted after this duration |
 | `janitorInterval` | `5s` | Janitor sweep interval; controls how often expired sessions are checked |
-| `sessionLogRouter` | in-memory | Custom event log router |
+| `sessionEventStore` | in-memory | Custom session event store |
 | `sessionStore` | in-memory | Custom session store |
 | `sessionIdGenerator` | `sess_<uuid>` | Custom hook for deriving session ids from the initialize `HttpRequest` (headers/URI) |
 

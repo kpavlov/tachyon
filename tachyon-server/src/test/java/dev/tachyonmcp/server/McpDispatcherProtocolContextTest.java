@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
-class RpcDispatcherProtocolContextTest {
+class McpDispatcherProtocolContextTest {
 
     /**
      * Fake protocol that records context-factory invocations.
@@ -91,13 +91,13 @@ class RpcDispatcherProtocolContextTest {
                 }
             });
 
-            var dispatcher = new RpcDispatcher(server, Runnable::run);
+            var dispatcher = new McpDispatcher(server, Runnable::run);
             var channelContext = protocol.createInteractionContext();
             var result = dispatcher
                     .dispatchRequestAsync(1, "test/capture", Map.of(), "sess_p1", null, channelContext)
                     .get(5, TimeUnit.SECONDS);
 
-            assertThat(result).isInstanceOf(RpcDispatcher.DispatchResult.Response.class);
+            assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Response.class);
             assertThat(protocol.contextsCreated).hasValue(1);
             assertThat(handlerContext.get())
                     .as("handler must receive a DispatchContext wrapping the channel context")
@@ -116,14 +116,14 @@ class RpcDispatcherProtocolContextTest {
             var protocol = new RecordingProtocol();
             server.createSession("sess_p2").activate();
 
-            var dispatcher = new RpcDispatcher(server, Runnable::run);
+            var dispatcher = new McpDispatcher(server, Runnable::run);
             var channelContext = protocol.createInteractionContext();
 
             var result = dispatcher
                     .dispatchRequestAsync(1, "ping", Map.of(), "sess_p2", null, channelContext)
                     .get(5, TimeUnit.SECONDS);
 
-            assertThat(result).isInstanceOf(RpcDispatcher.DispatchResult.Response.class);
+            assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Response.class);
         }
     }
 
@@ -145,12 +145,12 @@ class RpcDispatcherProtocolContextTest {
                 }
             });
 
-            var dispatcher = new RpcDispatcher(server, Runnable::run);
+            var dispatcher = new McpDispatcher(server, Runnable::run);
             var result = dispatcher
                     .dispatchRequestAsync(1, "test/capture", Map.of(), null)
                     .get(5, TimeUnit.SECONDS);
 
-            assertThat(result).isInstanceOf(RpcDispatcher.DispatchResult.Response.class);
+            assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Response.class);
             var context = handlerContext.get();
             assertThat(context).isNotNull();
             assertThat(context.session())

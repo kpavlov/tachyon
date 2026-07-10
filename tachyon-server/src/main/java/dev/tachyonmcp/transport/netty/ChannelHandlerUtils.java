@@ -8,7 +8,7 @@ import static dev.tachyonmcp.transport.netty.InteractionHandler.INTERACTION_CONT
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.Session;
-import dev.tachyonmcp.server.RpcDispatcher;
+import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.SessionIdGenerator;
 import io.netty.buffer.ByteBuf;
@@ -66,7 +66,7 @@ public final class ChannelHandlerUtils {
         // dropped (a session-id generator reads headers/URI, and the pooled body is already gone).
         var headers = new DefaultHttpHeaders().set(req.headers());
         var snapshot = new DefaultHttpRequest(req.protocolVersion(), req.method(), req.uri(), headers);
-        requireInteractionContext(ctx).setAttribute(RpcDispatcher.ATTR_INIT_REQUEST, snapshot);
+        requireInteractionContext(ctx).setAttribute(McpDispatcher.ATTR_INIT_REQUEST, snapshot);
     }
 
     public static void sendAccepted(ChannelHandlerContext ctx, @Nullable String origin) {

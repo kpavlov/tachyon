@@ -4,7 +4,7 @@
 
 package dev.tachyonmcp.transport.netty;
 
-import dev.tachyonmcp.server.RpcDispatcher;
+import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.netty.http.AcceptValidationHandler;
 import dev.tachyonmcp.transport.netty.http.DnsRebindingProtectionHandler;
@@ -67,7 +67,7 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
     private static final ChannelHandler statelessValidator = new StatelessValidatorHandler();
 
     private final ServerEngine server;
-    private final RpcDispatcher dispatcher;
+    private final McpDispatcher dispatcher;
 
     @Nullable
     private final Consumer<ChannelPipeline> pipelineCustomizer;
@@ -92,7 +92,7 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
         this.corsConfig = corsConfig;
         this.pipelineCustomizer = pipelineCustomizer;
         this.childChannels = childChannels;
-        this.dispatcher = new RpcDispatcher(server, server.executor());
+        this.dispatcher = new McpDispatcher(server, server.executor());
         this.interactionHandler = new InteractionHandler();
 
         protocolVersionHandler = new ProtocolVersionHandler(endpointPath);

@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.runtime.SseEvent;
-import dev.tachyonmcp.server.RpcDispatcher;
+import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
@@ -46,13 +46,13 @@ class NotificationDeliveryTest {
     });
 
     private ServerEngine server;
-    private RpcDispatcher dispatcher;
+    private McpDispatcher dispatcher;
     private CollectingConnection testConn;
 
     @BeforeEach
     void setUp() {
         server = newEngine(b -> b.session(s -> s.enabled(true)).tool(PROGRESS_AND_LOG_TOOL));
-        dispatcher = new RpcDispatcher(server, server.executor());
+        dispatcher = new McpDispatcher(server, server.executor());
         testConn = new CollectingConnection();
         Session session = server.createSession("sess_test");
         session.connection(testConn);
@@ -74,8 +74,8 @@ class NotificationDeliveryTest {
                 .dispatchRequestAsync(1, "tools/call", params, "sess_test")
                 .join();
 
-        assertThat(result).isInstanceOf(RpcDispatcher.DispatchResult.Response.class);
-        assertThat(((RpcDispatcher.DispatchResult.Response) result).responseBody())
+        assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Response.class);
+        assertThat(((McpDispatcher.DispatchResult.Response) result).responseBody())
                 .isNotNull();
 
         var progressEvents = testConn.sent.stream()

@@ -14,7 +14,7 @@ import org.jspecify.annotations.Nullable;
  * @param enabled            when {@code false} (the default) the server is stateless: no session is
  *                           created and no TTL tracking occurs; set {@code true} to enable sessions
  * @param sessionTtl         duration after which idle sessions are evicted (default 30s)
- * @param sessionLogRouter   optional custom event log router; {@code null} uses in-memory default
+ * @param sessionEventStore   optional custom event store; {@code null} uses in-memory default
  * @param sessionStore       optional custom session store; {@code null} uses in-memory default
  * @param sessionIdGenerator session id generator; defaults to {@link SessionIdGenerator#DEFAULT}
  * @param janitorInterval    interval between janitor sweeps (default 5s);
@@ -23,7 +23,7 @@ import org.jspecify.annotations.Nullable;
 public record SessionConfig(
         boolean enabled,
         @Nullable Duration sessionTtl,
-        @Nullable SessionLogRouter sessionLogRouter,
+        @Nullable SessionEventStore sessionEventStore,
         @Nullable SessionStore sessionStore,
         @Nullable SessionIdGenerator sessionIdGenerator,
         @Nullable Duration janitorInterval) {
@@ -37,7 +37,7 @@ public record SessionConfig(
         if (!enabled) {
             if (sessionIdGenerator != null
                     || sessionStore != null
-                    || sessionLogRouter != null
+                    || sessionEventStore != null
                     || sessionTtl != null
                     || janitorInterval != null) {
                 throw new IllegalStateException("Session options require sessions to be enabled — call enabled(true)");
@@ -60,7 +60,7 @@ public record SessionConfig(
         private boolean enabled = false;
         private @Nullable Duration sessionTtl;
         private @Nullable Duration janitorInterval;
-        private @Nullable SessionLogRouter sessionLogRouter;
+        private @Nullable SessionEventStore sessionEventStore;
         private @Nullable SessionStore sessionStore;
         private @Nullable SessionIdGenerator sessionIdGenerator;
 
@@ -92,10 +92,10 @@ public record SessionConfig(
         }
 
         /**
-         * Sets a custom session event log router.
+         * Sets a custom session event store.
          */
-        public Builder sessionLogRouter(@Nullable SessionLogRouter router) {
-            this.sessionLogRouter = router;
+        public Builder sessionEventStore(@Nullable SessionEventStore store) {
+            this.sessionEventStore = store;
             return this;
         }
 
@@ -123,7 +123,7 @@ public record SessionConfig(
             if (!enabled) {
                 if (sessionIdGenerator != null
                         || sessionStore != null
-                        || sessionLogRouter != null
+                        || sessionEventStore != null
                         || sessionTtl != null
                         || janitorInterval != null) {
                     throw new IllegalStateException(
@@ -135,7 +135,7 @@ public record SessionConfig(
                 return new SessionConfig(
                         enabled,
                         sessionTtl,
-                        sessionLogRouter != null ? sessionLogRouter : new InMemorySessionLogRouter(),
+                        sessionEventStore != null ? sessionEventStore : new InMemorySessionEventStore(),
                         sessionStore != null ? sessionStore : new InMemorySessionStore(),
                         sessionIdGenerator,
                         janitorInterval);

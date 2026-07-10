@@ -48,9 +48,9 @@ import org.slf4j.LoggerFactory;
  * {@code McpDialect} when a second spec version is wired.
  */
 @InternalApi
-public class RpcDispatcher {
+public class McpDispatcher {
 
-    private static final Logger logger = LoggerFactory.getLogger(RpcDispatcher.class);
+    private static final Logger logger = LoggerFactory.getLogger(McpDispatcher.class);
 
     private static final String METHOD_INITIALIZE = "initialize";
     private static final String METHOD_PING = "ping";
@@ -76,7 +76,7 @@ public class RpcDispatcher {
 
     private final ServerEngine server;
 
-    public RpcDispatcher(ServerEngine server, Executor executor) {
+    public McpDispatcher(ServerEngine server, Executor executor) {
         this.server = server;
         this.executor = executor;
     }

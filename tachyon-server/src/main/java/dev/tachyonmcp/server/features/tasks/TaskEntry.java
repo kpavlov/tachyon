@@ -5,13 +5,13 @@
 package dev.tachyonmcp.server.features.tasks;
 
 import dev.tachyonmcp.annotations.InternalApi;
-import dev.tachyonmcp.server.ServerResourceType;
+import dev.tachyonmcp.server.ServerFeature;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 
 @InternalApi
-public class TaskEntry implements ServerResourceType {
+public class TaskEntry implements ServerFeature {
 
     private final TaskDescriptor descriptor;
     private final String id;

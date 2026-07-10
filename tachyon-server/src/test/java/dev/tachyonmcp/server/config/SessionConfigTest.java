@@ -7,7 +7,7 @@ package dev.tachyonmcp.server.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
-import dev.tachyonmcp.server.session.InMemorySessionLogRouter;
+import dev.tachyonmcp.server.session.InMemorySessionEventStore;
 import dev.tachyonmcp.server.session.InMemorySessionStore;
 import dev.tachyonmcp.server.session.SessionIdGenerator;
 import java.time.Duration;
@@ -30,7 +30,7 @@ class SessionConfigTest {
         assertThat(config.enabled()).isFalse();
         assertThat(config.sessionIdGenerator()).isNull();
         assertThat(config.sessionStore()).isNull();
-        assertThat(config.sessionLogRouter()).isNull();
+        assertThat(config.sessionEventStore()).isNull();
     }
 
     @Test
@@ -78,7 +78,7 @@ class SessionConfigTest {
         assertThatIllegalStateException()
                 .isThrownBy(() -> SessionConfig.builder()
                         .enabled(false)
-                        .sessionLogRouter(new InMemorySessionLogRouter())
+                        .sessionEventStore(new InMemorySessionEventStore())
                         .build())
                 .withMessage(expectedMessage);
 

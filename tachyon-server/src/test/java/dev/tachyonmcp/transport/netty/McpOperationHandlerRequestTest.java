@@ -8,7 +8,7 @@ import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.RpcDispatcher;
+import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
@@ -84,7 +84,7 @@ class McpOperationHandlerRequestTest {
     @BeforeEach
     void setUp() {
         server = newEngine(b -> b.session(s -> s.enabled(true)).tool(PROGRESS_TOOL));
-        var dispatcher = new RpcDispatcher(server, Runnable::run);
+        var dispatcher = new McpDispatcher(server, Runnable::run);
         channel = new EmbeddedChannel(
                 new InteractionHandler(), new McpOperationHandler(server, dispatcher, Runnable::run));
         server.createSession("sess-op").activate();
@@ -197,7 +197,7 @@ class McpOperationHandlerRequestTest {
         ExecutorService pool = Executors.newSingleThreadExecutor();
         var ch = new EmbeddedChannel(
                 new InteractionHandler(),
-                new McpOperationHandler(srv, new RpcDispatcher(srv, pool::execute), Runnable::run));
+                new McpOperationHandler(srv, new McpDispatcher(srv, pool::execute), Runnable::run));
         srv.createSession("sess-stall").activate();
         try {
             var request = new DefaultFullHttpRequest(
@@ -282,7 +282,7 @@ class McpOperationHandlerRequestTest {
         var ch = new EmbeddedChannel(
                 new InteractionHandler(),
                 new McpOperationHandler(
-                        statelessServer, new RpcDispatcher(statelessServer, Runnable::run), Runnable::run));
+                        statelessServer, new McpDispatcher(statelessServer, Runnable::run), Runnable::run));
         try {
             var request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/mcp");
             request.headers()
@@ -313,7 +313,7 @@ class McpOperationHandlerRequestTest {
                 .sessionIdGenerator(req -> "tenant-" + req.headers().get("X-Tenant-Id"))));
         var ch = new EmbeddedChannel(
                 new InteractionHandler(),
-                new McpOperationHandler(customServer, new RpcDispatcher(customServer, Runnable::run), Runnable::run));
+                new McpOperationHandler(customServer, new McpDispatcher(customServer, Runnable::run), Runnable::run));
         try {
             var request = new DefaultFullHttpRequest(
                     HttpVersion.HTTP_1_1,
@@ -381,7 +381,7 @@ class McpOperationHandlerRequestTest {
             var srv = newEngine(b -> b.tool(SLOW_TOOL));
             var ch = new EmbeddedChannel(
                     new InteractionHandler(),
-                    new McpOperationHandler(srv, new RpcDispatcher(srv, Runnable::run), Runnable::run));
+                    new McpOperationHandler(srv, new McpDispatcher(srv, Runnable::run), Runnable::run));
             srv.createSession("sess-slow").activate();
             try {
                 var request = new DefaultFullHttpRequest(
@@ -422,7 +422,7 @@ class McpOperationHandlerRequestTest {
                     .monitoring(m -> m.slowRequestLogging().slowRequestThreshold(Duration.ofMillis(1))));
             var ch = new EmbeddedChannel(
                     new InteractionHandler(),
-                    new McpOperationHandler(srv, new RpcDispatcher(srv, Runnable::run), Runnable::run));
+                    new McpOperationHandler(srv, new McpDispatcher(srv, Runnable::run), Runnable::run));
             srv.createSession("sess-slow2").activate();
             try {
                 var request = new DefaultFullHttpRequest(
