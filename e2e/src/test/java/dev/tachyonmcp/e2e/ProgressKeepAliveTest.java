@@ -9,8 +9,8 @@ import static org.awaitility.Awaitility.await;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.TachyonServer;
+import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
@@ -214,22 +214,16 @@ class ProgressKeepAliveTest {
     /**
      * Token-driven keep-alive: forwards the client's {@code _meta.progressToken} to {@code progress()}.
      */
-    private static class ProgressHandler implements ToolHandler {
+    private static class ProgressHandler extends AbstractToolHandler {
 
-        private final ToolDescriptor descriptor;
         private final long sleepMs;
 
         ProgressHandler(String name, long sleepMs) {
-            this.descriptor = ToolDescriptor.builder()
+            super(ToolDescriptor.builder()
                     .name(name)
                     .description("Emits a progress notification then completes")
-                    .build();
+                    .build());
             this.sleepMs = sleepMs;
-        }
-
-        @Override
-        public ToolDescriptor descriptor() {
-            return descriptor;
         }
 
         @Override
@@ -246,22 +240,16 @@ class ProgressKeepAliveTest {
     /**
      * Token-free keep-alive: emits an empty SSE comment, which upgrades the POST with no token.
      */
-    private static class CommentHandler implements ToolHandler {
+    private static class CommentHandler extends AbstractToolHandler {
 
-        private final ToolDescriptor descriptor;
         private final long sleepMs;
 
         CommentHandler(String name, long sleepMs) {
-            this.descriptor = ToolDescriptor.builder()
+            super(ToolDescriptor.builder()
                     .name(name)
                     .description("Emits an empty SSE comment then completes")
-                    .build();
+                    .build());
             this.sleepMs = sleepMs;
-        }
-
-        @Override
-        public ToolDescriptor descriptor() {
-            return descriptor;
         }
 
         @Override

@@ -3,14 +3,14 @@
 package dev.tachyonmcp.extensions.tools.echo;
 
 import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
-public class EchoToolHandler implements ToolHandler {
+public class EchoToolHandler extends AbstractToolHandler {
 
     static final JsonNode ECHO_INPUT_SCHEMA = buildEchoSchema();
 
@@ -26,15 +26,12 @@ public class EchoToolHandler implements ToolHandler {
         return schema;
     }
 
-    private final ToolDescriptor descriptor = ToolDescriptor.builder()
-            .name("echo")
-            .description("Echo back the input message")
-            .inputSchema(ECHO_INPUT_SCHEMA)
-            .build();
-
-    @Override
-    public ToolDescriptor descriptor() {
-        return descriptor;
+    public EchoToolHandler() {
+        super(ToolDescriptor.builder()
+                .name("echo")
+                .description("Echo back the input message")
+                .inputSchema(ECHO_INPUT_SCHEMA)
+                .build());
     }
 
     @Override

@@ -7,9 +7,9 @@ import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.buildServer
 import dev.tachyonmcp.server.config.TachyonServerBuilder
 import dev.tachyonmcp.server.config.success
+import dev.tachyonmcp.server.features.tools.AbstractToolHandler
 import dev.tachyonmcp.server.features.tools.ToolArgs
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
-import dev.tachyonmcp.server.features.tools.ToolHandler
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.features.tools.decode
 import dev.tachyonmcp.server.features.tools.registerTool
@@ -85,15 +85,15 @@ fun TachyonServerBuilder.registerSlowTask() {
 }
 
 /**
- * Class-based — implements ToolHandler.
+ * Class-based — extends AbstractToolHandler.
  */
-class GreetingTool : ToolHandler {
-    override fun descriptor() = toolDescriptor("greeting") {
+class GreetingTool : AbstractToolHandler(
+    toolDescriptor("greeting") {
         title = "Greeting"
         description = "Generates a personalized greeting"
         inputSchema = GREET_SCHEMA
     }
-
+) {
     override fun handle(ctx: InteractionContext, args: ToolArgs): ToolResult {
         val name = args.stringValue("name")
         return ToolResult.text("Hello, $name!")
@@ -101,15 +101,15 @@ class GreetingTool : ToolHandler {
 }
 
 /**
- * Async class-based — implements ToolHandler with handleAsync.
+ * Async class-based — extends AbstractToolHandler with handleAsync.
  */
-class AsyncGreetingTool : ToolHandler {
-    override fun descriptor() = toolDescriptor("async-greeting") {
+class AsyncGreetingTool : AbstractToolHandler(
+    toolDescriptor("async-greeting") {
         title = "Async Greeting"
         description = "Async personalized greeting"
         inputSchema = GREET_SCHEMA
     }
-
+) {
     override fun handleAsync(ctx: InteractionContext, args: ToolArgs): CompletionStage<out ToolResult> {
         return CompletableFuture.completedFuture(ToolResult.text("Hello, Async!"))
     }

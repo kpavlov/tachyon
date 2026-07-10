@@ -12,8 +12,8 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.extensions.ServerExtension;
+import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
@@ -198,23 +198,17 @@ class ExtensionsTest extends AbstractMcpE2eTest {
 
         @Override
         public void bootstrap(ServerEngine server) {
-            server.registerTool(new ToolHandler() {
-                private final ToolDescriptor descriptor = ToolDescriptor.builder()
-                        .name("ext-tool")
-                        .description("Extension-owned tool")
-                        .extensionId(TEST_EXT_ID)
-                        .build();
-
-                @Override
-                public ToolDescriptor descriptor() {
-                    return descriptor;
-                }
-
-                @Override
-                public ToolResult handle(InteractionContext context, ToolRequest request) {
-                    return ToolResult.text("ext-tool-result");
-                }
-            });
+            server.registerTool(
+                    new AbstractToolHandler(ToolDescriptor.builder()
+                            .name("ext-tool")
+                            .description("Extension-owned tool")
+                            .extensionId(TEST_EXT_ID)
+                            .build()) {
+                        @Override
+                        public ToolResult handle(InteractionContext context, ToolRequest request) {
+                            return ToolResult.text("ext-tool-result");
+                        }
+                    });
         }
     }
 }

@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -422,8 +423,8 @@ class ToolRegistryTest {
             }
 
             @Override
-            public ToolResult handle(InteractionContext context, ToolRequest request) throws Exception {
-                return ToolResult.text("x");
+            public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolRequest request) {
+                return CompletableFuture.completedStage(ToolResult.text("x"));
             }
         };
         assertThatThrownBy(() -> registry.register(handler))

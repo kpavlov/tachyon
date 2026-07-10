@@ -56,7 +56,9 @@ class McpOperationHandlerRequestTest {
             .inputSchema(JsonNodeFactory.instance.objectNode().put("type", "object"))
             .build();
 
-    /** Emits two progress notifications (which upgrade the POST response to SSE), then returns a result. */
+    /**
+     * Emits two progress notifications (which upgrade the POST response to SSE), then returns a result.
+     */
     private static final ToolHandler PROGRESS_TOOL = new ToolHandler() {
         @Override
         public ToolDescriptor descriptor() {
@@ -64,11 +66,11 @@ class McpOperationHandlerRequestTest {
         }
 
         @Override
-        public ToolResult handle(InteractionContext ctx, ToolRequest request) throws Exception {
+        public CompletionStage<? extends ToolResult> handleAsync(InteractionContext ctx, ToolRequest request) {
             var pt = request.progressToken();
             ctx.notifications().progress(pt, 0, 100, "Starting");
             ctx.notifications().progress(pt, 100, 100, "Complete");
-            return ToolResult.text("ok");
+            return CompletableFuture.completedStage(ToolResult.text("ok"));
         }
     };
 

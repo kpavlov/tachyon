@@ -8,9 +8,9 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import org.junit.jupiter.api.Test;
@@ -139,15 +139,13 @@ class TaskLifecycleTest extends AbstractMcpE2eTest {
         }
     }
 
-    private class SyncTaskCreatorTool implements ToolHandler {
-        private final ToolDescriptor descriptor = ToolDescriptor.builder()
-                .name("create-task-sync")
-                .description("Creates a task synchronously")
-                .build();
+    private class SyncTaskCreatorTool extends AbstractToolHandler {
 
-        @Override
-        public ToolDescriptor descriptor() {
-            return descriptor;
+        SyncTaskCreatorTool() {
+            super(ToolDescriptor.builder()
+                    .name("create-task-sync")
+                    .description("Creates a task synchronously")
+                    .build());
         }
 
         @Override

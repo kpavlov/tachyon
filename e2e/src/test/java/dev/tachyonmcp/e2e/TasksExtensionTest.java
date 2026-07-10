@@ -9,8 +9,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.features.tasks.TasksExtension;
+import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.DispatchContext;
@@ -168,21 +168,15 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
         // The extension's create_task tool is async, so notifications don't route
         // through POST-SSE (ThreadLocal not inherited by ForkJoin threads).
         // This test uses a synchronous tool to verify notification delivery.
-        startServer(it -> it.tool(new ToolHandler() {
-                    private final ToolDescriptor d =
-                            ToolDescriptor.builder().name("create-sync").build();
-
-                    @Override
-                    public ToolDescriptor descriptor() {
-                        return d;
-                    }
-
-                    @Override
-                    public ToolResult handle(InteractionContext ctx, ToolRequest req) throws Exception {
-                        ((DispatchContext) ctx).engine().tasks().createTask("sync-notif-task", null);
-                        return ToolResult.text("ok");
-                    }
-                })
+        startServer(it -> it.tool(
+                        new AbstractToolHandler(
+                                ToolDescriptor.builder().name("create-sync").build()) {
+                            @Override
+                            public ToolResult handle(InteractionContext ctx, ToolRequest req) throws Exception {
+                                ((DispatchContext) ctx).engine().tasks().createTask("sync-notif-task", null);
+                                return ToolResult.text("ok");
+                            }
+                        })
                 .extension(TasksExtension.instance())
                 .build());
 
