@@ -73,16 +73,17 @@ stream never looks idle. There are two ways to trigger the upgrade:
 - **`comment(msg)`** — a token-free SSE comment (`: msg`). Use it to keep alive when no progress
   token is available. `comment()` emits a bare `:` heartbeat.
 
-Both are reachable only from the request-level `ToolHandler` methods — `handle(ctx, ToolRequest)`
-or `handleAsync(ctx, ToolRequest)` (the `ToolArgs` convenience overload carries neither the token
-nor a stream handle):
+Both are reachable only from the request-level entry points — override `handle(ctx, ToolRequest)`
+or `handleAsync(ctx, ToolRequest)` on `AbstractToolHandler` (the `ToolArgs` convenience overload
+carries neither the token nor a stream handle):
 
 ```java
-class SlowTool implements ToolHandler {
-    public ToolDescriptor descriptor() {
-        return ToolDescriptor.builder().name("slow-task").description("Long task, kept alive").build();
+class SlowTool extends AbstractToolHandler {
+    SlowTool() {
+        super(ToolDescriptor.builder().name("slow-task").description("Long task, kept alive").build());
     }
 
+    @Override
     public ToolResult handle(InteractionContext ctx, ToolRequest request) throws Exception {
         var token = request.progressToken();          // client _meta.progressToken; null if absent
         for (int i = 0; i < total; i++) {
