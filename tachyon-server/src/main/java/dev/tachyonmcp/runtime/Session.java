@@ -26,6 +26,7 @@ public class Session {
     private final AtomicReference<Backpressure> backpressure;
     private final AtomicLong cursor;
     private final Set<String> enabledExtensions = ConcurrentHashMap.newKeySet();
+    private volatile @Nullable String resumingStreamKey;
 
     public Session(String id, SseConnection connection) {
         this.id = Objects.requireNonNull(id, "id");
@@ -68,6 +69,21 @@ public class Session {
     /** Returns the current SSE connection. */
     public SseConnection connection() {
         return connection.get();
+    }
+
+    /**
+     * The POST-SSE stream key the current connection is resuming, parsed from a
+     * {@code <n>#<key>} {@code Last-Event-ID}; {@code null} for the general GET listening stream or
+     * a fresh connection. Lets a late POST-SSE response be re-delivered live to a connection that
+     * explicitly resumed that stream, without crossing streams.
+     */
+    public @Nullable String resumingStreamKey() {
+        return resumingStreamKey;
+    }
+
+    /** Records the POST-SSE stream key the current connection is resuming (or {@code null}). */
+    public void resumingStreamKey(@Nullable String streamKey) {
+        this.resumingStreamKey = streamKey;
     }
 
     /**
