@@ -8,7 +8,8 @@
     "Tool.inputSchema": "String",
     "Tool.outputSchema": "String",
     "ElicitRequestFormParams.requestedSchema": "String",
-    "Resource.size": "Long"
+    "Resource.size": "Long",
+    "ResourceLink.size": "Long"
   },
   "additionalProperties": {
     "ClientCapabilities": [

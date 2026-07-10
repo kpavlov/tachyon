@@ -178,7 +178,7 @@ class McpToolMapperTest {
                 .icons(List.of(domainIcon))
                 .description("A description")
                 .mimeType("text/plain")
-                .size(2048.0)
+                .size(2048L)
                 .build();
 
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ResourceLink)
@@ -189,13 +189,13 @@ class McpToolMapperTest {
         assertThat(protocol.icons().getFirst().sizes()).containsExactly("16x16", "32x32");
         assertThat(protocol.icons().getFirst().theme()).isEqualTo("light");
         assertThat(protocol.title()).isEqualTo("My Title");
-        assertThat(protocol.size()).isEqualTo(2048.0);
+        assertThat(protocol.size()).isEqualTo(2048L);
 
         var back = (ResourceLink) McpToolMapper.toDomainContentBlock(protocol);
         assertThat(back.icons()).hasSize(1);
         assertThat(back.icons().getFirst().src()).isEqualTo("https://example.com/icon.png");
         assertThat(back.icons().getFirst().sizes()).containsExactly("16x16", "32x32");
-        assertThat(back.size()).isEqualTo(2048.0);
+        assertThat(back.size()).isEqualTo(2048L);
         assertThat(back.title()).isEqualTo("My Title");
     }
 
