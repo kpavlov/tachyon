@@ -11,10 +11,14 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.features.ListRequests;
+import dev.tachyonmcp.server.features.PaginatedResult;
+import dev.tachyonmcp.server.features.Pagination;
 import dev.tachyonmcp.server.features.Registry;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -24,6 +28,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,28 +72,27 @@ public class TaskRegistry extends Registry<TaskEntry> {
     }
 
     @Override
-    public java.util.Collection<TaskEntry> getAll() {
+    public Collection<TaskEntry> getAll() {
         return byId.values();
     }
 
     @Override
-    public dev.tachyonmcp.server.features.PaginatedResult<TaskEntry> list(int limit, @Nullable String cursor) {
+    public PaginatedResult<TaskEntry> list(int limit, @Nullable String cursor) {
         int lim = limit > 0 ? limit : defaultPageSize();
         var all = byId.values().stream()
-                .sorted(java.util.Comparator.comparing(TaskEntry::id))
+                .sorted(Comparator.comparing(TaskEntry::id))
                 .toList();
-        return dev.tachyonmcp.server.features.Pagination.paginate(all, lim, cursor, TaskEntry::id);
+        return Pagination.paginate(all, lim, cursor, TaskEntry::id);
     }
 
     @Override
-    public dev.tachyonmcp.server.features.PaginatedResult<TaskEntry> list(
-            int limit, @Nullable String cursor, java.util.function.Predicate<TaskEntry> filter) {
+    public PaginatedResult<TaskEntry> list(int limit, @Nullable String cursor, Predicate<TaskEntry> filter) {
         int lim = limit > 0 ? limit : defaultPageSize();
         var all = byId.values().stream()
                 .filter(filter)
-                .sorted(java.util.Comparator.comparing(TaskEntry::id))
+                .sorted(Comparator.comparing(TaskEntry::id))
                 .toList();
-        return dev.tachyonmcp.server.features.Pagination.paginate(all, lim, cursor, TaskEntry::id);
+        return Pagination.paginate(all, lim, cursor, TaskEntry::id);
     }
 
     /** Returns the task with the given unique ID. */

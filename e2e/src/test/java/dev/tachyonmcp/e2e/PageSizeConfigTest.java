@@ -27,24 +27,22 @@ class PageSizeConfigTest extends AbstractMcpE2eTest {
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
 
-            // First page: should get exactly 2 tools + non-null nextCursor
             var page1 = client.sendRequest(sessionId, """
                 {"jsonrpc":"2.0","id":1,"method":"tools/list"}
                 """);
             var root1 = MAPPER.readTree(page1.body());
             var tools1 = root1.at("/result/tools");
-            assertThat(tools1).isNotNull();
+            assertThat(tools1.isArray()).isTrue();
             assertThat(tools1.size()).isEqualTo(2);
             var cursor = root1.at("/result/nextCursor").asText(null);
             assertThat(cursor).isNotNull();
 
-            // Second page: follow cursor → get the last tool
             var page2 = client.sendRequest(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{"cursor":"%s"}}
                 """.formatted(cursor));
             var root2 = MAPPER.readTree(page2.body());
             var tools2 = root2.at("/result/tools");
-            assertThat(tools2).isNotNull();
+            assertThat(tools2.isArray()).isTrue();
             assertThat(tools2.size()).isEqualTo(1);
             assertThat(root2.at("/result/nextCursor").asText(null)).isNull();
         }

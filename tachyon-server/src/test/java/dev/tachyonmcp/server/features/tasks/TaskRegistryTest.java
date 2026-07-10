@@ -13,19 +13,27 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetTaskResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListTasksResult;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.features.Pagination;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class TaskRegistryTest {
 
-    private final TaskRegistry registry = new TaskRegistry(newEngine(b -> {}), Pagination.DEFAULT_PAGE_SIZE);
+    private final ServerEngine engine = newEngine(b -> {});
+    private final TaskRegistry registry = new TaskRegistry(engine, Pagination.DEFAULT_PAGE_SIZE);
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
+
+    @AfterEach
+    void tearDown() {
+        engine.close();
+    }
 
     @BeforeEach
     void setUp() {
@@ -76,12 +84,14 @@ class TaskRegistryTest {
 
     @Test
     void listWithCustomPageSize() {
-        var reg = new TaskRegistry(newEngine(b -> {}), 1);
-        reg.add(new TaskEntry("a", "id-a", "A"));
-        reg.add(new TaskEntry("b", "id-b", "B"));
-        var result = reg.list(0, null);
-        assertThat(result.items()).hasSize(1);
-        assertThat(result.nextCursor()).isEqualTo("id-a");
+        try (var engine = newEngine(b -> {})) {
+            var reg = new TaskRegistry(engine, 1);
+            reg.add(new TaskEntry("a", "id-a", "A"));
+            reg.add(new TaskEntry("b", "id-b", "B"));
+            var result = reg.list(0, null);
+            assertThat(result.items()).hasSize(1);
+            assertThat(result.nextCursor()).isEqualTo("id-a");
+        }
     }
 
     @Test

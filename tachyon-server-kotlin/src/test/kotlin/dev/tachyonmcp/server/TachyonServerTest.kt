@@ -46,14 +46,18 @@ internal class TachyonServerTest {
             capabilities {
                 tools = Mode.ON
                 toolsListChanged = true
+                toolsPageSize = 20
                 resources = Mode.ON
                 resourcesSubscribe = true
                 resourcesListChanged = true
+                resourcesPageSize = 21
                 prompts = Mode.ON
                 promptsListChanged = true
+                promptsPageSize = 22
                 tasks = true
                 tasksCancel = true
                 tasksRequests = true
+                tasksPageSize = 23
                 completions = true
                 logging = true
             }
@@ -113,14 +117,18 @@ internal class TachyonServerTest {
             with(config.capabilities()) {
                 toolsMode() shouldBe Mode.ON
                 toolsListChanged() shouldBe true
+                toolsPageSize() shouldBe 20
                 resourcesMode() shouldBe Mode.ON
                 resourcesSubscribe() shouldBe true
                 resourcesListChanged() shouldBe true
+                resourcesPageSize() shouldBe 21
                 promptsMode() shouldBe Mode.ON
                 promptsListChanged() shouldBe true
+                promptsPageSize() shouldBe 22
                 tasksList() shouldBe true
                 tasksCancel() shouldBe true
                 tasksRequests() shouldBe true
+                tasksPageSize() shouldBe 23
                 completions() shouldBe true
                 logging() shouldBe true
             }
