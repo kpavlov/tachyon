@@ -8,3 +8,7 @@
 * [Extensions](extensions.md)
 * [Kotlin DSL](kotlin.md)
   * [Migrating from the Kotlin MCP SDK to Tachyon](migrate-from-kotlin-mcp-to-tachyon.md)
+
+### Internals
+
+* [POST-SSE reconnect re-delivery](sse-reconnect-redelivery.md)
