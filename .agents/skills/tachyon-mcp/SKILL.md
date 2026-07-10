@@ -62,14 +62,15 @@ One interface: `ToolHandler`. Override exactly one method — `handle`/`handleAs
 
 Blocking is fine — sync `handle` runs on a virtual thread. Async handlers stay async (no blocking detour). Only override the request form when you need `_meta` (progress token, input responses); `ToolArgs` carries neither.
 
-Class — implement `ToolHandler`:
+**Prefer the `ToolHandler.of…` factories** — one call, no class. The `ToolHandler` interface declares only `descriptor()` and `handleAsync(ctx, ToolRequest)`; the sync/args override points live on `AbstractToolHandler`. Reach for a class only when the handler needs instance state or shared setup.
+
+Class (when a factory won't do) — extend `AbstractToolHandler` (pass the descriptor to `super`):
 
 ```java
-class MyTool implements ToolHandler {
-    @Override
-    public ToolDescriptor descriptor() {
-        return ToolDescriptor.builder()
-            .name("my-tool").description("Does something useful").inputSchema(jsonSchema).build();
+class MyTool extends AbstractToolHandler {
+    MyTool() {
+        super(ToolDescriptor.builder()
+            .name("my-tool").description("Does something useful").inputSchema(jsonSchema).build());
     }
     @Override
     public ToolResult handle(InteractionContext ctx, ToolArgs args) throws Exception {
@@ -102,7 +103,7 @@ Lambda — `ToolHandler.of(name, description, (ctx, args) -> ...)`, or `of(confi
 
 Async — `ToolHandler.ofAsync(name, (ctx, args) -> CompletionStage<ToolResult>)` (or override `handleAsync`).
 
-`ToolResult` (not generic): `.text(t)` · `.error(msg)` (isError=true) · `.blocks(ContentBlock...)` · `.of(payload)` (structuredContent via Jackson) · `.of(payload, text)` · `.raw(json, text)` (pre-serialized JSON) · `.inputRequired(reqs, state)` · `.empty()` · `.withMeta(map)` / `.withMeta(key, value)`
+`ToolResult` (not generic): `.text(t)` · `.error(msg)` (isError=true) · `.blocks(ContentBlock...)` · `.of(payload)` (structuredContent; serialized JSON auto-added as text block) · `.of(payload, text)` · `.raw(json, text)` (pre-serialized JSON) · `.inputRequired(reqs, state)` · `.empty()` · `.withMeta(map)` / `.withMeta(key, value)`
 
 Full: `resources/java/ToolHandlerExample.java`
 
@@ -334,11 +335,11 @@ server.registerTool(
 Load on demand (next to this skill):
 
 - [resources/java/ServerBasic.java](resources/java/ServerBasic.java) — full server, all features
-- [resources/java/ToolHandlerExample.java](resources/java/ToolHandlerExample.java) — `ToolDescriptor`, `ToolHandler.of()`, `implements ToolHandler`, long-running keep-alive (`handle(ctx, ToolRequest)` + `progress()`)
+- [resources/java/ToolHandlerExample.java](resources/java/ToolHandlerExample.java) — `ToolDescriptor`, `ToolHandler.of()`, `extends AbstractToolHandler`, long-running keep-alive (`handle(ctx, ToolRequest)` + `progress()`)
 - [resources/java/ResourceHandlerExample.java](resources/java/ResourceHandlerExample.java) — `ResourceDescriptor`, `ResourceTemplateEntry`, `ResourceHandler`
 - [resources/java/PromptHandlerExample.java](resources/java/PromptHandlerExample.java) — `PromptDescriptor`, `PromptArgument`, `PromptHandler`
 - [resources/java/ConfigReference.java](resources/java/ConfigReference.java) — `CapabilitiesConfig.Builder`, `NetworkConfig.Builder`, `SessionConfig.Builder`
 - [resources/kotlin/ServerBasic.kt](resources/kotlin/ServerBasic.kt) — full server, all features (Kotlin DSL)
-- [resources/kotlin/ToolHandlerExample.kt](resources/kotlin/ToolHandlerExample.kt) — suspend handler, `implements ToolHandler` (`handle`/`handleAsync`), `registerTool`
+- [resources/kotlin/ToolHandlerExample.kt](resources/kotlin/ToolHandlerExample.kt) — suspend handler, `extends AbstractToolHandler` (`handle`/`handleAsync`), `registerTool`
 - [resources/kotlin/ResourceHandlerExample.kt](resources/kotlin/ResourceHandlerExample.kt) — static resources, URI templates (Kotlin DSL)
 - [resources/kotlin/PromptHandlerExample.kt](resources/kotlin/PromptHandlerExample.kt) — prompt descriptors and handlers (Kotlin DSL)

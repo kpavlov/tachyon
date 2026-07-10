@@ -27,29 +27,32 @@ Need an input schema? Configure the descriptor with the builder overload. `.inpu
     (ctx, args) -> ToolResult.text("Hello, " + args.stringOr("name", "world") + "!")))
 ```
 
-### Class (recommended for complex tools)
+### Class (only when a factory won't do)
 
-Implement `ToolHandler` directly: return a `descriptor()` and override `handle(ctx, ToolArgs)`.
+Prefer the `ToolHandler.of…` factories above — they cover most tools in one call. Reach for a
+class only when the handler needs instance state or shared setup. Then extend
+`AbstractToolHandler`: pass the descriptor to the constructor and override `handle(ctx, ToolArgs)`.
+(`ToolHandler` itself declares only `descriptor()` and `handleAsync(ctx, ToolRequest)`;
+`AbstractToolHandler` supplies the sync/args convenience overrides.)
 
 ```java
+import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.runtime.InteractionContext;
 
-class WeatherTool implements ToolHandler {
+class WeatherTool extends AbstractToolHandler {
     private static final String SCHEMA = """
         {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
         """;
 
-    @Override
-    public ToolDescriptor descriptor() {
-        return ToolDescriptor.builder()
+    WeatherTool() {
+        super(ToolDescriptor.builder()
             .name("get_weather")
             .description("Get current weather for a city")
             .inputSchema(SCHEMA)
-            .build();
+            .build());
     }
 
     @Override
@@ -66,8 +69,8 @@ Register: `.tool(new WeatherTool())`
 
 Blocking handlers run on a virtual thread, so most tools need no async plumbing. When you already
 hold a `CompletionStage` (a non-blocking client, another async service), return it directly:
-lambda via `ToolHandler.ofAsync`, or override `handleAsync(ctx, ToolArgs)`. Async handlers stay
-async — they are not funneled through the blocking path.
+lambda via `ToolHandler.ofAsync`, or override `handleAsync(ctx, ToolArgs)` on
+`AbstractToolHandler`. Async handlers stay async — they are not funneled through the blocking path.
 
 ```java
 import dev.tachyonmcp.server.features.tools.ToolHandler;
@@ -80,8 +83,9 @@ import dev.tachyonmcp.server.features.tools.ToolHandler;
 ### Progress token / full request
 
 `ToolArgs` carries only the parsed arguments. When you need the request `_meta` — a progress token,
-input responses — override the request-level method instead: `handle(ctx, ToolRequest)` (sync) or
-`ToolHandler.ofRequest(descriptor, (ctx, request) -> ...)` / `handleAsync(ctx, ToolRequest)` (async).
+input responses — use the request-level entry points: the `ToolHandler.ofRequest(descriptor,
+(ctx, request) -> ...)` factory, or override `handle(ctx, ToolRequest)` (sync) /
+`handleAsync(ctx, ToolRequest)` (async) on `AbstractToolHandler`.
 
 ## Read arguments
 
@@ -107,8 +111,8 @@ input responses — override the request-level method instead: `handle(ctx, Tool
 | `ToolResult.text(t)`                    | Plain text response                    |
 | `ToolResult.error(msg)`                 | Error (`isError = true`)               |
 | `ToolResult.blocks(blocks...)`          | Multiple content blocks                |
-| `ToolResult.of(payload)`                | POJO → `structuredContent` via Jackson |
-| `ToolResult.of(payload, text)`          | Structured + human-readable text       |
+| `ToolResult.of(payload)`                | POJO → `structuredContent`; serialized JSON auto-added as the text block |
+| `ToolResult.of(payload, text)`          | Structured + explicit human-readable text |
 | `ToolResult.empty()`                    | No content                             |
 | `ToolResult.inputRequired(reqs, state)` | Elicitation request                    |
 
