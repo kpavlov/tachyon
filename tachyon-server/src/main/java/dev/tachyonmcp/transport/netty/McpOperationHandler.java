@@ -232,6 +232,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             RpcDispatcher.@Nullable DispatchResult result,
             @Nullable Throwable ex) {
         var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
+        var m = server.config().monitoring();
         if (ex != null) {
             logger.error("Dispatch failed: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs, ex);
             if (postStream.started()) {
@@ -245,7 +246,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             return;
         }
         if (postStream.started()) {
-            if (elapsedMs > 500) {
+            if (m.slowRequestLogging() && elapsedMs > m.slowRequestThreshold().toMillis()) {
                 logger.warn("Slow POST-SSE response: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);
             } else {
                 logger.debug("POST-SSE response: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);
@@ -269,7 +270,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             sendAccepted(ctx, origin);
             return;
         }
-        if (elapsedMs > 500) {
+        if (m.slowRequestLogging() && elapsedMs > m.slowRequestThreshold().toMillis()) {
             logger.warn("Slow POST response: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);
         } else {
             logger.debug("POST response: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);

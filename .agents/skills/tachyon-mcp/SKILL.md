@@ -38,6 +38,7 @@ var server = TachyonServer.builder()
 | `.session(cfg)` | enabled (off by default = stateless), sessionTtl, SessionLogRouter, SessionStore, SessionIdGenerator |
 | `.network(cfg)` | host, port, endpointPath, timeouts, CORS, maxContentLength, ioEngine |
 | `.runtime(cfg)` | shutdownGracePeriod |
+| `.monitoring(cfg)` | slow-request diagnostics (off by default) |
 | `.name(s)` `.port(p)` | shorthands |
 | `.tool(handler)` | Sync/Async/ToolHandler |
 | `.tool(name, desc, inJson, outJson, fn)` | shorthand — JSON **string** schemas + lambda |
@@ -214,6 +215,13 @@ Rule: **long task ⇒ emit progress or comment first**; keep `heartbeatInterval 
 |---|---|
 | `.shutdownGracePeriod(d)` | 5s (drain in-flight handlers on close; `ZERO` = interrupt now) |
 | `.requestTimeout(d)` | 60s (timeout for pending requests sent to client) |
+
+### Monitoring `monitoring(cfg -> ...)`
+
+| Method | Default |
+|---|---|
+| `.slowRequestLogging()` / `.slowRequestLogging(b)` | `false` (gate all slow-request diagnostics) |
+| `.slowRequestThreshold(d)` | `10s` (slow-request threshold) |
 
 ## JSON Schema
 
