@@ -12,6 +12,7 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetTaskPayloadResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetTaskResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListTasksResult;
 import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.features.Pagination;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
@@ -23,7 +24,7 @@ import org.junit.jupiter.api.Test;
 
 class TaskRegistryTest {
 
-    private final TaskRegistry registry = new TaskRegistry(newEngine(b -> {}));
+    private final TaskRegistry registry = new TaskRegistry(newEngine(b -> {}), Pagination.DEFAULT_PAGE_SIZE);
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
 
     @BeforeEach
@@ -38,6 +39,49 @@ class TaskRegistryTest {
         assertThat(result).isInstanceOf(ListTasksResult.class);
         var listResult = (ListTasksResult) result;
         assertThat(listResult.tasks()).isEmpty();
+    }
+
+    @Test
+    void listWithZeroLimitUsesDefaultPageSize() {
+        registry.add(new TaskEntry("a", "id-a", "A"));
+        registry.add(new TaskEntry("b", "id-b", "B"));
+        var result = registry.list(0, null);
+        assertThat(result.items()).hasSize(2);
+    }
+
+    @Test
+    void listWithCursorSkipsPastCursor() {
+        registry.add(new TaskEntry("alpha", "id-alpha", "Alpha"));
+        registry.add(new TaskEntry("beta", "id-beta", "Beta"));
+        registry.add(new TaskEntry("gamma", "id-gamma", "Gamma"));
+        var result = registry.list(1, "id-alpha");
+        assertThat(result.items()).hasSize(1);
+        assertThat(result.items().getFirst().id()).isEqualTo("id-beta");
+    }
+
+    @Test
+    void listReturnsCursorWhenMoreItemsAvailable() {
+        registry.add(new TaskEntry("a", "id-a", "A"));
+        registry.add(new TaskEntry("b", "id-b", "B"));
+        var result = registry.list(1, null);
+        assertThat(result.nextCursor()).isEqualTo("id-a");
+    }
+
+    @Test
+    void listReturnsNullCursorWhenAllItemsReturned() {
+        registry.add(new TaskEntry("a", "id-a", "A"));
+        var result = registry.list(10, null);
+        assertThat(result.nextCursor()).isNull();
+    }
+
+    @Test
+    void listWithCustomPageSize() {
+        var reg = new TaskRegistry(newEngine(b -> {}), 1);
+        reg.add(new TaskEntry("a", "id-a", "A"));
+        reg.add(new TaskEntry("b", "id-b", "B"));
+        var result = reg.list(0, null);
+        assertThat(result.items()).hasSize(1);
+        assertThat(result.nextCursor()).isEqualTo("id-a");
     }
 
     @Test

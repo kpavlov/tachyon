@@ -2,6 +2,7 @@
 
 package dev.tachyonmcp.server.config;
 
+import dev.tachyonmcp.server.features.Pagination;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -17,8 +18,12 @@ import org.jspecify.annotations.Nullable;
  * @param tasksList           whether the server supports tasks/list
  * @param tasksCancel         whether the server supports tasks/cancel
  * @param tasksRequests       whether the server supports task-augmented tool call requests
- * @param completions         whether the server supports completion
- * @param logging             whether the server supports logging
+ * @param completions          whether the server supports completion
+ * @param logging              whether the server supports logging
+ * @param toolsPageSize        default page size for tools/list when limit is omitted (≤0 floors to {@value Pagination#DEFAULT_PAGE_SIZE})
+ * @param resourcesPageSize    default page size for resources/list when limit is omitted (≤0 floors to {@value Pagination#DEFAULT_PAGE_SIZE})
+ * @param promptsPageSize      default page size for prompts/list when limit is omitted (≤0 floors to {@value Pagination#DEFAULT_PAGE_SIZE})
+ * @param tasksPageSize        default page size for tasks/list when limit is omitted (≤0 floors to {@value Pagination#DEFAULT_PAGE_SIZE})
  */
 public record CapabilitiesConfig(
         Mode toolsMode,
@@ -32,12 +37,20 @@ public record CapabilitiesConfig(
         boolean tasksCancel,
         boolean tasksRequests,
         boolean completions,
-        boolean logging) {
+        boolean logging,
+        int toolsPageSize,
+        int resourcesPageSize,
+        int promptsPageSize,
+        int tasksPageSize) {
 
     public CapabilitiesConfig {
         if (toolsMode == null) toolsMode = Mode.AUTO;
         if (resourcesMode == null) resourcesMode = Mode.AUTO;
         if (promptsMode == null) promptsMode = Mode.AUTO;
+        if (toolsPageSize <= 0) toolsPageSize = Pagination.DEFAULT_PAGE_SIZE;
+        if (resourcesPageSize <= 0) resourcesPageSize = Pagination.DEFAULT_PAGE_SIZE;
+        if (promptsPageSize <= 0) promptsPageSize = Pagination.DEFAULT_PAGE_SIZE;
+        if (tasksPageSize <= 0) tasksPageSize = Pagination.DEFAULT_PAGE_SIZE;
     }
 
     /** Default configuration with all capabilities auto-detected and change notifications off. */
@@ -62,6 +75,10 @@ public record CapabilitiesConfig(
         private boolean tasksRequests;
         private boolean completions;
         private boolean logging;
+        private int toolsPageSize = Pagination.DEFAULT_PAGE_SIZE;
+        private int resourcesPageSize = Pagination.DEFAULT_PAGE_SIZE;
+        private int promptsPageSize = Pagination.DEFAULT_PAGE_SIZE;
+        private int tasksPageSize = Pagination.DEFAULT_PAGE_SIZE;
 
         private Builder() {}
 
@@ -125,6 +142,38 @@ public record CapabilitiesConfig(
             return this;
         }
 
+        /**
+         * @param toolsPageSize default page size for tools/list when limit is omitted
+         */
+        public Builder toolsPageSize(int toolsPageSize) {
+            this.toolsPageSize = toolsPageSize;
+            return this;
+        }
+
+        /**
+         * @param resourcesPageSize default page size for resources/list when limit is omitted
+         */
+        public Builder resourcesPageSize(int resourcesPageSize) {
+            this.resourcesPageSize = resourcesPageSize;
+            return this;
+        }
+
+        /**
+         * @param promptsPageSize default page size for prompts/list when limit is omitted
+         */
+        public Builder promptsPageSize(int promptsPageSize) {
+            this.promptsPageSize = promptsPageSize;
+            return this;
+        }
+
+        /**
+         * @param tasksPageSize default page size for tasks/list when limit is omitted
+         */
+        public Builder tasksPageSize(int tasksPageSize) {
+            this.tasksPageSize = tasksPageSize;
+            return this;
+        }
+
         public CapabilitiesConfig build() {
             return new CapabilitiesConfig(
                     toolsMode != null ? toolsMode : Mode.AUTO,
@@ -138,7 +187,11 @@ public record CapabilitiesConfig(
                     tasksCancel,
                     tasksRequests,
                     completions,
-                    logging);
+                    logging,
+                    toolsPageSize,
+                    resourcesPageSize,
+                    promptsPageSize,
+                    tasksPageSize);
         }
 
         // === Convenience defaults ===

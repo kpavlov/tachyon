@@ -44,7 +44,8 @@ public class TaskRegistry extends Registry<TaskEntry> {
     private volatile @Nullable ScheduledExecutorService ttlJanitor;
 
     /** Creates a task registry bound to the given server (for broadcasting status notifications). */
-    public TaskRegistry(ServerEngine server) {
+    public TaskRegistry(ServerEngine server, int pageSize) {
+        super(pageSize);
         this.server = server;
     }
 
@@ -71,13 +72,23 @@ public class TaskRegistry extends Registry<TaskEntry> {
     }
 
     @Override
+    public dev.tachyonmcp.server.features.PaginatedResult<TaskEntry> list(int limit, @Nullable String cursor) {
+        int lim = limit > 0 ? limit : defaultPageSize();
+        var all = byId.values().stream()
+                .sorted(java.util.Comparator.comparing(TaskEntry::id))
+                .toList();
+        return dev.tachyonmcp.server.features.Pagination.paginate(all, lim, cursor, TaskEntry::id);
+    }
+
+    @Override
     public dev.tachyonmcp.server.features.PaginatedResult<TaskEntry> list(
-            int limit, @Nullable String cursor, int defaultLimit, java.util.function.Predicate<TaskEntry> filter) {
+            int limit, @Nullable String cursor, java.util.function.Predicate<TaskEntry> filter) {
+        int lim = limit > 0 ? limit : defaultPageSize();
         var all = byId.values().stream()
                 .filter(filter)
                 .sorted(java.util.Comparator.comparing(TaskEntry::id))
                 .toList();
-        return dev.tachyonmcp.server.features.Pagination.paginate(all, limit, cursor, defaultLimit, TaskEntry::id);
+        return dev.tachyonmcp.server.features.Pagination.paginate(all, lim, cursor, TaskEntry::id);
     }
 
     /** Returns the task with the given unique ID. */

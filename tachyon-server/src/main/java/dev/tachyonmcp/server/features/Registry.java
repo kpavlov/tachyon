@@ -22,6 +22,17 @@ public abstract class Registry<R extends ServerResourceType> {
 
     private final ChangeSupport changes = new ChangeSupport();
 
+    private final int defaultPageSize;
+
+    protected Registry(int defaultPageSize) {
+        this.defaultPageSize = defaultPageSize;
+    }
+
+    /** Returns the configured default page size. */
+    protected int defaultPageSize() {
+        return defaultPageSize;
+    }
+
     /** Registers a callback invoked when the registry contents change. */
     public void onChange(Runnable callback) {
         changes.onChange(callback);
@@ -56,23 +67,20 @@ public abstract class Registry<R extends ServerResourceType> {
     }
 
     public PaginatedResult<R> list(int limit, @Nullable String cursor) {
-        return list(limit, cursor, Pagination.DEFAULT_PAGE_SIZE, r -> true);
+        int lim = limit > 0 ? limit : defaultPageSize;
+        var all = items.values().stream()
+                .sorted(Comparator.comparing(ServerResourceType::name))
+                .toList();
+        return Pagination.paginate(all, lim, cursor, ServerResourceType::name);
     }
 
     public PaginatedResult<R> list(int limit, @Nullable String cursor, Predicate<R> filter) {
-        return list(limit, cursor, Pagination.DEFAULT_PAGE_SIZE, filter);
-    }
-
-    public PaginatedResult<R> list(int limit, @Nullable String cursor, int defaultLimit) {
-        return list(limit, cursor, defaultLimit, r -> true);
-    }
-
-    public PaginatedResult<R> list(int limit, @Nullable String cursor, int defaultLimit, Predicate<R> filter) {
+        int lim = limit > 0 ? limit : defaultPageSize;
         var all = items.values().stream()
                 .filter(filter)
                 .sorted(Comparator.comparing(ServerResourceType::name))
                 .toList();
-        return Pagination.paginate(all, limit, cursor, defaultLimit, ServerResourceType::name);
+        return Pagination.paginate(all, lim, cursor, ServerResourceType::name);
     }
 
     public abstract void registerHandlers(Map<String, RpcMethodHandler> registry);

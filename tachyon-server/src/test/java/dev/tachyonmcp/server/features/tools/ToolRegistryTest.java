@@ -18,6 +18,7 @@ import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
+import dev.tachyonmcp.server.features.Pagination;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
@@ -53,8 +54,12 @@ class ToolRegistryTest {
 
     private static final PayloadSerde TEST_SERDE = new JacksonPayloadSerde();
 
-    private final ToolRegistry registry =
-            new ToolRegistry(JsonSchemaValidator.noop(), JsonSchemaValidator.noop(), TEST_SERDE, TEST_SERDE);
+    private final ToolRegistry registry = new ToolRegistry(
+            JsonSchemaValidator.noop(),
+            JsonSchemaValidator.noop(),
+            TEST_SERDE,
+            TEST_SERDE,
+            Pagination.DEFAULT_PAGE_SIZE);
 
     @Test
     void listToolsReturnsEmptyListWhenNoToolsRegistered() throws Exception {
@@ -385,11 +390,13 @@ class ToolRegistryTest {
     }
 
     @Test
-    void listWithCustomDefaultLimit() {
-        registry.register(testTool("a", null, null));
-        registry.register(testTool("b", null, null));
-        var result = registry.list(0, null, 1);
+    void listWithCustomPageSize() {
+        var reg = new ToolRegistry(JsonSchemaValidator.noop(), JsonSchemaValidator.noop(), TEST_SERDE, TEST_SERDE, 1);
+        reg.register(testTool("a", null, null));
+        reg.register(testTool("b", null, null));
+        var result = reg.list(0, null);
         assertThat(result.items()).hasSize(1);
+        assertThat(result.nextCursor()).isEqualTo("a");
     }
 
     @Test
@@ -658,7 +665,11 @@ class ToolRegistryTest {
             {"type":"object","properties":{"message":{"type":"string"},"count":{"type":"integer"}},"required":["message","count"]}
             """);
         var registryVal = new ToolRegistry(
-                new NetworkntJsonSchemaValidator(), new NetworkntJsonSchemaValidator(), TEST_SERDE, TEST_SERDE);
+                new NetworkntJsonSchemaValidator(),
+                new NetworkntJsonSchemaValidator(),
+                TEST_SERDE,
+                TEST_SERDE,
+                Pagination.DEFAULT_PAGE_SIZE);
         var handlers = new HashMap<String, RpcMethodHandler>();
         registryVal.registerHandlers(handlers);
         var handler = ToolHandler.of(
@@ -691,7 +702,11 @@ class ToolRegistryTest {
     @Test
     void shouldConvertMixedJavaAndJsonNodeEntries() throws Exception {
         var registryVal = new ToolRegistry(
-                new NetworkntJsonSchemaValidator(), new NetworkntJsonSchemaValidator(), TEST_SERDE, TEST_SERDE);
+                new NetworkntJsonSchemaValidator(),
+                new NetworkntJsonSchemaValidator(),
+                TEST_SERDE,
+                TEST_SERDE,
+                Pagination.DEFAULT_PAGE_SIZE);
         var handlers = new HashMap<String, RpcMethodHandler>();
         registryVal.registerHandlers(handlers);
         var handler = ToolHandler.of(

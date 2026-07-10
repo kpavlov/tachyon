@@ -12,6 +12,7 @@ import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.PromptArgument;
 import dev.tachyonmcp.server.domain.PromptMessage;
+import dev.tachyonmcp.server.features.Pagination;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
@@ -25,8 +26,13 @@ import org.junit.jupiter.api.Test;
 
 class PromptRegistryTest {
 
-    private final PromptRegistry registry = new PromptRegistry(JsonSchemaValidator.noop());
+    private final PromptRegistry registry =
+            new PromptRegistry(JsonSchemaValidator.noop(), Pagination.DEFAULT_PAGE_SIZE);
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
+
+    private static PromptDescriptor prompt(String name) {
+        return PromptDescriptor.of(name, null);
+    }
 
     @BeforeEach
     void setUp() {
@@ -39,6 +45,49 @@ class PromptRegistryTest {
 
         assertThat(result).isInstanceOf(ListPromptsResult.class);
         assertThat(((ListPromptsResult) result).prompts()).isEmpty();
+    }
+
+    @Test
+    void listWithZeroLimitUsesDefaultPageSize() {
+        registry.add(prompt("p1"), List.of());
+        registry.add(prompt("p2"), List.of());
+        var result = registry.list(0, null);
+        assertThat(result.items()).hasSize(2);
+    }
+
+    @Test
+    void listWithCursorSkipsPastCursor() {
+        registry.add(prompt("alpha"), List.of());
+        registry.add(prompt("beta"), List.of());
+        registry.add(prompt("gamma"), List.of());
+        var result = registry.list(1, "alpha");
+        assertThat(result.items()).hasSize(1);
+        assertThat(result.items().getFirst().name()).isEqualTo("beta");
+    }
+
+    @Test
+    void listReturnsCursorWhenMoreItemsAvailable() {
+        registry.add(prompt("a"), List.of());
+        registry.add(prompt("b"), List.of());
+        var result = registry.list(1, null);
+        assertThat(result.nextCursor()).isEqualTo("a");
+    }
+
+    @Test
+    void listReturnsNullCursorWhenAllItemsReturned() {
+        registry.add(prompt("a"), List.of());
+        var result = registry.list(10, null);
+        assertThat(result.nextCursor()).isNull();
+    }
+
+    @Test
+    void listWithCustomPageSize() {
+        var reg = new PromptRegistry(JsonSchemaValidator.noop(), 1);
+        reg.add(prompt("a"), List.of());
+        reg.add(prompt("b"), List.of());
+        var result = reg.list(0, null);
+        assertThat(result.items()).hasSize(1);
+        assertThat(result.nextCursor()).isEqualTo("a");
     }
 
     @Test

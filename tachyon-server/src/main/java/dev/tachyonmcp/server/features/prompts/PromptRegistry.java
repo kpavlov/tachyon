@@ -29,7 +29,8 @@ public class PromptRegistry extends Registry<PromptEntry> {
 
     private final JsonSchemaValidator validator;
 
-    public PromptRegistry(JsonSchemaValidator validator) {
+    public PromptRegistry(JsonSchemaValidator validator, int pageSize) {
+        super(pageSize);
         this.validator = validator;
     }
 
