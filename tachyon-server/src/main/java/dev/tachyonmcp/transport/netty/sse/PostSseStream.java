@@ -81,12 +81,22 @@ public final class PostSseStream implements OutboundSseStream {
     }
 
     public void writeEvent(long sseEventId, ByteBuf body) {
+        writeEvent(sseEventId, body, null);
+    }
+
+    /**
+     * Writes a final response event, invoking {@code onDropped} (on the event loop) when the write
+     * is discarded because this stream is already closed or its channel is dead — letting the caller
+     * re-deliver the buffered response to a reconnected stream instead of losing it.
+     */
+    public void writeEvent(long sseEventId, ByteBuf body, @Nullable Runnable onDropped) {
         // The task owns `body`; if the event loop is shutting down and rejects it, the release
         // inside doWriteEvent never runs — release here instead of leaking.
         try {
-            runOnEventLoop(() -> doWriteEvent(sseEventId, body));
+            runOnEventLoop(() -> doWriteEvent(sseEventId, body, onDropped));
         } catch (java.util.concurrent.RejectedExecutionException e) {
             body.release();
+            if (onDropped != null) onDropped.run();
         }
     }
 
@@ -161,9 +171,10 @@ public final class PostSseStream implements OutboundSseStream {
         });
     }
 
-    private void doWriteEvent(long sseEventId, ByteBuf body) {
+    private void doWriteEvent(long sseEventId, ByteBuf body, @Nullable Runnable onDropped) {
         if (closed || !channel.isActive()) {
             body.release();
+            if (onDropped != null) onDropped.run();
             return;
         }
         if (!started) {

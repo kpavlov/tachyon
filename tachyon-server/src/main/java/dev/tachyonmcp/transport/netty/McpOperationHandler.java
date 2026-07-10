@@ -10,6 +10,7 @@ import static dev.tachyonmcp.transport.netty.McpResponseWriter.*;
 import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.runtime.ChannelContext;
 import dev.tachyonmcp.runtime.InteractionEvent;
+import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.RpcDispatcher;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.SessionEvent;
@@ -297,6 +298,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         var responseBody = response.responseBody();
         try {
             var sseEventId = server.nextEventId();
+            Runnable onDropped = null;
             if (!server.isStateless()) {
                 var resultJson = responseBody.toString(StandardCharsets.UTF_8);
                 server.appendEvent(new SessionEvent.ResponseEvent(
@@ -306,8 +308,9 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                         System.currentTimeMillis(),
                         sseEventId,
                         postStream.streamKey()));
+                onDropped = redeliverOnReconnect(sessionId, postStream.streamKey(), sseEventId, resultJson);
             }
-            postStream.writeEvent(sseEventId, responseBody);
+            postStream.writeEvent(sseEventId, responseBody, onDropped);
             responseBody = null;
         } catch (RuntimeException e) {
             logger.error("Failed to write final response on POST-SSE stream", e);
@@ -317,6 +320,28 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             }
             postStream.close();
         }
+    }
+
+    /**
+     * Builds the fallback that runs when the final response could not be written because the tool
+     * already closed its POST-SSE stream: if the client has reconnected and explicitly resumed this
+     * stream key, deliver the response live on that stream. Otherwise it stays in the event log for
+     * {@code Last-Event-ID} replay. Never crosses to a different stream (MCP resumability rule).
+     */
+    private @Nullable Runnable redeliverOnReconnect(
+            @Nullable String sessionId, String streamKey, long sseEventId, String resultJson) {
+        if (sessionId == null) {
+            return null;
+        }
+        var wireId = ServerEngine.wireEventId(sseEventId, streamKey);
+        return () -> server.getSession(sessionId).ifPresent(session -> {
+            // ponytail: the resumed reconnect may also replay this event from the log, so a rare
+            // race can deliver it twice with the same SSE id — harmless (the client dedupes the
+            // JSON-RPC response by request id). Per-connection id de-dup if that ever bites.
+            if (streamKey.equals(session.resumingStreamKey())) {
+                session.send(new SseEvent(wireId, "message", resultJson));
+            }
+        });
     }
 
     private void handleGet(ChannelHandlerContext ctx, FullHttpRequest req, @Nullable String origin) {

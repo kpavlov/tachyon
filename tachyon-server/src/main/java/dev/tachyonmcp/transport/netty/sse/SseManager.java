@@ -51,7 +51,13 @@ public class SseManager {
         writeOpeningFrames(ctx, origin, connection);
 
         if (lastEventId != null && !lastEventId.isEmpty()) {
+            var hash = lastEventId.indexOf('#');
+            // Remember which POST-SSE stream (if any) this connection is resuming, so a response
+            // finalized after the replay window can still be delivered live on this stream.
+            session.resumingStreamKey(hash < 0 ? null : lastEventId.substring(hash + 1));
             server.executor().execute(() -> replayEvents(session, lastEventId));
+        } else {
+            session.resumingStreamKey(null);
         }
 
         logger.debug("SSE stream opened for session={}", session.id());
