@@ -19,8 +19,8 @@ import java.util.Objects;
  */
 public record RuntimeConfig(Duration shutdownGracePeriod, Duration requestTimeout) {
 
-    public static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(60);
-    public static final RuntimeConfig DEFAULT = new RuntimeConfig(Duration.ofSeconds(5), DEFAULT_REQUEST_TIMEOUT);
+    static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(60);
+    static final RuntimeConfig DEFAULT = new RuntimeConfig(Duration.ofSeconds(5), DEFAULT_REQUEST_TIMEOUT);
 
     public static Builder builder() {
         return new Builder();
@@ -30,8 +30,8 @@ public record RuntimeConfig(Duration shutdownGracePeriod, Duration requestTimeou
      * Builder for {@link RuntimeConfig}.
      */
     public static final class Builder {
-        private Duration shutdownGracePeriod = DEFAULT.shutdownGracePeriod();
-        private Duration requestTimeout = DEFAULT_REQUEST_TIMEOUT;
+        private Duration shutdownGracePeriod = DEFAULT.shutdownGracePeriod;
+        private Duration requestTimeout = DEFAULT.requestTimeout;
 
         private Builder() {
             Objects.requireNonNull(shutdownGracePeriod, "shutdownGracePeriod cannot be null");

@@ -21,7 +21,12 @@ import dev.tachyonmcp.server.features.Pagination;
  */
 public record TasksConfig(boolean enabled, boolean list, boolean cancel, boolean requests, int pageSize) {
 
-    public static final TasksConfig DEFAULT = new TasksConfig(false, false, false, false, Pagination.DEFAULT_PAGE_SIZE);
+    static final boolean DEFAULT_TASKS_ENABLED = false;
+    static final boolean DEFAULT_TASK_LIST = false;
+    static final boolean DEFAULT_TASK_CANCEL = false;
+    static final boolean DEFAULT_TASK_REQUESTS = false;
+
+    static final TasksConfig DEFAULT = new TasksConfig(false, false, false, false, Pagination.DEFAULT_PAGE_SIZE);
 
     public TasksConfig {
         if (pageSize <= 0) {
@@ -33,13 +38,16 @@ public record TasksConfig(boolean enabled, boolean list, boolean cancel, boolean
         return new Builder();
     }
 
-    /** Builder for {@link TasksConfig}. */
+    /**
+     * Builder for {@link TasksConfig}.
+     */
     public static final class Builder {
-        private boolean enabled = false;
-        private boolean list = false;
-        private boolean cancel = false;
-        private boolean requests = false;
-        private int pageSize = Pagination.DEFAULT_PAGE_SIZE;
+
+        private boolean enabled = DEFAULT_TASKS_ENABLED;
+        private boolean list = DEFAULT.list;
+        private boolean cancel = DEFAULT.cancel;
+        private boolean requests = DEFAULT.requests;
+        private int pageSize = DEFAULT.pageSize;
 
         private Builder() {}
 
@@ -68,7 +76,9 @@ public record TasksConfig(boolean enabled, boolean list, boolean cancel, boolean
             return this;
         }
 
-        /** Enables the tasks capability with the list surface on. */
+        /**
+         * Enables the tasks capability with the list surface on.
+         */
         public Builder on() {
             return enabled(true).list(true);
         }

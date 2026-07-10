@@ -25,7 +25,7 @@ public record ServerConfig(
         RuntimeConfig runtime,
         MonitoringConfig monitoring) {
 
-    public static final ServerConfig DEFAULT = new ServerConfig(
+    static final ServerConfig DEFAULT = new ServerConfig(
             ServerIdentity.DEFAULT,
             CapabilitiesConfig.DEFAULT,
             SessionConfig.STATELESS,

@@ -18,8 +18,7 @@ import dev.tachyonmcp.server.features.Pagination;
  */
 public record ResourcesConfig(Mode mode, boolean listChanged, int pageSize, boolean subscribe) {
 
-    public static final ResourcesConfig DEFAULT =
-            new ResourcesConfig(Mode.AUTO, false, Pagination.DEFAULT_PAGE_SIZE, false);
+    static final ResourcesConfig DEFAULT = new ResourcesConfig(Mode.AUTO, false, Pagination.DEFAULT_PAGE_SIZE, false);
 
     public ResourcesConfig {
         if (pageSize <= 0) {
@@ -33,10 +32,10 @@ public record ResourcesConfig(Mode mode, boolean listChanged, int pageSize, bool
 
     /** Builder for {@link ResourcesConfig}. */
     public static final class Builder {
-        private Mode mode = Mode.AUTO;
-        private boolean listChanged = false;
-        private int pageSize = Pagination.DEFAULT_PAGE_SIZE;
-        private boolean subscribe = false;
+        private Mode mode = DEFAULT.mode;
+        private boolean listChanged = DEFAULT.listChanged;
+        private int pageSize = DEFAULT.pageSize;
+        private boolean subscribe = DEFAULT.subscribe;
 
         private Builder() {}
 

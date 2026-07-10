@@ -20,7 +20,9 @@ public record CapabilitiesConfig(
         boolean completions,
         boolean logging) {
 
-    /** Default configuration with all capabilities auto-detected and change notifications off. */
+    /**
+     * Default configuration with all capabilities auto-detected and change notifications off.
+     */
     public static final CapabilitiesConfig DEFAULT = new CapabilitiesConfig(
             FeatureConfig.DEFAULT, ResourcesConfig.DEFAULT, FeatureConfig.DEFAULT, TasksConfig.DEFAULT, false, false);
 
@@ -28,7 +30,9 @@ public record CapabilitiesConfig(
         return new Builder();
     }
 
-    /** Builder for {@link CapabilitiesConfig}. */
+    /**
+     * Builder for {@link CapabilitiesConfig}.
+     */
     public static final class Builder {
 
         private FeatureConfig.Builder toolsBuilder = FeatureConfig.builder();
@@ -129,6 +133,11 @@ public record CapabilitiesConfig(
             return this;
         }
 
+        public Builder tasksEnabled(boolean tasksEnabled) {
+            tasksBuilder.enabled(tasksEnabled);
+            return this;
+        }
+
         public Builder tasksList(boolean tasksList) {
             tasksBuilder.list(tasksList);
             return this;
@@ -215,8 +224,16 @@ public record CapabilitiesConfig(
             return promptsMode(Mode.OFF);
         }
 
+        public Builder noTasks() {
+            return tasksEnabled(false);
+        }
+
         public Builder tasks() {
-            tasksBuilder.enabled(true).list(true).cancel(false).requests(false);
+            tasksBuilder
+                    .enabled(true)
+                    .list(TasksConfig.DEFAULT_TASK_LIST)
+                    .cancel(TasksConfig.DEFAULT_TASK_CANCEL)
+                    .requests(TasksConfig.DEFAULT_TASK_REQUESTS);
             return this;
         }
 

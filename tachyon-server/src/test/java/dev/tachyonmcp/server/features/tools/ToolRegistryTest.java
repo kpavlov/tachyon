@@ -55,7 +55,11 @@ class ToolRegistryTest {
     private static final PayloadSerde TEST_SERDE = new JacksonPayloadSerde();
 
     private final ToolRegistry registry = new ToolRegistry(
-            JsonSchemaValidator.noop(), JsonSchemaValidator.noop(), TEST_SERDE, TEST_SERDE, FeatureConfig.DEFAULT);
+            JsonSchemaValidator.noop(),
+            JsonSchemaValidator.noop(),
+            TEST_SERDE,
+            TEST_SERDE,
+            FeatureConfig.builder().build());
 
     @Test
     void listToolsReturnsEmptyListWhenNoToolsRegistered() throws Exception {
@@ -682,7 +686,7 @@ class ToolRegistryTest {
                 new NetworkntJsonSchemaValidator(),
                 TEST_SERDE,
                 TEST_SERDE,
-                FeatureConfig.DEFAULT);
+                FeatureConfig.builder().build());
         var handlers = new HashMap<String, RpcMethodHandler>();
         registryVal.registerHandlers(handlers);
         var handler = ToolHandler.of(
@@ -719,7 +723,7 @@ class ToolRegistryTest {
                 new NetworkntJsonSchemaValidator(),
                 TEST_SERDE,
                 TEST_SERDE,
-                FeatureConfig.DEFAULT);
+                FeatureConfig.builder().build());
         var handlers = new HashMap<String, RpcMethodHandler>();
         registryVal.registerHandlers(handlers);
         var handler = ToolHandler.of(

@@ -26,7 +26,8 @@ import org.junit.jupiter.api.Test;
 
 class PromptRegistryTest {
 
-    private final PromptRegistry registry = new PromptRegistry(JsonSchemaValidator.noop(), FeatureConfig.DEFAULT);
+    private final PromptRegistry registry = new PromptRegistry(
+            JsonSchemaValidator.noop(), FeatureConfig.builder().build());
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
 
     private static PromptDescriptor prompt(String name) {

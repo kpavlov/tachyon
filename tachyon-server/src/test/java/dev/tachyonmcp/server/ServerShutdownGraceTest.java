@@ -30,7 +30,7 @@ class ServerShutdownGraceTest {
 
     @Test
     void defaultGracePeriodIsFiveSeconds() {
-        assertThat(RuntimeConfig.DEFAULT.shutdownGracePeriod()).isEqualTo(Duration.ofSeconds(5));
+        assertThat(RuntimeConfig.builder().build().shutdownGracePeriod()).isEqualTo(Duration.ofSeconds(5));
     }
 
     @Test

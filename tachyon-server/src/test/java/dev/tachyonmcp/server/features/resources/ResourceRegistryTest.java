@@ -40,7 +40,8 @@ import org.junit.jupiter.api.Test;
 class ResourceRegistryTest {
 
     private final ServerEngine server = newEngine(b -> {});
-    private final ResourceRegistry registry = new ResourceRegistry(server, ResourcesConfig.DEFAULT);
+    private final ResourceRegistry registry =
+            new ResourceRegistry(server, ResourcesConfig.builder().build());
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
 
     private static ResourceDescriptor resource(String name) {

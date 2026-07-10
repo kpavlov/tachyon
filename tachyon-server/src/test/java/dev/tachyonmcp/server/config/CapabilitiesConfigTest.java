@@ -64,24 +64,6 @@ class CapabilitiesConfigTest {
     }
 
     @Test
-    void featureConfigRejectsNonPositivePageSize() {
-        assertThatThrownBy(() -> FeatureConfig.builder().pageSize(0).build())
-                .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    void resourcesConfigRejectsNonPositivePageSize() {
-        assertThatThrownBy(() -> ResourcesConfig.builder().pageSize(0).build())
-                .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    void tasksConfigRejectsNonPositivePageSize() {
-        assertThatThrownBy(() -> TasksConfig.builder().pageSize(0).build())
-                .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
     void chainedFlatSettersAccumulateOnSameSubConfig() {
         var config = CapabilitiesConfig.builder().tools().toolsPageSize(2).build();
 

@@ -27,7 +27,8 @@ import org.junit.jupiter.api.Test;
 class TaskRegistryTest {
 
     private final ServerEngine engine = newEngine(b -> {});
-    private final TaskRegistry registry = new TaskRegistry(engine, TasksConfig.DEFAULT);
+    private final TaskRegistry registry =
+            new TaskRegistry(engine, TasksConfig.builder().build());
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
 
     @AfterEach

@@ -17,7 +17,7 @@ import dev.tachyonmcp.server.features.Pagination;
  */
 public record FeatureConfig(Mode mode, boolean listChanged, int pageSize) {
 
-    public static final FeatureConfig DEFAULT = new FeatureConfig(Mode.AUTO, false, Pagination.DEFAULT_PAGE_SIZE);
+    static final FeatureConfig DEFAULT = new FeatureConfig(Mode.AUTO, false, Pagination.DEFAULT_PAGE_SIZE);
 
     public FeatureConfig {
         if (pageSize <= 0) {
@@ -31,9 +31,9 @@ public record FeatureConfig(Mode mode, boolean listChanged, int pageSize) {
 
     /** Builder for {@link FeatureConfig}. */
     public static final class Builder {
-        private Mode mode = Mode.AUTO;
-        private boolean listChanged = false;
-        private int pageSize = Pagination.DEFAULT_PAGE_SIZE;
+        private Mode mode = DEFAULT.mode;
+        private boolean listChanged = DEFAULT.listChanged;
+        private int pageSize = DEFAULT.pageSize;
 
         private Builder() {}
 
