@@ -23,7 +23,7 @@ fun createServer(port: Int = 0): TachyonServer {
                 enabled = true
             }
             capabilities {
-                tools = Mode.ON
+                tools { mode = Mode.ON }
             }
             tool(
                 name = "echo",

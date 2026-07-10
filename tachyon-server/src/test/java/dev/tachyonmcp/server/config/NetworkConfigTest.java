@@ -6,6 +6,7 @@ package dev.tachyonmcp.server.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.tachyonmcp.transport.netty.McpChannelInitializer;
@@ -96,6 +97,18 @@ class NetworkConfigTest {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> NetworkConfig.builder().maxContentLength(-1))
                 .withMessage("maxContentLength must be positive");
+    }
+
+    @Test
+    void rejectsNullTimingArguments() {
+        assertThatNullPointerException()
+                .isThrownBy(() -> NetworkConfig.builder().readerIdleTimeout(null));
+        assertThatNullPointerException()
+                .isThrownBy(() -> NetworkConfig.builder().writerIdleTimeout(null));
+        assertThatNullPointerException()
+                .isThrownBy(() -> NetworkConfig.builder().heartbeatInterval(null));
+        assertThatNullPointerException()
+                .isThrownBy(() -> NetworkConfig.builder().ioEngine(null));
     }
 
     @Test

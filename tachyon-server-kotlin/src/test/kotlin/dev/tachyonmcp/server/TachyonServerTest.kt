@@ -44,20 +44,29 @@ internal class TachyonServerTest {
                 instructions = "ignore me"
             }
             capabilities {
-                tools = Mode.ON
-                toolsListChanged = true
-                toolsPageSize = 20
-                resources = Mode.ON
-                resourcesSubscribe = true
-                resourcesListChanged = true
-                resourcesPageSize = 21
-                prompts = Mode.ON
-                promptsListChanged = true
-                promptsPageSize = 22
-                tasks = true
-                tasksCancel = true
-                tasksRequests = true
-                tasksPageSize = 23
+                tools {
+                    mode = Mode.ON
+                    listChanged = true
+                    pageSize = 20
+                }
+                resources {
+                    mode = Mode.ON
+                    subscribe = true
+                    listChanged = true
+                    pageSize = 21
+                }
+                prompts {
+                    mode = Mode.ON
+                    listChanged = true
+                    pageSize = 22
+                }
+                tasks {
+                    enabled = true
+                    list = true
+                    cancel = true
+                    requests = true
+                    pageSize = 23
+                }
                 completions = true
                 logging = true
             }
@@ -115,20 +124,21 @@ internal class TachyonServerTest {
 
             // capabilities
             with(config.capabilities()) {
-                toolsMode() shouldBe Mode.ON
-                toolsListChanged() shouldBe true
-                toolsPageSize() shouldBe 20
-                resourcesMode() shouldBe Mode.ON
-                resourcesSubscribe() shouldBe true
-                resourcesListChanged() shouldBe true
-                resourcesPageSize() shouldBe 21
-                promptsMode() shouldBe Mode.ON
-                promptsListChanged() shouldBe true
-                promptsPageSize() shouldBe 22
-                tasksList() shouldBe true
-                tasksCancel() shouldBe true
-                tasksRequests() shouldBe true
-                tasksPageSize() shouldBe 23
+                tools().mode() shouldBe Mode.ON
+                tools().listChanged() shouldBe true
+                tools().pageSize() shouldBe 20
+                resources().mode() shouldBe Mode.ON
+                resources().subscribe() shouldBe true
+                resources().listChanged() shouldBe true
+                resources().pageSize() shouldBe 21
+                prompts().mode() shouldBe Mode.ON
+                prompts().listChanged() shouldBe true
+                prompts().pageSize() shouldBe 22
+                tasks().enabled() shouldBe true
+                tasks().list() shouldBe true
+                tasks().cancel() shouldBe true
+                tasks().requests() shouldBe true
+                tasks().pageSize() shouldBe 23
                 completions() shouldBe true
                 logging() shouldBe true
             }
@@ -176,7 +186,7 @@ internal class TachyonServerTest {
             buildServer {
                 name("kotlin-build")
                 capabilities {
-                    tools = Mode.AUTO
+                    tools { mode = Mode.AUTO }
                 }
                 tool("build", "Build test") { ToolResult.text("built") }
             }

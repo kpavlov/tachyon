@@ -166,16 +166,21 @@ Full: `resources/java/PromptHandlerExample.java`
 ## Config️
 
 ### Capabilities `capabilities(cfg -> ...)`
-Default `AUTO` → advertised only when registered. Force with `Mode.ON` / `Mode.OFF`.
+Each feature has its own config: `FeatureConfig` (tools/prompts — `mode`, `listChanged`, `pageSize`), `ResourcesConfig` (adds `subscribe`), `TasksConfig` (`enabled`, `list`, `cancel`, `requests`, `pageSize` — maps 1:1 to MCP `tasks.list`/`tasks.cancel`/`tasks.requests.tools.call`).
+Default `Mode.AUTO` → advertised only when registered. Force with `Mode.ON` / `Mode.OFF`. **`OFF` also blocks registration** — `register`/`add` on that registry becomes a no-op (logged at debug), not just hidden from `initialize`.
 
 | Method | Effect |
 |---|---|
-| `.tools()` / `.tools(listChanged)` / `.noTools()` | tools |
-| `.resources()` / `.resources(subscribe, listChanged)` / `.noResources()` | resources |
-| `.prompts()` / `.prompts(listChanged)` / `.noPrompts()` | prompts |
-| `.tasks()` / `.tasks(list, cancel, requests)` | tasks |
+| `.tools(FeatureConfig)` / `.resources(ResourcesConfig)` / `.prompts(FeatureConfig)` / `.tasks(TasksConfig)` | set the full nested config |
+| `.tools()` / `.tools(listChanged)` / `.noTools()` | shortcut: tools |
+| `.resources()` / `.resources(subscribe, listChanged)` / `.noResources()` | shortcut: resources |
+| `.prompts()` / `.prompts(listChanged)` / `.noPrompts()` | shortcut: prompts |
+| `.tasks()` / `.tasks(list, cancel, requests)` | shortcut: tasks (`enabled=true`) |
+| `.toolsMode(m)` / `.toolsListChanged(b)` / `.toolsPageSize(n)` (+ `resources*`/`prompts*`/`tasks*` siblings) | flat per-field setters; chain onto the shortcuts above, e.g. `c.tools().toolsPageSize(20)` |
 | `.completions()` | arg autocomplete |
 | `.logging()` | logging notifications |
+
+Kotlin DSL nests instead: `capabilities { tools { mode = Mode.ON; pageSize = 20 }; tasks { enabled = true; list = true } }`.
 
 ### Network `network(cfg -> ...)`
 | Method | Default |
@@ -281,9 +286,9 @@ val server = TachyonServer(port = 8080) {
         description = "Demo MCP server"
     }
     capabilities {
-        tools(true)
-        resources(true, true)
-        prompts(true)
+        tools { mode = Mode.ON; listChanged = true }
+        resources { mode = Mode.ON; subscribe = true; listChanged = true }
+        prompts { mode = Mode.ON; listChanged = true }
     }
     tool(name = "ping", description = "Simple ping") {
         ToolResult.text("pong")

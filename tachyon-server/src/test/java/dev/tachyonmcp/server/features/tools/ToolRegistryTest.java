@@ -16,9 +16,9 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListToolsResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextContent;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.config.FeatureConfig;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
-import dev.tachyonmcp.server.features.Pagination;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
@@ -59,7 +59,7 @@ class ToolRegistryTest {
             JsonSchemaValidator.noop(),
             TEST_SERDE,
             TEST_SERDE,
-            Pagination.DEFAULT_PAGE_SIZE);
+            FeatureConfig.builder().build());
 
     @Test
     void listToolsReturnsEmptyListWhenNoToolsRegistered() throws Exception {
@@ -391,12 +391,29 @@ class ToolRegistryTest {
 
     @Test
     void listWithCustomPageSize() {
-        var reg = new ToolRegistry(JsonSchemaValidator.noop(), JsonSchemaValidator.noop(), TEST_SERDE, TEST_SERDE, 1);
+        var reg = new ToolRegistry(
+                JsonSchemaValidator.noop(),
+                JsonSchemaValidator.noop(),
+                TEST_SERDE,
+                TEST_SERDE,
+                FeatureConfig.builder().pageSize(1).build());
         reg.register(testTool("a", null, null));
         reg.register(testTool("b", null, null));
         var result = reg.list(0, null);
         assertThat(result.items()).hasSize(1);
         assertThat(result.nextCursor()).isEqualTo("a");
+    }
+
+    @Test
+    void registerIsNoOpWhenToolsCapabilityIsOff() {
+        var reg = new ToolRegistry(
+                JsonSchemaValidator.noop(),
+                JsonSchemaValidator.noop(),
+                TEST_SERDE,
+                TEST_SERDE,
+                FeatureConfig.builder().off().build());
+        reg.register(testTool("a", null, null));
+        assertThat(reg.isEmpty()).isTrue();
     }
 
     @Test
@@ -669,7 +686,7 @@ class ToolRegistryTest {
                 new NetworkntJsonSchemaValidator(),
                 TEST_SERDE,
                 TEST_SERDE,
-                Pagination.DEFAULT_PAGE_SIZE);
+                FeatureConfig.builder().build());
         var handlers = new HashMap<String, RpcMethodHandler>();
         registryVal.registerHandlers(handlers);
         var handler = ToolHandler.of(
@@ -706,7 +723,7 @@ class ToolRegistryTest {
                 new NetworkntJsonSchemaValidator(),
                 TEST_SERDE,
                 TEST_SERDE,
-                Pagination.DEFAULT_PAGE_SIZE);
+                FeatureConfig.builder().build());
         var handlers = new HashMap<String, RpcMethodHandler>();
         registryVal.registerHandlers(handlers);
         var handler = ToolHandler.of(

@@ -10,7 +10,7 @@ import java.util.Objects;
 public record MonitoringConfig(boolean slowRequestLogging, Duration slowRequestThreshold) {
 
     public static final Duration DEFAULT_SLOW_REQUEST_THRESHOLD = Duration.ofSeconds(10);
-    public static final MonitoringConfig DEFAULT = new MonitoringConfig(false, DEFAULT_SLOW_REQUEST_THRESHOLD);
+    static final MonitoringConfig DEFAULT = new MonitoringConfig(false, DEFAULT_SLOW_REQUEST_THRESHOLD);
 
     public static Builder builder() {
         return new Builder();
@@ -21,8 +21,8 @@ public record MonitoringConfig(boolean slowRequestLogging, Duration slowRequestT
     }
 
     public static final class Builder {
-        private boolean slowRequestLogging;
-        private Duration slowRequestThreshold = DEFAULT_SLOW_REQUEST_THRESHOLD;
+        private boolean slowRequestLogging = DEFAULT.slowRequestLogging;
+        private Duration slowRequestThreshold = DEFAULT.slowRequestThreshold;
 
         private Builder() {}
 

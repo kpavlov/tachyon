@@ -73,7 +73,7 @@ public record NetworkConfig(
     public static final Duration DEFAULT_HEARTBEAT_INTERVAL = Duration.ofSeconds(15);
     public static final int DEFAULT_MAX_CONTENT_LENGTH = 65535;
 
-    public static final NetworkConfig DEFAULT = new NetworkConfig(
+    static final NetworkConfig DEFAULT = new NetworkConfig(
             DEFAULT_HOST,
             UNSET_PORT,
             DEFAULT_ENDPOINT_PATH,
@@ -93,18 +93,18 @@ public record NetworkConfig(
 
     /** Builder for {@link NetworkConfig}. */
     public static final class Builder {
-        private String host = DEFAULT_HOST;
-        private int port = UNSET_PORT;
-        private String endpointPath = DEFAULT_ENDPOINT_PATH;
-        private Duration readerIdleTimeout = DEFAULT_READER_IDLE_TIMEOUT;
-        private Duration writerIdleTimeout = DEFAULT_WRITER_IDLE_TIMEOUT;
-        private int maxContentLength = McpChannelInitializer.DEFAULT_MAX_CONTENT_LENGTH;
-        private @Nullable List<String> allowedOrigins;
-        private boolean allowNullOrigin;
-        private boolean allowPrivateNetworks;
-        private @Nullable List<String> allowedHeaders;
-        private NettyIoEngine ioEngine = NettyIoEngine.AUTO;
-        private Duration heartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
+        private String host = DEFAULT.host;
+        private int port = DEFAULT.port;
+        private String endpointPath = DEFAULT.endpointPath;
+        private Duration readerIdleTimeout = DEFAULT.readerIdleTimeout;
+        private Duration writerIdleTimeout = DEFAULT.writerIdleTimeout;
+        private int maxContentLength = DEFAULT.maxContentLength;
+        private @Nullable List<String> allowedOrigins = DEFAULT.allowedOrigins;
+        private boolean allowNullOrigin = DEFAULT.allowNullOrigin;
+        private boolean allowPrivateNetworks = DEFAULT.allowPrivateNetworks;
+        private @Nullable List<String> allowedHeaders = DEFAULT.allowedHeaders;
+        private NettyIoEngine ioEngine = DEFAULT.ioEngine;
+        private Duration heartbeatInterval = DEFAULT.heartbeatInterval;
         private boolean hostPortExplicitlySet;
         private boolean addressExplicitlySet;
 
@@ -151,13 +151,13 @@ public record NetworkConfig(
 
         /** Sets the reader idle timeout. */
         public Builder readerIdleTimeout(Duration timeout) {
-            this.readerIdleTimeout = timeout;
+            this.readerIdleTimeout = Objects.requireNonNull(timeout, "readerIdleTimeout cannot be null");
             return this;
         }
 
         /** Sets the writer idle timeout. */
         public Builder writerIdleTimeout(Duration timeout) {
-            this.writerIdleTimeout = timeout;
+            this.writerIdleTimeout = Objects.requireNonNull(timeout, "writerIdleTimeout cannot be null");
             return this;
         }
 
@@ -196,7 +196,7 @@ public record NetworkConfig(
 
         /** Sets the Netty I/O engine; defaults to {@link NettyIoEngine#AUTO}. */
         public Builder ioEngine(NettyIoEngine ioEngine) {
-            this.ioEngine = Objects.requireNonNull(ioEngine, "ioEngine");
+            this.ioEngine = Objects.requireNonNull(ioEngine, "ioEngine cannot be null");
             return this;
         }
 
@@ -207,7 +207,7 @@ public record NetworkConfig(
          * client alive out of the box.
          */
         public Builder heartbeatInterval(Duration heartbeatInterval) {
-            this.heartbeatInterval = heartbeatInterval;
+            this.heartbeatInterval = Objects.requireNonNull(heartbeatInterval, "heartbeatInterval  cannot be null");
             return this;
         }
 

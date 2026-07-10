@@ -251,9 +251,61 @@ TachyonServer {
 }
 ```
 
-## Identity and capabilities
+## Identity
 
-`info { }` sets the `serverInfo` returned by `initialize` (name, version, title, etc.); `.name(String)` is a top-level shortcut. `capabilities { }` toggles advertised MCP capabilities. See [quickstart](quickstart.md) for a full example.
+`info { }` sets the `serverInfo` returned by `initialize` (name, version, title, etc.); `.name(String)` is a top-level shortcut. See [quickstart](quickstart.md) for a full example.
+
+## Capabilities
+
+Configured via `capabilities { }` / `CapabilitiesConfig.Builder`. Each MCP capability has its own
+config type, nested under `capabilities`: `tools` and `prompts` share `FeatureConfig`
+(`mode`, `listChanged`, `pageSize`); `resources` uses `ResourcesConfig` (adds `subscribe`); `tasks`
+uses `TasksConfig`, whose fields map 1:1 to the MCP `tasks` capability object (`tasks.list`,
+`tasks.cancel`, `tasks.requests.tools.call`).
+
+| Sub-config | Fields | Default |
+|---|---|---|
+| `tools` / `prompts` (`FeatureConfig`) | `mode`, `listChanged`, `pageSize` | `AUTO`, `false`, `50` |
+| `resources` (`ResourcesConfig`) | `mode`, `listChanged`, `pageSize`, `subscribe` | `AUTO`, `false`, `50`, `false` |
+| `tasks` (`TasksConfig`) | `enabled`, `list`, `cancel`, `requests`, `pageSize` | `false` × 4, `50` |
+| — | `completions`, `logging` | `false`, `false` |
+
+`mode`:
+- **`AUTO`** (default) — advertised only once a handler of that type is registered. No config needed for the common case.
+- **`ON`** — advertised from `initialize`, even with zero handlers registered yet (needed for dynamic registration + `list_changed` after startup).
+- **`OFF`** — never advertised, **and registration becomes a no-op**: `registerTool`/`resource().add(...)`/`prompt().add(...)` on that feature is silently skipped (logged at `debug`).
+
+`tasks.enabled` works the same as `mode == ON` for tools/resources/prompts, except the `tasks`
+capability is *also* advertised — regardless of `enabled` — whenever a registered tool declares
+task augmentation support (`ToolDescriptor.taskSupport()`).
+
+```java
+TachyonServer.builder()
+    .capabilities(c -> c
+        .tools(FeatureConfig.builder().mode(Mode.ON).listChanged(true).build())
+        .resources(ResourcesConfig.builder().mode(Mode.ON).subscribe(true).build())
+        .tasks(TasksConfig.builder().enabled(true).list(true).build())
+        .completions()
+        .logging())
+    .start();
+```
+
+```kotlin
+TachyonServer {
+    capabilities {
+        tools { mode = Mode.ON; listChanged = true }
+        resources { mode = Mode.ON; subscribe = true }
+        tasks { enabled = true; list = true }
+        completions = true
+        logging = true
+    }
+}
+```
+
+Java also keeps the pre-nesting flat setters and convenience shortcuts (`.tools()`,
+`.tools(listChanged)`, `.noTools()`, `.toolsPageSize(n)`, and the `resources`/`prompts`/`tasks`
+equivalents) — they mutate the same nested sub-config, so chaining still works:
+`c.tools().toolsPageSize(20)` sets `mode = ON` and `pageSize = 20` on the same `FeatureConfig`.
 
 ## Advanced
 

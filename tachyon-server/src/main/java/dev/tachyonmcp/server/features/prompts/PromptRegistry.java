@@ -8,6 +8,8 @@ import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetPromptRequestParams;
 import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.config.FeatureConfig;
+import dev.tachyonmcp.server.config.Mode;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.ListRequests;
@@ -27,22 +29,31 @@ import tools.jackson.databind.JsonNode;
 @InternalApi
 public class PromptRegistry extends Registry<PromptEntry> {
 
-    private final JsonSchemaValidator validator;
+    private static final Logger logger = LoggerFactory.getLogger(PromptRegistry.class);
 
-    public PromptRegistry(JsonSchemaValidator validator, int pageSize) {
-        super(pageSize);
+    private final JsonSchemaValidator validator;
+    private final FeatureConfig config;
+
+    public PromptRegistry(JsonSchemaValidator validator, FeatureConfig config) {
+        super(config.pageSize());
         this.validator = validator;
+        this.config = config;
     }
 
     public void add(PromptDescriptor descriptor, List<PromptMessage> messages) {
-        super.add(PromptEntry.of(descriptor, args -> messages));
+        add(descriptor, (InputRequiredPromptHandler) (ctx, request) -> PromptHandlerResult.messages(messages));
     }
 
     public void add(PromptDescriptor descriptor, PromptHandler handler) {
-        super.add(PromptEntry.of(descriptor, handler));
+        add(descriptor, (InputRequiredPromptHandler)
+                (ctx, request) -> PromptHandlerResult.messages(handler.getMessages(request.arguments())));
     }
 
     public void add(PromptDescriptor descriptor, InputRequiredPromptHandler handler) {
+        if (config.mode() == Mode.OFF) {
+            logger.debug("Prompt '{}' not registered: prompts capability is OFF", descriptor.name());
+            return;
+        }
         super.add(new PromptEntry(descriptor, handler));
     }
 

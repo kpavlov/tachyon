@@ -40,16 +40,25 @@ fun createServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer =
 
         // ── capabilities — all switches + helpers ─────────────────
         capabilities {
-            tools = Mode.ON
-            toolsListChanged = true
-            resources = Mode.ON
-            resourcesSubscribe = true
-            resourcesListChanged = true
-            prompts = Mode.ON
-            promptsListChanged = true
-            tasks = true
-            tasksCancel = true
-            tasksRequests = true
+            tools {
+                mode = Mode.ON
+                listChanged = true
+            }
+            resources {
+                mode = Mode.ON
+                subscribe = true
+                listChanged = true
+            }
+            prompts {
+                mode = Mode.ON
+                listChanged = true
+            }
+            tasks {
+                enabled = true
+                list = true
+                cancel = true
+                requests = true
+            }
             completions = true
             logging = true
         }

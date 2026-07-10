@@ -2,208 +2,244 @@
 
 package dev.tachyonmcp.server.config;
 
-import dev.tachyonmcp.server.features.Pagination;
-import org.immutables.value.Value;
-
 /**
  * Configuration of which MCP capabilities to enable and their behaviour.
+ *
+ * @param tools       tools capability configuration
+ * @param resources   resources capability configuration
+ * @param prompts     prompts capability configuration
+ * @param tasks       tasks capability configuration
+ * @param completions whether the completions capability is enabled (default {@code false})
+ * @param logging     whether the logging capability is enabled (default {@code false})
  */
-@Value.Immutable
-@Value.Style(visibility = Value.Style.ImplementationVisibility.PACKAGE, typeImmutable = "Default*")
-public interface CapabilitiesConfig {
+public record CapabilitiesConfig(
+        FeatureConfig tools,
+        ResourcesConfig resources,
+        FeatureConfig prompts,
+        TasksConfig tasks,
+        boolean completions,
+        boolean logging) {
 
-    @Value.Default
-    default Mode toolsMode() {
-        return Mode.AUTO;
+    /**
+     * Default configuration with all capabilities auto-detected and change notifications off.
+     */
+    public static final CapabilitiesConfig DEFAULT = new CapabilitiesConfig(
+            FeatureConfig.DEFAULT, ResourcesConfig.DEFAULT, FeatureConfig.DEFAULT, TasksConfig.DEFAULT, false, false);
+
+    public static Builder builder() {
+        return new Builder();
     }
 
-    @Value.Default
-    default boolean toolsListChanged() {
-        return false;
-    }
+    /**
+     * Builder for {@link CapabilitiesConfig}.
+     */
+    public static final class Builder {
 
-    @Value.Default
-    default Mode resourcesMode() {
-        return Mode.AUTO;
-    }
+        private FeatureConfig.Builder toolsBuilder = FeatureConfig.builder();
+        private ResourcesConfig.Builder resourcesBuilder = ResourcesConfig.builder();
+        private FeatureConfig.Builder promptsBuilder = FeatureConfig.builder();
+        private TasksConfig.Builder tasksBuilder = TasksConfig.builder();
+        private boolean completions;
+        private boolean logging;
 
-    @Value.Default
-    default boolean resourcesSubscribe() {
-        return false;
-    }
+        private Builder() {}
 
-    @Value.Default
-    default boolean resourcesListChanged() {
-        return false;
-    }
+        // === Nested config setters ===
 
-    @Value.Default
-    default Mode promptsMode() {
-        return Mode.AUTO;
-    }
-
-    @Value.Default
-    default boolean promptsListChanged() {
-        return false;
-    }
-
-    @Value.Default
-    default boolean tasksList() {
-        return false;
-    }
-
-    @Value.Default
-    default boolean tasksCancel() {
-        return false;
-    }
-
-    @Value.Default
-    default boolean tasksRequests() {
-        return false;
-    }
-
-    @Value.Default
-    default boolean completions() {
-        return false;
-    }
-
-    @Value.Default
-    default boolean logging() {
-        return false;
-    }
-
-    @Value.Default
-    default int toolsPageSize() {
-        return Pagination.DEFAULT_PAGE_SIZE;
-    }
-
-    @Value.Default
-    default int resourcesPageSize() {
-        return Pagination.DEFAULT_PAGE_SIZE;
-    }
-
-    @Value.Default
-    default int promptsPageSize() {
-        return Pagination.DEFAULT_PAGE_SIZE;
-    }
-
-    @Value.Default
-    default int tasksPageSize() {
-        return Pagination.DEFAULT_PAGE_SIZE;
-    }
-
-    @Value.Check
-    default void check() {
-        if (toolsPageSize() <= 0) {
-            throw new IllegalArgumentException("toolsPageSize must be positive, got: " + toolsPageSize());
+        public Builder tools(FeatureConfig config) {
+            toolsBuilder = FeatureConfig.builder()
+                    .mode(config.mode())
+                    .listChanged(config.listChanged())
+                    .pageSize(config.pageSize());
+            return this;
         }
-        if (resourcesPageSize() <= 0) {
-            throw new IllegalArgumentException("resourcesPageSize must be positive, got: " + resourcesPageSize());
+
+        public Builder resources(ResourcesConfig config) {
+            resourcesBuilder = ResourcesConfig.builder()
+                    .mode(config.mode())
+                    .listChanged(config.listChanged())
+                    .pageSize(config.pageSize())
+                    .subscribe(config.subscribe());
+            return this;
         }
-        if (promptsPageSize() <= 0) {
-            throw new IllegalArgumentException("promptsPageSize must be positive, got: " + promptsPageSize());
+
+        public Builder prompts(FeatureConfig config) {
+            promptsBuilder = FeatureConfig.builder()
+                    .mode(config.mode())
+                    .listChanged(config.listChanged())
+                    .pageSize(config.pageSize());
+            return this;
         }
-        if (tasksPageSize() <= 0) {
-            throw new IllegalArgumentException("tasksPageSize must be positive, got: " + tasksPageSize());
+
+        public Builder tasks(TasksConfig config) {
+            tasksBuilder = TasksConfig.builder()
+                    .enabled(config.enabled())
+                    .list(config.list())
+                    .cancel(config.cancel())
+                    .requests(config.requests())
+                    .pageSize(config.pageSize());
+            return this;
         }
-    }
 
-    /** Default configuration with all capabilities auto-detected and change notifications off. */
-    CapabilitiesConfig DEFAULT = builder().build();
+        // === Flat field setters ===
 
-    static Builder builder() {
-        return DefaultCapabilitiesConfig.builder();
-    }
+        public Builder toolsMode(Mode toolsMode) {
+            toolsBuilder.mode(toolsMode);
+            return this;
+        }
 
-    /** Builder for {@link CapabilitiesConfig}. */
-    interface Builder {
+        public Builder toolsListChanged(boolean toolsListChanged) {
+            toolsBuilder.listChanged(toolsListChanged);
+            return this;
+        }
 
-        Builder toolsMode(Mode toolsMode);
+        public Builder toolsPageSize(int toolsPageSize) {
+            toolsBuilder.pageSize(toolsPageSize);
+            return this;
+        }
 
-        Builder toolsListChanged(boolean toolsListChanged);
+        public Builder resourcesMode(Mode resourcesMode) {
+            resourcesBuilder.mode(resourcesMode);
+            return this;
+        }
 
-        Builder resourcesMode(Mode resourcesMode);
+        public Builder resourcesSubscribe(boolean resourcesSubscribe) {
+            resourcesBuilder.subscribe(resourcesSubscribe);
+            return this;
+        }
 
-        Builder resourcesSubscribe(boolean resourcesSubscribe);
+        public Builder resourcesListChanged(boolean resourcesListChanged) {
+            resourcesBuilder.listChanged(resourcesListChanged);
+            return this;
+        }
 
-        Builder resourcesListChanged(boolean resourcesListChanged);
+        public Builder resourcesPageSize(int resourcesPageSize) {
+            resourcesBuilder.pageSize(resourcesPageSize);
+            return this;
+        }
 
-        Builder promptsMode(Mode promptsMode);
+        public Builder promptsMode(Mode promptsMode) {
+            promptsBuilder.mode(promptsMode);
+            return this;
+        }
 
-        Builder promptsListChanged(boolean promptsListChanged);
+        public Builder promptsListChanged(boolean promptsListChanged) {
+            promptsBuilder.listChanged(promptsListChanged);
+            return this;
+        }
 
-        Builder tasksList(boolean tasksList);
+        public Builder promptsPageSize(int promptsPageSize) {
+            promptsBuilder.pageSize(promptsPageSize);
+            return this;
+        }
 
-        Builder tasksCancel(boolean tasksCancel);
+        public Builder tasksEnabled(boolean tasksEnabled) {
+            tasksBuilder.enabled(tasksEnabled);
+            return this;
+        }
 
-        Builder tasksRequests(boolean tasksRequests);
+        public Builder tasksList(boolean tasksList) {
+            tasksBuilder.list(tasksList);
+            return this;
+        }
 
-        Builder completions(boolean completions);
+        public Builder tasksCancel(boolean tasksCancel) {
+            tasksBuilder.cancel(tasksCancel);
+            return this;
+        }
 
-        Builder logging(boolean logging);
+        public Builder tasksRequests(boolean tasksRequests) {
+            tasksBuilder.requests(tasksRequests);
+            return this;
+        }
 
-        Builder toolsPageSize(int toolsPageSize);
+        public Builder tasksPageSize(int tasksPageSize) {
+            tasksBuilder.pageSize(tasksPageSize);
+            return this;
+        }
 
-        Builder resourcesPageSize(int resourcesPageSize);
+        public Builder completions(boolean completions) {
+            this.completions = completions;
+            return this;
+        }
 
-        Builder promptsPageSize(int promptsPageSize);
+        public Builder logging(boolean logging) {
+            this.logging = logging;
+            return this;
+        }
 
-        Builder tasksPageSize(int tasksPageSize);
-
-        CapabilitiesConfig build();
+        public CapabilitiesConfig build() {
+            return new CapabilitiesConfig(
+                    toolsBuilder.build(),
+                    resourcesBuilder.build(),
+                    promptsBuilder.build(),
+                    tasksBuilder.build(),
+                    completions,
+                    logging);
+        }
 
         // === Convenience defaults ===
 
-        default Builder completions() {
+        public Builder completions() {
             return completions(true);
         }
 
-        default Builder logging() {
+        public Builder logging() {
             return logging(true);
         }
 
-        default Builder tools() {
+        public Builder tools() {
             return toolsMode(Mode.ON).toolsListChanged(false);
         }
 
-        default Builder tools(boolean listChanged) {
+        public Builder tools(boolean listChanged) {
             return toolsMode(Mode.ON).toolsListChanged(listChanged);
         }
 
-        default Builder noTools() {
+        public Builder noTools() {
             return toolsMode(Mode.OFF);
         }
 
-        default Builder resources() {
+        public Builder resources() {
             return resourcesMode(Mode.ON).resourcesSubscribe(false).resourcesListChanged(false);
         }
 
-        default Builder resources(boolean subscribe, boolean listChanged) {
+        public Builder resources(boolean subscribe, boolean listChanged) {
             return resourcesMode(Mode.ON).resourcesSubscribe(subscribe).resourcesListChanged(listChanged);
         }
 
-        default Builder noResources() {
+        public Builder noResources() {
             return resourcesMode(Mode.OFF);
         }
 
-        default Builder prompts() {
+        public Builder prompts() {
             return promptsMode(Mode.ON).promptsListChanged(false);
         }
 
-        default Builder prompts(boolean listChanged) {
+        public Builder prompts(boolean listChanged) {
             return promptsMode(Mode.ON).promptsListChanged(listChanged);
         }
 
-        default Builder noPrompts() {
+        public Builder noPrompts() {
             return promptsMode(Mode.OFF);
         }
 
-        default Builder tasks() {
-            return tasksList(true).tasksCancel(false).tasksRequests(false);
+        public Builder noTasks() {
+            return tasksEnabled(false);
         }
 
-        default Builder tasks(boolean list, boolean cancel, boolean requests) {
-            return tasksList(list).tasksCancel(cancel).tasksRequests(requests);
+        public Builder tasks() {
+            tasksBuilder
+                    .enabled(true)
+                    .list(TasksConfig.DEFAULT_TASK_LIST)
+                    .cancel(TasksConfig.DEFAULT_TASK_CANCEL)
+                    .requests(TasksConfig.DEFAULT_TASK_REQUESTS);
+            return this;
+        }
+
+        public Builder tasks(boolean list, boolean cancel, boolean requests) {
+            tasksBuilder.enabled(true).list(list).cancel(cancel).requests(requests);
+            return this;
         }
     }
 }

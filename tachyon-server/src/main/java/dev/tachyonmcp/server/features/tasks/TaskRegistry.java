@@ -10,6 +10,7 @@ import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.config.TasksConfig;
 import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.features.PaginatedResult;
 import dev.tachyonmcp.server.features.Pagination;
@@ -49,8 +50,8 @@ public class TaskRegistry extends Registry<TaskEntry> {
     private volatile @Nullable ScheduledExecutorService ttlJanitor;
 
     /** Creates a task registry bound to the given server (for broadcasting status notifications). */
-    public TaskRegistry(ServerEngine server, int pageSize) {
-        super(pageSize);
+    public TaskRegistry(ServerEngine server, TasksConfig config) {
+        super(config.pageSize());
         this.server = server;
     }
 

@@ -37,12 +37,6 @@ class MonitoringConfigTest {
     }
 
     @Test
-    void defaultValue() {
-        assertThat(MonitoringConfig.DEFAULT.slowRequestLogging()).isFalse();
-        assertThat(MonitoringConfig.DEFAULT.slowRequestThreshold()).isEqualTo(Duration.ofSeconds(10));
-    }
-
-    @Test
     void serverConfigDefaultMonitoringIsNonNull() {
         assertThat(ServerConfig.DEFAULT.monitoring()).isNotNull();
         assertThat(ServerConfig.DEFAULT.monitoring().slowRequestLogging()).isFalse();

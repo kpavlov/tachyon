@@ -18,10 +18,10 @@ class CapabilitiesConfigTest {
     void defaultPageSizeIs50() {
         var config = CapabilitiesConfig.DEFAULT;
 
-        assertThat(config.toolsPageSize()).isEqualTo(Pagination.DEFAULT_PAGE_SIZE);
-        assertThat(config.resourcesPageSize()).isEqualTo(Pagination.DEFAULT_PAGE_SIZE);
-        assertThat(config.promptsPageSize()).isEqualTo(Pagination.DEFAULT_PAGE_SIZE);
-        assertThat(config.tasksPageSize()).isEqualTo(Pagination.DEFAULT_PAGE_SIZE);
+        assertThat(config.tools().pageSize()).isEqualTo(Pagination.DEFAULT_PAGE_SIZE);
+        assertThat(config.resources().pageSize()).isEqualTo(Pagination.DEFAULT_PAGE_SIZE);
+        assertThat(config.prompts().pageSize()).isEqualTo(Pagination.DEFAULT_PAGE_SIZE);
+        assertThat(config.tasks().pageSize()).isEqualTo(Pagination.DEFAULT_PAGE_SIZE);
     }
 
     @ParameterizedTest
@@ -60,6 +60,14 @@ class CapabilitiesConfigTest {
     void preservesPositiveToolsPageSize() {
         var config = CapabilitiesConfig.builder().toolsPageSize(10).build();
 
-        assertThat(config.toolsPageSize()).isEqualTo(10);
+        assertThat(config.tools().pageSize()).isEqualTo(10);
+    }
+
+    @Test
+    void chainedFlatSettersAccumulateOnSameSubConfig() {
+        var config = CapabilitiesConfig.builder().tools().toolsPageSize(2).build();
+
+        assertThat(config.tools().mode()).isEqualTo(Mode.ON);
+        assertThat(config.tools().pageSize()).isEqualTo(2);
     }
 }
