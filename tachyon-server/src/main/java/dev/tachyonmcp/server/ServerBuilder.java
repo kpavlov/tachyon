@@ -6,6 +6,7 @@ package dev.tachyonmcp.server;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.config.CapabilitiesConfig;
+import dev.tachyonmcp.server.config.MonitoringConfig;
 import dev.tachyonmcp.server.config.NetworkConfig;
 import dev.tachyonmcp.server.config.RuntimeConfig;
 import dev.tachyonmcp.server.config.ServerConfig;
@@ -57,6 +58,7 @@ public final class ServerBuilder {
     private final SessionConfig.Builder sessionBuilder = SessionConfig.builder();
     private final NetworkConfig.Builder networkBuilder = NetworkConfig.builder();
     private final RuntimeConfig.Builder runtimeBuilder = RuntimeConfig.builder();
+    private final MonitoringConfig.Builder monitoringBuilder = MonitoringConfig.builder();
 
     @Nullable
     Consumer<ChannelPipeline> pipelineCustomizer;
@@ -105,6 +107,14 @@ public final class ServerBuilder {
      */
     public ServerBuilder runtime(Consumer<RuntimeConfig.Builder> configurer) {
         configurer.accept(runtimeBuilder);
+        return this;
+    }
+
+    /**
+     * Configures diagnostics and observability settings (slow-request logging, etc.).
+     */
+    public ServerBuilder monitoring(Consumer<MonitoringConfig.Builder> configurer) {
+        configurer.accept(monitoringBuilder);
         return this;
     }
 
@@ -415,7 +425,8 @@ public final class ServerBuilder {
                 capabilitiesConfig.build(),
                 sessionBuilder.build(),
                 networkBuilder.build(),
-                runtimeBuilder.build());
+                runtimeBuilder.build(),
+                monitoringBuilder.build());
     }
 
     static final class FeaturesConfig {

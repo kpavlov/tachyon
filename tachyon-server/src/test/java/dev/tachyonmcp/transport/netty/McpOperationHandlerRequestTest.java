@@ -26,8 +26,11 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.ReferenceCountUtil;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -39,6 +42,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import tools.jackson.databind.node.JsonNodeFactory;
 
 /**
@@ -337,6 +341,114 @@ class McpOperationHandlerRequestTest {
         } finally {
             ch.close();
             customServer.close();
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // Monitoring / slow-request gating
+    // ──────────────────────────────────────────────────────────────
+
+    private static final ToolDescriptor SLOW_DESCRIPTOR = ToolDescriptor.builder()
+            .name("slow_tool")
+            .description("takes 50ms")
+            .inputSchema(JsonNodeFactory.instance.objectNode().put("type", "object"))
+            .build();
+
+    private static final ToolHandler SLOW_TOOL = new ToolHandler() {
+        @Override
+        public ToolDescriptor descriptor() {
+            return SLOW_DESCRIPTOR;
+        }
+
+        @Override
+        public CompletionStage<ToolResult> handleAsync(InteractionContext ctx, ToolRequest request) {
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            return CompletableFuture.completedStage(ToolResult.text("ok"));
+        }
+    };
+
+    @Test
+    @ResourceLock("SYSTEM_ERR")
+    void slowRequestLoggingDefaultDisabledNoWarning() {
+        var baos = new ByteArrayOutputStream();
+        var origErr = System.err;
+        System.setErr(new PrintStream(baos));
+        try {
+            var srv = newEngine(b -> b.tool(SLOW_TOOL));
+            var ch = new EmbeddedChannel(
+                    new InteractionHandler(),
+                    new McpOperationHandler(srv, new RpcDispatcher(srv, Runnable::run), Runnable::run));
+            srv.createSession("sess-slow").activate();
+            try {
+                var request = new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1,
+                        HttpMethod.POST,
+                        "/mcp",
+                        Unpooled.copiedBuffer(
+                                "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\","
+                                        + "\"params\":{\"name\":\"slow_tool\",\"arguments\":{}}}",
+                                StandardCharsets.UTF_8));
+                request.headers()
+                        .set(HttpHeaderNames.ORIGIN, "http://localhost:3000")
+                        .set("MCP-Session-Id", "sess-slow");
+                ch.writeInbound(request);
+                ch.runPendingTasks();
+                var msg = ch.readOutbound();
+                if (msg instanceof FullHttpResponse resp) {
+                    resp.release();
+                }
+                assertThat(baos.toString()).doesNotContain("Slow POST");
+            } finally {
+                ch.close();
+                srv.close();
+            }
+        } finally {
+            System.setErr(origErr);
+        }
+    }
+
+    @Test
+    @ResourceLock("SYSTEM_ERR")
+    void slowRequestLoggingEnabledWithLowThresholdWarns() {
+        var baos = new ByteArrayOutputStream();
+        var origErr = System.err;
+        System.setErr(new PrintStream(baos));
+        try {
+            var srv = newEngine(b -> b.tool(SLOW_TOOL)
+                    .monitoring(m -> m.slowRequestLogging().slowRequestThreshold(Duration.ofMillis(1))));
+            var ch = new EmbeddedChannel(
+                    new InteractionHandler(),
+                    new McpOperationHandler(srv, new RpcDispatcher(srv, Runnable::run), Runnable::run));
+            srv.createSession("sess-slow2").activate();
+            try {
+                var request = new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1,
+                        HttpMethod.POST,
+                        "/mcp",
+                        Unpooled.copiedBuffer(
+                                "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\","
+                                        + "\"params\":{\"name\":\"slow_tool\",\"arguments\":{}}}",
+                                StandardCharsets.UTF_8));
+                request.headers()
+                        .set(HttpHeaderNames.ORIGIN, "http://localhost:3000")
+                        .set("MCP-Session-Id", "sess-slow2");
+                ch.writeInbound(request);
+                ch.runPendingTasks();
+                var msg = ch.readOutbound();
+                if (msg instanceof FullHttpResponse resp) {
+                    resp.release();
+                }
+                assertThat(baos.toString()).contains("Slow POST");
+            } finally {
+                ch.close();
+                srv.close();
+            }
+        } finally {
+            System.setErr(origErr);
         }
     }
 

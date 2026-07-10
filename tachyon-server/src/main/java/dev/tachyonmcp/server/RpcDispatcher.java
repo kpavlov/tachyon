@@ -52,8 +52,6 @@ public class RpcDispatcher {
 
     private static final Logger logger = LoggerFactory.getLogger(RpcDispatcher.class);
 
-    private static final long SLOW_HANDLER_MS = 200;
-
     private static final String METHOD_INITIALIZE = "initialize";
     private static final String METHOD_PING = "ping";
 
@@ -226,7 +224,14 @@ public class RpcDispatcher {
                                         session.id(), id, method, paramsStr, System.currentTimeMillis()));
                             }
 
-                            var watchdog = HandlerWatchdog.watch(method, id, startNs, SLOW_HANDLER_MS);
+                            var m = server.config().monitoring();
+                            var watchdog = m.slowRequestLogging()
+                                    ? HandlerWatchdog.watch(
+                                            method,
+                                            id,
+                                            startNs,
+                                            m.slowRequestThreshold().toMillis())
+                                    : CompletableFuture.completedFuture(null);
                             try {
                                 CompletionStage<Object> stage = OutboundSseStreamMessageRouter.withDispatchContext(
                                         session != null ? session.id() : null, outboundSseStream, () -> {

@@ -92,6 +92,17 @@ public class TachyonServerBuilder
             return this
         }
 
+        @OptIn(ExperimentalContracts::class)
+        public inline fun monitoring(
+            crossinline configure: (@TachyonDsl MonitoringScope).() -> Unit,
+        ): TachyonServerBuilder {
+            contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
+            val scope = MonitoringScope()
+            scope.configure()
+            delegate.monitoring { scope.applyTo(it) }
+            return this
+        }
+
         public fun tool(
             name: String,
             description: String? = null,

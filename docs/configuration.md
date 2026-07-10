@@ -1,6 +1,6 @@
 # Configuration — Tachyon MCP Server
 
-All configuration flows through `TachyonServer.builder()` (Java) or the `TachyonServer { }` DSL (Kotlin). Four scopes: `info`, `capabilities`, `network`, `session`.
+All configuration flows through `TachyonServer.builder()` (Java) or the `TachyonServer { }` DSL (Kotlin). Scopes: `info`, `capabilities`, `network`, `session`, `runtime`, `monitoring`.
 
 ```java
 TachyonServer.builder()
@@ -220,6 +220,36 @@ Configured via `runtime { }` / `RuntimeConfig.Builder`.
 | Option | Default | Description |
 |---|---|---|
 | `shutdownGracePeriod` | `5s` | Time in-flight handlers get to drain on `close()`; `ZERO` interrupts immediately |
+
+## Monitoring
+
+Configured via `monitoring { }` / `MonitoringConfig.Builder`. Off by default.
+
+| Option | Default | Description |
+|---|---|---|
+| `slowRequestLogging` | `false` | Enable slow-request diagnostics (handler watchdog + slow-POST logging) |
+| `slowRequestThreshold` | `10s` | Requests exceeding this duration produce a `warn` log when logging is enabled |
+
+Turning `slowRequestLogging` on activates two diagnostics:
+- **Handler watchdog** — a scheduled timer logs `"Handler slow"` at `debug` level when a handler exceeds the threshold
+- **Slow-POST logging** — `completePostRequest` logs `"Slow POST response"` at `warn` level when the full request cycle exceeds the threshold
+
+Both share the same threshold and are silenced at default (flag off, zero overhead).
+
+```java
+TachyonServer.builder()
+    .monitoring(m -> m.slowRequestLogging().slowRequestThreshold(Duration.ofSeconds(5)))
+    .start();
+```
+
+```kotlin
+TachyonServer {
+    monitoring {
+        slowRequestLogging = true
+        slowRequestThreshold = 5.seconds
+    }
+}
+```
 
 ## Identity and capabilities
 

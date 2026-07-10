@@ -75,6 +75,10 @@ internal class TachyonServerTest {
                 sessionLogRouter = InMemorySessionLogRouter()
                 sessionIdGenerator { it.headers().get("X-Tenant-Id") ?: "anon" }
             }
+            monitoring {
+                slowRequestLogging = true
+                slowRequestThreshold = 15.seconds
+            }
             pipelineCustomizer { }
             tool("ping", "Health check") { ToolResult.text("pong") }
             resource(
@@ -137,9 +141,14 @@ internal class TachyonServerTest {
                 allowPrivateNetworks shouldBe true
             }
 
+            with(config.monitoring) {
+                slowRequestLogging shouldBe true
+                slowRequestThreshold shouldBe 15.seconds.toJavaDuration()
+            }
+
             // registered features
             handle.getTool("ping") shouldNotBe null
-            var engine = handle as ServerEngine
+            val engine = handle as ServerEngine
             engine.prompts()["greet"] shouldNotBe null
             engine.resources()["config"] shouldNotBe null
 
