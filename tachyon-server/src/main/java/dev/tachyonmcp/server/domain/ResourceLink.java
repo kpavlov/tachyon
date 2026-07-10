@@ -40,7 +40,7 @@ public non-sealed interface ResourceLink extends ContentBlock {
     Annotations annotations();
 
     @Nullable
-    Double size();
+    Long size();
 
     @Nullable
     Map<String, JsonNode> meta();
@@ -49,8 +49,7 @@ public non-sealed interface ResourceLink extends ContentBlock {
     default void check() {
         if (name().isBlank()) throw new IllegalArgumentException("name must not be blank");
         if (uri().isBlank()) throw new IllegalArgumentException("uri must not be blank");
-        if (size() != null && (Double.isNaN(size()) || size() < 0))
-            throw new IllegalArgumentException("size must be >= 0, got: " + size());
+        if (size() != null && size() < 0) throw new IllegalArgumentException("size must be >= 0, got: " + size());
     }
 
     @Override
@@ -58,22 +57,49 @@ public non-sealed interface ResourceLink extends ContentBlock {
         return Type.RESOURCE_LINK;
     }
 
-    /** Creates a resource link with no optional fields. */
+    /**
+     * Creates a resource link with no optional fields.
+     */
     static ResourceLink of(String uri, String name) {
-        return builder(uri, name).build();
+        return builder().uri(uri).name(name).build();
     }
 
-    /** Creates a resource link with MIME type and no other optional fields. */
+    /**
+     * Creates a resource link with MIME type and no other optional fields.
+     */
     static ResourceLink of(String uri, String name, @Nullable String mimeType) {
-        return builder(uri, name).mimeType(mimeType).build();
+        return builder().uri(uri).name(name).mimeType(mimeType).build();
     }
 
-    static DefaultResourceLink.Builder builder() {
+    static Builder builder() {
         return DefaultResourceLink.builder();
     }
 
-    /** Creates a builder for a resource link with the required fields. */
-    static DefaultResourceLink.Builder builder(String uri, String name) {
+    /**
+     * Creates a builder for a resource link with the required fields.
+     */
+    static Builder builder(String uri, String name) {
         return builder().uri(uri).name(name);
+    }
+
+    public interface Builder {
+
+        DefaultResourceLink.Builder name(String name);
+
+        DefaultResourceLink.Builder title(@Nullable String title);
+
+        DefaultResourceLink.Builder icons(@Nullable Iterable<? extends Icon> elements);
+
+        DefaultResourceLink.Builder uri(String uri);
+
+        DefaultResourceLink.Builder description(@Nullable String description);
+
+        DefaultResourceLink.Builder annotations(@Nullable Annotations annotations);
+
+        DefaultResourceLink.Builder size(@Nullable Long size);
+
+        DefaultResourceLink.Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
+
+        DefaultResourceLink build();
     }
 }

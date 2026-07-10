@@ -25,16 +25,7 @@ class ResourceLinkTest {
     @Test
     void shouldRejectNegativeSize() {
         assertThatThrownBy(() ->
-                        ResourceLink.builder("resource://x", "link").size(-1.0).build())
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("size");
-    }
-
-    @Test
-    void shouldRejectNaNSize() {
-        assertThatThrownBy(() -> ResourceLink.builder("resource://x", "link")
-                        .size(Double.NaN)
-                        .build())
+                        ResourceLink.builder("resource://x", "link").size(-1L).build())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("size");
     }
