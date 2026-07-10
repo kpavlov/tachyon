@@ -15,6 +15,8 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskMetadata;
 import dev.tachyonmcp.server.OutboundSseStreamMessageRouter;
 import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.config.FeatureConfig;
+import dev.tachyonmcp.server.config.Mode;
 import dev.tachyonmcp.server.features.ChangeSupport;
 import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.ListRequests;
@@ -59,7 +61,7 @@ public class ToolRegistry {
     private final JsonSchemaValidator outputValidator;
     private final PayloadSerializer payloadSerializer;
     private final PayloadDeserializer payloadDeserializer;
-    private final int defaultPageSize;
+    private final FeatureConfig config;
 
     private final ChangeSupport changes = new ChangeSupport();
 
@@ -77,12 +79,12 @@ public class ToolRegistry {
             JsonSchemaValidator outputValidator,
             PayloadSerializer payloadSerializer,
             PayloadDeserializer payloadDeserializer,
-            int defaultPageSize) {
+            FeatureConfig config) {
         this.inputValidator = inputValidator;
         this.outputValidator = outputValidator;
         this.payloadSerializer = payloadSerializer;
         this.payloadDeserializer = payloadDeserializer;
-        this.defaultPageSize = defaultPageSize;
+        this.config = config;
     }
 
     public void onChange(Runnable callback) {
@@ -100,6 +102,10 @@ public class ToolRegistry {
         Objects.requireNonNull(handler, "ToolHandler must not be null");
         var descriptor = handler.descriptor();
         Objects.requireNonNull(descriptor, "ToolDescriptor must not be null");
+        if (config.mode() == Mode.OFF) {
+            logger.debug("Tool '{}' not registered: tools capability is OFF", descriptor.name());
+            return;
+        }
         var name = descriptor.name();
         validateName(name);
         validateSchemaRoot("inputSchema", name, descriptor.inputSchema());
@@ -186,7 +192,7 @@ public class ToolRegistry {
     }
 
     public PaginatedResult<ToolDescriptor> list(int limit, @Nullable String cursor) {
-        int lim = limit > 0 ? limit : defaultPageSize;
+        int lim = limit > 0 ? limit : config.pageSize();
         var all = handlers.values().stream()
                 .map(ToolHandler::descriptor)
                 .sorted(Comparator.comparing(ToolDescriptor::name))
@@ -195,7 +201,7 @@ public class ToolRegistry {
     }
 
     public PaginatedResult<ToolDescriptor> list(int limit, @Nullable String cursor, Predicate<ToolDescriptor> filter) {
-        int lim = limit > 0 ? limit : defaultPageSize;
+        int lim = limit > 0 ? limit : config.pageSize();
         var all = handlers.values().stream()
                 .map(ToolHandler::descriptor)
                 .filter(filter)

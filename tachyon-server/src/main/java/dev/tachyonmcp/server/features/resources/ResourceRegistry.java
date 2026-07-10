@@ -9,6 +9,8 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ReadResourceRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.SubscribeRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.UnsubscribeRequestParams;
 import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.config.Mode;
+import dev.tachyonmcp.server.config.ResourcesConfig;
 import dev.tachyonmcp.server.domain.ReadResourceRequest;
 import dev.tachyonmcp.server.domain.ResourceContents;
 import dev.tachyonmcp.server.features.ChangeSupport;
@@ -41,21 +43,23 @@ import org.slf4j.LoggerFactory;
 @InternalApi
 public class ResourceRegistry {
 
+    private static final Logger logger = LoggerFactory.getLogger(ResourceRegistry.class);
+
     private final ConcurrentHashMap<String, ResourceEntry> byName = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ResourceEntry> byUri = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ResourceTemplateEntry> templates = new ConcurrentHashMap<>();
     final ConcurrentHashMap<String, Set<String>> subscriptions = new ConcurrentHashMap<>();
     private final ServerEngine server;
-    private final int defaultPageSize;
+    private final ResourcesConfig config;
 
     private final ChangeSupport changes = new ChangeSupport();
 
     /**
      * Creates a resource registry bound to the given server (for broadcasting subscription notifications).
      */
-    public ResourceRegistry(ServerEngine server, int defaultPageSize) {
+    public ResourceRegistry(ServerEngine server, ResourcesConfig config) {
         this.server = server;
-        this.defaultPageSize = defaultPageSize;
+        this.config = config;
     }
 
     public void onChange(Runnable callback) {
@@ -67,6 +71,10 @@ public class ResourceRegistry {
     }
 
     public ResourceRegistry add(ResourceDescriptor descriptor, ResourceHandler handler) {
+        if (config.mode() == Mode.OFF) {
+            logger.debug("Resource '{}' not registered: resources capability is OFF", descriptor.name());
+            return this;
+        }
         var entry = new ResourceEntry(descriptor, handler);
         var previous = byName.put(descriptor.name(), entry);
         if (previous != null && !previous.descriptor().uri().equals(descriptor.uri())) {
@@ -99,7 +107,7 @@ public class ResourceRegistry {
     }
 
     public PaginatedResult<ResourceDescriptor> list(int limit, @Nullable String cursor) {
-        int lim = limit > 0 ? limit : defaultPageSize;
+        int lim = limit > 0 ? limit : config.pageSize();
         var all = byName.values().stream()
                 .map(ResourceEntry::descriptor)
                 .sorted(Comparator.comparing(ResourceDescriptor::name))
@@ -109,7 +117,7 @@ public class ResourceRegistry {
 
     public PaginatedResult<ResourceDescriptor> list(
             int limit, @Nullable String cursor, Predicate<ResourceDescriptor> filter) {
-        int lim = limit > 0 ? limit : defaultPageSize;
+        int lim = limit > 0 ? limit : config.pageSize();
         var all = byName.values().stream()
                 .map(ResourceEntry::descriptor)
                 .filter(filter)
@@ -124,6 +132,10 @@ public class ResourceRegistry {
     }
 
     public ResourceRegistry addTemplate(ResourceTemplateEntry template) {
+        if (config.mode() == Mode.OFF) {
+            logger.debug("Resource template '{}' not registered: resources capability is OFF", template.name());
+            return this;
+        }
         templates.put(template.name(), template);
         fireOnChange();
         return this;

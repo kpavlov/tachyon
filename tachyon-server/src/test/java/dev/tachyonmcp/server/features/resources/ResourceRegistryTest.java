@@ -17,11 +17,11 @@ import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.config.ResourcesConfig;
 import dev.tachyonmcp.server.domain.Annotations;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.Role;
 import dev.tachyonmcp.server.domain.TextResourceContents;
-import dev.tachyonmcp.server.features.Pagination;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.server.session.DispatchContext;
@@ -40,7 +40,7 @@ import org.junit.jupiter.api.Test;
 class ResourceRegistryTest {
 
     private final ServerEngine server = newEngine(b -> {});
-    private final ResourceRegistry registry = new ResourceRegistry(server, Pagination.DEFAULT_PAGE_SIZE);
+    private final ResourceRegistry registry = new ResourceRegistry(server, ResourcesConfig.DEFAULT);
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
 
     private static ResourceDescriptor resource(String name) {
@@ -101,12 +101,20 @@ class ResourceRegistryTest {
 
     @Test
     void listWithCustomPageSize() {
-        var reg = new ResourceRegistry(server, 1);
+        var reg = new ResourceRegistry(
+                server, ResourcesConfig.builder().pageSize(1).build());
         reg.add(resource("a"), (ctx, req) -> null);
         reg.add(resource("b"), (ctx, req) -> null);
         var result = reg.list(0, null);
         assertThat(result.items()).hasSize(1);
         assertThat(result.nextCursor()).isEqualTo("a");
+    }
+
+    @Test
+    void addIsNoOpWhenResourcesCapabilityIsOff() {
+        var reg = new ResourceRegistry(server, ResourcesConfig.builder().off().build());
+        reg.add(resource("a"), (ctx, req) -> null);
+        assertThat(reg.getAll()).isEmpty();
     }
 
     @Test

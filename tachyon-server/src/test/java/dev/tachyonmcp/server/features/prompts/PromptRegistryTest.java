@@ -9,10 +9,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetPromptResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListPromptsResult;
 import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.config.FeatureConfig;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.PromptArgument;
 import dev.tachyonmcp.server.domain.PromptMessage;
-import dev.tachyonmcp.server.features.Pagination;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
@@ -26,8 +26,7 @@ import org.junit.jupiter.api.Test;
 
 class PromptRegistryTest {
 
-    private final PromptRegistry registry =
-            new PromptRegistry(JsonSchemaValidator.noop(), Pagination.DEFAULT_PAGE_SIZE);
+    private final PromptRegistry registry = new PromptRegistry(JsonSchemaValidator.noop(), FeatureConfig.DEFAULT);
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
 
     private static PromptDescriptor prompt(String name) {
@@ -82,12 +81,21 @@ class PromptRegistryTest {
 
     @Test
     void listWithCustomPageSize() {
-        var reg = new PromptRegistry(JsonSchemaValidator.noop(), 1);
+        var reg = new PromptRegistry(
+                JsonSchemaValidator.noop(), FeatureConfig.builder().pageSize(1).build());
         reg.add(prompt("a"), List.of());
         reg.add(prompt("b"), List.of());
         var result = reg.list(0, null);
         assertThat(result.items()).hasSize(1);
         assertThat(result.nextCursor()).isEqualTo("a");
+    }
+
+    @Test
+    void addIsNoOpWhenPromptsCapabilityIsOff() {
+        var reg = new PromptRegistry(
+                JsonSchemaValidator.noop(), FeatureConfig.builder().off().build());
+        reg.add(prompt("a"), List.of());
+        assertThat(reg.getAll()).isEmpty();
     }
 
     @Test

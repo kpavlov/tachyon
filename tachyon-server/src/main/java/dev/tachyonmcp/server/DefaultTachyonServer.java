@@ -175,42 +175,44 @@ final class DefaultTachyonServer implements ServerEngine {
         var hasTaskAugmentedTools = toolRegistry.getAll().stream()
                 .anyMatch(h ->
                         h.descriptor().taskSupport() != null && h.descriptor().taskSupport() != TaskSupport.FORBIDDEN);
-        if (capabilitiesConfig.tasksList() || capabilitiesConfig.tasksRequests() || hasTaskAugmentedTools) {
+        var tasksConfig = capabilitiesConfig.tasks();
+        if (tasksConfig.enabled() || hasTaskAugmentedTools) {
             builder.tasks(new ServerCapabilities.Tasks(
-                    capabilitiesConfig.tasksList(),
-                    capabilitiesConfig.tasksCancel(),
-                    capabilitiesConfig.tasksRequests() || hasTaskAugmentedTools));
+                    tasksConfig.list(), tasksConfig.cancel(), tasksConfig.requests() || hasTaskAugmentedTools));
         }
 
-        switch (capabilitiesConfig.toolsMode()) {
-            case ON -> builder.tools(new ServerCapabilities.Tools(capabilitiesConfig.toolsListChanged()));
+        var toolsConfig = capabilitiesConfig.tools();
+        switch (toolsConfig.mode()) {
+            case ON -> builder.tools(new ServerCapabilities.Tools(toolsConfig.listChanged()));
             case OFF -> {}
             case AUTO -> {
                 if (!toolRegistry.isEmpty()) {
-                    builder.tools(new ServerCapabilities.Tools(capabilitiesConfig.toolsListChanged()));
+                    builder.tools(new ServerCapabilities.Tools(toolsConfig.listChanged()));
                 }
             }
         }
 
-        switch (capabilitiesConfig.resourcesMode()) {
+        var resourcesConfig = capabilitiesConfig.resources();
+        switch (resourcesConfig.mode()) {
             case ON ->
-                builder.resources(new ServerCapabilities.Resources(
-                        capabilitiesConfig.resourcesSubscribe(), capabilitiesConfig.resourcesListChanged()));
+                builder.resources(
+                        new ServerCapabilities.Resources(resourcesConfig.subscribe(), resourcesConfig.listChanged()));
             case OFF -> {}
             case AUTO -> {
                 if (!resourceRegistry.getAll().isEmpty()) {
                     builder.resources(new ServerCapabilities.Resources(
-                            capabilitiesConfig.resourcesSubscribe(), capabilitiesConfig.resourcesListChanged()));
+                            resourcesConfig.subscribe(), resourcesConfig.listChanged()));
                 }
             }
         }
 
-        switch (capabilitiesConfig.promptsMode()) {
-            case ON -> builder.prompts(new ServerCapabilities.Prompts(capabilitiesConfig.promptsListChanged()));
+        var promptsConfig = capabilitiesConfig.prompts();
+        switch (promptsConfig.mode()) {
+            case ON -> builder.prompts(new ServerCapabilities.Prompts(promptsConfig.listChanged()));
             case OFF -> {}
             case AUTO -> {
                 if (!promptRegistry.getAll().isEmpty()) {
-                    builder.prompts(new ServerCapabilities.Prompts(capabilitiesConfig.promptsListChanged()));
+                    builder.prompts(new ServerCapabilities.Prompts(promptsConfig.listChanged()));
                 }
             }
         }
@@ -245,10 +247,10 @@ final class DefaultTachyonServer implements ServerEngine {
                 payloadDeserializer != null ? payloadDeserializer : defaultSerde;
         var caps = config.capabilities();
         this.toolRegistry = new ToolRegistry(
-                inputValidator1, outputValidator1, payloadSerializer1, payloadDeserializer1, caps.toolsPageSize());
-        this.resourceRegistry = new ResourceRegistry(this, caps.resourcesPageSize());
-        this.taskRegistry = new TaskRegistry(this, caps.tasksPageSize());
-        this.promptRegistry = new PromptRegistry(inputValidator1, caps.promptsPageSize());
+                inputValidator1, outputValidator1, payloadSerializer1, payloadDeserializer1, caps.tools());
+        this.resourceRegistry = new ResourceRegistry(this, caps.resources());
+        this.taskRegistry = new TaskRegistry(this, caps.tasks());
+        this.promptRegistry = new PromptRegistry(inputValidator1, caps.prompts());
         registerDefaults();
         bootstrapExtensions();
         setupChangeListeners(config);
@@ -287,16 +289,17 @@ final class DefaultTachyonServer implements ServerEngine {
     }
 
     private void setupChangeListeners(ServerConfig config) {
-        if (config.capabilities().toolsListChanged()) {
+        var caps = config.capabilities();
+        if (caps.tools().listChanged()) {
             toolRegistry.onChange(() -> broadcastNotification("notifications/tools/list_changed"));
         }
-        if (config.capabilities().resourcesListChanged()) {
+        if (caps.resources().listChanged()) {
             resourceRegistry.onChange(() -> broadcastNotification("notifications/resources/list_changed"));
         }
-        if (config.capabilities().promptsListChanged()) {
+        if (caps.prompts().listChanged()) {
             promptRegistry.onChange(() -> broadcastNotification("notifications/prompts/list_changed"));
         }
-        if (config.capabilities().tasksList()) {
+        if (caps.tasks().list()) {
             taskRegistry.onChange(() -> broadcastNotification("notifications/tasks/list_changed"));
         }
         taskRegistry.startTtlJanitor();

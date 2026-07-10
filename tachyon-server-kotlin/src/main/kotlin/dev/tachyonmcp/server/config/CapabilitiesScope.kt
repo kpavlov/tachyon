@@ -3,41 +3,25 @@
 package dev.tachyonmcp.server.config
 
 import dev.tachyonmcp.server.TachyonDsl
-import dev.tachyonmcp.server.features.Pagination
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 @TachyonDsl
 public class CapabilitiesScope
     @PublishedApi
     internal constructor() {
-        /** Tool capability mode: `ON`, `OFF`, or `AUTO`. */
-        public var tools: Mode = Mode.AUTO
+        @PublishedApi
+        internal var toolsConfig: FeatureConfig = FeatureConfig.DEFAULT
 
-        /** Whether to advertise tool list change notifications. */
-        public var toolsListChanged: Boolean = false
+        @PublishedApi
+        internal var resourcesConfig: ResourcesConfig = ResourcesConfig.DEFAULT
 
-        /** Resources capability mode: `ON`, `OFF`, or `AUTO`. */
-        public var resources: Mode = Mode.AUTO
+        @PublishedApi
+        internal var promptsConfig: FeatureConfig = FeatureConfig.DEFAULT
 
-        /** Whether to support resource subscriptions. */
-        public var resourcesSubscribe: Boolean = false
-
-        /** Whether to advertise resource list change notifications. */
-        public var resourcesListChanged: Boolean = false
-
-        /** Prompts capability mode: `ON`, `OFF`, or `AUTO`. */
-        public var prompts: Mode = Mode.AUTO
-
-        /** Whether to advertise prompt list change notifications. */
-        public var promptsListChanged: Boolean = false
-
-        /** Whether tasks capability is enabled. */
-        public var tasks: Boolean = false
-
-        /** Whether to support task cancellation. */
-        public var tasksCancel: Boolean = false
-
-        /** Whether to support task requests. */
-        public var tasksRequests: Boolean = false
+        @PublishedApi
+        internal var tasksConfig: TasksConfig = TasksConfig.DEFAULT
 
         /** Whether completions capability is enabled. */
         public var completions: Boolean = false
@@ -45,52 +29,37 @@ public class CapabilitiesScope
         /** Whether logging capability is enabled. */
         public var logging: Boolean = false
 
-        /** Default page size for tools/list when limit is omitted. */
-        public var toolsPageSize: Int = Pagination.DEFAULT_PAGE_SIZE
-
-        /** Default page size for resources/list when limit is omitted. */
-        public var resourcesPageSize: Int = Pagination.DEFAULT_PAGE_SIZE
-
-        /** Default page size for prompts/list when limit is omitted. */
-        public var promptsPageSize: Int = Pagination.DEFAULT_PAGE_SIZE
-
-        /** Default page size for tasks/list when limit is omitted. */
-        public var tasksPageSize: Int = Pagination.DEFAULT_PAGE_SIZE
-
-        public fun tools(listChanged: Boolean = false) {
-            tools = Mode.ON
-            toolsListChanged = listChanged
+        @OptIn(ExperimentalContracts::class)
+        public inline fun tools(configure: (@TachyonDsl FeatureScope).() -> Unit) {
+            contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
+            toolsConfig = FeatureScope().apply(configure).toConfig()
         }
 
-        public fun resources(
-            subscribe: Boolean = false,
-            listChanged: Boolean = false,
-        ) {
-            resources = Mode.ON
-            resourcesSubscribe = subscribe
-            resourcesListChanged = listChanged
+        @OptIn(ExperimentalContracts::class)
+        public inline fun resources(configure: (@TachyonDsl ResourcesScope).() -> Unit) {
+            contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
+            resourcesConfig = ResourcesScope().apply(configure).toConfig()
         }
 
-        public fun prompts(listChanged: Boolean = false) {
-            prompts = Mode.ON
-            promptsListChanged = listChanged
+        @OptIn(ExperimentalContracts::class)
+        public inline fun prompts(configure: (@TachyonDsl FeatureScope).() -> Unit) {
+            contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
+            promptsConfig = FeatureScope().apply(configure).toConfig()
+        }
+
+        @OptIn(ExperimentalContracts::class)
+        public inline fun tasks(configure: (@TachyonDsl TasksScope).() -> Unit) {
+            contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
+            tasksConfig = TasksScope().apply(configure).toConfig()
         }
 
         @PublishedApi
         internal fun applyTo(builder: CapabilitiesConfig.Builder) {
-            builder.toolsMode(tools)
-            builder.toolsListChanged(toolsListChanged)
-            builder.resourcesMode(resources)
-            builder.resourcesSubscribe(resourcesSubscribe)
-            builder.resourcesListChanged(resourcesListChanged)
-            builder.promptsMode(prompts)
-            builder.promptsListChanged(promptsListChanged)
-            if (tasks) builder.tasks(true, tasksCancel, tasksRequests)
+            builder.tools(toolsConfig)
+            builder.resources(resourcesConfig)
+            builder.prompts(promptsConfig)
+            builder.tasks(tasksConfig)
             if (completions) builder.completions()
             if (logging) builder.logging()
-            builder.toolsPageSize(toolsPageSize)
-            builder.resourcesPageSize(resourcesPageSize)
-            builder.promptsPageSize(promptsPageSize)
-            builder.tasksPageSize(tasksPageSize)
         }
     }

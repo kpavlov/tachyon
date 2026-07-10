@@ -17,34 +17,45 @@ import java.time.Duration;
 final class ConfigReference {
 
     /**
-     * Capabilities — which MCP features to advertise.
+     * Capabilities — which MCP features to advertise. Each feature has its own config type:
+     * {@link FeatureConfig} (tools/prompts), {@link ResourcesConfig}, {@link TasksConfig}.
      */
     static CapabilitiesConfig capabilities() {
         return CapabilitiesConfig.builder()
-            .toolsMode(Mode.AUTO) // ON when tools registered
-            .toolsListChanged(false)
-            .resourcesMode(Mode.AUTO) // ON when resources registered
-            .resourcesSubscribe(false)
-            .resourcesListChanged(false)
-            .promptsMode(Mode.AUTO) // ON when prompts registered
-            .promptsListChanged(false)
-            .tasksList(false)
-            .tasksCancel(false)
-            .tasksRequests(false)
+            .tools(FeatureConfig.builder()
+                .mode(Mode.AUTO) // ON when tools registered
+                .listChanged(false)
+                .build())
+            .resources(ResourcesConfig.builder()
+                .mode(Mode.AUTO) // ON when resources registered
+                .subscribe(false)
+                .listChanged(false)
+                .build())
+            .prompts(FeatureConfig.builder()
+                .mode(Mode.AUTO) // ON when prompts registered
+                .listChanged(false)
+                .build())
+            .tasks(TasksConfig.builder()
+                .enabled(false) // also advertised when a registered tool supports task augmentation
+                .list(false)
+                .cancel(false)
+                .requests(false)
+                .build())
             .completions(false)
             .logging(false)
             .build();
     }
 
     /**
-     * Convenience defaults.
+     * Flat setters and convenience defaults still work — they delegate to the nested configs
+     * above and accumulate across chained calls (e.g. {@code c.tools().toolsPageSize(2)}).
      */
     static CapabilitiesConfig convenienceDefaults() {
         return CapabilitiesConfig.builder()
             .tools(true) // Mode.ON, listChanged=true
             .resources(true, true) // Mode.ON, subscribe=true, listChanged=true
             .prompts() // Mode.ON, listChanged=false
-            .tasks() // list=true, cancel=false, requests=false
+            .tasks() // enabled=true, list=true, cancel=false, requests=false
             .completions() // true
             .logging() // true
             .build();

@@ -12,7 +12,7 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetTaskPayloadResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetTaskResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListTasksResult;
 import dev.tachyonmcp.server.RpcMethodHandler;
-import dev.tachyonmcp.server.features.Pagination;
+import dev.tachyonmcp.server.config.TasksConfig;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 class TaskRegistryTest {
 
     private final ServerEngine engine = newEngine(b -> {});
-    private final TaskRegistry registry = new TaskRegistry(engine, Pagination.DEFAULT_PAGE_SIZE);
+    private final TaskRegistry registry = new TaskRegistry(engine, TasksConfig.DEFAULT);
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
 
     @AfterEach
@@ -85,7 +85,7 @@ class TaskRegistryTest {
     @Test
     void listWithCustomPageSize() {
         try (var engine = newEngine(b -> {})) {
-            var reg = new TaskRegistry(engine, 1);
+            var reg = new TaskRegistry(engine, TasksConfig.builder().pageSize(1).build());
             reg.add(new TaskEntry("a", "id-a", "A"));
             reg.add(new TaskEntry("b", "id-b", "B"));
             var result = reg.list(0, null);
