@@ -90,7 +90,7 @@
         <spotbugs-maven-plugin.version>4.10.3.0</spotbugs-maven-plugin.version>
         <detekt.version>2.0.0-alpha.5</detekt.version>
         <ktlint.version>1.5.0</ktlint.version>
-        <spotbugs.version>4.10.2</spotbugs.version>
+        <spotbugs.version>4.10.3</spotbugs.version>
         <findsecbugs-plugin.version>1.14.0</findsecbugs-plugin.version>
         <dokka-maven-plugin.version>2.2.0</dokka-maven-plugin.version>
 
