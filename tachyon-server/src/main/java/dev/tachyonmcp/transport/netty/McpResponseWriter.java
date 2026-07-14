@@ -7,7 +7,7 @@ package dev.tachyonmcp.transport.netty;
 import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
@@ -43,19 +43,22 @@ public final class McpResponseWriter {
     }
 
     public static ChannelFuture sendJsonResponse(
-            ChannelHandlerContext ctx, ByteBuf body, @Nullable String sessionId, @Nullable String origin) {
+            ChannelHandlerContext ctx, byte[] body, @Nullable String sessionId, @Nullable String origin) {
         return sendJsonResponse(ctx, body, false, sessionId, origin);
     }
 
     public static ChannelFuture sendJsonResponse(
             ChannelHandlerContext ctx,
-            ByteBuf body,
+            byte[] body,
             boolean close,
             @Nullable String sessionId,
             @Nullable String origin) {
-        var response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, body);
+        // Zero-copy wrap on the event loop: the byte[] is GC-managed until this point, so a
+        // dropped task on the shutdown path is plain garbage, never a pooled-buffer leak.
+        var response =
+                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.wrappedBuffer(body));
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json");
-        response.headers().set(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
+        response.headers().set(HttpHeaderNames.CONTENT_LENGTH, body.length);
         if (sessionId != null) {
             response.headers().set(McpHeaderNames.MCP_SESSION_ID, sessionId);
         }

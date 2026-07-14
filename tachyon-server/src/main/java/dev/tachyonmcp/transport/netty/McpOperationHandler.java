@@ -213,7 +213,6 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                                 .execute(() -> completePostRequest(
                                         ctx, requestId, method, sessionId, origin, postStream, startNs, result, ex));
                     } catch (RejectedExecutionException e) {
-                        releaseResult(result);
                         logger.debug(
                                 "Event loop rejected response marshal during shutdown: id={}, method={}",
                                 requestId,
@@ -257,7 +256,6 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             try {
                 executor.execute(() -> finalizePostSseResponse(requestId, sessionId, postStream, result));
             } catch (RejectedExecutionException e) {
-                releaseResult(result);
                 postStream.close();
             }
             return;
@@ -280,12 +278,6 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         sendJsonResponse(ctx, response.responseBody(), response.sessionId(), origin);
     }
 
-    private static void releaseResult(McpDispatcher.@Nullable DispatchResult result) {
-        if (result instanceof McpDispatcher.DispatchResult.Response r) {
-            r.responseBody().release();
-        }
-    }
-
     private void finalizePostSseResponse(
             Object requestId,
             @Nullable String sessionId,
@@ -300,7 +292,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             var sseEventId = server.nextEventId();
             Runnable onDropped = null;
             if (!server.isStateless()) {
-                var resultJson = responseBody.toString(StandardCharsets.UTF_8);
+                var resultJson = new String(responseBody, StandardCharsets.UTF_8);
                 server.appendEvent(new SessionEvent.ResponseEvent(
                         sessionId,
                         requestId,
@@ -311,13 +303,9 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                 onDropped = redeliverOnReconnect(sessionId, postStream.streamKey(), sseEventId, resultJson);
             }
             postStream.writeEvent(sseEventId, responseBody, onDropped);
-            responseBody = null;
         } catch (RuntimeException e) {
             logger.error("Failed to write final response on POST-SSE stream", e);
         } finally {
-            if (responseBody != null) {
-                responseBody.release();
-            }
             postStream.close();
         }
     }

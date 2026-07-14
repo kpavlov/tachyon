@@ -7,7 +7,6 @@ package dev.tachyonmcp.server;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.internal.ServerEngine;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
@@ -34,12 +33,12 @@ class McpDispatcherTest {
             var first = asResponse(dispatcher
                     .dispatchRequestAsync(1, "ping", null, "sess_diff")
                     .join());
-            assertThat(first.responseBody().toString(StandardCharsets.UTF_8)).contains("result");
+            assertThat(first.responseBodyString()).contains("result");
 
             var second = asResponse(dispatcher
                     .dispatchRequestAsync(2, "ping", null, "sess_diff")
                     .join());
-            assertThat(second.responseBody().toString(StandardCharsets.UTF_8)).contains("result");
+            assertThat(second.responseBodyString()).contains("result");
         }
     }
 
@@ -52,11 +51,11 @@ class McpDispatcherTest {
 
             var first = asResponse(
                     dispatcher.dispatchRequestAsync(42, "ping", null, "sess_a").join());
-            assertThat(first.responseBody().toString(StandardCharsets.UTF_8)).contains("result");
+            assertThat(first.responseBodyString()).contains("result");
 
             var second = asResponse(
                     dispatcher.dispatchRequestAsync(42, "ping", null, "sess_b").join());
-            assertThat(second.responseBody().toString(StandardCharsets.UTF_8)).contains("result");
+            assertThat(second.responseBodyString()).contains("result");
         }
     }
 
@@ -70,7 +69,7 @@ class McpDispatcherTest {
             var result = asResponse(dispatcher
                     .dispatchRequestAsync(1, "tools/list", null, "sess_init")
                     .join());
-            var body = result.responseBody().toString(StandardCharsets.UTF_8);
+            var body = result.responseBodyString();
             assertThat(body).contains("error");
             assertThat(body).contains("-32600");
         }
@@ -85,7 +84,7 @@ class McpDispatcherTest {
             var result = asResponse(dispatcher
                     .dispatchRequestAsync(1, "ping", null, "sess_ping")
                     .join());
-            var body = result.responseBody().toString(StandardCharsets.UTF_8);
+            var body = result.responseBodyString();
             assertThat(body).contains("result");
             assertThat(body).doesNotContain("error");
         }
@@ -101,7 +100,7 @@ class McpDispatcherTest {
             var result = asResponse(dispatcher
                     .dispatchRequestAsync(1, "ping", null, "sess_active")
                     .join());
-            var body = result.responseBody().toString(StandardCharsets.UTF_8);
+            var body = result.responseBodyString();
             assertThat(body).contains("result");
         }
     }
@@ -184,7 +183,7 @@ class McpDispatcherTest {
             var result = asResponse(dispatcher
                     .dispatchRequestAsync(1, "ping", null, "sess_closed")
                     .join());
-            var body = result.responseBody().toString(StandardCharsets.UTF_8);
+            var body = result.responseBodyString();
             assertThat(body).contains("error");
             assertThat(body).contains("-32600");
         }

@@ -24,6 +24,7 @@ import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -98,7 +99,11 @@ public class McpDispatcher {
             static final Accepted INSTANCE = new Accepted();
         }
 
-        record Response(ByteBuf responseBody, @Nullable String sessionId) implements DispatchResult {}
+        record Response(byte[] responseBody, @Nullable String sessionId) implements DispatchResult {
+            public String responseBodyString() {
+                return new String(responseBody, StandardCharsets.UTF_8);
+            }
+        }
     }
 
     @Nullable
@@ -111,7 +116,7 @@ public class McpDispatcher {
         }
     }
 
-    public ByteBuf parseError() {
+    public byte[] parseError() {
         var err = JsonRpcErrors.parseError();
         return JsonRpcCodec.serializeError(-1, err.code(), err.message(), null);
     }
@@ -434,7 +439,7 @@ public class McpDispatcher {
         return new DispatchResult.Response(JsonRpcCodec.serializeError(id, code, message, null), null);
     }
 
-    private static ByteBuf encodeResponse(Object id, Object result) {
+    private static byte[] encodeResponse(Object id, Object result) {
         if (result instanceof String s) {
             return JsonRpcCodec.serializeResponse(id, s);
         }

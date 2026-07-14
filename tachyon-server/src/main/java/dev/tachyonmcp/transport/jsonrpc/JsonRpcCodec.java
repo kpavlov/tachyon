@@ -8,8 +8,6 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.Codec;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.CodecRegistry;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
-import io.netty.buffer.ByteBufOutputStream;
-import io.netty.buffer.PooledByteBufAllocator;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
@@ -63,7 +61,7 @@ public final class JsonRpcCodec {
     }
 
     /** Serializes a JSON-RPC response. */
-    public static ByteBuf serializeResponse(Object id, @Nullable String resultJson) {
+    public static byte[] serializeResponse(Object id, @Nullable String resultJson) {
         return serialize(gen -> {
             gen.writeStartObject();
             gen.writeStringProperty(JSONRPC, JSONRPC_VERSION);
@@ -79,7 +77,7 @@ public final class JsonRpcCodec {
     }
 
     /** Serializes a JSON-RPC error response. */
-    public static ByteBuf serializeError(Object id, int code, String message, @Nullable String dataJson) {
+    public static byte[] serializeError(Object id, int code, String message, @Nullable String dataJson) {
         return serialize(gen -> {
             gen.writeStartObject();
             gen.writeStringProperty(JSONRPC, JSONRPC_VERSION);
@@ -104,31 +102,6 @@ public final class JsonRpcCodec {
             case Number n -> gen.writeNumber(n.doubleValue());
             default -> gen.writeString(id.toString());
         }
-    }
-
-    /** Serializes a JSON-RPC request. */
-    public static ByteBuf serializeRequest(Object id, String method, String paramsJson) {
-        return serialize(gen -> {
-            gen.writeStartObject();
-            gen.writeStringProperty(JSONRPC, JSONRPC_VERSION);
-            gen.writeStringProperty(METHOD, method);
-            writeId(gen, id);
-            gen.writeName(PARAMS);
-            gen.writeRawValue(paramsJson);
-            gen.writeEndObject();
-        });
-    }
-
-    /** Serializes a JSON-RPC notification (no ID). */
-    public static ByteBuf serializeNotification(String method, String paramsJson) {
-        return serialize(gen -> {
-            gen.writeStartObject();
-            gen.writeStringProperty(JSONRPC, JSONRPC_VERSION);
-            gen.writeStringProperty(METHOD, method);
-            gen.writeName(PARAMS);
-            gen.writeRawValue(paramsJson);
-            gen.writeEndObject();
-        });
     }
 
     /** Serializes a JSON-RPC notification to a string. */
@@ -377,20 +350,17 @@ public final class JsonRpcCodec {
         ValueSerializer.writeJsonValue(gen, value);
     }
 
-    private static ByteBuf serialize(JsonWriter writer) {
-        // Pooled heap, matching the channel allocator: an Unpooled body would be garbage per
-        // response and copied into a pooled direct buffer again at channel-write time.
-        var buf = PooledByteBufAllocator.DEFAULT.heapBuffer(256);
-        try (var out = new ByteBufOutputStream(buf)) {
-            try (JsonGenerator gen = FACTORY.createGenerator(ObjectWriteContext.empty(), out, JsonEncoding.UTF8)) {
-                writer.write(gen);
-                gen.flush();
-            }
+    private static byte[] serialize(JsonWriter writer) {
+        // Plain byte[]: GC-managed, so a response dropped on the shutdown path is garbage, not a
+        // pooled-buffer leak. The send side wraps it zero-copy via Unpooled.wrappedBuffer.
+        try (var out = new ByteArrayOutputStream(256);
+                JsonGenerator gen = FACTORY.createGenerator(ObjectWriteContext.empty(), out, JsonEncoding.UTF8)) {
+            writer.write(gen);
+            gen.flush();
+            return out.toByteArray();
         } catch (IOException e) {
-            buf.release();
             throw new UncheckedIOException("Failed to serialize JSON", e);
         }
-        return buf;
     }
 
     @FunctionalInterface
