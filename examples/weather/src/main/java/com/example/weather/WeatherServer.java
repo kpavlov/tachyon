@@ -11,8 +11,6 @@ import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
-import dev.tachyonmcp.server.features.resources.ResourceTemplateHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +30,7 @@ public final class WeatherServer {
     }
 
     static TachyonServer createServer(int port) {
-        var server = TachyonServer.builder()
+        return TachyonServer.builder()
                 .info(it -> it
                         .name("weather-server")
                         .title("Weather Server")
@@ -58,19 +56,17 @@ public final class WeatherServer {
                         // Async resource handler — returns a CompletionStage (beta.5+)
                         (AsyncResourceHandler) (ctx, req) ->
                                 CompletableFuture.supplyAsync(WeatherImageResource::read))
-                .prompt(
-                        PromptDescriptor.of("rewrite-forecast", "Rewrites a weather forecast in a given style"),
+            .prompt(PromptDescriptor.of("rewrite-forecast", "Rewrites a weather forecast in a given style"),
                     WeatherServer::handleRewriteForecast)
-                .resourceTemplate(ResourceTemplateEntry.of(
-                        "forecast",
-                        "weather://forecast/{city}",
-                        "Weather forecast for a city",
-                        "application/json",
-                        (ResourceTemplateHandler) WeatherServer::handleForecastTemplate))
+            .resourceTemplate(builder -> builder
+                    .name("forecast")
+                    .uriTemplate("weather://forecast/{city}")
+                    .title("Weather in the city")
+                    .description("Weather forecast for a city")
+                    .mimeType("application/json"),
+                WeatherServer::handleForecastTemplate)
                 .port(port)
                 .start();
-
-        return server;
     }
 
     private WeatherServer() {
