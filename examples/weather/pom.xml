@@ -117,14 +117,29 @@
             </plugin>
 
             <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>4.0.6</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <finalName>${project.artifactId}</finalName>
+                    <mainClass>com.example.weather.WeatherServer</mainClass>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.5.0</version>
                 <configuration>
                     <archive>
                         <manifestEntries>
-                            <Main-Class
-                            >com.example.weather.WeatherServer</Main-Class>
+                            <Main-Class>com.example.weather.WeatherServer</Main-Class>
                         </manifestEntries>
                     </archive>
                 </configuration>
