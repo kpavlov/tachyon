@@ -10,8 +10,8 @@ import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.OutboundSseStream;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.netty.http.HttpHelpers;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http.*;
@@ -80,22 +80,15 @@ public final class PostSseStream implements OutboundSseStream {
         runOnEventLoop(() -> doWriteEvent(event));
     }
 
-    public void writeEvent(long sseEventId, ByteBuf body) {
-        writeEvent(sseEventId, body, null);
-    }
-
     /**
      * Writes a final response event, invoking {@code onDropped} (on the event loop) when the write
      * is discarded because this stream is already closed or its channel is dead — letting the caller
      * re-deliver the buffered response to a reconnected stream instead of losing it.
      */
-    public void writeEvent(long sseEventId, ByteBuf body, @Nullable Runnable onDropped) {
-        // The task owns `body`; if the event loop is shutting down and rejects it, the release
-        // inside doWriteEvent never runs — release here instead of leaking.
+    public void writeEvent(long sseEventId, byte[] body, @Nullable Runnable onDropped) {
         try {
             runOnEventLoop(() -> doWriteEvent(sseEventId, body, onDropped));
         } catch (java.util.concurrent.RejectedExecutionException e) {
-            body.release();
             if (onDropped != null) onDropped.run();
         }
     }
@@ -171,22 +164,17 @@ public final class PostSseStream implements OutboundSseStream {
         });
     }
 
-    private void doWriteEvent(long sseEventId, ByteBuf body, @Nullable Runnable onDropped) {
+    private void doWriteEvent(long sseEventId, byte[] body, @Nullable Runnable onDropped) {
         if (closed || !channel.isActive()) {
-            body.release();
             if (onDropped != null) onDropped.run();
             return;
         }
         if (!started) {
             // Stream not yet upgraded — fall back to the String path; rare path, OK to decode here.
-            try {
-                queued.add(new SseEvent(
-                        ServerEngine.wireEventId(sseEventId, streamKey),
-                        "message",
-                        body.toString(StandardCharsets.UTF_8)));
-            } finally {
-                body.release();
-            }
+            queued.add(new SseEvent(
+                    ServerEngine.wireEventId(sseEventId, streamKey),
+                    "message",
+                    new String(body, StandardCharsets.UTF_8)));
             return;
         }
         var alloc = channel.alloc();
@@ -195,7 +183,7 @@ public final class PostSseStream implements OutboundSseStream {
         var suffix = ByteBufUtil.writeAscii(alloc, "\n\n");
         var frame = alloc.compositeBuffer(3)
                 .addComponent(true, prefix)
-                .addComponent(true, body)
+                .addComponent(true, Unpooled.wrappedBuffer(body))
                 .addComponent(true, suffix);
         channel.writeAndFlush(new DefaultHttpContent(frame)).addListener((ChannelFutureListener) f -> {
             if (!f.isSuccess()) channel.close();

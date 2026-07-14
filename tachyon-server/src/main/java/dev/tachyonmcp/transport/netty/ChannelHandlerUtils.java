@@ -13,6 +13,7 @@ import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.SessionIdGenerator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -108,6 +109,16 @@ public final class ChannelHandlerUtils {
             ByteBuf body,
             @Nullable String origin) {
         return sendResponse(ctx, status, contentType, body, true, origin);
+    }
+
+    /** Zero-copy overload for GC-managed bodies: wraps the byte[] at send time on the event loop. */
+    public static ChannelFuture sendResponseAndClose(
+            ChannelHandlerContext ctx,
+            HttpResponseStatus status,
+            String contentType,
+            byte[] body,
+            @Nullable String origin) {
+        return sendResponse(ctx, status, contentType, Unpooled.wrappedBuffer(body), true, origin);
     }
 
     private static ChannelFuture sendResponse(

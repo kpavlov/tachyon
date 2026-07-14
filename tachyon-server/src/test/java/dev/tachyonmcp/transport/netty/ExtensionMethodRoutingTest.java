@@ -15,7 +15,6 @@ import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.server.session.DispatchContext;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
@@ -46,7 +45,7 @@ class ExtensionMethodRoutingTest {
         var result = (McpDispatcher.DispatchResult.Response) dispatcher
                 .dispatchRequestAsync(1, "test/ext-method", null, "sess_routing", null, ctx)
                 .join();
-        var body = result.responseBody().toString(StandardCharsets.UTF_8);
+        var body = result.responseBodyString();
         assertThat(body).contains("error");
         assertThat(body).contains("-32601");
     }
@@ -59,7 +58,7 @@ class ExtensionMethodRoutingTest {
         var result = (McpDispatcher.DispatchResult.Response) dispatcher
                 .dispatchRequestAsync(1, "test/ext-method", params, "sess_routing", null, context)
                 .join();
-        var body = result.responseBody().toString(StandardCharsets.UTF_8);
+        var body = result.responseBodyString();
         assertThat(body).contains("result");
     }
 

@@ -27,19 +27,6 @@ class JsonRpcCodecTest {
     }
 
     @Test
-    void serializeNotificationAsStringMatchesByteBufVersion() {
-        var method = "notifications/message";
-        var params = "{\"level\":\"info\",\"data\":\"hello\"}";
-
-        var asString = JsonRpcCodec.serializeNotificationAsString(method, params);
-        var asByteBuf = JsonRpcCodec.serializeNotification(method, params);
-        var fromByteBuf = asByteBuf.toString(java.nio.charset.StandardCharsets.UTF_8);
-        asByteBuf.release();
-
-        assertThat(asString).isEqualTo(fromByteBuf);
-    }
-
-    @Test
     void serializeRequestAsStringContainsRequiredFields() {
         var json = JsonRpcCodec.serializeRequestAsString("req-1", "sampling/createMessage", "{\"prompt\":\"hi\"}");
 
@@ -52,20 +39,6 @@ class JsonRpcCodecTest {
               "params": {"prompt":"hi"}
             }
             """);
-    }
-
-    @Test
-    void serializeRequestAsStringMatchesByteBufVersion() {
-        var id = "req-42";
-        var method = "elicitation/create";
-        var params = "{\"requestedSchema\":{}}";
-
-        var asString = JsonRpcCodec.serializeRequestAsString(id, method, params);
-        var asByteBuf = JsonRpcCodec.serializeRequest(id, method, params);
-        var fromByteBuf = asByteBuf.toString(java.nio.charset.StandardCharsets.UTF_8);
-        asByteBuf.release();
-
-        assertThat(asString).isEqualTo(fromByteBuf);
     }
 
     @Test

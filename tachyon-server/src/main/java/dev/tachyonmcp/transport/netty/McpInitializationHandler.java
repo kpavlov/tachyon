@@ -124,12 +124,14 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
     private void dispatchNoSessionMessage(
             ChannelHandlerContext ctx, @Nullable JsonRpcMessage message, @Nullable String origin) {
         switch (message) {
-            case null -> {
-                var errorBytes = dispatcher.parseError();
+            case null ->
                 ctx.executor()
                         .execute(() -> sendResponseAndClose(
-                                ctx, HttpResponseStatus.BAD_REQUEST, "application/json", errorBytes, origin));
-            }
+                                ctx,
+                                HttpResponseStatus.BAD_REQUEST,
+                                "application/json",
+                                dispatcher.parseError(),
+                                origin));
             case JsonRpcMessage.Request<?> req
             when METHOD_INITIALIZE.equals(req.method()) -> handleInitialize(ctx, req.id(), req.params(), origin);
             case JsonRpcMessage.Notification<?> not -> {
