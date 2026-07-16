@@ -5,6 +5,7 @@
 package dev.tachyonmcp.server.features.resources;
 
 import static dev.tachyonmcp.test.TestUtils.newEngine;
+import static dev.tachyonmcp.test.VirtualThreads.runInVirtualThread;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -42,7 +43,7 @@ import org.junit.jupiter.api.Test;
 class ResourceRegistryTest {
 
     private static final ResourceHandler EMPTY_HANDLER =
-            (ctx, request) -> TextResourceContents.of(request.uri(), "text/plain", "");
+            (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "");
 
     private final ServerEngine server = newEngine(b -> {});
     private final DefaultResourceRegistry registry =
@@ -130,7 +131,7 @@ class ResourceRegistryTest {
         reg.register(resource("a"), EMPTY_HANDLER);
         reg.registerTemplate(
                 ResourceTemplateDescriptor.of("template-entry", "test://entry/{id}"),
-                (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", ""));
+                (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", ""));
 
         assertThat(reg.find("a")).isEmpty();
         assertThat(reg.descriptors()).isEmpty();
@@ -146,15 +147,16 @@ class ResourceRegistryTest {
         api.register(resource -> resource.name("sync").uri("test://sync"), EMPTY_HANDLER)
                 .registerAsync(
                         resource -> resource.name("async").uri("test://async"),
-                        (ctx, request) -> CompletableFuture.completedFuture(
-                                TextResourceContents.of(request.uri(), "text/plain", "async")))
+                        (ctx, rawUri, params, uriTemplate) -> CompletableFuture.completedFuture(
+                                TextResourceContents.of(rawUri, "text/plain", "async")))
                 .registerTemplate(
                         template -> template.name("sync-template").uriTemplate("test://sync/{id}"),
-                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", scalar(params, "id")))
+                        (ctx, rawUri, params, uriTemplate) ->
+                                TextResourceContents.of(rawUri, "text/plain", scalar(params, "id")))
                 .registerTemplateAsync(
                         template -> template.name("async-template").uriTemplate("test://async/{id}"),
-                        (ctx, uri, params) -> CompletableFuture.completedFuture(
-                                TextResourceContents.of(uri, "text/plain", scalar(params, "id"))));
+                        (ctx, rawUri, params, uriTemplate) -> CompletableFuture.completedFuture(
+                                TextResourceContents.of(rawUri, "text/plain", scalar(params, "id"))));
 
         assertThat(api.descriptors()).extracting(ResourceDescriptor::name).containsExactly("async", "sync");
         assertThat(api.find("sync")).isPresent();
@@ -206,15 +208,98 @@ class ResourceRegistryTest {
     void shouldReadResourceContentByUri() throws Exception {
         var descriptor = ResourceDescriptor.of("test-resource", "test://resource/1", "Test resource", "text/plain");
         registry.register(
-                descriptor, (ctx, req) -> TextResourceContents.of("test://resource/1", "text/plain", "content"));
+                descriptor,
+                (ctx, rawUri, params, uriTemplate) ->
+                        TextResourceContents.of("test://resource/1", "text/plain", "content"));
 
-        var result = handlers.get("resources/read")
-                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "test://resource/1"));
+        var result = runInVirtualThread(() -> handlers.get("resources/read")
+                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "test://resource/1")));
 
         assertThat(result).isInstanceOf(ReadResourceResult.class);
         var readResult = (ReadResourceResult) result;
         assertThat(readResult.contents()).hasSize(1);
         assertThat(readResult.contents().getFirst().uri()).isEqualTo("test://resource/1");
+    }
+
+    @Test
+    void shouldPassStaticResourceDetailsToCommonHandler() throws Exception {
+        var capturedUri = new AtomicReference<String>();
+        var capturedParams = new AtomicReference<Map<String, UriTemplateValue>>();
+        var capturedTemplate = new AtomicReference<String>();
+        registry.register(resource("static-request"), (ctx, rawUri, params, uriTemplate) -> {
+            capturedUri.set(rawUri);
+            capturedParams.set(params);
+            capturedTemplate.set(uriTemplate);
+            return TextResourceContents.of(rawUri, "text/plain", "static");
+        });
+
+        runInVirtualThread(() -> handlers.get("resources/read")
+                .handle(DefaultDispatchContext.noop(), Map.of("uri", "test://static-request")));
+
+        assertThat(capturedUri).hasValue("test://static-request");
+        assertThat(capturedParams.get()).isEmpty();
+        assertThat(capturedTemplate).hasNullValue();
+    }
+
+    @Test
+    void shouldPassTemplateResourceDetailsToCommonHandler() throws Exception {
+        var capturedUri = new AtomicReference<String>();
+        var capturedParams = new AtomicReference<Map<String, UriTemplateValue>>();
+        var capturedTemplate = new AtomicReference<String>();
+        registry.registerTemplate(
+                ResourceTemplateDescriptor.of("template-request", "test://items/{id}"),
+                (ctx, rawUri, params, uriTemplate) -> {
+                    capturedUri.set(rawUri);
+                    capturedParams.set(params);
+                    capturedTemplate.set(uriTemplate);
+                    return TextResourceContents.of(rawUri, "text/plain", "template");
+                });
+
+        runInVirtualThread(() ->
+                handlers.get("resources/read").handle(DefaultDispatchContext.noop(), Map.of("uri", "test://items/42")));
+
+        assertThat(capturedUri).hasValue("test://items/42");
+        assertThat(capturedParams.get()).containsExactly(Map.entry("id", new UriTemplateValue.Scalar("42")));
+        assertThat(capturedTemplate).hasValue("test://items/{id}");
+    }
+
+    @Test
+    void shouldRunSynchronousResourceHandlerOnCallingVirtualThread() throws Exception {
+        var handlerThread = new AtomicReference<Thread>();
+        registry.register(resource("sync-thread"), (ctx, rawUri, params, uriTemplate) -> {
+            handlerThread.set(Thread.currentThread());
+            return TextResourceContents.of(rawUri, "text/plain", "sync");
+        });
+
+        runInVirtualThread(() -> handlers.get("resources/read")
+                .handle(DefaultDispatchContext.noop(), Map.of("uri", "test://sync-thread")));
+
+        assertThat(handlerThread.get()).isNotNull().matches(Thread::isVirtual);
+    }
+
+    @Test
+    void shouldRunAndAwaitAsynchronousResourceHandlerOnSameVirtualThread() throws Exception {
+        var handlerThread = new AtomicReference<Thread>();
+        var awaitThread = new AtomicReference<Thread>();
+        var contents = TextResourceContents.of("test://async-thread", "text/plain", "async");
+        var completion = new CompletableFuture<TextResourceContents>() {
+            @Override
+            public CompletableFuture<TextResourceContents> toCompletableFuture() {
+                awaitThread.set(Thread.currentThread());
+                return this;
+            }
+        };
+        registry.registerAsync(resource("async-thread"), (ctx, rawUri, params, uriTemplate) -> {
+            handlerThread.set(Thread.currentThread());
+            return completion;
+        });
+        CompletableFuture.runAsync(() -> completion.complete(contents));
+
+        runInVirtualThread(() -> handlers.get("resources/read")
+                .handle(DefaultDispatchContext.noop(), Map.of("uri", "test://async-thread")));
+
+        assertThat(handlerThread.get()).isSameAs(awaitThread.get());
+        assertThat(handlerThread.get()).isNotNull().matches(Thread::isVirtual);
     }
 
     @Test
@@ -341,7 +426,7 @@ class ResourceRegistryTest {
         handlers.get("resources/subscribe").handle(context(sess, server), Map.of("uri", "test://resource/1"));
         registry.register(
                 ResourceDescriptor.of("test-resource", "test://resource/1", "Test resource", "text/plain"),
-                (ctx, req) -> TextResourceContents.of("test://resource/1", "text/plain", ""));
+                (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", ""));
 
         registry.notifyResourceUpdated("test://resource/1");
 
@@ -358,7 +443,7 @@ class ResourceRegistryTest {
 
         registry.register(
                 ResourceDescriptor.of("r1", "test://r1", null, null),
-                (ctx, req) -> TextResourceContents.of("test://r1", "text/plain", ""));
+                (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", ""));
 
         assertThat(callCount).hasValue(1);
     }
@@ -367,7 +452,7 @@ class ResourceRegistryTest {
     void shouldFireOnChangeWhenExistingResourceRemoved() {
         registry.register(
                 ResourceDescriptor.of("r1", "test://r1", null, null),
-                (ctx, req) -> TextResourceContents.of("test://r1", "text/plain", ""));
+                (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", ""));
 
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
@@ -394,7 +479,7 @@ class ResourceRegistryTest {
 
         registry.registerTemplate(
                 ResourceTemplateDescriptor.of("tmpl", "test://tmpl/{id}"),
-                (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", ""));
+                (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", ""));
 
         assertThat(callCount).hasValue(1);
     }
@@ -403,14 +488,14 @@ class ResourceRegistryTest {
     void shouldReplaceHandlerAndFireOnChangeWhenAddedWithSameName() {
         registry.register(
                 ResourceDescriptor.of("doc", "resource://doc-v1", null, "text/plain"),
-                (ctx, req) -> TextResourceContents.of("resource://doc-v1", "text/plain", "v1"));
+                (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "v1"));
 
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
         registry.register(
                 ResourceDescriptor.of("doc", "resource://doc-v1", null, "text/plain"),
-                (ctx, req) -> TextResourceContents.of("resource://doc-v1", "text/plain", "v2"));
+                (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "v2"));
 
         assertThat(callCount).hasValue(1);
         assertThat(registry.find("doc")).isPresent();
@@ -421,11 +506,11 @@ class ResourceRegistryTest {
     void shouldEvictOldUriWhenResourceUpdatedWithNewUri() throws Exception {
         registry.register(
                 ResourceDescriptor.of("doc", "resource://doc-v1", null, "text/plain"),
-                (ctx, req) -> TextResourceContents.of("resource://doc-v1", "text/plain", "v1"));
+                (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "v1"));
 
         registry.register(
                 ResourceDescriptor.of("doc", "resource://doc-v2", null, "text/plain"),
-                (ctx, req) -> TextResourceContents.of("resource://doc-v2", "text/plain", "v2"));
+                (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "v2"));
 
         // old URI must no longer resolve
         var oldUriResult = handlers.get("resources/read")
@@ -433,8 +518,8 @@ class ResourceRegistryTest {
         assertThat(oldUriResult).isInstanceOf(JsonRpcError.class);
 
         // new URI must resolve correctly
-        var newUriResult = handlers.get("resources/read")
-                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "resource://doc-v2"));
+        var newUriResult = runInVirtualThread(() -> handlers.get("resources/read")
+                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "resource://doc-v2")));
         assertThat(newUriResult).isInstanceOf(ReadResourceResult.class);
         assertThat(registry.descriptors()).hasSize(1);
     }
@@ -443,14 +528,14 @@ class ResourceRegistryTest {
     void shouldFireOnChangeWhenResourceUriUpdated() {
         registry.register(
                 ResourceDescriptor.of("doc", "resource://doc-v1", null, "text/plain"),
-                (ctx, req) -> TextResourceContents.of("resource://doc-v1", "text/plain", "v1"));
+                (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "v1"));
 
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
         registry.register(
                 ResourceDescriptor.of("doc", "resource://doc-v2", null, "text/plain"),
-                (ctx, req) -> TextResourceContents.of("resource://doc-v2", "text/plain", "v2"));
+                (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "v2"));
 
         assertThat(callCount).hasValue(1);
     }
@@ -468,7 +553,9 @@ class ResourceRegistryTest {
                 annotations,
                 1024L,
                 List.of(icon));
-        registry.register(descriptor, (ctx, req) -> TextResourceContents.of("test://full", "text/plain", "content"));
+        registry.register(
+                descriptor,
+                (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "content"));
 
         var result = (ListResourcesResult) handlers.get("resources/list").handle(DefaultDispatchContext.noop(), null);
 
@@ -535,15 +622,16 @@ class ResourceRegistryTest {
     void shouldPassExplodedSequenceToTemplateHandler() throws Exception {
         var captured = new AtomicReference<Map<String, UriTemplateValue>>();
         registry.registerTemplate(
-                ResourceTemplateDescriptor.of("files", "resource://files{/segments*}"), (ctx, uri, params) -> {
+                ResourceTemplateDescriptor.of("files", "resource://files{/segments*}"),
+                (ctx, rawUri, params, uriTemplate) -> {
                     captured.set(params);
-                    return TextResourceContents.of(uri, "text/plain", "ok");
+                    return TextResourceContents.of(rawUri, "text/plain", "ok");
                 });
 
-        var result = handlers.get("resources/read")
+        var result = runInVirtualThread(() -> handlers.get("resources/read")
                 .handle(
                         DefaultDispatchContext.noop(),
-                        Map.<String, Object>of("uri", "resource://files/one/two%20words"));
+                        Map.<String, Object>of("uri", "resource://files/one/two%20words")));
 
         assertThat(result).isInstanceOf(ReadResourceResult.class);
         assertThat(captured.get())
@@ -554,18 +642,20 @@ class ResourceRegistryTest {
     void shouldPreferMoreSpecificTemplateOnOverlap() throws Exception {
         var matched = new AtomicReference<@Nullable String>();
         registry.registerTemplate(
-                ResourceTemplateDescriptor.of("generic", "resource://{type}/{id}"), (ctx, uri, params) -> {
+                ResourceTemplateDescriptor.of("generic", "resource://{type}/{id}"),
+                (ctx, rawUri, params, uriTemplate) -> {
                     matched.set("generic");
-                    return TextResourceContents.of(uri, "text/plain", "generic");
+                    return TextResourceContents.of(rawUri, "text/plain", "generic");
                 });
         registry.registerTemplate(
-                ResourceTemplateDescriptor.of("specific", "resource://users/{id}"), (ctx, uri, params) -> {
+                ResourceTemplateDescriptor.of("specific", "resource://users/{id}"),
+                (ctx, rawUri, params, uriTemplate) -> {
                     matched.set("specific");
-                    return TextResourceContents.of(uri, "text/plain", "specific");
+                    return TextResourceContents.of(rawUri, "text/plain", "specific");
                 });
 
-        handlers.get("resources/read")
-                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "resource://users/42"));
+        runInVirtualThread(() -> handlers.get("resources/read")
+                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "resource://users/42")));
 
         assertThat(matched).hasValue("specific");
     }
@@ -583,7 +673,8 @@ class ResourceRegistryTest {
                         "Template Title",
                         annotations,
                         List.of(icon)),
-                (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "content-" + scalar(params, "id")));
+                (ctx, rawUri, params, uriTemplate) ->
+                        TextResourceContents.of(rawUri, "text/plain", "content-" + scalar(params, "id")));
 
         var result = (ListResourceTemplatesResult)
                 handlers.get("resources/templates/list").handle(DefaultDispatchContext.noop(), null);
@@ -607,7 +698,7 @@ class ResourceRegistryTest {
         var descriptor = ResourceDescriptor.of(
                 "sized-resource", "test://sized", "A resource", "application/octet-stream", null, null, 4096L, null);
         var contentLoaded = new java.util.concurrent.atomic.AtomicBoolean(false);
-        registry.register(descriptor, (ctx, req) -> {
+        registry.register(descriptor, (ctx, rawUri, params, uriTemplate) -> {
             contentLoaded.set(true);
             return TextResourceContents.of("test://sized", "application/octet-stream", "data");
         });
@@ -619,8 +710,8 @@ class ResourceRegistryTest {
         assertThat(contentLoaded).isFalse();
 
         // resources/read triggers lazy content load
-        handlers.get("resources/read")
-                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "test://sized"));
+        runInVirtualThread(() -> handlers.get("resources/read")
+                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "test://sized")));
         assertThat(contentLoaded).isTrue();
     }
 

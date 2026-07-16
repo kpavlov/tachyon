@@ -11,7 +11,6 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.UnsubscribeRequestParams;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.Mode;
 import dev.tachyonmcp.server.config.ResourcesConfig;
-import dev.tachyonmcp.server.domain.ReadResourceRequest;
 import dev.tachyonmcp.server.domain.ResourceContents;
 import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.ChangeSupport;
@@ -192,7 +191,7 @@ public class DefaultResourceRegistry implements ResourceRegistry {
      * @throws IllegalArgumentException if a template with the same name is already registered
      */
     @Override
-    public ResourceRegistry registerTemplate(ResourceTemplateDescriptor descriptor, ResourceTemplateHandler handler) {
+    public ResourceRegistry registerTemplate(ResourceTemplateDescriptor descriptor, ResourceHandler handler) {
         if (config.mode() == Mode.OFF) {
             logger.debug("Resource template '{}' not registered: resources capability is OFF", descriptor.name());
             return this;
@@ -391,25 +390,31 @@ public class DefaultResourceRegistry implements ResourceRegistry {
             return "resources/read";
         }
 
-        /**
-         * Runs on the dispatcher's virtual thread; blocking to join the handler is the SPI contract.
-         */
+        /** Runs resource handlers on the server executor's virtual threads. */
         @Override
         public Object handle(DispatchContext context, Object params) throws Exception {
-            var readParams = toReadParams(params);
-            if (readParams == null) return JsonRpcErrors.invalidRequest("Missing resource URI");
-            var uri = readParams.uri();
+            var uri = toRawUri(params);
+            if (uri == null) return JsonRpcErrors.invalidRequest("Missing resource URI");
             var entry = registry.getByUri(uri);
             if (entry != null) {
                 var extId = entry.descriptor().extensionId();
                 if (extId != null && !context.isExtensionEnabled(extId)) {
                     return JsonRpcErrors.resourceNotFound("Resource not found");
                 }
-                return readResult(context, uri, () -> entry.handler().readAsync(context, readParams));
+                return readResult(context, uri, () -> entry.handler().readAsync(context, uri, Map.of(), null));
             }
             var match = registry.matchTemplate(uri);
             if (match == null) return JsonRpcErrors.resourceNotFound("Resource not found");
-            return readResult(context, uri, () -> match.entry().handler().readAsync(context, uri, match.params()));
+            return readResult(
+                    context,
+                    uri,
+                    () -> match.entry()
+                            .handler()
+                            .readAsync(
+                                    context,
+                                    uri,
+                                    match.params(),
+                                    match.entry().descriptor().uriTemplate()));
         }
 
         private Object readResult(
@@ -424,12 +429,12 @@ public class DefaultResourceRegistry implements ResourceRegistry {
             return context.responseMapper().readResourceResult(List.of(contents));
         }
 
-        private static @Nullable ReadResourceRequest toReadParams(Object params) {
+        private static @Nullable String toRawUri(Object params) {
             if (params instanceof ReadResourceRequestParams p) {
-                return ReadResourceRequest.of(p.uri(), null);
+                return p.uri();
             }
             if (params instanceof Map<?, ?> map && map.get("uri") instanceof String uri) {
-                return ReadResourceRequest.of(uri, null);
+                return uri;
             }
             return null;
         }

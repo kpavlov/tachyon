@@ -10,7 +10,7 @@ import dev.tachyonmcp.server.domain.UriTemplate;
 
 @InternalApi
 public record ResourceTemplateEntry(
-        ResourceTemplateDescriptor descriptor, ResourceTemplateHandler handler, UriTemplate uriTemplate)
+        ResourceTemplateDescriptor descriptor, ResourceHandler handler, UriTemplate uriTemplate)
         implements ServerFeature<ResourceTemplateDescriptor> {
 
     /**
@@ -20,7 +20,7 @@ public record ResourceTemplateEntry(
      * @param handler    the handler for resource template requests
      * @return the created resource template entry
      */
-    public static ResourceTemplateEntry of(ResourceTemplateDescriptor descriptor, ResourceTemplateHandler handler) {
+    public static ResourceTemplateEntry of(ResourceTemplateDescriptor descriptor, ResourceHandler handler) {
         return new ResourceTemplateEntry(descriptor, handler, UriTemplate.create(descriptor.uriTemplate()));
     }
 }

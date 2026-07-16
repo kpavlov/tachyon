@@ -4,14 +4,11 @@
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.BlobResourceContents;
-import dev.tachyonmcp.server.domain.ReadResourceRequest;
 import dev.tachyonmcp.server.domain.TextResourceContents;
-import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
-import dev.tachyonmcp.server.features.resources.ResourceTemplateHandler;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -24,8 +21,8 @@ final class ResourceHandlerExample {
      * Static resource — fixed URI.
      */
     static ResourceHandler configHandler() {
-        return (InteractionContext ctx, ReadResourceRequest req) ->
-            TextResourceContents.of(req.uri(), "application/json", "{\"mode\":\"production\"}");
+        return (ctx, uri, params, uriTemplate) ->
+            TextResourceContents.of(uri, "application/json", "{\"mode\":\"production\"}");
     }
 
     static ResourceDescriptor configDescriptor() {
@@ -36,8 +33,8 @@ final class ResourceHandlerExample {
      * Static resource — binary (image, PDF, etc).
      */
     static ResourceHandler imageHandler() {
-        return (InteractionContext ctx, ReadResourceRequest req) ->
-            BlobResourceContents.of(req.uri(), "image/png", "iVBORw0KGgoAAAANS...");
+        return (ctx, uri, params, uriTemplate) ->
+            BlobResourceContents.of(uri, "image/png", "iVBORw0KGgoAAAANS...");
     }
 
     /**
@@ -52,8 +49,8 @@ final class ResourceHandlerExample {
             .build();
     }
 
-    static ResourceTemplateHandler userProfileTemplateHandler() {
-        return (InteractionContext ctx, String uri, java.util.Map<String, UriTemplateValue> params) -> {
+    static ResourceHandler userProfileTemplateHandler() {
+        return (ctx, uri, params, uriTemplate) -> {
             var userId = params.get("userId").scalarValue();
             return TextResourceContents.of(uri, "application/json", "{\"userId\":\"" + userId + "\"}");
         };
@@ -69,8 +66,8 @@ final class ResourceHandlerExample {
         );
     }
 
-    static ResourceTemplateHandler forecastTemplateHandler() {
-        return (ctx, uri, params) -> TextResourceContents.of(
+    static ResourceHandler forecastTemplateHandler() {
+        return (ctx, uri, params, uriTemplate) -> TextResourceContents.of(
             uri, "application/json",
             "{\"city\":\"" + params.get("city") + "\",\"temp\":22}");
     }
@@ -81,7 +78,7 @@ final class ResourceHandlerExample {
      * integrating an already-async client.
      */
     static AsyncResourceHandler asyncConfigHandler() {
-        return (ctx, req) -> CompletableFuture.supplyAsync(
-            () -> TextResourceContents.of(req.uri(), "application/json", "{\"mode\":\"production\"}"));
+        return (ctx, uri, params, uriTemplate) -> CompletableFuture.supplyAsync(
+            () -> TextResourceContents.of(uri, "application/json", "{\"mode\":\"production\"}"));
     }
 }

@@ -13,9 +13,11 @@ import kotlinx.coroutines.CoroutineName
 internal fun templateHandler(
     name: String,
     block: suspend TemplateScope.() -> ResourceContents,
-): ResourceTemplateHandler {
+): ResourceHandler {
     val coroutineName = CoroutineName("resource-template:$name")
-    return ResourceTemplateHandler { ctx, uri, params ->
-        runSuspendHandler(coroutineName) { TemplateScope(ctx, uri, params).block() }
+    return ResourceHandler { ctx, uri, params, uriTemplate ->
+        runSuspendHandler(coroutineName) {
+            TemplateScope(ctx, uri, params, requireNotNull(uriTemplate)).block()
+        }
     }
 }

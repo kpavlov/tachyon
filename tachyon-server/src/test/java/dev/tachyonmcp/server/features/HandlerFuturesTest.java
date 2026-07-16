@@ -10,11 +10,29 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 class HandlerFuturesTest {
+
+    @Test
+    void shouldRequireVirtualThread() throws Exception {
+        assertThatThrownBy(HandlerFutures::assumeVirtualThread)
+                .isInstanceOf(AssertionError.class)
+                .hasMessage("Handler MUST run on virtual thread");
+
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var thread = executor.submit(() -> {
+                        HandlerFutures.assumeVirtualThread();
+                        return Thread.currentThread();
+                    })
+                    .get();
+
+            assertThat(thread.isVirtual()).isTrue();
+        }
+    }
 
     @Test
     void shouldReturnResultForAlreadyCompleteStage() throws Exception {

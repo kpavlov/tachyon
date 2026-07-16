@@ -7,8 +7,8 @@ import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.TextResourceContents
 import dev.tachyonmcp.server.domain.UriTemplateValue
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor
+import dev.tachyonmcp.server.features.resources.ResourceHandler
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
-import dev.tachyonmcp.server.features.resources.ResourceTemplateHandler
 import dev.tachyonmcp.server.features.resources.resourceDescriptor
 
 /** Static resource — plain factory. */
@@ -49,8 +49,8 @@ fun userProfileTemplateDescriptor(): ResourceTemplateDescriptor =
         .mimeType("application/json")
         .build()
 
-fun userProfileTemplateHandler(): ResourceTemplateHandler =
-    ResourceTemplateHandler { _, uri, params ->
+fun userProfileTemplateHandler(): ResourceHandler =
+    ResourceHandler { _, uri, params, _ ->
         val userId = params["userId"]?.scalarValue()
         TextResourceContents(
             uri = uri,
@@ -69,8 +69,8 @@ fun forecastTemplateDescriptor(): ResourceTemplateDescriptor =
         .mimeType("application/json")
         .build()
 
-fun forecastTemplateHandler(): ResourceTemplateHandler =
-    ResourceTemplateHandler { _, uri, params ->
+fun forecastTemplateHandler(): ResourceHandler =
+    ResourceHandler { _, uri, params, _ ->
         val city = params["city"]?.scalarValue()
         TextResourceContents(
             uri = uri,

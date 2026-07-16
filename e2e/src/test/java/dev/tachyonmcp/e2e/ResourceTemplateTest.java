@@ -24,8 +24,8 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
                                 .uriTemplate("resource://items/{id}")
                                 .description("An item")
                                 .mimeType("text/plain"),
-                        (ctx, uri, params) ->
-                                TextResourceContents.of(uri, "text/plain", "item=" + scalar(params, "id")));
+                        (ctx, rawUri, params, uriTemplate) ->
+                                TextResourceContents.of(rawUri, "text/plain", "item=" + scalar(params, "id")));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -60,22 +60,22 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
                                 .uriTemplate("resource://items/{id}")
                                 .description("An item")
                                 .mimeType("text/plain"),
-                        (ctx, uri, params) ->
-                                TextResourceContents.of(uri, "text/plain", "item=" + scalar(params, "id")))
+                        (ctx, rawUri, params, uriTemplate) ->
+                                TextResourceContents.of(rawUri, "text/plain", "item=" + scalar(params, "id")))
                 .registerTemplate(
                         builder -> builder.name("orders")
                                 .uriTemplate("resource://orders/{orderId}")
                                 .description("An order")
                                 .mimeType("text/plain"),
-                        (ctx, uri, params) ->
-                                TextResourceContents.of(uri, "text/plain", "order=" + scalar(params, "orderId")))
+                        (ctx, rawUri, params, uriTemplate) ->
+                                TextResourceContents.of(rawUri, "text/plain", "order=" + scalar(params, "orderId")))
                 .registerTemplate(
                         builder -> builder.name("users")
                                 .uriTemplate("resource://users/{userId}")
                                 .description("A user")
                                 .mimeType("text/plain"),
-                        (ctx, uri, params) ->
-                                TextResourceContents.of(uri, "text/plain", "user=" + scalar(params, "userId")));
+                        (ctx, rawUri, params, uriTemplate) ->
+                                TextResourceContents.of(rawUri, "text/plain", "user=" + scalar(params, "userId")));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -129,8 +129,8 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
                                 .uriTemplate("users://{userId}/posts/{postId}")
                                 .description("User's post")
                                 .mimeType("text/plain"),
-                        (ctx, uri, params) -> TextResourceContents.of(
-                                uri,
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
+                                rawUri,
                                 "text/plain",
                                 "user=" + scalar(params, "userId") + ",post=" + scalar(params, "postId")));
 

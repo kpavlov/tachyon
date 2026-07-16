@@ -65,12 +65,14 @@ public class TasksExtension implements ServerExtension {
         server.tools().register(new CreateTaskHandler(descriptor, server));
 
         server.resources()
-                .registerTemplate(ResourceTemplateDescriptor.of("task-status", "task://{id}"), (ctx, uri, params) -> {
-                    var id = params.get("id").scalarValue();
-                    var entry = server.tasks().get(id);
-                    var text = entry != null ? entry.status().name() : "not_found";
-                    return TextResourceContents.of(uri, "text/plain", text, null);
-                });
+                .registerTemplate(
+                        ResourceTemplateDescriptor.of("task-status", "task://{id}"),
+                        (ctx, uri, params, uriTemplate) -> {
+                            var id = params.get("id").scalarValue();
+                            var entry = server.tasks().get(id);
+                            var text = entry != null ? entry.status().name() : "not_found";
+                            return TextResourceContents.of(uri, "text/plain", text, null);
+                        });
     }
 
     private static final class CreateTaskHandler extends AbstractToolHandler {

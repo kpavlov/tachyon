@@ -17,6 +17,10 @@ public final class HandlerFutures {
 
     private HandlerFutures() {}
 
+    public static void assumeVirtualThread() {
+        assert Thread.currentThread().isVirtual() : "Handler MUST run on virtual thread";
+    }
+
     /**
      * Joins a CompletionStage via blocking {@code .get()}, restoring interrupt and unwrapping
      * ExecutionException. For use on virtual threads where blocking is expected.

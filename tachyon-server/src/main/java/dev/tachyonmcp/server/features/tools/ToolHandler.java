@@ -2,6 +2,8 @@
 
 package dev.tachyonmcp.server.features.tools;
 
+import static dev.tachyonmcp.server.features.HandlerFutures.assumeVirtualThread;
+
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.ServerFeature;
 import dev.tachyonmcp.server.domain.Args;

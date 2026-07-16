@@ -20,12 +20,10 @@ import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptHandler;
 import dev.tachyonmcp.server.features.prompts.PromptResult;
 import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
-import dev.tachyonmcp.server.features.resources.AsyncResourceTemplateHandler;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
-import dev.tachyonmcp.server.features.resources.ResourceTemplateHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
@@ -379,7 +377,7 @@ public final class ServerBuilder {
     /**
      * Registers a resource template.
      */
-    public ServerBuilder resourceTemplate(ResourceTemplateDescriptor descriptor, ResourceTemplateHandler handler) {
+    public ServerBuilder resourceTemplate(ResourceTemplateDescriptor descriptor, ResourceHandler handler) {
         featuresConfig.templates.add(ResourceTemplateEntry.of(descriptor, handler));
         return this;
     }
@@ -392,7 +390,7 @@ public final class ServerBuilder {
      * @return this builder
      */
     public ServerBuilder resourceTemplate(
-            Consumer<ResourceTemplateDescriptor.Builder> configBuilder, ResourceTemplateHandler handler) {
+            Consumer<ResourceTemplateDescriptor.Builder> configBuilder, ResourceHandler handler) {
         var builder = ResourceTemplateDescriptor.builder();
         configBuilder.accept(builder);
         return resourceTemplate(builder.build(), handler);
@@ -405,8 +403,7 @@ public final class ServerBuilder {
      * @param handler the handler invoked to resolve the resource template
      * @return this builder
      */
-    public ServerBuilder asyncResourceTemplate(
-            ResourceTemplateDescriptor descriptor, AsyncResourceTemplateHandler handler) {
+    public ServerBuilder asyncResourceTemplate(ResourceTemplateDescriptor descriptor, AsyncResourceHandler handler) {
         return resourceTemplate(descriptor, handler);
     }
 
@@ -418,7 +415,7 @@ public final class ServerBuilder {
      * @return this builder
      */
     public ServerBuilder asyncResourceTemplate(
-            Consumer<ResourceTemplateDescriptor.Builder> descriptor, AsyncResourceTemplateHandler handler) {
+            Consumer<ResourceTemplateDescriptor.Builder> descriptor, AsyncResourceHandler handler) {
         var builder = ResourceTemplateDescriptor.builder();
         descriptor.accept(builder);
         return asyncResourceTemplate(builder.build(), handler);

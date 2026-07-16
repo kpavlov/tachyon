@@ -18,9 +18,9 @@ internal fun resourceHandler(
     block: suspend ResourceScope.() -> ResourceContents,
 ): ResourceHandler {
     val coroutineName = CoroutineName("resource:${descriptor.name()}")
-    return ResourceHandler { ctx, req ->
+    return ResourceHandler { ctx, uri, params, uriTemplate ->
         runSuspendHandler(coroutineName) {
-            ResourceScope(ctx, req).block()
+            ResourceScope(ctx, uri, params, uriTemplate).block()
         }
     }
 }

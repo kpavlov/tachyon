@@ -12,6 +12,7 @@ public class TemplateScope
         public val ctx: InteractionContext,
         public val uri: String,
         public val params: Map<String, UriTemplateValue>,
+        public val uriTemplate: String,
     ) {
         /**
          * Retrieves a scalar template variable.
