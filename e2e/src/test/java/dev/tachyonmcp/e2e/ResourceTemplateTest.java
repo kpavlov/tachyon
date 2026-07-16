@@ -5,20 +5,27 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
 import dev.tachyonmcp.server.domain.TextResourceContents;
+import dev.tachyonmcp.server.domain.UriTemplateValue;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class ResourceTemplateTest extends AbstractMcpE2eTest {
+
+    private static String scalar(Map<String, UriTemplateValue> params, String name) {
+        return ((UriTemplateValue.Scalar) params.get(name)).value();
+    }
 
     @Test
     void shouldReadResourceFromSingleParamTemplate() throws Exception {
         startEmptyServer();
         server.resources()
-                .addTemplate(
+                .registerTemplate(
                         builder -> builder.name("item")
                                 .uriTemplate("resource://items/{id}")
                                 .description("An item")
                                 .mimeType("text/plain"),
-                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "item=" + params.get("id")));
+                        (ctx, uri, params) ->
+                                TextResourceContents.of(uri, "text/plain", "item=" + scalar(params, "id")));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -48,26 +55,27 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
     void shouldMatchCorrectTemplateWhenMultipleRegistered() throws Exception {
         startEmptyServer();
         server.resources()
-                .addTemplate(
+                .registerTemplate(
                         builder -> builder.name("items")
                                 .uriTemplate("resource://items/{id}")
                                 .description("An item")
                                 .mimeType("text/plain"),
-                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "item=" + params.get("id")))
-                .addTemplate(
+                        (ctx, uri, params) ->
+                                TextResourceContents.of(uri, "text/plain", "item=" + scalar(params, "id")))
+                .registerTemplate(
                         builder -> builder.name("orders")
                                 .uriTemplate("resource://orders/{orderId}")
                                 .description("An order")
                                 .mimeType("text/plain"),
                         (ctx, uri, params) ->
-                                TextResourceContents.of(uri, "text/plain", "order=" + params.get("orderId")))
-                .addTemplate(
+                                TextResourceContents.of(uri, "text/plain", "order=" + scalar(params, "orderId")))
+                .registerTemplate(
                         builder -> builder.name("users")
                                 .uriTemplate("resource://users/{userId}")
                                 .description("A user")
                                 .mimeType("text/plain"),
                         (ctx, uri, params) ->
-                                TextResourceContents.of(uri, "text/plain", "user=" + params.get("userId")));
+                                TextResourceContents.of(uri, "text/plain", "user=" + scalar(params, "userId")));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -116,13 +124,15 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
     void shouldReadResourceFromMultiParamTemplate() throws Exception {
         startEmptyServer();
         server.resources()
-                .addTemplate(
+                .registerTemplate(
                         builder -> builder.name("user-post")
                                 .uriTemplate("users://{userId}/posts/{postId}")
                                 .description("User's post")
                                 .mimeType("text/plain"),
                         (ctx, uri, params) -> TextResourceContents.of(
-                                uri, "text/plain", "user=" + params.get("userId") + ",post=" + params.get("postId")));
+                                uri,
+                                "text/plain",
+                                "user=" + scalar(params, "userId") + ",post=" + scalar(params, "postId")));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();

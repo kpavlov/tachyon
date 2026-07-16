@@ -4,6 +4,7 @@ package dev.tachyonmcp.server.features.tools;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.server.domain.InvalidArgumentException;
 import org.junit.jupiter.api.Test;
 
 class InvalidArgumentExceptionTest {

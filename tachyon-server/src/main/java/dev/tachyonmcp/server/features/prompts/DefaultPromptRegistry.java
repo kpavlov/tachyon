@@ -19,8 +19,10 @@ import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +43,7 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
     }
 
     @Override
-    public PromptRegistry add(PromptDescriptor descriptor, PromptHandler handler) {
+    public PromptRegistry register(PromptDescriptor descriptor, PromptHandler handler) {
         if (config.mode() == Mode.OFF) {
             logger.debug("Prompt '{}' not registered: prompts capability is OFF", descriptor.name());
             return this;
@@ -50,8 +52,23 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
         return this;
     }
 
-    public void remove(String name) {
-        removeItem(name);
+    @Override
+    public boolean unregister(String name) {
+        return removeItem(name);
+    }
+
+    @Override
+    public Optional<PromptDescriptor> find(String name) {
+        var entry = get(name);
+        return entry != null ? Optional.of(entry.descriptor()) : Optional.empty();
+    }
+
+    @Override
+    public List<PromptDescriptor> descriptors() {
+        return getAll().stream()
+                .map(PromptEntry::descriptor)
+                .sorted(Comparator.comparing(PromptDescriptor::name))
+                .toList();
     }
 
     public void registerHandlers(Map<String, RpcMethodHandler> registry) {

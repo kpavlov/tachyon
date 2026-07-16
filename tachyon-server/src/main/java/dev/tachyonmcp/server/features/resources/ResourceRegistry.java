@@ -4,43 +4,61 @@
 
 package dev.tachyonmcp.server.features.resources;
 
-import dev.tachyonmcp.server.domain.TextResourceContents;
-import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
-import org.jspecify.annotations.Nullable;
 
 public interface ResourceRegistry {
-    default ResourceRegistry add(ResourceDescriptor descriptor) {
-        return add(
-                descriptor,
-                (ctx, request) -> TextResourceContents.of(descriptor.uri(), descriptor.mimeType(), "", null));
-    }
 
-    ResourceRegistry add(ResourceDescriptor descriptor, ResourceHandler handler);
+    ResourceRegistry register(ResourceDescriptor descriptor, ResourceHandler handler);
 
-    default ResourceRegistry add(Consumer<ResourceDescriptor.Builder> configurer, ResourceHandler handler) {
+    default ResourceRegistry register(Consumer<ResourceDescriptor.Builder> configurer, ResourceHandler handler) {
         final var builder = ResourceDescriptor.builder();
         configurer.accept(builder);
-        return add(builder.build(), handler);
+        return register(builder.build(), handler);
     }
 
-    ResourceRegistry remove(String name);
+    default ResourceRegistry registerAsync(ResourceDescriptor descriptor, AsyncResourceHandler handler) {
+        return register(descriptor, handler);
+    }
 
-    @Nullable
-    ResourceDescriptor get(String name);
+    default ResourceRegistry registerAsync(
+            Consumer<ResourceDescriptor.Builder> descriptor, AsyncResourceHandler handler) {
+        final var builder = ResourceDescriptor.builder();
+        descriptor.accept(builder);
+        return registerAsync(builder.build(), handler);
+    }
 
-    Collection<ResourceDescriptor> getAll();
+    boolean unregister(String name);
 
-    ResourceRegistry addTemplate(ResourceTemplateDescriptor descriptor, ResourceTemplateHandler handler);
+    Optional<ResourceDescriptor> find(String name);
 
-    ResourceRegistry addTemplate(ResourceTemplate template);
+    List<ResourceDescriptor> descriptors();
 
-    default ResourceRegistry addTemplate(
+    ResourceRegistry registerTemplate(ResourceTemplateDescriptor descriptor, ResourceTemplateHandler handler);
+
+    default ResourceRegistry registerTemplate(
             Consumer<ResourceTemplateDescriptor.Builder> configurer, ResourceTemplateHandler handler) {
         final var builder = ResourceTemplateDescriptor.builder();
         configurer.accept(builder);
-        return addTemplate(builder.build(), handler);
+        return registerTemplate(builder.build(), handler);
     }
 
-    ResourceRegistry removeTemplate(String name);
+    default ResourceRegistry registerTemplateAsync(
+            ResourceTemplateDescriptor descriptor, AsyncResourceTemplateHandler handler) {
+        return registerTemplate(descriptor, handler);
+    }
+
+    default ResourceRegistry registerTemplateAsync(
+            Consumer<ResourceTemplateDescriptor.Builder> descriptor, AsyncResourceTemplateHandler handler) {
+        final var builder = ResourceTemplateDescriptor.builder();
+        descriptor.accept(builder);
+        return registerTemplateAsync(builder.build(), handler);
+    }
+
+    boolean unregisterTemplate(String name);
+
+    Optional<ResourceTemplateDescriptor> findTemplate(String name);
+
+    List<ResourceTemplateDescriptor> templateDescriptors();
 }

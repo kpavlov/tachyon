@@ -8,7 +8,6 @@ import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.ResourceContents
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
-import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry
 import dev.tachyonmcp.server.features.resources.resourceHandler
 import dev.tachyonmcp.server.features.resources.templateHandler
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
@@ -41,22 +40,20 @@ public fun ServerBuilder.resourceTemplate(
     icons: List<Icon>? = null,
     annotations: Annotations? = null,
     handler: suspend TemplateScope.() -> ResourceContents,
-): ServerBuilder =
-    resourceTemplate(
-        ResourceTemplateEntry(
-            ResourceTemplateDescriptor
-                .builder()
-                .name(name)
-                .uriTemplate(uriTemplate)
-                .description(description)
-                .mimeType(mimeType)
-                .title(title)
-                .icons(icons)
-                .annotations(annotations)
-                .build(),
-            templateHandler(name, handler),
-        ),
-    )
+): ServerBuilder {
+    val descriptor =
+        ResourceTemplateDescriptor
+            .builder()
+            .name(name)
+            .uriTemplate(uriTemplate)
+            .description(description)
+            .mimeType(mimeType)
+            .title(title)
+            .icons(icons)
+            .annotations(annotations)
+            .build()
+    return resourceTemplate(descriptor, templateHandler(name, handler))
+}
 
 public fun ServerBuilder.tool(
     name: String,

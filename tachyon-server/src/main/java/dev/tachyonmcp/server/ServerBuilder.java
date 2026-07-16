@@ -15,15 +15,18 @@ import dev.tachyonmcp.server.config.SessionConfig;
 import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.extensions.ServerExtension;
+import dev.tachyonmcp.server.features.prompts.AsyncPromptHandler;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptHandler;
 import dev.tachyonmcp.server.features.prompts.PromptResult;
+import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
+import dev.tachyonmcp.server.features.resources.AsyncResourceTemplateHandler;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceHandler;
-import dev.tachyonmcp.server.features.resources.ResourceTemplate;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateHandler;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
@@ -40,11 +43,13 @@ import io.netty.channel.ChannelPipeline;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 
@@ -178,11 +183,35 @@ public final class ServerBuilder {
     /**
      * Registers a tool handler at build time (DSL registration).
      *
-     * <p>Use {@code server.tools().add(handler)} for post-build dynamic registration.
+     * <p>Use {@code server.tools().register(handler)} for post-build dynamic registration.
      */
     public ServerBuilder tool(ToolHandler handler) {
         featuresConfig.tools.add(handler);
         return this;
+    }
+
+    public ServerBuilder tool(ToolDescriptor descriptor, BiFunction<InteractionContext, Args, ToolResult> handler) {
+        return tool(ToolHandler.of(descriptor, handler));
+    }
+
+    public ServerBuilder tool(
+            Consumer<ToolDescriptor.Builder> descriptor, BiFunction<InteractionContext, Args, ToolResult> handler) {
+        var builder = ToolDescriptor.builder();
+        descriptor.accept(builder);
+        return tool(builder.build(), handler);
+    }
+
+    public ServerBuilder asyncTool(
+            ToolDescriptor descriptor, BiFunction<InteractionContext, Args, CompletionStage<ToolResult>> handler) {
+        return tool(ToolHandler.ofAsync(descriptor, handler));
+    }
+
+    public ServerBuilder asyncTool(
+            Consumer<ToolDescriptor.Builder> descriptor,
+            BiFunction<InteractionContext, Args, CompletionStage<ToolResult>> handler) {
+        var builder = ToolDescriptor.builder();
+        descriptor.accept(builder);
+        return asyncTool(builder.build(), handler);
     }
 
     /**
@@ -205,14 +234,6 @@ public final class ServerBuilder {
     }
 
     /**
-     * Registers a resource with no read handler (returns empty content).
-     */
-    public ServerBuilder resource(ResourceDescriptor descriptor) {
-        featuresConfig.resources.add(new FeaturesConfig.ResourceRegistration(descriptor, null));
-        return this;
-    }
-
-    /**
      * Registers a resource with a read handler.
      */
     public ServerBuilder resource(ResourceDescriptor descriptor, ResourceHandler handler) {
@@ -220,11 +241,33 @@ public final class ServerBuilder {
         return this;
     }
 
+    public ServerBuilder resource(Consumer<ResourceDescriptor.Builder> descriptor, ResourceHandler handler) {
+        var builder = ResourceDescriptor.builder();
+        descriptor.accept(builder);
+        return resource(builder.build(), handler);
+    }
+
+    public ServerBuilder asyncResource(ResourceDescriptor descriptor, AsyncResourceHandler handler) {
+        return resource(descriptor, handler);
+    }
+
+    public ServerBuilder asyncResource(Consumer<ResourceDescriptor.Builder> descriptor, AsyncResourceHandler handler) {
+        var builder = ResourceDescriptor.builder();
+        descriptor.accept(builder);
+        return asyncResource(builder.build(), handler);
+    }
+
     /**
      * Registers a prompt with static messages (no handler, messages provided directly).
      */
     public ServerBuilder prompt(PromptDescriptor descriptor, List<PromptMessage> messages) {
         return prompt(descriptor, (ctx, request) -> PromptResult.messages(messages));
+    }
+
+    public ServerBuilder prompt(Consumer<PromptDescriptor.Builder> descriptor, List<PromptMessage> messages) {
+        var builder = PromptDescriptor.builder();
+        descriptor.accept(builder);
+        return prompt(builder.build(), messages);
     }
 
     /**
@@ -235,12 +278,20 @@ public final class ServerBuilder {
         return this;
     }
 
-    /**
-     * Registers a resource template.
-     */
-    public ServerBuilder resourceTemplate(ResourceTemplate resourceTemplate) {
-        featuresConfig.templates.add(ResourceTemplateEntry.of(resourceTemplate));
-        return this;
+    public ServerBuilder prompt(Consumer<PromptDescriptor.Builder> descriptor, PromptHandler handler) {
+        var builder = PromptDescriptor.builder();
+        descriptor.accept(builder);
+        return prompt(builder.build(), handler);
+    }
+
+    public ServerBuilder asyncPrompt(PromptDescriptor descriptor, AsyncPromptHandler handler) {
+        return prompt(descriptor, handler);
+    }
+
+    public ServerBuilder asyncPrompt(Consumer<PromptDescriptor.Builder> descriptor, AsyncPromptHandler handler) {
+        var builder = PromptDescriptor.builder();
+        descriptor.accept(builder);
+        return prompt(builder.build(), handler);
     }
 
     /**
@@ -253,10 +304,21 @@ public final class ServerBuilder {
 
     public ServerBuilder resourceTemplate(
             Consumer<ResourceTemplateDescriptor.Builder> configBuilder, ResourceTemplateHandler handler) {
-        ResourceTemplateDescriptor.Builder builder = ResourceTemplateDescriptor.builder();
+        var builder = ResourceTemplateDescriptor.builder();
         configBuilder.accept(builder);
-        featuresConfig.templates.add(ResourceTemplateEntry.of(builder.build(), handler));
-        return this;
+        return resourceTemplate(builder.build(), handler);
+    }
+
+    public ServerBuilder asyncResourceTemplate(
+            ResourceTemplateDescriptor descriptor, AsyncResourceTemplateHandler handler) {
+        return resourceTemplate(descriptor, handler);
+    }
+
+    public ServerBuilder asyncResourceTemplate(
+            Consumer<ResourceTemplateDescriptor.Builder> descriptor, AsyncResourceTemplateHandler handler) {
+        var builder = ResourceTemplateDescriptor.builder();
+        descriptor.accept(builder);
+        return asyncResourceTemplate(builder.build(), handler);
     }
 
     /**
@@ -373,17 +435,10 @@ public final class ServerBuilder {
                 featuresConfig.payloadSerializer,
                 featuresConfig.payloadDeserializer,
                 allExtensions);
-        featuresConfig.tools.forEach(server.tools()::add);
-        featuresConfig.resources.forEach(r -> {
-            var d = r.descriptor();
-            if (r.handler() != null) {
-                server.resources().add(d, r.handler());
-            } else {
-                server.resources().add(d);
-            }
-        });
-        featuresConfig.prompts.forEach(p -> server.prompts().add(p.descriptor(), p.handler()));
-        featuresConfig.templates.forEach(t -> server.resources().addTemplate(t));
+        featuresConfig.tools.forEach(server.tools()::register);
+        featuresConfig.resources.forEach(r -> server.resources().register(r.descriptor(), r.handler()));
+        featuresConfig.prompts.forEach(p -> server.prompts().register(p.descriptor(), p.handler()));
+        featuresConfig.templates.forEach(t -> server.resources().registerTemplate(t.descriptor(), t.handler()));
         return server;
     }
 
@@ -443,7 +498,6 @@ public final class ServerBuilder {
 
         record PromptRegistration(PromptDescriptor descriptor, PromptHandler handler) {}
 
-        record ResourceRegistration(
-                ResourceDescriptor descriptor, @Nullable ResourceHandler handler) {}
+        record ResourceRegistration(ResourceDescriptor descriptor, ResourceHandler handler) {}
     }
 }

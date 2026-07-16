@@ -13,6 +13,7 @@ import dev.tachyonmcp.server.config.Mode;
 import dev.tachyonmcp.server.config.ResourcesConfig;
 import dev.tachyonmcp.server.domain.ReadResourceRequest;
 import dev.tachyonmcp.server.domain.ResourceContents;
+import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.ChangeSupport;
 import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.ListRequests;
@@ -21,12 +22,12 @@ import dev.tachyonmcp.server.features.Pagination;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
@@ -71,7 +72,7 @@ public class DefaultResourceRegistry implements ResourceRegistry {
     }
 
     @Override
-    public DefaultResourceRegistry add(ResourceDescriptor descriptor, ResourceHandler handler) {
+    public DefaultResourceRegistry register(ResourceDescriptor descriptor, ResourceHandler handler) {
         if (config.mode() == Mode.OFF) {
             logger.debug("Resource '{}' not registered: resources capability is OFF", descriptor.name());
             return this;
@@ -87,27 +88,28 @@ public class DefaultResourceRegistry implements ResourceRegistry {
     }
 
     @Override
-    public ResourceRegistry remove(String name) {
+    public boolean unregister(String name) {
         var removed = byName.remove(name);
         if (removed != null) {
             byUri.remove(removed.descriptor().uri());
             fireOnChange();
+            return true;
         }
-        return this;
+        return false;
     }
 
-    /**
-     * Returns the resource descriptor by name.
-     */
     @Override
-    public @Nullable ResourceDescriptor get(String name) {
+    public Optional<ResourceDescriptor> find(String name) {
         var entry = byName.get(name);
-        return entry != null ? entry.descriptor() : null;
+        return entry != null ? Optional.of(entry.descriptor()) : Optional.empty();
     }
 
     @Override
-    public Collection<ResourceDescriptor> getAll() {
-        return byName.values().stream().map(ResourceEntry::descriptor).toList();
+    public List<ResourceDescriptor> descriptors() {
+        return byName.values().stream()
+                .map(ResourceEntry::descriptor)
+                .sorted(Comparator.comparing(ResourceDescriptor::name))
+                .toList();
     }
 
     public PaginatedResult<ResourceDescriptor> list(int limit, @Nullable String cursor) {
@@ -136,7 +138,7 @@ public class DefaultResourceRegistry implements ResourceRegistry {
     }
 
     @Override
-    public ResourceRegistry addTemplate(ResourceTemplateDescriptor descriptor, ResourceTemplateHandler handler) {
+    public ResourceRegistry registerTemplate(ResourceTemplateDescriptor descriptor, ResourceTemplateHandler handler) {
         if (config.mode() == Mode.OFF) {
             logger.debug("Resource template '{}' not registered: resources capability is OFF", descriptor.name());
             return this;
@@ -150,43 +152,50 @@ public class DefaultResourceRegistry implements ResourceRegistry {
     }
 
     @Override
-    public ResourceRegistry addTemplate(ResourceTemplate template) {
-        if (config.mode() == Mode.OFF) {
-            logger.debug(
-                    "Resource template '{}' not registered: resources capability is OFF",
-                    template.descriptor().name());
-            return this;
+    public boolean unregisterTemplate(String name) {
+        var removed = templates.remove(name);
+        if (removed != null) {
+            fireOnChange();
+            return true;
         }
-        final var entry = ResourceTemplateEntry.of(template);
-        templates.put(template.descriptor().name(), entry);
-        fireOnChange();
-        return this;
+        return false;
     }
 
     @Override
-    public ResourceRegistry removeTemplate(String name) {
-        templates.remove(name);
-        return this;
+    public Optional<ResourceTemplateDescriptor> findTemplate(String name) {
+        var template = templates.get(name);
+        return template != null ? Optional.of(template.descriptor()) : Optional.empty();
     }
 
-    private record TemplateMatch(ResourceTemplateEntry entry, Map<String, String> params) {}
+    @Override
+    public List<ResourceTemplateDescriptor> templateDescriptors() {
+        return templates.values().stream()
+                .map(ResourceTemplateEntry::descriptor)
+                .sorted(Comparator.comparing(ResourceTemplateDescriptor::name))
+                .toList();
+    }
+
+    public boolean isEmpty() {
+        return byName.isEmpty();
+    }
+
+    private record TemplateMatch(ResourceTemplateEntry entry, Map<String, UriTemplateValue> params) {}
 
     @Nullable
     private TemplateMatch matchTemplate(String uri) {
         return templates.values().stream()
-                .sorted(Comparator.comparingInt((ResourceTemplateEntry t) -> -UriTemplatePatterns.VAR
+                .sorted(Comparator.comparingInt((ResourceTemplateEntry t) -> -UriTemplatePatterns.EXPRESSION
                                 .matcher(t.descriptor().uriTemplate())
                                 .replaceAll("")
                                 .length())
                         .thenComparing(it -> it.descriptor().name()))
                 .map(template -> {
-                    var matcher = template.compiledPattern().matcher(uri);
-                    if (!matcher.matches()) return null;
-                    var params = new LinkedHashMap<String, String>();
-                    for (var name : template.paramNames()) {
-                        params.put(name, matcher.group(name));
+                    try {
+                        return new TemplateMatch(
+                                template, template.uriTemplate().parse(uri));
+                    } catch (IllegalArgumentException ignored) {
+                        return null;
                     }
-                    return new TemplateMatch(template, params);
                 })
                 .filter(Objects::nonNull)
                 .findFirst()

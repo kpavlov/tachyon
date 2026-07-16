@@ -25,8 +25,8 @@ class PromptsTest extends AbstractMcpE2eTest {
     void shouldListRegisteredPrompts() throws Exception {
         startEmptyServer();
         var prompts = server.prompts();
-        prompts.add(PromptDescriptor.of("greeting", "A greeting prompt"), List.of(PromptMessage.user("Hello!")));
-        prompts.add(PromptDescriptor.of("farewell", "A farewell prompt"), List.of(PromptMessage.user("Goodbye!")));
+        prompts.register(PromptDescriptor.of("greeting", "A greeting prompt"), List.of(PromptMessage.user("Hello!")));
+        prompts.register(PromptDescriptor.of("farewell", "A farewell prompt"), List.of(PromptMessage.user("Goodbye!")));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -47,7 +47,9 @@ class PromptsTest extends AbstractMcpE2eTest {
     void shouldGetSimplePrompt() throws Exception {
         startEmptyServer();
         server.prompts()
-                .add(PromptDescriptor.of("greeting", "A greeting prompt"), List.of(PromptMessage.user("Hello world!")));
+                .register(
+                        PromptDescriptor.of("greeting", "A greeting prompt"),
+                        List.of(PromptMessage.user("Hello world!")));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -66,7 +68,7 @@ class PromptsTest extends AbstractMcpE2eTest {
     void shouldGetPromptWithArguments() throws Exception {
         startEmptyServer();
         server.prompts()
-                .add(
+                .register(
                         PromptDescriptor.of("test_prompt_with_arguments", "A parameterized prompt"),
                         (ctx, request) -> PromptResult.messages(
                                 List.of(PromptMessage.user("Hello, " + request.arguments() + "!"))));
@@ -116,7 +118,7 @@ class PromptsTest extends AbstractMcpE2eTest {
     void shouldGetPromptWithEmbeddedResource() throws Exception {
         startEmptyServer();
         server.prompts()
-                .add(
+                .register(
                         PromptDescriptor.of("embedded", "Prompt with embedded resource"),
                         List.of(PromptMessage.user(EmbeddedResource.of(
                                 TextResourceContents.of("test://embedded", "text/plain", "embedded content")))));
@@ -140,7 +142,7 @@ class PromptsTest extends AbstractMcpE2eTest {
     void shouldGetPromptWithImage() throws Exception {
         startEmptyServer();
         server.prompts()
-                .add(
+                .register(
                         PromptDescriptor.of("image-prompt", "Prompt with image"),
                         List.of(PromptMessage.user(ImageContent.of("iVBORw0KGgo=", "image/png"))));
 

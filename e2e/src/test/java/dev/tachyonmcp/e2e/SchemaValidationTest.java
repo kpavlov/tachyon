@@ -133,7 +133,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
         startServer(it -> it.json(j -> j.schemaValidator(VALIDATOR)));
 
         server.prompts()
-                .add(
+                .register(
                         PromptDescriptor.of(
                                 "validated-prompt",
                                 "A validated prompt",
@@ -168,7 +168,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
         startServer(it -> it.json(j -> j.schemaValidator(VALIDATOR)));
 
         server.prompts()
-                .add(
+                .register(
                         PromptDescriptor.of(
                                 "validated-prompt",
                                 "A validated prompt",

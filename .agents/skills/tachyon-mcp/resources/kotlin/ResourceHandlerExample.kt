@@ -5,8 +5,10 @@ package dev.tachyonmcp.skill
 import dev.tachyonmcp.server.domain.Annotations
 import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.TextResourceContents
+import dev.tachyonmcp.server.domain.UriTemplateValue
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor
-import dev.tachyonmcp.server.features.resources.ResourceTemplate
+import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
+import dev.tachyonmcp.server.features.resources.ResourceTemplateHandler
 import dev.tachyonmcp.server.features.resources.resourceDescriptor
 
 /** Static resource — plain factory. */
@@ -38,14 +40,18 @@ fun richDescriptor(): ResourceDescriptor =
     }
 
 /** URI template — {param} segments captured at runtime. */
-fun userProfileTemplate(): ResourceTemplate =
-    ResourceTemplate(
-        name = "user-profile",
-        uriTemplate = "myapp://users/{userId}/profile",
-        description = "User profile data",
-        mimeType = "application/json",
-    ) { _, uri, params ->
-        val userId = params["userId"]
+fun userProfileTemplateDescriptor(): ResourceTemplateDescriptor =
+    ResourceTemplateDescriptor
+        .builder()
+        .name("user-profile")
+        .uriTemplate("myapp://users/{userId}/profile")
+        .description("User profile data")
+        .mimeType("application/json")
+        .build()
+
+fun userProfileTemplateHandler(): ResourceTemplateHandler =
+    ResourceTemplateHandler { _, uri, params ->
+        val userId = params["userId"]?.scalarValue()
         TextResourceContents(
             uri = uri,
             mimeType = "application/json",
@@ -54,16 +60,21 @@ fun userProfileTemplate(): ResourceTemplate =
     }
 
 /** URI template — multi-segment with static prefix matching. */
-fun forecastTemplate(): ResourceTemplate =
-    ResourceTemplate(
-        name = "forecast",
-        uriTemplate = "weather://forecast/{city}",
-        description = "Weather forecast for a city",
-        mimeType = "application/json",
-    ) { _, uri, params ->
+fun forecastTemplateDescriptor(): ResourceTemplateDescriptor =
+    ResourceTemplateDescriptor
+        .builder()
+        .name("forecast")
+        .uriTemplate("weather://forecast/{city}")
+        .description("Weather forecast for a city")
+        .mimeType("application/json")
+        .build()
+
+fun forecastTemplateHandler(): ResourceTemplateHandler =
+    ResourceTemplateHandler { _, uri, params ->
+        val city = params["city"]?.scalarValue()
         TextResourceContents(
             uri = uri,
             mimeType = "application/json",
-            text = """{"city":"${params["city"]}","temp":22}""",
+            text = """{"city":"$city","temp":22}""",
         )
     }

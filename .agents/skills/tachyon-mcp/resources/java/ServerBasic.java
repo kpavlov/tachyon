@@ -5,6 +5,7 @@
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.TextResourceContents;
+import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
@@ -60,7 +61,7 @@ public final class ServerBasic {
                     .description("User profile data")
                     .mimeType("application/json"),
                 (ctx, uri, params) -> {
-                    var userId = params.get("userId");
+                    var userId = params.get("userId").scalarValue();
                     return TextResourceContents.of(
                         uri, "application/json", "{\"userId\":\"" + userId + "\",\"name\":\"User\"}");
                 })

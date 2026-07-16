@@ -25,8 +25,11 @@ class PostStartRegistrationTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldRegisterResourceAfterStart() throws Exception {
-        server.registerResource(
-                ResourceDescriptor.of("post-start-res", "test://post-start", "Post-start resource", "text/plain"));
+        server.resources()
+                .register(
+                        ResourceDescriptor.of(
+                                "post-start-res", "test://post-start", "Post-start resource", "text/plain"),
+                        (ctx, request) -> TextResourceContents.of(request.uri(), "text/plain", ""));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -40,10 +43,11 @@ class PostStartRegistrationTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldRegisterPromptAfterStart() throws Exception {
-        server.registerPrompt(
-                PromptDescriptor.of("post-start-prompt", "Post-start prompt"),
-                (ctx, request) ->
-                        PromptResult.messages(List.of(of(Role.USER, TextContent.of("Hello from post-start")))));
+        server.prompts()
+                .register(
+                        PromptDescriptor.of("post-start-prompt", "Post-start prompt"),
+                        (ctx, request) ->
+                                PromptResult.messages(List.of(of(Role.USER, TextContent.of("Hello from post-start")))));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -59,9 +63,10 @@ class PostStartRegistrationTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldRegisterResourceWithHandlerAfterStart() throws Exception {
-        server.registerResource(
-                ResourceDescriptor.of("handled-res", "test://handled", "Handled resource", "text/plain"),
-                (ctx, req) -> TextResourceContents.of(req.uri(), "text/plain", "post-start data", null));
+        server.resources()
+                .register(
+                        ResourceDescriptor.of("handled-res", "test://handled", "Handled resource", "text/plain"),
+                        (ctx, req) -> TextResourceContents.of(req.uri(), "text/plain", "post-start data", null));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();

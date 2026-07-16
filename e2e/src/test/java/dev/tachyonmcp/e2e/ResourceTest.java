@@ -27,10 +27,10 @@ class ResourceTest extends AbstractMcpE2eTest {
     void shouldListRegisteredResources() throws Exception {
         startEmptyServer();
         server.resources()
-                .add(
+                .register(
                         ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
                         (ctx, req) -> TextResourceContents.of("resource://doc", "text/plain", "Hello"))
-                .add(
+                .register(
                         ResourceDescriptor.of("code", "resource://code", "Source code", "text/x-java"),
                         (ctx, req) ->
                                 TextResourceContents.of("resource://code", "text/x-java", "package com.example;"));
@@ -58,7 +58,9 @@ class ResourceTest extends AbstractMcpE2eTest {
         var descriptor = ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain");
         startEmptyServer();
         server.resources()
-                .add(descriptor, (ctx, req) -> TextResourceContents.of("resource://doc", "text/plain", "Hello world"));
+                .register(
+                        descriptor,
+                        (ctx, req) -> TextResourceContents.of("resource://doc", "text/plain", "Hello world"));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -78,13 +80,13 @@ class ResourceTest extends AbstractMcpE2eTest {
     void shouldReadCorrectResourceWhenMultipleRegistered() throws Exception {
         startEmptyServer();
         server.resources()
-                .add(
+                .register(
                         ResourceDescriptor.of("alpha", "resource://alpha", "Alpha", "text/plain"),
                         (ctx, req) -> TextResourceContents.of("resource://alpha", "text/plain", "content-alpha"))
-                .add(
+                .register(
                         ResourceDescriptor.of("beta", "resource://beta", "Beta", "text/plain"),
                         (ctx, req) -> TextResourceContents.of("resource://beta", "text/plain", "content-beta"))
-                .add(
+                .register(
                         ResourceDescriptor.of("gamma", "resource://gamma", "Gamma", "text/plain"),
                         (ctx, req) -> TextResourceContents.of("resource://gamma", "text/plain", "content-gamma"));
 
@@ -116,7 +118,7 @@ class ResourceTest extends AbstractMcpE2eTest {
                 () -> TextResourceContents.of("resource://async-doc", "text/plain", "async content"),
                 CompletableFuture.delayedExecutor(100, TimeUnit.MILLISECONDS));
         startEmptyServer();
-        server.resources().add(descriptor, handler);
+        server.resources().register(descriptor, handler);
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -135,7 +137,7 @@ class ResourceTest extends AbstractMcpE2eTest {
         AsyncResourceHandler handler =
                 (ctx, req) -> CompletableFuture.failedFuture(new IllegalStateException("backend down"));
         startEmptyServer();
-        server.resources().add(descriptor, handler);
+        server.resources().register(descriptor, handler);
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -198,7 +200,9 @@ class ResourceTest extends AbstractMcpE2eTest {
         startServer(builder -> {
             builder.capabilities(c -> c.resourcesListChanged(true)).tool(notifyListChangedTool(action));
             if ("remove".equals(action)) {
-                builder.resource(ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"));
+                builder.resource(
+                        ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
+                        (ctx, request) -> TextResourceContents.of(request.uri(), "text/plain", ""));
             }
         });
 
@@ -214,7 +218,9 @@ class ResourceTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldNotifyResourceUpdated() throws Exception {
-        startServer(it -> it.resource(ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"))
+        startServer(it -> it.resource(
+                        ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
+                        (ctx, request) -> TextResourceContents.of(request.uri(), "text/plain", ""))
                 .tool(notifyUpdatedTool()));
 
         try (var client = createTestClient()) {
@@ -241,12 +247,12 @@ class ResourceTest extends AbstractMcpE2eTest {
                 b -> b.name("notify-list-changed").description("Notifies resources/list_changed"), (context, args) -> {
                     var resources = server.resources();
                     if ("add".equals(action)) {
-                        resources.add(
+                        resources.register(
                                 ResourceDescriptor.of(
                                         "added-resource", "resource://added", "Added by handler", "text/plain"),
                                 (ctx, params) -> TextResourceContents.of("resource://added", "text/plain", "content"));
                     } else {
-                        resources.remove("doc");
+                        resources.unregister("doc");
                     }
                     return ToolResult.blocks(TextContent.of("done"));
                 });

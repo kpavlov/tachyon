@@ -189,7 +189,7 @@ final class DefaultTachyonServer implements ServerEngine {
                         new ServerCapabilities.Resources(resourcesConfig.subscribe(), resourcesConfig.listChanged()));
             case OFF -> {}
             case AUTO -> {
-                if (!resourceRegistry.getAll().isEmpty()) {
+                if (!resourceRegistry.isEmpty()) {
                     builder.resources(new ServerCapabilities.Resources(
                             resourcesConfig.subscribe(), resourcesConfig.listChanged()));
                 }
@@ -201,7 +201,7 @@ final class DefaultTachyonServer implements ServerEngine {
             case ON -> builder.prompts(new ServerCapabilities.Prompts(promptsConfig.listChanged()));
             case OFF -> {}
             case AUTO -> {
-                if (!promptRegistry.getAll().isEmpty()) {
+                if (!promptRegistry.isEmpty()) {
                     builder.prompts(new ServerCapabilities.Prompts(promptsConfig.listChanged()));
                 }
             }
@@ -469,21 +469,21 @@ final class DefaultTachyonServer implements ServerEngine {
     @Override
     public CompletableFuture<String> sendRequest(
             Session session, String method, Object params, @Nullable OutboundSseStream stream) {
-        var paramsStr = JsonRpcCodec.toJsonParams(params);
-        var requestId = UUID.randomUUID().toString();
-        var future = new CompletableFuture<String>();
+        final var paramsStr = JsonRpcCodec.toJsonParams(params);
+        final var requestId = UUID.randomUUID().toString();
+        final var future = new CompletableFuture<String>();
         registerPendingRequest(requestId, future);
 
-        var requestJson = JsonRpcCodec.serializeRequestAsString(requestId, method, paramsStr);
-        var target = stream != null ? stream : outboundStreamResolver.resolve(session);
-        var streamKey = target != null ? target.streamKey() : null;
-        var sseEventId = nextEventId();
+        final var requestJson = JsonRpcCodec.serializeRequestAsString(requestId, method, paramsStr);
+        final var target = stream != null ? stream : outboundStreamResolver.resolve(session);
+        final var streamKey = target != null ? target.streamKey() : null;
+        final var sseEventId = nextEventId();
 
-        var outboundEvent = new SessionEvent.OutboundRequestEvent(
+        final var outboundEvent = new SessionEvent.OutboundRequestEvent(
                 session.id(), requestId, method, paramsStr, System.currentTimeMillis(), sseEventId, streamKey);
         sessionEventStore.append(outboundEvent);
 
-        var sseEvent = new SseEvent(ServerEngine.wireEventId(sseEventId, streamKey), "message", requestJson);
+        final var sseEvent = new SseEvent(ServerEngine.wireEventId(sseEventId, streamKey), "message", requestJson);
 
         if (target != null) {
             target.start();

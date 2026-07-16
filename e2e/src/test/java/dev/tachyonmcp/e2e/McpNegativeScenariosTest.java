@@ -69,7 +69,8 @@ class McpNegativeScenariosTest extends AbstractMcpE2eTest {
     @Test
     void shouldListRegisteredPromptViaSdk() {
         var promptName = "negative-scenarios-list-probe";
-        server.prompts().add(PromptDescriptor.of(promptName, "A probe prompt"), List.of(PromptMessage.user("Hello!")));
+        server.prompts()
+                .register(PromptDescriptor.of(promptName, "A probe prompt"), List.of(PromptMessage.user("Hello!")));
 
         var transport = HttpClientStreamableHttpTransport.builder("http://localhost:" + port)
                 .build();

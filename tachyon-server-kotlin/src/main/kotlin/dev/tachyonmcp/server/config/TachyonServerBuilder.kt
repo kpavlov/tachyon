@@ -11,7 +11,6 @@ import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.ResourceContents
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.server.features.prompts.promptHandler
-import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.json.KxSerializationSerde
 import dev.tachyonmcp.server.json.toJacksonNode
@@ -141,9 +140,6 @@ public class TachyonServerBuilder
                 val descriptor = PromptDescriptor(name = name, description = description)
                 delegate.prompt(descriptor, promptHandler(descriptor, handler))
             }
-
-        public fun resourceTemplate(template: ResourceTemplateEntry): TachyonServerBuilder =
-            this.also { delegate.resourceTemplate(template) }
 
         public fun resourceTemplate(
             name: String,

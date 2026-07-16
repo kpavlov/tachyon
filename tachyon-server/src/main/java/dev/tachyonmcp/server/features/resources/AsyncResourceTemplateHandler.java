@@ -6,6 +6,7 @@ package dev.tachyonmcp.server.features.resources;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.ResourceContents;
+import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.HandlerFutures;
 import java.util.Map;
 import java.util.Objects;
@@ -20,10 +21,11 @@ public interface AsyncResourceTemplateHandler extends ResourceTemplateHandler {
      * Reads the resource asynchronously and returns a future of its contents.
      */
     CompletionStage<? extends ResourceContents> readAsync(
-            InteractionContext context, String uri, Map<String, String> params);
+            InteractionContext context, String uri, Map<String, UriTemplateValue> params);
 
     @Override
-    default ResourceContents read(InteractionContext context, String uri, Map<String, String> params) throws Exception {
+    default ResourceContents read(InteractionContext context, String uri, Map<String, UriTemplateValue> params)
+            throws Exception {
         return HandlerFutures.joinInterruptibly(readAsync(context, uri, params));
     }
 

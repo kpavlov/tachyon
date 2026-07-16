@@ -18,6 +18,7 @@ import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.FeatureConfig;
 import dev.tachyonmcp.server.domain.Icon;
+import dev.tachyonmcp.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.internal.ServerEngine;
@@ -198,7 +199,25 @@ class ToolRegistryTest {
     @MethodSource("validToolNames")
     void shouldAcceptValidNameOnRegister(String name) {
         registry.register(ToolHandler.of(name, (ctx, args) -> ToolResult.text("ok")));
-        assertThat(registry.get(name)).isNotNull();
+        assertThat(registry.find(name)).isPresent();
+    }
+
+    @Test
+    void interfaceDefaultBuilderOverloadsRegisterSyncAndAsyncTools() {
+        ToolRegistry api = registry;
+
+        api.register(tool -> tool.name("builder-sync"), (ctx, args) -> ToolResult.text("sync"))
+                .registerAsync(
+                        tool -> tool.name("builder-async"),
+                        (ctx, args) -> CompletableFuture.completedFuture(ToolResult.text("async")));
+
+        assertThat(api.find("builder-sync")).isPresent();
+        assertThat(api.find("builder-async")).isPresent();
+        assertThat(api.descriptors()).extracting(ToolDescriptor::name).containsExactly("builder-async", "builder-sync");
+        assertThatThrownBy(() -> api.descriptors().clear()).isInstanceOf(UnsupportedOperationException.class);
+        assertThat(api.unregister("builder-sync")).isTrue();
+        assertThat(api.unregister("builder-sync")).isFalse();
+        assertThat(api.find("builder-sync")).isEmpty();
     }
 
     @ParameterizedTest
@@ -291,7 +310,7 @@ class ToolRegistryTest {
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
-        registry.remove("removable-tool");
+        registry.unregister("removable-tool");
 
         assertThat(callCount).hasValue(1);
     }
@@ -301,7 +320,7 @@ class ToolRegistryTest {
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
-        registry.remove("does-not-exist");
+        registry.unregister("does-not-exist");
 
         assertThat(callCount).hasValue(0);
     }
@@ -331,24 +350,23 @@ class ToolRegistryTest {
     }
 
     @Test
-    void getDescriptorReturnsNullForMissingTool() {
-        assertThat(registry.getDescriptor("nonexistent")).isNull();
+    void findReturnsEmptyForMissingTool() {
+        assertThat(registry.find("nonexistent")).isEmpty();
     }
 
     @Test
-    void getDescriptorReturnsDescriptorForRegisteredTool() {
+    void findReturnsDescriptorForRegisteredTool() {
         registry.register(testTool("desc-tool", "test desc", null));
-        var desc = registry.getDescriptor("desc-tool");
-        assertThat(desc).isNotNull();
+        var desc = registry.find("desc-tool").orElseThrow();
         assertThat(desc.name()).isEqualTo("desc-tool");
         assertThat(desc.description()).isEqualTo("test desc");
     }
 
     @Test
-    void getAllReturnsAllHandlers() {
+    void descriptorsReturnsAllDescriptors() {
         registry.register(testTool("t1", null, null));
         registry.register(testTool("t2", null, null));
-        assertThat(registry.getAll()).hasSize(2);
+        assertThat(registry.descriptors()).hasSize(2);
     }
 
     @Test
@@ -412,8 +430,15 @@ class ToolRegistryTest {
                 TEST_SERDE,
                 TEST_SERDE,
                 FeatureConfig.builder().off().build());
+        var changeCount = new AtomicInteger();
+        reg.onChange(changeCount::incrementAndGet);
+
         reg.register(testTool("a", null, null));
+
         assertThat(reg.isEmpty()).isTrue();
+        assertThat(reg.find("a")).isEmpty();
+        assertThat(reg.descriptors()).isEmpty();
+        assertThat(changeCount).hasValue(0);
     }
 
     @Test
@@ -457,14 +482,14 @@ class ToolRegistryTest {
     }
 
     @Test
-    void getReturnsNullForMissingTool() {
-        assertThat(registry.get("nonexistent")).isNull();
+    void findReturnsEmptyForMissingToolAfterOtherOperations() {
+        assertThat(registry.find("nonexistent")).isEmpty();
     }
 
     @Test
-    void removeNonExistentToolDoesNotThrow() {
-        registry.remove("nonexistent");
-        assertThat(registry.get("nonexistent")).isNull();
+    void unregisterNonExistentToolReturnsFalse() {
+        assertThat(registry.unregister("nonexistent")).isFalse();
+        assertThat(registry.find("nonexistent")).isEmpty();
     }
 
     @Test
@@ -600,13 +625,13 @@ class ToolRegistryTest {
     @Test
     void shouldAcceptNullInputSchema() {
         registry.register(testTool("null-input", null, null));
-        assertThat(registry.get("null-input")).isNotNull();
+        assertThat(registry.find("null-input")).isPresent();
     }
 
     @Test
     void shouldAcceptValidInputSchemaWithTypeObject() {
         registry.register(testTool("valid-input", null, TEST_SCHEMA));
-        assertThat(registry.get("valid-input")).isNotNull();
+        assertThat(registry.find("valid-input")).isPresent();
     }
 
     @Test
@@ -668,7 +693,7 @@ class ToolRegistryTest {
                         .outputSchema(outputSchema)
                         .build(),
                 (context, args) -> ToolResult.text("ok")));
-        assertThat(registry.get("valid-output")).isNotNull();
+        assertThat(registry.find("valid-output")).isPresent();
     }
 
     // endregion
@@ -781,6 +806,6 @@ class ToolRegistryTest {
                         .inputSchema("{\"type\":\"object\",\"properties\":{\"x\":{\"type\":\"string\"}}}")
                         .outputSchema("{\"type\":\"object\",\"properties\":{\"y\":{\"type\":\"integer\"}}}"),
                 (ctx, args) -> ToolResult.text("ok")));
-        assertThat(registry.get("good-string")).isNotNull();
+        assertThat(registry.find("good-string")).isPresent();
     }
 }
