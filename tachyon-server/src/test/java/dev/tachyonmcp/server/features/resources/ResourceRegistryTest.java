@@ -39,9 +39,12 @@ import org.junit.jupiter.api.Test;
 
 class ResourceRegistryTest {
 
+    private static final ResourceHandler EMPTY_HANDLER =
+            (ctx, request) -> TextResourceContents.of(request.uri(), "text/plain", "");
+
     private final ServerEngine server = newEngine(b -> {});
-    private final ResourceRegistry registry =
-            new ResourceRegistry(server, ResourcesConfig.builder().build());
+    private final DefaultResourceRegistry registry =
+            new DefaultResourceRegistry(server, ResourcesConfig.builder().build());
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
 
     private static ResourceDescriptor resource(String name) {
@@ -69,17 +72,17 @@ class ResourceRegistryTest {
 
     @Test
     void listWithZeroLimitUsesDefaultPageSize() {
-        registry.add(resource("r1"), (ctx, req) -> null);
-        registry.add(resource("r2"), (ctx, req) -> null);
+        registry.add(resource("r1"), EMPTY_HANDLER);
+        registry.add(resource("r2"), EMPTY_HANDLER);
         var result = registry.list(0, null);
         assertThat(result.items()).hasSize(2);
     }
 
     @Test
     void listWithCursorSkipsPastCursor() {
-        registry.add(resource("alpha"), (ctx, req) -> null);
-        registry.add(resource("beta"), (ctx, req) -> null);
-        registry.add(resource("gamma"), (ctx, req) -> null);
+        registry.add(resource("alpha"), EMPTY_HANDLER);
+        registry.add(resource("beta"), EMPTY_HANDLER);
+        registry.add(resource("gamma"), EMPTY_HANDLER);
         var result = registry.list(1, "alpha");
         assertThat(result.items()).hasSize(1);
         assertThat(result.items().getFirst().name()).isEqualTo("beta");
@@ -87,25 +90,25 @@ class ResourceRegistryTest {
 
     @Test
     void listReturnsCursorWhenMoreItemsAvailable() {
-        registry.add(resource("a"), (ctx, req) -> null);
-        registry.add(resource("b"), (ctx, req) -> null);
+        registry.add(resource("a"), EMPTY_HANDLER);
+        registry.add(resource("b"), EMPTY_HANDLER);
         var result = registry.list(1, null);
         assertThat(result.nextCursor()).isEqualTo("a");
     }
 
     @Test
     void listReturnsNullCursorWhenAllItemsReturned() {
-        registry.add(resource("a"), (ctx, req) -> null);
+        registry.add(resource("a"), EMPTY_HANDLER);
         var result = registry.list(10, null);
         assertThat(result.nextCursor()).isNull();
     }
 
     @Test
     void listWithCustomPageSize() {
-        var reg = new ResourceRegistry(
+        var reg = new DefaultResourceRegistry(
                 server, ResourcesConfig.builder().pageSize(1).build());
-        reg.add(resource("a"), (ctx, req) -> null);
-        reg.add(resource("b"), (ctx, req) -> null);
+        reg.add(resource("a"), EMPTY_HANDLER);
+        reg.add(resource("b"), EMPTY_HANDLER);
         var result = reg.list(0, null);
         assertThat(result.items()).hasSize(1);
         assertThat(result.nextCursor()).isEqualTo("a");
@@ -113,8 +116,9 @@ class ResourceRegistryTest {
 
     @Test
     void addIsNoOpWhenResourcesCapabilityIsOff() {
-        var reg = new ResourceRegistry(server, ResourcesConfig.builder().off().build());
-        reg.add(resource("a"), (ctx, req) -> null);
+        var reg = new DefaultResourceRegistry(
+                server, ResourcesConfig.builder().off().build());
+        reg.add(resource("a"), EMPTY_HANDLER);
         assertThat(reg.getAll()).isEmpty();
     }
 
@@ -323,41 +327,11 @@ class ResourceRegistryTest {
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
-        registry.addTemplate(ResourceTemplateEntry.of(
-                "tmpl",
-                "test://tmpl/{id}",
-                null,
-                null,
-                (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "")));
+        registry.addTemplate(
+                ResourceTemplateDescriptor.of("tmpl", "test://tmpl/{id}"),
+                (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", ""));
 
         assertThat(callCount).hasValue(1);
-    }
-
-    @Test
-    void shouldFireOnChangeWhenExistingTemplateRemoved() {
-        registry.addTemplate(ResourceTemplateEntry.of(
-                "tmpl",
-                "test://tmpl/{id}",
-                null,
-                null,
-                (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "")));
-
-        var callCount = new AtomicInteger(0);
-        registry.onChange(callCount::incrementAndGet);
-
-        registry.removeTemplate("tmpl");
-
-        assertThat(callCount).hasValue(1);
-    }
-
-    @Test
-    void shouldNotFireOnChangeWhenRemovingNonExistentTemplate() {
-        var callCount = new AtomicInteger(0);
-        registry.onChange(callCount::incrementAndGet);
-
-        registry.removeTemplate("does-not-exist");
-
-        assertThat(callCount).hasValue(0);
     }
 
     @Test
@@ -452,72 +426,42 @@ class ResourceRegistryTest {
 
     @Test
     void shouldRejectTemplateWithBlankName() {
-        assertThatThrownBy(() -> ResourceTemplateEntry.of(
-                        "",
-                        "resource://{id}",
-                        null,
-                        null,
-                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "x")))
+        assertThatThrownBy(() -> ResourceTemplateDescriptor.of("", "resource://{id}"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("name");
     }
 
     @Test
     void shouldRejectTemplateWithBlankUriTemplate() {
-        assertThatThrownBy(() -> ResourceTemplateEntry.of(
-                        "tmpl",
-                        "  ",
-                        null,
-                        null,
-                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "x")))
+        assertThatThrownBy(() -> ResourceTemplateDescriptor.of("tmpl", "  "))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("uriTemplate");
     }
 
     @Test
     void shouldRejectTemplateWithInvalidVariableName() {
-        assertThatThrownBy(() -> ResourceTemplateEntry.of(
-                        "bad",
-                        "resource://{foo-bar}",
-                        null,
-                        null,
-                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "x")))
+        assertThatThrownBy(() -> ResourceTemplateDescriptor.of("bad", "resource://{foo-bar}"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("foo-bar");
     }
 
     @Test
     void shouldRejectTemplateWithEmptyBraces() {
-        assertThatThrownBy(() -> ResourceTemplateEntry.of(
-                        "bad",
-                        "resource://{}",
-                        null,
-                        null,
-                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "x")))
+        assertThatThrownBy(() -> ResourceTemplateDescriptor.of("bad", "resource://{}"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("braces");
     }
 
     @Test
     void shouldRejectTemplateWithUnmatchedOpenBrace() {
-        assertThatThrownBy(() -> ResourceTemplateEntry.of(
-                        "bad",
-                        "resource://{foo",
-                        null,
-                        null,
-                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "x")))
+        assertThatThrownBy(() -> ResourceTemplateDescriptor.of("bad", "resource://{foo"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("braces");
     }
 
     @Test
     void shouldRejectTemplateWithDuplicateVariableNames() {
-        assertThatThrownBy(() -> ResourceTemplateEntry.of(
-                        "bad",
-                        "resource://{id}/{id}",
-                        null,
-                        null,
-                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "x")))
+        assertThatThrownBy(() -> ResourceTemplateDescriptor.of("bad", "resource://{id}/{id}"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Duplicate");
     }
@@ -525,16 +469,14 @@ class ResourceRegistryTest {
     @Test
     void shouldPreferMoreSpecificTemplateOnOverlap() throws Exception {
         var matched = new AtomicReference<@Nullable String>();
-        registry.addTemplate(
-                ResourceTemplateEntry.of("generic", "resource://{type}/{id}", null, null, (ctx, uri, params) -> {
-                    matched.set("generic");
-                    return TextResourceContents.of(uri, "text/plain", "generic");
-                }));
-        registry.addTemplate(
-                ResourceTemplateEntry.of("specific", "resource://users/{id}", null, null, (ctx, uri, params) -> {
-                    matched.set("specific");
-                    return TextResourceContents.of(uri, "text/plain", "specific");
-                }));
+        registry.addTemplate(ResourceTemplateDescriptor.of("generic", "resource://{type}/{id}"), (ctx, uri, params) -> {
+            matched.set("generic");
+            return TextResourceContents.of(uri, "text/plain", "generic");
+        });
+        registry.addTemplate(ResourceTemplateDescriptor.of("specific", "resource://users/{id}"), (ctx, uri, params) -> {
+            matched.set("specific");
+            return TextResourceContents.of(uri, "text/plain", "specific");
+        });
 
         handlers.get("resources/read")
                 .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "resource://users/42"));
@@ -546,16 +488,16 @@ class ResourceRegistryTest {
     void shouldMapAllResourceTemplateFieldsToProtocolModel() throws Exception {
         var annotations = Annotations.of(null, 0.5, null);
         var icon = Icon.of("https://example.com/tmpl.png", null, null, null);
-        var entry = ResourceTemplateEntry.of(
-                "tmpl",
-                "test://tmpl/{id}",
-                "Template desc",
-                "text/plain",
-                "Template Title",
-                annotations,
-                List.of(icon),
+        registry.addTemplate(
+                ResourceTemplateDescriptor.of(
+                        "tmpl",
+                        "test://tmpl/{id}",
+                        "Template desc",
+                        "text/plain",
+                        "Template Title",
+                        annotations,
+                        List.of(icon)),
                 (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "content-" + params.get("id")));
-        registry.addTemplate(entry);
 
         var result = (ListResourceTemplatesResult)
                 handlers.get("resources/templates/list").handle(DefaultDispatchContext.noop(), null);

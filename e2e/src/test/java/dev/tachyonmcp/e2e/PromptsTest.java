@@ -12,6 +12,7 @@ import dev.tachyonmcp.server.domain.ImageContent;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.server.features.prompts.PromptResult;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
@@ -67,7 +68,8 @@ class PromptsTest extends AbstractMcpE2eTest {
         server.prompts()
                 .add(
                         PromptDescriptor.of("test_prompt_with_arguments", "A parameterized prompt"),
-                        args -> List.of(PromptMessage.user("Hello, " + args + "!")));
+                        (ctx, request) -> PromptResult.messages(
+                                List.of(PromptMessage.user("Hello, " + request.arguments() + "!"))));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();

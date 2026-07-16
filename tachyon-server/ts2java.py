@@ -335,6 +335,9 @@ class Generator:
         self.field_type_mappings = {k: v for k, v in raw_mappings.items() if "." in k}
         self.additional_props = additional_properties or {}
         self.ignore_props = ignore_properties or {}
+        # class_name -> set of json field names that are required-but-nullable (`x: T | null`,
+        # no `?`). Their key MUST be written on encode, emitting JSON null when the value is null.
+        self.nullable_required = {}
         self.dir_models = f"{self.base_dir}/java/{self.pkg_models.replace('.', '/')}"
         self.dir_codecs = (
             f"{self.base_dir}/java/{self.pkg_codecs.replace('.', '/')}"
@@ -938,8 +941,17 @@ class Generator:
                     field_name=f["name"],
                     type_mappings=self.type_mappings,
                 )
-            # Box optional primitives
-            if f.get("optional", False) and field_type in ("boolean", "long", "double"):
+            optional = f.get("optional", False)
+            # A required-but-nullable field (`x: T | null`, no `?`) is nullable like an optional
+            # field for typing/decoding/boxing, but on encode its key MUST still be written (as a
+            # JSON null literal), not omitted. Treat it as optional here and record it so the
+            # encoder can emit the else-null branch.
+            union_members = [p.strip() for p in f.get("raw_type", "").split("|")]
+            if not optional and "null" in union_members:
+                optional = True
+                self.nullable_required.setdefault(class_name, set()).add(f["name"])
+            # Box optional/nullable primitives
+            if optional and field_type in ("boolean", "long", "double"):
                 field_type = (
                     field_type.replace("boolean", "Boolean")
                     .replace("long", "Long")
@@ -953,7 +965,7 @@ class Generator:
                 (
                     field_type,
                     fname,
-                    f.get("optional", False),
+                    optional,
                     JavadocFormatter.format_jsdoc(f.get("jsdoc", "")),
                     json_name,
                 )
@@ -1512,7 +1524,24 @@ class Generator:
 
         for typ, fname, optional, _, json_name in regular:
             out.append(f'                case "{json_name}" -> {{\n')
-            if typ == "String" and self.field_type_mappings.get(f"{model_name}.{json_name}") == "String":
+            is_nullable_required = json_name in self.nullable_required.get(model_name, set())
+            is_raw_json_str = (
+                typ == "String"
+                and self.field_type_mappings.get(f"{model_name}.{json_name}") == "String"
+            )
+            if is_nullable_required and typ in ("String", "Boolean", "Long", "Double") and not is_raw_json_str:
+                # Required-but-nullable scalar: decodeValue returns null for a JSON null.
+                out.append(
+                    f"                    {fname} = decodeValue(parser, {self.ref_for_type(typ, model_name)}.class);\n"
+                )
+                out.append("                }\n")
+                continue
+            if is_nullable_required:
+                # Non-scalar required-but-nullable: an explicit JSON null leaves the field at its null default.
+                out.append(
+                    "                    if (parser.currentToken() != JsonToken.VALUE_NULL) {\n"
+                )
+            if is_raw_json_str:
                 out.append(
                     f"                    {fname} = parser.readValueAsTree().toString();\n"
                 )
@@ -1590,6 +1619,8 @@ class Generator:
                     out.append(f"                    }} else {{\n")
                     out.append(f"                        parser.skipChildren();\n")
                     out.append(f"                    }}\n")
+            if is_nullable_required:
+                out.append("                    }\n")
             out.append("                }\n")
 
         if has_additional:
@@ -1631,6 +1662,19 @@ class Generator:
         for typ, fname, optional, _, json_name in regular:
             acc = f"value.{fname}()"
             is_primitive = typ in ("boolean", "long", "double")
+            is_raw_json_str = (
+                typ == "String"
+                and self.field_type_mappings.get(f"{model_name}.{json_name}") == "String"
+            )
+            if (
+                json_name in self.nullable_required.get(model_name, set())
+                and typ in ("String", "Boolean", "Long", "Double")
+                and not is_raw_json_str
+            ):
+                # Required-but-nullable scalar: encodeValue writes the value, or a JSON null literal.
+                out.append(f'        gen.writeName("{json_name}");\n')
+                out.append(f"        encodeValue(gen, {acc});\n")
+                continue
             if optional and not is_primitive:
                 out.append(f"        if ({acc} != null) {{\n")
                 ind = "            "
@@ -1689,7 +1733,14 @@ class Generator:
                         f"{ind}CodecRegistry.<{base_type}>codecFor({base_type}.class).encode(gen, {acc});\n"
                     )
             if optional:
-                out.append("        }\n")
+                if json_name in self.nullable_required.get(model_name, set()):
+                    # Required-but-nullable: write the key as JSON null instead of omitting it.
+                    out.append("        } else {\n")
+                    out.append(f'            gen.writeName("{json_name}");\n')
+                    out.append("            gen.writeNull();\n")
+                    out.append("        }\n")
+                else:
+                    out.append("        }\n")
 
         if has_additional:
             out.append("        if (value.additionalProperties() != null) {\n")
@@ -1709,6 +1760,7 @@ class Generator:
         out.append(
             "    private static <T> T decodeValue(JsonParser parser, Class<T> type) throws IOException {\n"
         )
+        out.append("        if (parser.currentToken() == JsonToken.VALUE_NULL) return null;\n")
         out.append("        if (type == String.class) return (T) parser.getString();\n")
         out.append(
             "        if (type == Boolean.class || type == boolean.class) return (T) Boolean.valueOf(parser.getBooleanValue());\n"

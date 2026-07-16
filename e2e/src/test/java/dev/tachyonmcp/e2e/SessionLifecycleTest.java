@@ -24,9 +24,9 @@ class SessionLifecycleTest extends AbstractMcpE2eTest {
 
             clientA.delete(sessionA);
 
-            assertThat(server.getSession(sessionA)).isEmpty();
+            assertThat(engine().getSession(sessionA)).isEmpty();
 
-            assertThat(server.getSession(sessionB))
+            assertThat(engine().getSession(sessionB))
                     .isPresent()
                     .map(Session::state)
                     .hasValue(SessionState.ACTIVE);
@@ -41,7 +41,7 @@ class SessionLifecycleTest extends AbstractMcpE2eTest {
     void deleteTerminatesSession() throws Exception {
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            assertThat(server.getSession(sessionId))
+            assertThat(engine().getSession(sessionId))
                     .isPresent()
                     .map(Session::state)
                     .hasValue(SessionState.ACTIVE);
@@ -50,7 +50,7 @@ class SessionLifecycleTest extends AbstractMcpE2eTest {
             assertThat(response.statusCode()).isEqualTo(200);
 
             // Session should be removed from server
-            assertThat(server.getSession(sessionId)).isEmpty();
+            assertThat(engine().getSession(sessionId)).isEmpty();
         }
     }
 
@@ -92,10 +92,10 @@ class SessionLifecycleTest extends AbstractMcpE2eTest {
 
             // Delete session1
             client.delete(session1);
-            assertThat(server.getSession(session1)).isEmpty();
+            assertThat(engine().getSession(session1)).isEmpty();
 
             // session2 should still be active
-            assertThat(server.getSession(session2))
+            assertThat(engine().getSession(session2))
                     .isPresent()
                     .map(Session::state)
                     .hasValue(SessionState.ACTIVE);

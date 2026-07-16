@@ -4,9 +4,16 @@
 
 package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.*;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CancelTaskResult;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CreateTaskResult;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetTaskResult;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Task;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatus;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams;
 import dev.tachyonmcp.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.server.features.tasks.TaskState;
+import java.time.Duration;
+import org.jspecify.annotations.Nullable;
 
 final class McpTaskMapper {
 
@@ -19,7 +26,7 @@ final class McpTaskMapper {
             case INPUT_REQUIRED -> TaskStatus.INPUT_REQUIRED;
             case COMPLETED -> TaskStatus.COMPLETED;
             case CANCELLED -> TaskStatus.CANCELLED;
-            case TASK_STATE_UNSPECIFIED -> throw new UnsupportedOperationException("Unsupported status: " + status);
+            case UNKNOWN -> throw new UnsupportedOperationException("Unsupported status: " + status);
         };
     }
 
@@ -33,6 +40,10 @@ final class McpTaskMapper {
         };
     }
 
+    private static double ttlToMillis(@Nullable Duration ttl) {
+        return ttl != null ? (double) ttl.toMillis() : 0.0;
+    }
+
     static Task toTaskProto(TaskEntry entry) {
         return new Task(
                 entry.id(),
@@ -40,7 +51,7 @@ final class McpTaskMapper {
                 entry.status().toString(),
                 entry.createdAtIso(),
                 entry.lastUpdatedAtIso(),
-                entry.ttl(),
+                ttlToMillis(entry.ttl()),
                 null);
     }
 
@@ -52,7 +63,7 @@ final class McpTaskMapper {
                 entry.status().toString(),
                 entry.createdAtIso(),
                 entry.lastUpdatedAtIso(),
-                entry.ttl(),
+                ttlToMillis(entry.ttl()),
                 null);
     }
 
@@ -64,7 +75,7 @@ final class McpTaskMapper {
                 entry.status().toString(),
                 entry.createdAtIso(),
                 entry.lastUpdatedAtIso(),
-                entry.ttl(),
+                ttlToMillis(entry.ttl()),
                 null);
     }
 
@@ -73,6 +84,7 @@ final class McpTaskMapper {
     }
 
     static TaskStatusNotificationParams toStatusNotification(TaskEntry entry) {
+        final var ttl = entry.ttl();
         return new TaskStatusNotificationParams(
                 null,
                 entry.id(),
@@ -80,7 +92,7 @@ final class McpTaskMapper {
                 entry.status().toString(),
                 entry.createdAtIso(),
                 entry.lastUpdatedAtIso(),
-                entry.ttl(),
+                ttl != null ? ttl.toMillis() : null,
                 null);
     }
 }

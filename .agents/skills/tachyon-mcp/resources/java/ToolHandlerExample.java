@@ -3,7 +3,7 @@
  */
 
 import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
+import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
@@ -49,7 +49,7 @@ final class ToolHandlerExample {
             b -> b.name("greeting")
                 .description("Generates a personalized greeting")
                 .inputSchema(GREET_SCHEMA),
-            (@NonNull InteractionContext ctx, ToolArgs args) -> {
+            (@NonNull InteractionContext ctx, Args args) -> {
                 String name = args.stringValue("name");
                 return ToolResult.text("Hello, " + name + "!");
             });
@@ -81,7 +81,7 @@ final class ToolHandlerExample {
      * connection alive for the whole run.
      *
      * <p>Two triggers, both reachable only from the request-level {@link ToolHandler} (the
-     * {@link ToolArgs} convenience overload carries neither):
+     * {@link Args} convenience overload carries neither):
      *
      * <ul>
      *   <li>{@code progress(token, ...)} — when the client requested progress, forward its

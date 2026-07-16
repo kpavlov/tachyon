@@ -49,7 +49,7 @@ public inline fun tachyonServer(
 /**
  * Builds a fully configured [TachyonServer] **without** starting Netty transport.
  * The returned server is not listening — it supports dynamic registration
- * ([TachyonServer.registerTool] etc.) but has no bound port.
+ * through its feature registries but has no bound port.
  *
  * Use this for tests that don't need transport, or to set up handlers before
  * binding. To start, create with [TachyonServer] instead.

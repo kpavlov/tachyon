@@ -14,9 +14,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
 
-/** Base registry for named, paginated MCP features. */
+/**
+ * Abstract registry for named, paginated MCP features.
+ */
 @InternalApi
-public abstract class Registry<R extends ServerFeature> {
+public abstract class AbstractRegistry<D extends ServerFeature.Descriptor, R extends ServerFeature<D>> {
 
     private final ConcurrentHashMap<String, R> items = new ConcurrentHashMap<>();
 
@@ -24,7 +26,7 @@ public abstract class Registry<R extends ServerFeature> {
 
     private final int defaultPageSize;
 
-    protected Registry(int defaultPageSize) {
+    protected AbstractRegistry(int defaultPageSize) {
         this.defaultPageSize = defaultPageSize;
     }
 
@@ -39,13 +41,13 @@ public abstract class Registry<R extends ServerFeature> {
     }
 
     /** Adds or replaces an item by name. */
-    public void add(R item) {
-        items.put(item.name(), item);
+    protected void addItem(R item) {
+        items.put(item.descriptor().name(), item);
         fireOnChange();
     }
 
     /** Removes the item with the given name. */
-    public void remove(String name) {
+    protected void removeItem(String name) {
         var removed = items.remove(name);
         if (removed != null) {
             fireOnChange();
@@ -66,21 +68,33 @@ public abstract class Registry<R extends ServerFeature> {
         return items.values();
     }
 
-    public PaginatedResult<R> list(int limit, @Nullable String cursor) {
-        int lim = limit > 0 ? limit : defaultPageSize;
-        var all = items.values().stream()
-                .sorted(Comparator.comparing(ServerFeature::name))
-                .toList();
-        return Pagination.paginate(all, lim, cursor, ServerFeature::name);
+    /**
+     * Returns whether the registry is empty.
+     */
+    public boolean isEmpty() {
+        return items.isEmpty();
     }
 
-    public PaginatedResult<R> list(int limit, @Nullable String cursor, Predicate<R> filter) {
+    protected PaginatedResult<R> listItems(int limit, @Nullable String cursor) {
         int lim = limit > 0 ? limit : defaultPageSize;
-        var all = items.values().stream()
-                .filter(filter)
-                .sorted(Comparator.comparing(ServerFeature::name))
+        var all = getAll().stream()
+                .sorted(Comparator.comparing(item -> item.descriptor().name()))
                 .toList();
-        return Pagination.paginate(all, lim, cursor, ServerFeature::name);
+        return Pagination.paginate(all, lim, cursor, item -> item.descriptor().name());
+    }
+
+    public PaginatedResult<D> list(int limit, @Nullable String cursor) {
+        return list(limit, cursor, (any) -> true);
+    }
+
+    public PaginatedResult<D> list(int limit, @Nullable String cursor, Predicate<D> filter) {
+        int lim = limit > 0 ? limit : defaultPageSize;
+        var all = getAll().stream()
+                .map(ServerFeature::descriptor)
+                .filter(filter)
+                .sorted(Comparator.comparing(ServerFeature.Descriptor::name))
+                .toList();
+        return Pagination.paginate(all, lim, cursor, ServerFeature.Descriptor::name);
     }
 
     public abstract void registerHandlers(Map<String, RpcMethodHandler> registry);

@@ -12,7 +12,14 @@ import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
 public sealed interface ToolResult
-        permits ToolResult.Success, ToolResult.Error, ToolResult.WithMeta, ToolResult.InputRequired {
+        permits ToolResult.Success,
+                ToolResult.Error,
+                ToolResult.WithMeta,
+                ToolResult.InputRequired,
+                ToolResult.Deferred {
+
+    /** Sentinel returned by a task-augmented handler that defers completion to the caller. */
+    record Deferred() implements ToolResult {}
 
     record Success(@Nullable Object structuredValue, List<ContentBlock> content) implements ToolResult {
         public Success {

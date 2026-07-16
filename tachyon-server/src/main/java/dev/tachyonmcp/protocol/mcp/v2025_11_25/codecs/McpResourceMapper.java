@@ -8,7 +8,7 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Resource;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ResourceTemplate;
 import dev.tachyonmcp.server.domain.ResourceContents;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
+import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
 
 final class McpResourceMapper {
 
@@ -27,16 +27,16 @@ final class McpResourceMapper {
                 ContentBlockMappers.toProtocolIcons(d.icons()));
     }
 
-    static ResourceTemplate toResourceTemplate(ResourceTemplateEntry entry) {
+    static ResourceTemplate toResourceTemplate(ResourceTemplateDescriptor descriptor) {
         return new ResourceTemplate(
-                entry.uriTemplate(),
-                entry.description(),
-                entry.mimeType(),
-                ContentBlockMappers.toProtocolAnnotations(entry.annotations()),
+                descriptor.uriTemplate(),
+                descriptor.description(),
+                descriptor.mimeType(),
+                ContentBlockMappers.toProtocolAnnotations(descriptor.annotations()),
                 null,
-                entry.name(),
-                entry.title(),
-                ContentBlockMappers.toProtocolIcons(entry.icons()));
+                descriptor.name(),
+                descriptor.title(),
+                ContentBlockMappers.toProtocolIcons(descriptor.icons()));
     }
 
     static dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ResourceContents toProtocolResourceContents(

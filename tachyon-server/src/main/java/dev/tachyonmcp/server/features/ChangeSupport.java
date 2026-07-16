@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Change-notification for registries: a list of listeners run when contents change. Composed by
- * registries that don't share the {@link Registry} base, so the listener boilerplate lives once.
+ * registries that don't share the {@link AbstractRegistry} base, so the listener boilerplate lives once.
  *
  * @author Konstantin Pavlov
  */

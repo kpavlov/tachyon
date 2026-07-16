@@ -123,7 +123,7 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
 
     // endregion
 
-    // region: ToolArgs.decode via custom serde (Java API)
+    // region: Args.decode via custom serde (Java API)
 
     @Test
     void shouldDecodeArgsViaCustomSerde() throws Exception {

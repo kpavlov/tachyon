@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
+import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.NoopInteractionContext;
 import java.net.URI;
@@ -97,34 +97,34 @@ public class YouComSearchToolTest {
     @Test
     void handleReturnsErrorForEmptyQuery() {
         var tool = new YouComSearchTool(YouComSearchConfig.builder().build());
-        var args = ToolArgs.of(Map.of("query", JsonNodeFactory.instance.stringNode("")));
+        var args = Args.of(Map.of("query", JsonNodeFactory.instance.stringNode("")));
         assertThat(tool.handle(NOOP_CTX, args)).isInstanceOf(ToolResult.Error.class);
     }
 
     @Test
     void handleReturnsErrorWhenMissingQuery() {
         var tool = new YouComSearchTool(YouComSearchConfig.builder().build());
-        var args = ToolArgs.of(Map.of());
+        var args = Args.of(Map.of());
         assertThat(tool.handle(NOOP_CTX, args)).isInstanceOf(ToolResult.Error.class);
     }
 
     @Test
     void buildRequestReturnsNullForEmptyQuery() {
         var tool = new YouComSearchTool(YouComSearchConfig.builder().build());
-        var args = ToolArgs.of(Map.of("query", JsonNodeFactory.instance.stringNode("")));
+        var args = Args.of(Map.of("query", JsonNodeFactory.instance.stringNode("")));
         assertThat(tool.buildRequest(args)).isNull();
     }
 
     @Test
     void buildRequestReturnsNullForMissingQuery() {
         var tool = new YouComSearchTool(YouComSearchConfig.builder().build());
-        assertThat(tool.buildRequest(ToolArgs.of(Map.of()))).isNull();
+        assertThat(tool.buildRequest(Args.of(Map.of()))).isNull();
     }
 
     @Test
     void buildRequestUriContainsQuery() {
         var tool = new YouComSearchTool(YouComSearchConfig.builder().build());
-        var args = ToolArgs.of(Map.of("query", JsonNodeFactory.instance.stringNode("hello")));
+        var args = Args.of(Map.of("query", JsonNodeFactory.instance.stringNode("hello")));
         assertThat(tool.buildRequest(args).uri())
                 .isEqualTo(URI.create("https://api.you.com/v1/search?query=hello&count=5"));
     }
@@ -133,14 +133,14 @@ public class YouComSearchToolTest {
     void buildRequestIncludesProfileFreeWhenFreeTier() {
         var tool =
                 new YouComSearchTool(YouComSearchConfig.builder().freeTier(true).build());
-        var args = ToolArgs.of(Map.of("query", JsonNodeFactory.instance.stringNode("test")));
+        var args = Args.of(Map.of("query", JsonNodeFactory.instance.stringNode("test")));
         assertThat(tool.buildRequest(args).uri().toString()).contains("profile=free");
     }
 
     @Test
     void buildRequestOmitsProfileFreeWhenNotFreeTier() {
         var tool = new YouComSearchTool(YouComSearchConfig.builder().build());
-        var args = ToolArgs.of(Map.of("query", JsonNodeFactory.instance.stringNode("test")));
+        var args = Args.of(Map.of("query", JsonNodeFactory.instance.stringNode("test")));
         assertThat(tool.buildRequest(args).uri().toString()).doesNotContain("profile");
     }
 
@@ -148,7 +148,7 @@ public class YouComSearchToolTest {
     void buildRequestIncludesAuthHeaderWhenKeyProvided() {
         var tool = new YouComSearchTool(
                 YouComSearchConfig.builder().apiKey("sk-123").build());
-        var args = ToolArgs.of(Map.of("query", JsonNodeFactory.instance.stringNode("x")));
+        var args = Args.of(Map.of("query", JsonNodeFactory.instance.stringNode("x")));
         assertThat(tool.buildRequest(args).headers().firstValue("X-API-Key")).hasValue("sk-123");
     }
 
@@ -156,7 +156,7 @@ public class YouComSearchToolTest {
     void buildRequestOmitsAuthHeaderWhenFreeTier() {
         var tool = new YouComSearchTool(
                 YouComSearchConfig.builder().apiKey("sk-123").freeTier(true).build());
-        var args = ToolArgs.of(Map.of("query", JsonNodeFactory.instance.stringNode("x")));
+        var args = Args.of(Map.of("query", JsonNodeFactory.instance.stringNode("x")));
         assertThat(tool.buildRequest(args).headers().firstValue("X-API-Key")).isEmpty();
     }
 

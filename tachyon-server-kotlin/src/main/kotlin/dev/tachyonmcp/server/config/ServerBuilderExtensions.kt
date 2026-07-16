@@ -3,8 +3,11 @@
 package dev.tachyonmcp.server.config
 
 import dev.tachyonmcp.server.ServerBuilder
+import dev.tachyonmcp.server.domain.Annotations
+import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.ResourceContents
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor
+import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry
 import dev.tachyonmcp.server.features.resources.resourceHandler
 import dev.tachyonmcp.server.features.resources.templateHandler
@@ -34,15 +37,24 @@ public fun ServerBuilder.resourceTemplate(
     uriTemplate: String,
     description: String? = null,
     mimeType: String? = null,
+    title: String? = null,
+    icons: List<Icon>? = null,
+    annotations: Annotations? = null,
     handler: suspend TemplateScope.() -> ResourceContents,
 ): ServerBuilder =
     resourceTemplate(
         ResourceTemplateEntry(
-            name = name,
-            uriTemplate = uriTemplate,
-            description = description,
-            mimeType = mimeType,
-            handler = templateHandler(name, handler),
+            ResourceTemplateDescriptor
+                .builder()
+                .name(name)
+                .uriTemplate(uriTemplate)
+                .description(description)
+                .mimeType(mimeType)
+                .title(title)
+                .icons(icons)
+                .annotations(annotations)
+                .build(),
+            templateHandler(name, handler),
         ),
     )
 

@@ -1,26 +1,28 @@
-// Copyright (c) 2026 Konstantin Pavlov and contributors.
+/*
+ * Copyright (c) 2026 Konstantin Pavlov.
+ */
 
-package dev.tachyonmcp.server.features.tools
+package dev.tachyonmcp.server.domain
 
-public fun ToolArgs.stringOrNull(key: String): String? = if (has(key)) stringValue(key) else null
+public fun Args.stringOrNull(key: String): String? = if (has(key)) stringValue(key) else null
 
-public fun ToolArgs.intOrNull(key: String): Int? = if (has(key)) intValue(key) else null
+public fun Args.intOrNull(key: String): Int? = if (has(key)) intValue(key) else null
 
-public fun ToolArgs.booleanOrNull(key: String): Boolean? = if (has(key)) boolValue(key) else null
+public fun Args.booleanOrNull(key: String): Boolean? = if (has(key)) boolValue(key) else null
 
-public fun ToolArgs.doubleOrNull(key: String): Double? = if (has(key)) doubleValue(key) else null
+public fun Args.doubleOrNull(key: String): Double? = if (has(key)) doubleValue(key) else null
 
-public fun ToolArgs.boolean(
+public fun Args.boolean(
     key: String,
     default: Boolean,
 ): Boolean = boolOr(key, default)
 
-public fun ToolArgs.int(
+public fun Args.int(
     key: String,
     default: Int,
 ): Int = intOr(key, default)
 
-public fun ToolArgs.double(
+public fun Args.double(
     key: String,
     default: Double,
 ): Double = doubleOr(key, default)
@@ -34,4 +36,4 @@ public fun ToolArgs.double(
  *
  * @throws IllegalStateException if no deserializer is configured for these args.
  */
-public inline fun <reified T : Any> ToolArgs.decode(): T = decode(T::class.java)
+public inline fun <reified T : Any> Args.decode(): T = decode(T::class.java)

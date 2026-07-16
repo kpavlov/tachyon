@@ -7,6 +7,7 @@ import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.TextContent
 import dev.tachyonmcp.server.domain.TextResourceContents
+import dev.tachyonmcp.server.features.prompts.DefaultPromptRegistry
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.internal.ServerEngine
 import dev.tachyonmcp.server.session.InMemorySessionEventStore
@@ -165,9 +166,9 @@ internal class TachyonServerTest {
             }
 
             // registered features
-            handle.getTool("ping") shouldNotBe null
+            handle.tools().getDescriptor("ping") shouldNotBe null
             val engine = handle as ServerEngine
-            engine.prompts()["greet"] shouldNotBe null
+            (engine.prompts() as DefaultPromptRegistry)["greet"] shouldNotBe null
             engine.resources()["config"] shouldNotBe null
 
             // MCP initialize
@@ -190,7 +191,7 @@ internal class TachyonServerTest {
                 }
                 tool("build", "Build test") { ToolResult.text("built") }
             }
-        server.getTool("build") shouldNotBe null
+        server.tools().getDescriptor("build") shouldNotBe null
         server.close()
     }
 
@@ -291,7 +292,7 @@ internal class TachyonServerTest {
                 ToolResult.text("ok")
             }
         }.use { handle ->
-            handle.getTool("string-schema") shouldNotBe null
+            handle.tools().getDescriptor("string-schema") shouldNotBe null
         }
     }
 

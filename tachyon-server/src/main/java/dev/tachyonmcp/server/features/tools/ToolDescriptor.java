@@ -6,6 +6,7 @@ package dev.tachyonmcp.server.features.tools;
 
 import static dev.tachyonmcp.server.json.JsonSchemaUtils.parseSchema;
 
+import dev.tachyonmcp.server.ServerFeature;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
@@ -19,7 +20,7 @@ import tools.jackson.databind.JsonNode;
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
         typeImmutable = "Default*")
-public interface ToolDescriptor {
+public interface ToolDescriptor extends ServerFeature.Descriptor {
 
     String name();
 

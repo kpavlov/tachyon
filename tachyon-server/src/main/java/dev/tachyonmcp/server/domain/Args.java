@@ -1,7 +1,10 @@
-/* Copyright (c) 2026 Konstantin Pavlov and contributors. */
+/*
+ * Copyright (c) 2026 Konstantin Pavlov.
+ */
 
-package dev.tachyonmcp.server.features.tools;
+package dev.tachyonmcp.server.domain;
 
+import dev.tachyonmcp.server.features.tools.InvalidArgumentException;
 import dev.tachyonmcp.server.json.JsonUtils;
 import dev.tachyonmcp.server.json.PayloadDeserializer;
 import java.lang.reflect.Type;
@@ -11,22 +14,28 @@ import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
-public final class ToolArgs {
+public final class Args {
 
     private final Map<String, JsonNode> raw;
     private final @Nullable PayloadDeserializer deserializer;
 
-    private ToolArgs(@Nullable Map<String, JsonNode> raw, @Nullable PayloadDeserializer deserializer) {
+    private static final Args EMPTY = new Args(Collections.emptyMap(), null);
+
+    private Args(@Nullable Map<String, JsonNode> raw, @Nullable PayloadDeserializer deserializer) {
         this.raw = raw == null ? Map.of() : Map.copyOf(raw);
         this.deserializer = deserializer;
     }
 
-    public static ToolArgs of(@Nullable Map<String, JsonNode> raw) {
-        return new ToolArgs(raw, null);
+    public static Args of(@Nullable Map<String, JsonNode> raw) {
+        return new Args(raw, null);
     }
 
-    public static ToolArgs of(@Nullable Map<String, JsonNode> raw, @Nullable PayloadDeserializer deserializer) {
-        return new ToolArgs(raw, deserializer);
+    public static Args empty() {
+        return EMPTY;
+    }
+
+    public static Args of(@Nullable Map<String, JsonNode> raw, @Nullable PayloadDeserializer deserializer) {
+        return new Args(raw, deserializer);
     }
 
     public boolean isEmpty() {
@@ -39,7 +48,7 @@ public final class ToolArgs {
 
     /** Returns an unmodifiable view of the raw argument map. */
     public Map<String, JsonNode> asMap() {
-        return Collections.unmodifiableMap(raw);
+        return raw;
     }
 
     public String stringValue(String key) {
@@ -62,7 +71,8 @@ public final class ToolArgs {
         return has(key) ? Optional.of(raw.get(key).asString()) : Optional.empty();
     }
 
-    public String stringOr(String key, String fallback) {
+    @Nullable
+    public String stringOr(String key, @Nullable String fallback) {
         return has(key) ? raw.get(key).asString() : fallback;
     }
 
@@ -131,6 +141,12 @@ public final class ToolArgs {
     public JsonNode node(String key) {
         var n = raw.get(key);
         if (n == null) throw new InvalidArgumentException(key, "required argument missing");
+        return n;
+    }
+
+    public @Nullable JsonNode nodeOr(String key, @Nullable JsonNode fallback) {
+        var n = raw.get(key);
+        if (n == null) return fallback;
         return n;
     }
 

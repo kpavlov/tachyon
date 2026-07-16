@@ -34,9 +34,10 @@ class PageSizeConfigTest extends AbstractMcpE2eTest {
             var tools1 = root1.at("/result/tools");
             assertThat(tools1.isArray()).isTrue();
             assertThat(tools1.size()).isEqualTo(2);
-            var cursor = root1.at("/result/nextCursor").asText(null);
+            var cursor = root1.at("/result/nextCursor").asString(null);
             assertThat(cursor).isNotNull();
 
+            // language=json
             var page2 = client.sendRequest(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{"cursor":"%s"}}
                 """.formatted(cursor));
@@ -44,7 +45,7 @@ class PageSizeConfigTest extends AbstractMcpE2eTest {
             var tools2 = root2.at("/result/tools");
             assertThat(tools2.isArray()).isTrue();
             assertThat(tools2.size()).isEqualTo(1);
-            assertThat(root2.at("/result/nextCursor").asText(null)).isNull();
+            assertThat(root2.at("/result/nextCursor").asString(null)).isNull();
         }
     }
 

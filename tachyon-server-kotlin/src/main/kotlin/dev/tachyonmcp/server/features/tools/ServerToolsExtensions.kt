@@ -62,7 +62,7 @@ public fun TachyonServer.registerTool(
     descriptor: ToolDescriptor,
     block: suspend ToolScope.() -> ToolResult,
 ): TachyonServer {
-    this.registerTool(toolHandler(descriptor, block))
+    this.tools().add(toolHandler(descriptor, block))
     return this
 }
 

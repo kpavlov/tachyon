@@ -6,14 +6,16 @@ package dev.tachyonmcp.server.features.tasks;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.OutboundSseStreamMessageRouter;
+import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.extensions.ServerExtension;
-import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
+import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -57,21 +59,20 @@ public class TasksExtension implements ServerExtension {
                 .extensionId(ID)
                 .build();
 
-        server.registerTool(new CreateTaskHandler(descriptor, server));
+        server.tools().add(new CreateTaskHandler(descriptor, server));
 
         server.resources()
-                .addTemplate(ResourceTemplateEntry.of(
-                        "task-status", "task://{id}", "Current status of a task", "text/plain", (ctx, uri, params) -> {
-                            var id = params.get("id");
-                            var entry = server.tasks().getById(id);
-                            var text = entry != null ? entry.status().name() : "not_found";
-                            return TextResourceContents.of(uri, "text/plain", text, null);
-                        }));
+                .addTemplate(ResourceTemplateDescriptor.of("task-status", "task://{id}"), (ctx, uri, params) -> {
+                    var id = params.get("id");
+                    var entry = server.tasks().get(id);
+                    var text = entry != null ? entry.status().name() : "not_found";
+                    return TextResourceContents.of(uri, "text/plain", text, null);
+                });
     }
 
     private static final class CreateTaskHandler extends AbstractToolHandler {
 
-        private final TaskRegistry tasks;
+        private final InternalTaskRegistry tasks;
         private final Executor executor;
 
         CreateTaskHandler(ToolDescriptor descriptor, ServerEngine server) {
@@ -81,17 +82,25 @@ public class TasksExtension implements ServerExtension {
         }
 
         @Override
-        public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolArgs args) {
+        public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, Args args) {
             var sessionId = OutboundSseStreamMessageRouter.currentSessionId();
             var outboundStream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
             return CompletableFuture.supplyAsync(
                     () -> {
                         try {
                             return OutboundSseStreamMessageRouter.withDispatchContext(sessionId, outboundStream, () -> {
-                                var name = args.stringOr("name", "unnamed");
-                                var description = args.stringOpt("description").orElse(null);
-                                return ToolResult.text(
-                                        tasks.createTask(name, description).id());
+                                final var meta = new HashMap<String, JsonNode>(2);
+                                final var name = args.nodeOr("name", null);
+                                if (name != null) {
+                                    meta.put("name", name);
+                                }
+                                final var description = args.nodeOr("description", null);
+                                if (description != null) {
+                                    meta.put("description", description);
+                                }
+                                final var task = tasks.create(new TaskOptions(
+                                        null, !meta.isEmpty() ? Collections.unmodifiableMap(meta) : null));
+                                return ToolResult.text(task.id());
                             });
                         } catch (Exception e) {
                             throw new CompletionException(e);

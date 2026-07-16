@@ -4,20 +4,22 @@
 
 package dev.tachyonmcp.server;
 
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.config.ServerConfig;
-import dev.tachyonmcp.server.domain.PromptMessage;
+import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.extensions.ServerExtension;
-import dev.tachyonmcp.server.features.prompts.InputRequiredPromptHandler;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptHandler;
+import dev.tachyonmcp.server.features.prompts.PromptRegistry;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
+import dev.tachyonmcp.server.features.resources.ResourceRegistry;
+import dev.tachyonmcp.server.features.tasks.TaskRegistry;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolRegistry;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import java.util.function.BiFunction;
 import org.jspecify.annotations.Nullable;
 
@@ -30,6 +32,18 @@ import org.jspecify.annotations.Nullable;
  * <p>Kotlin users get {@code .use { }} from the stdlib via {@code AutoCloseable}.
  */
 public interface TachyonServer extends AutoCloseable {
+
+    /** Returns the tool registry. */
+    ToolRegistry tools();
+
+    /** Returns the resource registry. */
+    ResourceRegistry resources();
+
+    /** Returns the prompt registry. */
+    PromptRegistry prompts();
+
+    /** Returns the task registry. */
+    TaskRegistry tasks();
 
     /**
      * Returns the port the server is bound to, or 0 if not yet started.
@@ -46,67 +60,63 @@ public interface TachyonServer extends AutoCloseable {
     /** Returns the server configuration. */
     ServerConfig config();
 
-    /**
-     * Registers a tool handler after the server has started (dynamic registration).
-     *
-     * <p><b>Intentional naming difference:</b> this is {@code registerTool()} (post-start
-     * dynamic registration), while {@link ServerBuilder#tool(ToolHandler)} is
-     * {@code tool()} (build-time DSL noun). They serve different lifecycle phases and are
-     * intentionally named differently.
-     */
-    void registerTool(ToolHandler handler);
+    /** Returns the registered extensions. */
+    List<ServerExtension> extensions();
 
     /**
-     * Registers a tool with string JSON schemas and a handler function
-     * (post-start dynamic registration).
-     *
-     * <p><b>Intentional naming difference:</b> this is {@code registerTool()} (post-start),
-     * while {@link ServerBuilder#tool(String, String, String, String, BiFunction)} is
-     * {@code tool()} (build-time). They serve different lifecycle phases and are
-     * intentionally named differently.
+     * @deprecated Use {@code tools().add(handler)}.
      */
-    void registerTool(
+    @Deprecated(since = "1.0.0-beta.10")
+    default void registerTool(ToolHandler handler) {
+        tools().add(handler);
+    }
+
+    /**
+     * @deprecated Use {@link #tools()} and
+     * {@link ToolRegistry#add(String, String, String, String, BiFunction)}.
+     */
+    @Deprecated(since = "1.0.0-beta.10")
+    default void registerTool(
             String name,
             @Nullable String description,
             @Nullable String inputSchemaJson,
             @Nullable String outputSchemaJson,
-            BiFunction<dev.tachyonmcp.runtime.InteractionContext, ToolArgs, ToolResult> fn);
+            BiFunction<InteractionContext, Args, ToolResult> fn) {
+        tools().add(name, description, inputSchemaJson, outputSchemaJson, fn);
+    }
 
     /**
-     * Registers a resource after the server has started (dynamic registration).
-     * When no handler is provided, returns empty content.
+     * @deprecated Use {@code resources().add(descriptor)}.
      */
-    void registerResource(ResourceDescriptor descriptor);
+    @Deprecated(since = "1.0.0-beta.10")
+    default void registerResource(ResourceDescriptor descriptor) {
+        resources().add(descriptor);
+    }
 
     /**
-     * Registers a resource with a read handler after the server has started.
+     * @deprecated Use {@code resources().add(descriptor, handler)}.
      */
-    void registerResource(ResourceDescriptor descriptor, ResourceHandler handler);
+    @Deprecated(since = "1.0.0-beta.10")
+    default void registerResource(ResourceDescriptor descriptor, ResourceHandler handler) {
+        resources().add(descriptor, handler);
+    }
 
     /**
-     * Registers a prompt with static messages after the server has started.
+     * @deprecated Use {@code prompts().add(descriptor, handler)}.
      */
-    void registerPrompt(PromptDescriptor descriptor, List<PromptMessage> messages);
+    @Deprecated(since = "1.0.0-beta.10")
+    default void registerPrompt(PromptDescriptor descriptor, PromptHandler handler) {
+        prompts().add(descriptor, handler);
+    }
 
     /**
-     * Registers a prompt with a dynamic handler (simple messages only) after the server has started.
+     * @deprecated Use {@code tools().getDescriptor(name)}.
      */
-    void registerPrompt(PromptDescriptor descriptor, PromptHandler handler);
-
-    /**
-     * Registers a prompt with an input-required (MRTR) handler after the server has started.
-     */
-    void registerPrompt(PromptDescriptor descriptor, InputRequiredPromptHandler handler);
-
-    /** Returns the descriptor for a tool by name, or {@code null} if not registered. */
+    @Deprecated(since = "1.0.0-beta.10")
     @Nullable
-    ToolDescriptor getTool(String name);
-
-    /** Returns the executor used for handler dispatch. */
-    ExecutorService executor();
-
-    /** Returns the registered extensions. */
-    List<ServerExtension> extensions();
+    default ToolDescriptor getTool(String name) {
+        return tools().getDescriptor(name);
+    }
 
     @Override
     void close();

@@ -66,13 +66,13 @@ class McpSdkTest extends AbstractMcpE2eTest {
     void shouldEncodePromptMessageWithRoleEnum() throws Exception {
         server.prompts()
                 .add(
-                        PromptDescriptor.of("greeting", "A greeting prompt"),
+                        PromptDescriptor.of("role-enum-prompt", "A greeting prompt"),
                         List.of(PromptMessage.of(Role.USER, TextContent.of("Hello"))));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
             var getPromptResponse = client.sendRequest(sessionId, """
-                {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"greeting"}}
+                {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"role-enum-prompt"}}
                 """);
             assertThat(getPromptResponse.statusCode()).isEqualTo(200);
 

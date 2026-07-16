@@ -5,7 +5,6 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
 import dev.tachyonmcp.server.domain.TextResourceContents;
-import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
 import org.junit.jupiter.api.Test;
 
 class ResourceTemplateTest extends AbstractMcpE2eTest {
@@ -14,12 +13,12 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
     void shouldReadResourceFromSingleParamTemplate() throws Exception {
         startEmptyServer();
         server.resources()
-                .addTemplate(ResourceTemplateEntry.of(
-                        "item",
-                        "resource://items/{id}",
-                        "An item",
-                        "text/plain",
-                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "item=" + params.get("id"))));
+                .addTemplate(
+                        builder -> builder.name("item")
+                                .uriTemplate("resource://items/{id}")
+                                .description("An item")
+                                .mimeType("text/plain"),
+                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "item=" + params.get("id")));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -27,8 +26,11 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://items/42"}}
                 """);
 
-            // language=JSON
-            assertThatJson(response.body()).inPath("$.result").isEqualTo("""
+            assertThatJson(response.body())
+                    .inPath("$.result")
+                    .isEqualTo(
+                            // language=JSON
+                            """
                 {
                   "contents": [
                     {
@@ -46,26 +48,26 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
     void shouldMatchCorrectTemplateWhenMultipleRegistered() throws Exception {
         startEmptyServer();
         server.resources()
-                .addTemplate(ResourceTemplateEntry.of(
-                        "items",
-                        "resource://items/{id}",
-                        "An item",
-                        "text/plain",
-                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "item=" + params.get("id"))))
-                .addTemplate(ResourceTemplateEntry.of(
-                        "orders",
-                        "resource://orders/{orderId}",
-                        "An order",
-                        "text/plain",
+                .addTemplate(
+                        builder -> builder.name("items")
+                                .uriTemplate("resource://items/{id}")
+                                .description("An item")
+                                .mimeType("text/plain"),
+                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "item=" + params.get("id")))
+                .addTemplate(
+                        builder -> builder.name("orders")
+                                .uriTemplate("resource://orders/{orderId}")
+                                .description("An order")
+                                .mimeType("text/plain"),
                         (ctx, uri, params) ->
-                                TextResourceContents.of(uri, "text/plain", "order=" + params.get("orderId"))))
-                .addTemplate(ResourceTemplateEntry.of(
-                        "users",
-                        "resource://users/{userId}",
-                        "A user",
-                        "text/plain",
+                                TextResourceContents.of(uri, "text/plain", "order=" + params.get("orderId")))
+                .addTemplate(
+                        builder -> builder.name("users")
+                                .uriTemplate("resource://users/{userId}")
+                                .description("A user")
+                                .mimeType("text/plain"),
                         (ctx, uri, params) ->
-                                TextResourceContents.of(uri, "text/plain", "user=" + params.get("userId"))));
+                                TextResourceContents.of(uri, "text/plain", "user=" + params.get("userId")));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -73,8 +75,11 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
             var r1 = client.sendRequest(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://orders/99"}}
                 """);
-            // language=JSON
-            assertThatJson(r1.body()).inPath("$.result").isEqualTo("""
+            assertThatJson(r1.body())
+                    .inPath("$.result")
+                    .isEqualTo(
+                            // language=JSON
+                            """
                 {
                   "contents": [
                     {
@@ -89,8 +94,11 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
             var r2 = client.sendRequest(sessionId, """
                 {"jsonrpc":"2.0","id":3,"method":"resources/read","params":{"uri":"resource://users/alice"}}
                 """);
-            // language=JSON
-            assertThatJson(r2.body()).inPath("$.result").isEqualTo("""
+            assertThatJson(r2.body())
+                    .inPath("$.result")
+                    .isEqualTo(
+                            // language=JSON
+                            """
                 {
                   "contents": [
                     {
@@ -108,13 +116,13 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
     void shouldReadResourceFromMultiParamTemplate() throws Exception {
         startEmptyServer();
         server.resources()
-                .addTemplate(ResourceTemplateEntry.of(
-                        "user-post",
-                        "users://{userId}/posts/{postId}",
-                        "A user post",
-                        "text/plain",
+                .addTemplate(
+                        builder -> builder.name("user-post")
+                                .uriTemplate("users://{userId}/posts/{postId}")
+                                .description("User's post")
+                                .mimeType("text/plain"),
                         (ctx, uri, params) -> TextResourceContents.of(
-                                uri, "text/plain", "user=" + params.get("userId") + ",post=" + params.get("postId"))));
+                                uri, "text/plain", "user=" + params.get("userId") + ",post=" + params.get("postId")));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -122,8 +130,11 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"users://alice/posts/42"}}
                 """);
 
-            // language=JSON
-            assertThatJson(response.body()).inPath("$.result").isEqualTo("""
+            assertThatJson(response.body())
+                    .inPath("$.result")
+                    .isEqualTo(
+                            // language=JSON
+                            """
                 {
                   "contents": [
                     {

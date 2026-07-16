@@ -17,9 +17,8 @@ import dev.tachyonmcp.server.domain.RpcMethodRequest;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
-import dev.tachyonmcp.server.features.prompts.PromptHandlerResult;
+import dev.tachyonmcp.server.features.prompts.PromptResult;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
@@ -684,28 +683,24 @@ abstract class AbstractConformanceServer {
                         (ctx, req) -> BlobResourceContents.of("test://static-binary", "image/png", MINI_PNG_BASE64));
 
         server.resources()
-                .addTemplate(ResourceTemplateEntry.of(
-                        "test-template",
-                        "test://template/{id}/data",
-                        "Test template",
-                        "text/plain",
+                .addTemplate(
+                        builder -> builder.name("test-template")
+                                .uriTemplate("test://template/{id}/data")
+                                .description("test-description"),
                         (ctx, uri, params) -> TextResourceContents.of(
-                                uri, "text/plain", "Resource content for id: " + params.get("id"))));
+                                uri, "text/plain", "Resource content for id: " + params.get("id")));
     }
 
     private void registerPrompts(ServerEngine server) {
         server.prompts()
-                .add(PromptDescriptor.of("greeting", "A greeting prompt"), List.of(PromptMessage.user("Hello!")));
-
-        server.prompts()
+                .add(PromptDescriptor.of("greeting", "A greeting prompt"), List.of(PromptMessage.user("Hello!")))
                 .add(
                         PromptDescriptor.of("test_simple_prompt", "A simple test prompt"),
-                        List.of(PromptMessage.user("This is a simple test prompt.")));
-
-        server.prompts()
+                        List.of(PromptMessage.user("This is a simple test prompt.")))
                 .add(
                         PromptDescriptor.of("test_prompt_with_arguments", "A parameterized prompt"),
-                        args -> List.of(PromptMessage.user("Prompt with arguments: " + args)));
+                        (ctx, request) -> PromptResult.messages(
+                                List.of(PromptMessage.user("Prompt with arguments: " + request.arguments()))));
 
         server.prompts()
                 .add(
@@ -727,9 +722,9 @@ abstract class AbstractConformanceServer {
                         (ctx, request) -> {
                             var inputResponses = request.inputResponses();
                             if (inputResponses != null && inputResponses.containsKey("user_context")) {
-                                return PromptHandlerResult.messages(List.of(PromptMessage.user("Context received")));
+                                return PromptResult.messages(List.of(PromptMessage.user("Context received")));
                             }
-                            return PromptHandlerResult.inputRequired(
+                            return PromptResult.inputRequired(
                                     Map.of(
                                             "user_context",
                                             buildFormElicitation(

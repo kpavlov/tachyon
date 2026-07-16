@@ -8,11 +8,11 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.domain.FormInputRequest;
 import dev.tachyonmcp.server.domain.InputRequest;
 import dev.tachyonmcp.server.domain.UrlInputRequest;
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
@@ -288,7 +288,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
         }
 
         @Override
-        public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolArgs args) {
+        public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, Args args) {
             return handleAsync(
                     context, ToolRequest.builder().name(descriptor().name()).build());
         }

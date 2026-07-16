@@ -10,6 +10,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.stream.Stream;
+import org.intellij.lang.annotations.Language;
 import org.jspecify.annotations.Nullable;
 
 public record TestMcpClient(int serverPort, HttpClient httpClient) implements Closeable {
@@ -62,7 +63,7 @@ public record TestMcpClient(int serverPort, HttpClient httpClient) implements Cl
                 HttpResponse.BodyHandlers.ofString());
     }
 
-    public HttpResponse<String> post(String body) throws Exception {
+    public HttpResponse<String> post(@Language("json") String body) throws Exception {
         return post(null, body);
     }
 
@@ -70,7 +71,7 @@ public record TestMcpClient(int serverPort, HttpClient httpClient) implements Cl
      * POSTs an MCP request carrying an {@code Origin} header. Used to exercise the
      * DNS-rebinding protection, which validates {@code Origin} before {@code Host}.
      */
-    public HttpResponse<String> postWithOrigin(String origin, String body) throws Exception {
+    public HttpResponse<String> postWithOrigin(String origin, @Language("json") String body) throws Exception {
         return httpClient.send(
                 baseRequest()
                         .header("Origin", origin)
@@ -79,7 +80,7 @@ public record TestMcpClient(int serverPort, HttpClient httpClient) implements Cl
                 HttpResponse.BodyHandlers.ofString());
     }
 
-    public HttpResponse<String> post(@Nullable String sessionId, String body) throws Exception {
+    public HttpResponse<String> post(@Nullable String sessionId, @Language("json") String body) throws Exception {
         var builder = baseRequest();
         if (sessionId != null) {
             builder.header("MCP-Session-Id", sessionId);
@@ -88,11 +89,12 @@ public record TestMcpClient(int serverPort, HttpClient httpClient) implements Cl
                 builder.POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofString());
     }
 
-    public HttpResponse<String> sendRequest(String sessionId, String body) throws Exception {
+    public HttpResponse<String> sendRequest(String sessionId, @Language("json") String body) throws Exception {
         return post(sessionId, body);
     }
 
-    public HttpResponse<Stream<String>> sendStreamingRequest(String sessionId, String body) throws Exception {
+    public HttpResponse<Stream<String>> sendStreamingRequest(@Nullable String sessionId, @Language("json") String body)
+            throws Exception {
         var builder = baseRequest();
         if (sessionId != null) builder.header("MCP-Session-Id", sessionId);
         return httpClient.send(

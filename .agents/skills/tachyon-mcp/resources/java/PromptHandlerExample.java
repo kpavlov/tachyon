@@ -5,25 +5,23 @@
 import dev.tachyonmcp.server.domain.PromptArgument;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.features.prompts.AsyncPromptHandler;
-import dev.tachyonmcp.server.features.prompts.InputRequiredPromptHandler;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptHandler;
-import dev.tachyonmcp.server.features.prompts.PromptHandlerResult;
+import dev.tachyonmcp.server.features.prompts.PromptResult;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
  * Demonstrates prompt descriptor and handler patterns.
  *
- * <p>Three handler flavors: {@link PromptHandler} (simple, messages only),
- * {@link InputRequiredPromptHandler} (sync, returns {@link PromptHandlerResult} — messages
- * or an input-required/MRTR round-trip), and {@link AsyncPromptHandler} (non-blocking).
+ * <p>Two handler flavors: {@link PromptHandler} (sync, returns a {@link PromptResult} — messages
+ * or an input-required/MRTR round-trip) and {@link AsyncPromptHandler} (non-blocking).
  */
 final class PromptHandlerExample {
 
     /** Simplest — name + description, handler returns fixed messages. */
     static PromptHandler simpleHandler() {
-        return args -> List.of(PromptMessage.user("Rewrite this in a pirate style."));
+        return (ctx, request) -> PromptResult.messages(List.of(PromptMessage.user("Rewrite this in a pirate style.")));
     }
 
     static PromptDescriptor simpleDescriptor() {
@@ -42,11 +40,11 @@ final class PromptHandlerExample {
                 null);
     }
 
-    /** Handler that reads the argument. */
+    /** Handler that reads the argument string. */
     static PromptHandler argHandler() {
-        return args -> {
-            var text = args != null ? args : "default text";
-            return List.of(PromptMessage.user("Rewrite this: " + text));
+        return (ctx, request) -> {
+            var text = request.arguments() != null ? request.arguments() : "default text";
+            return PromptResult.messages(List.of(PromptMessage.user("Rewrite this: " + text)));
         };
     }
 
@@ -60,15 +58,9 @@ final class PromptHandlerExample {
                 .build();
     }
 
-    /** Sync handler with request context — returns a PromptHandlerResult. */
-    static InputRequiredPromptHandler syncHandler() {
-        return (ctx, request) ->
-                PromptHandlerResult.messages(List.of(PromptMessage.user("Rewrite: " + request.arguments())));
-    }
-
     /** Async handler — returns a CompletionStage for non-blocking backends. */
     static AsyncPromptHandler asyncHandler() {
         return (ctx, request) -> CompletableFuture.supplyAsync(
-                () -> PromptHandlerResult.messages(List.of(PromptMessage.user("Rewrite: " + request.arguments()))));
+                () -> PromptResult.messages(List.of(PromptMessage.user("Rewrite: " + request.arguments()))));
     }
 }

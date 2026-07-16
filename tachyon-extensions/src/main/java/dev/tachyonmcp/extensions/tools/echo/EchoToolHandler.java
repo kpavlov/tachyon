@@ -3,8 +3,8 @@
 package dev.tachyonmcp.extensions.tools.echo;
 
 import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import tools.jackson.databind.JsonNode;
@@ -35,7 +35,7 @@ public class EchoToolHandler extends AbstractToolHandler {
     }
 
     @Override
-    public ToolResult handle(InteractionContext context, ToolArgs args) {
+    public ToolResult handle(InteractionContext context, Args args) {
         return ToolResult.text(args.stringOr("message", ""));
     }
 }

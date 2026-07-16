@@ -18,7 +18,7 @@ import tools.jackson.databind.JsonNode;
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
         typeImmutable = "Default*")
-public interface PromptDescriptor extends ServerFeature {
+public interface PromptDescriptor extends ServerFeature.Descriptor {
 
     String name();
 

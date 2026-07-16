@@ -6,6 +6,7 @@ package dev.tachyonmcp.server.features.tools;
 
 import dev.tachyonmcp.runtime.Cancellation;
 import dev.tachyonmcp.server.domain.HasMeta;
+import dev.tachyonmcp.server.domain.Task;
 import dev.tachyonmcp.server.json.PayloadDeserializer;
 import java.util.Map;
 import org.immutables.value.Value;
@@ -45,6 +46,10 @@ public interface ToolRequest extends HasMeta {
     @Nullable
     String requestState();
 
+    /** The task handle for task-augmented tool calls, or {@code null} for non-augmented calls. */
+    @Nullable
+    Task task();
+
     static Builder builder() {
         return DefaultToolRequest.builder();
     }
@@ -65,6 +70,8 @@ public interface ToolRequest extends HasMeta {
         Builder inputResponses(@Nullable Map<String, ? extends JsonNode> inputResponses);
 
         Builder requestState(@Nullable String requestState);
+
+        Builder task(@Nullable Task task);
 
         ToolRequest build();
     }

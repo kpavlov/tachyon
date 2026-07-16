@@ -12,12 +12,14 @@ import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.ServerCapabilities;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.LoggingLevel;
+import dev.tachyonmcp.server.features.tasks.InternalTaskRegistry;
 import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.server.session.SessionIdGenerator;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -34,14 +36,8 @@ import org.jspecify.annotations.Nullable;
  */
 public interface ServerEngine extends TachyonServer {
 
-    /** Returns the resource registry. */
-    dev.tachyonmcp.server.features.resources.ResourceRegistry resources();
-
-    /** Returns the prompt registry. */
-    dev.tachyonmcp.server.features.prompts.PromptRegistry prompts();
-
     /** Returns the task registry. */
-    dev.tachyonmcp.server.features.tasks.TaskRegistry tasks();
+    InternalTaskRegistry tasks();
 
     /** Returns the protocol response mapper for the default MCP version. */
     ProtocolResponseMapper responseMapper();
@@ -99,6 +95,9 @@ public interface ServerEngine extends TachyonServer {
 
     /** Sends a notification to the given session, optionally via a bound outbound SSE stream. */
     void sendNotification(Session session, String method, @Nullable Object params, @Nullable OutboundSseStream stream);
+
+    /** Returns the executor used for handler dispatch. */
+    ExecutorService executor();
 
     /** Sends a request to the client and returns a future that completes with the response. */
     CompletableFuture<String> sendRequest(Session session, String method, Object params);

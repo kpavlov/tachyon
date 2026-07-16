@@ -31,13 +31,13 @@ Need an input schema? Configure the descriptor with the builder overload. `.inpu
 
 Prefer the `ToolHandler.of…` factories above — they cover most tools in one call. Reach for a
 class only when the handler needs instance state or shared setup. Then extend
-`AbstractToolHandler`: pass the descriptor to the constructor and override `handle(ctx, ToolArgs)`.
+`AbstractToolHandler`: pass the descriptor to the constructor and override `handle(ctx, Args)`.
 (`ToolHandler` itself declares only `descriptor()` and `handleAsync(ctx, ToolRequest)`;
 `AbstractToolHandler` supplies the sync/args convenience overrides.)
 
 ```java
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
+import dev.tachyonmcp.server.features.tools.Args;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.runtime.InteractionContext;
@@ -56,7 +56,7 @@ class WeatherTool extends AbstractToolHandler {
     }
 
     @Override
-    public ToolResult handle(InteractionContext ctx, ToolArgs args) {
+    public ToolResult handle(InteractionContext ctx, Args args) {
         String city = args.string("city");
         return ToolResult.text("☀️ 22°C in " + city);
     }
@@ -69,7 +69,7 @@ Register: `.tool(new WeatherTool())`
 
 Blocking handlers run on a virtual thread, so most tools need no async plumbing. When you already
 hold a `CompletionStage` (a non-blocking client, another async service), return it directly:
-lambda via `ToolHandler.ofAsync`, or override `handleAsync(ctx, ToolArgs)` on
+lambda via `ToolHandler.ofAsync`, or override `handleAsync(ctx, Args)` on
 `AbstractToolHandler`. Async handlers stay async — they are not funneled through the blocking path.
 
 ```java
@@ -82,14 +82,14 @@ import dev.tachyonmcp.server.features.tools.ToolHandler;
 
 ### Progress token / full request
 
-`ToolArgs` carries only the parsed arguments. When you need the request `_meta` — a progress token,
+`Args` carries only the parsed arguments. When you need the request `_meta` — a progress token,
 input responses — use the request-level entry points: the `ToolHandler.ofRequest(descriptor,
 (ctx, request) -> ...)` factory, or override `handle(ctx, ToolRequest)` (sync) /
 `handleAsync(ctx, ToolRequest)` (async) on `AbstractToolHandler`.
 
 ## Read arguments
 
-`ToolArgs` wraps the raw `Map<String, JsonNode>` with typed accessors:
+`Args` wraps the raw `Map<String, JsonNode>` with typed accessors:
 
 | Method                    | Returns    |
 |---------------------------|------------|

@@ -8,16 +8,17 @@ import dev.tachyonmcp.server.domain.InitializeResponse;
 import dev.tachyonmcp.server.domain.InputRequest;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.ResourceContents;
+import dev.tachyonmcp.server.domain.Task;
+import dev.tachyonmcp.server.domain.TaskResult;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
+import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
 /**
  * Maps domain objects to protocol-specific response shapes.
@@ -49,7 +50,7 @@ public interface ProtocolResponseMapper {
     Object listResourcesResult(List<ResourceDescriptor> resources, @Nullable String nextCursor);
 
     /** Maps a paginated list of resource template entries into protocol-specific shape. */
-    Object listResourceTemplatesResult(List<ResourceTemplateEntry> templates, @Nullable String nextCursor);
+    Object listResourceTemplatesResult(List<ResourceTemplateDescriptor> templates, @Nullable String nextCursor);
 
     /** Maps a resource contents list (from a read operation) into protocol-specific shape. */
     Object readResourceResult(List<ResourceContents> contents);
@@ -67,7 +68,7 @@ public interface ProtocolResponseMapper {
     Object listTasksResult(List<TaskEntry> entries, @Nullable String nextCursor);
 
     /** Maps a single task entry (get result) into protocol-specific shape. */
-    Object getTaskResult(TaskEntry entry);
+    Object getTaskResult(Task entry);
 
     /** Maps a newly created task entry into a CreateTaskResult (for task-augmented requests). */
     Object createTaskResult(TaskEntry entry);
@@ -75,8 +76,8 @@ public interface ProtocolResponseMapper {
     /** Maps a cancelled task entry into protocol-specific shape. */
     Object cancelTaskResult(TaskEntry entry);
 
-    /** Maps a task's result payload into protocol-specific shape. */
-    Object getTaskPayloadResult(@Nullable JsonNode result);
+    /** Maps a task's terminal result into the tasks/result payload — a {@code CallToolResult}. */
+    Object getTaskPayloadResult(@Nullable TaskResult result, String taskId);
 
     /** Builds the params object for a tasks/status notification from a task entry. */
     Object taskStatusNotificationParams(TaskEntry entry);
