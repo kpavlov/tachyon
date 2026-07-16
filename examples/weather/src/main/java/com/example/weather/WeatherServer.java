@@ -5,7 +5,6 @@ package com.example.weather;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.PromptMessage;
-import dev.tachyonmcp.server.domain.ReadResourceRequest;
 import dev.tachyonmcp.server.domain.ResourceContents;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.domain.UriTemplateValue;
@@ -17,8 +16,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Map;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public final class WeatherServer {
@@ -60,7 +59,8 @@ public final class WeatherServer {
                                 .uri("weather://current/image")
                                 .description("Current weather icon")
                                 .mimeType("image/png"),
-                        (ctx, req) -> CompletableFuture.supplyAsync(WeatherImageResource::read))
+                        (ctx, uri, params, uriTemplate) ->
+                                CompletableFuture.supplyAsync(WeatherImageResource::read))
 
             .prompt(PromptDescriptor.of("rewrite-forecast", "Rewrites a weather forecast in a given style"),
                     WeatherServer::handleRewriteForecast)
@@ -82,10 +82,14 @@ public final class WeatherServer {
     /**
      * Provides a Markdown article explaining weather prediction methods and observational systems.
      *
-     * @param req the request containing the resource URI
+     * @param uri the requested resource URI
      * @return Markdown resource contents for the requested URI
      */
-    private static TextResourceContents handleArticleResource(InteractionContext ctx, ReadResourceRequest req) {
+    private static TextResourceContents handleArticleResource(
+            InteractionContext ctx,
+            String uri,
+            Map<String, UriTemplateValue> params,
+            String uriTemplate) {
         var article = """
                 # Weather Prediction
 
@@ -105,18 +109,21 @@ public final class WeatherServer {
                 ---
                 Published by Tachyon Weather MCP — %s
             """.formatted(LocalDate.now());
-        return TextResourceContents.of(req.uri(), "text/markdown", article);
+        return TextResourceContents.of(uri, "text/markdown", article);
     }
 
     /**
      * Creates a JSON weather forecast resource for the requested city.
      *
-     * @param uri    the resource URI
-     * @param params the URI template parameters containing the city
+     * @param uri the requested resource URI
+     * @param params the parsed URI template parameters
      * @return       JSON resource contents for the city forecast
      */
     private static ResourceContents handleForecastTemplate(
-            InteractionContext ctx, String uri, Map<String, UriTemplateValue> params) {
+            InteractionContext ctx,
+            String uri,
+            Map<String, UriTemplateValue> params,
+            String uriTemplate) {
         var city = ((UriTemplateValue.Scalar) params.get("city")).value();
         var forecast = """
                 {

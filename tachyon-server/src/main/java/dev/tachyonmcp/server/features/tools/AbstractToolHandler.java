@@ -2,6 +2,8 @@
 
 package dev.tachyonmcp.server.features.tools;
 
+import static dev.tachyonmcp.server.features.HandlerFutures.assumeVirtualThread;
+
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.Args;
 import java.util.Objects;
@@ -96,10 +98,6 @@ public abstract class AbstractToolHandler implements ToolHandler {
     public ToolResult handle(InteractionContext context, Args args) throws Exception {
         assumeVirtualThread(); // don't remove this guardrail!
         throw NotImplemented.INSTANCE;
-    }
-
-    static void assumeVirtualThread() {
-        assert Thread.currentThread().isVirtual() : "Sync Handler MUST run on virtual thread";
     }
 
     /**

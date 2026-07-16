@@ -173,8 +173,8 @@ interaction/subscription context, not a global send.
 // concrete, per-item resource (shows up in resources/list)
 server.resources().register(
     ResourceDescriptor(name = uri, uri = uri, title = label, description = desc, mimeType = "text/markdown"),
-) { _, request ->
-    TextResourceContents.of(request.uri(), "text/markdown", read(request.uri()) ?: error("not found"))
+) { _, uri, _, _ ->
+    TextResourceContents.of(uri, "text/markdown", read(uri) ?: error("not found"))
 }
 
 // URI template (shows up in resources/templates/list)
@@ -185,8 +185,12 @@ server.resources().registerTemplate(
         .description("Docs")
         .mimeType("text/markdown")
         .build(),
-    { _, uri, _ ->
-        TextResourceContents.of(uri, "text/markdown", read(uri) ?: error("not found"))
+    { _, uri, _, _ ->
+        TextResourceContents.of(
+            uri,
+            "text/markdown",
+            read(uri) ?: error("not found"),
+        )
     },
 )
 ```

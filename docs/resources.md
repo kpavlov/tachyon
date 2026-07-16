@@ -12,7 +12,8 @@ import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 
 .resource(
     ResourceDescriptor.of("config", "app://config", "Server config", "application/json"),
-    (ctx, req) -> TextResourceContents.of(req.uri(), "application/json", """{"env":"prod"}"""))
+    (ctx, uri, params, uriTemplate) ->
+        TextResourceContents.of(uri, "application/json", """{"env":"prod"}"""))
 ```
 
 ## URI template
@@ -31,21 +32,23 @@ handle.server().resources()
             .description("User profile by ID")
             .mimeType("application/json")
             .build(),
-        (ctx, uri, params) -> {
+        (ctx, uri, params, uriTemplate) -> {
             String id = params.get("id").scalarValue();
             return TextResourceContents.of(uri, "application/json", loadUser(id));
         });
 ```
 
-Template variables are `UriTemplateValue.Scalar` or `UriTemplateValue.Sequence`.
+Static resources and templates use the same `ResourceHandler`. `uriTemplate` is null and `params`
+is empty for a static resource. Template handlers receive the original template text and immutable
+parsed values. `UriTemplate` performs matching internally. Values are `UriTemplateValue.Scalar` or
+`UriTemplateValue.Sequence`.
 Exploded lists such as `app://files{/segments*}` produce a sequence. Associative maps are not
 parsed until MCP defines a variable schema that can disambiguate them.
 
 ## Async handler
 
 Handlers are blocking-first and run on virtual threads — blocking is fine. To integrate
-non-blocking services, implement `AsyncResourceHandler` (or `AsyncResourceTemplateHandler`)
-and return a `CompletionStage`:
+non-blocking services, implement `AsyncResourceHandler` and return a `CompletionStage`:
 
 ```java
 import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
@@ -53,11 +56,11 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
 
-AsyncResourceHandler handler = (ctx, req) ->
+AsyncResourceHandler handler = (ctx, uri, params, uriTemplate) ->
     httpClient.sendAsync(
-            HttpRequest.newBuilder(URI.create(req.uri())).GET().build(),
+            HttpRequest.newBuilder(URI.create(uri)).GET().build(),
             BodyHandlers.ofString())
-        .thenApply(rsp -> TextResourceContents.of(req.uri(), "application/json", rsp.body()));
+        .thenApply(rsp -> TextResourceContents.of(uri, "application/json", rsp.body()));
 
 .resource(descriptor, handler)
 ```
@@ -72,7 +75,7 @@ Return binary content with `BlobResourceContents`:
 ```java
 import dev.tachyonmcp.server.domain.BlobResourceContents;
 
-(ctx, req) -> BlobResourceContents.of(req.uri(), "image/png", imageBytes)
+(ctx, uri, params, uriTemplate) -> BlobResourceContents.of(uri, "image/png", imageBytes)
 ```
 
 ## Subscribe to changes
@@ -104,7 +107,7 @@ server.resources().registerTemplate(
         .name("user-profile")
         .uriTemplate("app://users/{id}")
         .build(),
-) { _, uri, _ -> /* ... */ }
+) { _, uri, params, uriTemplate -> /* ... */ }
 ```
 
 ---

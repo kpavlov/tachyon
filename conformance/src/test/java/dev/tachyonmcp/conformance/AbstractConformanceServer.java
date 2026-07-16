@@ -725,28 +725,30 @@ abstract class AbstractConformanceServer {
         server.resources()
                 .register(
                         ResourceDescriptor.of("hello", "hello://world", "Hello resource", "text/plain"),
-                        (ctx, req) -> TextResourceContents.of("hello://world", "text/plain", "Hello, World!"));
+                        (ctx, rawUri, params, uriTemplate) ->
+                                TextResourceContents.of(rawUri, "text/plain", "Hello, World!"));
 
         server.resources()
                 .register(
                         ResourceDescriptor.of(
                                 "static-text", "test://static-text", "Static text resource", "text/plain"),
-                        (ctx, req) -> TextResourceContents.of(
-                                "test://static-text", "text/plain", "This is static text content for testing."));
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
+                                rawUri, "text/plain", "This is static text content for testing."));
 
         server.resources()
                 .register(
                         ResourceDescriptor.of(
                                 "static-binary", "test://static-binary", "Static binary resource", "image/png"),
-                        (ctx, req) -> BlobResourceContents.of("test://static-binary", "image/png", MINI_PNG_BASE64));
+                        (ctx, rawUri, params, uriTemplate) ->
+                                BlobResourceContents.of(rawUri, "image/png", MINI_PNG_BASE64));
 
         server.resources()
                 .registerTemplate(
                         builder -> builder.name("test-template")
                                 .uriTemplate("test://template/{id}/data")
                                 .description("test-description"),
-                        (ctx, uri, params) -> TextResourceContents.of(
-                                uri,
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
+                                rawUri,
                                 "text/plain",
                                 "Resource content for id: " + ((UriTemplateValue.Scalar) params.get("id")).value()));
     }

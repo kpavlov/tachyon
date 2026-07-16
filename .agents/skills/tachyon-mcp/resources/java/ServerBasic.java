@@ -5,7 +5,6 @@
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.TextResourceContents;
-import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
@@ -50,8 +49,8 @@ public final class ServerBasic {
                 ResourceDescriptor.of(
                     "config", "demo://config",
                     "Server configuration", "application/json"),
-                (ctx, req) ->
-                    TextResourceContents.of(req.uri(), "application/json", "{\"mode\":\"production\"}"))
+                (ctx, uri, params, uriTemplate) ->
+                    TextResourceContents.of(uri, "application/json", "{\"mode\":\"production\"}"))
             .prompt(
                 PromptDescriptor.of("greet", "Generates a greeting"),
                 List.of(PromptMessage.user("Say hello")))
@@ -60,7 +59,7 @@ public final class ServerBasic {
                     .uriTemplate("demo://users/{userId}/profile")
                     .description("User profile data")
                     .mimeType("application/json"),
-                (ctx, uri, params) -> {
+                (ctx, uri, params, uriTemplate) -> {
                     var userId = params.get("userId").scalarValue();
                     return TextResourceContents.of(
                         uri, "application/json", "{\"userId\":\"" + userId + "\",\"name\":\"User\"}");

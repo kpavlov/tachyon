@@ -33,7 +33,8 @@ public interface ResourceRegistry {
     }
 
     /**
-     * Registers a resource descriptor with an asynchronous handler.
+     * Registers a resource descriptor with an asynchronous handler. The handler and the blocking
+     * wait for its result run on a server-executor virtual thread.
      *
      * @return this resource registry for method chaining
      */
@@ -85,7 +86,7 @@ public interface ResourceRegistry {
      * @param handler the handler for the registered resource template
      * @return this registry
      */
-    ResourceRegistry registerTemplate(ResourceTemplateDescriptor descriptor, ResourceTemplateHandler handler);
+    ResourceRegistry registerTemplate(ResourceTemplateDescriptor descriptor, ResourceHandler handler);
 
     /**
      * Registers a resource template configured through its builder.
@@ -95,7 +96,7 @@ public interface ResourceRegistry {
      * @return this resource registry
      */
     default ResourceRegistry registerTemplate(
-            Consumer<ResourceTemplateDescriptor.Builder> configurer, ResourceTemplateHandler handler) {
+            Consumer<ResourceTemplateDescriptor.Builder> configurer, ResourceHandler handler) {
         final var builder = ResourceTemplateDescriptor.builder();
         configurer.accept(builder);
         return registerTemplate(builder.build(), handler);
@@ -109,7 +110,7 @@ public interface ResourceRegistry {
      * @return this resource registry
      */
     default ResourceRegistry registerTemplateAsync(
-            ResourceTemplateDescriptor descriptor, AsyncResourceTemplateHandler handler) {
+            ResourceTemplateDescriptor descriptor, AsyncResourceHandler handler) {
         return registerTemplate(descriptor, handler);
     }
 
@@ -121,7 +122,7 @@ public interface ResourceRegistry {
      * @return this resource registry
      */
     default ResourceRegistry registerTemplateAsync(
-            Consumer<ResourceTemplateDescriptor.Builder> descriptor, AsyncResourceTemplateHandler handler) {
+            Consumer<ResourceTemplateDescriptor.Builder> descriptor, AsyncResourceHandler handler) {
         final var builder = ResourceTemplateDescriptor.builder();
         descriptor.accept(builder);
         return registerTemplateAsync(builder.build(), handler);

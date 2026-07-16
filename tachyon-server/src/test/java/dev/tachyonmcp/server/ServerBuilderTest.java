@@ -57,12 +57,12 @@ class ServerBuilderTest {
                 .tool(tool -> tool.name("sync-tool"), (ctx, args) -> ToolResult.empty())
                 .resource(
                         resource -> resource.name("sync-resource").uri("test://sync"),
-                        (ctx, request) -> TextResourceContents.of(request.uri(), "text/plain", "sync"))
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "sync"))
                 .prompt(prompt -> prompt.name("sync-prompt"), List.of(PromptMessage.user("sync")))
                 .resourceTemplate(
                         template -> template.name("sync-template").uriTemplate("test://sync/{id}"),
-                        (ctx, uri, params) -> TextResourceContents.of(
-                                uri, "text/plain", ((UriTemplateValue.Scalar) params.get("id")).value()))
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
+                                rawUri, "text/plain", ((UriTemplateValue.Scalar) params.get("id")).value()))
                 .build()) {
             assertThat(server.tools().find("sync-tool")).isPresent();
             assertThat(server.resources().find("sync-resource")).isPresent();
@@ -79,16 +79,16 @@ class ServerBuilderTest {
                         (ctx, args) -> CompletableFuture.completedFuture(ToolResult.empty()))
                 .asyncResource(
                         resource -> resource.name("async-resource").uri("test://async"),
-                        (ctx, request) -> CompletableFuture.completedFuture(
-                                TextResourceContents.of(request.uri(), "text/plain", "async")))
+                        (ctx, rawUri, params, uriTemplate) -> CompletableFuture.completedFuture(
+                                TextResourceContents.of(rawUri, "text/plain", "async")))
                 .asyncPrompt(
                         prompt -> prompt.name("async-prompt"),
                         (ctx, request) -> CompletableFuture.completedFuture(
                                 PromptResult.messages(List.of(PromptMessage.user("async")))))
                 .asyncResourceTemplate(
                         template -> template.name("async-template").uriTemplate("test://async/{id}"),
-                        (ctx, uri, params) -> CompletableFuture.completedFuture(TextResourceContents.of(
-                                uri, "text/plain", ((UriTemplateValue.Scalar) params.get("id")).value())))
+                        (ctx, rawUri, params, uriTemplate) -> CompletableFuture.completedFuture(TextResourceContents.of(
+                                rawUri, "text/plain", ((UriTemplateValue.Scalar) params.get("id")).value())))
                 .build()) {
             assertThat(server.tools().find("async-tool")).isPresent();
             assertThat(server.resources().find("async-resource")).isPresent();

@@ -68,27 +68,3 @@ public fun BlobResourceContents(
     mimeType: String? = null,
     meta: Map<String, JsonObject>,
 ): BlobResourceContents = BlobResourceContents.of(uri, mimeType, blob, meta.toJacksonNodeMap())
-
-/**
- * Creates a [ReadResourceRequest] — a request to read a resource by URI.
- *
- * @param uri  the resource URI to read
- * @param meta optional request-level metadata forwarded to the handler
- * @author Konstantin Pavlov
- */
-public fun ReadResourceRequest(
-    uri: String,
-    meta: Map<String, JsonNode>? = null,
-): ReadResourceRequest = ReadResourceRequest.of(uri, meta)
-
-/**
- * Creates a [ReadResourceRequest] using a kotlinx-serialization metadata map.
- * Requires kotlinx-serialization-json on the classpath.
- *
- * @author Konstantin Pavlov
- */
-@JvmName("readResourceRequestWithKxMeta")
-public fun ReadResourceRequest(
-    uri: String,
-    meta: Map<String, JsonObject>?,
-): ReadResourceRequest = ReadResourceRequest.of(uri, meta?.toJacksonNodeMap())

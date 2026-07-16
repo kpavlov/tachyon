@@ -261,7 +261,7 @@ class ServerTest {
             server.resources()
                     .register(
                             ResourceDescriptor.of("dyn", "test://dyn", "Dyn resource", "text/plain"),
-                            (ctx, req) -> TextResourceContents.of("test://dyn", "text/plain", ""));
+                            (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", ""));
 
             var listChanged = conn.sent.stream()
                     .filter(e -> e.data().contains("notifications/resources/list_changed"))
