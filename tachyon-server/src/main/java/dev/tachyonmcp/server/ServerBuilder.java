@@ -181,19 +181,34 @@ public final class ServerBuilder {
     // === Feature registration ===
 
     /**
-     * Registers a tool handler at build time (DSL registration).
+     * Registers a tool handler to be added when the server is built.
      *
-     * <p>Use {@code server.tools().register(handler)} for post-build dynamic registration.
+     * @param handler the tool handler to register
+     * @return this builder
      */
     public ServerBuilder tool(ToolHandler handler) {
         featuresConfig.tools.add(handler);
         return this;
     }
 
+    /**
+     * Registers a synchronous tool handler with its descriptor.
+     *
+     * @param descriptor the tool descriptor
+     * @param handler the function that handles tool interactions
+     * @return this server builder
+     */
     public ServerBuilder tool(ToolDescriptor descriptor, BiFunction<InteractionContext, Args, ToolResult> handler) {
         return tool(ToolHandler.of(descriptor, handler));
     }
 
+    /**
+     * Registers a synchronous tool using a descriptor builder.
+     *
+     * @param descriptor configures the tool descriptor
+     * @param handler    handles tool invocations
+     * @return this server builder
+     */
     public ServerBuilder tool(
             Consumer<ToolDescriptor.Builder> descriptor, BiFunction<InteractionContext, Args, ToolResult> handler) {
         var builder = ToolDescriptor.builder();
@@ -201,11 +216,25 @@ public final class ServerBuilder {
         return tool(builder.build(), handler);
     }
 
+    /**
+     * Registers an asynchronous tool handler with the specified descriptor.
+     *
+     * @param descriptor the tool descriptor
+     * @param handler the function that handles tool interactions asynchronously
+     * @return this server builder
+     */
     public ServerBuilder asyncTool(
             ToolDescriptor descriptor, BiFunction<InteractionContext, Args, CompletionStage<ToolResult>> handler) {
         return tool(ToolHandler.ofAsync(descriptor, handler));
     }
 
+    /**
+     * Registers an asynchronous tool using a descriptor builder configuration.
+     *
+     * @param descriptor configures the tool descriptor
+     * @param handler    handles tool invocations asynchronously
+     * @return this server builder
+     */
     public ServerBuilder asyncTool(
             Consumer<ToolDescriptor.Builder> descriptor,
             BiFunction<InteractionContext, Args, CompletionStage<ToolResult>> handler) {
@@ -241,16 +270,37 @@ public final class ServerBuilder {
         return this;
     }
 
+    /**
+     * Registers a resource using a descriptor configured by the supplied builder.
+     *
+     * @param descriptor configures the resource descriptor
+     * @param handler handles requests for the registered resource
+     * @return this builder
+     */
     public ServerBuilder resource(Consumer<ResourceDescriptor.Builder> descriptor, ResourceHandler handler) {
         var builder = ResourceDescriptor.builder();
         descriptor.accept(builder);
         return resource(builder.build(), handler);
     }
 
+    /**
+     * Registers an asynchronous resource handler.
+     *
+     * @param descriptor the resource descriptor
+     * @param handler    the handler for resource requests
+     * @return this builder
+     */
     public ServerBuilder asyncResource(ResourceDescriptor descriptor, AsyncResourceHandler handler) {
         return resource(descriptor, handler);
     }
 
+    /**
+     * Registers an asynchronous resource using a descriptor configured by the supplied builder.
+     *
+     * @param descriptor configures the resource descriptor
+     * @param handler handles asynchronous resource requests
+     * @return this server builder
+     */
     public ServerBuilder asyncResource(Consumer<ResourceDescriptor.Builder> descriptor, AsyncResourceHandler handler) {
         var builder = ResourceDescriptor.builder();
         descriptor.accept(builder);
@@ -264,6 +314,13 @@ public final class ServerBuilder {
         return prompt(descriptor, (ctx, request) -> PromptResult.messages(messages));
     }
 
+    /**
+     * Registers a prompt with a descriptor configured by the supplied builder consumer.
+     *
+     * @param descriptor consumer that configures the prompt descriptor
+     * @param messages   messages returned when the prompt is invoked
+     * @return this server builder
+     */
     public ServerBuilder prompt(Consumer<PromptDescriptor.Builder> descriptor, List<PromptMessage> messages) {
         var builder = PromptDescriptor.builder();
         descriptor.accept(builder);
@@ -271,23 +328,48 @@ public final class ServerBuilder {
     }
 
     /**
-     * Registers a prompt with a handler (messages or an input-required MRTR round-trip).
+     * Registers a prompt and its handler with the server.
+     *
+     * @param descriptor the prompt descriptor
+     * @param handler    the handler invoked for prompt requests
+     * @return this builder
      */
     public ServerBuilder prompt(PromptDescriptor descriptor, PromptHandler handler) {
         featuresConfig.prompts.add(new FeaturesConfig.PromptRegistration(descriptor, handler));
         return this;
     }
 
+    /**
+     * Registers a prompt using a descriptor builder and handler.
+     *
+     * @param descriptor configures the prompt descriptor
+     * @param handler    handles prompt requests
+     * @return this server builder
+     */
     public ServerBuilder prompt(Consumer<PromptDescriptor.Builder> descriptor, PromptHandler handler) {
         var builder = PromptDescriptor.builder();
         descriptor.accept(builder);
         return prompt(builder.build(), handler);
     }
 
+    /**
+     * Registers an asynchronous prompt handler for a prompt descriptor.
+     *
+     * @param descriptor the prompt descriptor
+     * @param handler the asynchronous prompt handler
+     * @return this server builder
+     */
     public ServerBuilder asyncPrompt(PromptDescriptor descriptor, AsyncPromptHandler handler) {
         return prompt(descriptor, handler);
     }
 
+    /**
+     * Registers an asynchronous prompt using a descriptor configured by the supplied builder.
+     *
+     * @param descriptor configures the prompt descriptor
+     * @param handler handles prompt requests asynchronously
+     * @return this builder
+     */
     public ServerBuilder asyncPrompt(Consumer<PromptDescriptor.Builder> descriptor, AsyncPromptHandler handler) {
         var builder = PromptDescriptor.builder();
         descriptor.accept(builder);
@@ -302,6 +384,13 @@ public final class ServerBuilder {
         return this;
     }
 
+    /**
+     * Registers a resource template configured by the supplied builder.
+     *
+     * @param configBuilder configures the resource template descriptor
+     * @param handler       handles requests for the registered resource template
+     * @return this builder
+     */
     public ServerBuilder resourceTemplate(
             Consumer<ResourceTemplateDescriptor.Builder> configBuilder, ResourceTemplateHandler handler) {
         var builder = ResourceTemplateDescriptor.builder();
@@ -309,11 +398,25 @@ public final class ServerBuilder {
         return resourceTemplate(builder.build(), handler);
     }
 
+    /**
+     * Registers an asynchronous resource template handler.
+     *
+     * @param descriptor the resource template descriptor
+     * @param handler the handler invoked to resolve the resource template
+     * @return this builder
+     */
     public ServerBuilder asyncResourceTemplate(
             ResourceTemplateDescriptor descriptor, AsyncResourceTemplateHandler handler) {
         return resourceTemplate(descriptor, handler);
     }
 
+    /**
+     * Registers an asynchronous resource template using a descriptor configured by the supplied builder.
+     *
+     * @param descriptor configures the resource template descriptor
+     * @param handler handles requests for the resource template
+     * @return this builder
+     */
     public ServerBuilder asyncResourceTemplate(
             Consumer<ResourceTemplateDescriptor.Builder> descriptor, AsyncResourceTemplateHandler handler) {
         var builder = ResourceTemplateDescriptor.builder();
@@ -397,11 +500,13 @@ public final class ServerBuilder {
     // === Terminal methods ===
 
     /**
-     * Builds the {@link TachyonServer} without binding a transport.
+     * Builds a configured {@link TachyonServer} without binding a transport.
      *
-     * <p>Values returned by {@link TachyonServer#port()} and {@link TachyonServer#host()} are
-     * meaningful only after {@link #start()}. On a build()-only server, {@code port()} returns 0
-     * and {@code host()} returns the configured host.
+     * <p>The returned server includes the configured sessions, features, extensions, payload
+     * processing, and execution strategy. Transport-dependent host and port values become meaningful
+     * only after {@link #start()}.
+     *
+     * @return the configured server
      */
     public TachyonServer build() {
         var sessionConfig = sessionBuilder.build();

@@ -169,6 +169,12 @@ abstract class AbstractConformanceServer {
 
     protected abstract ServerEngine createServer(boolean isStateful);
 
+    /**
+     * Creates and configures a conformance-test server.
+     *
+     * @param isStateful whether the server should maintain state between requests
+     * @return the configured server
+     */
     ServerEngine startServer(boolean isStateful) {
         var srv = createServer(isStateful);
         registerTools(srv);
@@ -177,6 +183,10 @@ abstract class AbstractConformanceServer {
         return srv;
     }
 
+    /**
+     * Registers the conformance-test tools, including tools for content types, progress,
+     * logging, sampling, elicitation, JSON Schema validation, reconnection, and input-required results.
+     */
     private void registerTools(ServerEngine server) {
         server.tools().register(echoTool());
 
@@ -492,6 +502,10 @@ abstract class AbstractConformanceServer {
         registerInputRequiredTools(server);
     }
 
+    /**
+     * Registers tools that exercise input-required results for elicitation, sampling, roots listing,
+     * request-state handling, multi-round input, tamper detection, and client capability negotiation.
+     */
     private void registerInputRequiredTools(ServerEngine server) {
         server.tools()
                 .register(
@@ -704,6 +718,9 @@ abstract class AbstractConformanceServer {
                         });
     }
 
+    /**
+     * Registers static resources and a URI template resource for conformance testing.
+     */
     private void registerResources(ServerEngine server) {
         server.resources()
                 .register(

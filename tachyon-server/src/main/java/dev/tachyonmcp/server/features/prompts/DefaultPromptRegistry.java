@@ -36,12 +36,25 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
     private final JsonSchemaValidator validator;
     private final FeatureConfig config;
 
+    /**
+     * Creates a prompt registry with the specified schema validator and feature configuration.
+     *
+     * @param validator the validator used for prompt input schemas
+     * @param config the feature configuration governing registry behavior and page size
+     */
     public DefaultPromptRegistry(JsonSchemaValidator validator, FeatureConfig config) {
         super(config.pageSize());
         this.validator = validator;
         this.config = config;
     }
 
+    /**
+     * Registers a prompt unless prompt support is disabled by the configured mode.
+     *
+     * @param descriptor the prompt descriptor to register
+     * @param handler the handler invoked for the prompt
+     * @return this registry
+     */
     @Override
     public PromptRegistry register(PromptDescriptor descriptor, PromptHandler handler) {
         if (config.mode() == Mode.OFF) {
@@ -52,17 +65,34 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
         return this;
     }
 
+    /**
+     * Removes the registered prompt with the specified name.
+     *
+     * @param name the name of the prompt to remove
+     * @return {@code true} if a prompt was removed, {@code false} if no matching prompt was registered
+     */
     @Override
     public boolean unregister(String name) {
         return removeItem(name);
     }
 
+    /**
+     * Finds a registered prompt descriptor by name.
+     *
+     * @param name the prompt name
+     * @return the matching prompt descriptor, or an empty optional if no prompt is registered with that name
+     */
     @Override
     public Optional<PromptDescriptor> find(String name) {
         var entry = get(name);
         return entry != null ? Optional.of(entry.descriptor()) : Optional.empty();
     }
 
+    /**
+     * Returns all registered prompt descriptors sorted by name.
+     *
+     * @return the registered prompt descriptors in ascending name order
+     */
     @Override
     public List<PromptDescriptor> descriptors() {
         return getAll().stream()
@@ -71,6 +101,11 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
                 .toList();
     }
 
+    /**
+     * Registers the RPC handlers for listing and retrieving prompts.
+     *
+     * @param registry the map to populate with prompt RPC handlers
+     */
     public void registerHandlers(Map<String, RpcMethodHandler> registry) {
         registry.put("prompts/list", new PromptsListHandler(this));
         registry.put("prompts/get", new PromptsGetHandler(this, validator));

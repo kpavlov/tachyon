@@ -50,6 +50,9 @@ public class TasksExtension implements ServerExtension {
         return ID;
     }
 
+    /**
+     * Registers the task creation tool and task status resource template with the server.
+     */
     @Override
     public void bootstrap(ServerEngine server) {
         var descriptor = ToolDescriptor.builder()

@@ -31,6 +31,13 @@ public fun ServerBuilder.resource(
     return resource(descriptor, resourceHandler(descriptor, handler))
 }
 
+/**
+ * Registers a resource template with a handler.
+ *
+ * @param uriTemplate The URI pattern used to identify matching resources.
+ * @param handler The function that produces the resource contents.
+ * @return This server builder.
+ */
 public fun ServerBuilder.resourceTemplate(
     name: String,
     uriTemplate: String,
@@ -55,6 +62,16 @@ public fun ServerBuilder.resourceTemplate(
     return resourceTemplate(descriptor, templateHandler(name, handler))
 }
 
+/**
+ * Registers a tool with optional descriptions and JSON schemas.
+ *
+ * @param name The tool name.
+ * @param description The tool description.
+ * @param inputSchema The JSON schema for the tool input.
+ * @param outputSchema The JSON schema for the tool output.
+ * @param handler The function that handles tool invocations.
+ * @return This server builder.
+ */
 public fun ServerBuilder.tool(
     name: String,
     description: String? = null,

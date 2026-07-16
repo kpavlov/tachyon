@@ -29,6 +29,11 @@ public interface Annotations {
     @Nullable
     String lastModified();
 
+    /**
+     * Validates that the priority is within the range from 0.0 to 1.0.
+     *
+     * @throws IllegalArgumentException if the priority is NaN or outside the range from 0.0 to 1.0
+     */
     @Value.Check
     default void checkPriority() {
         Double priority = priority();
