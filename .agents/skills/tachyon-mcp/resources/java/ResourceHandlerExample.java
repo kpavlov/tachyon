@@ -6,11 +6,14 @@ import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.BlobResourceContents;
 import dev.tachyonmcp.server.domain.ReadResourceRequest;
 import dev.tachyonmcp.server.domain.TextResourceContents;
+import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateHandler;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Demonstrates static resources and URI-template resource registrations.
@@ -50,8 +53,8 @@ final class ResourceHandlerExample {
     }
 
     static ResourceTemplateHandler userProfileTemplateHandler() {
-        return (InteractionContext ctx, String uri, java.util.Map<String, String> params) -> {
-            var userId = params.get("userId");
+        return (InteractionContext ctx, String uri, java.util.Map<String, UriTemplateValue> params) -> {
+            var userId = params.get("userId").scalarValue();
             return TextResourceContents.of(uri, "application/json", "{\"userId\":\"" + userId + "\"}");
         };
     }
@@ -78,7 +81,7 @@ final class ResourceHandlerExample {
      * integrating an already-async client.
      */
     static AsyncResourceHandler asyncConfigHandler() {
-        return (ctx, req) -> java.util.concurrent.CompletableFuture.supplyAsync(
+        return (ctx, req) -> CompletableFuture.supplyAsync(
             () -> TextResourceContents.of(req.uri(), "application/json", "{\"mode\":\"production\"}"));
     }
 }

@@ -16,6 +16,7 @@ import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.RpcMethodRequest;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.domain.TextResourceContents;
+import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptResult;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
@@ -728,7 +729,9 @@ abstract class AbstractConformanceServer {
                                 .uriTemplate("test://template/{id}/data")
                                 .description("test-description"),
                         (ctx, uri, params) -> TextResourceContents.of(
-                                uri, "text/plain", "Resource content for id: " + params.get("id")));
+                                uri,
+                                "text/plain",
+                                "Resource content for id: " + ((UriTemplateValue.Scalar) params.get("id")).value()));
     }
 
     private void registerPrompts(ServerEngine server) {

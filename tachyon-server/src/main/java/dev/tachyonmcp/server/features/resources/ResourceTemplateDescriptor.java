@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Konstantin Pavlov.
+ * Copyright (c) 2026 Konstantin Pavlov and contributors.
  */
 
 package dev.tachyonmcp.server.features.resources;
@@ -7,10 +7,8 @@ package dev.tachyonmcp.server.features.resources;
 import dev.tachyonmcp.server.ServerFeature;
 import dev.tachyonmcp.server.domain.Annotations;
 import dev.tachyonmcp.server.domain.Icon;
-import java.util.ArrayList;
-import java.util.HashSet;
+import dev.tachyonmcp.server.domain.UriTemplate;
 import java.util.List;
-import java.util.regex.Pattern;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
@@ -45,52 +43,7 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor {
     default void check() {
         if (name().isBlank()) throw new IllegalArgumentException("name must not be blank");
         if (uriTemplate().isBlank()) throw new IllegalArgumentException("uriTemplate must not be blank");
-    }
-
-    @Value.Check
-    default void checkVariableNames() {
-        var stripped = UriTemplatePatterns.VAR.matcher(uriTemplate()).replaceAll("");
-        if (stripped.contains("{") || stripped.contains("}")) {
-            throw new IllegalArgumentException("Malformed URI template (unmatched or empty braces): " + uriTemplate());
-        }
-        var m = UriTemplatePatterns.VAR.matcher(uriTemplate());
-        while (m.find()) {
-            var name = m.group(1);
-            if (!UriTemplatePatterns.VALID_NAME.matcher(name).matches()) {
-                throw new IllegalArgumentException("Invalid URI template variable name: " + name);
-            }
-        }
-    }
-
-    default List<String> paramNames() {
-        var names = new ArrayList<String>();
-        var seen = new HashSet<String>();
-        var m = UriTemplatePatterns.VAR.matcher(uriTemplate());
-        while (m.find()) {
-            var name = m.group(1);
-            if (!seen.add(name)) {
-                throw new IllegalArgumentException("Duplicate URI template variable name: " + name);
-            }
-            names.add(name);
-        }
-        return List.copyOf(names);
-    }
-
-    @Value.Derived
-    default Pattern compiledPattern() {
-        var names = paramNames();
-        var sb = new StringBuilder("^");
-        var m = UriTemplatePatterns.VAR.matcher(uriTemplate());
-        int last = 0;
-        int i = 0;
-        while (m.find()) {
-            sb.append(Pattern.quote(uriTemplate().substring(last, m.start())));
-            sb.append("(?<").append(names.get(i++)).append(">[^/]+)");
-            last = m.end();
-        }
-        sb.append(Pattern.quote(uriTemplate().substring(last)));
-        sb.append("$");
-        return Pattern.compile(sb.toString());
+        UriTemplate.create(uriTemplate());
     }
 
     static Builder builder() {

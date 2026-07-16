@@ -5,6 +5,7 @@ package dev.tachyonmcp.skill
 import dev.tachyonmcp.server.domain.Annotations
 import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.TextResourceContents
+import dev.tachyonmcp.server.domain.UriTemplateValue
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.server.features.resources.ResourceTemplateHandler
@@ -50,7 +51,7 @@ fun userProfileTemplateDescriptor(): ResourceTemplateDescriptor =
 
 fun userProfileTemplateHandler(): ResourceTemplateHandler =
     ResourceTemplateHandler { _, uri, params ->
-        val userId = params["userId"]
+        val userId = params["userId"]?.scalarValue()
         TextResourceContents(
             uri = uri,
             mimeType = "application/json",
@@ -70,9 +71,10 @@ fun forecastTemplateDescriptor(): ResourceTemplateDescriptor =
 
 fun forecastTemplateHandler(): ResourceTemplateHandler =
     ResourceTemplateHandler { _, uri, params ->
+        val city = params["city"]?.scalarValue()
         TextResourceContents(
             uri = uri,
             mimeType = "application/json",
-            text = """{"city":"${params["city"]}","temp":22}""",
+            text = """{"city":"$city","temp":22}""",
         )
     }

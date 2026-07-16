@@ -21,6 +21,7 @@ Templates match parameterized URIs like `app://users/{id}`. Register after the s
 
 ```java
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
+import dev.tachyonmcp.server.domain.UriTemplateValue;
 
 handle.server().resources()
     .registerTemplate(
@@ -31,10 +32,14 @@ handle.server().resources()
             .mimeType("application/json")
             .build(),
         (ctx, uri, params) -> {
-            String id = params.get("id");
+            String id = params.get("id").scalarValue();
             return TextResourceContents.of(uri, "application/json", loadUser(id));
         });
 ```
+
+Template variables are `UriTemplateValue.Scalar` or `UriTemplateValue.Sequence`.
+Exploded lists such as `app://files{/segments*}` produce a sequence. Associative maps are not
+parsed until MCP defines a variable schema that can disambiguate them.
 
 ## Async handler
 

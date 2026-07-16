@@ -4,6 +4,11 @@
 
 package dev.tachyonmcp.server.features.tools;
 
+import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.internalError;
+import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidParams;
+import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidRequest;
+import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.methodNotFound;
+
 import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolRequestParams;
@@ -28,11 +33,6 @@ import dev.tachyonmcp.server.json.PayloadSerializer;
 import dev.tachyonmcp.server.json.SchemaValidationError;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import tools.jackson.databind.JsonNode;
-
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Comparator;
@@ -43,11 +43,10 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.regex.Pattern;
-
-import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.internalError;
-import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidParams;
-import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidRequest;
-import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.methodNotFound;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import tools.jackson.databind.JsonNode;
 
 /**
  * AbstractRegistry for tool handlers with input/output schema validation.

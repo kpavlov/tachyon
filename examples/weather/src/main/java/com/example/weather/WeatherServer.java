@@ -8,6 +8,7 @@ import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.ReadResourceRequest;
 import dev.tachyonmcp.server.domain.ResourceContents;
 import dev.tachyonmcp.server.domain.TextResourceContents;
+import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptRequest;
 import dev.tachyonmcp.server.features.prompts.PromptResult;
@@ -48,7 +49,7 @@ public final class WeatherServer {
                                 "Weather prediction article",
                                 "text/markdown"),
                         WeatherServer::handleArticleResource)
-                .resourceAsync(
+                .asyncResource(
                         resource -> resource.name("weather-image")
                                 .uri("weather://current/image")
                                 .description("Current weather icon")
@@ -95,8 +96,9 @@ public final class WeatherServer {
         return TextResourceContents.of(req.uri(), "text/markdown", article);
     }
 
-    private static ResourceContents handleForecastTemplate(InteractionContext ctx, String uri, Map<String, String> params) {
-        var city = params.get("city");
+    private static ResourceContents handleForecastTemplate(
+            InteractionContext ctx, String uri, Map<String, UriTemplateValue> params) {
+        var city = ((UriTemplateValue.Scalar) params.get("city")).value();
         var forecast = """
                 {
                   "city": "%s",

@@ -13,6 +13,7 @@ import dev.tachyonmcp.server.config.Mode;
 import dev.tachyonmcp.server.config.ResourcesConfig;
 import dev.tachyonmcp.server.domain.ReadResourceRequest;
 import dev.tachyonmcp.server.domain.ResourceContents;
+import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.ChangeSupport;
 import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.ListRequests;
@@ -174,24 +175,27 @@ public class DefaultResourceRegistry implements ResourceRegistry {
                 .toList();
     }
 
-    private record TemplateMatch(ResourceTemplateEntry entry, Map<String, String> params) {}
+    public boolean isEmpty() {
+        return byName.isEmpty();
+    }
+
+    private record TemplateMatch(ResourceTemplateEntry entry, Map<String, UriTemplateValue> params) {}
 
     @Nullable
     private TemplateMatch matchTemplate(String uri) {
         return templates.values().stream()
-                .sorted(Comparator.comparingInt((ResourceTemplateEntry t) -> -UriTemplatePatterns.VAR
+                .sorted(Comparator.comparingInt((ResourceTemplateEntry t) -> -UriTemplatePatterns.EXPRESSION
                                 .matcher(t.descriptor().uriTemplate())
                                 .replaceAll("")
                                 .length())
                         .thenComparing(it -> it.descriptor().name()))
                 .map(template -> {
-                    var matcher = template.compiledPattern().matcher(uri);
-                    if (!matcher.matches()) return null;
-                    var params = new LinkedHashMap<String, String>();
-                    for (var name : template.paramNames()) {
-                        params.put(name, matcher.group(name));
+                    try {
+                        return new TemplateMatch(
+                                template, template.uriTemplate().parse(uri));
+                    } catch (IllegalArgumentException ignored) {
+                        return null;
                     }
-                    return new TemplateMatch(template, params);
                 })
                 .filter(Objects::nonNull)
                 .findFirst()

@@ -6,22 +6,14 @@ package dev.tachyonmcp.server.features.resources;
 
 import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.server.ServerFeature;
-import java.util.List;
-import java.util.regex.Pattern;
+import dev.tachyonmcp.server.domain.UriTemplate;
 
 @InternalApi
-public record ResourceTemplateEntry(ResourceTemplateDescriptor descriptor, ResourceTemplateHandler handler)
+public record ResourceTemplateEntry(
+        ResourceTemplateDescriptor descriptor, ResourceTemplateHandler handler, UriTemplate uriTemplate)
         implements ServerFeature<ResourceTemplateDescriptor> {
 
-    List<String> paramNames() {
-        return descriptor.paramNames();
-    }
-
-    Pattern compiledPattern() {
-        return descriptor.compiledPattern();
-    }
-
     public static ResourceTemplateEntry of(ResourceTemplateDescriptor descriptor, ResourceTemplateHandler handler) {
-        return new ResourceTemplateEntry(descriptor, handler);
+        return new ResourceTemplateEntry(descriptor, handler, UriTemplate.create(descriptor.uriTemplate()));
     }
 }

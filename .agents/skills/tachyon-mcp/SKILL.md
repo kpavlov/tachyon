@@ -45,10 +45,10 @@ var server = TachyonServer.builder()
 | `.tool(configurer, fn)` / `.toolAsync(configurer, fn)` | descriptor-builder conveniences |
 | `.tool(name, desc, inJson, outJson, fn)` | shorthand — JSON **string** schemas + lambda |
 | `.resource(descriptor/configurer, handler)` | static resource with sync handler |
-| `.resourceAsync(descriptor/configurer, handler)` | async static resource without casts |
+| `.asyncResource(descriptor/configurer, handler)` | async static resource without casts |
 | `.resourceTemplate(...)` / `.resourceTemplateAsync(...)` | sync/async URI template |
 | `.prompt(descriptor/configurer, handler\|messages)` | sync prompt |
-| `.promptAsync(descriptor/configurer, handler)` | async prompt without casts |
+| `.asyncPrompt(descriptor/configurer, handler)` | async prompt without casts |
 | `.extension(ext)` | `ServerExtension` plugin |
 | `.json(cfg)` | serde + input/output schema validators |
 | `.jsonSchemaValidator(v)` | ⚠️ deprecated (removal) → `.json(cfg)` / `.inputSchemaValidator` / `.outputSchemaValidator` |
@@ -132,7 +132,7 @@ Template via builder:
         .description("Description")
         .mimeType("application/json"),
     (ctx, uri, params) -> {
-        var id = params.get("id");
+        var id = ((UriTemplateValue.Scalar) params.get("id")).value();
         return TextResourceContents.of(uri, "application/json", data);
     })
 ```
@@ -140,7 +140,7 @@ Template via builder:
 Use explicit async methods. Sync handlers run blocking-first on virtual threads.
 
 ```java
-.resourceAsync(
+.asyncResource(
     resource -> resource.name("config").uri("myapp://config"),
     (ctx, req) -> httpClient.sendAsync(request, BodyHandlers.ofString())
         .thenApply(rsp -> TextResourceContents.of(req.uri(), "application/json", rsp.body())))
@@ -164,7 +164,7 @@ Sync returns `PromptResult`:
 Async returns `CompletionStage`:
 
 ```java
-.promptAsync(
+.asyncPrompt(
     prompt -> prompt.name("rewrite-forecast"),
     (ctx, request) -> service.rewrite(request)
         .thenApply(message -> PromptResult.messages(List.of(PromptMessage.user(message)))))
