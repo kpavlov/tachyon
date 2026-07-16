@@ -18,11 +18,23 @@ import java.util.concurrent.CompletionStage;
 public interface AsyncResourceTemplateHandler extends ResourceTemplateHandler {
 
     /**
-     * Reads the resource asynchronously and returns a future of its contents.
+     * Reads the resource identified by the URI and template parameters.
+     *
+     * @param params values extracted from the resource template URI
+     * @return the resource contents
      */
     CompletionStage<? extends ResourceContents> readAsync(
             InteractionContext context, String uri, Map<String, UriTemplateValue> params);
 
+    /**
+     * Reads resource contents synchronously for the specified URI template parameters.
+     *
+     * @param context the interaction context
+     * @param uri the resource URI
+     * @param params the URI template parameter values
+     * @return the resource contents
+     * @throws Exception if the asynchronous read fails or is interrupted
+     */
     @Override
     default ResourceContents read(InteractionContext context, String uri, Map<String, UriTemplateValue> params)
             throws Exception {

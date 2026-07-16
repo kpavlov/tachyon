@@ -46,7 +46,12 @@ public abstract class AbstractRegistry<D extends ServerFeature.Descriptor, R ext
         fireOnChange();
     }
 
-    /** Removes the item with the given name. */
+    /**
+     * Removes the item with the specified name and notifies change listeners when an item is removed.
+     *
+     * @param name the name of the item to remove
+     * @return {@code true} if an item was removed, {@code false} if no item matched the name
+     */
     protected boolean removeItem(String name) {
         var removed = items.remove(name);
         if (removed != null) {
@@ -56,6 +61,9 @@ public abstract class AbstractRegistry<D extends ServerFeature.Descriptor, R ext
         return false;
     }
 
+    /**
+     * Notifies registered listeners that the registry contents have changed.
+     */
     protected void fireOnChange() {
         changes.fireOnChange();
     }

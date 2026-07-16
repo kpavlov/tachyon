@@ -15,13 +15,22 @@ import java.util.concurrent.CompletionStage;
 @FunctionalInterface
 public interface ResourceTemplateHandler {
 
-    /** Reads and returns the resource contents for the given URI and template variables. */
+    /**
+     * Reads the resource identified by the URI using the supplied template variables.
+     *
+     * @param uri    the resource URI
+     * @param params the URI template variables
+     * @return the resource contents
+     * @throws Exception if the resource cannot be read
+     */
     ResourceContents read(InteractionContext context, String uri, Map<String, UriTemplateValue> params)
             throws Exception;
 
     /**
-     * Reads asynchronously. Default delegates to {@link #read}.
-     * Override to integrate async services.
+     * Reads the resource identified by the URI and template variables.
+     *
+     * @param  params template variables used to resolve the resource URI
+     * @return       the resource contents, or a failed stage if reading fails
      */
     default CompletionStage<? extends ResourceContents> readAsync(
             InteractionContext context, String uri, Map<String, UriTemplateValue> params) {

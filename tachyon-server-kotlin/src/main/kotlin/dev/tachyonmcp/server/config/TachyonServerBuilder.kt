@@ -131,6 +131,14 @@ public class TachyonServerBuilder
         ): TachyonServerBuilder =
             this.also { delegate.resource(name, uri, description, mimeType, handler) }
 
+        /**
+         * Registers a prompt with the server.
+         *
+         * @param name The prompt name.
+         * @param description An optional description of the prompt.
+         * @param handler The handler that generates the prompt messages.
+         * @return This builder.
+         */
         public fun prompt(
             name: String,
             description: String? = null,
@@ -141,6 +149,19 @@ public class TachyonServerBuilder
                 delegate.prompt(descriptor, promptHandler(descriptor, handler))
             }
 
+        /**
+         * Registers a resource template with the server.
+         *
+         * @param name The template name.
+         * @param uriTemplate The URI template used to identify resources.
+         * @param title The optional template title.
+         * @param description The optional template description.
+         * @param mimeType The optional MIME type of the resources.
+         * @param annotations The optional template annotations.
+         * @param icons The optional template icons.
+         * @param block Handles requests for resources matching the template.
+         * @return This builder.
+         */
         public fun resourceTemplate(
             name: String,
             uriTemplate: String,

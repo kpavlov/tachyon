@@ -13,6 +13,13 @@ public record ResourceTemplateEntry(
         ResourceTemplateDescriptor descriptor, ResourceTemplateHandler handler, UriTemplate uriTemplate)
         implements ServerFeature<ResourceTemplateDescriptor> {
 
+    /**
+     * Creates a resource template entry from its descriptor and handler.
+     *
+     * @param descriptor the resource template descriptor
+     * @param handler    the handler for resource template requests
+     * @return the created resource template entry
+     */
     public static ResourceTemplateEntry of(ResourceTemplateDescriptor descriptor, ResourceTemplateHandler handler) {
         return new ResourceTemplateEntry(descriptor, handler, UriTemplate.create(descriptor.uriTemplate()));
     }

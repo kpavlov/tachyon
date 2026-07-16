@@ -31,6 +31,12 @@ public final class WeatherServer {
         log.info("Connect your MCP client to http://localhost:{}/mcp", port);
     }
 
+    /**
+     * Creates and starts the weather MCP server on the specified port.
+     *
+     * @param port the port on which the server listens
+     * @return the started weather MCP server
+     */
     static TachyonServer createServer(int port) {
         return TachyonServer.builder()
                 .info(it -> it
@@ -73,6 +79,12 @@ public final class WeatherServer {
     private WeatherServer() {
     }
 
+    /**
+     * Provides a Markdown article explaining weather prediction methods and observational systems.
+     *
+     * @param req the request containing the resource URI
+     * @return Markdown resource contents for the requested URI
+     */
     private static TextResourceContents handleArticleResource(InteractionContext ctx, ReadResourceRequest req) {
         var article = """
                 # Weather Prediction
@@ -96,6 +108,13 @@ public final class WeatherServer {
         return TextResourceContents.of(req.uri(), "text/markdown", article);
     }
 
+    /**
+     * Creates a JSON weather forecast resource for the requested city.
+     *
+     * @param uri    the resource URI
+     * @param params the URI template parameters containing the city
+     * @return       JSON resource contents for the city forecast
+     */
     private static ResourceContents handleForecastTemplate(
             InteractionContext ctx, String uri, Map<String, UriTemplateValue> params) {
         var city = ((UriTemplateValue.Scalar) params.get("city")).value();

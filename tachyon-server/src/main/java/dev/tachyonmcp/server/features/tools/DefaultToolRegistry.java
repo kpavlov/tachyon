@@ -86,7 +86,12 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
     }
 
     /**
-     * Registers a tool handler.
+     * Registers a tool handler when the tools capability is enabled.
+     *
+     * @param handler the tool handler to register
+     * @return this registry
+     * @throws NullPointerException if the handler or its descriptor is null
+     * @throws IllegalArgumentException if the tool name or schema root is invalid
      */
     @Override
     public ToolRegistry register(ToolHandler handler) {
@@ -114,17 +119,34 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
         return this;
     }
 
+    /**
+     * Removes the registered tool with the specified name.
+     *
+     * @param name the name of the tool to remove
+     * @return {@code true} if a tool was removed, {@code false} otherwise
+     */
     @Override
     public boolean unregister(String name) {
         return removeItem(name);
     }
 
+    /**
+     * Finds the descriptor for a registered tool by name.
+     *
+     * @param name the tool name to find
+     * @return the tool descriptor if registered, or an empty optional otherwise
+     */
     @Override
     public Optional<ToolDescriptor> find(String name) {
         var handler = get(name);
         return handler != null ? Optional.of(handler.descriptor()) : Optional.empty();
     }
 
+    /**
+     * Retrieves all registered tool descriptors in name order.
+     *
+     * @return the registered tool descriptors sorted by name
+     */
     @Override
     public List<ToolDescriptor> descriptors() {
         return getAll().stream()
@@ -133,6 +155,14 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                 .toList();
     }
 
+    /**
+     * Validates that a tool schema has an object root declaring {@code "type": "object"}.
+     *
+     * @param schemaKind the kind of schema being validated
+     * @param toolName   the name of the tool owning the schema
+     * @param schema     the schema to validate, or {@code null}
+     * @throws IllegalArgumentException if the schema root is invalid
+     */
     private static void validateSchemaRoot(String schemaKind, String toolName, @Nullable JsonNode schema) {
         if (schema == null) return;
         final String detail;
@@ -164,6 +194,11 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
 
     private static final Pattern VALID_NAME_PATTERN = Pattern.compile("[a-zA-Z0-9_\\-./]+");
 
+    /**
+     * Registers the JSON-RPC handlers for listing and invoking tools.
+     *
+     * @param registry the registry to receive the tool method handlers
+     */
     public void registerHandlers(Map<String, RpcMethodHandler> registry) {
         registry.put("tools/list", new ToolsListHandler(this));
         registry.put(
@@ -265,6 +300,16 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                     .callToolResult(JsonUtils.serializeStructured(toolResult, payloadSerializer));
         }
 
+        /**
+         * Dispatches a tool request as a session task and returns its initial task result.
+         *
+         * @param context  the dispatch context used to execute the tool and create the response
+         * @param handler  the tool handler to invoke
+         * @param request  the tool request to execute
+         * @param id       the tool identifier used for logging
+         * @param taskMeta task execution metadata, including the optional time-to-live
+         * @return         the initial result representing the created task
+         */
         private Object dispatchTaskAugmented(
                 DispatchContext context, ToolHandler handler, ToolRequest request, String id, TaskMetadata taskMeta) {
             sendLoggingIfEnabled(context, id, "started");

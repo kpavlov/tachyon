@@ -153,6 +153,11 @@ final class DefaultTachyonServer implements ServerEngine {
         return requested.ordinal() >= configured.ordinal();
     }
 
+    /**
+     * Resolves the server capabilities advertised by the configured features and registered handlers.
+     *
+     * @return the resolved server capabilities
+     */
     @Override
     public ServerCapabilities resolveCapabilities() {
         final var builder = ServerCapabilities.builder();
@@ -466,6 +471,15 @@ final class DefaultTachyonServer implements ServerEngine {
         return sendRequest(session, method, params, null);
     }
 
+    /**
+     * Sends a JSON-RPC request to a session and tracks its response.
+     *
+     * @param session the session that receives the request
+     * @param method the JSON-RPC method name
+     * @param params the request parameters
+     * @param stream the outbound stream to use, or {@code null} to resolve one for the session
+     * @return a future completed with the response JSON, or completed exceptionally if the request fails
+     */
     @Override
     public CompletableFuture<String> sendRequest(
             Session session, String method, Object params, @Nullable OutboundSseStream stream) {

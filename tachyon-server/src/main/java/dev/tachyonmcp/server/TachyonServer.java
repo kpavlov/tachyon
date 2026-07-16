@@ -64,6 +64,9 @@ public interface TachyonServer extends AutoCloseable {
     List<ServerExtension> extensions();
 
     /**
+     * Registers a tool handler with the server.
+     *
+     * @param handler the tool handler to register
      * @deprecated Use {@code tools().register(handler)}.
      */
     @Deprecated(since = "1.0.0-beta.10")
@@ -72,8 +75,15 @@ public interface TachyonServer extends AutoCloseable {
     }
 
     /**
+     * Registers a tool with the server.
+     *
+     * @param name              the tool name
+     * @param description       the tool description
+     * @param inputSchemaJson   the JSON schema for tool inputs
+     * @param outputSchemaJson  the JSON schema for tool outputs
+     * @param fn                the function that handles tool invocations
      * @deprecated Use {@link #tools()} and
-     * {@link ToolRegistry#register(String, String, String, String, BiFunction)}.
+     *             {@link ToolRegistry#register(String, String, String, String, BiFunction)}.
      */
     @Deprecated(since = "1.0.0-beta.10")
     default void registerTool(
@@ -86,6 +96,10 @@ public interface TachyonServer extends AutoCloseable {
     }
 
     /**
+     * Registers a resource descriptor and its handler.
+     *
+     * @param descriptor the resource descriptor
+     * @param handler    the handler for resource requests
      * @deprecated Use {@code resources().register(descriptor, handler)}.
      */
     @Deprecated(since = "1.0.0-beta.10")
@@ -94,6 +108,8 @@ public interface TachyonServer extends AutoCloseable {
     }
 
     /**
+     * Registers a prompt handler with the server.
+     *
      * @deprecated Use {@code prompts().register(descriptor, handler)}.
      */
     @Deprecated(since = "1.0.0-beta.10")
@@ -102,6 +118,10 @@ public interface TachyonServer extends AutoCloseable {
     }
 
     /**
+     * Finds a registered tool descriptor by name.
+     *
+     * @param name the tool name
+     * @return the matching tool descriptor, or {@code null} if no tool is registered with that name
      * @deprecated Use {@code tools().find(name)}.
      */
     @Deprecated(since = "1.0.0-beta.10")
@@ -110,6 +130,9 @@ public interface TachyonServer extends AutoCloseable {
         return tools().find(name).orElse(null);
     }
 
+    /**
+     * Shuts down the server and releases its resources.
+     */
     @Override
     void close();
 

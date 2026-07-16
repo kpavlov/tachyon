@@ -15,12 +15,32 @@ import org.jspecify.annotations.Nullable;
 
 public interface ToolRegistry {
 
+    /**
+     * Registers a tool handler with the registry.
+     *
+     * @param handler the tool handler to register
+     * @return this registry
+     */
     ToolRegistry register(ToolHandler handler);
 
+    /**
+     * Registers a tool descriptor with a synchronous handler.
+     *
+     * @param descriptor the descriptor for the tool to register
+     * @param handler    the function that handles tool interactions
+     * @return this tool registry
+     */
     default ToolRegistry register(ToolDescriptor descriptor, BiFunction<InteractionContext, Args, ToolResult> handler) {
         return register(ToolHandler.of(descriptor, handler));
     }
 
+    /**
+     * Registers a tool using a consumer to configure its descriptor and a synchronous handler.
+     *
+     * @param descriptor the consumer that configures the tool descriptor
+     * @param handler the function that handles tool interactions
+     * @return this tool registry
+     */
     default ToolRegistry register(
             Consumer<ToolDescriptor.Builder> descriptor, BiFunction<InteractionContext, Args, ToolResult> handler) {
         final var builder = ToolDescriptor.builder();
@@ -28,11 +48,25 @@ public interface ToolRegistry {
         return register(builder.build(), handler);
     }
 
+    /**
+     * Registers a tool with an asynchronous handler.
+     *
+     * @param descriptor the descriptor for the tool
+     * @param handler the function that handles interactions and produces a result asynchronously
+     * @return this tool registry
+     */
     default ToolRegistry registerAsync(
             ToolDescriptor descriptor, BiFunction<InteractionContext, Args, CompletionStage<ToolResult>> handler) {
         return register(ToolHandler.ofAsync(descriptor, handler));
     }
 
+    /**
+     * Registers a tool configured by a descriptor builder and handled asynchronously.
+     *
+     * @param descriptor configures the tool descriptor
+     * @param handler    processes interactions and produces the tool result
+     * @return this tool registry
+     */
     default ToolRegistry registerAsync(
             Consumer<ToolDescriptor.Builder> descriptor,
             BiFunction<InteractionContext, Args, CompletionStage<ToolResult>> handler) {
@@ -41,6 +75,16 @@ public interface ToolRegistry {
         return registerAsync(builder.build(), handler);
     }
 
+    /**
+     * Registers a tool with the specified metadata and synchronous handler.
+     *
+     * @param name              the tool name
+     * @param description       the tool description
+     * @param inputSchemaJson   the JSON schema for tool inputs
+     * @param outputSchemaJson  the JSON schema for tool outputs
+     * @param fn                the function that handles tool interactions
+     * @return the registry
+     */
     default ToolRegistry register(
             String name,
             @Nullable String description,
@@ -55,9 +99,26 @@ public interface ToolRegistry {
                 fn));
     }
 
+    /**
+     * Removes the registered tool with the specified name.
+     *
+     * @param name the name of the tool to remove
+     * @return {@code true} if a tool was removed, {@code false} if no tool was registered with that name
+     */
     boolean unregister(String name);
 
+    /**
+     * Finds a registered tool descriptor by name.
+     *
+     * @param name the name of the tool to find
+     * @return the matching tool descriptor, or an empty optional if no tool is registered with that name
+     */
     Optional<ToolDescriptor> find(String name);
 
+    /**
+     * Lists the descriptors of all registered tools.
+     *
+     * @return the registered tool descriptors
+     */
     List<ToolDescriptor> descriptors();
 }

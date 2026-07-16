@@ -39,6 +39,11 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor {
     @Nullable
     List<Icon> icons();
 
+    /**
+     * Validates the resource template descriptor's name and URI template.
+     *
+     * @throws IllegalArgumentException if the name or URI template is blank or invalid
+     */
     @Value.Check
     default void check() {
         if (name().isBlank()) throw new IllegalArgumentException("name must not be blank");
@@ -46,6 +51,11 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor {
         UriTemplate.create(uriTemplate());
     }
 
+    /**
+     * Creates a builder for constructing resource template descriptors.
+     *
+     * @return a new resource template descriptor builder
+     */
     static Builder builder() {
         return DefaultResourceTemplateDescriptor.builder();
     }

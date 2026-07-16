@@ -38,6 +38,14 @@ public final class UriTemplate {
         this.captures = List.copyOf(captures);
     }
 
+    /**
+     * Creates a reverse parser for an RFC 6570 URI template.
+     *
+     * @param uriTemplate the URI template to compile
+     * @return a parser that extracts decoded values from matching URIs
+     * @throws NullPointerException if {@code uriTemplate} is {@code null}
+     * @throws IllegalArgumentException if the template is too long or malformed
+     */
     public static UriTemplate create(String uriTemplate) {
         Objects.requireNonNull(uriTemplate, "uriTemplate");
         if (uriTemplate.length() > MAX_TEMPLATE_LENGTH) {
@@ -72,6 +80,13 @@ public final class UriTemplate {
         return new UriTemplate(Pattern.compile(regex.toString()), captures);
     }
 
+    /**
+     * Parses a raw URI according to this template and extracts decoded variable values.
+     *
+     * @param rawUri the URI to parse
+     * @return an unmodifiable map of variable names to decoded scalar or sequence values
+     * @throws IllegalArgumentException if the URI is invalid, exceeds the supported length, does not match the template, or contains undecodable values
+     */
     public Map<String, UriTemplateValue> parse(String rawUri) {
         Objects.requireNonNull(rawUri, "rawUri");
         if (rawUri.length() > MAX_RAW_URI_LENGTH) {
@@ -117,6 +132,13 @@ public final class UriTemplate {
         return Collections.unmodifiableMap(result);
     }
 
+    /**
+     * Appends the regular-expression representation of a URI template expression and records its captures.
+     *
+     * @param  expression the URI template expression to append
+     * @return the next available capture-group index
+     * @throws IllegalArgumentException if the expression is invalid or cannot be reversed unambiguously
+     */
     private static int appendExpression(
             StringBuilder regex, List<Capture> captures, int firstGroup, String expression) {
         if (expression.isEmpty()) {
@@ -177,6 +199,13 @@ public final class UriTemplate {
         return group;
     }
 
+    /**
+     * Appends the regular expression for an exploded variable sequence.
+     *
+     * @param regex the regular expression being constructed
+     * @param operator the URI template operator defining the sequence format
+     * @param variable the variable whose name is used for named sequence elements
+     */
     private static void appendExplodedExpression(StringBuilder regex, Operator operator, Variable variable) {
         String value = valuePattern(operator);
         switch (operator) {
@@ -208,6 +237,13 @@ public final class UriTemplate {
         }
     }
 
+    /**
+     * Parses a URI template variable, including optional prefix-length and explode modifiers.
+     *
+     * @param rawVariable the variable expression to parse
+     * @return the parsed variable metadata
+     * @throws IllegalArgumentException if the expression is empty or has an invalid name or modifier
+     */
     private static Variable parseVariable(String rawVariable) {
         if (rawVariable.isEmpty()) {
             throw new IllegalArgumentException("Empty URI template variable");
@@ -236,6 +272,12 @@ public final class UriTemplate {
         return new Variable(name, Integer.parseInt(rawPrefixLength), false);
     }
 
+    /**
+     * Validates the syntax of a URI template variable name.
+     *
+     * @param name the variable name to validate
+     * @throws IllegalArgumentException if the name contains invalid characters or separators
+     */
     private static void validateVariableName(String name) {
         boolean expectingCharacter = true;
         for (int index = 0; index < name.length(); ) {
@@ -268,6 +310,13 @@ public final class UriTemplate {
         }
     }
 
+    /**
+     * Appends a validated URI template literal to the regular expression.
+     *
+     * @param regex   the regular expression being constructed
+     * @param literal the literal template segment to validate and append
+     * @throws IllegalArgumentException if the literal contains invalid characters or percent encoding
+     */
     private static void appendLiteral(StringBuilder regex, String literal) {
         var encoded = new StringBuilder(literal.length());
         for (int index = 0; index < literal.length(); ) {
@@ -295,6 +344,13 @@ public final class UriTemplate {
         regex.append(Pattern.quote(encoded.toString()));
     }
 
+    /**
+     * Validates whether a code point can appear in URI template literals.
+     *
+     * @param  codePoint the Unicode code point to validate
+     * @return           {@code true} if the code point is allowed in URI template literals,
+     *                   {@code false} otherwise
+     */
     private static boolean isValidLiteral(int codePoint) {
         if (codePoint > 0x7F) {
             return !Character.isISOControl(codePoint)
@@ -313,6 +369,12 @@ public final class UriTemplate {
                 && codePoint != '}';
     }
 
+    /**
+     * Appends the UTF-8 percent-encoded representation of a Unicode code point.
+     *
+     * @param target the builder to receive the encoded bytes
+     * @param codePoint the Unicode code point to encode
+     */
     private static void appendPercentEncoded(StringBuilder target, int codePoint) {
         byte[] bytes = new String(Character.toChars(codePoint)).getBytes(StandardCharsets.UTF_8);
         for (byte value : bytes) {
@@ -327,6 +389,12 @@ public final class UriTemplate {
         return operator.allowReserved() ? RESERVED_VALUE : UNRESERVED_VALUE;
     }
 
+    /**
+     * Decodes a raw value containing percent-encoded UTF-8 bytes.
+     *
+     * @param raw the raw encoded value
+     * @return the decoded string, or an empty optional if decoding fails
+     */
     private static Optional<String> decode(String raw) {
         var bytes = new ByteArrayOutputStream(raw.length());
         for (int index = 0; index < raw.length(); index++) {
@@ -357,6 +425,14 @@ public final class UriTemplate {
         }
     }
 
+    /**
+     * Decodes the items in an exploded URI template variable sequence.
+     *
+     * @param raw     the matched raw sequence
+     * @param capture the variable and operator metadata for the sequence
+     * @param rawUri  the URI used when reporting a non-matching sequence
+     * @return the decoded sequence values
+     */
     private static UriTemplateValue.Sequence decodeSequence(String raw, Capture capture, String rawUri) {
         if (raw.isEmpty()) {
             return new UriTemplateValue.Sequence(List.of());
@@ -385,6 +461,16 @@ public final class UriTemplate {
         return new UriTemplateValue.Sequence(values);
     }
 
+    /**
+     * Merges a captured variable value into the parsed results, resolving compatible
+     * prefix captures and rejecting conflicting values.
+     *
+     * @param values   the accumulated parsed values
+     * @param capture  metadata for the captured variable
+     * @param value    the captured variable value
+     * @param rawUri   the URI being parsed
+     * @throws IllegalArgumentException if the value conflicts with an existing capture
+     */
     private static void merge(Map<String, ParsedValue> values, Capture capture, UriTemplateValue value, String rawUri) {
         ParsedValue current = values.get(capture.variable().name());
         ParsedValue candidate = new ParsedValue(value, capture.variable().prefixLength() > 0);
@@ -416,10 +502,22 @@ public final class UriTemplate {
         return new IllegalArgumentException("Malformed URI template: " + uriTemplate);
     }
 
+    /**
+     * Creates an exception indicating that a URI does not match the template.
+     *
+     * @param rawUri the URI that failed to match
+     * @return the corresponding mismatch exception
+     */
     private static IllegalArgumentException noMatch(String rawUri) {
         return new IllegalArgumentException("URI does not match template: " + rawUri);
     }
 
+    /**
+     * Converts a hexadecimal character to its numeric value.
+     *
+     * @param value the hexadecimal character
+     * @return the value from 0 to 15, or {@code -1} if the character is not hexadecimal
+     */
     private static int hexValue(char value) {
         if (value >= '0' && value <= '9') {
             return value - '0';
@@ -433,10 +531,22 @@ public final class UriTemplate {
         return -1;
     }
 
+    /**
+     * Determines whether a character is an ASCII letter.
+     *
+     * @param value the character to check
+     * @return {@code true} if the character is an ASCII letter, {@code false} otherwise
+     */
     private static boolean isAsciiLetter(char value) {
         return (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z');
     }
 
+    /**
+     * Determines whether a character is an ASCII digit.
+     *
+     * @param value the character to evaluate
+     * @return {@code true} if the character is between {@code '0'} and {@code '9'}, {@code false} otherwise
+     */
     private static boolean isAsciiDigit(char value) {
         return value >= '0' && value <= '9';
     }
@@ -465,6 +575,13 @@ public final class UriTemplate {
             this.allowReserved = allowReserved;
         }
 
+        /**
+         * Identifies the URI template operator represented by a character.
+         *
+         * @param candidate the character to classify
+         * @return the corresponding operator, or {@code SIMPLE} when no explicit operator is represented
+         * @throws IllegalArgumentException if the character is a reserved but unsupported operator
+         */
         static Operator from(char candidate) {
             return switch (candidate) {
                 case '+' -> RESERVED;
@@ -492,14 +609,30 @@ public final class UriTemplate {
             return separator;
         }
 
+        /**
+         * Indicates whether the operator uses named variables.
+         *
+         * @return {@code true} if variables include names, {@code false} otherwise
+         */
         boolean named() {
             return named;
         }
 
+        /**
+         * Indicates whether the operator permits reserved URI characters in variable values.
+         *
+         * @return {@code true} if reserved characters are permitted, {@code false} otherwise
+         */
         boolean allowReserved() {
             return allowReserved;
         }
 
+        /**
+         * Determines whether the operator supports exploded sequence variables.
+         *
+         * @return {@code true} for label, path, matrix, query, and continuation operators;
+         *         {@code false} otherwise
+         */
         boolean supportsExplodedSequence() {
             return this == LABEL || this == PATH || this == MATRIX || this == QUERY || this == CONTINUATION;
         }

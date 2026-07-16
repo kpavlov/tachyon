@@ -57,6 +57,13 @@ public inline fun TachyonServer.registerTool(
     )
 }
 
+/**
+ * Registers a tool with the server.
+ *
+ * @param descriptor The descriptor defining the tool.
+ * @param block The handler invoked when the tool is called.
+ * @return This server instance.
+ */
 @JvmSynthetic
 public fun TachyonServer.registerTool(
     descriptor: ToolDescriptor,

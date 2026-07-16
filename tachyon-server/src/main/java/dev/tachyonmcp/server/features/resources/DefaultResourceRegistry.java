@@ -67,10 +67,23 @@ public class DefaultResourceRegistry implements ResourceRegistry {
         changes.onChange(callback);
     }
 
+    /**
+     * Notifies registered callbacks that the registry has changed.
+     */
     private void fireOnChange() {
         changes.fireOnChange();
     }
 
+    /**
+     * Registers a resource descriptor and its handler.
+     *
+     * <p>If resource support is disabled, the descriptor is not registered. Registering a resource
+     * with an existing name replaces the previous resource and updates URI mappings accordingly.
+     *
+     * @param descriptor the resource descriptor to register
+     * @param handler the handler used to read the resource
+     * @return this registry
+     */
     @Override
     public DefaultResourceRegistry register(ResourceDescriptor descriptor, ResourceHandler handler) {
         if (config.mode() == Mode.OFF) {
@@ -87,6 +100,12 @@ public class DefaultResourceRegistry implements ResourceRegistry {
         return this;
     }
 
+    /**
+     * Removes the resource registered under the specified name.
+     *
+     * @param name the resource name
+     * @return {@code true} if a resource was removed, {@code false} if no resource was registered under the name
+     */
     @Override
     public boolean unregister(String name) {
         var removed = byName.remove(name);
@@ -98,12 +117,23 @@ public class DefaultResourceRegistry implements ResourceRegistry {
         return false;
     }
 
+    /**
+     * Finds a registered resource by name.
+     *
+     * @param name the resource name
+     * @return the resource descriptor, or an empty optional if no resource has the specified name
+     */
     @Override
     public Optional<ResourceDescriptor> find(String name) {
         var entry = byName.get(name);
         return entry != null ? Optional.of(entry.descriptor()) : Optional.empty();
     }
 
+    /**
+     * Lists registered resource descriptors in ascending name order.
+     *
+     * @return the registered resource descriptors
+     */
     @Override
     public List<ResourceDescriptor> descriptors() {
         return byName.values().stream()
@@ -112,6 +142,13 @@ public class DefaultResourceRegistry implements ResourceRegistry {
                 .toList();
     }
 
+    /**
+     * Lists registered resources in name order using cursor-based pagination.
+     *
+     * @param limit  the maximum number of resources to include; the configured page size is used when this value is not positive
+     * @param cursor the cursor identifying the starting position, or {@code null} to start from the beginning
+     * @return      the paginated resources and the cursor for the next page
+     */
     public PaginatedResult<ResourceDescriptor> list(int limit, @Nullable String cursor) {
         int lim = limit > 0 ? limit : config.pageSize();
         var all = byName.values().stream()
@@ -132,11 +169,28 @@ public class DefaultResourceRegistry implements ResourceRegistry {
         return Pagination.paginate(all, lim, cursor, ResourceDescriptor::name);
     }
 
+    /**
+     * Finds the resource registered for the specified URI.
+     *
+     * @param uri the resource URI
+     * @return the matching resource entry, or {@code null} if no resource is registered for the URI
+     */
     @Nullable
     ResourceEntry getByUri(String uri) {
         return byUri.get(uri);
     }
 
+    /**
+     * Registers a resource template with its handler.
+     *
+     * <p>If resource support is disabled, the template is not registered. An exception is thrown when
+     * a template with the same name already exists.
+     *
+     * @param descriptor the resource template descriptor
+     * @param handler the handler used to process requests matching the template
+     * @return this registry
+     * @throws IllegalArgumentException if a template with the same name is already registered
+     */
     @Override
     public ResourceRegistry registerTemplate(ResourceTemplateDescriptor descriptor, ResourceTemplateHandler handler) {
         if (config.mode() == Mode.OFF) {
@@ -151,6 +205,12 @@ public class DefaultResourceRegistry implements ResourceRegistry {
         return this;
     }
 
+    /**
+     * Removes a registered resource template by name.
+     *
+     * @param name the name of the template to remove
+     * @return {@code true} if a template was removed, {@code false} otherwise
+     */
     @Override
     public boolean unregisterTemplate(String name) {
         var removed = templates.remove(name);
@@ -161,12 +221,23 @@ public class DefaultResourceRegistry implements ResourceRegistry {
         return false;
     }
 
+    /**
+     * Finds a registered resource template by name.
+     *
+     * @param name the template name
+     * @return the matching resource template descriptor, or an empty optional if no template is registered with that name
+     */
     @Override
     public Optional<ResourceTemplateDescriptor> findTemplate(String name) {
         var template = templates.get(name);
         return template != null ? Optional.of(template.descriptor()) : Optional.empty();
     }
 
+    /**
+     * Lists registered resource template descriptors in name order.
+     *
+     * @return the registered resource template descriptors sorted by name
+     */
     @Override
     public List<ResourceTemplateDescriptor> templateDescriptors() {
         return templates.values().stream()
@@ -175,12 +246,23 @@ public class DefaultResourceRegistry implements ResourceRegistry {
                 .toList();
     }
 
+    /**
+     * Determines whether the registry contains no resources.
+     *
+     * @return {@code true} if the registry contains no resources, {@code false} otherwise
+     */
     public boolean isEmpty() {
         return byName.isEmpty();
     }
 
     private record TemplateMatch(ResourceTemplateEntry entry, Map<String, UriTemplateValue> params) {}
 
+    /**
+     * Finds the most specific registered resource template matching the URI.
+     *
+     * @param uri the resource URI to match
+     * @return the matching template and extracted parameters, or {@code null} if no template matches
+     */
     @Nullable
     private TemplateMatch matchTemplate(String uri) {
         return templates.values().stream()

@@ -15,6 +15,13 @@ import java.util.Objects;
  */
 public sealed interface UriTemplateValue permits UriTemplateValue.Scalar, UriTemplateValue.Sequence {
 
+    /**
+     * Gets the scalar text represented by this value.
+     *
+     * @return the scalar value or the sole element of a sequence
+     * @throws IllegalStateException if the sequence contains more than one element
+     * @throws UnsupportedOperationException if the value type is unsupported
+     */
     default String scalarValue() {
         if (this instanceof Scalar s) {
             return s.value;
@@ -29,6 +36,11 @@ public sealed interface UriTemplateValue permits UriTemplateValue.Scalar, UriTem
         }
     }
 
+    /**
+     * Converts this value to a scalar representation.
+     *
+     * @return this value when it is scalar; otherwise, a scalar containing its value
+     */
     default Scalar asScalar() {
         if (this instanceof Scalar s) {
             return s;
@@ -37,6 +49,11 @@ public sealed interface UriTemplateValue permits UriTemplateValue.Scalar, UriTem
         }
     }
 
+    /**
+     * Provides the value as a sequence.
+     *
+     * @return this value if it is already a sequence; otherwise, a single-element sequence containing the scalar value
+     */
     default Sequence asSequence() {
         if (this instanceof Sequence s) {
             return s;
