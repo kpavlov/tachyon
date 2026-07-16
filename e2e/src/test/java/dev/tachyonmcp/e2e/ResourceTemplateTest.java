@@ -3,17 +3,13 @@
 package dev.tachyonmcp.e2e;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.domain.TextResourceContents;
-import dev.tachyonmcp.server.domain.UriTemplateValue;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
 
 class ResourceTemplateTest extends AbstractMcpE2eTest {
-
-    private static String scalar(Map<String, UriTemplateValue> params, String name) {
-        return ((UriTemplateValue.Scalar) params.get(name)).value();
-    }
 
     @Test
     void shouldReadResourceFromSingleParamTemplate() throws Exception {
@@ -24,8 +20,8 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
                                 .uriTemplate("resource://items/{id}")
                                 .description("An item")
                                 .mimeType("text/plain"),
-                        (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "text/plain", "item=" + scalar(params, "id")));
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
+                                rawUri, "text/plain", "item=" + params.get("id").scalarValue()));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -60,22 +56,26 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
                                 .uriTemplate("resource://items/{id}")
                                 .description("An item")
                                 .mimeType("text/plain"),
-                        (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "text/plain", "item=" + scalar(params, "id")))
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
+                                rawUri, "text/plain", "item=" + params.get("id").scalarValue()))
                 .registerTemplate(
                         builder -> builder.name("orders")
                                 .uriTemplate("resource://orders/{orderId}")
                                 .description("An order")
                                 .mimeType("text/plain"),
-                        (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "text/plain", "order=" + scalar(params, "orderId")))
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
+                                rawUri,
+                                "text/plain",
+                                "order=" + params.get("orderId").scalarValue()))
                 .registerTemplate(
                         builder -> builder.name("users")
                                 .uriTemplate("resource://users/{userId}")
                                 .description("A user")
                                 .mimeType("text/plain"),
-                        (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "text/plain", "user=" + scalar(params, "userId")));
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
+                                rawUri,
+                                "text/plain",
+                                "user=" + params.get("userId").scalarValue()));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -117,6 +117,25 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
                   ]
                 }
                 """);
+
+            var r3 = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":4,"method":"resources/read","params":{"uri":"resource://items/7"}}
+                """);
+            assertThatJson(r3.body())
+                    .inPath("$.result")
+                    .isEqualTo(
+                            // language=JSON
+                            """
+                {
+                  "contents": [
+                    {
+                      "uri": "resource://items/7",
+                      "mimeType": "text/plain",
+                      "text": "item=7"
+                    }
+                  ]
+                }
+                """);
         }
     }
 
@@ -132,7 +151,8 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
                         (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
                                 rawUri,
                                 "text/plain",
-                                "user=" + scalar(params, "userId") + ",post=" + scalar(params, "postId")));
+                                "user=" + params.get("userId").scalarValue() + ",post="
+                                        + params.get("postId").scalarValue()));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -155,6 +175,66 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
                   ]
                 }
                 """);
+        }
+    }
+
+    @Test
+    void shouldListRegisteredTemplates() throws Exception {
+        startEmptyServer();
+        server.resources()
+                .registerTemplate(
+                        builder -> builder.name("item")
+                                .uriTemplate("resource://items/{id}")
+                                .description("An item")
+                                .mimeType("text/plain"),
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
+                                rawUri, "text/plain", "item=" + params.get("id").scalarValue()));
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+            var response = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"resources/templates/list"}
+                """);
+
+            var mapper = new ObjectMapper();
+            var templates = mapper.readTree(response.body()).at("/result/resourceTemplates");
+            assertThat(templates).hasSize(1);
+            assertThat(templates.get(0).get("name").asString()).isEqualTo("item");
+            assertThat(templates.get(0).get("uriTemplate").asString()).isEqualTo("resource://items/{id}");
+            assertThat(templates.get(0).get("mimeType").asString()).isEqualTo("text/plain");
+        }
+    }
+
+    @Test
+    void shouldReturnErrorWhenUriMatchesNoRegisteredTemplate() throws Exception {
+        startEmptyServer();
+        server.resources()
+                .registerTemplate(
+                        builder -> builder.name("item")
+                                .uriTemplate("resource://items/{id}")
+                                .description("An item")
+                                .mimeType("text/plain"),
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
+                                rawUri, "text/plain", "item=" + params.get("id").scalarValue()));
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+            var response = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://orders/99"}}
+                """);
+
+            // language=JSON
+            var expected = """
+                {
+                  "jsonrpc": "2.0",
+                  "id": 2,
+                  "error": {
+                    "code": -32002,
+                    "message": "Resource not found"
+                  }
+                }
+                """;
+            assertThatJson(response.body()).isEqualTo(expected);
         }
     }
 }
