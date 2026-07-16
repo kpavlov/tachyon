@@ -22,6 +22,7 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -81,6 +82,7 @@ class ProgressKeepAliveTest {
 
     // silent-comment request carries NO progress token — the handler keeps the connection alive
     // with ctx.notifications().comment(...), the token-free keep-alive.
+    @Language("json")
     private static final String COMMENT_CALL = // language=JSON
             """
             {"jsonrpc":"2.0","id":1,"method":"tools/call",

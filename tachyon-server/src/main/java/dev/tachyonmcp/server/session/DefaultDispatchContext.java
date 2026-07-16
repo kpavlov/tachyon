@@ -17,7 +17,6 @@ import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -180,8 +179,11 @@ public class DefaultDispatchContext implements DispatchContext {
         }
 
         @Override
-        public void progress(Object progressToken, double progress, double total, String message) {
-            Objects.requireNonNull(progressToken, "Progress token is required");
+        public void progress(@Nullable Object progressToken, double progress, double total, String message) {
+            if (progressToken == null) {
+                logger.debug("Dropping progress notification: no progressToken (client did not opt into progress)");
+                return;
+            }
             var paramsMap = Map.of(
                     "progressToken", progressToken,
                     "progress", progress,

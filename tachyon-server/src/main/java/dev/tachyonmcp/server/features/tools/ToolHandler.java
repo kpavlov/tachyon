@@ -3,6 +3,8 @@
 package dev.tachyonmcp.server.features.tools;
 
 import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.ServerFeature;
+import dev.tachyonmcp.server.domain.Args;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -13,9 +15,9 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>Override exactly one method in {@link AbstractToolHandler}:
  * <ul>
- *   <li>{@link AbstractToolHandler#handle(InteractionContext, ToolArgs)} — canonical for sync
+ *   <li>{@link AbstractToolHandler#handle(InteractionContext, Args)} — canonical for sync
  *       handlers.
- *   <li>{@link AbstractToolHandler#handleAsync(InteractionContext, ToolArgs)} — when the tool is
+ *   <li>{@link AbstractToolHandler#handleAsync(InteractionContext, Args)} — when the tool is
  *       already async; stays async with no virtual-thread detour.
  *   <li>The {@code ToolRequest} variants ({@link AbstractToolHandler#handle(InteractionContext,
  *       ToolRequest)} / {@link AbstractToolHandler#handleAsync(InteractionContext, ToolRequest)})
@@ -24,7 +26,7 @@ import org.jspecify.annotations.Nullable;
  *
  * @author Konstantin Pavlov
  */
-public interface ToolHandler {
+public interface ToolHandler extends ServerFeature<ToolDescriptor> {
 
     /**
      * Returns the metadata descriptor for this tool.
@@ -37,11 +39,11 @@ public interface ToolHandler {
      */
     CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolRequest request);
 
-    static ToolHandler of(ToolDescriptor descriptor, BiFunction<InteractionContext, ToolArgs, ToolResult> fn) {
+    static ToolHandler of(ToolDescriptor descriptor, BiFunction<InteractionContext, Args, ToolResult> fn) {
         return new AbstractToolHandler(descriptor) {
 
             @Override
-            public ToolResult handle(InteractionContext ctx, ToolArgs args) {
+            public ToolResult handle(InteractionContext ctx, Args args) {
                 assumeVirtualThread(); // don't remove this guardrail!
                 return fn.apply(ctx, args);
             }
@@ -61,11 +63,11 @@ public interface ToolHandler {
     }
 
     static ToolHandler of(
-            Consumer<ToolDescriptor.Builder> configurer, BiFunction<InteractionContext, ToolArgs, ToolResult> fn) {
+            Consumer<ToolDescriptor.Builder> configurer, BiFunction<InteractionContext, Args, ToolResult> fn) {
         return new AbstractToolHandler(configurer) {
 
             @Override
-            public ToolResult handle(InteractionContext ctx, ToolArgs args) {
+            public ToolResult handle(InteractionContext ctx, Args args) {
                 assumeVirtualThread(); // don't remove this guardrail!
                 return fn.apply(ctx, args);
             }
@@ -76,23 +78,23 @@ public interface ToolHandler {
      * Creates a simple sync ToolHandler from a name, description, and function.
      */
     static ToolHandler of(
-            String name, @Nullable String description, BiFunction<InteractionContext, ToolArgs, ToolResult> fn) {
+            String name, @Nullable String description, BiFunction<InteractionContext, Args, ToolResult> fn) {
         return of(builder -> builder.name(name).description(description), fn);
     }
 
     /**
      * Creates a simple sync ToolHandler from a name and function.
      */
-    static ToolHandler of(String name, BiFunction<InteractionContext, ToolArgs, ToolResult> fn) {
+    static ToolHandler of(String name, BiFunction<InteractionContext, Args, ToolResult> fn) {
         return of(builder -> builder.name(name), fn);
     }
 
     static ToolHandler ofAsync(
-            ToolDescriptor descriptor, BiFunction<InteractionContext, ToolArgs, CompletionStage<ToolResult>> fn) {
+            ToolDescriptor descriptor, BiFunction<InteractionContext, Args, CompletionStage<ToolResult>> fn) {
         return new AbstractToolHandler(descriptor) {
 
             @Override
-            public CompletionStage<? extends ToolResult> handleAsync(InteractionContext ctx, ToolArgs args) {
+            public CompletionStage<? extends ToolResult> handleAsync(InteractionContext ctx, Args args) {
                 return fn.apply(ctx, args);
             }
         };
@@ -111,11 +113,11 @@ public interface ToolHandler {
 
     static ToolHandler ofAsync(
             Consumer<ToolDescriptor.Builder> configurer,
-            BiFunction<InteractionContext, ToolArgs, CompletionStage<ToolResult>> fn) {
+            BiFunction<InteractionContext, Args, CompletionStage<ToolResult>> fn) {
         return new AbstractToolHandler(configurer) {
 
             @Override
-            public CompletionStage<? extends ToolResult> handleAsync(InteractionContext ctx, ToolArgs args) {
+            public CompletionStage<? extends ToolResult> handleAsync(InteractionContext ctx, Args args) {
                 return fn.apply(ctx, args);
             }
         };
@@ -127,14 +129,14 @@ public interface ToolHandler {
     static ToolHandler ofAsync(
             String name,
             @Nullable String description,
-            BiFunction<InteractionContext, ToolArgs, CompletionStage<ToolResult>> fn) {
+            BiFunction<InteractionContext, Args, CompletionStage<ToolResult>> fn) {
         return ofAsync(builder -> builder.name(name).description(description), fn);
     }
 
     /**
      * Creates a simple async ToolHandler from a name and function.
      */
-    static ToolHandler ofAsync(String name, BiFunction<InteractionContext, ToolArgs, CompletionStage<ToolResult>> fn) {
+    static ToolHandler ofAsync(String name, BiFunction<InteractionContext, Args, CompletionStage<ToolResult>> fn) {
         return ofAsync(builder -> builder.name(name), fn);
     }
 }

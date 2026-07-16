@@ -5,49 +5,33 @@
 package dev.tachyonmcp.server.features.tasks;
 
 import dev.tachyonmcp.server.ServerFeature;
-import dev.tachyonmcp.server.domain.Icon;
-import java.util.List;
 import org.immutables.value.Value;
-import org.jspecify.annotations.Nullable;
 
 @Value.Immutable
 @Value.Style(
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
         typeImmutable = "Default*")
-public interface TaskDescriptor extends ServerFeature {
+public interface TaskDescriptor extends ServerFeature.Descriptor {
 
-    String name();
+    String id();
 
-    @Nullable
-    String description();
-
-    @Nullable
-    String title();
-
-    List<Icon> icons();
+    @Value.Derived
+    default String name() {
+        return id();
+    }
 
     @Value.Check
     default void check() {
-        if (name().isBlank()) throw new IllegalArgumentException("name must not be blank");
+        if (id().isBlank()) throw new IllegalArgumentException("id must not be blank");
     }
 
     static Builder builder() {
         return DefaultTaskDescriptor.builder();
     }
 
-    static Builder builder(String name) {
-        return builder().name(name);
-    }
-
     interface Builder {
-        Builder name(String name);
-
-        Builder description(@Nullable String description);
-
-        Builder title(@Nullable String title);
-
-        Builder icons(Iterable<? extends Icon> icons);
+        Builder id(String id);
 
         TaskDescriptor build();
     }

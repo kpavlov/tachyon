@@ -6,7 +6,7 @@ import dev.tachyonmcp.server.domain.Annotations
 import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.TextResourceContents
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor
-import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry
+import dev.tachyonmcp.server.features.resources.ResourceTemplate
 import dev.tachyonmcp.server.features.resources.resourceDescriptor
 
 /** Static resource — plain factory. */
@@ -26,26 +26,36 @@ fun richDescriptor(): ResourceDescriptor =
         title = "My Profile"
         annotations = Annotations(priority = 0.5, lastModified = "2026-01-01T00:00:00Z")
         size = 1024
-        icons = listOf(
-            Icon(src = "https://example.com/user.png", mimeType = "image/png", sizes = listOf("32x32"), theme = "blue"),
-        )
+        icons =
+            listOf(
+                Icon(
+                    src = "https://example.com/user.png",
+                    mimeType = "image/png",
+                    sizes = listOf("32x32"),
+                    theme = "blue",
+                ),
+            )
     }
 
 /** URI template — {param} segments captured at runtime. */
-fun userProfileTemplate(): ResourceTemplateEntry =
-    ResourceTemplateEntry(
+fun userProfileTemplate(): ResourceTemplate =
+    ResourceTemplate(
         name = "user-profile",
         uriTemplate = "myapp://users/{userId}/profile",
         description = "User profile data",
         mimeType = "application/json",
     ) { _, uri, params ->
         val userId = params["userId"]
-        TextResourceContents(uri = uri, mimeType = "application/json", text = """{"userId":"$userId"}""")
+        TextResourceContents(
+            uri = uri,
+            mimeType = "application/json",
+            text = """{"userId":"$userId"}""",
+        )
     }
 
 /** URI template — multi-segment with static prefix matching. */
-fun forecastTemplate(): ResourceTemplateEntry =
-    ResourceTemplateEntry(
+fun forecastTemplate(): ResourceTemplate =
+    ResourceTemplate(
         name = "forecast",
         uriTemplate = "weather://forecast/{city}",
         description = "Weather forecast for a city",

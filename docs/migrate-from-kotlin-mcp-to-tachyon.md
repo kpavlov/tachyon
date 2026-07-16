@@ -18,7 +18,7 @@ fail to compile and won't show up until a client hits them.
 | Icon | `sdk.types.Icon` | `dev.tachyonmcp.server.domain.Icon(src, mimeType, sizes, theme)` |
 | Register a tool | `server.addTool(name, desc, inputSchema: ToolSchema, outputSchema, handler)` | `server.registerTool(name, desc, inputSchema, outputSchema) { }` |
 | Handler receiver | `suspend ClientConnection.(CallToolRequest) -> CallToolResult` | `suspend ToolScope.() -> ToolResult` |
-| Read arguments | `request.arguments: JsonObject` | `args: ToolArgs` (typed accessors) |
+| Read arguments | `request.arguments: JsonObject` | `args: Args` (typed accessors) |
 | Tool result | `CallToolResult(content = listOf(TextContent(x)), isError)` | `ToolResult.text(x)` / `.error(x)` / `success(v)` |
 | Schema type | `ToolSchema(properties, required)` | `String` **or** Jackson `JsonNode` **or** kotlinx `JsonObject` |
 | Logging | `server.sendLoggingMessage(LoggingMessageNotification(...))` | `server.log(session, level, logger, data: JsonNode)` |
@@ -113,7 +113,7 @@ server.registerTool(
 A thin wrapper that assembles the `{"type":"object","properties":…,"required":…}` envelope and
 warns when a description exceeds 2048 chars (clients truncate there) pays off across many tools.
 
-## 4. Arguments — `ToolArgs`
+## 4. Arguments — `Args`
 
 `ToolScope.args` replaces digging through a `JsonObject`:
 

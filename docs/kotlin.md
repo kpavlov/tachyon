@@ -74,7 +74,7 @@ Tool lambdas are `suspend` functions with access to `ToolScope`:
 tool(name = "reverse", description = "Reverse a string") {
     // this: ToolScope
     // ctx: InteractionContext
-    // args: ToolArgs
+    // args: Args
     val msg = args.string("message")
     ToolResult.text(msg.reversed())
 }
@@ -175,7 +175,7 @@ configured serde in the Kotlin DSL:
 | `scope.success(value)` | server-configured `PayloadSerializer` | Deferred serialization at encode time |
 | `scope.success(value, text)` | server-configured `PayloadSerializer` | Structured + human-readable text |
 
-`decode<T>` uses `T::class.java → ToolArgs.decode(Class<T>)`, which routes
+`decode<T>` uses `T::class.java → Args.decode(Class<T>)`, which routes
 through the deserializer set in `json { serde = ... }`.
 
 ```kotlin
@@ -188,7 +188,7 @@ tool(name = "greet", inputSchema = ..., outputSchema = ...) {
 }
 ```
 
-## ToolArgs accessors
+## Args accessors
 
 | Call | Behaviour |
 |---|---|

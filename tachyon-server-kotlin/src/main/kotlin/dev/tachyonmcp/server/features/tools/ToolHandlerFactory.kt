@@ -6,6 +6,7 @@ package dev.tachyonmcp.server.features.tools
 
 import dev.tachyonmcp.runtime.InteractionContext
 import dev.tachyonmcp.server.config.ToolScope
+import dev.tachyonmcp.server.domain.Args
 import dev.tachyonmcp.server.features.runSuspendHandler
 import kotlinx.coroutines.CoroutineName
 
@@ -28,7 +29,7 @@ internal fun toolHandler(
             runSuspendHandler(coroutineName) {
                 ToolScope(
                     context,
-                    ToolArgs.of(request.arguments(), request.payloadDeserializer()),
+                    Args.of(request.arguments(), request.payloadDeserializer()),
                 ).block()
             }
     }

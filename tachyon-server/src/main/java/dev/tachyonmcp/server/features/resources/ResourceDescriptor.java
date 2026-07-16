@@ -16,7 +16,7 @@ import org.jspecify.annotations.Nullable;
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
         typeImmutable = "Default*")
-public interface ResourceDescriptor extends ServerFeature {
+public interface ResourceDescriptor extends ServerFeature.Descriptor {
 
     String name();
 
@@ -47,7 +47,8 @@ public interface ResourceDescriptor extends ServerFeature {
     default void check() {
         if (name().isBlank()) throw new IllegalArgumentException("name must not be blank");
         if (uri().isBlank()) throw new IllegalArgumentException("uri must not be blank");
-        if (size() != null && size() < 0) throw new IllegalArgumentException("size must be >= 0, got: " + size());
+        Long size = size();
+        if (size != null && size < 0) throw new IllegalArgumentException("size must be >= 0, got: " + size);
     }
 
     static ResourceDescriptor.Builder builder() {
@@ -55,7 +56,12 @@ public interface ResourceDescriptor extends ServerFeature {
     }
 
     static ResourceDescriptor of(String name, String uri, @Nullable String description, @Nullable String mimeType) {
-        return DefaultResourceDescriptor.of(name, null, description, uri, mimeType, null, null, null, null);
+        return DefaultResourceDescriptor.builder()
+                .name(name)
+                .uri(uri)
+                .description(description)
+                .mimeType(mimeType)
+                .build();
     }
 
     static ResourceDescriptor of(
@@ -67,7 +73,16 @@ public interface ResourceDescriptor extends ServerFeature {
             @Nullable Annotations annotations,
             @Nullable Long size,
             @Nullable List<Icon> icons) {
-        return DefaultResourceDescriptor.of(name, title, description, uri, mimeType, annotations, size, icons, null);
+        return DefaultResourceDescriptor.builder()
+                .name(name)
+                .uri(uri)
+                .description(description)
+                .mimeType(mimeType)
+                .title(title)
+                .annotations(annotations)
+                .size(size)
+                .icons(icons)
+                .build();
     }
 
     interface Builder {

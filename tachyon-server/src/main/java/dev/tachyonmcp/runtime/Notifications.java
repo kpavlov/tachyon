@@ -4,7 +4,6 @@
 
 package dev.tachyonmcp.runtime;
 
-import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -20,9 +19,7 @@ public interface Notifications {
         public void send(String method, Object params) {}
 
         @Override
-        public void progress(Object progressToken, double progress, double total, String message) {
-            Objects.requireNonNull(progressToken, "Progress token is required");
-        }
+        public void progress(@Nullable Object progressToken, double progress, double total, String message) {}
 
         @Override
         public void comment(@Nullable String message) {}
@@ -50,12 +47,11 @@ public interface Notifications {
      * an early {@code progress(...)} is the keep-alive mechanism for long-running tools.
      *
      * <p>{@code progressToken} should be the client's request {@code _meta.progressToken}
-     * (e.g. {@code ToolRequest.progressToken()});
-     * .
-     *
-     * @throws IllegalArgumentException when the progress token is null
+     * (e.g. {@code ToolRequest.progressToken()}). When it is {@code null} the client did not opt
+     * into progress, so the notification is silently dropped per the MCP spec — handlers may emit
+     * progress unconditionally without null-checking the token.
      */
-    void progress(Object progressToken, double progress, double total, String message);
+    void progress(@Nullable Object progressToken, double progress, double total, String message);
 
     /**
      * Sends a raw SSE comment line ({@code : message}) on the response stream, upgrading a buffered

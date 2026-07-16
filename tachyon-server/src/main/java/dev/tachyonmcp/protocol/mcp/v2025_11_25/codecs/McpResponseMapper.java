@@ -13,7 +13,6 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ElicitRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ElicitRequestURLParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.EmptyResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetPromptResult;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetTaskPayloadResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListPromptsResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListResourceTemplatesResult;
@@ -24,7 +23,7 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ReadResourceResult;
 import dev.tachyonmcp.server.domain.*;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
+import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
@@ -114,20 +113,34 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
                         null);
             case Success s -> wireSuccess(s, resolvedMeta);
             case WithMeta ignored -> throw new AssertionError("WithMeta unwrapped above");
+            case ToolResult.Deferred ignored ->
+                throw new AssertionError("Deferred should not reach callToolResult mapping");
         };
     }
 
     private Object wireSuccess(Success s, @Nullable Map<String, JsonNode> meta) {
+        return buildCallToolResult(s.content(), s.structuredValue(), null, meta);
+    }
+
+    /**
+     * Builds a {@link CallToolResult} — the wire shape shared by {@code tools/call} responses and
+     * {@code tasks/result} payloads (a task's terminal result is exactly what the tool call would
+     * have returned).
+     */
+    private CallToolResult buildCallToolResult(
+            List<ContentBlock> content,
+            @Nullable Object structuredValue,
+            @Nullable Boolean isError,
+            @Nullable Map<String, JsonNode> meta) {
         var blocks = new java.util.ArrayList<>(
-                s.content().stream().map(McpToolMapper::toProtocolContentBlock).toList());
+                content.stream().map(McpToolMapper::toProtocolContentBlock).toList());
         Map<String, JsonNode> structured = null;
-        var sv = s.structuredValue();
-        if (sv != null) {
+        if (structuredValue != null) {
             JsonNode node =
-                    switch (sv) {
+                    switch (structuredValue) {
                         case RawJson rj -> JsonUtils.parse(rj.json());
                         case JsonNode n -> n;
-                        default -> JsonUtils.parse(JsonUtils.writeString(sv));
+                        default -> JsonUtils.parse(JsonUtils.writeString(structuredValue));
                     };
             if (!node.isObject()) {
                 throw new IllegalArgumentException(
@@ -141,12 +154,12 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
             structured = map;
             // MCP: a tool returning structured content SHOULD also return the serialized JSON in a
             // text block (backwards-compat). Inject it when the handler supplied no text block.
-            var hasText = s.content().stream().anyMatch(c -> c instanceof TextContent);
+            var hasText = content.stream().anyMatch(c -> c instanceof TextContent);
             if (!hasText) {
                 blocks.add(McpToolMapper.toProtocolContentBlock(TextContent.of(objNode.toString())));
             }
         }
-        return new CallToolResult(blocks, structured, null, meta, null);
+        return new CallToolResult(blocks, structured, isError, meta, null);
     }
 
     @Override
@@ -157,7 +170,7 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
     }
 
     @Override
-    public Object listResourceTemplatesResult(List<ResourceTemplateEntry> templates, @Nullable String nextCursor) {
+    public Object listResourceTemplatesResult(List<ResourceTemplateDescriptor> templates, @Nullable String nextCursor) {
         var protocolTemplates =
                 templates.stream().map(McpResourceMapper::toResourceTemplate).toList();
         return new ListResourceTemplatesResult(protocolTemplates, null, nextCursor, null);
@@ -191,8 +204,8 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
     }
 
     @Override
-    public Object getTaskResult(TaskEntry entry) {
-        return McpTaskMapper.toGetTaskResult(entry);
+    public Object getTaskResult(Task entry) {
+        return McpTaskMapper.toGetTaskResult((TaskEntry) entry);
     }
 
     @Override
@@ -211,13 +224,24 @@ public final class McpResponseMapper implements ProtocolResponseMapper {
     }
 
     @Override
-    public Object getTaskPayloadResult(@Nullable JsonNode result) {
-        if (result == null) {
-            return new GetTaskPayloadResult(null, null);
-        }
-        var additionalProps = new LinkedHashMap<String, JsonNode>();
-        additionalProps.put("result", result);
-        return new GetTaskPayloadResult(null, additionalProps);
+    public Object getTaskPayloadResult(@Nullable TaskResult result, String taskId) {
+        return switch (result) {
+            case null -> new CallToolResult(List.of(), null, null, relatedTaskMeta(null, taskId), null);
+            case TaskResult.Completed c ->
+                buildCallToolResult(c.content(), c.structuredContent(), null, relatedTaskMeta(c.meta(), taskId));
+            case TaskResult.Failed f ->
+                buildCallToolResult(f.content(), f.structuredContent(), true, relatedTaskMeta(f.meta(), taskId));
+        };
+    }
+
+    // Spec: every tasks/result response MUST carry io.modelcontextprotocol/related-task in _meta,
+    // since the CallToolResult shape itself does not contain the task ID.
+    private static Map<String, JsonNode> relatedTaskMeta(@Nullable Map<String, JsonNode> meta, String taskId) {
+        var merged = meta != null ? new LinkedHashMap<>(meta) : new LinkedHashMap<String, JsonNode>();
+        merged.put(
+                "io.modelcontextprotocol/related-task",
+                JsonUtils.parse(JsonUtils.writeString(Map.of("taskId", taskId))));
+        return merged;
     }
 
     @Override

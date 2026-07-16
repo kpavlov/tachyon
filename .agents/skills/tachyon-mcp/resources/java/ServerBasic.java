@@ -7,7 +7,6 @@ import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
@@ -54,17 +53,17 @@ public final class ServerBasic {
                     TextResourceContents.of(req.uri(), "application/json", "{\"mode\":\"production\"}"))
             .prompt(
                 PromptDescriptor.of("greet", "Generates a greeting"),
-                args -> List.of(PromptMessage.user("Say hello")))
-            .resourceTemplate(ResourceTemplateEntry.of(
-                "user-profile",
-                "demo://users/{userId}/profile",
-                "User profile data",
-                "application/json",
+                List.of(PromptMessage.user("Say hello")))
+            .resourceTemplate(builder -> builder
+                    .name("user-profile")
+                    .uriTemplate("demo://users/{userId}/profile")
+                    .description("User profile data")
+                    .mimeType("application/json"),
                 (ctx, uri, params) -> {
                     var userId = params.get("userId");
                     return TextResourceContents.of(
                         uri, "application/json", "{\"userId\":\"" + userId + "\",\"name\":\"User\"}");
-                }))
+                })
             .port(port)
             .start();
 

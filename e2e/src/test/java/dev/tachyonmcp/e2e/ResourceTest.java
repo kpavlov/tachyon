@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
+import dev.tachyonmcp.server.features.resources.DefaultResourceRegistry;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
@@ -254,7 +255,7 @@ class ResourceTest extends AbstractMcpE2eTest {
     private ToolHandler notifyUpdatedTool() {
         return ToolHandler.of(
                 b -> b.name("notify-update").description("Triggers resource updated notification"), (context, args) -> {
-                    server.resources().notifyResourceUpdated("resource://doc");
+                    ((DefaultResourceRegistry) server.resources()).notifyResourceUpdated("resource://doc");
                     return ToolResult.blocks(TextContent.of("notified"));
                 });
     }

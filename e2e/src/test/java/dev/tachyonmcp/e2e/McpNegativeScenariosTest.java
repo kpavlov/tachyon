@@ -8,8 +8,11 @@ import static io.modelcontextprotocol.spec.McpSchema.CallToolRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.tachyonmcp.server.domain.PromptMessage;
+import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -64,7 +67,10 @@ class McpNegativeScenariosTest extends AbstractMcpE2eTest {
     }
 
     @Test
-    void shouldListPromptsWhenNoPromptsRegistered() {
+    void shouldListRegisteredPromptViaSdk() {
+        var promptName = "negative-scenarios-list-probe";
+        server.prompts().add(PromptDescriptor.of(promptName, "A probe prompt"), List.of(PromptMessage.user("Hello!")));
+
         var transport = HttpClientStreamableHttpTransport.builder("http://localhost:" + port)
                 .build();
         try (var client = McpClient.sync(transport).build()) {
@@ -72,7 +78,7 @@ class McpNegativeScenariosTest extends AbstractMcpE2eTest {
 
             var result = client.listPrompts();
             assertThat(result).isNotNull();
-            assertThat(result.prompts()).isEmpty();
+            assertThat(result.prompts()).anyMatch(p -> promptName.equals(p.name()));
         }
     }
 

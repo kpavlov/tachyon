@@ -15,6 +15,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.function.Consumer;
+import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
@@ -22,10 +23,15 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class AbstractMcpE2eTest {
 
-    protected ServerEngine server;
+    protected TachyonServer server;
     protected NettyServer nettyServer;
     protected int port;
     private boolean usingCustomServer;
+
+    /** Exposes the internal engine SPI for tests that need server introspection. */
+    protected ServerEngine engine() {
+        return (ServerEngine) server;
+    }
 
     @BeforeAll
     void beforeAll() {
@@ -68,8 +74,8 @@ abstract class AbstractMcpE2eTest {
         ServerBuilder serverBuilder = TachyonServer.builder();
         serverBuilder.session(s -> s.enabled(true));
         configurer.accept(serverBuilder);
-        this.server = (ServerEngine) serverBuilder.build();
-        this.nettyServer = new NettyServer(0, server);
+        this.server = serverBuilder.build();
+        this.nettyServer = new NettyServer(0, (ServerEngine) server);
         this.port = nettyServer.port();
         this.usingCustomServer = true;
     }
@@ -92,7 +98,8 @@ abstract class AbstractMcpE2eTest {
      * Sends a JSON-RPC request and returns the response body, extracting a JSON-RPC envelope from
      * an SSE body if the response content-type is {@code text/event-stream}.
      */
-    protected static String rpc(HttpClient client, int port, String sessionId, String body) throws Exception {
+    protected static String rpc(HttpClient client, int port, String sessionId, @Language("json") String body)
+            throws Exception {
         var request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + port + "/mcp"))
                 .header("Content-Type", "application/json")

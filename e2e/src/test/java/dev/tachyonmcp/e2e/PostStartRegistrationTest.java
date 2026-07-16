@@ -11,6 +11,7 @@ import dev.tachyonmcp.server.domain.Role;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.server.features.prompts.PromptResult;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -41,7 +42,8 @@ class PostStartRegistrationTest extends AbstractMcpE2eTest {
     void shouldRegisterPromptAfterStart() throws Exception {
         server.registerPrompt(
                 PromptDescriptor.of("post-start-prompt", "Post-start prompt"),
-                List.of(of(Role.USER, TextContent.of("Hello from post-start"))));
+                (ctx, request) ->
+                        PromptResult.messages(List.of(of(Role.USER, TextContent.of("Hello from post-start")))));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();

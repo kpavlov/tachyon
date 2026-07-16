@@ -5,8 +5,8 @@ package dev.tachyonmcp.extensions.tools.echo;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.domain.TextContent;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.NoopInteractionContext;
 import java.util.Map;
@@ -20,7 +20,7 @@ class EchoToolHandlerTest {
     @Test
     void echoReturnsInputMessage() {
         var handler = new EchoToolHandler();
-        var args = ToolArgs.of(Map.of("message", JsonNodeFactory.instance.stringNode("hello")));
+        var args = Args.of(Map.of("message", JsonNodeFactory.instance.stringNode("hello")));
 
         var result = (ToolResult.Success) handler.handle(NOOP_CTX, args);
 
@@ -31,7 +31,7 @@ class EchoToolHandlerTest {
     @Test
     void echoReturnsEmptyStringWhenMessageMissing() {
         var handler = new EchoToolHandler();
-        var args = ToolArgs.of(Map.of());
+        var args = Args.empty();
 
         var result = (ToolResult.Success) handler.handle(NOOP_CTX, args);
 

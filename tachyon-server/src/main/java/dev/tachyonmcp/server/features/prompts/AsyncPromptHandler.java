@@ -11,15 +11,15 @@ import java.util.concurrent.CompletionStage;
 /**
  * Convenient base for asynchronous (non-blocking) prompt handlers.
  */
-public interface AsyncPromptHandler extends InputRequiredPromptHandler {
+public interface AsyncPromptHandler extends PromptHandler {
 
     /**
      * Handles the prompt request asynchronously.
      */
-    CompletionStage<? extends PromptHandlerResult> handleAsync(InteractionContext ctx, PromptRequest request);
+    CompletionStage<? extends PromptResult> handleAsync(InteractionContext ctx, PromptRequest request);
 
     @Override
-    default PromptHandlerResult handle(InteractionContext ctx, PromptRequest request) throws Exception {
+    default PromptResult handle(InteractionContext ctx, PromptRequest request) throws Exception {
         return HandlerFutures.joinInterruptibly(handleAsync(ctx, request));
     }
 }

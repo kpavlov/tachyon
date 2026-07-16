@@ -7,30 +7,37 @@ import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.buildServer
 import dev.tachyonmcp.server.config.TachyonServerBuilder
 import dev.tachyonmcp.server.config.success
+import dev.tachyonmcp.server.domain.Args
+import dev.tachyonmcp.server.domain.decode
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler
-import dev.tachyonmcp.server.features.tools.ToolArgs
-import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.features.tools.decode
 import dev.tachyonmcp.server.features.tools.registerTool
 import dev.tachyonmcp.server.features.tools.toolDescriptor
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CompletionStage
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionStage
 
 private val MAPPER = ObjectMapper()
-private val GREET_SCHEMA: JsonNode = MAPPER.readTree("""
+private val GREET_SCHEMA: JsonNode =
+    MAPPER.readTree(
+        """
     {"type":"object","properties":{"name":{"type":"string","description":"Name to greet"}},"required":["name"]}
-""")
+""",
+    )
 
 @Serializable
-data class GreetArgs(val name: String, val greeting: String = "Hello")
+data class GreetArgs(
+    val name: String,
+    val greeting: String = "Hello",
+)
 
 @Serializable
-data class GreetReply(val message: String)
+data class GreetReply(
+    val message: String,
+)
 
 /**
  * Registers a simple hello tool via DSL.
@@ -45,7 +52,11 @@ fun TachyonServerBuilder.registerHello() {
  * Suspend handler with input schema and arguments.
  */
 fun TachyonServerBuilder.registerGreeting() {
-    tool(name = "greeting", description = "Generates a personalized greeting", inputSchema = GREET_SCHEMA) {
+    tool(
+        name = "greeting",
+        description = "Generates a personalized greeting",
+        inputSchema = GREET_SCHEMA,
+    ) {
         val name = args.stringValue("name")
         ToolResult.text("Hello, $name!")
     }
@@ -87,14 +98,18 @@ fun TachyonServerBuilder.registerSlowTask() {
 /**
  * Class-based — extends AbstractToolHandler.
  */
-class GreetingTool : AbstractToolHandler(
-    toolDescriptor("greeting") {
-        title = "Greeting"
-        description = "Generates a personalized greeting"
-        inputSchema = GREET_SCHEMA
-    }
-) {
-    override fun handle(ctx: InteractionContext, args: ToolArgs): ToolResult {
+class GreetingTool :
+    AbstractToolHandler(
+        toolDescriptor("greeting") {
+            title = "Greeting"
+            description = "Generates a personalized greeting"
+            inputSchema = GREET_SCHEMA
+        },
+    ) {
+    override fun handle(
+        ctx: InteractionContext,
+        args: Args,
+    ): ToolResult {
         val name = args.stringValue("name")
         return ToolResult.text("Hello, $name!")
     }
@@ -103,29 +118,33 @@ class GreetingTool : AbstractToolHandler(
 /**
  * Async class-based — extends AbstractToolHandler with handleAsync.
  */
-class AsyncGreetingTool : AbstractToolHandler(
-    toolDescriptor("async-greeting") {
-        title = "Async Greeting"
-        description = "Async personalized greeting"
-        inputSchema = GREET_SCHEMA
-    }
-) {
-    override fun handleAsync(ctx: InteractionContext, args: ToolArgs): CompletionStage<out ToolResult> {
-        return CompletableFuture.completedFuture(ToolResult.text("Hello, Async!"))
-    }
+class AsyncGreetingTool :
+    AbstractToolHandler(
+        toolDescriptor("async-greeting") {
+            title = "Async Greeting"
+            description = "Async personalized greeting"
+            inputSchema = GREET_SCHEMA
+        },
+    ) {
+    override fun handleAsync(
+        ctx: InteractionContext,
+        args: Args,
+    ): CompletionStage<out ToolResult> =
+        CompletableFuture.completedFuture(ToolResult.text("Hello, Async!"))
 }
 
 /** Build a server using the DSL and register tools post-build. */
 fun buildWithPostRegistration(): TachyonServer {
-    val server = buildServer {
-        registerHello()
-        registerGreeting()
-        registerTypedGreeting()
-        registerSlowTask()
-        tool(name = "inline", description = "Registered inline") {
-            ToolResult.text("inline result")
+    val server =
+        buildServer {
+            registerHello()
+            registerGreeting()
+            registerTypedGreeting()
+            registerSlowTask()
+            tool(name = "inline", description = "Registered inline") {
+                ToolResult.text("inline result")
+            }
         }
-    }
     server.registerTool(GreetingTool())
     server.registerTool(AsyncGreetingTool())
     server.registerTool(

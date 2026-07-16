@@ -4,20 +4,20 @@ package dev.tachyonmcp.server.config
 
 import dev.tachyonmcp.runtime.InteractionContext
 import dev.tachyonmcp.server.TachyonDsl
-import dev.tachyonmcp.server.features.tools.ToolArgs
+import dev.tachyonmcp.server.domain.Args
 import dev.tachyonmcp.server.features.tools.ToolResult
 
 @TachyonDsl
 public class ToolScope
     internal constructor(
         public val ctx: InteractionContext,
-        public val args: ToolArgs,
+        public val args: Args,
     )
 
 /**
  * Returns a [ToolResult] whose structured value is [value], serialized to
  * `structuredContent` by the serde configured in server config at encode time
- * (symmetric with [decode][dev.tachyonmcp.server.features.tools.decode]).
+ * (symmetric with [decode][dev.tachyonmcp.server.domain.decode]).
  *
  * When [text] is omitted, no text block is attached and the server emits the
  * serialized JSON as the text content (MCP backwards-compat). Pass [text] to

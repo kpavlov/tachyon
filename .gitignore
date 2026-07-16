@@ -95,3 +95,5 @@ opencode.json
 __pycache__/
 *.pyc
 *.pyo
+
+.notes/

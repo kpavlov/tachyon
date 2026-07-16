@@ -9,6 +9,8 @@ import dev.tachyonmcp.server.domain.ReadResourceRequest;
 import dev.tachyonmcp.server.domain.ResourceContents;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.server.features.prompts.PromptRequest;
+import dev.tachyonmcp.server.features.prompts.PromptResult;
 import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import org.slf4j.Logger;
@@ -56,8 +58,10 @@ public final class WeatherServer {
                         // Async resource handler — returns a CompletionStage (beta.5+)
                         (AsyncResourceHandler) (ctx, req) ->
                                 CompletableFuture.supplyAsync(WeatherImageResource::read))
+
             .prompt(PromptDescriptor.of("rewrite-forecast", "Rewrites a weather forecast in a given style"),
                     WeatherServer::handleRewriteForecast)
+
             .resourceTemplate(builder -> builder
                     .name("forecast")
                     .uriTemplate("weather://forecast/{city}")
@@ -110,8 +114,8 @@ public final class WeatherServer {
         return TextResourceContents.of(uri, "application/json", forecast);
     }
 
-    private static List<PromptMessage> handleRewriteForecast(String arguments) {
-        return List.of(PromptMessage.user("Rewrite this forecast in a pirate style."));
+    private static PromptResult handleRewriteForecast(InteractionContext ctx, PromptRequest request) {
+        return PromptResult.messages(List.of(PromptMessage.user("Rewrite this forecast in a pirate style.")));
     }
 
 }

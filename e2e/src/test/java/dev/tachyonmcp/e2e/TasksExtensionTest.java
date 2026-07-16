@@ -7,18 +7,28 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ClientCapabilities;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Implementation;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.config.CapabilitiesConfig;
+import dev.tachyonmcp.server.domain.TaskResult;
 import dev.tachyonmcp.server.features.tasks.TasksExtension;
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.json.JsonUtils;
 import dev.tachyonmcp.server.session.DispatchContext;
+import java.util.Map;
+import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.api.parallel.Isolated;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.JsonNodeFactory;
 
 /**
  * <a href="https://modelcontextprotocol.io/seps/1686-tasks">SEP-1686 Tasks</a> —
@@ -28,47 +38,29 @@ import tools.jackson.databind.ObjectMapper;
 @Execution(ExecutionMode.SAME_THREAD) // to fix shouldNotifyTaskStatusOnCreate flakiness
 class TasksExtensionTest extends AbstractMcpE2eTest {
 
+    private static final String TASKS_EXTENSION_ID = "io.modelcontextprotocol/tasks";
+
     @Override
     protected void startDefaultServer() {
         startServer(it -> it.extension(TasksExtension.instance()));
     }
 
     @Test
-    void toolAndTemplateVisibleWhenExtensionNegotiated() throws Exception {
+    void advertisesTasksExtensionWhenNegotiated() throws Exception {
+        startServer(it -> it.capabilities(CapabilitiesConfig.Builder::tasks).extension(TasksExtension.instance()));
         try (var client = createTestClient()) {
-            var sessionId = initializeWithExtension(client);
+            var initBody = buildInitializeJson(Map.of(TASKS_EXTENSION_ID, JsonNodeFactory.instance.objectNode()));
+            var response = client.post(null, initBody);
+            client.sendInitialized(
+                    response.headers().firstValue("MCP-Session-Id").orElseThrow());
 
-            var toolsJson = rpc(client.httpClient(), port, sessionId, """
-                    {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
-                    """);
-            assertThatJson(toolsJson)
-                    .inPath("$.result.tools[?(@.name=='create_task')]")
-                    .isArray()
-                    .isNotEmpty();
-            assertThatJson(toolsJson)
-                    .inPath("$.result.tools[?(@.name=='create_task')].description")
-                    .isArray()
-                    .isNotEmpty();
-            assertThatJson(toolsJson)
-                    .inPath("$.result.tools[?(@.name=='create_task')].inputSchema")
-                    .isArray()
-                    .isNotEmpty();
-
-            var templatesJson = rpc(client.httpClient(), port, sessionId, """
-                    {"jsonrpc":"2.0","id":3,"method":"resources/templates/list","params":{}}
-                    """);
-            assertThatJson(templatesJson)
-                    .inPath("$.result.resourceTemplates[?(@.uriTemplate=='task://{id}')]")
-                    .isArray()
-                    .isNotEmpty();
-            assertThatJson(templatesJson)
-                    .inPath("$.result.resourceTemplates[?(@.uriTemplate=='task://{id}')].name")
-                    .isArray()
-                    .isNotEmpty();
-            assertThatJson(templatesJson)
-                    .inPath("$.result.resourceTemplates[?(@.uriTemplate=='task://{id}')].description")
-                    .isArray()
-                    .isNotEmpty();
+            assertThatJson(response.body())
+                    .inPath("$.result.capabilities.tasks")
+                    .isObject();
+            assertThatJson(response.body())
+                    .inPath("$.result.capabilities.extensions")
+                    .isObject()
+                    .containsKey(TASKS_EXTENSION_ID);
         }
     }
 
@@ -99,6 +91,7 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
         // This is the exact response shape the flake produced when activation had not yet
         // completed — and it falsifies the diagnosis if initialize secretly activates.
         try (var client = createTestClient()) {
+            @Language("json")
             var initBody = """
                     {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/tasks":{}}},"clientInfo":{"name":"test","version":"1.0"}}}
                     """;
@@ -133,7 +126,7 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
             assertThatJson(getBeforeJson).inPath("$.result.taskId").isEqualTo(taskId);
             assertThatJson(getBeforeJson).inPath("$.result.status").isEqualTo("working");
 
-            server.tasks().completeTask(taskId, "{\"output\":\"completed\"}");
+            server.tasks().get(taskId).complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"completed\"}")));
 
             var getAfterJson = rpc(client.httpClient(), port, sessionId, """
                     {"jsonrpc":"2.0","id":4,"method":"tasks/get","params":{"taskId":"%s"}}
@@ -144,7 +137,11 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
             var resultJson = rpc(client.httpClient(), port, sessionId, """
                     {"jsonrpc":"2.0","id":5,"method":"tasks/result","params":{"taskId":"%s"}}
                     """.formatted(taskId));
-            assertThatJson(resultJson).inPath("$.result.result").isObject().containsEntry("output", "completed");
+            // tasks/result returns a CallToolResult: structured tool output lands in structuredContent.
+            assertThatJson(resultJson)
+                    .inPath("$.result.structuredContent")
+                    .isObject()
+                    .containsEntry("output", "completed");
         }
     }
 
@@ -153,12 +150,12 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
         try (var client = createTestClient()) {
             var sessionId = initializeWithExtension(client);
 
-            var task = server.tasks().createTask("res-task", "task for resource read");
+            var task = server.tasks().create();
 
             var readJson = rpc(client.httpClient(), port, sessionId, """
                     {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"task://%s"}}
                     """.formatted(task.id()));
-            assertThatJson(readJson).inPath("$.result.contents[0].text").isEqualTo("WORKING");
+            assertThatJson(readJson).inPath("$.result.contents[0].text").isEqualTo("SUBMITTED");
             assertThatJson(readJson).inPath("$.result.contents[0].uri").isEqualTo("task://" + task.id());
         }
     }
@@ -172,8 +169,8 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
                         new AbstractToolHandler(
                                 ToolDescriptor.builder().name("create-sync").build()) {
                             @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest req) throws Exception {
-                                ((DispatchContext) ctx).engine().tasks().createTask("sync-notif-task", null);
+                            public ToolResult handle(InteractionContext ctx, ToolRequest req) {
+                                ((DispatchContext) ctx).engine().tasks().create();
                                 return ToolResult.text("ok");
                             }
                         })
@@ -197,10 +194,30 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
         }
     }
 
+    private static String buildInitializeJson(Map<String, JsonNode> extensions) {
+        var capsBuilder = ClientCapabilities.builder();
+        if (!extensions.isEmpty()) {
+            capsBuilder.extensions(extensions);
+        }
+        var params = InitializeRequestParams.builder()
+                .protocolVersion("2025-11-25")
+                .capabilities(capsBuilder.build())
+                .clientInfo(new Implementation("1.0", null, null, "test-client", null, null))
+                .build();
+        try {
+            var paramsJson = new ObjectMapper().writeValueAsString(params);
+            return """
+                    {"jsonrpc":"2.0","id":1,"method":"initialize","params":%s}
+                    """.formatted(paramsJson);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private String initializeWithExtension(TestMcpClient client) throws Exception {
         var initBody = """
-                {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/tasks":{}}},"clientInfo":{"name":"test","version":"1.0"}}}
-                """;
+            {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/tasks":{}}},"clientInfo":{"name":"test","version":"1.0"}}}
+            """;
         var response = client.post(null, initBody);
         var sessionId = response.headers().firstValue("MCP-Session-Id").orElseThrow();
         client.sendInitialized(sessionId);

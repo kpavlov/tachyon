@@ -5,6 +5,8 @@ package dev.tachyonmcp.server.config
 import dev.tachyonmcp.server.ServerBuilder
 import dev.tachyonmcp.server.TachyonDsl
 import dev.tachyonmcp.server.TachyonServer
+import dev.tachyonmcp.server.domain.Annotations
+import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.ResourceContents
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
@@ -146,17 +148,23 @@ public class TachyonServerBuilder
         public fun resourceTemplate(
             name: String,
             uriTemplate: String,
+            title: String? = null,
             description: String? = null,
             mimeType: String? = null,
-            handler: suspend TemplateScope.() -> ResourceContents,
+            annotations: Annotations? = null,
+            icons: List<Icon>? = null,
+            block: suspend TemplateScope.() -> ResourceContents,
         ): TachyonServerBuilder =
             this.also {
                 delegate.resourceTemplate(
-                    name,
-                    uriTemplate,
-                    description,
-                    mimeType,
-                    handler,
+                    name = name,
+                    uriTemplate = uriTemplate,
+                    title = title,
+                    description = description,
+                    mimeType = mimeType,
+                    icons = icons,
+                    annotations = annotations,
+                    handler = block,
                 )
             }
 

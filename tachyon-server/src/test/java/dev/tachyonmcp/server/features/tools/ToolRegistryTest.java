@@ -54,7 +54,7 @@ class ToolRegistryTest {
 
     private static final PayloadSerde TEST_SERDE = new JacksonPayloadSerde();
 
-    private final ToolRegistry registry = new ToolRegistry(
+    private final DefaultToolRegistry registry = new DefaultToolRegistry(
             JsonSchemaValidator.noop(),
             JsonSchemaValidator.noop(),
             TEST_SERDE,
@@ -391,7 +391,7 @@ class ToolRegistryTest {
 
     @Test
     void listWithCustomPageSize() {
-        var reg = new ToolRegistry(
+        var reg = new DefaultToolRegistry(
                 JsonSchemaValidator.noop(),
                 JsonSchemaValidator.noop(),
                 TEST_SERDE,
@@ -406,7 +406,7 @@ class ToolRegistryTest {
 
     @Test
     void registerIsNoOpWhenToolsCapabilityIsOff() {
-        var reg = new ToolRegistry(
+        var reg = new DefaultToolRegistry(
                 JsonSchemaValidator.noop(),
                 JsonSchemaValidator.noop(),
                 TEST_SERDE,
@@ -681,7 +681,7 @@ class ToolRegistryTest {
         var outputSchema = parseJson("""
             {"type":"object","properties":{"message":{"type":"string"},"count":{"type":"integer"}},"required":["message","count"]}
             """);
-        var registryVal = new ToolRegistry(
+        var registryVal = new DefaultToolRegistry(
                 new NetworkntJsonSchemaValidator(),
                 new NetworkntJsonSchemaValidator(),
                 TEST_SERDE,
@@ -718,7 +718,7 @@ class ToolRegistryTest {
 
     @Test
     void shouldConvertMixedJavaAndJsonNodeEntries() throws Exception {
-        var registryVal = new ToolRegistry(
+        var registryVal = new DefaultToolRegistry(
                 new NetworkntJsonSchemaValidator(),
                 new NetworkntJsonSchemaValidator(),
                 TEST_SERDE,

@@ -44,7 +44,7 @@ public fun ResourceDescriptor(
  * @param icons       list of associated icons; null to omit
  * @param handler     handler invoked with captured template variables
  */
-public fun ResourceTemplateEntry(
+public fun ResourceTemplate(
     name: String,
     uriTemplate: String,
     description: String? = null,
@@ -53,14 +53,17 @@ public fun ResourceTemplateEntry(
     annotations: Annotations? = null,
     icons: List<Icon>? = null,
     handler: ResourceTemplateHandler,
-): ResourceTemplateEntry =
-    ResourceTemplateEntry.of(
-        name,
-        uriTemplate,
-        description,
-        mimeType,
-        title,
-        annotations,
-        icons,
+): ResourceTemplate =
+    ResourceTemplate.of(
+        ResourceTemplateDescriptor
+            .builder()
+            .name(name)
+            .uriTemplate(uriTemplate)
+            .title(title)
+            .description(description)
+            .annotations(annotations)
+            .icons(icons)
+            .mimeType(mimeType)
+            .build(),
         handler,
     )

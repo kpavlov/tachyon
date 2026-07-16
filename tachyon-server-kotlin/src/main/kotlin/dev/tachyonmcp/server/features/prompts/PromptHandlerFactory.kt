@@ -11,17 +11,17 @@ import dev.tachyonmcp.server.features.runSuspendHandler
 import kotlinx.coroutines.CoroutineName
 
 /**
- * Wraps a suspend prompt lambda returning [List]<[PromptMessage]> into an [InputRequiredPromptHandler].
+ * Wraps a suspend prompt lambda returning [List]<[PromptMessage]> into an [PromptHandler].
  */
 @JvmSynthetic
 internal fun promptHandler(
     descriptor: PromptDescriptor,
     block: suspend PromptScope.() -> List<PromptMessage>,
-): InputRequiredPromptHandler {
+): PromptHandler {
     val coroutineName = CoroutineName("prompt:${descriptor.name()}")
-    return InputRequiredPromptHandler { ctx: InteractionContext, request: PromptRequest ->
+    return PromptHandler { ctx: InteractionContext, request: PromptRequest ->
         runSuspendHandler(coroutineName) {
-            PromptHandlerResult.messages(PromptScope(ctx, request).block())
+            PromptResult.messages(PromptScope(ctx, request).block())
         }
     }
 }

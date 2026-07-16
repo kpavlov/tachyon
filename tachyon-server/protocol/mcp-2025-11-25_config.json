@@ -9,7 +9,9 @@
     "Tool.outputSchema": "String",
     "ElicitRequestFormParams.requestedSchema": "String",
     "Resource.size": "Long",
-    "ResourceLink.size": "Long"
+    "ResourceLink.size": "Long",
+    "TaskMetadata.ttl": "Long",
+    "TaskStatusNotificationParams.ttl": "Long"
   },
   "additionalProperties": {
     "ClientCapabilities": [

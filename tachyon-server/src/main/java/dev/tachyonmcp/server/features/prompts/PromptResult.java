@@ -12,11 +12,11 @@ import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
-public sealed interface PromptHandlerResult permits PromptHandlerResult.Messages, PromptHandlerResult.InputRequired {
+public sealed interface PromptResult permits PromptResult.Messages, PromptResult.InputRequired {
 
-    record Messages(@Nullable List<PromptMessage> messages) implements PromptHandlerResult {}
+    record Messages(@Nullable List<PromptMessage> messages) implements PromptResult {}
 
-    record InputRequired(InputRequestBundle request) implements PromptHandlerResult {
+    record InputRequired(InputRequestBundle request) implements PromptResult {
         public InputRequired {
             Objects.requireNonNull(request, "request");
         }
@@ -30,11 +30,11 @@ public sealed interface PromptHandlerResult permits PromptHandlerResult.Messages
         }
     }
 
-    static PromptHandlerResult messages(@Nullable List<PromptMessage> messages) {
+    static PromptResult messages(@Nullable List<PromptMessage> messages) {
         return new Messages(messages);
     }
 
-    static PromptHandlerResult inputRequired(
+    static PromptResult inputRequired(
             Map<String, ? extends InputRequest> inputRequests, @Nullable String requestState) {
         return new InputRequired(new InputRequestBundle(inputRequests, requestState));
     }

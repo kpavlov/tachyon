@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 
 class PromptRegistryTest {
 
-    private final PromptRegistry registry = new PromptRegistry(
+    private final DefaultPromptRegistry registry = new DefaultPromptRegistry(
             JsonSchemaValidator.noop(), FeatureConfig.builder().build());
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
 
@@ -82,7 +82,7 @@ class PromptRegistryTest {
 
     @Test
     void listWithCustomPageSize() {
-        var reg = new PromptRegistry(
+        var reg = new DefaultPromptRegistry(
                 JsonSchemaValidator.noop(), FeatureConfig.builder().pageSize(1).build());
         reg.add(prompt("a"), List.of());
         reg.add(prompt("b"), List.of());
@@ -93,7 +93,7 @@ class PromptRegistryTest {
 
     @Test
     void addIsNoOpWhenPromptsCapabilityIsOff() {
-        var reg = new PromptRegistry(
+        var reg = new DefaultPromptRegistry(
                 JsonSchemaValidator.noop(), FeatureConfig.builder().off().build());
         reg.add(prompt("a"), List.of());
         assertThat(reg.getAll()).isEmpty();
@@ -205,7 +205,8 @@ class PromptRegistryTest {
     @Test
     void shouldUseDynamicHandlerForMessages() throws Exception {
         registry.add(
-                PromptDescriptor.of("dynamic", "Dynamic prompt"), args -> List.of(PromptMessage.user("args=" + args)));
+                PromptDescriptor.of("dynamic", "Dynamic prompt"),
+                (ctx, request) -> PromptResult.messages(List.of(PromptMessage.user("args=" + request.arguments()))));
 
         var result = (GetPromptResult)
                 handlers.get("prompts/get").handle(DefaultDispatchContext.noop(), Map.of("name", "dynamic"));

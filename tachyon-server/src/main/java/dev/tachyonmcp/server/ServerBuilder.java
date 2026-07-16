@@ -12,17 +12,18 @@ import dev.tachyonmcp.server.config.RuntimeConfig;
 import dev.tachyonmcp.server.config.ServerConfig;
 import dev.tachyonmcp.server.config.ServerIdentity;
 import dev.tachyonmcp.server.config.SessionConfig;
+import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.domain.PromptMessage;
-import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.extensions.ServerExtension;
-import dev.tachyonmcp.server.features.prompts.InputRequiredPromptHandler;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptHandler;
-import dev.tachyonmcp.server.features.prompts.PromptHandlerResult;
+import dev.tachyonmcp.server.features.prompts.PromptResult;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceHandler;
+import dev.tachyonmcp.server.features.resources.ResourceTemplate;
+import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
+import dev.tachyonmcp.server.features.resources.ResourceTemplateHandler;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
@@ -177,10 +178,7 @@ public final class ServerBuilder {
     /**
      * Registers a tool handler at build time (DSL registration).
      *
-     * <p><b>Intentional naming difference:</b> this is {@code tool()} (build-time DSL noun),
-     * while {@link TachyonServer#registerTool(ToolHandler)} is
-     * {@code registerTool()} (post-start dynamic registration). They serve different lifecycle
-     * phases and are intentionally named differently.
+     * <p>Use {@code server.tools().add(handler)} for post-build dynamic registration.
      */
     public ServerBuilder tool(ToolHandler handler) {
         featuresConfig.tools.add(handler);
@@ -190,17 +188,14 @@ public final class ServerBuilder {
     /**
      * Registers a tool with string JSON schemas and a handler function (build-time DSL).
      *
-     * <p><b>Intentional naming difference:</b> this is {@code tool()} (build-time),
-     * while {@link TachyonServer#registerTool(String, String, String, String, java.util.function.BiFunction)}
-     * is {@code registerTool()} (post-start). They serve different lifecycle phases and are
-     * intentionally named differently.
+     * <p>Use {@link TachyonServer#tools()} for post-build dynamic registration.
      */
     public ServerBuilder tool(
             String name,
             @Nullable String description,
             @Nullable String inputSchemaJson,
             @Nullable String outputSchemaJson,
-            java.util.function.BiFunction<InteractionContext, ToolArgs, ToolResult> fn) {
+            java.util.function.BiFunction<InteractionContext, Args, ToolResult> fn) {
         return tool(ToolHandler.of(
                 b -> b.name(name)
                         .description(description)
@@ -229,33 +224,38 @@ public final class ServerBuilder {
      * Registers a prompt with static messages (no handler, messages provided directly).
      */
     public ServerBuilder prompt(PromptDescriptor descriptor, List<PromptMessage> messages) {
-        return prompt(descriptor, toInputRequiredHandler(args -> messages));
+        return prompt(descriptor, (ctx, request) -> PromptResult.messages(messages));
     }
 
     /**
-     * Registers a prompt with a dynamic handler (simple messages only).
+     * Registers a prompt with a handler (messages or an input-required MRTR round-trip).
      */
     public ServerBuilder prompt(PromptDescriptor descriptor, PromptHandler handler) {
-        return prompt(descriptor, toInputRequiredHandler(handler));
-    }
-
-    /**
-     * Registers a prompt with an input-required (MRTR) handler.
-     */
-    public ServerBuilder prompt(PromptDescriptor descriptor, InputRequiredPromptHandler handler) {
         featuresConfig.prompts.add(new FeaturesConfig.PromptRegistration(descriptor, handler));
         return this;
-    }
-
-    private static InputRequiredPromptHandler toInputRequiredHandler(PromptHandler handler) {
-        return (ctx, request) -> PromptHandlerResult.messages(handler.getMessages(request.arguments()));
     }
 
     /**
      * Registers a resource template.
      */
-    public ServerBuilder resourceTemplate(ResourceTemplateEntry template) {
-        featuresConfig.templates.add(template);
+    public ServerBuilder resourceTemplate(ResourceTemplate resourceTemplate) {
+        featuresConfig.templates.add(ResourceTemplateEntry.of(resourceTemplate));
+        return this;
+    }
+
+    /**
+     * Registers a resource template.
+     */
+    public ServerBuilder resourceTemplate(ResourceTemplateDescriptor descriptor, ResourceTemplateHandler handler) {
+        featuresConfig.templates.add(ResourceTemplateEntry.of(descriptor, handler));
+        return this;
+    }
+
+    public ServerBuilder resourceTemplate(
+            Consumer<ResourceTemplateDescriptor.Builder> configBuilder, ResourceTemplateHandler handler) {
+        ResourceTemplateDescriptor.Builder builder = ResourceTemplateDescriptor.builder();
+        configBuilder.accept(builder);
+        featuresConfig.templates.add(ResourceTemplateEntry.of(builder.build(), handler));
         return this;
     }
 
@@ -373,15 +373,14 @@ public final class ServerBuilder {
                 featuresConfig.payloadSerializer,
                 featuresConfig.payloadDeserializer,
                 allExtensions);
-        featuresConfig.tools.forEach(server::registerTool);
+        featuresConfig.tools.forEach(server.tools()::add);
         featuresConfig.resources.forEach(r -> {
             var d = r.descriptor();
-            server.resources()
-                    .add(
-                            d,
-                            r.handler() != null
-                                    ? r.handler()
-                                    : (ctx, req) -> TextResourceContents.of(d.uri(), d.mimeType(), "", null));
+            if (r.handler() != null) {
+                server.resources().add(d, r.handler());
+            } else {
+                server.resources().add(d);
+            }
         });
         featuresConfig.prompts.forEach(p -> server.prompts().add(p.descriptor(), p.handler()));
         featuresConfig.templates.forEach(t -> server.resources().addTemplate(t));
@@ -442,7 +441,7 @@ public final class ServerBuilder {
         PayloadSerializer payloadSerializer = new JacksonPayloadSerde();
         PayloadDeserializer payloadDeserializer = new JacksonPayloadSerde();
 
-        record PromptRegistration(PromptDescriptor descriptor, InputRequiredPromptHandler handler) {}
+        record PromptRegistration(PromptDescriptor descriptor, PromptHandler handler) {}
 
         record ResourceRegistration(
                 ResourceDescriptor descriptor, @Nullable ResourceHandler handler) {}

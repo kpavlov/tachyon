@@ -74,7 +74,7 @@ stream never looks idle. There are two ways to trigger the upgrade:
   token is available. `comment()` emits a bare `:` heartbeat.
 
 Both are reachable only from the request-level entry points — override `handle(ctx, ToolRequest)`
-or `handleAsync(ctx, ToolRequest)` on `AbstractToolHandler` (the `ToolArgs` convenience overload
+or `handleAsync(ctx, ToolRequest)` on `AbstractToolHandler` (the `Args` convenience overload
 carries neither the token nor a stream handle):
 
 ```java

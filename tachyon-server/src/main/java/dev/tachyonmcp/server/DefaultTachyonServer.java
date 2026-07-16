@@ -9,30 +9,21 @@ import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.runtime.Backpressure;
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.config.ServerConfig;
 import dev.tachyonmcp.server.domain.LoggingLevel;
-import dev.tachyonmcp.server.domain.PromptMessage;
-import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.extensions.ServerExtension;
-import dev.tachyonmcp.server.features.prompts.InputRequiredPromptHandler;
-import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
-import dev.tachyonmcp.server.features.prompts.PromptHandler;
-import dev.tachyonmcp.server.features.prompts.PromptHandlerResult;
+import dev.tachyonmcp.server.features.prompts.DefaultPromptRegistry;
 import dev.tachyonmcp.server.features.prompts.PromptRegistry;
-import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.server.features.resources.ResourceHandler;
+import dev.tachyonmcp.server.features.resources.DefaultResourceRegistry;
 import dev.tachyonmcp.server.features.resources.ResourceRegistry;
-import dev.tachyonmcp.server.features.tasks.TaskRegistry;
+import dev.tachyonmcp.server.features.tasks.DefaultTaskRegistry;
+import dev.tachyonmcp.server.features.tasks.InternalTaskRegistry;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
-import dev.tachyonmcp.server.features.tools.ToolArgs;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.DefaultToolRegistry;
 import dev.tachyonmcp.server.features.tools.ToolRegistry;
-import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.handlers.CompletionHandlers;
 import dev.tachyonmcp.server.handlers.InitializeHandler;
 import dev.tachyonmcp.server.handlers.LoggingHandlers;
@@ -66,7 +57,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.BiFunction;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,10 +70,10 @@ final class DefaultTachyonServer implements ServerEngine {
     private final SessionManager sessionManager;
     private final OutboundStreamResolver outboundStreamResolver = new OutboundSseStreamMessageRouter();
     private final AtomicLong eventIdCounter = new AtomicLong(0);
-    private final ToolRegistry toolRegistry;
-    private final ResourceRegistry resourceRegistry;
-    private final TaskRegistry taskRegistry;
-    private final PromptRegistry promptRegistry;
+    private final DefaultToolRegistry toolRegistry;
+    private final DefaultResourceRegistry resourceRegistry;
+    private final DefaultTaskRegistry taskRegistry;
+    private final DefaultPromptRegistry promptRegistry;
     private final Map<String, RpcMethodHandler> methodHandlers = new ConcurrentHashMap<>();
     final Map<String, LoggingLevel> loggingLevels = new ConcurrentHashMap<>();
     final ConcurrentHashMap<Object, CompletableFuture<String>> pendingRequests = new ConcurrentHashMap<>();
@@ -246,11 +236,11 @@ final class DefaultTachyonServer implements ServerEngine {
         final PayloadDeserializer payloadDeserializer1 =
                 payloadDeserializer != null ? payloadDeserializer : defaultSerde;
         var caps = config.capabilities();
-        this.toolRegistry = new ToolRegistry(
+        this.toolRegistry = new DefaultToolRegistry(
                 inputValidator1, outputValidator1, payloadSerializer1, payloadDeserializer1, caps.tools());
-        this.resourceRegistry = new ResourceRegistry(this, caps.resources());
-        this.taskRegistry = new TaskRegistry(this, caps.tasks());
-        this.promptRegistry = new PromptRegistry(inputValidator1, caps.prompts());
+        this.resourceRegistry = new DefaultResourceRegistry(this, caps.resources());
+        this.taskRegistry = new DefaultTaskRegistry(this, caps.tasks());
+        this.promptRegistry = new DefaultPromptRegistry(inputValidator1, caps.prompts());
         registerDefaults();
         bootstrapExtensions();
         setupChangeListeners(config);
@@ -386,56 +376,8 @@ final class DefaultTachyonServer implements ServerEngine {
     }
 
     @Override
-    public void registerTool(
-            String name,
-            @Nullable String description,
-            @Nullable String inputSchemaJson,
-            @Nullable String outputSchemaJson,
-            BiFunction<InteractionContext, ToolArgs, ToolResult> fn) {
-        registerTool(ToolHandler.of(
-                b -> b.name(name)
-                        .description(description)
-                        .inputSchema(inputSchemaJson)
-                        .outputSchema(outputSchemaJson),
-                fn));
-    }
-
-    @Override
-    public void registerTool(ToolHandler handler) {
-        toolRegistry.register(handler);
-        logger.debug("Tool registered: {}", handler.descriptor().name());
-    }
-
-    @Override
-    public void registerResource(ResourceDescriptor descriptor) {
-        registerResource(
-                descriptor, (ctx, req) -> TextResourceContents.of(descriptor.uri(), descriptor.mimeType(), "", null));
-    }
-
-    @Override
-    public void registerResource(ResourceDescriptor descriptor, ResourceHandler handler) {
-        resourceRegistry.add(descriptor, handler);
-    }
-
-    @Override
-    public void registerPrompt(PromptDescriptor descriptor, List<PromptMessage> messages) {
-        registerPrompt(descriptor, (ctx, request) -> PromptHandlerResult.messages(messages));
-    }
-
-    @Override
-    public void registerPrompt(PromptDescriptor descriptor, PromptHandler handler) {
-        registerPrompt(
-                descriptor, (ctx, request) -> PromptHandlerResult.messages(handler.getMessages(request.arguments())));
-    }
-
-    @Override
-    public void registerPrompt(PromptDescriptor descriptor, InputRequiredPromptHandler handler) {
-        promptRegistry.add(descriptor, handler);
-    }
-
-    @Override
-    public @Nullable ToolDescriptor getTool(String name) {
-        return toolRegistry.getDescriptor(name);
+    public ToolRegistry tools() {
+        return toolRegistry;
     }
 
     @Override
@@ -449,7 +391,7 @@ final class DefaultTachyonServer implements ServerEngine {
     }
 
     @Override
-    public TaskRegistry tasks() {
+    public InternalTaskRegistry tasks() {
         return taskRegistry;
     }
 

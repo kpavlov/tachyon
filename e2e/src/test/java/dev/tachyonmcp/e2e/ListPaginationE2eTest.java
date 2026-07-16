@@ -31,7 +31,7 @@ class ListPaginationE2eTest extends AbstractMcpE2eTest {
                 """);
             var root1 = MAPPER.readTree(page1.body());
             assertThat(root1.at("/result/resources").size()).isEqualTo(2);
-            var cursor = root1.at("/result/nextCursor").asText(null);
+            var cursor = root1.at("/result/nextCursor").asString(null);
             assertThat(cursor).isNotNull();
 
             var page2 = client.sendRequest(sessionId, """
@@ -39,7 +39,7 @@ class ListPaginationE2eTest extends AbstractMcpE2eTest {
                 """.formatted(cursor));
             var root2 = MAPPER.readTree(page2.body());
             assertThat(root2.at("/result/resources").size()).isEqualTo(1);
-            assertThat(root2.at("/result/nextCursor").asText(null)).isNull();
+            assertThat(root2.at("/result/nextCursor").asString(null)).isNull();
         }
     }
 
@@ -58,7 +58,7 @@ class ListPaginationE2eTest extends AbstractMcpE2eTest {
                 """);
             var root1 = MAPPER.readTree(page1.body());
             assertThat(root1.at("/result/prompts").size()).isEqualTo(2);
-            var cursor = root1.at("/result/nextCursor").asText(null);
+            var cursor = root1.at("/result/nextCursor").asString(null);
             assertThat(cursor).isNotNull();
 
             var page2 = client.sendRequest(sessionId, """
@@ -66,16 +66,16 @@ class ListPaginationE2eTest extends AbstractMcpE2eTest {
                 """.formatted(cursor));
             var root2 = MAPPER.readTree(page2.body());
             assertThat(root2.at("/result/prompts").size()).isEqualTo(1);
-            assertThat(root2.at("/result/nextCursor").asText(null)).isNull();
+            assertThat(root2.at("/result/nextCursor").asString(null)).isNull();
         }
     }
 
     @Test
     void tasksListReturnsConfiguredPageSize() throws Exception {
         startServer(it -> it.capabilities(c -> c.tasks(true, false, false).tasksPageSize(2)));
-        server.tasks().createTask("task-a", "A");
-        server.tasks().createTask("task-b", "B");
-        server.tasks().createTask("task-c", "C");
+        server.tasks().create();
+        server.tasks().create();
+        server.tasks().create();
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -85,7 +85,7 @@ class ListPaginationE2eTest extends AbstractMcpE2eTest {
                 """);
             var root1 = MAPPER.readTree(page1.body());
             assertThat(root1.at("/result/tasks").size()).isEqualTo(2);
-            var cursor = root1.at("/result/nextCursor").asText(null);
+            var cursor = root1.at("/result/nextCursor").asString(null);
             assertThat(cursor).isNotNull();
 
             var page2 = client.sendRequest(sessionId, """
@@ -93,7 +93,7 @@ class ListPaginationE2eTest extends AbstractMcpE2eTest {
                 """.formatted(cursor));
             var root2 = MAPPER.readTree(page2.body());
             assertThat(root2.at("/result/tasks").size()).isEqualTo(1);
-            assertThat(root2.at("/result/nextCursor").asText(null)).isNull();
+            assertThat(root2.at("/result/nextCursor").asString(null)).isNull();
         }
     }
 

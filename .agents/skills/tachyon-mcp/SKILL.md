@@ -15,7 +15,8 @@ Make **Java 21+** MCP server. Tachyon lib. Transport = Streamable HTTP (Netty).
 - `TachyonServer.builder()` → `ServerBuilder`. Start here.
 - `.start()` (blocking) → builds `TachyonServer` (`AutoCloseable`) with Netty transport bound.
 - `.build()` → `TachyonServer` only, no transport.
-- `TachyonServer`: `.port()`, `.close()`, `.config()`, `.getTool(name)`, `.registerTool(handler)` (the handler carries its own descriptor).
+- `TachyonServer`: `.tools()`, `.resources()`, `.prompts()`, `.tasks()` first; then `.port()`, `.close()`, `.config()`.
+- Dynamic registration: `.tools().add(handler)`, `.resources().add(...)`, `.prompts().add(...)`.
 - `InteractionContext` → session + notifications + server ctx. Every handler gets it (`dev.tachyonmcp.runtime.InteractionContext`).
 - ⚡ **Virtual threads**: All handlers (`ToolHandler`, `ResourceHandler`, `PromptHandler`) run on a virtual thread per request. Blocking for I/O is fine — never use `synchronized` (pins carrier thread). Use `ReentrantLock` instead. CPU-bound work → offload to `context.server().executor()`. See `RpcMethodHandler.java` javadoc.
 
@@ -52,16 +53,16 @@ var server = TachyonServer.builder()
 
 ## Tools 🔧
 
-One interface: `ToolHandler`. Override exactly one method — `handle`/`handleAsync` × `ToolArgs`/`ToolRequest` — or use a `ToolHandler.of*` factory. Dispatch calls `handleAsync(ctx, ToolRequest)`; the defaults route to whichever you provide.
+One interface: `ToolHandler`. Override exactly one method — `handle`/`handleAsync` × `Args`/`ToolRequest` — or use a `ToolHandler.of*` factory. Dispatch calls `handleAsync(ctx, ToolRequest)`; the defaults route to whichever you provide.
 
 | Need | Factory | Override |
 |---|---|---|
-| sync, args only | `ToolHandler.of(name, desc, fn)` / `of(configurer, fn)` | `handle(ctx, ToolArgs)` |
+| sync, args only | `ToolHandler.of(name, desc, fn)` / `of(configurer, fn)` | `handle(ctx, Args)` |
 | sync, full request (progress token) | `ToolHandler.ofRequest(descriptor, fn)` | `handle(ctx, ToolRequest)` |
-| async, args only | `ToolHandler.ofAsync(name, fn)` | `handleAsync(ctx, ToolArgs)` |
+| async, args only | `ToolHandler.ofAsync(name, fn)` | `handleAsync(ctx, Args)` |
 | async, full request | `ToolHandler.ofAsyncRequest(descriptor, fn)` | `handleAsync(ctx, ToolRequest)` |
 
-Blocking is fine — sync `handle` runs on a virtual thread. Async handlers stay async (no blocking detour). Only override the request form when you need `_meta` (progress token, input responses); `ToolArgs` carries neither.
+Blocking is fine — sync `handle` runs on a virtual thread. Async handlers stay async (no blocking detour). Only override the request form when you need `_meta` (progress token, input responses); `Args` carries neither.
 
 **Prefer the `ToolHandler.of…` factories** — one call, no class. The `ToolHandler` interface declares only `descriptor()` and `handleAsync(ctx, ToolRequest)`; the sync/args override points live on `AbstractToolHandler`. Reach for a class only when the handler needs instance state or shared setup.
 
@@ -74,7 +75,7 @@ class MyTool extends AbstractToolHandler {
             .name("my-tool").description("Does something useful").inputSchema(jsonSchema).build());
     }
     @Override
-    public ToolResult handle(InteractionContext ctx, ToolArgs args) throws Exception {
+    public ToolResult handle(InteractionContext ctx, Args args) throws Exception {
         return ToolResult.text("result");
     }
 }
@@ -198,7 +199,7 @@ Kotlin DSL nests instead: `capabilities { tools { mode = Mode.ON; pageSize = 20 
 
 Native transports need optional runtime jars (`netty-transport-native-epoll` / `-kqueue` / `-io_uring` with `${os.detected.classifier}`); without them `AUTO` falls back to NIO. Explicit unavailable engine throws `UnsupportedOperationException`. See `docs/configuration.md`.
 
-⏳ **Keep-alive for long tools** — `readerIdleTimeout` (60s) closes any connection with no **inbound** bytes for that long, and a client waiting for a reply sends none — so a tool slower than 60s gets reaped mid-compute. Set `readerIdleTimeout` to `Duration.ZERO` to disable closing idle inbound stream. Don't just raise the timeout. Emit an early server→client message: the POST upgrades to SSE and a scheduler sends `:\r\n` heartbeats every `heartbeatInterval` (15s), keeping the stream alive for the whole run. Two triggers (request-level `ToolHandler` only — `ToolArgs` carries neither):
+⏳ **Keep-alive for long tools** — `readerIdleTimeout` (60s) closes any connection with no **inbound** bytes for that long, and a client waiting for a reply sends none — so a tool slower than 60s gets reaped mid-compute. Set `readerIdleTimeout` to `Duration.ZERO` to disable closing idle inbound stream. Don't just raise the timeout. Emit an early server→client message: the POST upgrades to SSE and a scheduler sends `:\r\n` heartbeats every `heartbeatInterval` (15s), keeping the stream alive for the whole run. Two triggers (request-level `ToolHandler` only — `Args` carries neither):
 - `ctx.notifications().progress(token, ...)` — forward the client's `ToolRequest.progressToken()`; **null token throws**.
 - `ctx.notifications().comment(msg)` — token-free SSE comment (`: msg`); `comment()` = bare `:` heartbeat. Use when no progress token.
 
