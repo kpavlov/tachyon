@@ -31,8 +31,9 @@ public interface Annotations {
 
     @Value.Check
     default void checkPriority() {
-        if (priority() != null && (Double.isNaN(priority()) || priority() < 0.0 || priority() > 1.0)) {
-            throw new IllegalArgumentException("priority must be in [0.0, 1.0], got: " + priority());
+        Double priority = priority();
+        if (priority != null && (Double.isNaN(priority) || priority < 0.0 || priority > 1.0)) {
+            throw new IllegalArgumentException("priority must be in [0.0, 1.0], got: " + priority);
         }
     }
 

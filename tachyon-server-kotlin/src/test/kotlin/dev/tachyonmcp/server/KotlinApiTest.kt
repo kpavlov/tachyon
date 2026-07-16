@@ -4,6 +4,7 @@ package dev.tachyonmcp.server
 
 import dev.tachyonmcp.server.config.ToolScope
 import dev.tachyonmcp.server.config.success
+import dev.tachyonmcp.server.domain.InvalidArgumentException
 import dev.tachyonmcp.server.domain.TextContent
 import dev.tachyonmcp.server.domain.boolean
 import dev.tachyonmcp.server.domain.booleanOrNull
@@ -14,7 +15,6 @@ import dev.tachyonmcp.server.domain.int
 import dev.tachyonmcp.server.domain.intOrNull
 import dev.tachyonmcp.server.domain.stringOrNull
 import dev.tachyonmcp.server.features.tools.Args
-import dev.tachyonmcp.server.features.tools.InvalidArgumentException
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.internal.ServerEngine
 import dev.tachyonmcp.server.json.KxSerializationSerde
@@ -44,7 +44,7 @@ internal class KotlinApiTest {
             name("test")
             tool("t1", inputSchema = schema) { ToolResult.text("ok") }
         }.use { handle ->
-            handle.tools().getDescriptor("t1") shouldNotBe null
+            handle.tools().find("t1").orElse(null) shouldNotBe null
         }
     }
 
@@ -55,7 +55,7 @@ internal class KotlinApiTest {
             name("test")
             tool("t2", inputSchema = schema, outputSchema = schema) { ToolResult.text("ok") }
         }.use { handle ->
-            handle.tools().getDescriptor("t2") shouldNotBe null
+            handle.tools().find("t2").orElse(null) shouldNotBe null
         }
     }
 
@@ -66,7 +66,7 @@ internal class KotlinApiTest {
             name("test")
             tool("t3", inputSchema = json) { ToolResult.text("ok") }
         }.use { handle ->
-            handle.tools().getDescriptor("t3") shouldNotBe null
+            handle.tools().find("t3").orElse(null) shouldNotBe null
         }
     }
 
@@ -77,7 +77,7 @@ internal class KotlinApiTest {
             name("test")
             tool("t4", inputSchema = json, outputSchema = json) { ToolResult.text("ok") }
         }.use { handle ->
-            handle.tools().getDescriptor("t4") shouldNotBe null
+            handle.tools().find("t4").orElse(null) shouldNotBe null
         }
     }
 
@@ -88,7 +88,7 @@ internal class KotlinApiTest {
             name("test")
             tool("t5", inputSchema = schema) { ToolResult.text("ok") }
         }.use { handle ->
-            handle.tools().getDescriptor("t5") shouldNotBe null
+            handle.tools().find("t5").orElse(null) shouldNotBe null
         }
     }
 
@@ -99,7 +99,7 @@ internal class KotlinApiTest {
             name("test")
             tool("t6", inputSchema = schema, outputSchema = schema) { ToolResult.text("ok") }
         }.use { handle ->
-            handle.tools().getDescriptor("t6") shouldNotBe null
+            handle.tools().find("t6").orElse(null) shouldNotBe null
         }
     }
 

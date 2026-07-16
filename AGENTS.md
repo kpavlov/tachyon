@@ -42,6 +42,14 @@ mvn spotless:apply  # auto-fix
 - `git mv` for files.
 - Use MCP tools.
 - **Format**: Spotless (Palantir). Check on `mvn verify`, fix with `mvn spotless:apply`.
+- **Registry API naming**:
+  - Build-time `ServerBuilder` methods are declarative nouns: `tool`, `resource`, `prompt`, `resourceTemplate`.
+  - Runtime feature registries use `register` / `registerAsync` and `unregister`.
+  - Optional lookup uses `Optional<Descriptor> find(String name)`. Never nullable `get`.
+  - Descriptor enumeration uses immutable, name-sorted `descriptors()` snapshots.
+  - Resource templates follow `registerTemplate`, `registerTemplateAsync`, `unregisterTemplate`, `findTemplate`, `templateDescriptors`.
+  - Keep typed registration methods on each registry. No public generic base registry.
+  - `TaskRegistry` is excluded. Tasks use runtime lifecycle methods such as `create` and `get`.
 - **Kotlin DSL** (`tachyon-server-kotlin`):
   - Each scope class gets its own `*Scope.kt` file.
   - `TachyonServerBuilder` wraps `ServerBuilder` as the DSL receiver. Scope methods on `TachyonServerBuilder` use clean names (`info`, `capabilities`, `network`, `session`) with zero Java member conflicts.

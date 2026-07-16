@@ -22,6 +22,7 @@ import dev.tachyonmcp.server.domain.Annotations;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.Role;
 import dev.tachyonmcp.server.domain.TextResourceContents;
+import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.server.session.DispatchContext;
@@ -30,6 +31,7 @@ import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.NonNull;
@@ -49,6 +51,10 @@ class ResourceRegistryTest {
 
     private static ResourceDescriptor resource(String name) {
         return ResourceDescriptor.of(name, "test://" + name, null, null);
+    }
+
+    private static String scalar(Map<String, UriTemplateValue> params, String name) {
+        return params.get(name).scalarValue();
     }
 
     private static DispatchContext context(Session session, ServerEngine server) {
@@ -72,17 +78,17 @@ class ResourceRegistryTest {
 
     @Test
     void listWithZeroLimitUsesDefaultPageSize() {
-        registry.add(resource("r1"), EMPTY_HANDLER);
-        registry.add(resource("r2"), EMPTY_HANDLER);
+        registry.register(resource("r1"), EMPTY_HANDLER);
+        registry.register(resource("r2"), EMPTY_HANDLER);
         var result = registry.list(0, null);
         assertThat(result.items()).hasSize(2);
     }
 
     @Test
     void listWithCursorSkipsPastCursor() {
-        registry.add(resource("alpha"), EMPTY_HANDLER);
-        registry.add(resource("beta"), EMPTY_HANDLER);
-        registry.add(resource("gamma"), EMPTY_HANDLER);
+        registry.register(resource("alpha"), EMPTY_HANDLER);
+        registry.register(resource("beta"), EMPTY_HANDLER);
+        registry.register(resource("gamma"), EMPTY_HANDLER);
         var result = registry.list(1, "alpha");
         assertThat(result.items()).hasSize(1);
         assertThat(result.items().getFirst().name()).isEqualTo("beta");
@@ -90,15 +96,15 @@ class ResourceRegistryTest {
 
     @Test
     void listReturnsCursorWhenMoreItemsAvailable() {
-        registry.add(resource("a"), EMPTY_HANDLER);
-        registry.add(resource("b"), EMPTY_HANDLER);
+        registry.register(resource("a"), EMPTY_HANDLER);
+        registry.register(resource("b"), EMPTY_HANDLER);
         var result = registry.list(1, null);
         assertThat(result.nextCursor()).isEqualTo("a");
     }
 
     @Test
     void listReturnsNullCursorWhenAllItemsReturned() {
-        registry.add(resource("a"), EMPTY_HANDLER);
+        registry.register(resource("a"), EMPTY_HANDLER);
         var result = registry.list(10, null);
         assertThat(result.nextCursor()).isNull();
     }
@@ -107,19 +113,77 @@ class ResourceRegistryTest {
     void listWithCustomPageSize() {
         var reg = new DefaultResourceRegistry(
                 server, ResourcesConfig.builder().pageSize(1).build());
-        reg.add(resource("a"), EMPTY_HANDLER);
-        reg.add(resource("b"), EMPTY_HANDLER);
+        reg.register(resource("a"), EMPTY_HANDLER);
+        reg.register(resource("b"), EMPTY_HANDLER);
         var result = reg.list(0, null);
         assertThat(result.items()).hasSize(1);
         assertThat(result.nextCursor()).isEqualTo("a");
     }
 
     @Test
-    void addIsNoOpWhenResourcesCapabilityIsOff() {
+    void registerIsNoOpWhenResourcesCapabilityIsOff() {
         var reg = new DefaultResourceRegistry(
                 server, ResourcesConfig.builder().off().build());
-        reg.add(resource("a"), EMPTY_HANDLER);
-        assertThat(reg.getAll()).isEmpty();
+        var changeCount = new AtomicInteger();
+        reg.onChange(changeCount::incrementAndGet);
+
+        reg.register(resource("a"), EMPTY_HANDLER);
+        reg.registerTemplate(
+                ResourceTemplateDescriptor.of("template-entry", "test://entry/{id}"),
+                (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", ""));
+
+        assertThat(reg.find("a")).isEmpty();
+        assertThat(reg.descriptors()).isEmpty();
+        assertThat(reg.findTemplate("template-entry")).isEmpty();
+        assertThat(reg.templateDescriptors()).isEmpty();
+        assertThat(changeCount).hasValue(0);
+    }
+
+    @Test
+    void interfaceDefaultBuilderOverloadsRegisterResourcesAndTemplates() throws Exception {
+        ResourceRegistry api = registry;
+
+        api.register(resource -> resource.name("sync").uri("test://sync"), EMPTY_HANDLER)
+                .registerAsync(
+                        resource -> resource.name("async").uri("test://async"),
+                        (ctx, request) -> CompletableFuture.completedFuture(
+                                TextResourceContents.of(request.uri(), "text/plain", "async")))
+                .registerTemplate(
+                        template -> template.name("sync-template").uriTemplate("test://sync/{id}"),
+                        (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", scalar(params, "id")))
+                .registerTemplateAsync(
+                        template -> template.name("async-template").uriTemplate("test://async/{id}"),
+                        (ctx, uri, params) -> CompletableFuture.completedFuture(
+                                TextResourceContents.of(uri, "text/plain", scalar(params, "id"))));
+
+        assertThat(api.descriptors()).extracting(ResourceDescriptor::name).containsExactly("async", "sync");
+        assertThat(api.find("sync")).isPresent();
+        assertThat(api.find("missing")).isEmpty();
+        assertThat(api.templateDescriptors())
+                .extracting(ResourceTemplateDescriptor::name)
+                .containsExactly("async-template", "sync-template");
+        assertThat(api.findTemplate("sync-template")).isPresent();
+        assertThat(api.findTemplate("missing")).isEmpty();
+        assertThat(api.unregister("sync")).isTrue();
+        assertThat(api.unregister("sync")).isFalse();
+        assertThat(api.unregisterTemplate("sync-template")).isTrue();
+        assertThat(api.unregisterTemplate("sync-template")).isFalse();
+    }
+
+    @Test
+    void registerRequiresHandler() {
+        assertThat(ResourceRegistry.class.getDeclaredMethods())
+                .filteredOn(method -> method.getName().equals("register"))
+                .hasSize(2)
+                .allSatisfy(method -> assertThat(method.getParameterCount()).isEqualTo(2));
+    }
+
+    @Test
+    void registerTemplateRequiresDescriptorAndHandler() {
+        assertThat(ResourceRegistry.class.getDeclaredMethods())
+                .filteredOn(method -> method.getName().equals("registerTemplate"))
+                .hasSize(2)
+                .allSatisfy(method -> assertThat(method.getParameterCount()).isEqualTo(2));
     }
 
     @Test
@@ -141,7 +205,8 @@ class ResourceRegistryTest {
     @Test
     void shouldReadResourceContentByUri() throws Exception {
         var descriptor = ResourceDescriptor.of("test-resource", "test://resource/1", "Test resource", "text/plain");
-        registry.add(descriptor, (ctx, req) -> TextResourceContents.of("test://resource/1", "text/plain", "content"));
+        registry.register(
+                descriptor, (ctx, req) -> TextResourceContents.of("test://resource/1", "text/plain", "content"));
 
         var result = handlers.get("resources/read")
                 .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "test://resource/1"));
@@ -274,7 +339,7 @@ class ResourceRegistryTest {
         sess.activate();
 
         handlers.get("resources/subscribe").handle(context(sess, server), Map.of("uri", "test://resource/1"));
-        registry.add(
+        registry.register(
                 ResourceDescriptor.of("test-resource", "test://resource/1", "Test resource", "text/plain"),
                 (ctx, req) -> TextResourceContents.of("test://resource/1", "text/plain", ""));
 
@@ -291,7 +356,7 @@ class ResourceRegistryTest {
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
-        registry.add(
+        registry.register(
                 ResourceDescriptor.of("r1", "test://r1", null, null),
                 (ctx, req) -> TextResourceContents.of("test://r1", "text/plain", ""));
 
@@ -300,14 +365,14 @@ class ResourceRegistryTest {
 
     @Test
     void shouldFireOnChangeWhenExistingResourceRemoved() {
-        registry.add(
+        registry.register(
                 ResourceDescriptor.of("r1", "test://r1", null, null),
                 (ctx, req) -> TextResourceContents.of("test://r1", "text/plain", ""));
 
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
-        registry.remove("r1");
+        registry.unregister("r1");
 
         assertThat(callCount).hasValue(1);
     }
@@ -317,7 +382,7 @@ class ResourceRegistryTest {
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
-        registry.remove("does-not-exist");
+        registry.unregister("does-not-exist");
 
         assertThat(callCount).hasValue(0);
     }
@@ -327,7 +392,7 @@ class ResourceRegistryTest {
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
-        registry.addTemplate(
+        registry.registerTemplate(
                 ResourceTemplateDescriptor.of("tmpl", "test://tmpl/{id}"),
                 (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", ""));
 
@@ -336,29 +401,29 @@ class ResourceRegistryTest {
 
     @Test
     void shouldReplaceHandlerAndFireOnChangeWhenAddedWithSameName() {
-        registry.add(
+        registry.register(
                 ResourceDescriptor.of("doc", "resource://doc-v1", null, "text/plain"),
                 (ctx, req) -> TextResourceContents.of("resource://doc-v1", "text/plain", "v1"));
 
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
-        registry.add(
+        registry.register(
                 ResourceDescriptor.of("doc", "resource://doc-v1", null, "text/plain"),
                 (ctx, req) -> TextResourceContents.of("resource://doc-v1", "text/plain", "v2"));
 
         assertThat(callCount).hasValue(1);
-        assertThat(registry.get("doc")).isNotNull();
-        assertThat(registry.getAll()).hasSize(1);
+        assertThat(registry.find("doc")).isPresent();
+        assertThat(registry.descriptors()).hasSize(1);
     }
 
     @Test
     void shouldEvictOldUriWhenResourceUpdatedWithNewUri() throws Exception {
-        registry.add(
+        registry.register(
                 ResourceDescriptor.of("doc", "resource://doc-v1", null, "text/plain"),
                 (ctx, req) -> TextResourceContents.of("resource://doc-v1", "text/plain", "v1"));
 
-        registry.add(
+        registry.register(
                 ResourceDescriptor.of("doc", "resource://doc-v2", null, "text/plain"),
                 (ctx, req) -> TextResourceContents.of("resource://doc-v2", "text/plain", "v2"));
 
@@ -371,19 +436,19 @@ class ResourceRegistryTest {
         var newUriResult = handlers.get("resources/read")
                 .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "resource://doc-v2"));
         assertThat(newUriResult).isInstanceOf(ReadResourceResult.class);
-        assertThat(registry.getAll()).hasSize(1);
+        assertThat(registry.descriptors()).hasSize(1);
     }
 
     @Test
     void shouldFireOnChangeWhenResourceUriUpdated() {
-        registry.add(
+        registry.register(
                 ResourceDescriptor.of("doc", "resource://doc-v1", null, "text/plain"),
                 (ctx, req) -> TextResourceContents.of("resource://doc-v1", "text/plain", "v1"));
 
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
-        registry.add(
+        registry.register(
                 ResourceDescriptor.of("doc", "resource://doc-v2", null, "text/plain"),
                 (ctx, req) -> TextResourceContents.of("resource://doc-v2", "text/plain", "v2"));
 
@@ -403,7 +468,7 @@ class ResourceRegistryTest {
                 annotations,
                 1024L,
                 List.of(icon));
-        registry.add(descriptor, (ctx, req) -> TextResourceContents.of("test://full", "text/plain", "content"));
+        registry.register(descriptor, (ctx, req) -> TextResourceContents.of("test://full", "text/plain", "content"));
 
         var result = (ListResourcesResult) handlers.get("resources/list").handle(DefaultDispatchContext.noop(), null);
 
@@ -449,34 +514,55 @@ class ResourceRegistryTest {
     void shouldRejectTemplateWithEmptyBraces() {
         assertThatThrownBy(() -> ResourceTemplateDescriptor.of("bad", "resource://{}"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("braces");
+                .hasMessageContaining("Empty URI template expression");
     }
 
     @Test
     void shouldRejectTemplateWithUnmatchedOpenBrace() {
         assertThatThrownBy(() -> ResourceTemplateDescriptor.of("bad", "resource://{foo"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("braces");
+                .hasMessageContaining("Malformed URI template");
     }
 
     @Test
-    void shouldRejectTemplateWithDuplicateVariableNames() {
-        assertThatThrownBy(() -> ResourceTemplateDescriptor.of("bad", "resource://{id}/{id}"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Duplicate");
+    void shouldAllowRepeatedVariableNames() {
+        var descriptor = ResourceTemplateDescriptor.of("dictionary", "resource://dictionary/{term:1}/{term}");
+
+        assertThat(descriptor.uriTemplate()).isEqualTo("resource://dictionary/{term:1}/{term}");
+    }
+
+    @Test
+    void shouldPassExplodedSequenceToTemplateHandler() throws Exception {
+        var captured = new AtomicReference<Map<String, UriTemplateValue>>();
+        registry.registerTemplate(
+                ResourceTemplateDescriptor.of("files", "resource://files{/segments*}"), (ctx, uri, params) -> {
+                    captured.set(params);
+                    return TextResourceContents.of(uri, "text/plain", "ok");
+                });
+
+        var result = handlers.get("resources/read")
+                .handle(
+                        DefaultDispatchContext.noop(),
+                        Map.<String, Object>of("uri", "resource://files/one/two%20words"));
+
+        assertThat(result).isInstanceOf(ReadResourceResult.class);
+        assertThat(captured.get())
+                .containsExactly(Map.entry("segments", new UriTemplateValue.Sequence(List.of("one", "two words"))));
     }
 
     @Test
     void shouldPreferMoreSpecificTemplateOnOverlap() throws Exception {
         var matched = new AtomicReference<@Nullable String>();
-        registry.addTemplate(ResourceTemplateDescriptor.of("generic", "resource://{type}/{id}"), (ctx, uri, params) -> {
-            matched.set("generic");
-            return TextResourceContents.of(uri, "text/plain", "generic");
-        });
-        registry.addTemplate(ResourceTemplateDescriptor.of("specific", "resource://users/{id}"), (ctx, uri, params) -> {
-            matched.set("specific");
-            return TextResourceContents.of(uri, "text/plain", "specific");
-        });
+        registry.registerTemplate(
+                ResourceTemplateDescriptor.of("generic", "resource://{type}/{id}"), (ctx, uri, params) -> {
+                    matched.set("generic");
+                    return TextResourceContents.of(uri, "text/plain", "generic");
+                });
+        registry.registerTemplate(
+                ResourceTemplateDescriptor.of("specific", "resource://users/{id}"), (ctx, uri, params) -> {
+                    matched.set("specific");
+                    return TextResourceContents.of(uri, "text/plain", "specific");
+                });
 
         handlers.get("resources/read")
                 .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "resource://users/42"));
@@ -488,7 +574,7 @@ class ResourceRegistryTest {
     void shouldMapAllResourceTemplateFieldsToProtocolModel() throws Exception {
         var annotations = Annotations.of(null, 0.5, null);
         var icon = Icon.of("https://example.com/tmpl.png", null, null, null);
-        registry.addTemplate(
+        registry.registerTemplate(
                 ResourceTemplateDescriptor.of(
                         "tmpl",
                         "test://tmpl/{id}",
@@ -497,7 +583,7 @@ class ResourceRegistryTest {
                         "Template Title",
                         annotations,
                         List.of(icon)),
-                (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "content-" + params.get("id")));
+                (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "content-" + scalar(params, "id")));
 
         var result = (ListResourceTemplatesResult)
                 handlers.get("resources/templates/list").handle(DefaultDispatchContext.noop(), null);
@@ -521,7 +607,7 @@ class ResourceRegistryTest {
         var descriptor = ResourceDescriptor.of(
                 "sized-resource", "test://sized", "A resource", "application/octet-stream", null, null, 4096L, null);
         var contentLoaded = new java.util.concurrent.atomic.AtomicBoolean(false);
-        registry.add(descriptor, (ctx, req) -> {
+        registry.register(descriptor, (ctx, req) -> {
             contentLoaded.set(true);
             return TextResourceContents.of("test://sized", "application/octet-stream", "data");
         });

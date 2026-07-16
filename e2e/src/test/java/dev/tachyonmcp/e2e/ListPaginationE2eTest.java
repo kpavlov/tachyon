@@ -6,8 +6,10 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
+import dev.tachyonmcp.server.features.resources.ResourceHandler;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
@@ -15,13 +17,15 @@ import tools.jackson.databind.ObjectMapper;
 class ListPaginationE2eTest extends AbstractMcpE2eTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ResourceHandler EMPTY_RESOURCE =
+            (ctx, request) -> TextResourceContents.of(request.uri(), "text/plain", "");
 
     @Test
     void resourcesListReturnsConfiguredPageSize() throws Exception {
         startServer(it -> it.capabilities(c -> c.resources().resourcesPageSize(2))
-                .resource(resource("res-a"))
-                .resource(resource("res-b"))
-                .resource(resource("res-c")));
+                .resource(resource("res-a"), EMPTY_RESOURCE)
+                .resource(resource("res-b"), EMPTY_RESOURCE)
+                .resource(resource("res-c"), EMPTY_RESOURCE));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();

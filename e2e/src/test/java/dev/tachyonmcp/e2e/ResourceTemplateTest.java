@@ -13,7 +13,7 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
     void shouldReadResourceFromSingleParamTemplate() throws Exception {
         startEmptyServer();
         server.resources()
-                .addTemplate(
+                .registerTemplate(
                         builder -> builder.name("item")
                                 .uriTemplate("resource://items/{id}")
                                 .description("An item")
@@ -48,20 +48,20 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
     void shouldMatchCorrectTemplateWhenMultipleRegistered() throws Exception {
         startEmptyServer();
         server.resources()
-                .addTemplate(
+                .registerTemplate(
                         builder -> builder.name("items")
                                 .uriTemplate("resource://items/{id}")
                                 .description("An item")
                                 .mimeType("text/plain"),
                         (ctx, uri, params) -> TextResourceContents.of(uri, "text/plain", "item=" + params.get("id")))
-                .addTemplate(
+                .registerTemplate(
                         builder -> builder.name("orders")
                                 .uriTemplate("resource://orders/{orderId}")
                                 .description("An order")
                                 .mimeType("text/plain"),
                         (ctx, uri, params) ->
                                 TextResourceContents.of(uri, "text/plain", "order=" + params.get("orderId")))
-                .addTemplate(
+                .registerTemplate(
                         builder -> builder.name("users")
                                 .uriTemplate("resource://users/{userId}")
                                 .description("A user")
@@ -116,7 +116,7 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
     void shouldReadResourceFromMultiParamTemplate() throws Exception {
         startEmptyServer();
         server.resources()
-                .addTemplate(
+                .registerTemplate(
                         builder -> builder.name("user-post")
                                 .uriTemplate("users://{userId}/posts/{postId}")
                                 .description("User's post")

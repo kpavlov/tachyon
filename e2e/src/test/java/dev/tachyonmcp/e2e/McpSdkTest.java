@@ -65,7 +65,7 @@ class McpSdkTest extends AbstractMcpE2eTest {
     @Test
     void shouldEncodePromptMessageWithRoleEnum() throws Exception {
         server.prompts()
-                .add(
+                .register(
                         PromptDescriptor.of("role-enum-prompt", "A greeting prompt"),
                         List.of(PromptMessage.of(Role.USER, TextContent.of("Hello"))));
 

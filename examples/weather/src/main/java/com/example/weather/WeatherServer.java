@@ -11,7 +11,6 @@ import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptRequest;
 import dev.tachyonmcp.server.features.prompts.PromptResult;
-import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,15 +48,12 @@ public final class WeatherServer {
                                 "Weather prediction article",
                                 "text/markdown"),
                         WeatherServer::handleArticleResource)
-                .resource(
-                        ResourceDescriptor.of(
-                                "weather-image",
-                                "weather://current/image",
-                                "Current weather icon",
-                                "image/png"),
-                        // Async resource handler — returns a CompletionStage (beta.5+)
-                        (AsyncResourceHandler) (ctx, req) ->
-                                CompletableFuture.supplyAsync(WeatherImageResource::read))
+                .resourceAsync(
+                        resource -> resource.name("weather-image")
+                                .uri("weather://current/image")
+                                .description("Current weather icon")
+                                .mimeType("image/png"),
+                        (ctx, req) -> CompletableFuture.supplyAsync(WeatherImageResource::read))
 
             .prompt(PromptDescriptor.of("rewrite-forecast", "Rewrites a weather forecast in a given style"),
                     WeatherServer::handleRewriteForecast)

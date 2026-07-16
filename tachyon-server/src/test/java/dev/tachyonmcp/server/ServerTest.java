@@ -233,12 +233,13 @@ class ServerTest {
             session.connection(conn);
             session.activate();
 
-            server.registerTool(ToolHandler.of(
-                    builder -> builder.name("dynamic-tool")
-                            .description("Dynamically registered")
-                            // language=json
-                            .inputSchema("{\"type\": \"object\"}"),
-                    (context, args) -> ToolResult.empty()));
+            server.tools()
+                    .register(ToolHandler.of(
+                            builder -> builder.name("dynamic-tool")
+                                    .description("Dynamically registered")
+                                    // language=json
+                                    .inputSchema("{\"type\": \"object\"}"),
+                            (context, args) -> ToolResult.empty()));
 
             var listChanged = conn.sent.stream()
                     .filter(e -> e.data().contains("notifications/tools/list_changed"))
@@ -258,7 +259,7 @@ class ServerTest {
             session.activate();
 
             server.resources()
-                    .add(
+                    .register(
                             ResourceDescriptor.of("dyn", "test://dyn", "Dyn resource", "text/plain"),
                             (ctx, req) -> TextResourceContents.of("test://dyn", "text/plain", ""));
 
@@ -279,7 +280,7 @@ class ServerTest {
             session.connection(conn);
             session.activate();
 
-            server.prompts().add(PromptDescriptor.of("dyn-prompt", "Dynamic prompt"), List.of());
+            server.prompts().register(PromptDescriptor.of("dyn-prompt", "Dynamic prompt"), List.of());
 
             var listChanged = conn.sent.stream()
                     .filter(e -> e.data().contains("notifications/prompts/list_changed"))
@@ -335,8 +336,9 @@ class ServerTest {
             var session = server.createSession("sess_init");
             session.connection(conn);
 
-            server.registerTool(
-                    ToolHandler.of(builder -> builder.name("tool-during-init"), (context, args) -> ToolResult.empty()));
+            server.tools()
+                    .register(ToolHandler.of(
+                            builder -> builder.name("tool-during-init"), (context, args) -> ToolResult.empty()));
 
             var listChanged = conn.sent.stream()
                     .filter(e -> e.data().contains("list_changed"))

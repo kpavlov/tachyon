@@ -64,16 +64,16 @@ public interface TachyonServer extends AutoCloseable {
     List<ServerExtension> extensions();
 
     /**
-     * @deprecated Use {@code tools().add(handler)}.
+     * @deprecated Use {@code tools().register(handler)}.
      */
     @Deprecated(since = "1.0.0-beta.10")
     default void registerTool(ToolHandler handler) {
-        tools().add(handler);
+        tools().register(handler);
     }
 
     /**
      * @deprecated Use {@link #tools()} and
-     * {@link ToolRegistry#add(String, String, String, String, BiFunction)}.
+     * {@link ToolRegistry#register(String, String, String, String, BiFunction)}.
      */
     @Deprecated(since = "1.0.0-beta.10")
     default void registerTool(
@@ -82,40 +82,32 @@ public interface TachyonServer extends AutoCloseable {
             @Nullable String inputSchemaJson,
             @Nullable String outputSchemaJson,
             BiFunction<InteractionContext, Args, ToolResult> fn) {
-        tools().add(name, description, inputSchemaJson, outputSchemaJson, fn);
+        tools().register(name, description, inputSchemaJson, outputSchemaJson, fn);
     }
 
     /**
-     * @deprecated Use {@code resources().add(descriptor)}.
-     */
-    @Deprecated(since = "1.0.0-beta.10")
-    default void registerResource(ResourceDescriptor descriptor) {
-        resources().add(descriptor);
-    }
-
-    /**
-     * @deprecated Use {@code resources().add(descriptor, handler)}.
+     * @deprecated Use {@code resources().register(descriptor, handler)}.
      */
     @Deprecated(since = "1.0.0-beta.10")
     default void registerResource(ResourceDescriptor descriptor, ResourceHandler handler) {
-        resources().add(descriptor, handler);
+        resources().register(descriptor, handler);
     }
 
     /**
-     * @deprecated Use {@code prompts().add(descriptor, handler)}.
+     * @deprecated Use {@code prompts().register(descriptor, handler)}.
      */
     @Deprecated(since = "1.0.0-beta.10")
     default void registerPrompt(PromptDescriptor descriptor, PromptHandler handler) {
-        prompts().add(descriptor, handler);
+        prompts().register(descriptor, handler);
     }
 
     /**
-     * @deprecated Use {@code tools().getDescriptor(name)}.
+     * @deprecated Use {@code tools().find(name)}.
      */
     @Deprecated(since = "1.0.0-beta.10")
     @Nullable
     default ToolDescriptor getTool(String name) {
-        return tools().getDescriptor(name);
+        return tools().find(name).orElse(null);
     }
 
     @Override

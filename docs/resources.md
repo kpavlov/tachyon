@@ -2,17 +2,7 @@
 
 Resources expose data that AI clients can read. Tachyon supports static URIs, dynamic handlers, and URI templates with parameters.
 
-## Static resource (no handler)
-
-A static resource with a fixed external URI — the client fetches the content directly:
-
-```java
-import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
-
-.resource(ResourceDescriptor.of("schema", "https://example.com/schema.json", "JSON Schema", "application/json"))
-```
-
-## Static resource with handler
+## Static resource
 
 Server-computed content for a fixed URI:
 
@@ -30,18 +20,20 @@ import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 Templates match parameterized URIs like `app://users/{id}`. Register after the server starts:
 
 ```java
-import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
+import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
 
 handle.server().resources()
-    .addTemplate(ResourceTemplateEntry.of(
-        "user-profile",
-        "app://users/{id}",
-        "User profile by ID",
-        "application/json",
+    .registerTemplate(
+        ResourceTemplateDescriptor.builder()
+            .name("user-profile")
+            .uriTemplate("app://users/{id}")
+            .description("User profile by ID")
+            .mimeType("application/json")
+            .build(),
         (ctx, uri, params) -> {
             String id = params.get("id");
             return TextResourceContents.of(uri, "application/json", loadUser(id));
-        }));
+        });
 ```
 
 ## Async handler
@@ -102,7 +94,12 @@ URI templates use the Java API post-build:
 
 ```kotlin
 val server = buildServer { /* ... */ }
-server.resources().addTemplate(ResourceTemplateEntry.of(...))
+server.resources().registerTemplate(
+    ResourceTemplateDescriptor.builder()
+        .name("user-profile")
+        .uriTemplate("app://users/{id}")
+        .build(),
+) { _, uri, _ -> /* ... */ }
 ```
 
 ---

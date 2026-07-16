@@ -47,11 +47,13 @@ public abstract class AbstractRegistry<D extends ServerFeature.Descriptor, R ext
     }
 
     /** Removes the item with the given name. */
-    protected void removeItem(String name) {
+    protected boolean removeItem(String name) {
         var removed = items.remove(name);
         if (removed != null) {
             fireOnChange();
+            return true;
         }
+        return false;
     }
 
     protected void fireOnChange() {

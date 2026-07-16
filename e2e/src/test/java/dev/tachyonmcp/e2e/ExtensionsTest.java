@@ -198,17 +198,18 @@ class ExtensionsTest extends AbstractMcpE2eTest {
 
         @Override
         public void bootstrap(ServerEngine server) {
-            server.registerTool(
-                    new AbstractToolHandler(ToolDescriptor.builder()
-                            .name("ext-tool")
-                            .description("Extension-owned tool")
-                            .extensionId(TEST_EXT_ID)
-                            .build()) {
-                        @Override
-                        public ToolResult handle(InteractionContext context, ToolRequest request) {
-                            return ToolResult.text("ext-tool-result");
-                        }
-                    });
+            server.tools()
+                    .register(
+                            new AbstractToolHandler(ToolDescriptor.builder()
+                                    .name("ext-tool")
+                                    .description("Extension-owned tool")
+                                    .extensionId(TEST_EXT_ID)
+                                    .build()) {
+                                @Override
+                                public ToolResult handle(InteractionContext context, ToolRequest request) {
+                                    return ToolResult.text("ext-tool-result");
+                                }
+                            });
         }
     }
 }

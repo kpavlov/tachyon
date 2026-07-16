@@ -51,7 +51,7 @@ class WeatherServerTest {
     }
 
     @Test
-    void shouldServerInfo() {
+    void shouldGetServerInfo() {
         assertThat(initResult.serverInfo()).isEqualTo(
             McpSchema.Implementation.builder("weather-server", "1.0")
                 .title("Weather Server")

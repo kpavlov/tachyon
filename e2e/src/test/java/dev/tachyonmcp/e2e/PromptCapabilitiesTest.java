@@ -34,11 +34,11 @@ class PromptCapabilitiesTest extends AbstractMcpE2eTest {
     void shouldIncludeTitle(String promptName, String title, boolean hasTitle) throws Exception {
         if (hasTitle) {
             server.prompts()
-                    .add(
+                    .register(
                             PromptDescriptor.of(promptName, "A " + promptName + " prompt", title, null, null),
                             List.of(of(Role.USER, TextContent.of("Hello"))));
         } else {
-            server.prompts().add(PromptDescriptor.of(promptName, "A " + promptName + " prompt"), List.of());
+            server.prompts().register(PromptDescriptor.of(promptName, "A " + promptName + " prompt"), List.of());
         }
 
         try (var client = createTestClient()) {
@@ -72,11 +72,11 @@ class PromptCapabilitiesTest extends AbstractMcpE2eTest {
         if (hasArguments) {
             var args = List.of(parseArgument(arg0), parseArgument(arg1));
             server.prompts()
-                    .add(
+                    .register(
                             PromptDescriptor.of(promptName, "A " + promptName + " prompt", null, args, null),
                             List.of(of(Role.USER, TextContent.of("generate"))));
         } else {
-            server.prompts().add(PromptDescriptor.of(promptName, "A " + promptName + " prompt"), List.of());
+            server.prompts().register(PromptDescriptor.of(promptName, "A " + promptName + " prompt"), List.of());
         }
 
         try (var client = createTestClient()) {
@@ -107,7 +107,7 @@ class PromptCapabilitiesTest extends AbstractMcpE2eTest {
     void shouldIncludeTitleAndArgumentsOnSamePrompt() throws Exception {
         var args = List.of(PromptArgument.of("name", null, "Your name", null));
         server.prompts()
-                .add(
+                .register(
                         PromptDescriptor.of(
                                 "personalized", "Personalized greeting", "Personalized Greeting", args, null),
                         List.of(of(Role.USER, TextContent.of("Hello"))));

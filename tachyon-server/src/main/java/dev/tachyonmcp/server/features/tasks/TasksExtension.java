@@ -59,10 +59,10 @@ public class TasksExtension implements ServerExtension {
                 .extensionId(ID)
                 .build();
 
-        server.tools().add(new CreateTaskHandler(descriptor, server));
+        server.tools().register(new CreateTaskHandler(descriptor, server));
 
         server.resources()
-                .addTemplate(ResourceTemplateDescriptor.of("task-status", "task://{id}"), (ctx, uri, params) -> {
+                .registerTemplate(ResourceTemplateDescriptor.of("task-status", "task://{id}"), (ctx, uri, params) -> {
                     var id = params.get("id");
                     var entry = server.tasks().get(id);
                     var text = entry != null ? entry.status().name() : "not_found";

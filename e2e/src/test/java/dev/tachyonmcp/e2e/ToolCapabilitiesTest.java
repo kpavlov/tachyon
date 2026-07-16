@@ -178,7 +178,7 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
     @Test
     void shouldRegisterWithMinimalDescriptor() throws Exception {
         startEmptyServer();
-        server.registerTool(ToolHandler.of("minimal-tool", (ctx, args) -> ToolResult.text("ok")));
+        server.tools().register(ToolHandler.of("minimal-tool", (ctx, args) -> ToolResult.text("ok")));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -221,15 +221,16 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
     void shouldRegisterWithFullDescriptor() throws Exception {
         var annotations = ToolAnnotations.of(null, true, false, null, null);
         startEmptyServer();
-        server.registerTool(ToolHandler.of(
-                b -> b.name("full-tool")
-                        .title("Full Tool")
-                        .description("A tool with all metadata")
-                        .inputSchema(INPUT_SCHEMA)
-                        .outputSchema(OUTPUT_SCHEMA)
-                        .taskSupport(TaskSupport.OPTIONAL)
-                        .annotations(annotations),
-                (ctx, args) -> ToolResult.text("ok")));
+        server.tools()
+                .register(ToolHandler.of(
+                        b -> b.name("full-tool")
+                                .title("Full Tool")
+                                .description("A tool with all metadata")
+                                .inputSchema(INPUT_SCHEMA)
+                                .outputSchema(OUTPUT_SCHEMA)
+                                .taskSupport(TaskSupport.OPTIONAL)
+                                .annotations(annotations),
+                        (ctx, args) -> ToolResult.text("ok")));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();

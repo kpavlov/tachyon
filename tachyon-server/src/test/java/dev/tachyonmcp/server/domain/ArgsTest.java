@@ -7,7 +7,6 @@ package dev.tachyonmcp.server.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import dev.tachyonmcp.server.features.tools.InvalidArgumentException;
 import java.util.Map;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;

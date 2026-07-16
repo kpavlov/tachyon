@@ -20,6 +20,7 @@ import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,17 +50,17 @@ class PromptRegistryTest {
 
     @Test
     void listWithZeroLimitUsesDefaultPageSize() {
-        registry.add(prompt("p1"), List.of());
-        registry.add(prompt("p2"), List.of());
+        registry.register(prompt("p1"), List.of());
+        registry.register(prompt("p2"), List.of());
         var result = registry.list(0, null);
         assertThat(result.items()).hasSize(2);
     }
 
     @Test
     void listWithCursorSkipsPastCursor() {
-        registry.add(prompt("alpha"), List.of());
-        registry.add(prompt("beta"), List.of());
-        registry.add(prompt("gamma"), List.of());
+        registry.register(prompt("alpha"), List.of());
+        registry.register(prompt("beta"), List.of());
+        registry.register(prompt("gamma"), List.of());
         var result = registry.list(1, "alpha");
         assertThat(result.items()).hasSize(1);
         assertThat(result.items().getFirst().name()).isEqualTo("beta");
@@ -67,15 +68,15 @@ class PromptRegistryTest {
 
     @Test
     void listReturnsCursorWhenMoreItemsAvailable() {
-        registry.add(prompt("a"), List.of());
-        registry.add(prompt("b"), List.of());
+        registry.register(prompt("a"), List.of());
+        registry.register(prompt("b"), List.of());
         var result = registry.list(1, null);
         assertThat(result.nextCursor()).isEqualTo("a");
     }
 
     @Test
     void listReturnsNullCursorWhenAllItemsReturned() {
-        registry.add(prompt("a"), List.of());
+        registry.register(prompt("a"), List.of());
         var result = registry.list(10, null);
         assertThat(result.nextCursor()).isNull();
     }
@@ -84,19 +85,46 @@ class PromptRegistryTest {
     void listWithCustomPageSize() {
         var reg = new DefaultPromptRegistry(
                 JsonSchemaValidator.noop(), FeatureConfig.builder().pageSize(1).build());
-        reg.add(prompt("a"), List.of());
-        reg.add(prompt("b"), List.of());
+        reg.register(prompt("a"), List.of());
+        reg.register(prompt("b"), List.of());
         var result = reg.list(0, null);
         assertThat(result.items()).hasSize(1);
         assertThat(result.nextCursor()).isEqualTo("a");
     }
 
     @Test
-    void addIsNoOpWhenPromptsCapabilityIsOff() {
+    void registerIsNoOpWhenPromptsCapabilityIsOff() {
         var reg = new DefaultPromptRegistry(
                 JsonSchemaValidator.noop(), FeatureConfig.builder().off().build());
-        reg.add(prompt("a"), List.of());
-        assertThat(reg.getAll()).isEmpty();
+        var changeCount = new AtomicInteger();
+        reg.onChange(changeCount::incrementAndGet);
+
+        reg.register(prompt("a"), List.of());
+
+        assertThat(reg.find("a")).isEmpty();
+        assertThat(reg.descriptors()).isEmpty();
+        assertThat(changeCount).hasValue(0);
+    }
+
+    @Test
+    void interfaceDefaultBuilderOverloadsRegisterPrompts() {
+        PromptRegistry api = registry;
+
+        api.register(prompt -> prompt.name("static"), List.of(PromptMessage.user("static")))
+                .register(
+                        prompt -> prompt.name("sync"),
+                        (ctx, request) -> PromptResult.messages(List.of(PromptMessage.user("sync"))))
+                .registerAsync(
+                        prompt -> prompt.name("async"),
+                        (ctx, request) -> CompletableFuture.completedFuture(
+                                PromptResult.messages(List.of(PromptMessage.user("async")))));
+
+        assertThat(api.descriptors()).extracting(PromptDescriptor::name).containsExactly("async", "static", "sync");
+        assertThat(api.find("sync")).isPresent();
+        assertThat(api.find("missing")).isEmpty();
+        assertThat(api.unregister("sync")).isTrue();
+        assertThat(api.unregister("sync")).isFalse();
+        assertThat(api.find("sync")).isEmpty();
     }
 
     @Test
@@ -116,7 +144,7 @@ class PromptRegistryTest {
 
     @Test
     void shouldReturnPromptByName() throws Exception {
-        registry.add(PromptDescriptor.of("greeting", "A greeting prompt"), List.of(PromptMessage.user("Hello!")));
+        registry.register(PromptDescriptor.of("greeting", "A greeting prompt"), List.of(PromptMessage.user("Hello!")));
 
         var result = handlers.get("prompts/get").handle(DefaultDispatchContext.noop(), Map.of("name", "greeting"));
 
@@ -126,8 +154,8 @@ class PromptRegistryTest {
 
     @Test
     void shouldReturnAllRegisteredPrompts() throws Exception {
-        registry.add(PromptDescriptor.of("prompt-1", "First prompt"), List.of());
-        registry.add(PromptDescriptor.of("prompt-2", "Second prompt"), List.of());
+        registry.register(PromptDescriptor.of("prompt-1", "First prompt"), List.of());
+        registry.register(PromptDescriptor.of("prompt-2", "Second prompt"), List.of());
 
         var result = (ListPromptsResult) handlers.get("prompts/list").handle(DefaultDispatchContext.noop(), null);
 
@@ -139,19 +167,19 @@ class PromptRegistryTest {
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
-        registry.add(PromptDescriptor.of("greeting", "A greeting prompt"), List.of());
+        registry.register(PromptDescriptor.of("greeting", "A greeting prompt"), List.of());
 
         assertThat(callCount).hasValue(1);
     }
 
     @Test
     void shouldFireOnChangeWhenExistingPromptRemoved() {
-        registry.add(PromptDescriptor.of("greeting", "A greeting prompt"), List.of());
+        registry.register(PromptDescriptor.of("greeting", "A greeting prompt"), List.of());
 
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
-        registry.remove("greeting");
+        registry.unregister("greeting");
 
         assertThat(callCount).hasValue(1);
     }
@@ -161,23 +189,26 @@ class PromptRegistryTest {
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
-        registry.remove("does-not-exist");
+        registry.unregister("does-not-exist");
 
         assertThat(callCount).hasValue(0);
     }
 
     @Test
     void shouldReplacePromptAndFireOnChangeWhenAddedWithSameName() {
-        registry.add(PromptDescriptor.of("greeting", "Original"), List.of());
+        registry.register(PromptDescriptor.of("greeting", "Original"), List.of());
 
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
-        registry.add(PromptDescriptor.of("greeting", "Updated"), List.of());
+        registry.register(PromptDescriptor.of("greeting", "Updated"), List.of());
 
         assertThat(callCount).hasValue(1);
-        assertThat(registry.get("greeting").descriptor().description()).isEqualTo("Updated");
-        assertThat(registry.getAll()).hasSize(1);
+        assertThat(registry.find("greeting"))
+                .get()
+                .extracting(PromptDescriptor::description)
+                .isEqualTo("Updated");
+        assertThat(registry.descriptors()).hasSize(1);
     }
 
     @Test
@@ -186,7 +217,7 @@ class PromptRegistryTest {
         var arg = PromptArgument.of("topic", null, "The topic", true);
         var descriptor =
                 PromptDescriptor.of("full-prompt", "Full description", "Full Title", List.of(arg), null, List.of(icon));
-        registry.add(descriptor, List.of(PromptMessage.user("Hello")));
+        registry.register(descriptor, List.of(PromptMessage.user("Hello")));
 
         var result = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListPromptsResult)
                 handlers.get("prompts/list").handle(DefaultDispatchContext.noop(), null);
@@ -204,7 +235,7 @@ class PromptRegistryTest {
 
     @Test
     void shouldUseDynamicHandlerForMessages() throws Exception {
-        registry.add(
+        registry.register(
                 PromptDescriptor.of("dynamic", "Dynamic prompt"),
                 (ctx, request) -> PromptResult.messages(List.of(PromptMessage.user("args=" + request.arguments()))));
 

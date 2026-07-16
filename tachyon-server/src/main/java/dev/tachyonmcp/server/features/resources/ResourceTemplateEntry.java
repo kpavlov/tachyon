@@ -11,12 +11,7 @@ import java.util.regex.Pattern;
 
 @InternalApi
 public record ResourceTemplateEntry(ResourceTemplateDescriptor descriptor, ResourceTemplateHandler handler)
-        implements ServerFeature, ResourceTemplate {
-
-    @Override
-    public String name() {
-        return descriptor.name();
-    }
+        implements ServerFeature<ResourceTemplateDescriptor> {
 
     List<String> paramNames() {
         return descriptor.paramNames();
@@ -28,12 +23,5 @@ public record ResourceTemplateEntry(ResourceTemplateDescriptor descriptor, Resou
 
     public static ResourceTemplateEntry of(ResourceTemplateDescriptor descriptor, ResourceTemplateHandler handler) {
         return new ResourceTemplateEntry(descriptor, handler);
-    }
-
-    public static ResourceTemplateEntry of(ResourceTemplate resourceTemplate) {
-        if (resourceTemplate instanceof ResourceTemplateEntry entry) {
-            return entry;
-        }
-        return new ResourceTemplateEntry(resourceTemplate.descriptor(), resourceTemplate.handler());
     }
 }

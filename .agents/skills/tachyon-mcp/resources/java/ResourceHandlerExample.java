@@ -9,8 +9,8 @@ import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceHandler;
-import dev.tachyonmcp.server.features.resources.ResourceTemplate;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
+import dev.tachyonmcp.server.features.resources.ResourceTemplateHandler;
 
 /**
  * Demonstrates static resources and URI-template resource registrations.
@@ -40,32 +40,36 @@ final class ResourceHandlerExample {
     /**
      * URI template — {param} segments captured at runtime.
      */
-    static ResourceTemplate userProfileTemplate() {
-        return ResourceTemplate.of(
-            ResourceTemplateDescriptor.builder()
-                .name("user-profile")
-                .uriTemplate("myapp://users/{userId}/profile")
-                .description("User profile data")
-                .mimeType("application/json")
-                .build(),
-            (InteractionContext ctx, String uri, java.util.Map<String, String> params) -> {
-                var userId = params.get("userId");
-                return TextResourceContents.of(uri, "application/json", "{\"userId\":\"" + userId + "\"}");
-            });
+    static ResourceTemplateDescriptor userProfileTemplateDescriptor() {
+        return ResourceTemplateDescriptor.builder()
+            .name("user-profile")
+            .uriTemplate("myapp://users/{userId}/profile")
+            .description("User profile data")
+            .mimeType("application/json")
+            .build();
+    }
+
+    static ResourceTemplateHandler userProfileTemplateHandler() {
+        return (InteractionContext ctx, String uri, java.util.Map<String, String> params) -> {
+            var userId = params.get("userId");
+            return TextResourceContents.of(uri, "application/json", "{\"userId\":\"" + userId + "\"}");
+        };
     }
 
     /**
      * URI template — multi-segment with static prefix matching.
      */
-    static ResourceTemplate forecastTemplate() {
-        return ResourceTemplate.of(
-            ResourceTemplateDescriptor.of(
-                "forecast",//name
-                "weather://forecast/{city}" //uriTemplate
-            ),
-            (ctx, uri, params) -> TextResourceContents.of(
-                uri, "application/json",
-                "{\"city\":\"" + params.get("city") + "\",\"temp\":22}"));
+    static ResourceTemplateDescriptor forecastTemplateDescriptor() {
+        return ResourceTemplateDescriptor.of(
+            "forecast", //name
+            "weather://forecast/{city}" //uriTemplate
+        );
+    }
+
+    static ResourceTemplateHandler forecastTemplateHandler() {
+        return (ctx, uri, params) -> TextResourceContents.of(
+            uri, "application/json",
+            "{\"city\":\"" + params.get("city") + "\",\"temp\":22}");
     }
 
     /**

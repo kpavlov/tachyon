@@ -4,7 +4,6 @@
 
 package dev.tachyonmcp.server.domain;
 
-import dev.tachyonmcp.server.features.tools.InvalidArgumentException;
 import dev.tachyonmcp.server.json.JsonUtils;
 import dev.tachyonmcp.server.json.PayloadDeserializer;
 import java.lang.reflect.Type;

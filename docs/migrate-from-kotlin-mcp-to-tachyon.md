@@ -23,7 +23,7 @@ fail to compile and won't show up until a client hits them.
 | Schema type | `ToolSchema(properties, required)` | `String` **or** Jackson `JsonNode` **or** kotlinx `JsonObject` |
 | Logging | `server.sendLoggingMessage(LoggingMessageNotification(...))` | `server.log(session, level, logger, data: JsonNode)` |
 | Log level | `LoggingLevel.Info/Debug/Error` (PascalCase) | `LoggingLevel.INFO/DEBUG/ERROR` (UPPER) |
-| Resources | `server.addResources(...)` per file | `server.resources().add(descriptor, handler)` / `.addTemplate(...)` |
+| Resources | `server.addResources(...)` per file | `server.resources().register(descriptor, handler)` / `.registerTemplate(...)` |
 | Elicitation | `Server.userFeedbackElicitor(sessionId)` | `InteractionContext.userFeedbackElicitor()` (via `ToolScope.ctx`) |
 | JSON config | `McpJson` | `KxSerializationSerde(json = yourJson)` in `json { serde = ... }` |
 
@@ -171,15 +171,21 @@ interaction/subscription context, not a global send.
 
 ```kotlin
 // concrete, per-item resource (shows up in resources/list)
-server.resources().add(
+server.resources().register(
     ResourceDescriptor(name = uri, uri = uri, title = label, description = desc, mimeType = "text/markdown"),
 ) { _, request ->
     TextResourceContents.of(request.uri(), "text/markdown", read(request.uri()) ?: error("not found"))
 }
 
 // URI template (shows up in resources/templates/list)
-server.resources().addTemplate(
-    ResourceTemplateEntry.of("docs", "example://docs/{path}", "Docs", "text/markdown") { _, uri, _ ->
+server.resources().registerTemplate(
+    ResourceTemplateDescriptor.builder()
+        .name("docs")
+        .uriTemplate("example://docs/{path}")
+        .description("Docs")
+        .mimeType("text/markdown")
+        .build(),
+    { _, uri, _ ->
         TextResourceContents.of(uri, "text/markdown", read(uri) ?: error("not found"))
     },
 )

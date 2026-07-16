@@ -4,11 +4,6 @@
 
 package dev.tachyonmcp.server.features.tools;
 
-import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.internalError;
-import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidParams;
-import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidRequest;
-import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.methodNotFound;
-
 import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolRequestParams;
@@ -17,6 +12,7 @@ import dev.tachyonmcp.server.OutboundSseStreamMessageRouter;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.FeatureConfig;
 import dev.tachyonmcp.server.config.Mode;
+import dev.tachyonmcp.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.server.domain.TaskResult;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.features.AbstractRegistry;
@@ -32,18 +28,26 @@ import dev.tachyonmcp.server.json.PayloadSerializer;
 import dev.tachyonmcp.server.json.SchemaValidationError;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
-import java.time.Duration;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
+
+import java.time.Duration;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.regex.Pattern;
+
+import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.internalError;
+import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidParams;
+import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidRequest;
+import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.methodNotFound;
 
 /**
  * AbstractRegistry for tool handlers with input/output schema validation.
@@ -86,7 +90,7 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
      * Registers a tool handler.
      */
     @Override
-    public ToolRegistry add(ToolHandler handler) {
+    public ToolRegistry register(ToolHandler handler) {
         Objects.requireNonNull(handler, "ToolHandler must not be null");
         var descriptor = handler.descriptor();
         Objects.requireNonNull(descriptor, "ToolDescriptor must not be null");
@@ -112,9 +116,22 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
     }
 
     @Override
-    public ToolRegistry remove(String name) {
-        removeItem(name);
-        return this;
+    public boolean unregister(String name) {
+        return removeItem(name);
+    }
+
+    @Override
+    public Optional<ToolDescriptor> find(String name) {
+        var handler = get(name);
+        return handler != null ? Optional.of(handler.descriptor()) : Optional.empty();
+    }
+
+    @Override
+    public List<ToolDescriptor> descriptors() {
+        return getAll().stream()
+                .map(ToolHandler::descriptor)
+                .sorted(Comparator.comparing(ToolDescriptor::name))
+                .toList();
     }
 
     private static void validateSchemaRoot(String schemaKind, String toolName, @Nullable JsonNode schema) {
@@ -147,13 +164,6 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
     }
 
     private static final Pattern VALID_NAME_PATTERN = Pattern.compile("[a-zA-Z0-9_\\-./]+");
-
-    /**
-     * Returns the tool descriptor by name.
-     */
-    public void register(ToolHandler handler) {
-        add(handler);
-    }
 
     public void registerHandlers(Map<String, RpcMethodHandler> registry) {
         registry.put("tools/list", new ToolsListHandler(this));
@@ -277,19 +287,19 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                     .task(task)
                     .build();
 
-            var taskEntry = (TaskEntry) task;
             var future = CompletableFuture.supplyAsync(
                     () -> {
                         try {
                             return HandlerFutures.joinInterruptibly(handler.handleAsync(context, taskRequest));
+                        } catch (CompletionException e) {
+                            throw e;
                         } catch (Exception e) {
-                            handleTaskError(taskEntry, e);
-                            return null;
+                            throw new CompletionException(e);
                         }
                     },
                     engine.executor());
 
-            tasks.registerRunning(taskEntry.id(), future);
+            tasks.registerRunning(task.id(), future);
 
             future.thenAccept(toolResult -> {
                 if (toolResult == null) {
@@ -299,27 +309,27 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                     return;
                 }
                 if (toolResult instanceof ToolResult.Error(String message)) {
-                    taskEntry.fail(new TaskResult.Failed(List.of(TextContent.of(message)), null, null));
+                    task.fail(new TaskResult.Failed(List.of(TextContent.of(message)), null, null));
                 } else if (toolResult
                         instanceof
                         ToolResult.Success(
                                 Object structuredValue,
                                 List<dev.tachyonmcp.server.domain.ContentBlock> content)) {
                     var structured = JsonUtils.valueToObjectNode(structuredValue, payloadSerializer);
-                    taskEntry.complete(new TaskResult.Completed(content, structured, null));
+                    task.complete(new TaskResult.Completed(content, structured, null));
                 }
-                tasks.unregisterRunning(taskEntry.id());
+                tasks.unregisterRunning(task.id());
             });
             future.exceptionally(throwable -> {
                 var e = throwable instanceof CompletionException ce && ce.getCause() != null
                         ? ce.getCause()
                         : throwable;
                 if (e instanceof Exception ex) {
-                    handleTaskError(taskEntry, ex);
+                    handleTaskError(task, ex);
                 } else {
-                    logger.error("Non-exception throwable in task handler for '{}'", taskEntry.name(), e);
+                    logger.error("Non-exception throwable in task handler for '{}'", task.name(), e);
                 }
-                tasks.unregisterRunning(taskEntry.id());
+                tasks.unregisterRunning(task.id());
                 return null;
             });
 

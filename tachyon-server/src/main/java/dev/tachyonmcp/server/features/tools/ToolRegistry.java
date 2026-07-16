@@ -6,21 +6,48 @@ package dev.tachyonmcp.server.features.tools;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.Args;
-import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 
 public interface ToolRegistry {
 
-    ToolRegistry add(ToolHandler handler);
+    ToolRegistry register(ToolHandler handler);
 
-    default ToolRegistry add(
+    default ToolRegistry register(ToolDescriptor descriptor, BiFunction<InteractionContext, Args, ToolResult> handler) {
+        return register(ToolHandler.of(descriptor, handler));
+    }
+
+    default ToolRegistry register(
+            Consumer<ToolDescriptor.Builder> descriptor, BiFunction<InteractionContext, Args, ToolResult> handler) {
+        final var builder = ToolDescriptor.builder();
+        descriptor.accept(builder);
+        return register(builder.build(), handler);
+    }
+
+    default ToolRegistry registerAsync(
+            ToolDescriptor descriptor, BiFunction<InteractionContext, Args, CompletionStage<ToolResult>> handler) {
+        return register(ToolHandler.ofAsync(descriptor, handler));
+    }
+
+    default ToolRegistry registerAsync(
+            Consumer<ToolDescriptor.Builder> descriptor,
+            BiFunction<InteractionContext, Args, CompletionStage<ToolResult>> handler) {
+        final var builder = ToolDescriptor.builder();
+        descriptor.accept(builder);
+        return registerAsync(builder.build(), handler);
+    }
+
+    default ToolRegistry register(
             String name,
             @Nullable String description,
             @Nullable String inputSchemaJson,
             @Nullable String outputSchemaJson,
             BiFunction<InteractionContext, Args, ToolResult> fn) {
-        return add(ToolHandler.of(
+        return register(ToolHandler.of(
                 builder -> builder.name(name)
                         .description(description)
                         .inputSchema(inputSchemaJson)
@@ -28,15 +55,9 @@ public interface ToolRegistry {
                 fn));
     }
 
-    ToolRegistry remove(String name);
+    boolean unregister(String name);
 
-    @Nullable
-    ToolHandler get(String name);
+    Optional<ToolDescriptor> find(String name);
 
-    Collection<ToolHandler> getAll();
-
-    default @Nullable ToolDescriptor getDescriptor(String name) {
-        var handler = get(name);
-        return handler != null ? handler.descriptor() : null;
-    }
+    List<ToolDescriptor> descriptors();
 }
