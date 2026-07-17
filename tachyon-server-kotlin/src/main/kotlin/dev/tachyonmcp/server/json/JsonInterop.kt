@@ -28,11 +28,17 @@ internal fun String.toJsonNode(): JsonNode =
     }
 
 internal fun ToolDescriptor.Builder.schemas(
-    inputSchema: String,
-    outputSchema: String?,
-): ToolDescriptor.Builder =
-    inputSchema(parseSchema(inputSchema))
-        .outputSchema(outputSchema?.let { parseSchema(it) })
+    inputSchema: String? = null,
+    outputSchema: String? = null,
+): ToolDescriptor.Builder {
+    if (inputSchema != null) {
+        inputSchema(parseSchema(inputSchema))
+    }
+    if (outputSchema != null) {
+        outputSchema(parseSchema(outputSchema))
+    }
+    return this
+}
 
 internal fun JsonElement.toJacksonNode(): JsonNode =
     when (this) {

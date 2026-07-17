@@ -14,11 +14,11 @@ import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.features.tools.toolHandler
 import dev.tachyonmcp.server.json.schemas
-import dev.tachyonmcp.server.json.toJacksonNode
 import dev.tachyonmcp.server.json.toJacksonNodeOrNull
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
 
+@JvmSynthetic
 public fun ServerBuilder.resource(
     name: String,
     uri: String,
@@ -38,6 +38,7 @@ public fun ServerBuilder.resource(
  * @param handler The function that produces the resource contents.
  * @return This server builder.
  */
+@JvmSynthetic
 public fun ServerBuilder.resourceTemplate(
     name: String,
     uriTemplate: String,
@@ -72,6 +73,7 @@ public fun ServerBuilder.resourceTemplate(
  * @param handler The function that handles tool invocations.
  * @return This server builder.
  */
+@JvmSynthetic
 public fun ServerBuilder.tool(
     name: String,
     description: String? = null,
@@ -92,10 +94,11 @@ public fun ServerBuilder.tool(
         ),
     )
 
+@JvmSynthetic
 public fun ServerBuilder.tool(
     name: String,
     description: String? = null,
-    inputSchema: String,
+    inputSchema: String? = null,
     outputSchema: String? = null,
     handler: suspend ToolScope.() -> ToolResult,
 ): ServerBuilder =
@@ -115,17 +118,18 @@ public fun ServerBuilder.tool(
  * Registers a tool using a [JsonObject] input schema.
  * Requires kotlinx-serialization-json on the classpath.
  */
+@JvmSynthetic
 public fun ServerBuilder.tool(
     name: String,
     description: String? = null,
-    inputSchema: JsonObject,
+    inputSchema: JsonObject? = null,
     outputSchema: JsonObject? = null,
     handler: suspend ToolScope.() -> ToolResult,
 ): ServerBuilder =
     tool(
         name = name,
         description = description,
-        inputSchema = inputSchema.toJacksonNode(),
-        outputSchema = outputSchema?.toJacksonNodeOrNull(),
+        inputSchema = inputSchema.toJacksonNodeOrNull(),
+        outputSchema = outputSchema.toJacksonNodeOrNull(),
         handler = handler,
     )

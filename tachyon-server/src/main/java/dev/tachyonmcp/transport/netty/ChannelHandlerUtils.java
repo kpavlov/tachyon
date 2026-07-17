@@ -57,7 +57,7 @@ public final class ChannelHandlerUtils {
      * request is released before the async dispatch runs.
      */
     public static void captureInitRequest(ChannelHandlerContext ctx, HttpRequest req, ServerEngine server) {
-        if (server.isStateless() || server.sessionIdGenerator() == SessionIdGenerator.DEFAULT) {
+        if (server.isStateless() || !server.sessionIdGenerator().readsRequest()) {
             return;
         }
         // Always build a fresh metadata-only snapshot. The aggregated request is a pooled

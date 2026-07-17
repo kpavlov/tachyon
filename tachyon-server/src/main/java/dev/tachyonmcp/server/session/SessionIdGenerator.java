@@ -23,8 +23,17 @@ public interface SessionIdGenerator {
     /**
      * Default generator: {@code sess_<UUID>}, ignoring the request.
      */
-    SessionIdGenerator DEFAULT =
-            request -> "sess_" + UUID.randomUUID().toString().replace("-", "");
+    SessionIdGenerator DEFAULT = new SessionIdGenerator() {
+        @Override
+        public String generate(HttpRequest request) {
+            return "sess_" + UUID.randomUUID().toString().replace("-", "");
+        }
+
+        @Override
+        public boolean readsRequest() {
+            return false;
+        }
+    };
 
     /**
      * Derives a session id from the initialize request (headers, URI, …).
@@ -39,4 +48,15 @@ public interface SessionIdGenerator {
      * </ul>
      */
     String generate(HttpRequest request);
+
+    /**
+     * Whether {@link #generate} inspects the request (headers, URI, …). When {@code false}, the
+     * transport skips detaching a per-request snapshot for the async session-creation dispatch.
+     *
+     * <p>Defaults to {@code true} so every custom generator is handed a valid request; override to
+     * {@code false} for a request-independent id (like {@link #DEFAULT}) to opt into the fast path.
+     */
+    default boolean readsRequest() {
+        return true;
+    }
 }

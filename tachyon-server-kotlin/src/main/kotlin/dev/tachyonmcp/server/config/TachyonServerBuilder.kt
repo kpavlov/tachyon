@@ -104,6 +104,7 @@ public class TachyonServerBuilder
             return this
         }
 
+        @JvmSynthetic
         public fun tool(
             name: String,
             description: String? = null,
@@ -113,6 +114,7 @@ public class TachyonServerBuilder
         ): TachyonServerBuilder =
             this.also { delegate.tool(name, description, inputSchema, outputSchema, handler) }
 
+        @JvmSynthetic
         public fun tool(
             name: String,
             description: String? = null,
@@ -122,6 +124,7 @@ public class TachyonServerBuilder
         ): TachyonServerBuilder =
             this.also { delegate.tool(name, description, inputSchema, outputSchema, handler) }
 
+        @JvmSynthetic
         public fun resource(
             name: String,
             uri: String,
@@ -139,6 +142,7 @@ public class TachyonServerBuilder
          * @param handler The handler that generates the prompt messages.
          * @return This builder.
          */
+        @JvmSynthetic
         public fun prompt(
             name: String,
             description: String? = null,
@@ -162,6 +166,7 @@ public class TachyonServerBuilder
          * @param block Handles requests for resources matching the template.
          * @return This builder.
          */
+        @JvmSynthetic
         public fun resourceTemplate(
             name: String,
             uriTemplate: String,
@@ -189,6 +194,7 @@ public class TachyonServerBuilder
          * Registers a tool using a [kotlinx.serialization.json.JsonObject] input schema.
          * Requires kotlinx-serialization-json on the classpath.
          */
+        @JvmSynthetic
         public fun tool(
             name: String,
             description: String? = null,
