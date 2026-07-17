@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -173,19 +172,80 @@ class ResourceRegistryTest {
     }
 
     @Test
-    void registerRequiresHandler() {
-        assertThat(ResourceRegistry.class.getDeclaredMethods())
-                .filteredOn(method -> method.getName().equals("register"))
-                .hasSize(2)
-                .allSatisfy(method -> assertThat(method.getParameterCount()).isEqualTo(2));
+    void findByUriReturnsDescriptorForRegisteredUri() {
+        registry.register(resource("r1"), EMPTY_HANDLER);
+
+        var found = registry.findByUri("test://r1");
+
+        assertThat(found).isPresent();
+        assertThat(found.get().name()).isEqualTo("r1");
     }
 
     @Test
-    void registerTemplateRequiresDescriptorAndHandler() {
-        assertThat(ResourceRegistry.class.getDeclaredMethods())
-                .filteredOn(method -> method.getName().equals("registerTemplate"))
-                .hasSize(2)
-                .allSatisfy(method -> assertThat(method.getParameterCount()).isEqualTo(2));
+    void findByUriReturnsEmptyForUnknownUri() {
+        registry.register(resource("r1"), EMPTY_HANDLER);
+
+        assertThat(registry.findByUri("test://unknown")).isEmpty();
+    }
+
+    @Test
+    void unregisterByUriRemovesResourceAndFiresOnChange() {
+        registry.register(resource("r1"), EMPTY_HANDLER);
+        var callCount = new AtomicInteger(0);
+        registry.onChange(callCount::incrementAndGet);
+
+        var removed = registry.unregisterByUri("test://r1");
+
+        assertThat(removed).isTrue();
+        assertThat(registry.find("r1")).isEmpty();
+        assertThat(registry.findByUri("test://r1")).isEmpty();
+        assertThat(registry.descriptors()).isEmpty();
+        assertThat(callCount).hasValue(1);
+    }
+
+    @Test
+    void unregisterByUriReturnsFalseForNonExistentUri() {
+        var callCount = new AtomicInteger(0);
+        registry.onChange(callCount::incrementAndGet);
+
+        var removed = registry.unregisterByUri("test://nonexistent");
+
+        assertThat(removed).isFalse();
+        assertThat(callCount).hasValue(0);
+    }
+
+    @Test
+    void unregisterByUriMakesHandlerUnresolvable() throws Exception {
+        registry.register(
+                ResourceDescriptor.of("r1", "test://r1", null, "text/plain"),
+                (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "content"));
+
+        registry.unregisterByUri("test://r1");
+
+        var result = handlers.get("resources/read")
+                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "test://r1"));
+        assertThat(result).isInstanceOf(JsonRpcError.class);
+        assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.RESOURCE_NOT_FOUND);
+    }
+
+    @Test
+    void unregisterRemovesSubscriptionsForResourceUri() {
+        registry.register(resource("r1"), EMPTY_HANDLER);
+        registry.subscribe("test://r1", "s1");
+
+        assertThat(registry.unregister("r1")).isTrue();
+
+        assertThat(registry.subscriptions).doesNotContainKey("test://r1");
+    }
+
+    @Test
+    void unregisterByUriRemovesSubscriptionsForUri() {
+        registry.register(resource("r1"), EMPTY_HANDLER);
+        registry.subscribe("test://r1", "s1");
+
+        assertThat(registry.unregisterByUri("test://r1")).isTrue();
+
+        assertThat(registry.subscriptions).doesNotContainKey("test://r1");
     }
 
     @Test
@@ -223,9 +283,9 @@ class ResourceRegistryTest {
 
     @Test
     void shouldPassStaticResourceDetailsToCommonHandler() throws Exception {
-        var capturedUri = new AtomicReference<String>();
-        var capturedParams = new AtomicReference<Map<String, UriTemplateValue>>();
-        var capturedTemplate = new AtomicReference<String>();
+        var capturedUri = new AtomicReference<@Nullable String>();
+        var capturedParams = new AtomicReference<@Nullable Map<String, UriTemplateValue>>();
+        var capturedTemplate = new AtomicReference<@Nullable String>();
         registry.register(resource("static-request"), (ctx, rawUri, params, uriTemplate) -> {
             capturedUri.set(rawUri);
             capturedParams.set(params);
@@ -243,9 +303,9 @@ class ResourceRegistryTest {
 
     @Test
     void shouldPassTemplateResourceDetailsToCommonHandler() throws Exception {
-        var capturedUri = new AtomicReference<String>();
-        var capturedParams = new AtomicReference<Map<String, UriTemplateValue>>();
-        var capturedTemplate = new AtomicReference<String>();
+        var capturedUri = new AtomicReference<@Nullable String>();
+        var capturedParams = new AtomicReference<@Nullable Map<String, UriTemplateValue>>();
+        var capturedTemplate = new AtomicReference<@Nullable String>();
         registry.registerTemplate(
                 ResourceTemplateDescriptor.of("template-request", "test://items/{id}"),
                 (ctx, rawUri, params, uriTemplate) -> {
@@ -279,8 +339,8 @@ class ResourceRegistryTest {
 
     @Test
     void shouldRunAndAwaitAsynchronousResourceHandlerOnSameVirtualThread() throws Exception {
-        var handlerThread = new AtomicReference<Thread>();
-        var awaitThread = new AtomicReference<Thread>();
+        var handlerThread = new AtomicReference<@Nullable Thread>();
+        var awaitThread = new AtomicReference<@Nullable Thread>();
         var contents = TextResourceContents.of("test://async-thread", "text/plain", "async");
         var completion = new CompletableFuture<TextResourceContents>() {
             @Override
@@ -546,6 +606,18 @@ class ResourceRegistryTest {
     }
 
     @Test
+    void registerWithChangedUriDropsSubscriptionsOnlyForOldUri() {
+        registry.register(ResourceDescriptor.of("doc", "resource://doc-v1", null, "text/plain"), EMPTY_HANDLER);
+        registry.subscribe("resource://doc-v1", "s1");
+        registry.subscribe("resource://doc-v2", "s2"); // pre-existing sub on the not-yet-used new URI
+
+        registry.register(ResourceDescriptor.of("doc", "resource://doc-v2", null, "text/plain"), EMPTY_HANDLER);
+
+        assertThat(registry.subscriptions).doesNotContainKey("resource://doc-v1");
+        assertThat(registry.isSubscribed("resource://doc-v2", "s2")).isTrue();
+    }
+
+    @Test
     void shouldMapAllResourceDescriptorFieldsToProtocolModel() throws Exception {
         var annotations = Annotations.of(List.of(Role.USER), 0.9, "2026-01-01T00:00:00Z");
         var icon = Icon.of("https://example.com/icon.png", "image/png", null, null);
@@ -625,7 +697,7 @@ class ResourceRegistryTest {
 
     @Test
     void shouldPassExplodedSequenceToTemplateHandler() throws Exception {
-        var captured = new AtomicReference<Map<String, UriTemplateValue>>();
+        var captured = new AtomicReference<@Nullable Map<String, UriTemplateValue>>();
         registry.registerTemplate(
                 ResourceTemplateDescriptor.of("files", "resource://files{/segments*}"),
                 (ctx, rawUri, params, uriTemplate) -> {
@@ -715,8 +787,8 @@ class ResourceRegistryTest {
         assertThat(contentLoaded).isFalse();
 
         // resources/read triggers lazy content load
-        runInVirtualThread(() -> handlers.get("resources/read")
-                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "test://sized")));
+        runInVirtualThread(() ->
+                handlers.get("resources/read").handle(DefaultDispatchContext.noop(), Map.of("uri", "test://sized")));
         assertThat(contentLoaded).isTrue();
     }
 
@@ -796,7 +868,7 @@ class ResourceRegistryTest {
         }
 
         @Override
-        public void send(@NonNull SseEvent event) {
+        public void send(SseEvent event) {
             sent.add(event);
         }
     }

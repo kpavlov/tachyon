@@ -119,8 +119,12 @@ public class DefaultResourceRegistry implements ResourceRegistry {
             var newByName = new HashMap<>(current.byName());
             var newByUri = new HashMap<>(current.byUri());
             newByName.put(descriptor.name(), entry);
-            if (previous != null && !previous.descriptor().uri().equals(descriptor.uri())) {
-                newByUri.remove(previous.descriptor().uri());
+            if (previous != null) {
+                final var previousUri = previous.descriptor().uri();
+                if (!previousUri.equals(descriptor.uri())) {
+                    newByUri.remove(previousUri);
+                    dropSubscriptions(previousUri);
+                }
             }
             newByUri.put(descriptor.uri(), entry);
             index = new Index(Map.copyOf(newByName), Map.copyOf(newByUri));
@@ -150,6 +154,30 @@ public class DefaultResourceRegistry implements ResourceRegistry {
             var newByUri = new HashMap<>(current.byUri());
             newByName.remove(name);
             newByUri.remove(removed.descriptor().uri());
+            dropSubscriptions(removed.descriptor().uri());
+            index = new Index(Map.copyOf(newByName), Map.copyOf(newByUri));
+        } finally {
+            writeLock.unlock();
+        }
+        fireOnChange();
+        return true;
+    }
+
+    @Override
+    public boolean unregisterByUri(String uri) {
+        writeLock.lock();
+        try {
+            var current = index;
+            var removed = current.byUri.get(uri);
+            if (removed == null) {
+                return false;
+            }
+            final var name = removed.descriptor().name();
+            var newByName = new HashMap<>(current.byName);
+            var newByUri = new HashMap<>(current.byUri);
+            newByName.remove(name);
+            newByUri.remove(uri);
+            dropSubscriptions(uri);
             index = new Index(Map.copyOf(newByName), Map.copyOf(newByUri));
         } finally {
             writeLock.unlock();
@@ -166,7 +194,13 @@ public class DefaultResourceRegistry implements ResourceRegistry {
      */
     @Override
     public Optional<ResourceDescriptor> find(String name) {
-        var entry = index.byName().get(name);
+        var entry = index.byName.get(name);
+        return entry != null ? Optional.of(entry.descriptor()) : Optional.empty();
+    }
+
+    @Override
+    public Optional<ResourceDescriptor> findByUri(String uri) {
+        var entry = index.byUri.get(uri);
         return entry != null ? Optional.of(entry.descriptor()) : Optional.empty();
     }
 
@@ -364,6 +398,15 @@ public class DefaultResourceRegistry implements ResourceRegistry {
             set.remove(sessionId);
             return set.isEmpty() ? null : set;
         });
+    }
+
+    /**
+     * Drops any subscription-set entry for a URI that no longer names a live resource, e.g. after
+     * unregistering or renaming the resource that owned it. Called under {@link #writeLock} alongside
+     * the index change; {@code subscriptions} is an independent map, so this never blocks subscribe.
+     */
+    private void dropSubscriptions(String uri) {
+        subscriptions.remove(uri);
     }
 
     /**
