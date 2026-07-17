@@ -26,8 +26,8 @@ public class KxSerializationSerde(
     @Suppress("UNCHECKED_CAST")
     override fun <T : Any> serialize(value: T): String {
         val serializer =
-            serializerCache.getOrPut(value.javaClass) {
-                json.serializersModule.serializer(value.javaClass)
+            serializerCache.computeIfAbsent(value.javaClass) {
+                json.serializersModule.serializer(it)
             } as KSerializer<Any>
         return json.encodeToString(serializer, value)
     }

@@ -31,22 +31,6 @@ public inline fun TachyonServer(
 }
 
 /**
- * Creates and starts a [TachyonServer] on [port]. Alias for [TachyonServer].
- *
- * @see TachyonServer
- */
-@OptIn(ExperimentalContracts::class)
-public inline fun tachyonServer(
-    port: Int? = null,
-    configure: (@TachyonDsl TachyonServerBuilder).() -> Unit = {},
-): TachyonServer {
-    contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
-    val builder = TachyonServerBuilder().apply(configure)
-    builder.applyPort(port)
-    return builder.start()
-}
-
-/**
  * Builds a fully configured [TachyonServer] **without** starting Netty transport.
  * The returned server is not listening — it supports dynamic registration
  * through its feature registries but has no bound port.
@@ -54,7 +38,6 @@ public inline fun tachyonServer(
  * Use this for tests that don't need transport, or to set up handlers before
  * binding. To start, create with [TachyonServer] instead.
  */
-@Suppress("FunctionName")
 @OptIn(ExperimentalContracts::class)
 public inline fun buildServer(
     configure: (@TachyonDsl TachyonServerBuilder).() -> Unit = {},

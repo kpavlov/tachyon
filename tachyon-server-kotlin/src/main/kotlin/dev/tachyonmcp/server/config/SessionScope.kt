@@ -4,6 +4,7 @@ package dev.tachyonmcp.server.config
 
 import dev.tachyonmcp.server.TachyonDsl
 import dev.tachyonmcp.server.session.SessionEventStore
+import dev.tachyonmcp.server.session.SessionIdGenerator
 import dev.tachyonmcp.server.session.SessionStore
 import io.netty.handler.codec.http.HttpRequest
 import kotlin.time.Duration
@@ -28,12 +29,17 @@ public class SessionScope
         /** Custom session event store. */
         public var sessionEventStore: SessionEventStore? = null
 
-        /** Custom session ID generator function. */
-        public var sessionIdGenerator: ((HttpRequest) -> String)? = null
+        /** Session ID generator; defaults to [SessionIdGenerator.DEFAULT] (`sess_<uuid>`). Never null. */
+        public var sessionIdGenerator: SessionIdGenerator = SessionIdGenerator.DEFAULT
 
-        /** Lambda-friendly overload: `sessionIdGenerator { it.headers()["X-Tenant-Id"]!! }`. */
+        /**
+         * Lambda-friendly overload, e.g. deriving the id from an authenticated principal:
+         * `sessionIdGenerator { req -> principalFrom(req)?.sessionKey ?: SessionIdGenerator.DEFAULT.generate(req) }`.
+         * Do not key sessions off an unauthenticated client header — that invites session
+         * fixation and cross-tenant collisions, and a missing header would crash the request thread.
+         */
         public fun sessionIdGenerator(generator: (HttpRequest) -> String) {
-            sessionIdGenerator = generator
+            sessionIdGenerator = SessionIdGenerator { generator(it) }
         }
 
         @PublishedApi
@@ -43,6 +49,6 @@ public class SessionScope
             janitorInterval?.let { builder.janitorInterval(it.toJavaDuration()) }
             sessionStore?.let(builder::sessionStore)
             sessionEventStore?.let(builder::sessionEventStore)
-            sessionIdGenerator.let { builder.sessionIdGenerator(it) }
+            if (enabled) builder.sessionIdGenerator(sessionIdGenerator)
         }
     }
