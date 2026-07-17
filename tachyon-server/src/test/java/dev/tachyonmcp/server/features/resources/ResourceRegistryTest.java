@@ -463,6 +463,21 @@ class ResourceRegistryTest {
     }
 
     @Test
+    void shouldNotFireOnChangeWhenRegisteringIdenticalResource() {
+        var descriptor = ResourceDescriptor.of("doc", "resource://doc", null, "text/plain");
+        registry.register(descriptor, EMPTY_HANDLER);
+
+        var callCount = new AtomicInteger(0);
+        registry.onChange(callCount::incrementAndGet);
+
+        // same descriptor + same handler instance is a no-op: no add, no change
+        registry.register(descriptor, EMPTY_HANDLER);
+
+        assertThat(callCount).hasValue(0);
+        assertThat(registry.descriptors()).hasSize(1);
+    }
+
+    @Test
     void shouldNotFireOnChangeWhenRemovingNonExistentResource() {
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
@@ -508,9 +523,15 @@ class ResourceRegistryTest {
                 ResourceDescriptor.of("doc", "resource://doc-v1", null, "text/plain"),
                 (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "v1"));
 
+        var callCount = new AtomicInteger(0);
+        registry.onChange(callCount::incrementAndGet);
+
         registry.register(
                 ResourceDescriptor.of("doc", "resource://doc-v2", null, "text/plain"),
                 (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "v2"));
+
+        // updating a resource's URI is a single change
+        assertThat(callCount).hasValue(1);
 
         // old URI must no longer resolve
         var oldUriResult = handlers.get("resources/read")
@@ -522,22 +543,6 @@ class ResourceRegistryTest {
                 .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "resource://doc-v2")));
         assertThat(newUriResult).isInstanceOf(ReadResourceResult.class);
         assertThat(registry.descriptors()).hasSize(1);
-    }
-
-    @Test
-    void shouldFireOnChangeWhenResourceUriUpdated() {
-        registry.register(
-                ResourceDescriptor.of("doc", "resource://doc-v1", null, "text/plain"),
-                (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "v1"));
-
-        var callCount = new AtomicInteger(0);
-        registry.onChange(callCount::incrementAndGet);
-
-        registry.register(
-                ResourceDescriptor.of("doc", "resource://doc-v2", null, "text/plain"),
-                (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "v2"));
-
-        assertThat(callCount).hasValue(1);
     }
 
     @Test
@@ -713,6 +718,72 @@ class ResourceRegistryTest {
         runInVirtualThread(() -> handlers.get("resources/read")
                 .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "test://sized")));
         assertThat(contentLoaded).isTrue();
+    }
+
+    @Test
+    void registerRejectsUriAlreadyOwnedByDifferentName() {
+        registry.register(ResourceDescriptor.of("first", "resource://shared", null, "text/plain"), EMPTY_HANDLER);
+
+        assertThatThrownBy(() -> registry.register(
+                        ResourceDescriptor.of("second", "resource://shared", null, "text/plain"), EMPTY_HANDLER))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("resource://shared")
+                .hasMessageContaining("first");
+
+        // rejected registration must not leak into either index
+        assertThat(registry.find("second")).isEmpty();
+        assertThat(registry.descriptors()).extracting(ResourceDescriptor::name).containsExactly("first");
+        assertThat(registry.getByUri("resource://shared").descriptor().name()).isEqualTo("first");
+    }
+
+    @Test
+    void registerAllowsSameNameToKeepItsOwnUri() {
+        registry.register(ResourceDescriptor.of("doc", "resource://doc", null, "text/plain"), EMPTY_HANDLER);
+        // same name re-registering its own URI is a replace, not a conflict
+        registry.register(ResourceDescriptor.of("doc", "resource://doc", "updated", "text/plain"), EMPTY_HANDLER);
+
+        assertThat(registry.find("doc")).map(ResourceDescriptor::description).hasValue("updated");
+        assertThat(registry.descriptors()).hasSize(1);
+    }
+
+    @Test
+    void concurrentRegisterOfSameNameLeavesExactlyOneUri() throws Exception {
+        // Race under test: two registrations of the same name with different URIs run concurrently.
+        // Under the old two-map design the loser's URI could be stranded in byUri — an orphan
+        // readable via resources/read but absent from find/list, never reclaimed. Copy-on-write
+        // publish of a single immutable Index moves both indexes atomically, so exactly one URI
+        // survives and it always matches find(name), regardless of interleaving.
+        var name = "A";
+        var u1 = "resource://a/1";
+        var u2 = "resource://a/2";
+        int iterations = 1_000;
+        try (var exec = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            for (int i = 0; i < iterations; i++) {
+                var start = new java.util.concurrent.CountDownLatch(1);
+                var r1 = exec.submit(() -> {
+                    start.await();
+                    registry.register(ResourceDescriptor.of(name, u1, null, null), EMPTY_HANDLER);
+                    return null;
+                });
+                var r2 = exec.submit(() -> {
+                    start.await();
+                    registry.register(ResourceDescriptor.of(name, u2, null, null), EMPTY_HANDLER);
+                    return null;
+                });
+                start.countDown();
+                r1.get();
+                r2.get();
+
+                var survivingUri = registry.find(name).orElseThrow().uri();
+                var orphanUri = survivingUri.equals(u1) ? u2 : u1;
+                assertThat(registry.getByUri(survivingUri))
+                        .as("iteration %d: winning URI must resolve", i)
+                        .isNotNull();
+                assertThat(registry.getByUri(orphanUri))
+                        .as("iteration %d: losing URI must not be orphaned in byUri", i)
+                        .isNull();
+            }
+        }
     }
 
     private static class CollectingConnection implements SseConnection {

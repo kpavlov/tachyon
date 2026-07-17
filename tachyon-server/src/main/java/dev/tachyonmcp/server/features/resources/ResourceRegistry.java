@@ -13,9 +13,13 @@ public interface ResourceRegistry {
     /**
      * Registers a resource descriptor with its handler.
      *
+     * <p>Registering a resource whose name already exists replaces it. A URI is unique across
+     * resources: registering a URI already owned by a different name is rejected.
+     *
      * @param descriptor the resource descriptor to register
      * @param handler    the handler for the resource
      * @return this registry
+     * @throws IllegalArgumentException if the URI is already registered under a different name
      */
     ResourceRegistry register(ResourceDescriptor descriptor, ResourceHandler handler);
 
@@ -78,6 +82,16 @@ public interface ResourceRegistry {
      * @return the registered resource descriptors
      */
     List<ResourceDescriptor> descriptors();
+
+    /**
+     * Notifies every session subscribed to the given resource URI that the resource has changed,
+     * emitting a {@code notifications/resources/updated} notification to each.
+     *
+     * <p>Has no effect when no session is subscribed to the URI.
+     *
+     * @param uri the URI of the resource that changed
+     */
+    void notifyResourceUpdated(String uri);
 
     /**
      * Registers a resource template descriptor with its handler.

@@ -22,6 +22,7 @@ import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -45,8 +47,17 @@ public class DefaultResourceRegistry implements ResourceRegistry {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultResourceRegistry.class);
 
-    private final ConcurrentHashMap<String, ResourceEntry> byName = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, ResourceEntry> byUri = new ConcurrentHashMap<>();
+    /**
+     * Immutable pair of the name and URI indexes. Published atomically through {@link #index} so
+     * readers always observe both maps in a mutually consistent state.
+     */
+    private record Index(Map<String, ResourceEntry> byName, Map<String, ResourceEntry> byUri) {
+        static final Index EMPTY = new Index(Map.of(), Map.of());
+    }
+
+    private volatile Index index = Index.EMPTY;
+    private final ReentrantLock writeLock = new ReentrantLock();
+
     private final ConcurrentHashMap<String, ResourceTemplateEntry> templates = new ConcurrentHashMap<>();
     final ConcurrentHashMap<String, Set<String>> subscriptions = new ConcurrentHashMap<>();
     private final ServerEngine server;
@@ -77,11 +88,13 @@ public class DefaultResourceRegistry implements ResourceRegistry {
      * Registers a resource descriptor and its handler.
      *
      * <p>If resource support is disabled, the descriptor is not registered. Registering a resource
-     * with an existing name replaces the previous resource and updates URI mappings accordingly.
+     * with an existing name replaces the previous resource and updates URI mappings accordingly. A
+     * URI is unique across resources: registering a URI already owned by a different name is rejected.
      *
      * @param descriptor the resource descriptor to register
      * @param handler the handler used to read the resource
      * @return this registry
+     * @throws IllegalArgumentException if the URI is already registered under a different name
      */
     @Override
     public DefaultResourceRegistry register(ResourceDescriptor descriptor, ResourceHandler handler) {
@@ -90,11 +103,30 @@ public class DefaultResourceRegistry implements ResourceRegistry {
             return this;
         }
         var entry = new ResourceEntry(descriptor, handler);
-        var previous = byName.put(descriptor.name(), entry);
-        if (previous != null && !previous.descriptor().uri().equals(descriptor.uri())) {
-            byUri.remove(previous.descriptor().uri());
+        writeLock.lock();
+        try {
+            var current = index;
+            var uriOwner = current.byUri().get(descriptor.uri());
+            if (uriOwner != null && !uriOwner.descriptor().name().equals(descriptor.name())) {
+                throw new IllegalArgumentException("Resource URI '" + descriptor.uri()
+                        + "' is already registered under name '"
+                        + uriOwner.descriptor().name() + "'");
+            }
+            var previous = current.byName().get(descriptor.name());
+            if (entry.equals(previous)) {
+                return this;
+            }
+            var newByName = new HashMap<>(current.byName());
+            var newByUri = new HashMap<>(current.byUri());
+            newByName.put(descriptor.name(), entry);
+            if (previous != null && !previous.descriptor().uri().equals(descriptor.uri())) {
+                newByUri.remove(previous.descriptor().uri());
+            }
+            newByUri.put(descriptor.uri(), entry);
+            index = new Index(Map.copyOf(newByName), Map.copyOf(newByUri));
+        } finally {
+            writeLock.unlock();
         }
-        byUri.put(descriptor.uri(), entry);
         fireOnChange();
         return this;
     }
@@ -107,13 +139,23 @@ public class DefaultResourceRegistry implements ResourceRegistry {
      */
     @Override
     public boolean unregister(String name) {
-        var removed = byName.remove(name);
-        if (removed != null) {
-            byUri.remove(removed.descriptor().uri());
-            fireOnChange();
-            return true;
+        writeLock.lock();
+        try {
+            var current = index;
+            var removed = current.byName().get(name);
+            if (removed == null) {
+                return false;
+            }
+            var newByName = new HashMap<>(current.byName());
+            var newByUri = new HashMap<>(current.byUri());
+            newByName.remove(name);
+            newByUri.remove(removed.descriptor().uri());
+            index = new Index(Map.copyOf(newByName), Map.copyOf(newByUri));
+        } finally {
+            writeLock.unlock();
         }
-        return false;
+        fireOnChange();
+        return true;
     }
 
     /**
@@ -124,7 +166,7 @@ public class DefaultResourceRegistry implements ResourceRegistry {
      */
     @Override
     public Optional<ResourceDescriptor> find(String name) {
-        var entry = byName.get(name);
+        var entry = index.byName().get(name);
         return entry != null ? Optional.of(entry.descriptor()) : Optional.empty();
     }
 
@@ -135,7 +177,7 @@ public class DefaultResourceRegistry implements ResourceRegistry {
      */
     @Override
     public List<ResourceDescriptor> descriptors() {
-        return byName.values().stream()
+        return index.byName().values().stream()
                 .map(ResourceEntry::descriptor)
                 .sorted(Comparator.comparing(ResourceDescriptor::name))
                 .toList();
@@ -150,7 +192,7 @@ public class DefaultResourceRegistry implements ResourceRegistry {
      */
     public PaginatedResult<ResourceDescriptor> list(int limit, @Nullable String cursor) {
         int lim = limit > 0 ? limit : config.pageSize();
-        var all = byName.values().stream()
+        var all = index.byName().values().stream()
                 .map(ResourceEntry::descriptor)
                 .sorted(Comparator.comparing(ResourceDescriptor::name))
                 .toList();
@@ -160,7 +202,7 @@ public class DefaultResourceRegistry implements ResourceRegistry {
     public PaginatedResult<ResourceDescriptor> list(
             int limit, @Nullable String cursor, Predicate<ResourceDescriptor> filter) {
         int lim = limit > 0 ? limit : config.pageSize();
-        var all = byName.values().stream()
+        var all = index.byName().values().stream()
                 .map(ResourceEntry::descriptor)
                 .filter(filter)
                 .sorted(Comparator.comparing(ResourceDescriptor::name))
@@ -176,7 +218,7 @@ public class DefaultResourceRegistry implements ResourceRegistry {
      */
     @Nullable
     ResourceEntry getByUri(String uri) {
-        return byUri.get(uri);
+        return index.byUri().get(uri);
     }
 
     /**
@@ -251,7 +293,7 @@ public class DefaultResourceRegistry implements ResourceRegistry {
      * @return {@code true} if the registry contains no resources, {@code false} otherwise
      */
     public boolean isEmpty() {
-        return byName.isEmpty();
+        return index.byName().isEmpty();
     }
 
     private record TemplateMatch(ResourceTemplateEntry entry, Map<String, UriTemplateValue> params) {}
@@ -327,6 +369,7 @@ public class DefaultResourceRegistry implements ResourceRegistry {
     /**
      * Notifies all subscribed sessions that a resource has been updated.
      */
+    @Override
     public void notifyResourceUpdated(String uri) {
         var subscribedSessionIds = subscriptions.get(uri);
         if (subscribedSessionIds == null || subscribedSessionIds.isEmpty()) {
