@@ -8,7 +8,9 @@ import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
+import dev.tachyonmcp.runtime.AbstractNotifications;
 import dev.tachyonmcp.runtime.Backpressure;
+import dev.tachyonmcp.runtime.Notifications;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.runtime.SseEvent;
@@ -387,6 +389,36 @@ final class DefaultTachyonServer implements ServerEngine {
     @Override
     public InternalTaskRegistry tasks() {
         return taskRegistry;
+    }
+
+    private final Notifications serverNotifications = this::broadcastLog;
+
+    @Override
+    public Notifications notifications() {
+        return serverNotifications;
+    }
+
+    /**
+     * Broadcasts a structured MCP log to every active session whose configured threshold admits the
+     * level. No-op when the server does not advertise the {@code logging} capability. The wire form
+     * is serialized once and reused across recipients.
+     */
+    public void broadcastLog(LoggingLevel level, @Nullable String logger, @Nullable Object data) {
+        if (!config.capabilities().logging()) {
+            return;
+        }
+        var paramsStr = JsonRpcCodec.toJsonParams(AbstractNotifications.logParams(level, logger, data));
+        var notificationJson = JsonRpcCodec.serializeNotificationAsString(AbstractNotifications.LOG_METHOD, paramsStr);
+        for (var session : sessionManager.allSessions()) {
+            if (session.state() != SessionState.ACTIVE) {
+                continue;
+            }
+            var threshold = loggingLevels.getOrDefault(session.id(), LoggingLevel.INFO);
+            if (level.ordinal() < threshold.ordinal()) {
+                continue;
+            }
+            sendSerializedNotification(session, AbstractNotifications.LOG_METHOD, paramsStr, notificationJson, null);
+        }
     }
 
     @Override

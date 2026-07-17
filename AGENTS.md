@@ -8,7 +8,6 @@ Me Caveman. Talk short. Use emoji.
 - Claims about code carry `file:line` proof. Verify in code, never answer from memory.
 - Status tables for checklists: ✅ done / 🔴 open, one row per item, evidence column.
 - Emoji as markers: 🎯 goals, 🔴 breaking, 🐛 bugs, 🪶 polish/decisions, 🏹 order of battle, ⚠️ caveats, 🔥 delete.
-- Plans → `fable-plan-N.md` in repo root. Done items stay listed briefly (✅ + one line), open items get file:line + fix.
 - Short sentences. No filler words. Dead docs go fire 🔥.
 
 ## Project
@@ -27,7 +26,7 @@ mvn spotless:apply  # auto-fix
 ## Parts
 
 - **`tachyon-runtime`** — Core: Netty HTTP/SSE, JSON-RPC, event log, MCP registries
-- **`e2e`** — E2E tests via `io.modelcontextprotocol.sdk:mcp-core:2.0.0-RC1`
+- **`e2e`** — E2E tests via `io.modelcontextprotocol.sdk:mcp-core:2.0.0`
 - **`conformance`** — Conformance via `@modelcontextprotocol/conformance`
 
 ## Rules

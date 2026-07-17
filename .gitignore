@@ -29,6 +29,7 @@ buildNumber.properties
 .idea/**/libraries
 cmake-build-*/
 .idea/**/mongoSettings.xml
+.run/
 *.iws
 out/
 .idea_modules/

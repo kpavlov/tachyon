@@ -5,6 +5,7 @@
 package dev.tachyonmcp.server;
 
 import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.runtime.Notifications;
 import dev.tachyonmcp.server.config.ServerConfig;
 import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.extensions.ServerExtension;
@@ -44,6 +45,8 @@ public interface TachyonServer extends AutoCloseable {
 
     /** Returns the task registry. */
     TaskRegistry tasks();
+
+    Notifications notifications();
 
     /**
      * Returns the port the server is bound to, or 0 if not yet started.
