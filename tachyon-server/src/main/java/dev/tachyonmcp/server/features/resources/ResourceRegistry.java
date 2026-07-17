@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.features.resources;
 
+import dev.tachyonmcp.annotations.ExperimentalApi;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -69,12 +70,30 @@ public interface ResourceRegistry {
     boolean unregister(String name);
 
     /**
+     * Removes the registered resource with the specified uri.
+     *
+     * @param uri resource URI
+     * @return true if resource was unregistered
+     */
+    @ExperimentalApi
+    boolean unregisterByUri(String uri);
+
+    /**
      * Finds a registered resource descriptor by name.
      *
      * @param name the resource name
      * @return the matching descriptor, or an empty {@code Optional} if no resource is registered with that name
      */
     Optional<ResourceDescriptor> find(String name);
+
+    /**
+     * Finds a registered resource descriptor by URI.
+     *
+     * @param uri the resource URI
+     * @return the matching descriptor, or an empty {@code Optional} if no resource is registered with that uri
+     */
+    @ExperimentalApi
+    Optional<ResourceDescriptor> findByUri(String uri);
 
     /**
      * Lists the descriptors for all registered resources.

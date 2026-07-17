@@ -14,7 +14,6 @@ import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -99,8 +98,11 @@ class ResourceTest extends AbstractMcpE2eTest {
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://beta"}}
                 """);
 
-            // language=JSON
-            assertThatJson(response.body()).inPath("$.result").isEqualTo("""
+            assertThatJson(response.body())
+                    .inPath("$.result")
+                    .isEqualTo(
+                            // language=JSON
+                            """
                 {
                   "contents": [
                     {
@@ -118,8 +120,7 @@ class ResourceTest extends AbstractMcpE2eTest {
     void shouldReadResourceFromAsyncHandler() throws Exception {
         var descriptor = ResourceDescriptor.of("async-doc", "resource://async-doc", "Async document", "text/plain");
         AsyncResourceHandler handler = (ctx, rawUri, params, uriTemplate) -> CompletableFuture.supplyAsync(
-                () -> TextResourceContents.of("resource://async-doc", "text/plain", "async content"),
-                CompletableFuture.delayedExecutor(100, TimeUnit.MILLISECONDS));
+                () -> TextResourceContents.of("resource://async-doc", "text/plain", "async content"));
         startEmptyServer();
         server.resources().register(descriptor, handler);
 
@@ -194,6 +195,39 @@ class ResourceTest extends AbstractMcpE2eTest {
         }
     }
 
+    @Test
+    void shouldUnregisterResourceByUriAndFailRead() throws Exception {
+        startEmptyServer();
+        server.resources()
+                .register(
+                        ResourceDescriptor.of("alpha", "resource://alpha", "Alpha", "text/plain"),
+                        (ctx, rawUri, params, uriTemplate) ->
+                                TextResourceContents.of(rawUri, "text/plain", "content-alpha"))
+                .register(
+                        ResourceDescriptor.of("beta", "resource://beta", "Beta", "text/plain"),
+                        (ctx, rawUri, params, uriTemplate) ->
+                                TextResourceContents.of(rawUri, "text/plain", "content-beta"));
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+
+            server.resources().unregisterByUri("resource://alpha");
+
+            var readResponse = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://alpha"}}
+                """);
+            assertThatJson(readResponse.body()).inPath("$.error.code").isEqualTo(-32002);
+
+            var listResponse = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":3,"method":"resources/list"}
+                """);
+            assertThatJson(listResponse.body()).inPath("$.result.resources");
+            assertThatJson(listResponse.body())
+                    .inPath("$.result.resources[0].name")
+                    .isEqualTo("beta");
+        }
+    }
+
     @ParameterizedTest(name = "[{index}] {0}")
     @CsvSource(delimiter = '|', textBlock = """
         add-resource    | add
@@ -243,6 +277,25 @@ class ResourceTest extends AbstractMcpE2eTest {
         }
     }
 
+    @Test
+    void shouldNotifyListChangedOnUnregisterByUri() throws Exception {
+        startServer(builder -> {
+            builder.capabilities(c -> c.resourcesListChanged(true)).tool(unregisterByUriTool());
+            builder.resource(
+                    ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
+                    (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", ""));
+        });
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+            var response = client.sendRequest(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"unregister-by-uri","arguments":{}}}
+                """);
+
+            assertThat(response.body()).contains("notifications/resources/list_changed");
+        }
+    }
+
     // ---- Tool handler implementations ----
 
     private ToolHandler notifyListChangedTool(String action) {
@@ -267,6 +320,14 @@ class ResourceTest extends AbstractMcpE2eTest {
                 b -> b.name("notify-update").description("Triggers resource updated notification"), (context, args) -> {
                     server.resources().notifyResourceUpdated("resource://doc");
                     return ToolResult.blocks(TextContent.of("notified"));
+                });
+    }
+
+    private ToolHandler unregisterByUriTool() {
+        return ToolHandler.of(
+                b -> b.name("unregister-by-uri").description("Unregisters resource by URI"), (context, args) -> {
+                    server.resources().unregisterByUri("resource://doc");
+                    return ToolResult.blocks(TextContent.of("done"));
                 });
     }
 }
