@@ -7,6 +7,14 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/kpavlov/tachyon)
 <img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=fd923998-7054-4524-b014-cd368cfba9fc" />
 
+<div style="align-content: center">
+  <img
+    src="docs/assets/social-banner.jpg"
+    alt=""
+    style="width: 100%; height: auto;border-radius: 10px"
+  />
+</div>
+
 **Tachyon MCP** is a Java 21 [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server built on [Netty](https://netty.io). It implements the **2025-11-25** Streamable HTTP transport, passes all official conformance tests, and runs stateless by default.
 
 ## 💫 Why Tachyon?
@@ -165,3 +173,11 @@ See [docs/resources.md](docs/resources.md) — covers static URIs, dynamic handl
 ## License
 
 **Tachyon MCP** is available under the terms of the [Apache 2.0](LICENSE).
+
+<div style="display:flex; align-content:center; justify-content: center; width: 100%">
+  <img
+    src="docs/assets/logo-512.png"
+    alt="Tachyon logo"
+    style="display:inline-block; width: 256px; height: auto;"
+  />
+</div>
