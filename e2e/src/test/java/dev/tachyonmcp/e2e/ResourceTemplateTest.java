@@ -3,7 +3,6 @@
 package dev.tachyonmcp.e2e;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
-import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import org.junit.jupiter.api.Test;
@@ -198,10 +197,21 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
 
             var mapper = new ObjectMapper();
             var templates = mapper.readTree(response.body()).at("/result/resourceTemplates");
-            assertThat(templates).hasSize(1);
-            assertThat(templates.get(0).get("name").asString()).isEqualTo("item");
-            assertThat(templates.get(0).get("uriTemplate").asString()).isEqualTo("resource://items/{id}");
-            assertThat(templates.get(0).get("mimeType").asString()).isEqualTo("text/plain");
+            assertThatJson(response.body())
+                    .inPath("$.result.resourceTemplates")
+                    .isArray()
+                    .isEqualTo(
+                            // language=JSON
+                            """
+                        [
+                          {
+                            "name": "item",
+                            "uriTemplate": "resource://items/{id}",
+                            "description": "An item",
+                            "mimeType": "text/plain"
+                          }
+                        ]
+                        """);
         }
     }
 

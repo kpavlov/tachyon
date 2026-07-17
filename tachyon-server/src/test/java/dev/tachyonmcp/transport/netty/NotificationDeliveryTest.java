@@ -11,6 +11,7 @@ import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.McpDispatcher;
+import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
@@ -39,9 +40,15 @@ class NotificationDeliveryTest {
         ctx.notifications().progress(pt, 50, 100, "Halfway");
         ctx.notifications().progress(pt, 100, 100, "Complete");
         var logData = Map.of("tool", request.name(), "message", "tool log");
+        ctx.notifications().log(LoggingLevel.INFO, "tachyon.tools", logData);
         ctx.notifications().info("tachyon.tools", logData);
         ctx.notifications().info("tachyon.tools", logData);
-        ctx.notifications().info("tachyon.tools", logData);
+        return ToolResult.text("ok");
+    });
+
+    private static final ToolHandler FILTERED_LOG_TOOL = ToolHandler.of("filtered_log", (ctx, args) -> {
+        ctx.notifications().log(LoggingLevel.INFO, "filtered.logger", Map.of("message", "skip"));
+        ctx.notifications().log(LoggingLevel.ERROR, null);
         return ToolResult.text("ok");
     });
 
@@ -51,7 +58,10 @@ class NotificationDeliveryTest {
 
     @BeforeEach
     void setUp() {
-        server = newEngine(b -> b.session(s -> s.enabled(true)).tool(PROGRESS_AND_LOG_TOOL));
+        server = newEngine(b -> b.capabilities(c -> c.logging())
+                .session(s -> s.enabled(true))
+                .tool(PROGRESS_AND_LOG_TOOL)
+                .tool(FILTERED_LOG_TOOL));
         dispatcher = new McpDispatcher(server, server.executor());
         testConn = new CollectingConnection();
         Session session = server.createSession("sess_test");
@@ -103,13 +113,70 @@ class NotificationDeliveryTest {
                 .dispatchRequestAsync(2, "tools/call", toolParams, "sess_test")
                 .join();
 
-        // 3 from askable + 2 from automatic lifecycle logging (started/completed)
         var logEvents = testConn.sent.stream()
                 .filter(e -> e.data().contains("notifications/message"))
                 .toList();
-        assertThat(logEvents).hasSize(5);
+        assertThat(logEvents).hasSize(3);
         assertThat(logEvents.getFirst().data()).contains("\"level\":\"info\"");
         assertThat(logEvents.getFirst().data()).contains("\"logger\":\"tachyon.tools\"");
+    }
+
+    @Test
+    void shouldFilterHandlerLogsAtClientThresholdAndAllowMissingLogger() {
+        dispatcher
+                .dispatchRequestAsync(1, "logging/setLevel", Map.of("level", "warning"), "sess_test")
+                .join();
+
+        dispatcher
+                .dispatchRequestAsync(
+                        2, "tools/call", Map.of("name", "filtered_log", "arguments", Map.of()), "sess_test")
+                .join();
+
+        var logEvents = testConn.sent.stream()
+                .filter(e -> e.data().contains("notifications/message"))
+                .toList();
+        assertThat(logEvents).singleElement().satisfies(event -> {
+            assertThat(event.data()).contains("\"level\":\"error\"");
+            assertThat(event.data()).contains("\"data\":null");
+            assertThat(event.data()).doesNotContain("\"logger\"");
+        });
+    }
+
+    @Test
+    void shouldRejectSetLevelWhenLoggingCapabilityIsDisabled() {
+        try (var disabledServer = newEngine(b -> b.session(s -> s.enabled(true)).tool(FILTERED_LOG_TOOL))) {
+            var disabledConnection = new CollectingConnection();
+            var disabledSession = disabledServer.createSession("sess_disabled");
+            disabledSession.connection(disabledConnection);
+            disabledSession.activate();
+            var disabledDispatcher = new McpDispatcher(disabledServer, disabledServer.executor());
+
+            var result = disabledDispatcher
+                    .dispatchRequestAsync(1, "logging/setLevel", Map.of("level", "info"), "sess_disabled")
+                    .join();
+
+            assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Response.class);
+            var responseBody = ((McpDispatcher.DispatchResult.Response) result).responseBodyString();
+            assertThat(responseBody).contains("\"code\":-32601").contains("Method not found");
+
+            disabledDispatcher
+                    .dispatchRequestAsync(
+                            2, "tools/call", Map.of("name", "filtered_log", "arguments", Map.of()), "sess_disabled")
+                    .join();
+            assertThat(disabledConnection.sent).noneMatch(event -> event.data().contains("notifications/message"));
+        }
+    }
+
+    @Test
+    void shouldRejectMissingLogLevelAsInvalidParams() {
+        var result = dispatcher
+                .dispatchRequestAsync(1, "logging/setLevel", Map.of(), "sess_test")
+                .join();
+
+        assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Response.class);
+        assertThat(((McpDispatcher.DispatchResult.Response) result).responseBodyString())
+                .contains("\"code\":-32602")
+                .contains("Missing level parameter");
     }
 
     @Test
@@ -131,7 +198,6 @@ class NotificationDeliveryTest {
                 "_meta", java.util.Map.of("progressToken", 42));
         dispatcher.dispatchRequestAsync(1, "tools/call", params, "sess_test").join();
 
-        // info() sends unconditionally; sendLoggingIfEnabled skips (no level configured)
         var logEvents = testConn.sent.stream()
                 .filter(e -> e.data().contains("notifications/message"))
                 .toList();
@@ -201,11 +267,10 @@ class NotificationDeliveryTest {
                 "_meta", java.util.Map.of("progressToken", 1));
         dispatcher.dispatchRequestAsync(3, "tools/call", params, "sess_test").join();
 
-        // 3 from askable + 2 from automatic lifecycle logging
         var testLogEvents = testConn.sent.stream()
                 .filter(e -> e.data().contains("notifications/message"))
                 .toList();
-        assertThat(testLogEvents).hasSize(5);
+        assertThat(testLogEvents).hasSize(3);
         assertThat(testLogEvents.getFirst().data()).contains("\"level\":\"info\"");
 
         var otherLogEvents = conn2.sent.stream()

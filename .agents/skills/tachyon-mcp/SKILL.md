@@ -197,6 +197,23 @@ Default `Mode.AUTO` advertises only registered features. Force `Mode.ON`/`Mode.O
 
 Kotlin DSL nests instead: `capabilities { tools { mode = Mode.ON; pageSize = 20 }; tasks { enabled = true; list = true } }`.
 
+Enable logging before publishing structured messages from a handler. `log` accepts every MCP
+severity; `info`, `warning`, and `error` are conveniences. The client-selected threshold is applied
+per session, with `INFO` used until the client sends `logging/setLevel`.
+
+```java
+.capabilities(c -> c.logging())
+.tool(
+    tool -> tool.name("work").description("Does work"),
+    (context, args) -> {
+        context.notifications().log(
+            LoggingLevel.NOTICE,
+            "jobs",
+            Map.of("status", "started"));
+        return ToolResult.empty();
+    })
+```
+
 ### Network `network(cfg -> ...)`
 | Method | Default |
 |---|---|

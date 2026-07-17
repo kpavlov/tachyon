@@ -41,12 +41,12 @@ public final class LoggingHandlers {
                     return JsonRpcErrors.invalidParams("Failed to decode params for logging/setLevel");
                 }
             } else {
-                return JsonRpcErrors.invalidRequest("Invalid params for logging/setLevel");
+                return JsonRpcErrors.invalidParams("Invalid params for logging/setLevel");
             }
 
             var protocolLevel = typed.level();
             if (protocolLevel == null) {
-                return JsonRpcErrors.invalidRequest("Missing level parameter");
+                return JsonRpcErrors.invalidParams("Missing level parameter");
             }
 
             context.setLoggingLevel(LoggingLevelMapper.toDomain(protocolLevel));

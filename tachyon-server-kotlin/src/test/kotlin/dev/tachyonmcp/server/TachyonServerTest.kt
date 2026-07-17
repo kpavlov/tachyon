@@ -315,6 +315,7 @@ internal class TachyonServerTest {
     fun `notification sent during suspend tool arrives on the request stream`() {
         TachyonServer(port = 0) {
             name("notify-test")
+            capabilities { logging = true }
             session { enabled = true }
             tool("notify", "Notifies mid-run") {
                 delay(10.milliseconds)

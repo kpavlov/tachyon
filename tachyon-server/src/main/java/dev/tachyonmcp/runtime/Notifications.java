@@ -4,35 +4,15 @@
 
 package dev.tachyonmcp.runtime;
 
+import dev.tachyonmcp.annotations.ExperimentalApi;
+import dev.tachyonmcp.server.domain.LoggingLevel;
+import java.util.LinkedHashMap;
 import org.jspecify.annotations.Nullable;
 
 /**
  * Sends notifications from within an interaction (handler dispatch) context.
  */
 public interface Notifications {
-
-    /**
-     * No-op sender for synthetic contexts that are not bound to a live connection.
-     */
-    Notifications NOOP = new Notifications() {
-        @Override
-        public void send(String method, Object params) {}
-
-        @Override
-        public void progress(@Nullable Object progressToken, double progress, double total, String message) {}
-
-        @Override
-        public void comment(@Nullable String message) {}
-
-        @Override
-        public void info(String logger, Object data) {}
-
-        @Override
-        public void warning(String logger, Object data) {}
-
-        @Override
-        public void error(String logger, Object data) {}
-    };
 
     /**
      * Sends a generic notification with the given method and params.
@@ -62,6 +42,7 @@ public interface Notifications {
      * alive when no progress token is available. A {@code null} or blank message emits a bare
      * {@code :} heartbeat comment. No-op when no outbound stream is bound to the context.
      */
+    @ExperimentalApi
     void comment(@Nullable String message);
 
     /**
@@ -69,22 +50,76 @@ public interface Notifications {
      *
      * @see #comment(String)
      */
+    @ExperimentalApi
     default void comment() {
         comment(null);
     }
 
     /**
+     * Decides whether a log message at the given level should be emitted. This is the single gate
+     * every {@link #log} call funnels through, so gating cannot be bypassed by a caller.
+     *
+     * <p>The base implementation always returns {@code true} (an unbound sender writes
+     * unconditionally). Connection-bound implementations override this to apply the client's
+     * configured threshold and the server's advertised {@code logging} capability.
+     *
+     * @param level the message severity
+     * @return {@code true} if a {@code notifications/message} at this level should be sent
+     */
+    default boolean shouldEmit(LoggingLevel level) {
+        return true;
+    }
+
+    /**
+     * Sends a structured MCP {@code notifications/message} log, gated by {@link #shouldEmit}.
+     *
+     * <p>This default is the unconditional wire writer once {@link #shouldEmit} allows the level:
+     * it serializes the params and delegates to {@link #send}. All threshold and capability policy
+     * lives in {@link #shouldEmit}, never here — so overriding that predicate is the only supported
+     * way to change what gets emitted.
+     *
+     * @param level the message severity
+     * @param logger the optional logger name
+     * @param data JSON-serializable message data, including {@code null}
+     */
+    default void log(LoggingLevel level, @Nullable String logger, @Nullable Object data) {
+        if (!shouldEmit(level)) {
+            return;
+        }
+        var params = new LinkedHashMap<String, Object>(3);
+        params.put("level", level.getValue());
+        if (logger != null) {
+            params.put("logger", logger);
+        }
+        params.put("data", data);
+        send("notifications/message", params);
+    }
+
+    /**
+     * Sends a structured MCP log message without a logger name.
+     */
+    default void log(LoggingLevel level, @Nullable Object data) {
+        log(level, null, data);
+    }
+
+    /**
      * Sends an info-level log message.
      */
-    void info(String logger, Object data);
+    default void info(String logger, @Nullable Object data) {
+        log(LoggingLevel.INFO, logger, data);
+    }
 
     /**
      * Sends a warning-level log message.
      */
-    void warning(String logger, Object data);
+    default void warning(String logger, @Nullable Object data) {
+        log(LoggingLevel.WARNING, logger, data);
+    }
 
     /**
      * Sends an error-level log message.
      */
-    void error(String logger, Object data);
+    default void error(String logger, @Nullable Object data) {
+        log(LoggingLevel.ERROR, logger, data);
+    }
 }

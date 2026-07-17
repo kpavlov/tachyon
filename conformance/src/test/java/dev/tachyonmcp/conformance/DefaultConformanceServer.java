@@ -12,6 +12,7 @@ class DefaultConformanceServer extends AbstractConformanceServer {
     @Override
     protected ServerEngine createServer(boolean isStateful) {
         return (ServerEngine) TachyonServer.builder()
+                .capabilities(c -> c.logging())
                 .session(s -> s.enabled(isStateful))
                 .network(n -> n.host("localhost"))
                 .build();
