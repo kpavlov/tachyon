@@ -279,6 +279,77 @@ class NotificationDeliveryTest {
         assertThat(otherLogEvents).isEmpty();
     }
 
+    @Test
+    void shouldBroadcastServerLogToSessionsAboveTheirOwnThreshold() {
+        // server.notifications() fans out, gated by each session's configured threshold
+        var warnConn = new CollectingConnection();
+        var warnSession = server.createSession("sess_warn");
+        warnSession.connection(warnConn);
+        warnSession.activate();
+        server.setLoggingLevel("sess_warn", LoggingLevel.WARNING);
+        server.setLoggingLevel("sess_test", LoggingLevel.DEBUG);
+
+        server.notifications().log(LoggingLevel.INFO, "svc", Map.of("m", "hi"));
+        assertThat(logMessages(testConn)).hasSize(1);
+        assertThat(logMessages(warnConn)).isEmpty();
+
+        server.notifications().error("svc", Map.of("m", "bad"));
+        assertThat(logMessages(testConn)).hasSize(2);
+        assertThat(logMessages(warnConn))
+                .singleElement()
+                .satisfies(e ->
+                        assertThat(e.data()).contains("\"level\":\"error\"").contains("\"logger\":\"svc\""));
+    }
+
+    @Test
+    void shouldNotBroadcastServerLogToInactiveSession() {
+        var idleConn = new CollectingConnection();
+        var idleSession = server.createSession("sess_idle"); // created but never activated
+        idleSession.connection(idleConn);
+        server.setLoggingLevel("sess_idle", LoggingLevel.DEBUG);
+
+        server.notifications().error("svc", "boom");
+
+        assertThat(logMessages(idleConn)).isEmpty();
+        assertThat(logMessages(testConn)).hasSize(1); // active session at default INFO, ERROR passes
+    }
+
+    @Test
+    void shouldOmitLoggerAndRetainNullDataInBroadcast() {
+        server.setLoggingLevel("sess_test", LoggingLevel.DEBUG);
+
+        server.notifications().log(LoggingLevel.NOTICE, null);
+
+        assertThat(logMessages(testConn))
+                .singleElement()
+                .satisfies(e -> assertThat(e.data())
+                        .contains("\"level\":\"notice\"")
+                        .contains("\"data\":null")
+                        .doesNotContain("\"logger\""));
+    }
+
+    @Test
+    void shouldNotBroadcastServerLogWhenLoggingCapabilityDisabled() {
+        try (var noLog = newEngine(b -> b.session(s -> s.enabled(true)))) {
+            var conn = new CollectingConnection();
+            var session = noLog.createSession("s1");
+            session.connection(conn);
+            session.activate();
+            noLog.setLoggingLevel("s1", LoggingLevel.DEBUG);
+
+            noLog.notifications().error("svc", "x");
+
+            assertThat(conn.sent.stream().filter(e -> e.data().contains("notifications/message")))
+                    .isEmpty();
+        }
+    }
+
+    private static java.util.List<SseEvent> logMessages(CollectingConnection conn) {
+        return conn.sent.stream()
+                .filter(e -> e.data().contains("notifications/message"))
+                .toList();
+    }
+
     private static class CollectingConnection implements SseConnection {
 
         final ArrayList<SseEvent> sent = new ArrayList<>();

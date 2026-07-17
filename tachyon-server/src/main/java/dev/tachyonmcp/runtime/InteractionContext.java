@@ -43,7 +43,7 @@ public interface InteractionContext {
     boolean isExtensionEnabled(String extensionId);
 
     /** Returns the notification sender bound to this interaction. */
-    Notifications notifications();
+    InternalNotifications notifications();
 
     /**
      * Sends a request to the client and returns a future that completes with the raw JSON response.

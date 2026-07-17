@@ -9,7 +9,7 @@ import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.ProtocolMappers;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
-import dev.tachyonmcp.runtime.Notifications;
+import dev.tachyonmcp.runtime.InternalNotifications;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.server.OutboundSseStream;
 import dev.tachyonmcp.server.domain.LoggingLevel;
@@ -67,7 +67,7 @@ public class NoopInteractionContext implements DispatchContext {
     }
 
     @Override
-    public Notifications notifications() {
+    public InternalNotifications notifications() {
         throw new UnsupportedOperationException("No interaction context available");
     }
 

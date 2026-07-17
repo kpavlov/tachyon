@@ -1,7 +1,11 @@
 ---
-name: tachyon-testing
-description: Apply project specific rules when designing and writing tests
+name: tachyon-development
+description: Apply project specific rules when designing, writing code and tests
 ---
+
+# Prime directives
+
+- Use acceptance-test-driven development (ATDD). Prefer testing e2e with unit tests for edge conditions. Start e2e tests before prod code.
 
 # Test Rules 🧪
 

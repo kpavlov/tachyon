@@ -8,8 +8,9 @@ import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.Protocols;
+import dev.tachyonmcp.runtime.AbstractNotifications;
 import dev.tachyonmcp.runtime.ChannelContext;
-import dev.tachyonmcp.runtime.Notifications;
+import dev.tachyonmcp.runtime.InternalNotifications;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.OutboundSseStream;
@@ -29,7 +30,7 @@ public class DefaultDispatchContext implements DispatchContext {
 
     private final ChannelContext channel;
     private final ServerEngine server;
-    private final Notifications notifications = new NotificationsImpl();
+    private final InternalNotifications notifications = new NotificationsImpl();
     private volatile @Nullable OutboundSseStream outboundStream;
 
     public DefaultDispatchContext(ChannelContext channel, ServerEngine server) {
@@ -130,7 +131,7 @@ public class DefaultDispatchContext implements DispatchContext {
     }
 
     @Override
-    public Notifications notifications() {
+    public InternalNotifications notifications() {
         return notifications;
     }
 
@@ -159,7 +160,7 @@ public class DefaultDispatchContext implements DispatchContext {
         return protocol().responseMapper();
     }
 
-    private class NotificationsImpl implements Notifications {
+    private class NotificationsImpl extends AbstractNotifications {
 
         @Override
         public void send(String method, Object params) {
