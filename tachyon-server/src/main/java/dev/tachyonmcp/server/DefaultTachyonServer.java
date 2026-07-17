@@ -140,19 +140,6 @@ final class DefaultTachyonServer implements ServerEngine {
         return loggingLevels.get(sessionId);
     }
 
-    @Override
-    public void log(Session session, LoggingLevel requested, String loggerName, Object data) {
-        var configured = loggingLevels.get(session.id());
-        if (configured == null) return;
-        if (!isLevelEnabled(requested, configured)) return;
-        var params = Map.of("level", requested.getValue(), "logger", loggerName, "data", data);
-        sendNotification(session, "notifications/message", params);
-    }
-
-    private static boolean isLevelEnabled(LoggingLevel requested, LoggingLevel configured) {
-        return requested.ordinal() >= configured.ordinal();
-    }
-
     /**
      * Resolves the server capabilities advertised by the configured features and registered handlers.
      *
@@ -322,7 +309,9 @@ final class DefaultTachyonServer implements ServerEngine {
         resourceRegistry.registerHandlers(methodHandlers);
         taskRegistry.registerHandlers(methodHandlers);
         promptRegistry.registerHandlers(methodHandlers);
-        LoggingHandlers.register(methodHandlers);
+        if (config.capabilities().logging()) {
+            LoggingHandlers.register(methodHandlers);
+        }
         CompletionHandlers.register(methodHandlers);
     }
 

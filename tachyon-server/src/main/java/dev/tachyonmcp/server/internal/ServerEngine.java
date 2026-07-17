@@ -55,9 +55,6 @@ public interface ServerEngine extends TachyonServer {
     @Nullable
     LoggingLevel getLoggingLevel(String sessionId);
 
-    /** Emits a log notification for the given session if the requested level meets the configured threshold. */
-    void log(Session session, LoggingLevel requested, String logger, Object data);
-
     /** Resolves effective capabilities based on configuration and registered features. */
     ServerCapabilities resolveCapabilities();
 

@@ -29,6 +29,7 @@ public class DefaultDispatchContext implements DispatchContext {
 
     private final ChannelContext channel;
     private final ServerEngine server;
+    private final Notifications notifications = new NotificationsImpl();
     private volatile @Nullable OutboundSseStream outboundStream;
 
     public DefaultDispatchContext(ChannelContext channel, ServerEngine server) {
@@ -130,7 +131,7 @@ public class DefaultDispatchContext implements DispatchContext {
 
     @Override
     public Notifications notifications() {
-        return new NotificationsImpl();
+        return notifications;
     }
 
     @Override
@@ -203,18 +204,11 @@ public class DefaultDispatchContext implements DispatchContext {
         }
 
         @Override
-        public void info(String logger, Object data) {
-            send("notifications/message", Map.of("level", "info", "logger", logger, "data", data));
-        }
-
-        @Override
-        public void warning(String logger, Object data) {
-            send("notifications/message", Map.of("level", "warning", "logger", logger, "data", data));
-        }
-
-        @Override
-        public void error(String logger, Object data) {
-            send("notifications/message", Map.of("level", "error", "logger", logger, "data", data));
+        public boolean shouldEmit(LoggingLevel level) {
+            if (!server.config().capabilities().logging()) return false;
+            var configuredLevel = getLoggingLevel();
+            var threshold = configuredLevel != null ? configuredLevel : LoggingLevel.INFO;
+            return level.ordinal() >= threshold.ordinal();
         }
     }
 }

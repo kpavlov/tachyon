@@ -18,6 +18,7 @@ import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.FeatureConfig;
 import dev.tachyonmcp.server.config.Mode;
 import dev.tachyonmcp.server.domain.InvalidArgumentException;
+import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.domain.TaskResult;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.features.AbstractRegistry;
@@ -446,11 +447,8 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
         }
 
         private void sendLoggingIfEnabled(DispatchContext context, String toolName, String status) {
-            var session = context.session();
-            if (session == null) return;
-            var level = context.getLoggingLevel();
-            if (level == null) return;
-            context.engine().log(session, level, "tachyon.tools", Map.of("tool", toolName, "status", status));
+            context.notifications()
+                    .log(LoggingLevel.DEBUG, "tachyon.tools", Map.of("tool", toolName, "status", status));
         }
     }
 }

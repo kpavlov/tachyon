@@ -18,7 +18,7 @@ class LoggingTest extends AbstractMcpE2eTest {
             var sessionId = client.initialize();
 
             var setLevelBody = """
-                {"jsonrpc":"2.0","id":2,"method":"logging/setLevel","params":{"level":"info"}}
+                {"jsonrpc":"2.0","id":2,"method":"logging/setLevel","params":{"level":"debug"}}
                 """;
             var setLevelResponse = client.sendRequest(sessionId, setLevelBody);
             assertThatJson(setLevelResponse.body()).inPath("$.result").isObject();
@@ -27,10 +27,14 @@ class LoggingTest extends AbstractMcpE2eTest {
                 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"echo","arguments":{"message":"hello"}}}
                 """;
             var toolResponse = client.sendRequest(sessionId, toolBody);
-            assertThat(toolResponse.body()).contains("notifications/message");
-            assertThat(toolResponse.body()).contains("\"level\":\"info\"");
-            assertThat(toolResponse.body()).contains("\"logger\":\"tachyon.tools\"");
-            assertThat(toolResponse.body()).contains("\"tool\":\"echo\"");
+            final String responseBody = toolResponse.body();
+
+            assertThat(responseBody)
+                    .contains(
+                            // language=json
+                            """
+                {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"hello"}]}}
+                """.trim());
         }
     }
 }

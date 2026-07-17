@@ -15,7 +15,8 @@ class ToolNotificationsTest extends AbstractMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServer(it -> it.tool(EchoToolHandler.create()).tool(notifyingTool()));
+        startServer(it ->
+                it.capabilities(c -> c.logging()).tool(EchoToolHandler.create()).tool(notifyingTool()));
     }
 
     @Test

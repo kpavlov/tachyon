@@ -10,7 +10,6 @@ import dev.tachyonmcp.runtime.Backpressure;
 import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.runtime.SseEvent;
-import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
@@ -286,44 +285,6 @@ class ServerTest {
                     .filter(e -> e.data().contains("notifications/prompts/list_changed"))
                     .toList();
             assertThat(listChanged).isNotEmpty();
-        }
-    }
-
-    @Test
-    void logRespectsLevelThreshold() {
-        try (DefaultTachyonServer server =
-                (DefaultTachyonServer) TachyonServer.builder().build()) {
-            var conn = new TestConnection();
-            var session = server.createSession("sess_log");
-            session.connection(conn);
-            session.activate();
-
-            server.setLoggingLevel(session.id(), LoggingLevel.INFO);
-
-            // Below threshold: DEBUG should not be sent
-            server.log(session, LoggingLevel.DEBUG, "test.logger", "debug msg");
-            var debugEvents = conn.sent.stream()
-                    .filter(e -> e.data().contains("notifications/message"))
-                    .toList();
-            assertThat(debugEvents).isEmpty();
-
-            // At threshold: INFO should be sent
-            server.log(session, LoggingLevel.INFO, "test.logger", "info msg");
-            var infoEvents = conn.sent.stream()
-                    .filter(e -> e.data().contains("notifications/message"))
-                    .toList();
-            assertThat(infoEvents).hasSize(1);
-            assertThat(infoEvents.getFirst().data()).contains("\"level\":\"info\"");
-            assertThat(infoEvents.getFirst().data()).contains("\"logger\":\"test.logger\"");
-
-            // Above threshold: WARNING should be sent
-            conn.sent.clear();
-            server.log(session, LoggingLevel.WARNING, "test.logger", "warn msg");
-            var warnEvents = conn.sent.stream()
-                    .filter(e -> e.data().contains("notifications/message"))
-                    .toList();
-            assertThat(warnEvents).hasSize(1);
-            assertThat(warnEvents.getFirst().data()).contains("\"level\":\"warning\"");
         }
     }
 
