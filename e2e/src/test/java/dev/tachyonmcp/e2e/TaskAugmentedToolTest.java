@@ -15,6 +15,7 @@ import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.Test;
 
 class TaskAugmentedToolTest extends AbstractMcpE2eTest {
@@ -51,10 +52,22 @@ class TaskAugmentedToolTest extends AbstractMcpE2eTest {
 
             var response = client.sendRpc("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sleep","arguments":{},"task":{}}}
-                """);
+            """);
             var taskId = extractTaskId(response);
 
-            client.awaitTaskStatus(taskId, "completed");
+            var completedTask = client.awaitTaskStatus(taskId, "completed");
+            // language=JSON
+            var expectedTask = """
+                    {
+                      "jsonrpc": "2.0",
+                      "id": "tasks-get",
+                      "result": {
+                        "taskId": "%s",
+                        "status": "completed"
+                      }
+                    }
+                    """.formatted(taskId);
+            assertThatJson(completedTask).when(Option.IGNORING_EXTRA_FIELDS).isEqualTo(expectedTask);
 
             var resultJson = client.sendRpc("""
                 {"jsonrpc":"2.0","id":4,"method":"tasks/result","params":{"taskId":"%s"}}
@@ -139,7 +152,19 @@ class TaskAugmentedToolTest extends AbstractMcpE2eTest {
 
             server.tasks().get(taskId).fail(TaskResult.failed("boom \"quoted\""));
 
-            client.awaitTaskStatus(taskId, "failed");
+            var failedTask = client.awaitTaskStatus(taskId, "failed");
+            // language=JSON
+            var expectedTask = """
+                    {
+                      "jsonrpc": "2.0",
+                      "id": "tasks-get",
+                      "result": {
+                        "taskId": "%s",
+                        "status": "failed"
+                      }
+                    }
+                    """.formatted(taskId);
+            assertThatJson(failedTask).when(Option.IGNORING_EXTRA_FIELDS).isEqualTo(expectedTask);
 
             var resultJson = client.sendRpc("""
                 {"jsonrpc":"2.0","id":4,"method":"tasks/result","params":{"taskId":"%s"}}

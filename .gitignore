@@ -84,6 +84,7 @@ Temporary Items
 .claude/
 !.claude/skills
 .cursor/
+.codex/
 .gemini/
 .junie/
 .vscode/

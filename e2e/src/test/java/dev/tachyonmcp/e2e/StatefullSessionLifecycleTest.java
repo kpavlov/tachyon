@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.e2e;
 
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.runtime.Session;
@@ -11,7 +12,29 @@ import dev.tachyonmcp.runtime.SessionState;
 import java.net.http.HttpResponse;
 import org.junit.jupiter.api.Test;
 
-class SessionLifecycleTest extends AbstractMcpE2eTest {
+class StatefullSessionLifecycleTest extends AbstractMcpE2eTest {
+
+    @Test
+    void statefulLifecycleIssuesAndReusesSessionId() throws Exception {
+        try (var client = createTestClient()) {
+            // MCP Streamable HTTP: reuse the issued session ID on every subsequent request.
+            var sessionId = client.initialize();
+
+            var response = client.sendRpc("""
+                    {"jsonrpc":"2.0","id":2,"method":"ping"}
+                    """);
+
+            assertThat(sessionId).isNotBlank();
+            assertThat(engine().getSession(sessionId))
+                    .isPresent()
+                    .map(Session::state)
+                    .hasValue(SessionState.ACTIVE);
+            // language=JSON
+            assertThatJson(response).isEqualTo("""
+                    {"jsonrpc":"2.0","id":2,"result":{}}
+                    """);
+        }
+    }
 
     @Test
     void disconnectOneClientDoesNotAffectOther() throws Exception {
