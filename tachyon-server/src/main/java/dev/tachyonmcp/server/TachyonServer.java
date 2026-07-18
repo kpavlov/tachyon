@@ -4,10 +4,8 @@
 
 package dev.tachyonmcp.server;
 
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.Notifications;
 import dev.tachyonmcp.server.config.ServerConfig;
-import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptHandler;
@@ -17,11 +15,10 @@ import dev.tachyonmcp.server.features.resources.ResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceRegistry;
 import dev.tachyonmcp.server.features.tasks.TaskRegistry;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolFn;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRegistry;
-import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.List;
-import java.util.function.BiFunction;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -86,7 +83,7 @@ public interface TachyonServer extends AutoCloseable {
      * @param outputSchemaJson  the JSON schema for tool outputs
      * @param fn                the function that handles tool invocations
      * @deprecated Use {@link #tools()} and
-     *             {@link ToolRegistry#register(String, String, String, String, BiFunction)}.
+     *             {@link ToolRegistry#register(String, String, String, String, ToolFn)}.
      */
     @Deprecated(since = "1.0.0-beta.10")
     default void registerTool(
@@ -94,7 +91,7 @@ public interface TachyonServer extends AutoCloseable {
             @Nullable String description,
             @Nullable String inputSchemaJson,
             @Nullable String outputSchemaJson,
-            BiFunction<InteractionContext, Args, ToolResult> fn) {
+            ToolFn fn) {
         tools().register(name, description, inputSchemaJson, outputSchemaJson, fn);
     }
 

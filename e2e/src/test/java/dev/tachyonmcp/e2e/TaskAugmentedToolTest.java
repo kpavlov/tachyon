@@ -18,7 +18,6 @@ import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
-import org.junitpioneer.jupiter.DisabledUntil;
 
 class TaskAugmentedToolTest extends AbstractMcpE2eTest {
 
@@ -47,7 +46,6 @@ class TaskAugmentedToolTest extends AbstractMcpE2eTest {
     }
 
     @Test
-    @DisabledUntil(date = "2026-07-18", reason = "fixme")
     void taskAugmentedSyncToolTaskCompletesAfterToolFinishes() throws Exception {
         startServer(it -> it.tool(new SleepingSyncTool(500)));
         try (var client = createTestClient()) {
@@ -70,8 +68,22 @@ class TaskAugmentedToolTest extends AbstractMcpE2eTest {
             var resultJson = rpc(client.httpClient(), port, sessionId, """
                 {"jsonrpc":"2.0","id":4,"method":"tasks/result","params":{"taskId":"%s"}}
                 """.formatted(taskId));
-            assertThatJson(resultJson).inPath("$.result.result").isObject();
-            assertThatJson(resultJson).inPath("$.result.result.content[0].text").isEqualTo("done");
+            // language=JSON
+            var expected = """
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 4,
+                      "result": {
+                        "content": [
+                          {"type": "text", "text": "done"}
+                        ],
+                        "_meta": {
+                          "io.modelcontextprotocol/related-task": {"taskId": "%s"}
+                        }
+                      }
+                    }
+                    """.formatted(taskId);
+            assertThatJson(resultJson).isEqualTo(expected);
         }
     }
 
@@ -117,22 +129,24 @@ class TaskAugmentedToolTest extends AbstractMcpE2eTest {
     }
 
     @Test
-    @DisabledUntil(date = "2026-07-18", reason = "fixme")
     void taskResultSurfacesErrorMessageWithSpecialChars() throws Exception {
-        var handler = ToolHandler.of(b -> b.name("thrower").taskSupport(TaskSupport.OPTIONAL), (context, args) -> {
-            throw new RuntimeException("boom \"quoted\"");
+        // Blocks the tool indefinitely so the manual fail() below — not the tool itself —
+        // deterministically decides the outcome; released only after that outcome is asserted.
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var handler = ToolHandler.of(b -> b.name("sleep").taskSupport(TaskSupport.OPTIONAL), (context, args) -> {
+            release.await();
+            return ToolResult.text("done");
         });
-
         startServer(it -> it.tool(handler));
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
 
             var response = rpc(client.httpClient(), port, sessionId, """
-                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"thrower","arguments":{},"task":{}}}
+                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sleep","arguments":{},"task":{}}}
                 """);
             var taskId = extractTaskId(response);
 
-            server.tasks().get(taskId).fail(TaskResult.failed("xxx"));
+            server.tasks().get(taskId).fail(TaskResult.failed("boom \"quoted\""));
 
             await().atMost(Duration.ofSeconds(5))
                     .pollInterval(Duration.ofMillis(100))
@@ -146,7 +160,25 @@ class TaskAugmentedToolTest extends AbstractMcpE2eTest {
             var resultJson = rpc(client.httpClient(), port, sessionId, """
                 {"jsonrpc":"2.0","id":4,"method":"tasks/result","params":{"taskId":"%s"}}
                 """.formatted(taskId));
-            assertThatJson(resultJson).inPath("$.result.result.error").isStringEqualTo("Internal server error");
+            // language=JSON
+            var expected = """
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 4,
+                      "result": {
+                        "content": [
+                          {"type": "text", "text": "boom \\"quoted\\""}
+                        ],
+                        "isError": true,
+                        "_meta": {
+                          "io.modelcontextprotocol/related-task": {"taskId": "%s"}
+                        }
+                      }
+                    }
+                    """.formatted(taskId);
+            assertThatJson(resultJson).isEqualTo(expected);
+
+            release.countDown();
         }
     }
 
