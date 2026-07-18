@@ -10,6 +10,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -19,13 +20,13 @@ import org.junit.jupiter.api.Test;
  * aggregator, where its {@code FullHttpRequest} match never fired and validation was silently
  * skipped.
  */
-class AcceptHeaderValidationTest extends AbstractMcpE2eTest {
+class AcceptHeaderValidationTest extends AbstractStatelessMcpE2eTest {
 
     // language=JSON
     private static final String INIT_BODY =
             "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},\"clientInfo\":{\"name\":\"t\",\"version\":\"1\"}}}";
 
-    private HttpResponse<String> post(String accept) throws Exception {
+    private HttpResponse<String> post(@Nullable String accept) throws Exception {
         var builder = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + port + "/mcp"))
                 .header("Content-Type", "application/json")
@@ -40,7 +41,7 @@ class AcceptHeaderValidationTest extends AbstractMcpE2eTest {
                 .uri(URI.create("http://localhost:" + port + "/mcp"))
                 .header("MCP-Protocol-Version", "2025-11-25")
                 .GET();
-        if (accept != null) builder.header("Accept", accept);
+        builder.header("Accept", accept);
         return HttpClient.newHttpClient().send(builder.build(), HttpResponse.BodyHandlers.ofString());
     }
 

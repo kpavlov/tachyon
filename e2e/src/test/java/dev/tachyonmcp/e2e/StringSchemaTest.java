@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-class StringSchemaTest extends AbstractMcpE2eTest {
+class StringSchemaTest extends AbstractStatelessMcpE2eTest {
 
     private static final String INPUT_SCHEMA_JSON =
             "{\"type\":\"object\",\"properties\":{\"x\":{\"type\":\"string\"}},\"required\":[\"x\"]}";
@@ -31,8 +31,8 @@ class StringSchemaTest extends AbstractMcpE2eTest {
                 (ctx, args) -> ToolResult.text("ok"))));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
                 """);
 
@@ -62,8 +62,8 @@ class StringSchemaTest extends AbstractMcpE2eTest {
         });
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var r1 = client.post(sessionId, """
+            client.initialize();
+            var r1 = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
                 """);
 
@@ -87,8 +87,8 @@ class StringSchemaTest extends AbstractMcpE2eTest {
                 it.tool("call-test", "Call test", INPUT_SCHEMA_JSON, null, (ctx, args) -> ToolResult.text("called")));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"call-test","arguments":{"x":"hello"}}}
                 """);
 

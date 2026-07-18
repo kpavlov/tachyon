@@ -36,7 +36,7 @@ import tools.jackson.databind.node.JsonNodeFactory;
  */
 @Isolated
 @Execution(ExecutionMode.SAME_THREAD) // to fix shouldNotifyTaskStatusOnCreate flakiness
-class TasksExtensionTest extends AbstractMcpE2eTest {
+class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
 
     private static final String TASKS_EXTENSION_ID = "io.modelcontextprotocol/tasks";
 

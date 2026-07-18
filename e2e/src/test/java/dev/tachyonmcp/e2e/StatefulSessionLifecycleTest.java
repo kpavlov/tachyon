@@ -12,7 +12,7 @@ import dev.tachyonmcp.runtime.SessionState;
 import java.net.http.HttpResponse;
 import org.junit.jupiter.api.Test;
 
-class StatefullSessionLifecycleTest extends AbstractMcpE2eTest {
+class StatefulSessionLifecycleTest extends AbstractStatefulMcpE2eTest {
 
     @Test
     void statefulLifecycleIssuesAndReusesSessionId() throws Exception {
@@ -38,8 +38,6 @@ class StatefullSessionLifecycleTest extends AbstractMcpE2eTest {
 
     @Test
     void disconnectOneClientDoesNotAffectOther() throws Exception {
-        var pingBody = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}";
-
         try (var clientA = createTestClient();
                 var clientB = createTestClient()) {
             var sessionA = clientA.initialize();
@@ -54,7 +52,7 @@ class StatefullSessionLifecycleTest extends AbstractMcpE2eTest {
                     .map(Session::state)
                     .hasValue(SessionState.ACTIVE);
 
-            var response = clientB.post(sessionB, pingBody);
+            var response = clientB.ping(sessionB, 1);
             assertThat(response.statusCode()).isEqualTo(200);
             assertThat(response.body()).contains("result");
         }
@@ -80,30 +78,22 @@ class StatefullSessionLifecycleTest extends AbstractMcpE2eTest {
     @Test
     void deleteReturns400WithoutSessionHeader() throws Exception {
         try (var client = createTestClient()) {
-            // DELETE without MCP-Session-Id header
-            var response = client.post(null, "");
-            // The init handler forwards to operation handler which rejects
-            // Actually we need a raw DELETE without session header
-            var deleteResponse = client.delete("");
-            // Empty session id triggers "Missing MCP-Session-Id" from operation handler
-            assertThat(deleteResponse.statusCode()).isIn(400, 404);
+            // MCP Streamable HTTP: DELETE without MCP-Session-Id header returns 400.
+            var deleteResponse = client.deleteWithoutSession();
+            assertThat(deleteResponse.statusCode()).isEqualTo(400);
         }
     }
 
     @Test
-    void sessionRemovedAfterDeleteCannotBeUsed() throws Exception {
+    void postWithDeletedSessionReturns404() throws Exception {
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
 
-            // Delete the session
             client.delete(sessionId);
 
-            // Attempt to use the deleted session
-            var pingBody = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}";
-            var response = client.post(sessionId, pingBody);
-            // Should fail - session no longer exists
-            assertThat(response.statusCode()).isEqualTo(200);
-            assertThat(response.body()).contains("error");
+            // MCP Streamable HTTP: a terminated session ID returns HTTP 404.
+            var response = client.ping(sessionId, 1);
+            assertThat(response.statusCode()).isEqualTo(404);
         }
     }
 
@@ -124,8 +114,7 @@ class StatefullSessionLifecycleTest extends AbstractMcpE2eTest {
                     .hasValue(SessionState.ACTIVE);
 
             // session2 should still work
-            var pingBody = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}";
-            var response = client.post(session2, pingBody);
+            var response = client.ping(session2, 1);
             assertThat(response.statusCode()).isEqualTo(200);
             assertThat(response.body()).contains("result");
         }
@@ -134,10 +123,27 @@ class StatefullSessionLifecycleTest extends AbstractMcpE2eTest {
     @Test
     void postWithoutSessionReturnsError() throws Exception {
         try (var client = createTestClient()) {
+            // MCP Streamable HTTP: a non-initialize POST without MCP-Session-Id returns a raw
+            // HTTP 400, not a JSON-RPC error envelope.
             var body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}";
             var response = client.post(body);
-            assertThat(response.statusCode()).isEqualTo(200);
+            assertThat(response.statusCode()).isEqualTo(400);
             assertThat(response.body()).contains("Missing MCP-Session-Id");
+            assertThat(response.body()).doesNotContain("jsonrpc");
+        }
+    }
+
+    @Test
+    void notificationWithoutSessionReturnsError() throws Exception {
+        try (var client = createTestClient()) {
+            client.initialize();
+
+            var response = client.post("""
+                    {"jsonrpc":"2.0","method":"notifications/initialized"}
+                    """);
+
+            assertThat(response.statusCode()).isEqualTo(400);
+            assertThat(response.body()).isEqualTo("Missing MCP-Session-Id header");
         }
     }
 }

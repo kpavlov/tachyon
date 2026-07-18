@@ -12,7 +12,12 @@ import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import java.nio.charset.StandardCharsets;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -99,7 +104,7 @@ class McpInitializationHandlerTest {
     }
 
     @Test
-    void postNotificationReturns202() {
+    void postNotificationWithoutSessionReturnsSessionError() {
         var body = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}";
         var request = new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.POST, "/mcp", Unpooled.copiedBuffer(body, StandardCharsets.UTF_8));
@@ -109,7 +114,8 @@ class McpInitializationHandlerTest {
         channel.writeInbound(request);
 
         var response = readResponse();
-        assertThat(response.status()).isEqualTo(HttpResponseStatus.ACCEPTED);
+        assertThat(response.status()).isEqualTo(HttpResponseStatus.BAD_REQUEST);
+        assertThat(response.content().toString(StandardCharsets.UTF_8)).isEqualTo("Missing MCP-Session-Id header");
         response.release();
     }
 
@@ -124,10 +130,10 @@ class McpInitializationHandlerTest {
         channel.writeInbound(request);
 
         var response = readResponse();
-        assertThat(response.status()).isEqualTo(HttpResponseStatus.OK);
+        assertThat(response.status()).isEqualTo(HttpResponseStatus.BAD_REQUEST);
         var content = response.content().toString(StandardCharsets.UTF_8);
-        assertThat(content).contains("error");
         assertThat(content).contains("Missing MCP-Session-Id");
+        assertThat(content).doesNotContain("jsonrpc");
         response.release();
     }
 

@@ -446,6 +446,9 @@ public class DefaultResourceRegistry implements ResourceRegistry {
                 var extId = e.extensionId();
                 return extId == null || context.isExtensionEnabled(extId);
             });
+            if (!paginated.cursorValid()) {
+                return JsonRpcErrors.invalidParams("Invalid cursor");
+            }
 
             return context.responseMapper().listResourcesResult(paginated.items(), paginated.nextCursor());
         }
@@ -460,6 +463,9 @@ public class DefaultResourceRegistry implements ResourceRegistry {
 
         @Override
         public Object handle(DispatchContext context, Object params) {
+            if (ListRequests.parseCursor(params) != null) {
+                return JsonRpcErrors.invalidParams("Invalid cursor");
+            }
             var templates = registry.templates.values().stream()
                     .map(ResourceTemplateEntry::descriptor)
                     .toList();

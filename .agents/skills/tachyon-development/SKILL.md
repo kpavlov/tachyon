@@ -1,8 +1,6 @@
 ---
 name: tachyon-development
-description: Apply project specific rules when designing, writing code and tests
-metadata:
-    author: Konstantin Pavlov
+description: Apply Tachyon MCP project rules when designing, implementing, reviewing, or testing Java and Kotlin server code, MCP protocol behavior, E2E fixtures, concurrency, JSON, and schemas.
 ---
 
 # Prime directives
@@ -17,10 +15,20 @@ metadata:
 ## E2E
 
 - Java MCP SDK client. Raw HTTP only for edge cases.
-- `JsonUnit` + AssertJ for JSON. Assert full JSON via `assertThatJson(actual).isEqualTo(expected)`, dynamic values (IDs etc.) interpolated via `.formatted(...)` — not `inPath(...)` fragments, which can hide a wrong response shape behind passing-looking checks. `whenIgnoringPaths`, `IGNORING_ARRAY_ORDER`, `IGNORING_EXTRA_FIELDS`, `TREATING_NULL_AS_ABSENT` for partial tolerance.
-- `// language=JSON` before JSON strings.
+- `JsonUnit` + AssertJ for JSON. Assert full JSON via `assertThatJson(actual).isEqualTo(expected)`, dynamic values (IDs etc.) via `.formatted(...)` — not `inPath(...)` fragments, which can hide a wrong response shape behind passing checks. `whenIgnoringPaths`, `IGNORING_ARRAY_ORDER`, `IGNORING_EXTRA_FIELDS`, `TREATING_NULL_AS_ABSENT` for partial tolerance.
+- `// language=json` before JSON strings.
 - Awaitility for polling.
 - Kotlin: use kotest-assertions
+
+### Shared E2E servers
+
+- Treat shared stateful/stateless singleton servers as production-parity SUTs, not just suite optimizations.
+- Keep shared server config/registries immutable after startup. Tests that register or replace features use an isolated `startServer(...)`.
+- Make session mode explicit and invariant: stateful fixtures enable sessions; stateless disable them. Don't switch a test's mode just to drop session-ID plumbing.
+- JUnit parallel execution is background pressure, not concurrency proof. Add dedicated E2E scenarios coordinating simultaneous clients with barriers/latches, virtual threads, bounded timeouts; never fixed sleeps.
+- For stateful concurrency, verify: unique active sessions, parallel requests across sessions, parallel requests within one session, response isolation even with repeated JSON-RPC IDs across sessions, and terminating one session without affecting others.
+- For stateless concurrency, verify: parallel initialization returns no session ID, concurrent requests never cross responses or client data.
+- Test observable server behavior through real clients. Don't add tests for test helpers.
 
 ## JSON Schemas
 

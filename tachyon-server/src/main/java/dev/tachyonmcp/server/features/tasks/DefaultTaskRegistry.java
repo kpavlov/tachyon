@@ -262,6 +262,9 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
             var limit = ListRequests.parseLimit(params);
             var cursor = ListRequests.parseCursor(params);
             var paginated = registry.listItems(limit, cursor);
+            if (!paginated.cursorValid()) {
+                return JsonRpcErrors.invalidParams("Invalid cursor");
+            }
             return context.responseMapper().listTasksResult(paginated.items(), paginated.nextCursor());
         }
     }

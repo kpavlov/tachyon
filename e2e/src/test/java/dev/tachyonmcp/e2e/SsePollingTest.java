@@ -20,7 +20,7 @@ import org.junit.jupiter.api.TestInstance;
  * <p>Pattern: POST to send requests, GET to receive SSE events.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class SsePollingTest extends AbstractMcpE2eTest {
+class SsePollingTest extends AbstractStatefulMcpE2eTest {
 
     @Test
     void getSseStreamIncludesRetryField() throws Exception {

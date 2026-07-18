@@ -10,7 +10,7 @@ import dev.tachyonmcp.server.domain.Icon;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class ServerInfoTest extends AbstractMcpE2eTest {
+class ServerInfoTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void allCapabilitiesEnabled() throws Exception {

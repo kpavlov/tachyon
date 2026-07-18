@@ -18,7 +18,7 @@ import dev.tachyonmcp.server.features.tools.ToolResult;
 import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.Test;
 
-class TaskAugmentedToolTest extends AbstractMcpE2eTest {
+class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {

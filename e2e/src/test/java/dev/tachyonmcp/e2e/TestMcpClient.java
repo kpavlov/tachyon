@@ -111,6 +111,11 @@ public final class TestMcpClient implements Closeable {
                 builder.POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofString());
     }
 
+    public HttpResponse<String> ping(@Nullable String sessionId, Object id) throws Exception {
+        final var idString = MAPPER.writeValueAsString(id);
+        return post(sessionId, "{\"jsonrpc\":\"2.0\",\"id\":%s,\"method\":\"ping\"}".formatted(idString));
+    }
+
     public HttpResponse<Stream<String>> sendStreamingRequest(@Nullable String sessionId, @Language("json") String body)
             throws Exception {
         var builder = baseRequest();
@@ -119,7 +124,9 @@ public final class TestMcpClient implements Closeable {
                 builder.POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofLines());
     }
 
-    /** {@link #sendRpc(String, String)} against the session set by {@link #initialize()}. */
+    /**
+     * {@link #sendRpc(String, String)} against the session set by {@link #initialize()}.
+     */
     public String sendRpc(@Language("json") String body) throws Exception {
         return sendRpc(sessionId, body);
     }
@@ -139,7 +146,9 @@ public final class TestMcpClient implements Closeable {
         return response.body();
     }
 
-    /** Sends {@code tasks/get} for {@code taskId} and returns the JSON-RPC response body. */
+    /**
+     * Sends {@code tasks/get} for {@code taskId} and returns the JSON-RPC response body.
+     */
     public String getTask(@Nullable String sessionId, String taskId) throws Exception {
         // language=JSON
         var body = """
@@ -190,6 +199,10 @@ public final class TestMcpClient implements Closeable {
         return httpClient.send(
                 baseRequest().header("MCP-Session-Id", sessionId).DELETE().build(),
                 HttpResponse.BodyHandlers.ofString());
+    }
+
+    public HttpResponse<String> deleteWithoutSession() throws Exception {
+        return httpClient.send(baseRequest().DELETE().build(), HttpResponse.BodyHandlers.ofString());
     }
 
     private HttpRequest.Builder baseRequest() {

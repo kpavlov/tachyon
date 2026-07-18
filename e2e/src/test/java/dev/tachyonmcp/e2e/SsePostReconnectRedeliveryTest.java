@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
  * exercising the reconnect-before-append race. Without live re-delivery on resume, the reconnecting
  * client would never receive the response.
  */
-class SsePostReconnectRedeliveryTest extends AbstractMcpE2eTest {
+class SsePostReconnectRedeliveryTest extends AbstractStatefulMcpE2eTest {
 
     private static final Pattern PRIMING_ID = Pattern.compile("id: (\\d+#\\d+)", Pattern.MULTILINE);
 

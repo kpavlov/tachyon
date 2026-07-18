@@ -8,7 +8,7 @@ import dev.tachyonmcp.server.domain.TextResourceContents;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 
-class ResourceTemplateTest extends AbstractMcpE2eTest {
+class ResourceTemplateTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void shouldReadResourceFromSingleParamTemplate() throws Exception {
@@ -23,8 +23,8 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
                                 rawUri, "text/plain", "item=" + params.get("id").scalarValue()));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://items/42"}}
                 """);
 
@@ -77,9 +77,9 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
                                 "user=" + params.get("userId").scalarValue()));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
+            client.initialize();
 
-            var r1 = client.post(sessionId, """
+            var r1 = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://orders/99"}}
                 """);
             assertThatJson(r1.body())
@@ -98,7 +98,7 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
                 }
                 """);
 
-            var r2 = client.post(sessionId, """
+            var r2 = client.post("""
                 {"jsonrpc":"2.0","id":3,"method":"resources/read","params":{"uri":"resource://users/alice"}}
                 """);
             assertThatJson(r2.body())
@@ -117,7 +117,7 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
                 }
                 """);
 
-            var r3 = client.post(sessionId, """
+            var r3 = client.post("""
                 {"jsonrpc":"2.0","id":4,"method":"resources/read","params":{"uri":"resource://items/7"}}
                 """);
             assertThatJson(r3.body())
@@ -154,8 +154,8 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
                                         + params.get("postId").scalarValue()));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"users://alice/posts/42"}}
                 """);
 
@@ -190,8 +190,8 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
                                 rawUri, "text/plain", "item=" + params.get("id").scalarValue()));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"resources/templates/list"}
                 """);
 
@@ -216,6 +216,33 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
     }
 
     @Test
+    void shouldRejectInvalidTemplateCursor() throws Exception {
+        startEmptyServer();
+        server.resources()
+                .registerTemplate(
+                        builder -> builder.name("item").uriTemplate("resource://items/{id}"),
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "item"));
+
+        try (var client = createTestClient()) {
+            client.initialize();
+            var response = client.post("""
+                {"jsonrpc":"2.0","id":2,"method":"resources/templates/list","params":{"cursor":"invalid"}}
+                """);
+
+            assertThatJson(response.body()).isEqualTo("""
+                {
+                  "jsonrpc": "2.0",
+                  "id": 2,
+                  "error": {
+                    "code": -32602,
+                    "message": "Invalid cursor"
+                  }
+                }
+                """);
+        }
+    }
+
+    @Test
     void shouldReturnErrorWhenUriMatchesNoRegisteredTemplate() throws Exception {
         startEmptyServer();
         server.resources()
@@ -228,8 +255,8 @@ class ResourceTemplateTest extends AbstractMcpE2eTest {
                                 rawUri, "text/plain", "item=" + params.get("id").scalarValue()));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://orders/99"}}
                 """);
 

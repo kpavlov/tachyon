@@ -38,11 +38,18 @@ public interface PaginatedResult<R> {
         return nextCursor() != null;
     }
 
+    /**
+     * Returns {@code true} if the requested cursor was valid: either absent (first page) or found
+     * among the underlying items. {@code false} means a non-null cursor matched nothing, and per
+     * the MCP pagination spec the caller SHOULD raise -32602 (Invalid params).
+     */
+    boolean cursorValid();
+
     static <R> DefaultPaginatedResult.Builder<R> builder() {
         return DefaultPaginatedResult.builder();
     }
 
-    static <R> PaginatedResult<R> of(List<R> items, @Nullable String nextCursor) {
-        return DefaultPaginatedResult.of(items, nextCursor);
+    static <R> PaginatedResult<R> of(List<R> items, @Nullable String nextCursor, boolean cursorValid) {
+        return DefaultPaginatedResult.of(items, nextCursor, cursorValid);
     }
 }

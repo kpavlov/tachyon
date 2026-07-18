@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
  * response there — the client fully receives both. When the client resumes the GET stream with
  * its last GET-stream event ID, the replay must not re-deliver the POST-stream messages.
  */
-class SseReplayPerStreamTest extends AbstractMcpE2eTest {
+class SseReplayPerStreamTest extends AbstractStatefulMcpE2eTest {
 
     private static final Pattern EVENT_ID = Pattern.compile("^id: (\\d+)", Pattern.MULTILINE);
 

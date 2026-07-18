@@ -11,8 +11,16 @@ import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.timeout.IdleStateEvent;
+import io.netty.util.ReferenceCountUtil;
 import java.nio.charset.StandardCharsets;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -69,6 +77,23 @@ class McpOperationHandlerTest {
 
         var response = readResponse();
         assertThat(response.status()).isEqualTo(HttpResponseStatus.ACCEPTED);
+        response.release();
+    }
+
+    @Test
+    void postWithUnknownSessionReturns404() {
+        var body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}";
+        var request = new DefaultFullHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.POST, "/mcp", Unpooled.copiedBuffer(body, StandardCharsets.UTF_8));
+        request.headers()
+                .set(HttpHeaderNames.ORIGIN, "http://localhost:3000")
+                .set("MCP-Session-Id", "sess-missing")
+                .set(HttpHeaderNames.ACCEPT, "application/json, text/event-stream");
+        channel.writeInbound(request);
+
+        var response = readResponse();
+        assertThat(response.status()).isEqualTo(HttpResponseStatus.NOT_FOUND);
+        assertThat(response.content().toString(StandardCharsets.UTF_8)).contains("Unknown session");
         response.release();
     }
 
@@ -163,7 +188,21 @@ class McpOperationHandlerTest {
     }
 
     @Test
+    void deleteWithUnknownSessionReturnsNotFound() {
+        var request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/mcp");
+        request.headers().set(HttpHeaderNames.ORIGIN, "http://localhost:3000").set("MCP-Session-Id", "ghost");
+        channel.writeInbound(request);
+
+        var response = readResponse();
+        assertThat(response.status()).isEqualTo(HttpResponseStatus.NOT_FOUND);
+        assertThat(response.content().toString(StandardCharsets.UTF_8)).contains("Unknown session");
+        response.release();
+    }
+
+    @Test
     void postMalformedJsonReturnsParseError() {
+        server.createSession("sess-parse").activate();
+
         var body = "not json";
         var request = new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.POST, "/mcp", Unpooled.copiedBuffer(body, StandardCharsets.UTF_8));
@@ -209,7 +248,7 @@ class McpOperationHandlerTest {
     private void drainOutbound() {
         Object msg;
         while ((msg = channel.readOutbound()) != null) {
-            io.netty.util.ReferenceCountUtil.release(msg);
+            ReferenceCountUtil.release(msg);
         }
     }
 

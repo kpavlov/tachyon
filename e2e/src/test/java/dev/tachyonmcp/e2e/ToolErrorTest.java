@@ -10,7 +10,7 @@ import dev.tachyonmcp.server.features.tools.ToolHandler;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-class ToolErrorTest extends AbstractMcpE2eTest {
+class ToolErrorTest extends AbstractStatelessMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
@@ -20,11 +20,11 @@ class ToolErrorTest extends AbstractMcpE2eTest {
     @Test
     void toolThrowsAfterSseUpgradeStillClosesStream() throws Exception {
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
+            client.initialize();
             var body = """
                 {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"boom","arguments":{}}}
                 """;
-            var response = client.post(sessionId, body);
+            var response = client.post(body);
 
             assertThat(response.statusCode()).isEqualTo(200);
             assertThat(response.body()).contains("notifications/before-boom");

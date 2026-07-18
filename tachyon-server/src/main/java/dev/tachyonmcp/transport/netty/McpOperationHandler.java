@@ -4,8 +4,14 @@
 
 package dev.tachyonmcp.transport.netty;
 
-import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.*;
-import static dev.tachyonmcp.transport.netty.McpResponseWriter.*;
+import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.captureInitRequest;
+import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendAccepted;
+import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendPlainTextAndClose;
+import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendResponseAndClose;
+import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.setSession;
+import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendInternalError;
+import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendJsonResponse;
+import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendOptions;
 
 import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.runtime.ChannelContext;
@@ -99,9 +105,12 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
     private void handlePost(ChannelHandlerContext ctx, FullHttpRequest req, @Nullable String origin) {
         var sessionId = req.headers().get(McpHeaderNames.MCP_SESSION_ID);
         if (sessionId != null) {
-            server.getSession(sessionId).ifPresent(s -> {
-                setSession(ctx, s);
-            });
+            var session = server.getSession(sessionId);
+            if (session.isEmpty()) {
+                sendPlainTextAndClose(ctx, HttpResponseStatus.NOT_FOUND, "Unknown session", origin);
+                return;
+            }
+            setSession(ctx, session.get());
         } else {
             // A session-less POST may be an initialize (e.g. on a keep-alive channel already in
             // the operation phase); preserve the request for a custom SessionIdGenerator.
@@ -146,6 +155,12 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             ctx.executor()
                     .execute(() -> sendResponseAndClose(
                             ctx, HttpResponseStatus.BAD_REQUEST, "application/json", dispatcher.parseError(), origin));
+            return;
+        }
+        if (!server.isStateless() && sessionId == null && !(message instanceof JsonRpcMessage.Request<?>)) {
+            ctx.executor()
+                    .execute(() -> sendPlainTextAndClose(
+                            ctx, HttpResponseStatus.BAD_REQUEST, "Missing MCP-Session-Id header", origin));
             return;
         }
         switch (message) {
@@ -243,6 +258,13 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                 postStream.close();
                 sendInternalError(ctx, requestId, origin);
             }
+            return;
+        }
+        if (result instanceof McpDispatcher.DispatchResult.Status(int code, String message)) {
+            // Transport-level signal from the dispatcher — spec ties this condition to a raw HTTP
+            // status, not a JSON-RPC error envelope.
+            postStream.close();
+            sendPlainTextAndClose(ctx, HttpResponseStatus.valueOf(code), message, origin);
             return;
         }
         if (postStream.started()) {
@@ -344,7 +366,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         }
         var sessionOpt = server.getSession(sessionId);
         if (sessionOpt.isEmpty()) {
-            sendPlainTextAndClose(ctx, HttpResponseStatus.BAD_REQUEST, "Unknown session", origin);
+            sendPlainTextAndClose(ctx, HttpResponseStatus.NOT_FOUND, "Unknown session", origin);
             return;
         }
         sseManager.openStream(ctx, sessionOpt.get(), req.headers().get(McpHeaderNames.LAST_EVENT_ID), origin);
@@ -354,6 +376,10 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         var sessionId = req.headers().get(McpHeaderNames.MCP_SESSION_ID);
         if (sessionId == null || sessionId.isEmpty()) {
             sendPlainTextAndClose(ctx, HttpResponseStatus.BAD_REQUEST, "Missing MCP-Session-Id header", origin);
+            return;
+        }
+        if (server.getSession(sessionId).isEmpty()) {
+            sendPlainTextAndClose(ctx, HttpResponseStatus.NOT_FOUND, "Unknown session", origin);
             return;
         }
         // Fire ShutdownStarted before sending the response so the session is removed

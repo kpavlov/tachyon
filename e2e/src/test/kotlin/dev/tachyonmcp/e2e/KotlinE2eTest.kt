@@ -12,7 +12,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Test
 
-internal class KotlinE2eTest : AbstractMcpE2eTest() {
+internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
     @Serializable
     data class GreetArgs(
         val name: String,
@@ -49,10 +49,9 @@ internal class KotlinE2eTest : AbstractMcpE2eTest() {
         }
 
         val client = createTestClient()
-        val sessionId = client.initialize()
+        client.initialize()
         val response =
             client.post(
-                sessionId,
                 """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"greet","arguments":{"name":"World"}}}
                 """.trimIndent(),
@@ -86,10 +85,9 @@ internal class KotlinE2eTest : AbstractMcpE2eTest() {
         }
 
         val client = createTestClient()
-        val sessionId = client.initialize()
+        client.initialize()
         val response =
             client.post(
-                sessionId,
                 """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"greet","arguments":{"name":"World"}}}
                 """.trimIndent(),
@@ -129,10 +127,9 @@ internal class KotlinE2eTest : AbstractMcpE2eTest() {
         }
 
         val client = createTestClient()
-        val sessionId = client.initialize()
+        client.initialize()
         val response =
             client.post(
-                sessionId,
                 // language=json
                 """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"strict-greet","arguments":{"name":"World","unknownKey":"extra"}}}

@@ -54,6 +54,6 @@ public final class Pagination {
                 nextCursor = key.apply(lastItem);
             }
         }
-        return PaginatedResult.of(result, nextCursor);
+        return PaginatedResult.of(result, nextCursor, pastCursor);
     }
 }

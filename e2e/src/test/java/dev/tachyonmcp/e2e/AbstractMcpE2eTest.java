@@ -21,7 +21,15 @@ abstract class AbstractMcpE2eTest {
     protected TachyonServer server;
     protected NettyServer nettyServer;
     protected int port;
-    private boolean usingCustomServer;
+    protected boolean usingCustomServer;
+
+    enum SessionMode {
+        STATEFUL,
+        STATELESS
+    }
+
+    /** Each subclass declares its session policy once. */
+    protected abstract SessionMode sessionMode();
 
     /** Exposes the internal engine SPI for tests that need server introspection. */
     protected ServerEngine engine() {
@@ -35,13 +43,7 @@ abstract class AbstractMcpE2eTest {
 
     @AfterAll
     void tearDown() {
-        if (usingCustomServer) {
-            nettyServer.close();
-            server.close();
-            nettyServer = null;
-            server = null;
-            usingCustomServer = false;
-        }
+        closeCustomServerIfRunning();
     }
 
     protected TestMcpClient createTestClient() {
@@ -50,29 +52,41 @@ abstract class AbstractMcpE2eTest {
 
     // region: ---- McpServer lifecycle management (call from subclass setup / teardown) ----
 
+    /** Starts the session-mode-appropriate shared singleton server. */
     protected void startDefaultServer() {
         var h = SharedE2eServer.ensureStarted();
-        this.server = (ServerEngine) h;
+        this.server = h;
         this.port = h.port();
         this.usingCustomServer = false;
     }
 
     protected void startEmptyServer() {
-        startServer((b) -> {});
+        startServer(b -> {});
     }
 
-    protected void startServer(Consumer<ServerBuilder> configurer) {
-        if (usingCustomServer) {
-            nettyServer.close();
-            server.close();
-        }
-        ServerBuilder serverBuilder = TachyonServer.builder();
-        serverBuilder.session(s -> s.enabled(true));
-        configurer.accept(serverBuilder);
-        this.server = serverBuilder.build();
+    /**
+     * Builds and starts a fresh server. The test consumer is applied FIRST, then the parent's
+     * {@link #sessionMode()} is enforced — tests cannot accidentally override session policy.
+     */
+    protected final void startServer(Consumer<ServerBuilder> configurer) {
+        closeCustomServerIfRunning();
+        var builder = TachyonServer.builder();
+        configurer.accept(builder);
+        builder.session(s -> s.enabled(sessionMode() == SessionMode.STATEFUL));
+        this.server = builder.build();
         this.nettyServer = new NettyServer(0, (ServerEngine) server);
         this.port = nettyServer.port();
         this.usingCustomServer = true;
+    }
+
+    private void closeCustomServerIfRunning() {
+        if (usingCustomServer) {
+            nettyServer.close();
+            server.close();
+            nettyServer = null;
+            server = null;
+            usingCustomServer = false;
+        }
     }
 
     protected void stopServer() {

@@ -143,7 +143,7 @@ class ToolRegistryTest {
         var result = callHandler.handle(DefaultDispatchContext.noop(), params);
         assertThat(result).isInstanceOf(JsonRpcError.class);
         var err = (JsonRpcError) result;
-        assertThat(err.code()).isEqualTo(JsonRpcErrors.METHOD_NOT_FOUND);
+        assertThat(err.code()).isEqualTo(JsonRpcErrors.INVALID_PARAMS);
     }
 
     @Test

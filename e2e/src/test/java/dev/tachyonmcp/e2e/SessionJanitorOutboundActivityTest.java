@@ -57,8 +57,8 @@ class SessionJanitorOutboundActivityTest {
     @Test
     void silentListeningStreamStaysAlive() throws Exception {
         var sessionId = initializeAndActivate(port);
-        var sseSocket = openRawSse(port, sessionId);
-        try (var reader = drainInBackground(sseSocket, 6000)) {
+        try (var sseSocket = openRawSse(port, sessionId);
+                var reader = drainInBackground(sseSocket, 6000)) {
             // Well past the 2s TTL: the session must survive on heartbeats alone.
             await().atMost(ofSeconds(6)).pollInterval(ofMillis(200)).untilAsserted(() -> {
                 var session = ((ServerEngine) serverHandle).getSession(sessionId);
@@ -68,13 +68,11 @@ class SessionJanitorOutboundActivityTest {
 
             try (var client = new TestMcpClient(port)) {
                 var ping = client.post(sessionId, """
-                        {"jsonrpc":"2.0","id":1,"method":"ping"}
-                        """);
+                    {"jsonrpc":"2.0","id":1,"method":"ping"}
+                    """);
                 assertThat(ping.statusCode()).isEqualTo(200);
                 assertThat(ping.body()).contains("result");
             }
-        } finally {
-            sseSocket.close();
         }
     }
 
@@ -87,14 +85,12 @@ class SessionJanitorOutboundActivityTest {
                 .start()) {
             var noHbPort = noHbServer.port();
             var sessionId = initializeAndActivate(noHbPort);
-            var sseSocket = openRawSse(noHbPort, sessionId);
-            try (var reader = drainInBackground(sseSocket, 6000)) {
+            try (var sseSocket = openRawSse(noHbPort, sessionId);
+                    var reader = drainInBackground(sseSocket, 6000)) {
                 await().atMost(ofSeconds(6))
                         .pollInterval(ofMillis(200))
                         .untilAsserted(() -> assertThat(((ServerEngine) noHbServer).getSession(sessionId))
                                 .isEmpty());
-            } finally {
-                sseSocket.close();
             }
         }
     }

@@ -93,7 +93,8 @@ public class McpDispatcher {
         return new DefaultDispatchContext(channel, server);
     }
 
-    public sealed interface DispatchResult permits DispatchResult.Accepted, DispatchResult.Response {
+    public sealed interface DispatchResult
+            permits DispatchResult.Accepted, DispatchResult.Response, DispatchResult.Status {
 
         record Accepted() implements DispatchResult {
             static final Accepted INSTANCE = new Accepted();
@@ -104,6 +105,14 @@ public class McpDispatcher {
                 return new String(responseBody, StandardCharsets.UTF_8);
             }
         }
+
+        /**
+         * Transport-level signal: the transport must reply with a raw HTTP {@code code}/{@code message},
+         * not a JSON-RPC error envelope. Used for conditions the MCP Streamable HTTP spec ties to a
+         * specific HTTP status rather than a JSON-RPC error code — e.g. a missing {@code MCP-Session-Id}
+         * header (400) or an unknown/expired session (404).
+         */
+        record Status(int code, String message) implements DispatchResult {}
     }
 
     @Nullable
@@ -156,14 +165,12 @@ public class McpDispatcher {
         }
 
         if (sessionId == null) {
-            var err = JsonRpcErrors.invalidRequest("Missing MCP-Session-Id header");
-            return CompletableFuture.completedFuture(errorResult(id, err.code(), err.message()));
+            return CompletableFuture.completedFuture(new DispatchResult.Status(400, "Missing MCP-Session-Id header"));
         }
 
         var sessionOpt = server.getSession(sessionId);
         if (sessionOpt.isEmpty()) {
-            var err = JsonRpcErrors.invalidRequest("Unknown session");
-            return CompletableFuture.completedFuture(errorResult(id, err.code(), err.message()));
+            return CompletableFuture.completedFuture(new DispatchResult.Status(404, "Unknown session"));
         }
         var session = sessionOpt.get();
         session.touch();

@@ -14,7 +14,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 
 @TestInstance(Lifecycle.PER_CLASS)
-class SseRetryTest extends AbstractMcpE2eTest {
+class SseRetryTest extends AbstractStatefulMcpE2eTest {
 
     @Test
     void sseResponseIncludesRetryField() throws Exception {

@@ -82,14 +82,17 @@ class CustomSessionIdGeneratorTest {
     }
 
     @Test
-    void shouldFallBackToDefaultGeneratorWhenCustomGeneratorThrows() throws Exception {
-        var failingHandle = TachyonServer.builder()
-                .session(s -> s.enabled(true).sessionIdGenerator(request -> {
-                    throw new IllegalStateException("boom");
-                }))
-                .network(n -> n.host("localhost").port(0))
-                .start();
-        try (var client = HttpClient.newHttpClient()) {
+    void shouldReturnInternalErrorWhenCustomGeneratorThrows() throws Exception {
+        // SessionIdGenerator has no fallback by design (see its javadoc): a thrown exception
+        // aborts session creation with an internal-error response, it does not fall back to
+        // the default generator.
+        try (var failingHandle = TachyonServer.builder()
+                        .session(s -> s.enabled(true).sessionIdGenerator(request -> {
+                            throw new IllegalStateException("boom");
+                        }))
+                        .network(n -> n.host("localhost").port(0))
+                        .start();
+                var client = HttpClient.newHttpClient()) {
             var init = post(
                     client,
                     failingHandle.port(),
@@ -107,10 +110,8 @@ class CustomSessionIdGeneratorTest {
                     .isEqualTo(
                             // language=JSON
                             """
-                 {"jsonrpc":"2.0","id":33,"error":{"code":-32603,"message":"Internal error"}}
-                """);
-        } finally {
-            failingHandle.close();
+                         {"jsonrpc":"2.0","id":33,"error":{"code":-32603,"message":"Internal error"}}
+                        """);
         }
     }
 
