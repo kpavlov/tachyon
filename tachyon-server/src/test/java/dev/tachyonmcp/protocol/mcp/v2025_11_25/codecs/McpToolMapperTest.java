@@ -6,7 +6,16 @@ package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.domain.*;
+import dev.tachyonmcp.server.domain.AudioContent;
+import dev.tachyonmcp.server.domain.BlobResourceContents;
+import dev.tachyonmcp.server.domain.ContentBlock;
+import dev.tachyonmcp.server.domain.EmbeddedResource;
+import dev.tachyonmcp.server.domain.Icon;
+import dev.tachyonmcp.server.domain.ImageContent;
+import dev.tachyonmcp.server.domain.ResourceLink;
+import dev.tachyonmcp.server.domain.TextContent;
+import dev.tachyonmcp.server.domain.TextResourceContents;
+import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.List;
 import java.util.Map;

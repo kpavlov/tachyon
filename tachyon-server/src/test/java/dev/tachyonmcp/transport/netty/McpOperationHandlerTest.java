@@ -11,8 +11,16 @@ import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.timeout.IdleStateEvent;
+import io.netty.util.ReferenceCountUtil;
 import java.nio.charset.StandardCharsets;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -227,7 +235,7 @@ class McpOperationHandlerTest {
     private void drainOutbound() {
         Object msg;
         while ((msg = channel.readOutbound()) != null) {
-            io.netty.util.ReferenceCountUtil.release(msg);
+            ReferenceCountUtil.release(msg);
         }
     }
 

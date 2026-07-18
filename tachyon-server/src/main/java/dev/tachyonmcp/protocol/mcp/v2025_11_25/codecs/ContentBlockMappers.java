@@ -4,7 +4,13 @@
 
 package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
-import dev.tachyonmcp.server.domain.*;
+import dev.tachyonmcp.server.domain.AudioContent;
+import dev.tachyonmcp.server.domain.BlobResourceContents;
+import dev.tachyonmcp.server.domain.EmbeddedResource;
+import dev.tachyonmcp.server.domain.ImageContent;
+import dev.tachyonmcp.server.domain.ResourceLink;
+import dev.tachyonmcp.server.domain.TextContent;
+import dev.tachyonmcp.server.domain.TextResourceContents;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
