@@ -187,6 +187,18 @@ class McpOperationHandlerTest {
     }
 
     @Test
+    void deleteWithUnknownSessionReturnsNotFound() {
+        var request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/mcp");
+        request.headers().set(HttpHeaderNames.ORIGIN, "http://localhost:3000").set("MCP-Session-Id", "ghost");
+        channel.writeInbound(request);
+
+        var response = readResponse();
+        assertThat(response.status()).isEqualTo(HttpResponseStatus.NOT_FOUND);
+        assertThat(response.content().toString(StandardCharsets.UTF_8)).contains("Unknown session");
+        response.release();
+    }
+
+    @Test
     void postMalformedJsonReturnsParseError() {
         server.createSession("sess-parse").activate();
 

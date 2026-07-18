@@ -129,10 +129,10 @@ class McpInitializationHandlerTest {
         channel.writeInbound(request);
 
         var response = readResponse();
-        assertThat(response.status()).isEqualTo(HttpResponseStatus.OK);
+        assertThat(response.status()).isEqualTo(HttpResponseStatus.BAD_REQUEST);
         var content = response.content().toString(StandardCharsets.UTF_8);
-        assertThat(content).contains("error");
         assertThat(content).contains("Missing MCP-Session-Id");
+        assertThat(content).doesNotContain("jsonrpc");
         response.release();
     }
 

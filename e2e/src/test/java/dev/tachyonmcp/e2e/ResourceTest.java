@@ -278,6 +278,34 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
     }
 
     @Test
+    void shouldNotNotifyAfterUnsubscribe() throws Exception {
+        startServer(it -> it.resource(
+                        ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", ""))
+                .tool(notifyUpdatedTool()));
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+
+            var subResponse = client.post(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"resources/subscribe","params":{"uri":"resource://doc"}}
+                """);
+            assertThat(subResponse.statusCode()).isEqualTo(200);
+
+            var unsubResponse = client.post(sessionId, """
+                {"jsonrpc":"2.0","id":3,"method":"resources/unsubscribe","params":{"uri":"resource://doc"}}
+                """);
+            assertThat(unsubResponse.statusCode()).isEqualTo(200);
+
+            var response = client.post(sessionId, """
+                {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"notify-update","arguments":{}}}
+                """);
+
+            assertThat(response.body()).doesNotContain("notifications/resources/updated");
+        }
+    }
+
+    @Test
     void shouldNotifyListChangedOnUnregisterByUri() throws Exception {
         startServer(builder -> {
             builder.capabilities(c -> c.resourcesListChanged(true)).tool(unregisterByUriTool());

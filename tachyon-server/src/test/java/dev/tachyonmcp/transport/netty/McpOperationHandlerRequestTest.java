@@ -235,9 +235,10 @@ class McpOperationHandlerRequestTest {
         }
     }
 
-    // GET with a session id that does not exist is rejected with 400.
+    // GET with a session id that does not exist is rejected with 404 (MCP spec: unknown/terminated
+    // session -> 404 Not Found).
     @Test
-    void getUnknownSessionReturnsBadRequest() {
+    void getUnknownSessionReturnsNotFound() {
         var request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/mcp");
         request.headers()
                 .set(HttpHeaderNames.ORIGIN, "http://localhost:3000")
@@ -246,7 +247,7 @@ class McpOperationHandlerRequestTest {
         channel.writeInbound(request);
 
         var response = readResponse();
-        assertThat(response.status()).isEqualTo(HttpResponseStatus.BAD_REQUEST);
+        assertThat(response.status()).isEqualTo(HttpResponseStatus.NOT_FOUND);
         assertThat(response.content().toString(StandardCharsets.UTF_8)).contains("Unknown session");
         response.release();
     }

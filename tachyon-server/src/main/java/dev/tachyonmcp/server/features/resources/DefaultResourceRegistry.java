@@ -446,6 +446,9 @@ public class DefaultResourceRegistry implements ResourceRegistry {
                 var extId = e.extensionId();
                 return extId == null || context.isExtensionEnabled(extId);
             });
+            if (!paginated.cursorValid()) {
+                return JsonRpcErrors.invalidParams("Invalid cursor");
+            }
 
             return context.responseMapper().listResourcesResult(paginated.items(), paginated.nextCursor());
         }

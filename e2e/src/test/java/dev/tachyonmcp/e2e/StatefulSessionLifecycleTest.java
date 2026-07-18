@@ -78,13 +78,9 @@ class StatefulSessionLifecycleTest extends AbstractStatefulMcpE2eTest {
     @Test
     void deleteReturns400WithoutSessionHeader() throws Exception {
         try (var client = createTestClient()) {
-            // DELETE without MCP-Session-Id header
-            var response = client.post(null, "");
-            // The init handler forwards to operation handler which rejects
-            // Actually we need a raw DELETE without session header
+            // MCP Streamable HTTP: DELETE without MCP-Session-Id header returns 400.
             var deleteResponse = client.delete("");
-            // Empty session id triggers "Missing MCP-Session-Id" from operation handler
-            assertThat(deleteResponse.statusCode()).isIn(400, 404);
+            assertThat(deleteResponse.statusCode()).isEqualTo(400);
         }
     }
 
@@ -127,10 +123,13 @@ class StatefulSessionLifecycleTest extends AbstractStatefulMcpE2eTest {
     @Test
     void postWithoutSessionReturnsError() throws Exception {
         try (var client = createTestClient()) {
+            // MCP Streamable HTTP: a non-initialize POST without MCP-Session-Id returns a raw
+            // HTTP 400, not a JSON-RPC error envelope.
             var body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}";
             var response = client.post(body);
-            assertThat(response.statusCode()).isEqualTo(200);
+            assertThat(response.statusCode()).isEqualTo(400);
             assertThat(response.body()).contains("Missing MCP-Session-Id");
+            assertThat(response.body()).doesNotContain("jsonrpc");
         }
     }
 }

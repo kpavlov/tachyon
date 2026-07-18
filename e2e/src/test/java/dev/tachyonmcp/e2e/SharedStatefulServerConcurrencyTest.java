@@ -54,9 +54,13 @@ class SharedStatefulServerConcurrencyTest extends AbstractStatefulMcpE2eTest {
                 executor.submit(() -> {
                     try (var client = createTestClient()) {
                         var sid = client.initialize();
-                        var response = client.ping(sid, clientId);
-                        if (!response.body().contains("\"result\"")) {
-                            errors.add("client %d: unexpected response: %s".formatted(clientId, response.body()));
+                        var uniqueMessage = "client-" + clientId;
+                        var response = client.post(sid, """
+                                {"jsonrpc":"2.0","id":%d,"method":"tools/call","params":{"name":"echo","arguments":{"message":"%s"}}}
+                                """.formatted(clientId, uniqueMessage));
+                        if (!response.body().contains(uniqueMessage)) {
+                            errors.add("client %d: expected echo of '%s' but got: %s"
+                                    .formatted(clientId, uniqueMessage, response.body()));
                         }
                     } catch (Exception e) {
                         errors.add("client %d: %s".formatted(clientId, e.getMessage()));
@@ -111,19 +115,22 @@ class SharedStatefulServerConcurrencyTest extends AbstractStatefulMcpE2eTest {
             }
         }
         var latch = new CountDownLatch(sessionCount);
-        var results = new ConcurrentLinkedQueue<String>();
+        var results = new ConcurrentHashMap<Integer, String>();
+        var errors = new ConcurrentLinkedQueue<String>();
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             for (int i = 0; i < sessionCount; i++) {
                 var idx = i;
                 var sid = sessions[i];
                 executor.submit(() -> {
                     try (var client = createTestClient()) {
+                        // Every session sends the same JSON-RPC id (1) — a genuine cross-session
+                        // mixup must be caught by the echoed message, not by the (identical) id.
                         var response = client.post(sid, """
-                            {"jsonrpc":"2.0","id":1,"method":"ping"}
-                            """);
-                        results.add("session-%d:%s".formatted(idx, response.body()));
+                            {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"echo","arguments":{"message":"session-msg-%d"}}}
+                            """.formatted(idx));
+                        results.put(idx, response.body());
                     } catch (Exception e) {
-                        results.add("session-%d:error:%s".formatted(idx, e.getMessage()));
+                        errors.add("session-%d: %s".formatted(idx, e.getMessage()));
                     } finally {
                         latch.countDown();
                     }
@@ -131,7 +138,9 @@ class SharedStatefulServerConcurrencyTest extends AbstractStatefulMcpE2eTest {
             }
             assertThat(latch.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
         }
-        assertThat(results).allMatch(r -> r.contains("\"result\""));
+        assertThat(errors).isEmpty();
+        assertThat(results).hasSize(sessionCount);
+        results.forEach((idx, body) -> assertThat(body).contains("session-msg-" + idx));
     }
 
     @Test

@@ -6,6 +6,7 @@ package dev.tachyonmcp.transport.netty;
 
 import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.captureInitRequest;
 import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendAccepted;
+import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendPlainTextAndClose;
 import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendResponseAndClose;
 import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendJsonResponse;
 import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendOptions;
@@ -173,6 +174,10 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                     }
                     if (result instanceof McpDispatcher.DispatchResult.Accepted) {
                         sendAccepted(ctx, origin);
+                        return;
+                    }
+                    if (result instanceof McpDispatcher.DispatchResult.Status(int code, String statusMessage)) {
+                        sendPlainTextAndClose(ctx, HttpResponseStatus.valueOf(code), statusMessage, origin);
                         return;
                     }
                     var response = (McpDispatcher.DispatchResult.Response) result;

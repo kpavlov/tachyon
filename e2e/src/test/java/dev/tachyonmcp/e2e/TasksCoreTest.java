@@ -117,7 +117,7 @@ class TasksCoreTest extends AbstractStatefulMcpE2eTest {
             var getJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"nonexistent-id"}}
                     """);
-            assertThatJson(getJson).inPath("$.error.code").isNumber();
+            assertThatJson(getJson).inPath("$.error.code").isEqualTo(-32602);
         }
     }
 

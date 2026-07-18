@@ -168,7 +168,7 @@ class ProgressKeepAliveTest {
                             .anyMatch(l -> l.startsWith(":")));
             consume.get(15, TimeUnit.SECONDS);
             var body = String.join("\n", lines);
-            assertThat(body).contains("notifications/progress");
+            assertProgressTokenCorrelates(body);
             assertThat(body).contains("done");
         }
     }
@@ -208,9 +208,23 @@ class ProgressKeepAliveTest {
             assertThat(response.statusCode()).isEqualTo(200);
             assertThat(response.headers().firstValue("content-type").orElse("")).startsWith("text/event-stream");
             var body = response.body();
-            assertThat(body).contains("notifications/progress");
+            assertProgressTokenCorrelates(body);
             assertThat(body).contains("done");
         }
+    }
+
+    /**
+     * Spec (basic/utilities/progress): a progress notification MUST only reference a token that was
+     * provided in the originating request's {@code _meta.progressToken} (here, {@code "tok-1"} from
+     * {@link #TOOL_CALL}). Asserting mere presence of "notifications/progress" would also pass for a
+     * notification carrying the wrong or no token.
+     */
+    private static void assertProgressTokenCorrelates(String body) {
+        var progressLine = body.lines()
+                .filter(l -> l.contains("notifications/progress"))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("no notifications/progress line in: " + body));
+        assertThat(progressLine).contains("\"progressToken\":\"tok-1\"");
     }
 
     /**

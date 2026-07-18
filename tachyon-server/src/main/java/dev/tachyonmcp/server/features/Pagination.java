@@ -33,11 +33,13 @@ public final class Pagination {
             limit = 1;
         }
         var result = new ArrayList<T>();
+        boolean cursorFound = cursor == null;
         boolean pastCursor = cursor == null;
         for (var item : sorted) {
             if (!pastCursor) {
                 if (key.apply(item).equals(cursor)) {
                     pastCursor = true;
+                    cursorFound = true;
                 }
                 continue;
             }
@@ -54,6 +56,6 @@ public final class Pagination {
                 nextCursor = key.apply(lastItem);
             }
         }
-        return PaginatedResult.of(result, nextCursor);
+        return PaginatedResult.of(result, nextCursor, cursorFound);
     }
 }

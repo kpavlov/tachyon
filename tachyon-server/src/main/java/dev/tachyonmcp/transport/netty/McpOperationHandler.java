@@ -254,6 +254,13 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             }
             return;
         }
+        if (result instanceof McpDispatcher.DispatchResult.Status(int code, String message)) {
+            // Transport-level signal from the dispatcher — spec ties this condition to a raw HTTP
+            // status, not a JSON-RPC error envelope.
+            postStream.close();
+            sendPlainTextAndClose(ctx, HttpResponseStatus.valueOf(code), message, origin);
+            return;
+        }
         if (postStream.started()) {
             if (m.slowRequestLogging() && elapsedMs > m.slowRequestThreshold().toMillis()) {
                 logger.warn("Slow POST-SSE response: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);
@@ -353,7 +360,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         }
         var sessionOpt = server.getSession(sessionId);
         if (sessionOpt.isEmpty()) {
-            sendPlainTextAndClose(ctx, HttpResponseStatus.BAD_REQUEST, "Unknown session", origin);
+            sendPlainTextAndClose(ctx, HttpResponseStatus.NOT_FOUND, "Unknown session", origin);
             return;
         }
         sseManager.openStream(ctx, sessionOpt.get(), req.headers().get(McpHeaderNames.LAST_EVENT_ID), origin);
@@ -363,6 +370,10 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         var sessionId = req.headers().get(McpHeaderNames.MCP_SESSION_ID);
         if (sessionId == null || sessionId.isEmpty()) {
             sendPlainTextAndClose(ctx, HttpResponseStatus.BAD_REQUEST, "Missing MCP-Session-Id header", origin);
+            return;
+        }
+        if (server.getSession(sessionId).isEmpty()) {
+            sendPlainTextAndClose(ctx, HttpResponseStatus.NOT_FOUND, "Unknown session", origin);
             return;
         }
         // Fire ShutdownStarted before sending the response so the session is removed

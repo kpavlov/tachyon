@@ -222,6 +222,9 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                 var extId = d.extensionId();
                 return extId == null || context.isExtensionEnabled(extId);
             });
+            if (!paginated.cursorValid()) {
+                return invalidParams("Invalid cursor");
+            }
             return context.responseMapper().listToolsResult(paginated.items(), paginated.nextCursor());
         }
     }
@@ -250,9 +253,11 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
             if (parsed.name().length() > 64) return invalidRequest("Tool name exceeds maximum length (SEP-986)");
 
             var handler = registry.get(parsed.name());
-            if (handler == null) return methodNotFound("Method not found");
+            if (handler == null) return invalidParams("Unknown tool: " + parsed.name());
             var extId = handler.descriptor().extensionId();
-            if (extId != null && !context.isExtensionEnabled(extId)) return methodNotFound("Method not found");
+            if (extId != null && !context.isExtensionEnabled(extId)) {
+                return methodNotFound("Method not found: " + parsed.name());
+            }
 
             var validationError = validateInput(handler.descriptor().inputSchema(), parsed.args());
             if (validationError != null) return invalidParams(validationError);

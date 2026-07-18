@@ -48,6 +48,22 @@ class ListPaginationE2eTest extends AbstractStatelessMcpE2eTest {
     }
 
     @Test
+    void resourcesListRejectsInvalidCursor() throws Exception {
+        startServer(it ->
+                it.capabilities(c -> c.resources().resourcesPageSize(2)).resource(resource("res-a"), EMPTY_RESOURCE));
+
+        try (var client = createTestClient()) {
+            client.initialize();
+
+            var response = client.post("""
+                {"jsonrpc":"2.0","id":1,"method":"resources/list","params":{"cursor":"garbage-cursor-xyz"}}
+                """);
+            var root = MAPPER.readTree(response.body());
+            assertThat(root.at("/error/code").asInt()).isEqualTo(-32602);
+        }
+    }
+
+    @Test
     void promptsListReturnsConfiguredPageSize() throws Exception {
         startServer(it -> it.capabilities(c -> c.prompts().promptsPageSize(2))
                 .prompt(PromptDescriptor.of("p-a", null), List.of())

@@ -126,6 +126,9 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
                 var extId = descriptor.extensionId();
                 return extId == null || context.isExtensionEnabled(extId);
             });
+            if (!paginated.cursorValid()) {
+                return JsonRpcErrors.invalidParams("Invalid cursor");
+            }
 
             var descriptors = paginated.items();
             return context.responseMapper().listPromptsResult(descriptors, paginated.nextCursor());
