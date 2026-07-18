@@ -4,12 +4,8 @@
 
 package dev.tachyonmcp.server.features.tools;
 
-import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.domain.Args;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletionStage;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 
@@ -30,7 +26,7 @@ public interface ToolRegistry {
      * @param handler    the function that handles tool interactions
      * @return this tool registry
      */
-    default ToolRegistry register(ToolDescriptor descriptor, BiFunction<InteractionContext, Args, ToolResult> handler) {
+    default ToolRegistry register(ToolDescriptor descriptor, ToolFn handler) {
         return register(ToolHandler.of(descriptor, handler));
     }
 
@@ -41,8 +37,7 @@ public interface ToolRegistry {
      * @param handler the function that handles tool interactions
      * @return this tool registry
      */
-    default ToolRegistry register(
-            Consumer<ToolDescriptor.Builder> descriptor, BiFunction<InteractionContext, Args, ToolResult> handler) {
+    default ToolRegistry register(Consumer<ToolDescriptor.Builder> descriptor, ToolFn handler) {
         final var builder = ToolDescriptor.builder();
         descriptor.accept(builder);
         return register(builder.build(), handler);
@@ -55,8 +50,7 @@ public interface ToolRegistry {
      * @param handler the function that handles interactions and produces a result asynchronously
      * @return this tool registry
      */
-    default ToolRegistry registerAsync(
-            ToolDescriptor descriptor, BiFunction<InteractionContext, Args, CompletionStage<ToolResult>> handler) {
+    default ToolRegistry registerAsync(ToolDescriptor descriptor, AsyncToolFn handler) {
         return register(ToolHandler.ofAsync(descriptor, handler));
     }
 
@@ -67,9 +61,7 @@ public interface ToolRegistry {
      * @param handler    processes interactions and produces the tool result
      * @return this tool registry
      */
-    default ToolRegistry registerAsync(
-            Consumer<ToolDescriptor.Builder> descriptor,
-            BiFunction<InteractionContext, Args, CompletionStage<ToolResult>> handler) {
+    default ToolRegistry registerAsync(Consumer<ToolDescriptor.Builder> descriptor, AsyncToolFn handler) {
         final var builder = ToolDescriptor.builder();
         descriptor.accept(builder);
         return registerAsync(builder.build(), handler);
@@ -90,7 +82,7 @@ public interface ToolRegistry {
             @Nullable String description,
             @Nullable String inputSchemaJson,
             @Nullable String outputSchemaJson,
-            BiFunction<InteractionContext, Args, ToolResult> fn) {
+            ToolFn fn) {
         return register(ToolHandler.of(
                 builder -> builder.name(name)
                         .description(description)

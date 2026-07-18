@@ -29,6 +29,7 @@ import dev.tachyonmcp.server.json.PayloadSerde;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -603,6 +604,24 @@ class ToolRegistryTest {
             var ctx = DefaultDispatchContext.create(Protocols.list().getFirst(), server);
             ctx.setSession(session);
             var params = Map.of("name", "sync-fail", "arguments", Map.of());
+            var result = runInVirtualThread(() -> callHandler.handle(ctx, params));
+            assertThat(result).isInstanceOf(JsonRpcError.class);
+            assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INTERNAL_ERROR);
+        }
+    }
+
+    @Test
+    void syncToolHandlerCheckedExceptionMapsToInternalError() throws Exception {
+        try (ServerEngine server = newEngine(b -> b.tool(desc -> desc.name("sync-checked-fail")
+                        .description("sync"), (ctx, args) -> {
+            throw new IOException("boom"); // no try/catch needed — ToolFn declares throws Exception
+        }))) {
+            var session = server.createSession("s-sync-checked-fail");
+            session.activate();
+            var callHandler = server.getHandler("tools/call");
+            var ctx = DefaultDispatchContext.create(Protocols.list().getFirst(), server);
+            ctx.setSession(session);
+            var params = Map.of("name", "sync-checked-fail", "arguments", Map.of());
             var result = runInVirtualThread(() -> callHandler.handle(ctx, params));
             assertThat(result).isInstanceOf(JsonRpcError.class);
             assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INTERNAL_ERROR);

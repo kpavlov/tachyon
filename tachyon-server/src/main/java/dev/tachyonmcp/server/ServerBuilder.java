@@ -4,7 +4,6 @@
 
 package dev.tachyonmcp.server;
 
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.server.config.MonitoringConfig;
 import dev.tachyonmcp.server.config.NetworkConfig;
@@ -12,7 +11,6 @@ import dev.tachyonmcp.server.config.RuntimeConfig;
 import dev.tachyonmcp.server.config.ServerConfig;
 import dev.tachyonmcp.server.config.ServerIdentity;
 import dev.tachyonmcp.server.config.SessionConfig;
-import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.features.prompts.AsyncPromptHandler;
@@ -24,9 +22,10 @@ import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
+import dev.tachyonmcp.server.features.tools.AsyncToolFn;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolFn;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
 import dev.tachyonmcp.server.json.JsonConfig;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
@@ -41,13 +40,11 @@ import io.netty.channel.ChannelPipeline;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 
@@ -196,7 +193,7 @@ public final class ServerBuilder {
      * @param handler the function that handles tool interactions
      * @return this server builder
      */
-    public ServerBuilder tool(ToolDescriptor descriptor, BiFunction<InteractionContext, Args, ToolResult> handler) {
+    public ServerBuilder tool(ToolDescriptor descriptor, ToolFn handler) {
         return tool(ToolHandler.of(descriptor, handler));
     }
 
@@ -207,8 +204,7 @@ public final class ServerBuilder {
      * @param handler    handles tool invocations
      * @return this server builder
      */
-    public ServerBuilder tool(
-            Consumer<ToolDescriptor.Builder> descriptor, BiFunction<InteractionContext, Args, ToolResult> handler) {
+    public ServerBuilder tool(Consumer<ToolDescriptor.Builder> descriptor, ToolFn handler) {
         var builder = ToolDescriptor.builder();
         descriptor.accept(builder);
         return tool(builder.build(), handler);
@@ -221,8 +217,7 @@ public final class ServerBuilder {
      * @param handler the function that handles tool interactions asynchronously
      * @return this server builder
      */
-    public ServerBuilder asyncTool(
-            ToolDescriptor descriptor, BiFunction<InteractionContext, Args, CompletionStage<ToolResult>> handler) {
+    public ServerBuilder asyncTool(ToolDescriptor descriptor, AsyncToolFn handler) {
         return tool(ToolHandler.ofAsync(descriptor, handler));
     }
 
@@ -233,9 +228,7 @@ public final class ServerBuilder {
      * @param handler    handles tool invocations asynchronously
      * @return this server builder
      */
-    public ServerBuilder asyncTool(
-            Consumer<ToolDescriptor.Builder> descriptor,
-            BiFunction<InteractionContext, Args, CompletionStage<ToolResult>> handler) {
+    public ServerBuilder asyncTool(Consumer<ToolDescriptor.Builder> descriptor, AsyncToolFn handler) {
         var builder = ToolDescriptor.builder();
         descriptor.accept(builder);
         return asyncTool(builder.build(), handler);
@@ -251,7 +244,7 @@ public final class ServerBuilder {
             @Nullable String description,
             @Nullable String inputSchemaJson,
             @Nullable String outputSchemaJson,
-            java.util.function.BiFunction<InteractionContext, Args, ToolResult> fn) {
+            ToolFn fn) {
         return tool(ToolHandler.of(
                 b -> b.name(name)
                         .description(description)
