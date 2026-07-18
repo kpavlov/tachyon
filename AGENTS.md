@@ -1,9 +1,8 @@
 # Tachyon MCP — Agent Guide
 
-Me Caveman. Talk short. Use emoji.
-
 ## Style
 
+- Me Caveman. Talk short. Use emoji.
 - Verdict first, then evidence. No preamble.
 - Claims about code carry `file:line` proof. Verify in code, never answer from memory.
 - Status tables for checklists: ✅ done / 🔴 open, one row per item, evidence column.
@@ -33,24 +32,15 @@ mvn spotless:apply  # auto-fix
 
 ## Rules
 
-- Talk concisely like smart Caveman
 - TDD + SOLID. TachyonServer is SUT in unit tests.
-- **Tests**: JUnit 6 + Kotest (Kotlin) / AssertJ (Java) + Awaitility. `@TempDir` for unit, port 0 for E2E. Prefer E2E for long scenarios. No tautologies. Many asserts per test.
+- **Tests**: JUnit 6 + Kotest (Kotlin) / AssertJ (Java) + Awaitility. `@TempDir` for unit, port 0 for E2E. Prefer E2E, esp. long scenarios; unit only when E2E can't cover, drop unit if E2E already does. No tautologies. Many asserts per test.
 - **Nullability**: JSpecify `@Nullable`/`@NonNull`. `@NullMarked` at package level.
 - **Copyright**: `Copyright (c) 2026 Konstantin Pavlov and contributors.` in file headers everywhere; don't overwrite existing attributions.
 - **No comments** unless spec needs explain.
-- Unit tests only when E2E can't. Drop unit if E2E covers.
 - `git mv` for files.
 - Use MCP tools.
-- **Format**: Spotless (Palantir). Check on `mvn verify`, fix with `mvn spotless:apply`.
-- **Registry API naming**:
-  - Build-time `ServerBuilder` methods are declarative nouns: `tool`, `resource`, `prompt`, `resourceTemplate`.
-  - Runtime feature registries use `register` / `registerAsync` and `unregister`.
-  - Optional lookup uses `Optional<Descriptor> find(String name)`. Never nullable `get`.
-  - Descriptor enumeration uses immutable, name-sorted `descriptors()` snapshots.
-  - Resource templates follow `registerTemplate`, `registerTemplateAsync`, `unregisterTemplate`, `findTemplate`, `templateDescriptors`.
-  - Keep typed registration methods on each registry. No public generic base registry.
-  - `TaskRegistry` is excluded. Tasks use runtime lifecycle methods such as `create` and `get`.
+- **Format**: Check on `make lint`, fix with `make format`.
+- **API/Registry design**: see [`docs/architecture/guidance.md`](docs/architecture/guidance.md) before adding/changing a handler SAM (sync/async shape, checked exceptions, descriptor bundling, `_meta`) or naming registry APIs (`ServerBuilder` nouns, `register`/`registerAsync`/`unregister`, `find`, `descriptors()`).
 - **Kotlin DSL** (`tachyon-server-kotlin`):
   - Each scope class gets its own `*Scope.kt` file.
   - `TachyonServerBuilder` wraps `ServerBuilder` as the DSL receiver. Scope methods on `TachyonServerBuilder` use clean names (`info`, `capabilities`, `network`, `session`) with zero Java member conflicts.
