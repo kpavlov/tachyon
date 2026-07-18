@@ -487,7 +487,7 @@ public class DefaultResourceRegistry implements ResourceRegistry {
                 if (extId != null && !context.isExtensionEnabled(extId)) {
                     return JsonRpcErrors.resourceNotFound("Resource not found");
                 }
-                return readResult(context, uri, () -> entry.handler().readAsync(context, uri, Map.of(), null));
+                return readResult(context, uri, () -> entry.handler().handleAsync(context, uri, Map.of(), null));
             }
             var match = registry.matchTemplate(uri);
             if (match == null) return JsonRpcErrors.resourceNotFound("Resource not found");
@@ -496,7 +496,7 @@ public class DefaultResourceRegistry implements ResourceRegistry {
                     uri,
                     () -> match.entry()
                             .handler()
-                            .readAsync(
+                            .handleAsync(
                                     context,
                                     uri,
                                     match.params(),

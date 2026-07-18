@@ -130,10 +130,14 @@ class TaskAugmentedToolTest extends AbstractMcpE2eTest {
 
     @Test
     void taskResultSurfacesErrorMessageWithSpecialChars() throws Exception {
-        // Sleeps long enough that the manual fail() below — not the tool itself — decides the
-        // outcome; a self-throwing handler would race its own generic "Internal server error"
-        // redaction (see DefaultToolRegistry#handleTaskError) against this test's assertion.
-        startServer(it -> it.tool(new SleepingSyncTool(2000)));
+        // Blocks the tool indefinitely so the manual fail() below — not the tool itself —
+        // deterministically decides the outcome; released only after that outcome is asserted.
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var handler = ToolHandler.of(b -> b.name("sleep").taskSupport(TaskSupport.OPTIONAL), (context, args) -> {
+            release.await();
+            return ToolResult.text("done");
+        });
+        startServer(it -> it.tool(handler));
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
 
@@ -173,6 +177,8 @@ class TaskAugmentedToolTest extends AbstractMcpE2eTest {
                     }
                     """.formatted(taskId);
             assertThatJson(resultJson).isEqualTo(expected);
+
+            release.countDown();
         }
     }
 
