@@ -16,7 +16,7 @@ description: Apply Tachyon MCP project rules when designing, implementing, revie
 
 - Java MCP SDK client. Raw HTTP only for edge cases.
 - `JsonUnit` + AssertJ for JSON. Assert full JSON via `assertThatJson(actual).isEqualTo(expected)`, dynamic values (IDs etc.) via `.formatted(...)` — not `inPath(...)` fragments, which can hide a wrong response shape behind passing checks. `whenIgnoringPaths`, `IGNORING_ARRAY_ORDER`, `IGNORING_EXTRA_FIELDS`, `TREATING_NULL_AS_ABSENT` for partial tolerance.
-- `// language=JSON` before JSON strings.
+- `// language=json` before JSON strings.
 - Awaitility for polling.
 - Kotlin: use kotest-assertions
 

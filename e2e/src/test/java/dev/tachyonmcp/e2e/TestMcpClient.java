@@ -112,12 +112,7 @@ public final class TestMcpClient implements Closeable {
     }
 
     public HttpResponse<String> ping(@Nullable String sessionId, Object id) throws Exception {
-        final String idString;
-        if (id instanceof Integer) {
-            idString = id.toString();
-        } else {
-            idString = "\"" + id + "\"";
-        }
+        final var idString = MAPPER.writeValueAsString(id);
         return post(sessionId, "{\"jsonrpc\":\"2.0\",\"id\":%s,\"method\":\"ping\"}".formatted(idString));
     }
 
@@ -204,6 +199,10 @@ public final class TestMcpClient implements Closeable {
         return httpClient.send(
                 baseRequest().header("MCP-Session-Id", sessionId).DELETE().build(),
                 HttpResponse.BodyHandlers.ofString());
+    }
+
+    public HttpResponse<String> deleteWithoutSession() throws Exception {
+        return httpClient.send(baseRequest().DELETE().build(), HttpResponse.BodyHandlers.ofString());
     }
 
     private HttpRequest.Builder baseRequest() {

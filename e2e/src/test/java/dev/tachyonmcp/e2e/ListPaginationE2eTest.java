@@ -59,7 +59,9 @@ class ListPaginationE2eTest extends AbstractStatelessMcpE2eTest {
                 {"jsonrpc":"2.0","id":1,"method":"resources/list","params":{"cursor":"garbage-cursor-xyz"}}
                 """);
             var root = MAPPER.readTree(response.body());
+            assertThat(response.statusCode()).isEqualTo(200);
             assertThat(root.at("/error/code").asInt()).isEqualTo(-32602);
+            assertThat(root.at("/error/message").asString()).isEqualTo("Invalid cursor");
         }
     }
 

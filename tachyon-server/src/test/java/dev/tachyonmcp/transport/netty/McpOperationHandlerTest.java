@@ -93,6 +93,7 @@ class McpOperationHandlerTest {
 
         var response = readResponse();
         assertThat(response.status()).isEqualTo(HttpResponseStatus.NOT_FOUND);
+        assertThat(response.content().toString(StandardCharsets.UTF_8)).contains("Unknown session");
         response.release();
     }
 

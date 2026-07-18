@@ -11,6 +11,7 @@ import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import java.net.http.HttpResponse;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -40,11 +41,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
         startServer(it -> it.tool(handler));
 
         try (var client = createTestClient()) {
-
-            client.initialize();
-            var response = client.post("""
-                {"jsonrpc":"2.0","id":2,"method":"tools/list"}
-                """);
+            var response = listTools(client);
 
             final String expected;
             if (hasSchema) {
@@ -111,10 +108,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
                 .tool(simpleToolHandler("tool-b", "Tool B")));
 
         try (var client = createTestClient()) {
-            client.initialize();
-            var response = client.post("""
-                {"jsonrpc":"2.0","id":2,"method":"tools/list"}
-                """);
+            var response = listTools(client);
 
             var mapper = new ObjectMapper();
             var root = mapper.readTree(response.body());
@@ -146,10 +140,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
         startServer(it -> it.tool(handler));
 
         try (var client = createTestClient()) {
-            client.initialize();
-            var response = client.post("""
-                {"jsonrpc":"2.0","id":2,"method":"tools/list"}
-                """);
+            var response = listTools(client);
 
             assertThatJson(response.body()).inPath("$.result.tools[0].name").isEqualTo(toolName);
             if (hasExecution) {
@@ -181,10 +172,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
         server.tools().register(ToolHandler.of("minimal-tool", (ctx, args) -> ToolResult.text("ok")));
 
         try (var client = createTestClient()) {
-            client.initialize();
-            var response = client.post("""
-                {"jsonrpc":"2.0","id":2,"method":"tools/list"}
-                """);
+            var response = listTools(client);
 
             // language=JSON
             var expected = """
@@ -233,10 +221,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
                         (ctx, args) -> ToolResult.text("ok")));
 
         try (var client = createTestClient()) {
-            client.initialize();
-            var response = client.post("""
-                {"jsonrpc":"2.0","id":2,"method":"tools/list"}
-                """);
+            var response = listTools(client);
 
             var expected = """
                 {"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"full-tool","title":"Full Tool","description":"A tool with all metadata","inputSchema":{"type":"object","properties":{"message":{"type":"string","description":"Input"}},"required":["message"]},"outputSchema":{"type":"object","properties":{"result":{"type":"string","description":"The output result"}}},"execution":{"taskSupport":"optional"},"annotations":{"readOnlyHint":true,"destructiveHint":false}}]}}
@@ -248,6 +233,13 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
     // endregion
 
     // region: Tool Handler Implementations
+
+    private static HttpResponse<String> listTools(TestMcpClient client) throws Exception {
+        client.initialize();
+        return client.post("""
+                {"jsonrpc":"2.0","id":2,"method":"tools/list"}
+                """);
+    }
 
     private static ToolHandler outputSchemaToolHandler(JsonNode outputSchemaNode) {
         return ToolHandler.of(

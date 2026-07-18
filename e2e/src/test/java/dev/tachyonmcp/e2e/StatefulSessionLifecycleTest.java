@@ -79,7 +79,7 @@ class StatefulSessionLifecycleTest extends AbstractStatefulMcpE2eTest {
     void deleteReturns400WithoutSessionHeader() throws Exception {
         try (var client = createTestClient()) {
             // MCP Streamable HTTP: DELETE without MCP-Session-Id header returns 400.
-            var deleteResponse = client.delete("");
+            var deleteResponse = client.deleteWithoutSession();
             assertThat(deleteResponse.statusCode()).isEqualTo(400);
         }
     }
