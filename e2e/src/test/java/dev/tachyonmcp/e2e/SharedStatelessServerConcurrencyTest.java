@@ -1,11 +1,13 @@
 /*
- * Copyright (c) 2026 Konstantin Pavlov.
+ * Copyright (c) 2026 Konstantin Pavlov and contributors.
  */
 
 package dev.tachyonmcp.e2e;
 
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -46,6 +48,7 @@ class SharedStatelessServerConcurrencyTest extends AbstractStatelessMcpE2eTest {
     void parallelRequestsHaveIsolatedResponses() throws Exception {
         var latch = new CountDownLatch(CLIENT_COUNT);
         var errors = new ConcurrentLinkedQueue<String>();
+        var responses = new ConcurrentHashMap<Integer, String>();
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             for (int i = 0; i < CLIENT_COUNT; i++) {
                 var clientId = i;
@@ -55,9 +58,7 @@ class SharedStatelessServerConcurrencyTest extends AbstractStatelessMcpE2eTest {
                         var response = client.sendRpc("""
                             {"jsonrpc":"2.0","id":%d,"method":"tools/list"}
                             """.formatted(clientId));
-                        if (!response.contains("\"tools\"")) {
-                            errors.add("client %d: missing tools: %s".formatted(clientId, response));
-                        }
+                        responses.put(clientId, response);
                     } catch (Exception e) {
                         errors.add("client %d: %s".formatted(clientId, e.getMessage()));
                     } finally {
@@ -68,5 +69,10 @@ class SharedStatelessServerConcurrencyTest extends AbstractStatelessMcpE2eTest {
             assertThat(latch.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
         }
         assertThat(errors).isEmpty();
+        assertThat(responses).hasSize(CLIENT_COUNT);
+        responses.forEach((clientId, response) ->
+                assertThatJson(response).whenIgnoringPaths("result.tools").isEqualTo("""
+                        {"jsonrpc":"2.0","id":%d,"result":{"tools":[]}}
+                        """.formatted(clientId)));
     }
 }

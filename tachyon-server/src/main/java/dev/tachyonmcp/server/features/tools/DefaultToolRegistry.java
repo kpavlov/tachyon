@@ -7,7 +7,6 @@ package dev.tachyonmcp.server.features.tools;
 import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.internalError;
 import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidParams;
 import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidRequest;
-import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.methodNotFound;
 
 import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
@@ -256,7 +255,7 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
             if (handler == null) return invalidParams("Unknown tool: " + parsed.name());
             var extId = handler.descriptor().extensionId();
             if (extId != null && !context.isExtensionEnabled(extId)) {
-                return methodNotFound("Method not found: " + parsed.name());
+                return invalidParams("Unknown tool: " + parsed.name());
             }
 
             var validationError = validateInput(handler.descriptor().inputSchema(), parsed.args());

@@ -113,6 +113,20 @@ class ExtensionsTest extends AbstractStatefulMcpE2eTest {
                     {"jsonrpc":"2.0","id":2,"method":"tools/list"}
                     """);
             assertThatJson(listResp.body()).inPath("$.result.tools").isArray().isEmpty();
+
+            var callResp = client.post(sessionId, """
+                    {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"ext-tool","arguments":{}}}
+                    """);
+            assertThatJson(callResp.body()).isEqualTo("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 3,
+                      "error": {
+                        "code": -32602,
+                        "message": "Unknown tool: ext-tool"
+                      }
+                    }
+                    """);
         }
     }
 

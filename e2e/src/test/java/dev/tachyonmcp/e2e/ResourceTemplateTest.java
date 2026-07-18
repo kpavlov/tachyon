@@ -216,6 +216,33 @@ class ResourceTemplateTest extends AbstractStatelessMcpE2eTest {
     }
 
     @Test
+    void shouldRejectInvalidTemplateCursor() throws Exception {
+        startEmptyServer();
+        server.resources()
+                .registerTemplate(
+                        builder -> builder.name("item").uriTemplate("resource://items/{id}"),
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "item"));
+
+        try (var client = createTestClient()) {
+            client.initialize();
+            var response = client.post("""
+                {"jsonrpc":"2.0","id":2,"method":"resources/templates/list","params":{"cursor":"invalid"}}
+                """);
+
+            assertThatJson(response.body()).isEqualTo("""
+                {
+                  "jsonrpc": "2.0",
+                  "id": 2,
+                  "error": {
+                    "code": -32602,
+                    "message": "Invalid cursor"
+                  }
+                }
+                """);
+        }
+    }
+
+    @Test
     void shouldReturnErrorWhenUriMatchesNoRegisteredTemplate() throws Exception {
         startEmptyServer();
         server.resources()

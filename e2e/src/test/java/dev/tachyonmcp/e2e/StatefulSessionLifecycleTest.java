@@ -132,4 +132,18 @@ class StatefulSessionLifecycleTest extends AbstractStatefulMcpE2eTest {
             assertThat(response.body()).doesNotContain("jsonrpc");
         }
     }
+
+    @Test
+    void notificationWithoutSessionReturnsError() throws Exception {
+        try (var client = createTestClient()) {
+            client.initialize();
+
+            var response = client.post("""
+                    {"jsonrpc":"2.0","method":"notifications/initialized"}
+                    """);
+
+            assertThat(response.statusCode()).isEqualTo(400);
+            assertThat(response.body()).isEqualTo("Missing MCP-Session-Id header");
+        }
+    }
 }

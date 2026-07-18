@@ -137,11 +137,6 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                                 origin));
             case JsonRpcMessage.Request<?> req
             when METHOD_INITIALIZE.equals(req.method()) -> handleInitialize(ctx, req.id(), req.params(), origin);
-            case JsonRpcMessage.Notification<?> not -> {
-                ctx.executor().execute(() -> sendAccepted(ctx, origin));
-                CompletableFuture.runAsync(
-                        () -> dispatcher.dispatchNotification(not.method(), not.params(), null), executor);
-            }
             default ->
                 // Non-initialize request without session-id: dispatch via operation handler
                 // (which will return "Missing MCP-Session-Id" or stateless ping etc.)
@@ -151,7 +146,13 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
 
     private void dispatchPreSessionRequest(ChannelHandlerContext ctx, JsonRpcMessage message, @Nullable String origin) {
         if (!(message instanceof JsonRpcMessage.Request(Object id, String method, Object params))) {
-            ctx.executor().execute(() -> sendAccepted(ctx, origin));
+            ctx.executor().execute(() -> {
+                if (server.isStateless()) {
+                    sendAccepted(ctx, origin);
+                } else {
+                    sendPlainTextAndClose(ctx, HttpResponseStatus.BAD_REQUEST, "Missing MCP-Session-Id header", origin);
+                }
+            });
             return;
         }
         var heartbeatInterval = server.config().network().heartbeatInterval();

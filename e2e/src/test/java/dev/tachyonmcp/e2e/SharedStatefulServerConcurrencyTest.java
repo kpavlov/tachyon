@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Konstantin Pavlov.
+ * Copyright (c) 2026 Konstantin Pavlov and contributors.
  */
 
 package dev.tachyonmcp.e2e;
@@ -81,6 +81,7 @@ class SharedStatefulServerConcurrencyTest extends AbstractStatefulMcpE2eTest {
             var sid = client.initialize();
             var latch = new CountDownLatch(requestCount);
             var errors = new ConcurrentLinkedQueue<String>();
+            var responses = new ConcurrentHashMap<Integer, String>();
             try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
                 for (int i = 0; i < requestCount; i++) {
                     var reqId = i;
@@ -89,9 +90,7 @@ class SharedStatefulServerConcurrencyTest extends AbstractStatefulMcpE2eTest {
                             var response = client.post(sid, """
                                 {"jsonrpc":"2.0","id":%d,"method":"ping"}
                                 """.formatted(reqId));
-                            if (!response.body().contains("\"result\"")) {
-                                errors.add("req %d: unexpected response: %s".formatted(reqId, response.body()));
-                            }
+                            responses.put(reqId, response.body());
                         } catch (Exception e) {
                             errors.add("req %d: %s".formatted(reqId, e.getMessage()));
                         } finally {
@@ -102,6 +101,10 @@ class SharedStatefulServerConcurrencyTest extends AbstractStatefulMcpE2eTest {
                 assertThat(latch.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
             }
             assertThat(errors).isEmpty();
+            assertThat(responses).hasSize(requestCount);
+            responses.forEach((requestId, response) -> assertThatJson(response).isEqualTo("""
+                    {"jsonrpc":"2.0","id":%d,"result":{}}
+                    """.formatted(requestId)));
         }
     }
 

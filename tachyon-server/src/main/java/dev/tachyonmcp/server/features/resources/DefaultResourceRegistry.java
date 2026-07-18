@@ -463,6 +463,9 @@ public class DefaultResourceRegistry implements ResourceRegistry {
 
         @Override
         public Object handle(DispatchContext context, Object params) {
+            if (ListRequests.parseCursor(params) != null) {
+                return JsonRpcErrors.invalidParams("Invalid cursor");
+            }
             var templates = registry.templates.values().stream()
                     .map(ResourceTemplateEntry::descriptor)
                     .toList();

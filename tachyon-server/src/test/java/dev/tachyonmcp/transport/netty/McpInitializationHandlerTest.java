@@ -104,7 +104,7 @@ class McpInitializationHandlerTest {
     }
 
     @Test
-    void postNotificationReturns202() {
+    void postNotificationWithoutSessionReturnsSessionError() {
         var body = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}";
         var request = new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.POST, "/mcp", Unpooled.copiedBuffer(body, StandardCharsets.UTF_8));
@@ -114,7 +114,8 @@ class McpInitializationHandlerTest {
         channel.writeInbound(request);
 
         var response = readResponse();
-        assertThat(response.status()).isEqualTo(HttpResponseStatus.ACCEPTED);
+        assertThat(response.status()).isEqualTo(HttpResponseStatus.BAD_REQUEST);
+        assertThat(response.content().toString(StandardCharsets.UTF_8)).isEqualTo("Missing MCP-Session-Id header");
         response.release();
     }
 

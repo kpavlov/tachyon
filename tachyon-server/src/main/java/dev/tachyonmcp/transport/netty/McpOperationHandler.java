@@ -157,6 +157,12 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                             ctx, HttpResponseStatus.BAD_REQUEST, "application/json", dispatcher.parseError(), origin));
             return;
         }
+        if (!server.isStateless() && sessionId == null && !(message instanceof JsonRpcMessage.Request<?>)) {
+            ctx.executor()
+                    .execute(() -> sendPlainTextAndClose(
+                            ctx, HttpResponseStatus.BAD_REQUEST, "Missing MCP-Session-Id header", origin));
+            return;
+        }
         switch (message) {
             case JsonRpcMessage.Request<?> reqMsg -> handlePostRequest(ctx, sessionId, reqMsg, origin);
             case JsonRpcMessage.Response resp -> handlePostResponse(ctx, resp, origin);
