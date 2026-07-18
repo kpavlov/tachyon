@@ -12,9 +12,11 @@ Me Caveman. Talk short. Use emoji.
 
 ## Project
 
-Java 21+ MCP server. Java first, Kotlin adapts.
+Java 21+Kotlin 2.2 MCP server. Java first, Kotlin adapts.
 
 ## Fast Commands
+
+Use IDE MCP for building/running tests if available. Otherwise:
 
 ```bash
 mvn test            # unit + e2e tests

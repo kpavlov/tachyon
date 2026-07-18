@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="all-tests" type="CompoundRunConfigurationType">
+    <toRun name="conformance-tests" type="JUnit" />
+    <toRun name="e2e-tests" type="JUnit" />
+    <toRun name="tachyon-extensions-tests" type="JUnit" />
+    <toRun name="tachyon-server-kotlin-tests" type="JUnit" />
+    <toRun name="tachyon-server-tests" type="JUnit" />
+    <method v="2" />
+  </configuration>
+</component>
