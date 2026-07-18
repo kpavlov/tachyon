@@ -8,10 +8,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -69,34 +65,8 @@ class SsePollingTest extends AbstractMcpE2eTest {
     // ------------------------------------------------------------------
 
     private String initializeSession() throws Exception {
-        try (var client = HttpClient.newHttpClient()) {
-            var body = """
-                    {"jsonrpc":"2.0","id":0,"method":"initialize",
-                     "params":{"protocolVersion":"2025-11-25","capabilities":{},
-                               "clientInfo":{"name":"test","version":"1.0"}}}
-                    """;
-            var request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:" + port + "/mcp"))
-                    .header("Content-Type", "application/json")
-                    .header("Accept", "application/json, text/event-stream")
-                    .header("MCP-Protocol-Version", "2025-11-25")
-                    .POST(HttpRequest.BodyPublishers.ofString(body))
-                    .build();
-            var response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            var sessionId = response.headers().firstValue("MCP-Session-Id").orElseThrow();
-            client.send(
-                    HttpRequest.newBuilder()
-                            .uri(URI.create("http://localhost:" + port + "/mcp"))
-                            .header("Content-Type", "application/json")
-                            .header("Accept", "application/json, text/event-stream")
-                            .header("MCP-Protocol-Version", "2025-11-25")
-                            .header("MCP-Session-Id", sessionId)
-                            .POST(HttpRequest.BodyPublishers.ofString("""
-                                    {"jsonrpc":"2.0","method":"notifications/initialized"}
-                                    """))
-                            .build(),
-                    HttpResponse.BodyHandlers.ofString());
-            return sessionId;
+        try (var client = createTestClient()) {
+            return client.initialize();
         }
     }
 

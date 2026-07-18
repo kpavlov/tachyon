@@ -26,9 +26,9 @@ class ToolNotificationsTest extends AbstractMcpE2eTest {
             var setLevelBody = """
                 {"jsonrpc":"2.0","id":2,"method":"logging/setLevel","params":{"level":"info"}}
                 """;
-            client.sendRequest(sessionId, setLevelBody);
+            client.post(sessionId, setLevelBody);
 
-            var toolResponse = client.sendRequest(sessionId, """
+            var toolResponse = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"notifier","arguments":{"message":"hello from tool"}}}
                 """);
             var body = toolResponse.body();

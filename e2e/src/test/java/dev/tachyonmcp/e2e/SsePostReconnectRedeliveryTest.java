@@ -42,7 +42,7 @@ class SsePostReconnectRedeliveryTest extends AbstractMcpE2eTest {
 
             // POST tools/call: the tool upgrades the POST to SSE, emits the priming event, then
             // closes the stream — so the POST completes carrying only that priming event.
-            var post = client.sendRequest(sessionId, """
+            var post = client.post(sessionId, """
                     {"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"self-closing","arguments":{}}}
                     """);
             assertThat(post.headers().firstValue("Content-Type").orElse("")).contains("text/event-stream");

@@ -43,7 +43,7 @@ class PromptCapabilitiesTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"prompts/list"}
                 """);
 
@@ -81,7 +81,7 @@ class PromptCapabilitiesTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"prompts/list"}
                 """);
 
@@ -114,7 +114,7 @@ class PromptCapabilitiesTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"prompts/list"}
                 """);
 

@@ -31,7 +31,7 @@ class SessionLifecycleTest extends AbstractMcpE2eTest {
                     .map(Session::state)
                     .hasValue(SessionState.ACTIVE);
 
-            var response = clientB.sendRequest(sessionB, pingBody);
+            var response = clientB.post(sessionB, pingBody);
             assertThat(response.statusCode()).isEqualTo(200);
             assertThat(response.body()).contains("result");
         }
@@ -77,7 +77,7 @@ class SessionLifecycleTest extends AbstractMcpE2eTest {
 
             // Attempt to use the deleted session
             var pingBody = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}";
-            var response = client.sendRequest(sessionId, pingBody);
+            var response = client.post(sessionId, pingBody);
             // Should fail - session no longer exists
             assertThat(response.statusCode()).isEqualTo(200);
             assertThat(response.body()).contains("error");
@@ -102,7 +102,7 @@ class SessionLifecycleTest extends AbstractMcpE2eTest {
 
             // session2 should still work
             var pingBody = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}";
-            var response = client.sendRequest(session2, pingBody);
+            var response = client.post(session2, pingBody);
             assertThat(response.statusCode()).isEqualTo(200);
             assertThat(response.body()).contains("result");
         }

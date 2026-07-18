@@ -53,7 +53,7 @@ class SseReplayPerStreamTest extends AbstractMcpE2eTest {
 
             // While the GET stream is down: tools/call → the inline notification upgrades the
             // POST to SSE, and both the notification and the response are DELIVERED there.
-            var toolResponse = client.sendRequest(sessionId, """
+            var toolResponse = client.post(sessionId, """
                     {"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"notifying-echo","arguments":{"message":"post-stream-payload"}}}
                     """);
             assertThat(toolResponse.headers().firstValue("Content-Type").orElse(""))

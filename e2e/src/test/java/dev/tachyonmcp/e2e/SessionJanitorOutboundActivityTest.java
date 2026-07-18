@@ -14,14 +14,9 @@ import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -71,11 +66,13 @@ class SessionJanitorOutboundActivityTest {
                 assertThat(session.get().state()).isEqualTo(SessionState.ACTIVE);
             });
 
-            var ping = sendJsonRpc(port, sessionId, """
-                    {"jsonrpc":"2.0","id":1,"method":"ping"}
-                    """);
-            assertThat(ping.statusCode()).isEqualTo(200);
-            assertThat(ping.body()).contains("result");
+            try (var client = new TestMcpClient(port)) {
+                var ping = client.post(sessionId, """
+                        {"jsonrpc":"2.0","id":1,"method":"ping"}
+                        """);
+                assertThat(ping.statusCode()).isEqualTo(200);
+                assertThat(ping.body()).contains("result");
+            }
         } finally {
             sseSocket.close();
         }
@@ -124,17 +121,8 @@ class SessionJanitorOutboundActivityTest {
     }
 
     private String initializeAndActivate(int targetPort) throws Exception {
-        try (var client = HttpClient.newHttpClient()) {
-            var init = sendJsonRpc(client, targetPort, null, """
-                    {"jsonrpc":"2.0","id":0,"method":"initialize",
-                     "params":{"protocolVersion":"2025-11-25","capabilities":{},
-                               "clientInfo":{"name":"test","version":"1.0"}}}
-                    """);
-            var sessionId = init.headers().firstValue("MCP-Session-Id").orElseThrow();
-            sendJsonRpc(client, targetPort, sessionId, """
-                    {"jsonrpc":"2.0","method":"notifications/initialized"}
-                    """);
-            return sessionId;
+        try (var client = new TestMcpClient(targetPort)) {
+            return client.initialize();
         }
     }
 
@@ -157,23 +145,5 @@ class SessionJanitorOutboundActivityTest {
         }
         assertThat(sb.toString()).contains("200 OK");
         return socket;
-    }
-
-    private HttpResponse<String> sendJsonRpc(int targetPort, String sessionId, String body) throws Exception {
-        return sendJsonRpc(HttpClient.newHttpClient(), targetPort, sessionId, body);
-    }
-
-    private HttpResponse<String> sendJsonRpc(HttpClient client, int targetPort, @Nullable String sessionId, String body)
-            throws Exception {
-        var builder = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:" + targetPort + "/mcp"))
-                .header("Content-Type", "application/json")
-                .header("Accept", "application/json, text/event-stream")
-                .header("MCP-Protocol-Version", "2025-11-25")
-                .POST(HttpRequest.BodyPublishers.ofString(body));
-        if (sessionId != null) {
-            builder.header("MCP-Session-Id", sessionId);
-        }
-        return client.send(builder.build(), HttpResponse.BodyHandlers.ofString());
     }
 }

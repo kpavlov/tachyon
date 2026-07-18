@@ -51,15 +51,15 @@ class TasksCoreTest extends AbstractMcpE2eTest {
     void createsListsAndGetsTask() throws Exception {
         startDefaultServer();
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
+            client.initialize();
             var task = server.tasks().create();
 
-            var listJson = rpc(client.httpClient(), port, sessionId, """
+            var listJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/list","params":{}}
                     """);
             assertThatJson(listJson).inPath("$.result.tasks.length()").isEqualTo(1);
 
-            var getJson = rpc(client.httpClient(), port, sessionId, """
+            var getJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
                     """.formatted(task.id()));
             assertThatJson(getJson).inPath("$.result.taskId").isEqualTo(task.id());
@@ -71,10 +71,10 @@ class TasksCoreTest extends AbstractMcpE2eTest {
     void cancelsTask() throws Exception {
         startDefaultServer();
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
+            client.initialize();
             var task = server.tasks().create();
 
-            var cancelJson = rpc(client.httpClient(), port, sessionId, """
+            var cancelJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/cancel","params":{"taskId":"%s"}}
                     """.formatted(task.id()));
             assertThatJson(cancelJson).inPath("$.result.taskId").isEqualTo(task.id());
@@ -86,19 +86,19 @@ class TasksCoreTest extends AbstractMcpE2eTest {
     void completedTaskResultIsACallToolResult() throws Exception {
         startDefaultServer();
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
+            client.initialize();
             var task = server.tasks().create();
             var output = JsonNodeFactory.instance.objectNode().put("output", "success");
             task.complete(TaskResult.completed(output));
 
-            var getJson = rpc(client.httpClient(), port, sessionId, """
+            var getJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"%s"}}
                     """.formatted(task.id()));
             assertThatJson(getJson).inPath("$.result.status").isEqualTo("completed");
 
             // tasks/result returns exactly what the tool call would have — a CallToolResult
             // (content + structuredContent), not a wrapped {"result": …} envelope.
-            var resultJson = rpc(client.httpClient(), port, sessionId, """
+            var resultJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":3,"method":"tasks/result","params":{"taskId":"%s"}}
                     """.formatted(task.id()));
             assertThatJson(resultJson).inPath("$.result.content").isArray();
@@ -112,9 +112,9 @@ class TasksCoreTest extends AbstractMcpE2eTest {
     void unknownTaskReturnsError() throws Exception {
         startDefaultServer();
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
+            client.initialize();
 
-            var getJson = rpc(client.httpClient(), port, sessionId, """
+            var getJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"nonexistent-id"}}
                     """);
             assertThatJson(getJson).inPath("$.error.code").isNumber();

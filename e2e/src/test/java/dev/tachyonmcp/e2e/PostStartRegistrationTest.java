@@ -33,7 +33,7 @@ class PostStartRegistrationTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"resources/list"}
                 """);
             assertThatJson(response.body()).inPath("$.result.resources[0].name").isEqualTo("post-start-res");
@@ -51,7 +51,7 @@ class PostStartRegistrationTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"prompts/list"}
                 """);
             assertThatJson(response.body()).inPath("$.result.prompts[0].name").isEqualTo("post-start-prompt");
@@ -71,7 +71,7 @@ class PostStartRegistrationTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"test://handled"}}
                 """);
             assertThatJson(response.body()).inPath("$.result.contents[0].text").isEqualTo("post-start data");
