@@ -6,29 +6,31 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-class ToolNotificationsTest extends AbstractMcpE2eTest {
+class ToolNotificationsTest extends AbstractStatelessMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServer(it ->
-                it.capabilities(c -> c.logging()).tool(EchoToolHandler.create()).tool(notifyingTool()));
+        startServer(it -> it.capabilities(CapabilitiesConfig.Builder::logging)
+                .tool(EchoToolHandler.create())
+                .tool(notifyingTool()));
     }
 
     @Test
     void toolSendsNotificationAndLogEventInline() throws Exception {
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
+            client.initialize();
             var setLevelBody = """
                 {"jsonrpc":"2.0","id":2,"method":"logging/setLevel","params":{"level":"info"}}
                 """;
-            client.post(sessionId, setLevelBody);
+            client.post(setLevelBody);
 
-            var toolResponse = client.post(sessionId, """
+            var toolResponse = client.post("""
                 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"notifier","arguments":{"message":"hello from tool"}}}
                 """);
             var body = toolResponse.body();

@@ -99,9 +99,12 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
     private void handlePost(ChannelHandlerContext ctx, FullHttpRequest req, @Nullable String origin) {
         var sessionId = req.headers().get(McpHeaderNames.MCP_SESSION_ID);
         if (sessionId != null) {
-            server.getSession(sessionId).ifPresent(s -> {
-                setSession(ctx, s);
-            });
+            var session = server.getSession(sessionId);
+            if (session.isEmpty()) {
+                sendPlainTextAndClose(ctx, HttpResponseStatus.NOT_FOUND, "Unknown session", origin);
+                return;
+            }
+            setSession(ctx, session.get());
         } else {
             // A session-less POST may be an initialize (e.g. on a keep-alive channel already in
             // the operation phase); preserve the request for a custom SessionIdGenerator.

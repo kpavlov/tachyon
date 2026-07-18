@@ -19,7 +19,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import tools.jackson.databind.ObjectMapper;
 
-class ResourceTest extends AbstractMcpE2eTest {
+class ResourceTest extends AbstractStatefulMcpE2eTest {
 
     @Test
     void shouldListRegisteredResources() throws Exception {
@@ -319,7 +319,7 @@ class ResourceTest extends AbstractMcpE2eTest {
         return ToolHandler.of(
                 b -> b.name("notify-update").description("Triggers resource updated notification"), (context, args) -> {
                     server.resources().notifyResourceUpdated("resource://doc");
-                    return ToolResult.blocks(TextContent.of("notified"));
+                    return ToolResult.blocks(TextContent.of("resource update 'resource://doc' notified "));
                 });
     }
 

@@ -73,6 +73,22 @@ class McpOperationHandlerTest {
     }
 
     @Test
+    void postWithUnknownSessionReturns404() {
+        var body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}";
+        var request = new DefaultFullHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.POST, "/mcp", Unpooled.copiedBuffer(body, StandardCharsets.UTF_8));
+        request.headers()
+                .set(HttpHeaderNames.ORIGIN, "http://localhost:3000")
+                .set("MCP-Session-Id", "sess-missing")
+                .set(HttpHeaderNames.ACCEPT, "application/json, text/event-stream");
+        channel.writeInbound(request);
+
+        var response = readResponse();
+        assertThat(response.status()).isEqualTo(HttpResponseStatus.NOT_FOUND);
+        response.release();
+    }
+
+    @Test
     void getWithoutSessionReturnsError() {
         var request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/mcp");
         request.headers()
@@ -164,6 +180,8 @@ class McpOperationHandlerTest {
 
     @Test
     void postMalformedJsonReturnsParseError() {
+        server.createSession("sess-parse").activate();
+
         var body = "not json";
         var request = new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.POST, "/mcp", Unpooled.copiedBuffer(body, StandardCharsets.UTF_8));

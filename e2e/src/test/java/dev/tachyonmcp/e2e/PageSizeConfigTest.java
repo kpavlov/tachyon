@@ -13,7 +13,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.JsonNodeFactory;
 
-class PageSizeConfigTest extends AbstractMcpE2eTest {
+class PageSizeConfigTest extends AbstractStatelessMcpE2eTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -25,9 +25,9 @@ class PageSizeConfigTest extends AbstractMcpE2eTest {
                 .tool(handler("tool-c")));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
+            client.initialize();
 
-            var page1 = client.post(sessionId, """
+            var page1 = client.post("""
                 {"jsonrpc":"2.0","id":1,"method":"tools/list"}
                 """);
             var root1 = MAPPER.readTree(page1.body());
@@ -38,7 +38,7 @@ class PageSizeConfigTest extends AbstractMcpE2eTest {
             assertThat(cursor).isNotNull();
 
             // language=json
-            var page2 = client.post(sessionId, """
+            var page2 = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{"cursor":"%s"}}
                 """.formatted(cursor));
             var root2 = MAPPER.readTree(page2.body());

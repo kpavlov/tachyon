@@ -21,7 +21,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.JsonNodeFactory;
 
-class ToolCapabilitiesTest extends AbstractMcpE2eTest {
+class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
 
     // region: Output Schema Tests
 
@@ -41,14 +41,15 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
 
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/list"}
                 """);
 
+            final String expected;
             if (hasSchema) {
                 // language=JSON
-                var expected = """
+                expected = """
                     {
                       "jsonrpc": "2.0",
                       "id": 2,
@@ -75,10 +76,9 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
                       }
                     }
                     """;
-                assertThatJson(response.body()).isEqualTo(expected);
             } else {
                 // language=JSON
-                var expected = """
+                expected = """
                     {
                       "jsonrpc": "2.0",
                       "id": 2,
@@ -99,8 +99,8 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
                       }
                     }
                     """.formatted(toolName, toolName);
-                assertThatJson(response.body()).isEqualTo(expected);
             }
+            assertThatJson(response.body()).isEqualTo(expected);
         }
     }
 
@@ -111,8 +111,8 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
                 .tool(simpleToolHandler("tool-b", "Tool B")));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/list"}
                 """);
 
@@ -146,8 +146,8 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
         startServer(it -> it.tool(handler));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/list"}
                 """);
 
@@ -181,8 +181,8 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
         server.tools().register(ToolHandler.of("minimal-tool", (ctx, args) -> ToolResult.text("ok")));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/list"}
                 """);
 
@@ -201,8 +201,8 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
         startServer(it -> it.tool(structuredToolHandler()));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"structured","arguments":{"message":"hi"}}}
                 """);
 
@@ -233,8 +233,8 @@ class ToolCapabilitiesTest extends AbstractMcpE2eTest {
                         (ctx, args) -> ToolResult.text("ok")));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/list"}
                 """);
 

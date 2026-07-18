@@ -7,8 +7,6 @@ package dev.tachyonmcp.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.TestInstance.Lifecycle;
 
 /**
  * Verifies DNS-rebinding protection and, crucially, that a rejected request is closed with a
@@ -19,8 +17,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
  * that socket, raced the next request onto it, and intermittently saw "other side closed".
  * Signalling {@code Connection: close} stops the client from reusing the socket.
  */
-@TestInstance(Lifecycle.PER_CLASS)
-class DnsRebindingTest extends AbstractMcpE2eTest {
+class DnsRebindingTest extends AbstractStatelessMcpE2eTest {
 
     // language=JSON
     private static final String INIT_BODY = """

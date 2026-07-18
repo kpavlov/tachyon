@@ -22,7 +22,7 @@ import tools.jackson.databind.node.JsonNodeFactory;
  * API only. Extension-specific flows (the {@code create_task} tool, {@code task://} resource,
  * notification delivery) live in {@link TasksExtensionTest}.
  */
-class TasksCoreTest extends AbstractMcpE2eTest {
+class TasksCoreTest extends AbstractStatefulMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {

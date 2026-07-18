@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
-class ExtensionsTest extends AbstractMcpE2eTest {
+class ExtensionsTest extends AbstractStatefulMcpE2eTest {
 
     private static final String TEST_EXT_ID = "com.example/test";
 

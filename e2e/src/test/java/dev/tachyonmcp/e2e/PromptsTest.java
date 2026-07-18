@@ -17,7 +17,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 
-class PromptsTest extends AbstractMcpE2eTest {
+class PromptsTest extends AbstractStatelessMcpE2eTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -29,8 +29,8 @@ class PromptsTest extends AbstractMcpE2eTest {
         prompts.register(PromptDescriptor.of("farewell", "A farewell prompt"), List.of(PromptMessage.user("Goodbye!")));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"prompts/list"}
                 """);
 
@@ -52,8 +52,8 @@ class PromptsTest extends AbstractMcpE2eTest {
                         List.of(PromptMessage.user("Hello world!")));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"greeting"}}
                 """);
 
@@ -74,8 +74,8 @@ class PromptsTest extends AbstractMcpE2eTest {
                                 List.of(PromptMessage.user("Hello, " + request.arguments() + "!"))));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"test_prompt_with_arguments","arguments":{"name":"World"}}}
                 """);
 
@@ -91,8 +91,8 @@ class PromptsTest extends AbstractMcpE2eTest {
         startEmptyServer();
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"unknown"}}
                 """);
 
@@ -105,8 +105,8 @@ class PromptsTest extends AbstractMcpE2eTest {
         startEmptyServer();
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"prompts/list"}
                 """);
 
@@ -124,8 +124,8 @@ class PromptsTest extends AbstractMcpE2eTest {
                                 TextResourceContents.of("test://embedded", "text/plain", "embedded content")))));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"embedded"}}
                 """);
 
@@ -147,8 +147,8 @@ class PromptsTest extends AbstractMcpE2eTest {
                         List.of(PromptMessage.user(ImageContent.of("iVBORw0KGgo=", "image/png"))));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"image-prompt"}}
                 """);
 

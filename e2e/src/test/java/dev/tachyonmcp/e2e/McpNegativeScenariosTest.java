@@ -21,7 +21,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 @TestInstance(Lifecycle.PER_CLASS)
-class McpNegativeScenariosTest extends AbstractMcpE2eTest {
+class McpNegativeScenariosTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void shouldRejectUnknownTool() {
@@ -68,6 +68,7 @@ class McpNegativeScenariosTest extends AbstractMcpE2eTest {
 
     @Test
     void shouldListRegisteredPromptViaSdk() {
+        startEmptyServer();
         var promptName = "negative-scenarios-list-probe";
         server.prompts()
                 .register(PromptDescriptor.of(promptName, "A probe prompt"), List.of(PromptMessage.user("Hello!")));

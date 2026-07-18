@@ -15,12 +15,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-class LoggingTest extends AbstractMcpE2eTest {
-
-    @Override
-    protected void startDefaultServer() {
-        startServer(b -> b.capabilities(c -> c.tools().logging()).tool(EchoToolHandler.create()));
-    }
+class LoggingTest extends AbstractStatefulMcpE2eTest {
 
     @Test
     void shouldReceiveLoggingNotificationAfterToolCall() throws Exception {

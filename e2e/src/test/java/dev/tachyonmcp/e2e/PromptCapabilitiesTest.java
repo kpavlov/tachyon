@@ -19,7 +19,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-class PromptCapabilitiesTest extends AbstractMcpE2eTest {
+class PromptCapabilitiesTest extends AbstractStatelessMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
@@ -42,8 +42,8 @@ class PromptCapabilitiesTest extends AbstractMcpE2eTest {
         }
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"prompts/list"}
                 """);
 
@@ -80,8 +80,8 @@ class PromptCapabilitiesTest extends AbstractMcpE2eTest {
         }
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"prompts/list"}
                 """);
 
@@ -113,8 +113,8 @@ class PromptCapabilitiesTest extends AbstractMcpE2eTest {
                         List.of(of(Role.USER, TextContent.of("Hello"))));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"prompts/list"}
                 """);
 

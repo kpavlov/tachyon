@@ -19,7 +19,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.JsonNodeFactory;
 
-class PayloadSerdeTest extends AbstractMcpE2eTest {
+class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
 
     private static final JsonNodeFactory JSON = JsonNodeFactory.instance;
 
@@ -47,9 +47,9 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
                         (ctx, args) -> ToolResult.of(Map.of("message", "hello from Gson"), "text fallback"))));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
+            client.initialize();
             // language=json
-            var response = client.post(sessionId, """
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"gson-tool","arguments":{}}}
                 """);
 
@@ -71,8 +71,8 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
                 "raw-tool", "Raw JSON tool", (ctx, args) -> ToolResult.raw("{\"echo\":\"exact\"}", "raw fallback"))));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"raw-tool","arguments":{}}}
                 """);
 
@@ -109,8 +109,8 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
                         (ctx, args) -> ToolResult.of(Map.of("message", "valid", "extra", 42), "ok"))));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"validated-output","arguments":{"message":"test"}}}
                 """);
 
@@ -147,8 +147,8 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
                 })));
 
         try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
+            client.initialize();
+            var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"decode-tool","arguments":{"key":"value"}}}
                 """);
 
@@ -189,7 +189,7 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
     // region: Non-ASCII payload (emoji, cyrillic) survives String round-trip
 
     @Test
-    void shouldRoundTripNonAsciiPayload() throws Exception {
+    void shouldRoundTripNonAsciiPayload() {
         var serde = new dev.tachyonmcp.server.json.JacksonPayloadSerde();
         var input = Map.of("emoji", "\uD83D\uDE00", "cyrillic", "\u043F\u0440\u0438\u0432\u0435\u0442");
 
@@ -204,7 +204,7 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
     // region: Jackson serde produces same output as Jackson's writeValueAsString
 
     @Test
-    void shouldMatchJacksonStringOutput() throws Exception {
+    void shouldMatchJacksonStringOutput() {
         var serde = new dev.tachyonmcp.server.json.JacksonPayloadSerde();
         var mapper = new tools.jackson.databind.ObjectMapper();
         var input = Map.of("message", "hello", "count", 42);
