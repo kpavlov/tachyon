@@ -30,7 +30,7 @@ class ListPaginationE2eTest extends AbstractMcpE2eTest {
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
 
-            var page1 = client.sendRequest(sessionId, """
+            var page1 = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":1,"method":"resources/list"}
                 """);
             var root1 = MAPPER.readTree(page1.body());
@@ -38,7 +38,7 @@ class ListPaginationE2eTest extends AbstractMcpE2eTest {
             var cursor = root1.at("/result/nextCursor").asString(null);
             assertThat(cursor).isNotNull();
 
-            var page2 = client.sendRequest(sessionId, """
+            var page2 = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"resources/list","params":{"cursor":"%s"}}
                 """.formatted(cursor));
             var root2 = MAPPER.readTree(page2.body());
@@ -57,7 +57,7 @@ class ListPaginationE2eTest extends AbstractMcpE2eTest {
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
 
-            var page1 = client.sendRequest(sessionId, """
+            var page1 = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":1,"method":"prompts/list"}
                 """);
             var root1 = MAPPER.readTree(page1.body());
@@ -65,7 +65,7 @@ class ListPaginationE2eTest extends AbstractMcpE2eTest {
             var cursor = root1.at("/result/nextCursor").asString(null);
             assertThat(cursor).isNotNull();
 
-            var page2 = client.sendRequest(sessionId, """
+            var page2 = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"prompts/list","params":{"cursor":"%s"}}
                 """.formatted(cursor));
             var root2 = MAPPER.readTree(page2.body());
@@ -84,7 +84,7 @@ class ListPaginationE2eTest extends AbstractMcpE2eTest {
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
 
-            var page1 = client.sendRequest(sessionId, """
+            var page1 = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":1,"method":"tasks/list"}
                 """);
             var root1 = MAPPER.readTree(page1.body());
@@ -92,7 +92,7 @@ class ListPaginationE2eTest extends AbstractMcpE2eTest {
             var cursor = root1.at("/result/nextCursor").asString(null);
             assertThat(cursor).isNotNull();
 
-            var page2 = client.sendRequest(sessionId, """
+            var page2 = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tasks/list","params":{"cursor":"%s"}}
                 """.formatted(cursor));
             var root2 = MAPPER.readTree(page2.body());

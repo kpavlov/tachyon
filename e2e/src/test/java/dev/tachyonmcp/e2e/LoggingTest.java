@@ -33,7 +33,7 @@ class LoggingTest extends AbstractMcpE2eTest {
                     """
                     {"jsonrpc":"2.0","id":2,"method":"logging/setLevel","params":{"level":"debug"}}
                     """;
-            var setLevelResponse = client.sendRequest(sessionId, setLevelBody);
+            var setLevelResponse = client.post(sessionId, setLevelBody);
             assertThatJson(setLevelResponse.body()).inPath("$.result").isObject();
 
             var toolBody =
@@ -41,7 +41,7 @@ class LoggingTest extends AbstractMcpE2eTest {
                     """
                     {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"echo","arguments":{"message":"hello"}}}
                     """;
-            var toolResponse = client.sendRequest(sessionId, toolBody);
+            var toolResponse = client.post(sessionId, toolBody);
 
             assertThat(toolResponse.body())
                     .contains(
@@ -58,7 +58,7 @@ class LoggingTest extends AbstractMcpE2eTest {
         // server.notifications().log(...) fans out to every active session, delivered on its GET listen stream
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            client.sendRequest(
+            client.post(
                     sessionId,
                     // language=JSON
                     """

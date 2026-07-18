@@ -67,15 +67,15 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
     @Test
     void createTaskViaTool() throws Exception {
         try (var client = createTestClient()) {
-            var sessionId = initializeWithExtension(client);
+            initializeWithExtension(client);
 
-            var callJson = rpc(client.httpClient(), port, sessionId, """
+            var callJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create_task","arguments":{"name":"my-task","description":"from tool"}}}
                     """);
             assertThatJson(callJson).inPath("$.result.content[0].text").isString();
             var taskId = extractText(callJson);
 
-            var getJson = rpc(client.httpClient(), port, sessionId, """
+            var getJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
                     """.formatted(taskId));
             assertThatJson(getJson).inPath("$.result.taskId").isEqualTo(taskId);
@@ -112,15 +112,15 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
     @Test
     void createCompletePollAndGetResult() throws Exception {
         try (var client = createTestClient()) {
-            var sessionId = initializeWithExtension(client);
+            initializeWithExtension(client);
 
-            var callJson = rpc(client.httpClient(), port, sessionId, """
+            var callJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create_task","arguments":{"name":"full-cycle","description":"complete lifecycle"}}}
                     """);
             var taskId = extractText(callJson);
             assertThat(taskId).isNotEmpty();
 
-            var getBeforeJson = rpc(client.httpClient(), port, sessionId, """
+            var getBeforeJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
                     """.formatted(taskId));
             assertThatJson(getBeforeJson).inPath("$.result.taskId").isEqualTo(taskId);
@@ -128,13 +128,13 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
 
             server.tasks().get(taskId).complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"completed\"}")));
 
-            var getAfterJson = rpc(client.httpClient(), port, sessionId, """
+            var getAfterJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":4,"method":"tasks/get","params":{"taskId":"%s"}}
                     """.formatted(taskId));
             assertThatJson(getAfterJson).inPath("$.result.taskId").isEqualTo(taskId);
             assertThatJson(getAfterJson).inPath("$.result.status").isEqualTo("completed");
 
-            var resultJson = rpc(client.httpClient(), port, sessionId, """
+            var resultJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":5,"method":"tasks/result","params":{"taskId":"%s"}}
                     """.formatted(taskId));
             // tasks/result returns a CallToolResult: structured tool output lands in structuredContent.
@@ -148,11 +148,11 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
     @Test
     void readTaskResourceTemplate() throws Exception {
         try (var client = createTestClient()) {
-            var sessionId = initializeWithExtension(client);
+            initializeWithExtension(client);
 
             var task = server.tasks().create();
 
-            var readJson = rpc(client.httpClient(), port, sessionId, """
+            var readJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"task://%s"}}
                     """.formatted(task.id()));
             assertThatJson(readJson).inPath("$.result.contents[0].text").isEqualTo("SUBMITTED");
@@ -180,7 +180,7 @@ class TasksExtensionTest extends AbstractMcpE2eTest {
         try (var client = createTestClient()) {
             var sessionId = initializeWithExtension(client);
 
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                     {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create-sync","arguments":{}}}
                     """);
             assertThat(response.headers().firstValue("content-type").orElse("")).startsWith("text/event-stream");

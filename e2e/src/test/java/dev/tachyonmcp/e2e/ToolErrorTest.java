@@ -24,7 +24,7 @@ class ToolErrorTest extends AbstractMcpE2eTest {
             var body = """
                 {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"boom","arguments":{}}}
                 """;
-            var response = client.sendRequest(sessionId, body);
+            var response = client.post(sessionId, body);
 
             assertThat(response.statusCode()).isEqualTo(200);
             assertThat(response.body()).contains("notifications/before-boom");

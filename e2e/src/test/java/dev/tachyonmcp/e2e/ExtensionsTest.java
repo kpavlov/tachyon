@@ -87,7 +87,7 @@ class ExtensionsTest extends AbstractMcpE2eTest {
             var callWithoutMeta = """
                     {"jsonrpc":"2.0","id":2,"method":"test/ext-call","params":{}}
                     """;
-            var resp1 = client.sendRequest(sessionId, callWithoutMeta);
+            var resp1 = client.post(sessionId, callWithoutMeta);
             assertThat(resp1.body()).contains("-32601");
 
             // Call extension method WITH meta envelope -> should succeed
@@ -95,7 +95,7 @@ class ExtensionsTest extends AbstractMcpE2eTest {
             var callWithMeta = """
                     {"jsonrpc":"2.0","id":3,"method":"test/ext-call","params":{"_meta":{"com.example/test":{}}}}
                     """;
-            var resp2 = client.sendRequest(sessionId, callWithMeta);
+            var resp2 = client.post(sessionId, callWithMeta);
             assertThatJson(resp2.body()).inPath("$.result.status").isEqualTo("ok");
         }
     }
@@ -109,7 +109,7 @@ class ExtensionsTest extends AbstractMcpE2eTest {
             var sessionId = response.headers().firstValue("MCP-Session-Id").orElseThrow();
             client.sendInitialized(sessionId);
 
-            var listResp = client.sendRequest(sessionId, """
+            var listResp = client.post(sessionId, """
                     {"jsonrpc":"2.0","id":2,"method":"tools/list"}
                     """);
             assertThatJson(listResp.body()).inPath("$.result.tools").isArray().isEmpty();
@@ -126,12 +126,12 @@ class ExtensionsTest extends AbstractMcpE2eTest {
             var sessionId = response.headers().firstValue("MCP-Session-Id").orElseThrow();
             client.sendInitialized(sessionId);
 
-            var listResp = client.sendRequest(sessionId, """
+            var listResp = client.post(sessionId, """
                     {"jsonrpc":"2.0","id":2,"method":"tools/list"}
                     """);
             assertThatJson(listResp.body()).inPath("$.result.tools[0].name").isEqualTo("ext-tool");
 
-            var callResp = client.sendRequest(sessionId, """
+            var callResp = client.post(sessionId, """
                     {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"ext-tool","arguments":{}}}
                     """);
             assertThatJson(callResp.body()).inPath("$.result.content[0].text").isEqualTo("ext-tool-result");

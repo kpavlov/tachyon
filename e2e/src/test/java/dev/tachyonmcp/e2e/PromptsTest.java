@@ -30,7 +30,7 @@ class PromptsTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"prompts/list"}
                 """);
 
@@ -53,7 +53,7 @@ class PromptsTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"greeting"}}
                 """);
 
@@ -75,7 +75,7 @@ class PromptsTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"test_prompt_with_arguments","arguments":{"name":"World"}}}
                 """);
 
@@ -92,7 +92,7 @@ class PromptsTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"unknown"}}
                 """);
 
@@ -106,7 +106,7 @@ class PromptsTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"prompts/list"}
                 """);
 
@@ -125,7 +125,7 @@ class PromptsTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"embedded"}}
                 """);
 
@@ -148,7 +148,7 @@ class PromptsTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"image-prompt"}}
                 """);
 

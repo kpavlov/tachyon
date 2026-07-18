@@ -10,12 +10,7 @@ import dev.tachyonmcp.server.ServerBuilder;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.netty.NettyServer;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.function.Consumer;
-import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
@@ -93,29 +88,6 @@ abstract class AbstractMcpE2eTest {
     // endregion
 
     // region: ---- JSON-RPC helpers ----
-
-    /**
-     * Sends a JSON-RPC request and returns the response body, extracting a JSON-RPC envelope from
-     * an SSE body if the response content-type is {@code text/event-stream}.
-     */
-    protected static String rpc(HttpClient client, int port, String sessionId, @Language("json") String body)
-            throws Exception {
-        var request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:" + port + "/mcp"))
-                .header("Content-Type", "application/json")
-                .header("Accept", "application/json, text/event-stream")
-                .header("MCP-Protocol-Version", "2025-11-25")
-                .header("MCP-Session-Id", sessionId)
-                .POST(HttpRequest.BodyPublishers.ofString(body))
-                .build();
-        var response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        assertThat(response.statusCode()).isEqualTo(200);
-        var contentType = response.headers().firstValue("content-type").orElse("");
-        if (contentType.startsWith("text/event-stream")) {
-            return extractJsonRpcResponse(response.body(), extractRequestId(body));
-        }
-        return response.body();
-    }
 
     /** Parses {@code "id":<n>} or {@code "id":"<s>"} out of a JSON-RPC request body. */
     protected static String extractRequestId(String requestBody) {

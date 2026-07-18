@@ -13,7 +13,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import org.jspecify.annotations.Nullable;
+import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -24,70 +24,88 @@ import org.junit.jupiter.params.provider.ValueSource;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class StatelessServerTest {
 
-    private TachyonServer serverHandle;
+    private final TachyonServer tachyonServer = TachyonServer.builder()
+            .tool(EchoToolHandler.create())
+            .network(n -> n.host("localhost").port(0))
+            .start();
     private int port;
 
     @BeforeAll
     void beforeAll() {
-        serverHandle = TachyonServer.builder()
-                .tool(EchoToolHandler.create())
-                .network(n -> n.host("localhost").port(0))
-                .start();
-        port = serverHandle.port();
+        port = tachyonServer.port();
     }
 
     @AfterAll
     void afterAll() {
-        serverHandle.close();
+        tachyonServer.close();
     }
 
     @Test
-    void shouldInitializeWithoutIssuingSessionId() throws Exception {
+    void shouldCompleteLifecycleAndDispatchWithoutSessionId() throws Exception {
         try (var client = new TestMcpClient(port)) {
+            // MCP 2025-11-25 lifecycle: initialize first, then notify initialized.
+            var sessionId = client.initialize();
 
-            var response = client.post(
-                    // language=JSON
-                    """
-                    {"jsonrpc":"2.0","id":1,"method":"initialize",
-                     "params":{"protocolVersion":"2025-11-25","capabilities":{},
-                               "clientInfo":{"name":"test","version":"1.0"}}}
+            var response = client.sendRpc("""
+                    {"jsonrpc":"2.0","id":2,"method":"tools/list"}
                     """);
 
-            assertThat(response.statusCode()).isEqualTo(200);
-            assertThatJson(response.body()).inPath("$.result.protocolVersion").isEqualTo("2025-11-25");
-            assertThat(response.headers().firstValue("MCP-Session-Id")).isEmpty();
-        }
-    }
-
-    @Test
-    void shouldDispatchToolsListWithoutSessionId() throws Exception {
-        try (var client = HttpClient.newHttpClient()) {
-            var response = post(client, null, """
-                    {"jsonrpc":"2.0","id":1,"method":"tools/list"}
-                    """);
-
-            assertThat(response.statusCode()).isEqualTo(200);
-            assertThatJson(response.body()).inPath("$.result.tools").isArray().isNotEmpty();
+            assertThat(sessionId).isNull();
+            // language=JSON
+            var expected = """
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 2,
+                      "result": {
+                        "tools": [{
+                          "name": "echo",
+                          "description": "Echo back the input message",
+                          "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                              "message": {
+                                "type": "string",
+                                "description": "Message to echo"
+                              }
+                            },
+                            "required": ["message"]
+                          }
+                        }]
+                      }
+                    }
+                    """;
+            assertThatJson(response).when(Option.IGNORING_EXTRA_FIELDS).isEqualTo(expected);
         }
     }
 
     @Test
     void shouldExecuteToolCallWithoutSessionId() throws Exception {
-        try (var client = HttpClient.newHttpClient()) {
-            var response = post(client, null, """
-                    {"jsonrpc":"2.0","id":1,"method":"tools/call",
+        try (var client = new TestMcpClient(port)) {
+            client.initialize();
+
+            var response = client.sendRpc("""
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call",
                      "params":{"name":"echo","arguments":{"message":"hello"}}}
                     """);
 
-            assertThat(response.statusCode()).isEqualTo(200);
-            assertThatJson(response.body()).inPath("$.result.content[0].text").isEqualTo("hello");
+            // language=JSON
+            var expected = """
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 2,
+                      "result": {
+                        "content": [{"type": "text", "text": "hello"}]
+                      }
+                    }
+                    """;
+            assertThatJson(response).isEqualTo(expected);
         }
     }
 
     @Test
     void shouldAcceptNotificationWithoutSessionId() throws Exception {
-        try (var client = HttpClient.newHttpClient()) {
-            var response = post(client, null, """
+        try (var client = new TestMcpClient(port)) {
+            var response = client.post(null, """
                     {"jsonrpc":"2.0","method":"notifications/initialized"}
                     """);
 
@@ -98,8 +116,8 @@ class StatelessServerTest {
     @ParameterizedTest(name = "POST method={0}")
     @ValueSource(strings = {"tools/list", "tools/call", "ping"})
     void shouldReturn404WhenPostCarriesSessionId(String method) throws Exception {
-        try (var client = HttpClient.newHttpClient()) {
-            var response = post(client, "sess_12345678", """
+        try (var client = new TestMcpClient(port)) {
+            var response = client.post("sess_12345678", """
                     {"jsonrpc":"2.0","id":1,"method":"%s"}
                     """.formatted(method));
 
@@ -154,18 +172,5 @@ class StatelessServerTest {
             assertThat(response.headers().firstValue("Content-Type")).hasValue("text/event-stream");
             response.body().close();
         }
-    }
-
-    private HttpResponse<String> post(HttpClient client, @Nullable String sessionId, String body) throws Exception {
-        var builder = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:" + port + "/mcp"))
-                .header("Content-Type", "application/json")
-                .header("Accept", "application/json, text/event-stream")
-                .header("MCP-Protocol-Version", "2025-11-25")
-                .POST(HttpRequest.BodyPublishers.ofString(body));
-        if (sessionId != null) {
-            builder.header("MCP-Session-Id", sessionId);
-        }
-        return client.send(builder.build(), HttpResponse.BodyHandlers.ofString());
     }
 }

@@ -39,7 +39,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
             var sessionId = client.initialize();
 
             // Round 1: call tool without inputResponses -> expect InputRequiredResult
-            var round1 = client.sendRequest(sessionId, """
+            var round1 = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"test_elicitation","arguments":{}}}
                 """);
 
@@ -52,7 +52,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
                     .isEqualTo("What is your name?");
 
             // Round 2: call tool with inputResponses -> expect complete result
-            var round2 = client.sendRequest(sessionId, """
+            var round2 = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"test_elicitation","arguments":{},"inputResponses":{"user_name":{"name":"Alice"}}}}
                 """);
 
@@ -68,7 +68,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
             var sessionId = client.initialize();
 
             // Round 1: call tool without inputResponses -> expect InputRequiredResult with step1
-            var round1 = client.sendRequest(sessionId, """
+            var round1 = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"test_multi_round","arguments":{}}}
                 """);
 
@@ -80,7 +80,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
             assertThat(state1).isEqualTo("state-round-1");
 
             // Round 2: call tool with step1 inputResponses + requestState -> expect another InputRequiredResult
-            var round2 = client.sendRequest(sessionId, """
+            var round2 = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"test_multi_round","arguments":{},"inputResponses":{"step1":{"name":"Bob"}},"requestState":"state-round-1"}}
                 """);
 
@@ -92,7 +92,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
             assertThat(state2).startsWith("state-round-2:");
 
             // Round 3: call tool with step2 inputResponses + updated requestState -> expect complete result
-            var round3 = client.sendRequest(
+            var round3 = client.post(
                     sessionId,
                     "{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"tools/call\",\"params\":{\"name\":\"test_multi_round\",\"arguments\":{},\"inputResponses\":{\"step2\":{\"color\":\"blue\"}},\"requestState\":\""
                             + state2 + "\"}}");
@@ -110,7 +110,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
 
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"test_meta_elicitation","arguments":{}}}
                 """);
 
@@ -127,7 +127,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
             var sessionId = client.initialize();
 
             // Call tool with wrong keys in inputResponses -> expect new InputRequiredResult
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"test_elicitation","arguments":{},"inputResponses":{"wrong_key":{"name":"Alice"}}}}
                 """);
 
@@ -149,7 +149,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
             var sessionId = client.initialize();
 
             // Round 1: tool requires URL-mode authentication
-            var round1 = client.sendRequest(sessionId, """
+            var round1 = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"test_url_elicitation","arguments":{}}}
                 """);
 
@@ -171,7 +171,7 @@ class InputRequiredResultTest extends AbstractMcpE2eTest {
                     .isEqualTo("auth-elicitation-1");
 
             // Round 2: client signals URL auth complete with action=accept
-            var round2 = client.sendRequest(sessionId, """
+            var round2 = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"test_url_elicitation","arguments":{},"inputResponses":{"auth":{"action":"accept"}}}}
                 """);
 

@@ -49,7 +49,7 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
             // language=json
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"gson-tool","arguments":{}}}
                 """);
 
@@ -72,7 +72,7 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"raw-tool","arguments":{}}}
                 """);
 
@@ -110,7 +110,7 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"validated-output","arguments":{"message":"test"}}}
                 """);
 
@@ -148,7 +148,7 @@ class PayloadSerdeTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"decode-tool","arguments":{"key":"value"}}}
                 """);
 

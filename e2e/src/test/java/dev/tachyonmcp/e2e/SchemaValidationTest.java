@@ -38,7 +38,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
 
-            var r1 = client.sendRequest(sessionId, """
+            var r1 = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"validated","arguments":{"name":"John","age":30}}}
                 """);
             assertThat(r1.statusCode()).isEqualTo(200);
@@ -46,7 +46,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
                 {"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"ok"}]}}
                 """);
 
-            var r2 = client.sendRequest(sessionId, """
+            var r2 = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"validated2","arguments":{"email":"john@example.com","age":25}}}
                 """);
             assertThat(r2.statusCode()).isEqualTo(200);
@@ -54,7 +54,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
                 {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"ok"}]}}
                 """);
 
-            var r3 = client.sendRequest(sessionId, """
+            var r3 = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"validated2","arguments":{"email":"john@example.com"}}}
                 """);
             assertThat(r3.statusCode()).isEqualTo(200);
@@ -71,7 +71,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"validated","arguments":{"name":"John","age":30}}}
                 """);
 
@@ -91,7 +91,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"validated","arguments":{"age":30}}}
                 """);
 
@@ -110,7 +110,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"validated","arguments":{"name":123}}}
                 """);
 
@@ -145,7 +145,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"validated-prompt","arguments":{"name":"John"}}}
                 """);
 
@@ -180,7 +180,7 @@ class SchemaValidationTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"validated-prompt","arguments":{}}}
                 """);
 

@@ -51,7 +51,7 @@ internal class KotlinE2eTest : AbstractMcpE2eTest() {
         val client = createTestClient()
         val sessionId = client.initialize()
         val response =
-            client.sendRequest(
+            client.post(
                 sessionId,
                 """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"greet","arguments":{"name":"World"}}}
@@ -88,7 +88,7 @@ internal class KotlinE2eTest : AbstractMcpE2eTest() {
         val client = createTestClient()
         val sessionId = client.initialize()
         val response =
-            client.sendRequest(
+            client.post(
                 sessionId,
                 """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"greet","arguments":{"name":"World"}}}
@@ -131,7 +131,7 @@ internal class KotlinE2eTest : AbstractMcpE2eTest() {
         val client = createTestClient()
         val sessionId = client.initialize()
         val response =
-            client.sendRequest(
+            client.post(
                 sessionId,
                 // language=json
                 """

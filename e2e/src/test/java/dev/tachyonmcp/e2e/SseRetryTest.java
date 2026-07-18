@@ -8,10 +8,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -23,18 +19,8 @@ class SseRetryTest extends AbstractMcpE2eTest {
     @Test
     void sseResponseIncludesRetryField() throws Exception {
         String sessionId;
-        try (var client = HttpClient.newHttpClient()) {
-            var initRequest = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:" + port + "/mcp"))
-                    .header("Content-Type", "application/json")
-                    .header("Accept", "application/json, text/event-stream")
-                    .header("MCP-Protocol-Version", "2025-11-25")
-                    .POST(HttpRequest.BodyPublishers.ofString("""
-                            {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}
-                            """))
-                    .build();
-            var initResponse = client.send(initRequest, HttpResponse.BodyHandlers.ofString());
-            sessionId = initResponse.headers().firstValue("MCP-Session-Id").orElseThrow();
+        try (var client = createTestClient()) {
+            sessionId = client.initialize();
         }
 
         try (var socket = new Socket("localhost", port)) {

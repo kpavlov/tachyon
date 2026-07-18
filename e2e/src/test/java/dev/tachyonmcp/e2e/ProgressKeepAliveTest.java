@@ -132,13 +132,13 @@ class ProgressKeepAliveTest {
     private void warmUp() throws Exception {
         try (var client = new TestMcpClient(port)) {
             var sessionId = client.initialize();
-            client.sendRequest(
+            client.post(
                     sessionId, // language=JSON
                     """
                     {"jsonrpc":"2.0","id":1,"method":"tools/call",
                      "params":{"name":"warmup","arguments":{},"_meta":{"progressToken":"warmup"}}}
                     """);
-            client.sendRequest(
+            client.post(
                     sessionId, // language=JSON
                     """
                     {"jsonrpc":"2.0","id":2,"method":"tools/call",
@@ -203,7 +203,7 @@ class ProgressKeepAliveTest {
     private void callSlowProgressAndAssertSse() throws Exception {
         try (var client = new TestMcpClient(port)) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, TOOL_CALL);
+            var response = client.post(sessionId, TOOL_CALL);
 
             assertThat(response.statusCode()).isEqualTo(200);
             assertThat(response.headers().firstValue("content-type").orElse("")).startsWith("text/event-stream");

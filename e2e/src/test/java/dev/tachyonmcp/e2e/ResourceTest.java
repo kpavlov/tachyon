@@ -35,7 +35,7 @@ class ResourceTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"resources/list"}
                 """);
 
@@ -63,7 +63,7 @@ class ResourceTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://doc"}}
                 """);
 
@@ -94,7 +94,7 @@ class ResourceTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://beta"}}
                 """);
 
@@ -126,7 +126,7 @@ class ResourceTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://async-doc"}}
                 """);
 
@@ -145,7 +145,7 @@ class ResourceTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://failing"}}
                 """);
 
@@ -159,7 +159,7 @@ class ResourceTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://unknown"}}
                 """);
 
@@ -184,7 +184,7 @@ class ResourceTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"resources/list"}
                 """);
 
@@ -213,12 +213,12 @@ class ResourceTest extends AbstractMcpE2eTest {
 
             server.resources().unregisterByUri("resource://alpha");
 
-            var readResponse = client.sendRequest(sessionId, """
+            var readResponse = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://alpha"}}
                 """);
             assertThatJson(readResponse.body()).inPath("$.error.code").isEqualTo(-32002);
 
-            var listResponse = client.sendRequest(sessionId, """
+            var listResponse = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":3,"method":"resources/list"}
                 """);
             assertThatJson(listResponse.body()).inPath("$.result.resources");
@@ -245,7 +245,7 @@ class ResourceTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"notify-list-changed","arguments":{}}}
                 """);
 
@@ -263,12 +263,12 @@ class ResourceTest extends AbstractMcpE2eTest {
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
 
-            var subResponse = client.sendRequest(sessionId, """
+            var subResponse = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"resources/subscribe","params":{"uri":"resource://doc"}}
                 """);
             assertThat(subResponse.statusCode()).isEqualTo(200);
 
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"notify-update","arguments":{}}}
                 """);
 
@@ -288,7 +288,7 @@ class ResourceTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var response = client.sendRequest(sessionId, """
+            var response = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"unregister-by-uri","arguments":{}}}
                 """);
 

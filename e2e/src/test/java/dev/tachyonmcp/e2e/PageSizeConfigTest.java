@@ -27,7 +27,7 @@ class PageSizeConfigTest extends AbstractMcpE2eTest {
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
 
-            var page1 = client.sendRequest(sessionId, """
+            var page1 = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":1,"method":"tools/list"}
                 """);
             var root1 = MAPPER.readTree(page1.body());
@@ -38,7 +38,7 @@ class PageSizeConfigTest extends AbstractMcpE2eTest {
             assertThat(cursor).isNotNull();
 
             // language=json
-            var page2 = client.sendRequest(sessionId, """
+            var page2 = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{"cursor":"%s"}}
                 """.formatted(cursor));
             var root2 = MAPPER.readTree(page2.body());

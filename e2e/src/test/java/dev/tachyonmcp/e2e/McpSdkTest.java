@@ -71,7 +71,7 @@ class McpSdkTest extends AbstractMcpE2eTest {
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
-            var getPromptResponse = client.sendRequest(sessionId, """
+            var getPromptResponse = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"role-enum-prompt"}}
                 """);
             assertThat(getPromptResponse.statusCode()).isEqualTo(200);
