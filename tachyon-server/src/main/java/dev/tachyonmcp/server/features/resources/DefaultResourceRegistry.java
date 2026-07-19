@@ -11,6 +11,7 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.UnsubscribeRequestParams;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.Mode;
 import dev.tachyonmcp.server.config.ResourcesConfig;
+import dev.tachyonmcp.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.server.domain.ResourceContents;
 import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.ChangeSupport;
@@ -514,6 +515,8 @@ public class DefaultResourceRegistry implements ResourceRegistry {
             ResourceContents contents;
             try {
                 contents = HandlerFutures.joinInterruptibly(invoker.call());
+            } catch (InvalidArgumentException e) {
+                return JsonRpcErrors.invalidParams("invalid argument '" + e.argName() + "': " + e.getMessage());
             } catch (Exception e) {
                 logger.error("Resource handler error for '{}'", uri, e);
                 return JsonRpcErrors.internalError("Resource handler failed");

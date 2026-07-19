@@ -35,7 +35,7 @@ public interface OutboundSseStream {
     }
 
     /**
-     * Activates the SSE stream and emits initial framing (headers, retry directive).
+     * Activates the SSE stream and emits initial framing.
      * Idempotent — subsequent calls are no-ops. May be called from any thread.
      */
     void start();

@@ -21,6 +21,7 @@ import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.ResourcesConfig;
 import dev.tachyonmcp.server.domain.Annotations;
 import dev.tachyonmcp.server.domain.Icon;
+import dev.tachyonmcp.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.server.domain.Role;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.domain.UriTemplateValue;
@@ -262,6 +263,21 @@ class ResourceRegistryTest {
         var result = handlers.get("resources/read").handle(DefaultDispatchContext.noop(), Map.of());
 
         assertThat(result).isInstanceOf(JsonRpcError.class);
+    }
+
+    @Test
+    void shouldMapInvalidArgumentExceptionToInvalidParams() throws Exception {
+        registry.register(
+                ResourceDescriptor.of("bad-input", "test://bad-input", null, "text/plain"),
+                (ctx, rawUri, params, uriTemplate) -> {
+                    throw new InvalidArgumentException("city", "unknown city");
+                });
+
+        var result = runInVirtualThread(() -> handlers.get("resources/read")
+                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "test://bad-input")));
+
+        assertThat(result).isInstanceOf(JsonRpcError.class);
+        assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_PARAMS);
     }
 
     @Test

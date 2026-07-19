@@ -2,27 +2,42 @@
 
 package com.example.weather;
 
-import dev.tachyonmcp.runtime.InteractionContext;
+import com.example.weather.integration.OpenMeteoWeatherProvider;
+import com.example.weather.service.NarrationStyle;
+import com.example.weather.service.WeatherService;
+import com.example.weather.spi.CityNotFoundException;
+import com.example.weather.spi.WeatherObservation;
 import dev.tachyonmcp.server.TachyonServer;
+import dev.tachyonmcp.server.domain.Icon;
+import dev.tachyonmcp.server.domain.InvalidArgumentException;
+import dev.tachyonmcp.server.domain.PromptArgument;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.ResourceContents;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.domain.UriTemplateValue;
-import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptRequest;
 import dev.tachyonmcp.server.features.prompts.PromptResult;
-import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.databind.ObjectMapper;
 
-import java.time.LocalDate;
-import java.util.Map;
+import java.io.IOException;
+import java.net.http.HttpClient;
+import java.util.Base64;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.Map;
+import java.util.concurrent.Executors;
 
 public final class WeatherServer {
 
     private static final Logger log = LoggerFactory.getLogger(WeatherServer.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final String LOGO = classpathDataUri("/images/logo.png", "image/png");
+
+    private static final WeatherService weatherService = new WeatherService(
+        new OpenMeteoWeatherProvider(
+            HttpClient.newBuilder().executor(Executors.newVirtualThreadPerTaskExecutor()).build()
+        ));
 
     public static void main(String... args) {
         final var server = createServer(8080);
@@ -30,116 +45,100 @@ public final class WeatherServer {
         log.info("Connect your MCP client to http://localhost:{}/mcp", port);
     }
 
-    /**
-     * Creates and starts the weather MCP server on the specified port.
-     *
-     * @param port the port on which the server listens
-     * @return the started weather MCP server
-     */
     static TachyonServer createServer(int port) {
+        return createServer(port, weatherService);
+    }
+
+    static TachyonServer createServer(int port, WeatherService weatherService) {
         return TachyonServer.builder()
                 .info(it -> it
                         .name("weather-server")
                         .title("Weather Server")
                         .description("Weather MCP server")
-                        .websiteUrl("http://localhost:8080/mcp")
+                        .websiteUrl("https://github.com/kpavlov/tachyon/tree/main/examples/weather")
                         .instructions("Test instructions")
+                        .icons(Icon.of(LOGO, "image/png", List.of("256x256"), null))
                         .version("1.0"))
-                .session(s -> s.enabled(false))
-                .tool(GetWeatherTool.create())
+                .tool(GetWeatherTool.create(weatherService))
                 .resource(
-                        ResourceDescriptor.of(
-                                "prediction-article",
-                                "weather://prediction/article",
-                                "Weather prediction article",
-                                "text/markdown"),
-                        WeatherServer::handleArticleResource)
-                .asyncResource(
-                        resource -> resource.name("weather-image")
-                                .uri("weather://current/image")
-                                .description("Current weather icon")
-                                .mimeType("image/png"),
+                        resource -> resource.name("prediction-article")
+                                .uri("weather://prediction/article")
+                                .description("Weather prediction article")
+                                .mimeType("text/markdown"),
                         (ctx, uri, params, uriTemplate) ->
-                                CompletableFuture.supplyAsync(WeatherImageResource::read))
-
-            .prompt(PromptDescriptor.of("rewrite-forecast", "Rewrites a weather forecast in a given style"),
-                    WeatherServer::handleRewriteForecast)
-
-            .resourceTemplate(builder -> builder
-                    .name("forecast")
-                    .uriTemplate("weather://forecast/{city}")
-                    .title("Weather in the city")
-                    .description("Weather forecast for a city")
-                    .mimeType("application/json"),
-                WeatherServer::handleForecastTemplate)
-                .port(port)
+                                TextResourceContents.of(uri, "text/markdown", weatherService.predictionArticle()))
+                .asyncResource(
+                        resource -> resource.name("featured-current-weather")
+                                .uri("weather://featured/current")
+                                .description("Current weather in Tallinn")
+                                .mimeType("application/json"),
+                        (ctx, uri, params, uriTemplate) -> weatherService.currentWeatherAsync("Tallinn")
+                                .thenApply(weather -> TextResourceContents.of(uri, "application/json", asJson(weather))))
+                .prompt(
+                        prompt -> prompt.name("rewrite-forecast")
+                                .description("Rewrites a weather forecast in a chosen style")
+                                .addArguments(
+                                        PromptArgument.of("forecast", "Forecast", "Weather forecast to rewrite", true),
+                                        PromptArgument.of("style", "Style", "plain, concise, or pirate", true))
+                                .inputSchema(NarrationStyle.inputSchema()),
+                        (ctx, request) -> rewriteForecast(weatherService, request))
+                .resourceTemplate(
+                        template -> template.name("current-weather")
+                                .uriTemplate("weather://current/{city}")
+                                .title("Weather in the city")
+                                .description("Weather forecast for a city")
+                                .mimeType("application/json"),
+                        (ctx, uri, params, uriTemplate) ->
+                                handleWeatherTemplate(weatherService, uri, params))
+                .session(session -> session.enabled(true))
+                .network(network -> network.port(port))
                 .start();
     }
 
     private WeatherServer() {
     }
 
-    /**
-     * Provides a Markdown article explaining weather prediction methods and observational systems.
-     *
-     * @param uri the requested resource URI
-     * @return Markdown resource contents for the requested URI
-     */
-    private static TextResourceContents handleArticleResource(
-            InteractionContext ctx,
-            String uri,
-            Map<String, UriTemplateValue> params,
-            String uriTemplate) {
-        var article = """
-                # Weather Prediction
-
-                Weather prediction uses physics-based models and statistical methods to forecast
-                atmospheric conditions. Modern forecasting combines:
-
-                - **Numerical Weather Prediction (NWP)** — solving fluid dynamics equations
-                  on a 3-D grid of the atmosphere
-                - **Ensemble forecasting** — running multiple model perturbations to estimate
-                  confidence intervals
-                - **Machine learning** — neural networks that learn from historical patterns
-                  and improve short-term nowcasting
-
-                The global observing system includes weather stations, radiosondes, aircraft
-                reports, ocean buoys, and over 30 polar-orbiting and geostationary satellites.
-
-                ---
-                Published by Tachyon Weather MCP — %s
-            """.formatted(LocalDate.now());
-        return TextResourceContents.of(uri, "text/markdown", article);
+    private static PromptResult rewriteForecast(WeatherService weatherService, PromptRequest request) {
+        var arguments = MAPPER.readTree(request.arguments() != null ? request.arguments() : "{}");
+        var forecast = arguments.path("forecast").asString();
+        var style = NarrationStyle.from(arguments.path("style").asString());
+        return PromptResult.messages(List.of(PromptMessage.user(weatherService.rewriteForecastInstruction(forecast, style))));
     }
 
-    /**
-     * Creates a JSON weather forecast resource for the requested city.
-     *
-     * @param uri the requested resource URI
-     * @param params the parsed URI template parameters
-     * @return       JSON resource contents for the city forecast
-     */
-    private static ResourceContents handleForecastTemplate(
-            InteractionContext ctx,
+    private static ResourceContents handleWeatherTemplate(
+            WeatherService weatherService,
             String uri,
-            Map<String, UriTemplateValue> params,
-            String uriTemplate) {
+            Map<String, UriTemplateValue> params) {
         var city = ((UriTemplateValue.Scalar) params.get("city")).value();
-        var forecast = """
-                {
-                  "city": "%s",
-                  "condition": "Partly cloudy",
-                  "temperature": 22,
-                  "unit": "celsius",
-                  "humidity": 55,
-                  "wind": 15
-                }
-                """.formatted(city);
-        return TextResourceContents.of(uri, "application/json", forecast);
+        try {
+            return TextResourceContents.of(uri, "application/json", asJson(weatherService.currentWeather(city)));
+        } catch (CityNotFoundException e) {
+            throw new InvalidArgumentException("city", e.getMessage());
+        } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            throw new IllegalStateException("Could not get weather", e);
+        }
     }
 
-    private static PromptResult handleRewriteForecast(InteractionContext ctx, PromptRequest request) {
-        return PromptResult.messages(List.of(PromptMessage.user("Rewrite this forecast in a pirate style.")));
+    private static String asJson(WeatherObservation weather) {
+        try {
+            return MAPPER.writeValueAsString(weather);
+        } catch (Exception e) {
+            throw new IllegalStateException("Could not serialize weather", e);
+        }
+    }
+
+    private static String classpathDataUri(String path, String mimeType) {
+        try (var image = WeatherServer.class.getResourceAsStream(path)) {
+            if (image == null) {
+                throw new IllegalStateException("Missing classpath resource: " + path);
+            }
+            return "data:%s;base64,%s".formatted(mimeType, Base64.getEncoder().encodeToString(image.readAllBytes()));
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not read classpath resource: " + path, e);
+        }
     }
 
 }

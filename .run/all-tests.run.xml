@@ -5,6 +5,7 @@
     <toRun name="tachyon-extensions-tests" type="JUnit" />
     <toRun name="tachyon-server-kotlin-tests" type="JUnit" />
     <toRun name="tachyon-server-tests" type="JUnit" />
+    <toRun name="weather-example-tests" type="JUnit" />
     <method v="2" />
   </configuration>
 </component>

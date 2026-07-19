@@ -109,7 +109,11 @@ public final class PostSseStream implements OutboundSseStream {
 
     @Override
     public void close() {
-        runOnEventLoop(this::doClose);
+        runOnEventLoop(() -> doClose(true));
+    }
+
+    public void terminate() {
+        runOnEventLoop(() -> doClose(false));
     }
 
     private void runOnEventLoop(Runnable task) {
@@ -130,8 +134,6 @@ public final class PostSseStream implements OutboundSseStream {
         var response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         HttpHelpers.setSseStreamHeaders(response, origin);
         channel.write(response);
-        channel.write(
-                new DefaultHttpContent(ByteBufUtil.writeUtf8(channel.alloc(), "retry: " + SSE_RETRY_DELAY_MS + "\n")));
         SseHeartbeat.enable(channel, heartbeatInterval);
         // Priming event: gives the client a Last-Event-ID baseline for reconnection (SEP-1699).
         // Carries this stream's key so a resume from the priming id replays only this stream.
@@ -207,10 +209,14 @@ public final class PostSseStream implements OutboundSseStream {
         });
     }
 
-    private void doClose() {
+    private void doClose(boolean reconnect) {
         if (closed) return;
         closed = true;
         if (!channel.isActive() || !started) return;
+        if (reconnect) {
+            channel.write(new DefaultHttpContent(
+                    ByteBufUtil.writeUtf8(channel.alloc(), "retry: " + SSE_RETRY_DELAY_MS + "\n")));
+        }
         channel.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
     }
 

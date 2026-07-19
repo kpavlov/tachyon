@@ -251,11 +251,11 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         if (ex != null) {
             logger.error("Dispatch failed: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs, ex);
             if (postStream.started()) {
-                postStream.close();
+                postStream.terminate();
             } else {
                 // Neutralize the stream so a late server→client message cannot start a
                 // second HTTP response on this channel, then send the JSON error.
-                postStream.close();
+                postStream.terminate();
                 sendInternalError(ctx, requestId, origin);
             }
             return;
@@ -263,7 +263,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         if (result instanceof McpDispatcher.DispatchResult.Status(int code, String message)) {
             // Transport-level signal from the dispatcher — spec ties this condition to a raw HTTP
             // status, not a JSON-RPC error envelope.
-            postStream.close();
+            postStream.terminate();
             sendPlainTextAndClose(ctx, HttpResponseStatus.valueOf(code), message, origin);
             return;
         }
@@ -278,7 +278,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             try {
                 executor.execute(() -> finalizePostSseResponse(requestId, sessionId, postStream, result));
             } catch (RejectedExecutionException e) {
-                postStream.close();
+                postStream.terminate();
             }
             return;
         }
@@ -286,7 +286,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         // stream so a server→client message that arrives after this check (e.g. an async
         // tool's status notification) cannot open a second response on the pooled socket
         // and corrupt the next request's reuse of it.
-        postStream.close();
+        postStream.terminate();
         if (result instanceof McpDispatcher.DispatchResult.Accepted) {
             sendAccepted(ctx, origin);
             return;
@@ -306,7 +306,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             PostSseStream postStream,
             McpDispatcher.@Nullable DispatchResult result) {
         if (!(result instanceof McpDispatcher.DispatchResult.Response response)) {
-            postStream.close();
+            postStream.terminate();
             return;
         }
         var responseBody = response.responseBody();
@@ -328,7 +328,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         } catch (RuntimeException e) {
             logger.error("Failed to write final response on POST-SSE stream", e);
         } finally {
-            postStream.close();
+            postStream.terminate();
         }
     }
 
