@@ -25,7 +25,13 @@ public non-sealed interface TextResourceContents extends ResourceContents {
 
     String text();
 
-    static DefaultTextResourceContents.Builder builder() {
+    @Value.Check
+    default void check() {
+        if (uri().isBlank()) throw new IllegalArgumentException("uri must not be blank");
+        if (text().isBlank()) throw new IllegalArgumentException("text must not be blank");
+    }
+
+    static Builder builder() {
         return DefaultTextResourceContents.builder();
     }
 
@@ -36,5 +42,17 @@ public non-sealed interface TextResourceContents extends ResourceContents {
     static TextResourceContents of(
             String uri, @Nullable String mimeType, String text, @Nullable Map<String, JsonNode> meta) {
         return DefaultTextResourceContents.of(meta, uri, mimeType, text);
+    }
+
+    interface Builder {
+        Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
+
+        Builder uri(String uri);
+
+        Builder mimeType(@Nullable String mimeType);
+
+        Builder text(String text);
+
+        TextResourceContents build();
     }
 }

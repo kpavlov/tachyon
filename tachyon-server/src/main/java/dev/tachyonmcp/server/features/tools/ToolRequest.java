@@ -22,6 +22,11 @@ public interface ToolRequest extends HasMeta {
 
     String name();
 
+    @Value.Check
+    default void check() {
+        if (name().isBlank()) throw new IllegalArgumentException("name must not be blank");
+    }
+
     @Value.Default
     default Map<String, JsonNode> arguments() {
         return Map.of();

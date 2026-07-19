@@ -21,11 +21,24 @@ public non-sealed interface RpcMethodRequest extends InputRequest {
     @Nullable
     JsonNode params();
 
-    static DefaultRpcMethodRequest.Builder builder() {
+    @Value.Check
+    default void check() {
+        if (method().isBlank()) throw new IllegalArgumentException("method must not be blank");
+    }
+
+    static Builder builder() {
         return DefaultRpcMethodRequest.builder();
     }
 
     static RpcMethodRequest of(String method, @Nullable JsonNode params) {
         return DefaultRpcMethodRequest.of(method, params);
+    }
+
+    interface Builder {
+        Builder method(String method);
+
+        Builder params(@Nullable JsonNode params);
+
+        RpcMethodRequest build();
     }
 }

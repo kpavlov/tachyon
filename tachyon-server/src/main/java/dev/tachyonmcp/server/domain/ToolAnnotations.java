@@ -38,7 +38,7 @@ public interface ToolAnnotations {
     @Nullable
     Boolean openWorldHint();
 
-    static DefaultToolAnnotations.Builder builder() {
+    static Builder builder() {
         return DefaultToolAnnotations.builder();
     }
 
@@ -49,5 +49,19 @@ public interface ToolAnnotations {
             @Nullable Boolean idempotentHint,
             @Nullable Boolean openWorldHint) {
         return DefaultToolAnnotations.of(title, readOnlyHint, destructiveHint, idempotentHint, openWorldHint);
+    }
+
+    interface Builder {
+        Builder title(@Nullable String title);
+
+        Builder readOnlyHint(@Nullable Boolean readOnlyHint);
+
+        Builder destructiveHint(@Nullable Boolean destructiveHint);
+
+        Builder idempotentHint(@Nullable Boolean idempotentHint);
+
+        Builder openWorldHint(@Nullable Boolean openWorldHint);
+
+        ToolAnnotations build();
     }
 }

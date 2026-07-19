@@ -45,11 +45,21 @@ public interface PaginatedResult<R> {
      */
     boolean cursorValid();
 
-    static <R> DefaultPaginatedResult.Builder<R> builder() {
+    static <R> Builder<R> builder() {
         return DefaultPaginatedResult.builder();
     }
 
     static <R> PaginatedResult<R> of(List<R> items, @Nullable String nextCursor, boolean cursorValid) {
         return DefaultPaginatedResult.of(items, nextCursor, cursorValid);
+    }
+
+    interface Builder<R> {
+        Builder<R> items(Iterable<? extends R> elements);
+
+        Builder<R> nextCursor(@Nullable String nextCursor);
+
+        Builder<R> cursorValid(boolean cursorValid);
+
+        PaginatedResult<R> build();
     }
 }

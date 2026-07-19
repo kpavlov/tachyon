@@ -21,11 +21,28 @@ public non-sealed interface UrlInputRequest extends InputRequest {
     /** URL to open for user input. */
     String url();
 
-    static DefaultUrlInputRequest.Builder builder() {
+    @Value.Check
+    default void check() {
+        if (message().isBlank()) throw new IllegalArgumentException("message must not be blank");
+        if (elicitationId().isBlank()) throw new IllegalArgumentException("elicitationId must not be blank");
+        if (url().isBlank()) throw new IllegalArgumentException("url must not be blank");
+    }
+
+    static Builder builder() {
         return DefaultUrlInputRequest.builder();
     }
 
     static UrlInputRequest of(String message, String elicitationId, String url) {
         return DefaultUrlInputRequest.of(message, elicitationId, url);
+    }
+
+    interface Builder {
+        Builder message(String message);
+
+        Builder elicitationId(String elicitationId);
+
+        Builder url(String url);
+
+        UrlInputRequest build();
     }
 }

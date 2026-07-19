@@ -37,7 +37,13 @@ public non-sealed interface ImageContent extends ContentBlock {
         return Type.IMAGE;
     }
 
-    static DefaultImageContent.Builder builder() {
+    @Value.Check
+    default void check() {
+        if (data().isBlank()) throw new IllegalArgumentException("data must not be blank");
+        if (mimeType().isBlank()) throw new IllegalArgumentException("mimeType must not be blank");
+    }
+
+    static Builder builder() {
         return DefaultImageContent.builder();
     }
 
@@ -55,5 +61,17 @@ public non-sealed interface ImageContent extends ContentBlock {
     static ImageContent of(
             String data, String mimeType, @Nullable Annotations annotations, @Nullable Map<String, JsonNode> meta) {
         return DefaultImageContent.of(data, mimeType, annotations, meta);
+    }
+
+    interface Builder {
+        Builder data(String data);
+
+        Builder mimeType(String mimeType);
+
+        Builder annotations(@Nullable Annotations annotations);
+
+        Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
+
+        ImageContent build();
     }
 }

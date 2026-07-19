@@ -17,7 +17,10 @@ import tools.jackson.databind.JsonNode;
  * metadata (URI, name, title, description, MIME type) without the actual content data.
  */
 @Value.Immutable
-@Value.Style(allParameters = true, typeImmutable = "Default*")
+@Value.Style(
+        allParameters = true,
+        typeImmutable = "Default*",
+        visibility = Value.Style.ImplementationVisibility.PACKAGE)
 public non-sealed interface ResourceLink extends ContentBlock {
 
     String name();
@@ -49,7 +52,8 @@ public non-sealed interface ResourceLink extends ContentBlock {
     default void check() {
         if (name().isBlank()) throw new IllegalArgumentException("name must not be blank");
         if (uri().isBlank()) throw new IllegalArgumentException("uri must not be blank");
-        if (size() != null && size() < 0) throw new IllegalArgumentException("size must be >= 0, got: " + size());
+        Long size = size();
+        if (size != null && size < 0) throw new IllegalArgumentException("size must be >= 0, got: " + size);
     }
 
     @Override
@@ -82,24 +86,26 @@ public non-sealed interface ResourceLink extends ContentBlock {
         return builder().uri(uri).name(name);
     }
 
-    public interface Builder {
+    interface Builder {
 
-        DefaultResourceLink.Builder name(String name);
+        Builder name(String name);
 
-        DefaultResourceLink.Builder title(@Nullable String title);
+        Builder title(@Nullable String title);
 
-        DefaultResourceLink.Builder icons(@Nullable Iterable<? extends Icon> elements);
+        Builder icons(@Nullable Iterable<? extends Icon> elements);
 
-        DefaultResourceLink.Builder uri(String uri);
+        Builder uri(String uri);
 
-        DefaultResourceLink.Builder description(@Nullable String description);
+        Builder description(@Nullable String description);
 
-        DefaultResourceLink.Builder annotations(@Nullable Annotations annotations);
+        Builder mimeType(@Nullable String mimeType);
 
-        DefaultResourceLink.Builder size(@Nullable Long size);
+        Builder annotations(@Nullable Annotations annotations);
 
-        DefaultResourceLink.Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
+        Builder size(@Nullable Long size);
 
-        DefaultResourceLink build();
+        Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
+
+        ResourceLink build();
     }
 }

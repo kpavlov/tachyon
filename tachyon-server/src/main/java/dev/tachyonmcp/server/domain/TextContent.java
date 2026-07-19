@@ -5,6 +5,7 @@
 package dev.tachyonmcp.server.domain;
 
 import java.util.Map;
+import java.util.Objects;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
@@ -34,7 +35,12 @@ public non-sealed interface TextContent extends ContentBlock {
         return ContentBlock.Type.TEXT;
     }
 
-    static DefaultTextContent.Builder builder() {
+    @Value.Check
+    default void check() {
+        Objects.requireNonNull(text(), "text must not be null");
+    }
+
+    static Builder builder() {
         return DefaultTextContent.builder();
     }
 
@@ -51,5 +57,15 @@ public non-sealed interface TextContent extends ContentBlock {
     /** Creates a text content block with metadata and optional annotations. */
     static TextContent of(String text, @Nullable Map<String, JsonNode> meta, @Nullable Annotations annotations) {
         return DefaultTextContent.of(text, meta, annotations);
+    }
+
+    interface Builder {
+        Builder text(String text);
+
+        Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
+
+        Builder annotations(@Nullable Annotations annotations);
+
+        TextContent build();
     }
 }

@@ -17,8 +17,8 @@ import org.jspecify.annotations.Nullable;
 @Value.Immutable
 @Value.Style(
         allParameters = true,
-        visibility = Value.Style.ImplementationVisibility.PACKAGE,
-        typeImmutable = "Default*")
+        typeImmutable = "Default*",
+        visibility = Value.Style.ImplementationVisibility.PACKAGE)
 public interface PromptArgument {
 
     String name();
@@ -32,12 +32,30 @@ public interface PromptArgument {
     @Nullable
     Boolean required();
 
-    static DefaultPromptArgument.Builder builder() {
+    @Value.Check
+    default void check() {
+        if (name().isBlank()) throw new IllegalArgumentException("name must not be blank");
+    }
+
+    static Builder builder() {
         return DefaultPromptArgument.builder();
     }
 
     static PromptArgument of(
             String name, @Nullable String title, @Nullable String description, @Nullable Boolean required) {
         return DefaultPromptArgument.of(name, title, description, required);
+    }
+
+    interface Builder {
+
+        Builder name(String name);
+
+        Builder title(@Nullable String title);
+
+        Builder description(@Nullable String description);
+
+        Builder required(@Nullable Boolean required);
+
+        PromptArgument build();
     }
 }

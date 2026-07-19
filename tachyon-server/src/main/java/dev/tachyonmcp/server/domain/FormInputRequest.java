@@ -20,11 +20,24 @@ public non-sealed interface FormInputRequest extends InputRequest {
     /** JSON schema describing the expected form fields. */
     Map<String, JsonNode> requestedSchema();
 
-    static DefaultFormInputRequest.Builder builder() {
+    @Value.Check
+    default void check() {
+        if (message().isBlank()) throw new IllegalArgumentException("message must not be blank");
+    }
+
+    static Builder builder() {
         return DefaultFormInputRequest.builder();
     }
 
     static FormInputRequest of(String message, Map<String, JsonNode> requestedSchema) {
         return DefaultFormInputRequest.of(message, requestedSchema);
+    }
+
+    interface Builder {
+        Builder message(String message);
+
+        Builder requestedSchema(Map<String, ? extends JsonNode> entries);
+
+        FormInputRequest build();
     }
 }
