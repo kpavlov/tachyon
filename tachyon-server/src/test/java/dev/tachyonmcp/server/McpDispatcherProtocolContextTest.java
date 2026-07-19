@@ -140,7 +140,6 @@ class McpDispatcherProtocolContextTest {
                 @Override
                 public Object handle(DispatchContext context, Object params) {
                     handlerContext.set(context);
-                    context.notifications().send("notifications/message", Map.of("level", "info"));
                     return Map.of("ok", true);
                 }
             });

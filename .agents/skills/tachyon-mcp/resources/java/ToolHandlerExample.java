@@ -85,9 +85,12 @@ final class ToolHandlerExample {
      *
      * <ul>
      *   <li>{@code progress(token, ...)} — when the client requested progress, forward its
-     *       {@link ToolRequest#progressToken()}. A {@code null} token throws, so guard on it.
+     *       {@link ToolRequest#progressToken()}. A {@code null} token is silently dropped per the
+     *       MCP spec (the client didn't opt in) — no bytes are sent, so it does NOT keep the
+     *       connection alive.
      *   <li>{@code comment(msg)} — a token-free SSE comment ({@code : msg}); use it to keep alive
-     *       when no progress token is available.
+     *       when no progress token is available, since a dropped {@code progress(null, ...)} sends
+     *       nothing.
      * </ul>
      */
     static final class LongRunningTool extends AbstractToolHandler {

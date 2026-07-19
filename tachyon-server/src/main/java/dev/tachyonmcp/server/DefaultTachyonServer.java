@@ -8,7 +8,6 @@ import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
-import dev.tachyonmcp.runtime.AbstractNotifications;
 import dev.tachyonmcp.runtime.Backpressure;
 import dev.tachyonmcp.runtime.Notifications;
 import dev.tachyonmcp.runtime.Session;
@@ -30,6 +29,7 @@ import dev.tachyonmcp.server.handlers.CompletionHandlers;
 import dev.tachyonmcp.server.handlers.InitializeHandler;
 import dev.tachyonmcp.server.handlers.LoggingHandlers;
 import dev.tachyonmcp.server.handlers.PingHandler;
+import dev.tachyonmcp.server.internal.NotificationLogSupport;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
@@ -407,8 +407,8 @@ final class DefaultTachyonServer implements ServerEngine {
         if (!config.capabilities().logging()) {
             return;
         }
-        var paramsStr = JsonRpcCodec.toJsonParams(AbstractNotifications.logParams(level, logger, data));
-        var notificationJson = JsonRpcCodec.serializeNotificationAsString(AbstractNotifications.LOG_METHOD, paramsStr);
+        var paramsStr = JsonRpcCodec.toJsonParams(NotificationLogSupport.logParams(level, logger, data));
+        var notificationJson = JsonRpcCodec.serializeNotificationAsString(NotificationLogSupport.LOG_METHOD, paramsStr);
         for (var session : sessionManager.allSessions()) {
             if (session.state() != SessionState.ACTIVE) {
                 continue;
@@ -417,7 +417,7 @@ final class DefaultTachyonServer implements ServerEngine {
             if (level.ordinal() < threshold.ordinal()) {
                 continue;
             }
-            sendSerializedNotification(session, AbstractNotifications.LOG_METHOD, paramsStr, notificationJson, null);
+            sendSerializedNotification(session, NotificationLogSupport.LOG_METHOD, paramsStr, notificationJson, null);
         }
     }
 

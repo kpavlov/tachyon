@@ -6,6 +6,9 @@ package com.example.weather;
 import com.example.weather.service.WeatherService;
 import com.example.weather.spi.CityNotFoundException;
 import com.example.weather.spi.WeatherObservation;
+import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.domain.Args;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import org.slf4j.Logger;
@@ -39,32 +42,45 @@ class GetWeatherTool {
         """;
 
     static ToolHandler create(WeatherService weatherService) {
-        return ToolHandler.of(b -> b
+        var descriptor = ToolDescriptor.builder()
                 .name("get-weather")
                 .title("Current Weather")
                 .description("Get current weather for a city")
-                .inputSchema(INPUT_SCHEMA),
-            (ctx, args) -> {
-                var city = args.stringValue("city");
-                var units = args.stringOr("units", "celsius");
-                try {
-                    return ToolResult.text(format(weatherService.currentWeather(city), units));
-                } catch (CityNotFoundException e) {
-                    var elicitedCity = elicitCity(ctx, city);
-                    if (elicitedCity.isEmpty()) {
-                        return ToolResult.error("City not found");
-                    }
-                    try {
-                        return ToolResult.text(format(weatherService.currentWeather(elicitedCity.get()), units));
-                    } catch (CityNotFoundException ignored) {
-                        return ToolResult.error("City not found");
-                    } catch (Exception x) {
-                        return internalError(x);
-                    }
-                } catch (Exception e) {
-                    return internalError(e);
+                .inputSchema(INPUT_SCHEMA)
+                .build();
+        return ToolHandler.ofRequest(descriptor, (ctx, request) -> {
+            var args = Args.of(request.arguments(), request.payloadDeserializer());
+            var city = args.stringValue("city");
+            var units = args.stringOr("units", "celsius");
+            var progressToken = request.progressToken();
+            try {
+                return ToolResult.text(format(fetchWithProgress(ctx, progressToken, weatherService, city), units));
+            } catch (CityNotFoundException e) {
+                var elicitedCity = elicitCity(ctx, city);
+                if (elicitedCity.isEmpty()) {
+                    return ToolResult.error("City not found");
                 }
-            });
+                try {
+                    return ToolResult.text(
+                            format(fetchWithProgress(ctx, progressToken, weatherService, elicitedCity.get()), units));
+                } catch (CityNotFoundException ignored) {
+                    return ToolResult.error("City not found");
+                } catch (Exception x) {
+                    return internalError(x);
+                }
+            } catch (Exception e) {
+                return internalError(e);
+            }
+        });
+    }
+
+    private static WeatherObservation fetchWithProgress(
+            InteractionContext ctx, Object progressToken, WeatherService weatherService, String city)
+            throws Exception {
+        ctx.notifications().progress(progressToken, 0.1, 1.0, "Fetching weather for " + city);
+        var weather = weatherService.currentWeather(city);
+        ctx.notifications().progress(progressToken, 1.0, 1.0, "Weather retrieved for " + city);
+        return weather;
     }
 
     private static ToolResult internalError(Exception e) {
@@ -75,7 +91,7 @@ class GetWeatherTool {
         return ToolResult.error("Could not get weather");
     }
 
-    private static Optional<String> elicitCity(dev.tachyonmcp.runtime.InteractionContext ctx, String city) throws Exception {
+    private static Optional<String> elicitCity(InteractionContext ctx, String city) throws Exception {
         var future = ctx.sendRequest(
                 "elicitation/create",
                 Map.of(

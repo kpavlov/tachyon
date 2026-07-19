@@ -8,18 +8,10 @@ import dev.tachyonmcp.annotations.ExperimentalApi;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Internal notification surface used from within an interaction (handler dispatch) context. Extends
- * the public {@link Notifications} logging surface with the raw transport primitives.
- *
- * <p>Only wire operations live here. Log gating and wire-shape construction are provided by
- * {@link AbstractNotifications}; this interface declares no logic beyond a single delegating default.
+ * Handler-facing notification surface used from within an interaction (handler dispatch) context.
+ * Extends the public {@link Notifications} logging surface with progress and keep-alive operations.
  */
-public interface InternalNotifications extends Notifications {
-
-    /**
-     * Sends a generic notification with the given method and params.
-     */
-    void send(String method, Object params);
+public interface ContextNotifications extends Notifications {
 
     /**
      * Sends a progress notification.

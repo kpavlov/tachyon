@@ -68,10 +68,12 @@ fixed-rate scheduler emits a `:\r\n` comment every `heartbeatInterval` (default 
 stream never looks idle. There are two ways to trigger the upgrade:
 
 - **`progress(token, ...)`** — when the client requested progress (sent `_meta.progressToken`).
-  Forward that token, exposed as `ToolRequest.progressToken()`. A `null` token **throws**, so use
-  this path only when a token is present.
+  Forward that token, exposed as `ToolRequest.progressToken()`. A `null` token is **silently
+  dropped** per the MCP spec (the client didn't opt in) — no bytes are sent, so it does **not**
+  upgrade the connection or keep it alive.
 - **`comment(msg)`** — a token-free SSE comment (`: msg`). Use it to keep alive when no progress
-  token is available. `comment()` emits a bare `:` heartbeat.
+  token is available, since a dropped `progress(null, ...)` sends nothing. `comment()` emits a
+  bare `:` heartbeat.
 
 Both are reachable only from the request-level entry points — override `handle(ctx, ToolRequest)`
 or `handleAsync(ctx, ToolRequest)` on `AbstractToolHandler` (the `Args` convenience overload
@@ -103,7 +105,7 @@ class SlowTool extends AbstractToolHandler {
 Guidance:
 
 - No token available? Use `comment(...)` — it upgrades and keeps the stream alive without one.
-  `progress(...)` requires a non-null token and throws otherwise.
+  A `null`-token `progress(...)` call is silently dropped (no throw, no bytes sent, no upgrade).
 - Keep `heartbeatInterval < readerIdleTimeout` (default `15s < 60s`) so a live stream's own
   heartbeats always beat the reader-idle deadline.
 - Size `readerIdleTimeout` for **dead-peer detection** (how long a silent connection may live),

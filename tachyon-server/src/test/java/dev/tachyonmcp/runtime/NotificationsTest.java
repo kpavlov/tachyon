@@ -7,83 +7,37 @@ package dev.tachyonmcp.runtime;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.domain.LoggingLevel;
-import java.util.Map;
+import dev.tachyonmcp.server.internal.NotificationLogSupport;
 import java.util.concurrent.atomic.AtomicReference;
-import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 class NotificationsTest {
 
     @Test
-    void logFunnelsThroughSendWithWireShape() {
-        var sent = new AtomicReference<Sent>();
-        var notifications = collecting(sent);
-
-        notifications.log(LoggingLevel.NOTICE, null, null);
-
-        assertThat(sent.get().method()).isEqualTo("notifications/message");
-        var params = params(sent.get().params());
-        assertThat(params).containsEntry("level", "notice").containsEntry("data", null);
-        assertThat(params).doesNotContainKey("logger");
-    }
-
-    @Test
     void convenienceMethodsDelegateToLog() {
-        var sent = new AtomicReference<Sent>();
-        var notifications = collecting(sent);
+        var seen = new AtomicReference<Logged>();
+        Notifications notifications = (level, logger, data) -> seen.set(new Logged(level, logger, data));
 
         notifications.warning("logger.x", "boom");
 
-        var params = params(sent.get().params());
-        assertThat(params).containsEntry("level", "warning").containsEntry("logger", "logger.x");
+        assertThat(seen.get()).isEqualTo(new Logged(LoggingLevel.WARNING, "logger.x", "boom"));
     }
 
     @Test
-    void shouldEmitFalseSuppressesSend() {
-        var sent = new AtomicReference<Sent>();
-        AbstractNotifications notifications = new AbstractNotifications() {
-            @Override
-            public boolean shouldEmit(LoggingLevel level) {
-                return false;
-            }
+    void logParamsBuildsWireShapeOmittingAbsentLogger() {
+        var params = NotificationLogSupport.logParams(LoggingLevel.NOTICE, null, null);
 
-            @Override
-            public void send(String method, Object params) {
-                sent.set(new Sent(method, params));
-            }
-
-            @Override
-            public void progress(@Nullable Object token, double progress, double total, String message) {}
-
-            @Override
-            public void comment(@Nullable String message) {}
-        };
-
-        notifications.error("logger.x", "boom");
-
-        assertThat(sent.get()).isNull();
+        assertThat(params).containsEntry("level", "notice").containsEntry("data", null);
+        assertThat(params).doesNotContainKey("logger");
+        assertThat(NotificationLogSupport.LOG_METHOD).isEqualTo("notifications/message");
     }
 
-    private static AbstractNotifications collecting(AtomicReference<Sent> sent) {
-        return new AbstractNotifications() {
-            @Override
-            public void send(String method, Object params) {
-                sent.set(new Sent(method, params));
-            }
+    @Test
+    void logParamsIncludesLoggerWhenPresent() {
+        var params = NotificationLogSupport.logParams(LoggingLevel.WARNING, "logger.x", "boom");
 
-            @Override
-            public void progress(@Nullable Object token, double progress, double total, String message) {}
-
-            @Override
-            public void comment(@Nullable String message) {}
-        };
+        assertThat(params).containsEntry("level", "warning").containsEntry("logger", "logger.x");
     }
 
-    @SuppressWarnings("unchecked")
-    private static Map<String, Object> params(Object value) {
-        assertThat(value).isInstanceOf(Map.class);
-        return (Map<String, Object>) value;
-    }
-
-    private record Sent(String method, Object params) {}
+    private record Logged(LoggingLevel level, String logger, Object data) {}
 }

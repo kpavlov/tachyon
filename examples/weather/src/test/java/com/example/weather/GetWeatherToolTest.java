@@ -7,12 +7,15 @@ package com.example.weather;
 import com.example.weather.service.WeatherService;
 import com.example.weather.spi.WeatherObservation;
 import com.example.weather.spi.WeatherProvider;
+import dev.tachyonmcp.runtime.ContextNotifications;
 import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.NoopInteractionContext;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.JsonNodeFactory;
 
@@ -29,7 +32,7 @@ class GetWeatherToolTest {
 
     @Test
     void returnsCityNotFoundWhenElicitationIsCancelled() throws Exception {
-        var method = new AtomicReference<String>();
+        var method = new AtomicReference<@Nullable String>();
         var context = context("{\"action\":\"cancel\"}", method);
 
         var result = invoke(GetWeatherTool.create(new WeatherService(new TestWeatherProvider())), context);
@@ -63,10 +66,21 @@ class GetWeatherToolTest {
             }
         };
 
-        var result = invoke(GetWeatherTool.create(new WeatherService(failing)), new NoopInteractionContext());
+        var result = invoke(GetWeatherTool.create(new WeatherService(failing)), context("unused", new AtomicReference<>()));
 
         assertThat(result).isEqualTo(ToolResult.error("Could not get weather"));
     }
+
+    private static final ContextNotifications NOOP_NOTIFICATIONS = new ContextNotifications() {
+        @Override
+        public void log(LoggingLevel level, @Nullable String logger, @Nullable Object data) {}
+
+        @Override
+        public void progress(@Nullable Object progressToken, double progress, double total, String message) {}
+
+        @Override
+        public void comment(@Nullable String message) {}
+    };
 
     private static InteractionContext context(String response, AtomicReference<String> method) {
         return new NoopInteractionContext() {
@@ -75,12 +89,17 @@ class GetWeatherToolTest {
                 method.set(requestMethod);
                 return CompletableFuture.completedFuture(response);
             }
+
+            @Override
+            public ContextNotifications notifications() {
+                return NOOP_NOTIFICATIONS;
+            }
         };
     }
 
     private static ToolResult invoke(ToolHandler handler, InteractionContext context) throws Exception {
-        var result = new AtomicReference<ToolResult>();
-        var failure = new AtomicReference<Exception>();
+        var result = new AtomicReference<@Nullable ToolResult>();
+        var failure = new AtomicReference<@Nullable Exception>();
         Thread.ofVirtual().start(() -> {
             try {
                 result.set(HandlerFutures.joinInterruptibly(handler.handleAsync(

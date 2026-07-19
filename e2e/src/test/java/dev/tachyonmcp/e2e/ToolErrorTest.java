@@ -7,7 +7,6 @@ package dev.tachyonmcp.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.features.tools.ToolHandler;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class ToolErrorTest extends AbstractStatelessMcpE2eTest {
@@ -27,7 +26,7 @@ class ToolErrorTest extends AbstractStatelessMcpE2eTest {
             var response = client.post(body);
 
             assertThat(response.statusCode()).isEqualTo(200);
-            assertThat(response.body()).contains("notifications/before-boom");
+            assertThat(response.body()).contains(": before-boom");
             // language=json
             assertThat(response.body()).contains("""
                 {"jsonrpc":"2.0","id":1,"error":{"code":-32603,"message":"Tool handler failed"}}
@@ -38,7 +37,7 @@ class ToolErrorTest extends AbstractStatelessMcpE2eTest {
     private static ToolHandler throwingTool() {
         return ToolHandler.of(
                 b -> b.name("boom").description("Throws after sending a notification"), (context, args) -> {
-                    context.notifications().send("notifications/before-boom", Map.of());
+                    context.notifications().comment("before-boom");
                     throw new RuntimeException("Simulated handler failure. Ignore it");
                 });
     }
