@@ -46,6 +46,7 @@ class SsePostReconnectRedeliveryTest extends AbstractStatefulMcpE2eTest {
                     {"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"self-closing","arguments":{}}}
                     """);
             assertThat(post.headers().firstValue("Content-Type").orElse("")).contains("text/event-stream");
+            assertThat(post.body()).contains("retry: 3000");
             var matcher = PRIMING_ID.matcher(post.body());
             assertThat(matcher.find())
                     .as("POST-SSE priming event id (<n>#<key>) in:\n%s", post.body())

@@ -210,6 +210,7 @@ class ProgressKeepAliveTest {
             var body = response.body();
             assertProgressTokenCorrelates(body);
             assertThat(body).contains("done");
+            assertThat(body).doesNotContain("retry:");
         }
     }
 
