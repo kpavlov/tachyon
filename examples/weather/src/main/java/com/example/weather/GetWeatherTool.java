@@ -3,14 +3,23 @@
  */
 package com.example.weather;
 
+import com.example.weather.service.WeatherService;
+import com.example.weather.spi.CityNotFoundException;
+import com.example.weather.spi.WeatherObservation;
+import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
-import java.util.random.RandomGenerator;
+import java.util.Map;
+import java.util.Optional;
 
 class GetWeatherTool {
-    private static final RandomGenerator RANDOM = RandomGenerator.getDefault();
+    private static final Logger log = LoggerFactory.getLogger(GetWeatherTool.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
     // language=json
     private static final String INPUT_SCHEMA = """
         {
@@ -30,7 +39,7 @@ class GetWeatherTool {
         }
         """;
 
-    static ToolHandler create() {
+    static ToolHandler create(WeatherService weatherService) {
         return ToolHandler.of(b -> b
                 .name("get-weather")
                 .title("Current Weather")
@@ -39,23 +48,61 @@ class GetWeatherTool {
             (ctx, args) -> {
                 var city = args.stringValue("city");
                 var units = args.stringOr("units", "celsius");
-                return ToolResult.text(generateWeather(city, units));
+                try {
+                    return ToolResult.text(format(weatherService.currentWeather(city), units));
+                } catch (CityNotFoundException e) {
+                    var elicitedCity = elicitCity(ctx, city);
+                    if (elicitedCity.isEmpty()) {
+                        return ToolResult.error("City not found");
+                    }
+                    try {
+                        return ToolResult.text(format(weatherService.currentWeather(elicitedCity.get()), units));
+                    } catch (CityNotFoundException ignored) {
+                        return ToolResult.error("City not found");
+                    } catch (Exception x) {
+                        return internalError(x);
+                    }
+                } catch (Exception e) {
+                    return internalError(e);
+                }
             });
     }
 
-    private static String generateWeather(String city, String units) {
-        var tempCelsius = -5 + RANDOM.nextInt(35);
-        var tempDisplay = "celsius".equals(units) ? tempCelsius + "°C" : (tempCelsius * 9 / 5 + 32) + "°F";
-        var conditions = List.of("Sunny", "Cloudy", "Rainy", "Windy", "Foggy", "Partly cloudy", "Thunderstorms");
-        var condition = conditions.get(RANDOM.nextInt(conditions.size()));
-        var humidity = 30 + RANDOM.nextInt(60);
-        var windSpeed = 5 + RANDOM.nextInt(40);
+    private static ToolResult internalError(Exception e) {
+        log.warn("get-weather failed", e);
+        return ToolResult.error("Could not get weather");
+    }
+
+    private static Optional<String> elicitCity(dev.tachyonmcp.runtime.InteractionContext ctx, String city) throws Exception {
+        var response = HandlerFutures.joinInterruptibly(ctx.sendRequest(
+                "elicitation/create",
+                Map.of(
+                        "mode", "form",
+                        "message", "City '%s' was not found. Enter another city.".formatted(city),
+                        "requestedSchema",
+                        Map.of(
+                                "type", "object",
+                                "properties", Map.of("city", Map.of("type", "string", "title", "City")),
+                                "required", List.of("city")))));
+        var result = MAPPER.readTree(response);
+        if (!"accept".equals(result.path("action").asString())) {
+            return Optional.empty();
+        }
+        var correctedCity = result.path("content").path("city").asString();
+        return correctedCity.isBlank() ? Optional.empty() : Optional.of(correctedCity);
+    }
+
+    private static String format(WeatherObservation weather, String units) {
+        var temperature = "celsius".equals(units)
+                ? "%.1f°C".formatted(weather.temperatureCelsius())
+                : "%.1f°F".formatted(weather.temperatureCelsius() * 9 / 5 + 32);
         return """
             Weather in %s:
               Condition: %s
               Temperature: %s
               Humidity: %d%%
-              Wind: %d km/h
-            """.formatted(city, condition, tempDisplay, humidity, windSpeed);
+              Wind: %.1f km/h
+            """.formatted(
+                weather.city(), weather.condition(), temperature, weather.humidity(), weather.windSpeed());
     }
 }
