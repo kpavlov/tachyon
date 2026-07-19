@@ -17,6 +17,7 @@ import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.prompts.PromptRequest;
 import dev.tachyonmcp.server.features.prompts.PromptResult;
+import dev.tachyonmcp.server.features.resources.ResourceHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.ObjectMapper;
@@ -65,15 +66,15 @@ public final class WeatherServer {
                                 .uri("weather://prediction/article")
                                 .description("Weather prediction article")
                                 .mimeType("text/markdown"),
-                        (ctx, uri, params, uriTemplate) ->
-                                TextResourceContents.of(uri, "text/markdown", weatherService.predictionArticle()))
+                    ResourceHandler.of((ctx, uri) ->
+                        TextResourceContents.of(uri, "text/markdown", weatherService.predictionArticle())))
                 .asyncResource(
                         resource -> resource.name("featured-current-weather")
                                 .uri("weather://featured/current")
                                 .description("Current weather in Tallinn")
                                 .mimeType("application/json"),
-                        (ctx, uri, params, uriTemplate) -> weatherService.currentWeatherAsync("Tallinn")
-                                .thenApply(weather -> TextResourceContents.of(uri, "application/json", asJson(weather))))
+                    ResourceHandler.ofAsync((ctx, uri) -> weatherService.currentWeatherAsync("Tallinn")
+                        .thenApply(weather -> TextResourceContents.of(uri, "application/json", asJson(weather)))))
                 .prompt(
                         prompt -> prompt.name("rewrite-forecast")
                                 .description("Rewrites a weather forecast in a chosen style")

@@ -47,4 +47,20 @@ public interface ResourceHandler {
             return CompletableFuture.failedFuture(e);
         }
     }
+
+    /**
+     * Adapts a two-arg {@link StaticResourceFn} into a {@link ResourceHandler} for a static,
+     * fixed-URI resource — no {@code params}/{@code uriTemplate} to ignore.
+     */
+    static ResourceHandler of(StaticResourceFn fn) {
+        return (context, uri, params, uriTemplate) -> fn.handle(context, uri);
+    }
+
+    /**
+     * Adapts a two-arg {@link AsyncStaticResourceFn} into an {@link AsyncResourceHandler} for a
+     * static, fixed-URI resource — no {@code params}/{@code uriTemplate} to ignore.
+     */
+    static AsyncResourceHandler ofAsync(AsyncStaticResourceFn fn) {
+        return (context, uri, params, uriTemplate) -> fn.handle(context, uri);
+    }
 }

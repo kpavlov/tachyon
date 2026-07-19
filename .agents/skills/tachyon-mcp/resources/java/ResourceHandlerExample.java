@@ -21,8 +21,8 @@ final class ResourceHandlerExample {
      * Static resource — fixed URI.
      */
     static ResourceHandler configHandler() {
-        return (ctx, uri, params, uriTemplate) ->
-            TextResourceContents.of(uri, "application/json", "{\"mode\":\"production\"}");
+        return ResourceHandler.of((ctx, uri) ->
+            TextResourceContents.of(uri, "application/json", "{\"mode\":\"production\"}"));
     }
 
     static ResourceDescriptor configDescriptor() {
@@ -33,8 +33,8 @@ final class ResourceHandlerExample {
      * Static resource — binary (image, PDF, etc).
      */
     static ResourceHandler imageHandler() {
-        return (ctx, uri, params, uriTemplate) ->
-            BlobResourceContents.of(uri, "image/png", "iVBORw0KGgoAAAANS...");
+        return ResourceHandler.of((ctx, uri) ->
+            BlobResourceContents.of(uri, "image/png", "iVBORw0KGgoAAAANS..."));
     }
 
     /**
@@ -78,7 +78,7 @@ final class ResourceHandlerExample {
      * integrating an already-async client.
      */
     static AsyncResourceHandler asyncConfigHandler() {
-        return (ctx, uri, params, uriTemplate) -> CompletableFuture.supplyAsync(
-            () -> TextResourceContents.of(uri, "application/json", "{\"mode\":\"production\"}"));
+        return ResourceHandler.ofAsync((ctx, uri) -> CompletableFuture.supplyAsync(
+            () -> TextResourceContents.of(uri, "application/json", "{\"mode\":\"production\"}")));
     }
 }

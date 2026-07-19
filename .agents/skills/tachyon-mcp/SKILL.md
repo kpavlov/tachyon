@@ -119,8 +119,8 @@ Static fixed URI:
         .uri("myapp://data/item")
         .description("Description")
         .mimeType("application/json"),
-    (ctx, uri, params, uriTemplate) ->
-        TextResourceContents.of(uri, "application/json", jsonData))
+    ResourceHandler.of((ctx, uri) ->
+        TextResourceContents.of(uri, "application/json", jsonData)))
 ```
 
 Template via builder:
@@ -138,17 +138,18 @@ Template via builder:
     })
 ```
 
-Static resources and templates share `ResourceHandler`. Its parameters are `(context, uri,
-params, uriTemplate)`. Static resources receive an empty params map and null template. Templates
-receive immutable parsed values and the original template text; `UriTemplate` performs matching.
+Static resources and templates share `ResourceHandler`. Its full parameters are `(context, uri,
+params, uriTemplate)`; templates receive immutable parsed values and the original template text,
+`UriTemplate` performs matching. Static resources get an empty params map and null template, so
+use `ResourceHandler.of((ctx, uri) -> ...)` to drop the two unused parameters.
 
 Use explicit async methods. Sync handlers run blocking-first on virtual threads.
 
 ```java
 .asyncResource(
     resource -> resource.name("config").uri("myapp://config"),
-    (ctx, uri, params, uriTemplate) -> httpClient.sendAsync(request, BodyHandlers.ofString())
-        .thenApply(rsp -> TextResourceContents.of(uri, "application/json", rsp.body())))
+    ResourceHandler.ofAsync((ctx, uri) -> httpClient.sendAsync(request, BodyHandlers.ofString())
+        .thenApply(rsp -> TextResourceContents.of(uri, "application/json", rsp.body()))))
 ```
 
 Full: `resources/java/ResourceHandlerExample.java`
