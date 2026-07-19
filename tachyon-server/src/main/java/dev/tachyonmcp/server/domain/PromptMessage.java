@@ -23,6 +23,10 @@ public interface PromptMessage {
 
     ContentBlock content();
 
+    static Builder builder() {
+        return DefaultPromptMessage.builder();
+    }
+
     static PromptMessage of(Role role, ContentBlock content) {
         return DefaultPromptMessage.of(role, content);
     }
@@ -35,5 +39,13 @@ public interface PromptMessage {
     /** Creates a user-role message whose content is plain text (no annotations). */
     static PromptMessage user(String text) {
         return DefaultPromptMessage.of(Role.USER, TextContent.of(text));
+    }
+
+    interface Builder {
+        Builder role(Role role);
+
+        Builder content(ContentBlock content);
+
+        PromptMessage build();
     }
 }

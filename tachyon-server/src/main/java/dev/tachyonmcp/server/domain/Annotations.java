@@ -42,7 +42,7 @@ public interface Annotations {
         }
     }
 
-    static DefaultAnnotations.Builder builder() {
+    static Builder builder() {
         return DefaultAnnotations.builder();
     }
 
@@ -52,5 +52,16 @@ public interface Annotations {
                 .priority(priority)
                 .lastModified(lastModified)
                 .build();
+    }
+
+    interface Builder {
+
+        Builder audience(@Nullable Iterable<? extends Role> elements);
+
+        Builder priority(@Nullable Double priority);
+
+        Builder lastModified(@Nullable String lastModified);
+
+        Annotations build();
     }
 }

@@ -36,7 +36,7 @@ public non-sealed interface EmbeddedResource extends ContentBlock, HasMeta {
         return Type.RESOURCE;
     }
 
-    static DefaultEmbeddedResource.Builder builder() {
+    static Builder builder() {
         return DefaultEmbeddedResource.builder();
     }
 
@@ -54,5 +54,15 @@ public non-sealed interface EmbeddedResource extends ContentBlock, HasMeta {
     static EmbeddedResource of(
             ResourceContents resource, @Nullable Annotations annotations, @Nullable Map<String, JsonNode> meta) {
         return DefaultEmbeddedResource.of(resource, annotations, meta);
+    }
+
+    interface Builder {
+        Builder resource(ResourceContents resource);
+
+        Builder annotations(@Nullable Annotations annotations);
+
+        Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
+
+        EmbeddedResource build();
     }
 }

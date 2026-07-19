@@ -11,7 +11,6 @@ import io.modelcontextprotocol.spec.McpError;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -47,11 +46,6 @@ class WeatherServerTest {
             .build();
 
         initResult = client.initialize();
-    }
-
-    @BeforeEach
-    void clearProgressNotifications() {
-        progressNotifications.clear();
     }
 
     @AfterAll

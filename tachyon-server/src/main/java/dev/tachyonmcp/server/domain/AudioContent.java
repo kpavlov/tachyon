@@ -16,7 +16,10 @@ import tools.jackson.databind.JsonNode;
  * {@code mimeType} describing the encoding (e.g. {@code audio/mp3}).
  */
 @Value.Immutable
-@Value.Style(allParameters = true, typeImmutable = "Default*")
+@Value.Style(
+        allParameters = true,
+        typeImmutable = "Default*",
+        visibility = Value.Style.ImplementationVisibility.PACKAGE)
 public non-sealed interface AudioContent extends ContentBlock, HasMeta {
 
     String data();
@@ -34,7 +37,13 @@ public non-sealed interface AudioContent extends ContentBlock, HasMeta {
         return Type.AUDIO;
     }
 
-    static DefaultAudioContent.Builder builder() {
+    @Value.Check
+    default void check() {
+        if (data().isBlank()) throw new IllegalArgumentException("data must not be blank");
+        if (mimeType().isBlank()) throw new IllegalArgumentException("mimeType must not be blank");
+    }
+
+    static Builder builder() {
         return DefaultAudioContent.builder();
     }
 
@@ -52,5 +61,17 @@ public non-sealed interface AudioContent extends ContentBlock, HasMeta {
     static AudioContent of(
             String data, String mimeType, @Nullable Annotations annotations, @Nullable Map<String, JsonNode> meta) {
         return DefaultAudioContent.of(data, mimeType, annotations, meta);
+    }
+
+    interface Builder {
+        Builder data(String data);
+
+        Builder mimeType(String mimeType);
+
+        Builder annotations(@Nullable Annotations annotations);
+
+        Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
+
+        AudioContent build();
     }
 }

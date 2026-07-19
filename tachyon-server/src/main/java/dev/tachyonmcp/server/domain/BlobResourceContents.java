@@ -25,11 +25,33 @@ public non-sealed interface BlobResourceContents extends ResourceContents {
 
     String blob();
 
+    @Value.Check
+    default void check() {
+        if (uri().isBlank()) throw new IllegalArgumentException("uri must not be blank");
+        if (blob().isBlank()) throw new IllegalArgumentException("blob must not be blank");
+    }
+
     static BlobResourceContents of(String uri, @Nullable String mimeType, String blob) {
         return DefaultBlobResourceContents.of(null, uri, mimeType, blob);
     }
 
     static BlobResourceContents of(String uri, @Nullable String mimeType, String blob, Map<String, JsonNode> meta) {
         return DefaultBlobResourceContents.of(meta, uri, mimeType, blob);
+    }
+
+    static Builder builder() {
+        return DefaultBlobResourceContents.builder();
+    }
+
+    interface Builder {
+        Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
+
+        Builder uri(String uri);
+
+        Builder mimeType(@Nullable String mimeType);
+
+        Builder blob(String blob);
+
+        BlobResourceContents build();
     }
 }
