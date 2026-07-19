@@ -7,6 +7,7 @@ import dev.tachyonmcp.server.TachyonServer;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
+import io.modelcontextprotocol.spec.McpError;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class WeatherServerTest {
 
@@ -58,7 +60,7 @@ class WeatherServerTest {
         assertThat(initResult.serverInfo()).usingRecursiveComparison().ignoringFields("icons").isEqualTo(
             McpSchema.Implementation.builder("weather-server", "1.0")
                 .title("Weather Server")
-                .websiteUrl("http://localhost:8080/mcp")
+                .websiteUrl("https://github.com/kpavlov/tachyon/tree/main/examples/weather")
                 .description("Weather MCP server")
                 .build());
         assertThat(initResult.serverInfo().icons()).singleElement().satisfies(icon -> {
@@ -207,6 +209,15 @@ class WeatherServerTest {
         assertThat(textContents.uri()).isEqualTo("weather://current/London");
         assertThat(textContents.mimeType()).isEqualTo("application/json");
         assertThat(textContents.text()).contains("London");
+    }
+
+    @Test
+    void shouldReturnInvalidParamsWhenTemplateCityIsUnknown() {
+        assertThatThrownBy(() -> client.readResource(
+                McpSchema.ReadResourceRequest.builder("weather://current/Unknown").build()))
+            .isInstanceOf(McpError.class)
+            .extracting(e -> ((McpError) e).getJsonRpcError().code())
+            .isEqualTo(-32602);
     }
 
     @Test

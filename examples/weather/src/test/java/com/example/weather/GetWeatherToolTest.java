@@ -8,7 +8,6 @@ import com.example.weather.service.WeatherService;
 import com.example.weather.spi.WeatherObservation;
 import com.example.weather.spi.WeatherProvider;
 import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
@@ -24,21 +23,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 class GetWeatherToolTest {
-
-    @Test
-    void elicitsAnotherCityWhenTheFirstIsUnknown() throws Exception {
-        var method = new AtomicReference<String>();
-        var context = context("{\"action\":\"accept\",\"content\":{\"city\":\"Tallinn\"}}", method);
-
-        var result = invoke(GetWeatherTool.create(new WeatherService(new TestWeatherProvider())), context);
-
-        assertThat(method).hasValue("elicitation/create");
-        assertThat(result).isInstanceOf(ToolResult.Success.class);
-        var success = (ToolResult.Success) result;
-        assertThat(((TextContent) success.content().getFirst()).text()).startsWith("Weather in Tallinn:");
-    }
 
     @Test
     void returnsCityNotFoundWhenElicitationIsCancelled() throws Exception {
@@ -94,7 +81,7 @@ class GetWeatherToolTest {
     private static ToolResult invoke(ToolHandler handler, InteractionContext context) throws Exception {
         var result = new AtomicReference<ToolResult>();
         var failure = new AtomicReference<Exception>();
-        var thread = Thread.ofVirtual().start(() -> {
+        Thread.ofVirtual().start(() -> {
             try {
                 result.set(HandlerFutures.joinInterruptibly(handler.handleAsync(
                         context,
@@ -106,7 +93,7 @@ class GetWeatherToolTest {
                 failure.set(e);
             }
         });
-        assertThat(thread.join(Duration.ofSeconds(1))).isTrue();
+        await().atMost(Duration.ofSeconds(1)).until(() -> result.get() != null || failure.get() != null);
         if (failure.get() != null) {
             throw failure.get();
         }

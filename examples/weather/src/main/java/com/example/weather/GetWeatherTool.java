@@ -6,7 +6,6 @@ package com.example.weather;
 import com.example.weather.service.WeatherService;
 import com.example.weather.spi.CityNotFoundException;
 import com.example.weather.spi.WeatherObservation;
-import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import org.slf4j.Logger;
@@ -69,12 +68,15 @@ class GetWeatherTool {
     }
 
     private static ToolResult internalError(Exception e) {
+        if (e instanceof InterruptedException) {
+            Thread.currentThread().interrupt();
+        }
         log.warn("get-weather failed", e);
         return ToolResult.error("Could not get weather");
     }
 
     private static Optional<String> elicitCity(dev.tachyonmcp.runtime.InteractionContext ctx, String city) throws Exception {
-        var response = HandlerFutures.joinInterruptibly(ctx.sendRequest(
+        var future = ctx.sendRequest(
                 "elicitation/create",
                 Map.of(
                         "mode", "form",
@@ -83,7 +85,14 @@ class GetWeatherTool {
                         Map.of(
                                 "type", "object",
                                 "properties", Map.of("city", Map.of("type", "string", "title", "City")),
-                                "required", List.of("city")))));
+                                "required", List.of("city"))));
+        String response;
+        try {
+            response = future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw e;
+        }
         var result = MAPPER.readTree(response);
         if (!"accept".equals(result.path("action").asString())) {
             return Optional.empty();

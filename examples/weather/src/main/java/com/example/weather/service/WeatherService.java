@@ -20,7 +20,13 @@ public record WeatherService(WeatherProvider weatherProvider) {
         return weatherProvider.currentWeatherAsync(city);
     }
 
+    private static final String PREDICTION_ARTICLE = loadPredictionArticle();
+
     public String predictionArticle() {
+        return PREDICTION_ARTICLE;
+    }
+
+    private static String loadPredictionArticle() {
         var article = WeatherService.class.getResourceAsStream("/articles/prediction-article.md");
         if (article == null) {
             throw new IllegalStateException("Missing prediction article");

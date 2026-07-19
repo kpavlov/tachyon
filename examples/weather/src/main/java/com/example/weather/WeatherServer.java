@@ -5,9 +5,11 @@ package com.example.weather;
 import com.example.weather.integration.OpenMeteoWeatherProvider;
 import com.example.weather.service.NarrationStyle;
 import com.example.weather.service.WeatherService;
+import com.example.weather.spi.CityNotFoundException;
 import com.example.weather.spi.WeatherObservation;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.Icon;
+import dev.tachyonmcp.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.server.domain.PromptArgument;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.ResourceContents;
@@ -24,12 +26,18 @@ import java.net.http.HttpClient;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 public final class WeatherServer {
 
     private static final Logger log = LoggerFactory.getLogger(WeatherServer.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final String LOGO = classpathDataUri("/images/logo.png", "image/png");
+
+    private static final WeatherService weatherService = new WeatherService(
+        new OpenMeteoWeatherProvider(
+            HttpClient.newBuilder().executor(Executors.newVirtualThreadPerTaskExecutor()).build()
+        ));
 
     public static void main(String... args) {
         final var server = createServer(8080);
@@ -38,7 +46,7 @@ public final class WeatherServer {
     }
 
     static TachyonServer createServer(int port) {
-        return createServer(port, new WeatherService(new OpenMeteoWeatherProvider(HttpClient.newHttpClient())));
+        return createServer(port, weatherService);
     }
 
     static TachyonServer createServer(int port, WeatherService weatherService) {
@@ -47,7 +55,7 @@ public final class WeatherServer {
                         .name("weather-server")
                         .title("Weather Server")
                         .description("Weather MCP server")
-                        .websiteUrl("http://localhost:8080/mcp")
+                        .websiteUrl("https://github.com/kpavlov/tachyon/tree/main/examples/weather")
                         .instructions("Test instructions")
                         .icons(Icon.of(LOGO, "image/png", List.of("256x256"), null))
                         .version("1.0"))
@@ -104,7 +112,12 @@ public final class WeatherServer {
         var city = ((UriTemplateValue.Scalar) params.get("city")).value();
         try {
             return TextResourceContents.of(uri, "application/json", asJson(weatherService.currentWeather(city)));
+        } catch (CityNotFoundException e) {
+            throw new InvalidArgumentException("city", e.getMessage());
         } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             throw new IllegalStateException("Could not get weather", e);
         }
     }

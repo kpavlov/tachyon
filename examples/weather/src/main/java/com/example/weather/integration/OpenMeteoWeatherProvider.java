@@ -18,12 +18,15 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 public final class OpenMeteoWeatherProvider implements WeatherProvider {
 
     private static final String GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
     private static final String FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    private final Executor executor = Executors.newVirtualThreadPerTaskExecutor();
 
     private final HttpClient httpClient;
 
@@ -41,10 +44,10 @@ public final class OpenMeteoWeatherProvider implements WeatherProvider {
     @Override
     public CompletableFuture<WeatherObservation> currentWeatherAsync(String city) {
         return httpClient.sendAsync(geocodingRequest(city), HttpResponse.BodyHandlers.ofString())
-            .thenApply(OpenMeteoWeatherProvider::responseBody)
+            .thenApplyAsync(OpenMeteoWeatherProvider::responseBody, executor)
             .thenApply(response -> location(city, response))
             .thenCompose(location -> httpClient.sendAsync(forecastRequest(location), HttpResponse.BodyHandlers.ofString()))
-            .thenApply(OpenMeteoWeatherProvider::responseBody)
+            .thenApplyAsync(OpenMeteoWeatherProvider::responseBody, executor)
             .thenApply(forecast -> weather(city, forecast));
     }
 
