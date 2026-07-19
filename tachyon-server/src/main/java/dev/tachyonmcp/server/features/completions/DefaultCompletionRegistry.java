@@ -6,6 +6,8 @@ package dev.tachyonmcp.server.features.completions;
 
 import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.config.Mode;
+import dev.tachyonmcp.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
@@ -25,28 +27,69 @@ import org.slf4j.LoggerFactory;
 @InternalApi
 public class DefaultCompletionRegistry implements CompletionRegistry {
 
+    private static final Logger logger = LoggerFactory.getLogger(DefaultCompletionRegistry.class);
+
     private final ConcurrentHashMap<String, CompletionHandler> promptHandlers = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, CompletionHandler> resourceHandlers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> promptExtensionIds = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> resourceExtensionIds = new ConcurrentHashMap<>();
+    private final Mode mode;
+
+    public DefaultCompletionRegistry() {
+        this(Mode.AUTO);
+    }
+
+    public DefaultCompletionRegistry(Mode mode) {
+        this.mode = mode;
+    }
 
     @Override
     public CompletionRegistry registerForPrompt(String promptName, CompletionHandler handler) {
+        return registerForPrompt(promptName, null, handler);
+    }
+
+    @Override
+    public CompletionRegistry registerForPrompt(
+            String promptName, @Nullable String extensionId, CompletionHandler handler) {
+        if (mode == Mode.OFF) {
+            logger.debug("Completion '{}' not registered: completions capability is OFF", promptName);
+            return this;
+        }
         promptHandlers.put(promptName, handler);
+        if (extensionId != null) {
+            promptExtensionIds.put(promptName, extensionId);
+        }
         return this;
     }
 
     @Override
     public CompletionRegistry registerForResource(String uriOrTemplate, CompletionHandler handler) {
+        return registerForResource(uriOrTemplate, null, handler);
+    }
+
+    @Override
+    public CompletionRegistry registerForResource(
+            String uriOrTemplate, @Nullable String extensionId, CompletionHandler handler) {
+        if (mode == Mode.OFF) {
+            logger.debug("Completion for '{}' not registered: completions capability is OFF", uriOrTemplate);
+            return this;
+        }
         resourceHandlers.put(uriOrTemplate, handler);
+        if (extensionId != null) {
+            resourceExtensionIds.put(uriOrTemplate, extensionId);
+        }
         return this;
     }
 
     @Override
     public boolean unregisterForPrompt(String promptName) {
+        promptExtensionIds.remove(promptName);
         return promptHandlers.remove(promptName) != null;
     }
 
     @Override
     public boolean unregisterForResource(String uriOrTemplate) {
+        resourceExtensionIds.remove(uriOrTemplate);
         return resourceHandlers.remove(uriOrTemplate) != null;
     }
 
@@ -76,6 +119,16 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
         registry.put("completion/complete", new CompletionCompleteHandler(this));
     }
 
+    /**
+     * Checks whether the handler for the given key is gated behind a disabled extension.
+     *
+     * @return {@code true} if the handler's extension is disabled (should be hidden)
+     */
+    boolean isExtensionDisabled(DispatchContext context, String key, ConcurrentHashMap<String, String> extensionIds) {
+        var extId = extensionIds.get(key);
+        return extId != null && !context.isExtensionEnabled(extId);
+    }
+
     private record CompletionCompleteHandler(DefaultCompletionRegistry registry) implements RpcMethodHandler {
 
         private static final Logger logger = LoggerFactory.getLogger(CompletionCompleteHandler.class);
@@ -103,23 +156,32 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
                 return JsonRpcErrors.invalidParams("argument.name and argument.value are required");
             }
 
-            Optional<CompletionHandler> handler;
             var refType = ref.get("type");
+            boolean extensionDisabled;
+            Optional<CompletionHandler> handler;
+            String promptName;
+            String uri;
             if ("ref/prompt".equals(refType)) {
-                if (!(ref.get("name") instanceof String promptName)) {
+                if (!(ref.get("name") instanceof String pn)) {
                     return JsonRpcErrors.invalidParams("ref.name is required for ref/prompt");
                 }
+                promptName = pn;
+                uri = null;
+                extensionDisabled = registry.isExtensionDisabled(context, promptName, registry.promptExtensionIds);
                 handler = registry.findForPrompt(promptName);
             } else if ("ref/resource".equals(refType)) {
-                if (!(ref.get("uri") instanceof String uri)) {
+                if (!(ref.get("uri") instanceof String u)) {
                     return JsonRpcErrors.invalidParams("ref.uri is required for ref/resource");
                 }
+                uri = u;
+                promptName = null;
+                extensionDisabled = registry.isExtensionDisabled(context, uri, registry.resourceExtensionIds);
                 handler = registry.findForResource(uri);
             } else {
                 return JsonRpcErrors.invalidParams("Unknown ref.type: " + refType);
             }
 
-            if (handler.isEmpty()) {
+            if (handler.isEmpty() || extensionDisabled) {
                 return context.responseMapper().completeResult(List.of(), null, false);
             }
 
@@ -128,6 +190,8 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
             CompletionResult result;
             try {
                 result = HandlerFutures.joinInterruptibly(handler.get().handleAsync(context, request));
+            } catch (InvalidArgumentException e) {
+                return JsonRpcErrors.invalidParams("invalid argument '" + e.argName() + "': " + e.getMessage());
             } catch (Exception e) {
                 logger.error("Completion handler error for ref.type '{}'", refType, e);
                 return JsonRpcErrors.internalError("Completion handler failed");

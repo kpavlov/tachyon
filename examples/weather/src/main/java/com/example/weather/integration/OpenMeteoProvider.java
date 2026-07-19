@@ -39,14 +39,14 @@ public final class OpenMeteoProvider implements WeatherProvider, CityProvider {
 
     @Override
     public WeatherObservation currentWeather(String city) throws Exception {
-        var location = location(city, responseBody(httpClient.send(geocodingRequest(city), HttpResponse.BodyHandlers.ofString())));
+        var location = location(city, responseBody(httpClient.send(geocodingRequest(city, 1), HttpResponse.BodyHandlers.ofString())));
         var forecast = responseBody(httpClient.send(forecastRequest(location), HttpResponse.BodyHandlers.ofString()));
         return weather(city, forecast);
     }
 
     @Override
     public CompletableFuture<WeatherObservation> currentWeatherAsync(String city) {
-        return httpClient.sendAsync(geocodingRequest(city), HttpResponse.BodyHandlers.ofString())
+        return httpClient.sendAsync(geocodingRequest(city, 1), HttpResponse.BodyHandlers.ofString())
             .thenApplyAsync(OpenMeteoProvider::responseBody, executor)
             .thenApply(response -> location(city, response))
             .thenCompose(location -> httpClient.sendAsync(forecastRequest(location), HttpResponse.BodyHandlers.ofString()))
@@ -56,25 +56,18 @@ public final class OpenMeteoProvider implements WeatherProvider, CityProvider {
 
     @Override
     public CompletableFuture<List<String>> searchCities(String query) {
-        if (query.isBlank()) {
+        if (query == null || query.length() < 2) {
             return CompletableFuture.completedFuture(List.of());
         }
-        return httpClient.sendAsync(geocodingSearchRequest(query), HttpResponse.BodyHandlers.ofString())
+        return httpClient.sendAsync(geocodingRequest(query, 10), HttpResponse.BodyHandlers.ofString())
             .thenApplyAsync(OpenMeteoProvider::responseBody, executor)
             .thenApply(OpenMeteoProvider::cityNames)
             .exceptionally(e -> List.of());
     }
 
-    private static HttpRequest geocodingRequest(String city) {
-        var encodedCity = URLEncoder.encode(city, StandardCharsets.UTF_8);
-        return HttpRequest.newBuilder(URI.create(GEOCODING_URL + "?name=" + encodedCity + "&count=1&language=en"))
-            .GET()
-            .build();
-    }
-
-    private static HttpRequest geocodingSearchRequest(String query) {
-        var encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8);
-        return HttpRequest.newBuilder(URI.create(GEOCODING_URL + "?name=" + encodedQuery + "&count=10&language=en"))
+    private static HttpRequest geocodingRequest(String query, int count) {
+        var encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
+        return HttpRequest.newBuilder(URI.create(GEOCODING_URL + "?name=" + encoded + "&count=" + count + "&language=en"))
             .GET()
             .build();
     }

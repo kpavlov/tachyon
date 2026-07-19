@@ -23,8 +23,8 @@ public class CapabilitiesScope
         @PublishedApi
         internal var tasksConfig: TasksConfig = TasksConfig.DEFAULT
 
-        /** Whether completions capability is enabled. */
-        public var completions: Boolean = false
+        /** Completions capability mode. */
+        public var completionsMode: Mode = Mode.AUTO
 
         /** Whether logging capability is enabled. */
         public var logging: Boolean = false
@@ -59,7 +59,7 @@ public class CapabilitiesScope
             builder.resources(resourcesConfig)
             builder.prompts(promptsConfig)
             builder.tasks(tasksConfig)
-            if (completions) builder.completions()
+            builder.completions(completionsMode)
             if (logging) builder.logging()
         }
     }

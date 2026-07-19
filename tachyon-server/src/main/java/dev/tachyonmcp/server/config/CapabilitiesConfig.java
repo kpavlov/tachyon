@@ -9,7 +9,7 @@ package dev.tachyonmcp.server.config;
  * @param resources   resources capability configuration
  * @param prompts     prompts capability configuration
  * @param tasks       tasks capability configuration
- * @param completions whether the completions capability is enabled (default {@code false})
+ * @param completions completions enablement mode (default {@link Mode#AUTO})
  * @param logging     whether the logging capability is enabled (default {@code false})
  */
 public record CapabilitiesConfig(
@@ -17,14 +17,19 @@ public record CapabilitiesConfig(
         ResourcesConfig resources,
         FeatureConfig prompts,
         TasksConfig tasks,
-        boolean completions,
+        Mode completions,
         boolean logging) {
 
     /**
      * Default configuration with all capabilities auto-detected and change notifications off.
      */
     public static final CapabilitiesConfig DEFAULT = new CapabilitiesConfig(
-            FeatureConfig.DEFAULT, ResourcesConfig.DEFAULT, FeatureConfig.DEFAULT, TasksConfig.DEFAULT, false, false);
+            FeatureConfig.DEFAULT,
+            ResourcesConfig.DEFAULT,
+            FeatureConfig.DEFAULT,
+            TasksConfig.DEFAULT,
+            Mode.AUTO,
+            false);
 
     public static Builder builder() {
         return new Builder();
@@ -39,7 +44,7 @@ public record CapabilitiesConfig(
         private ResourcesConfig.Builder resourcesBuilder = ResourcesConfig.builder();
         private FeatureConfig.Builder promptsBuilder = FeatureConfig.builder();
         private TasksConfig.Builder tasksBuilder = TasksConfig.builder();
-        private boolean completions;
+        private Mode completions = Mode.AUTO;
         private boolean logging;
 
         private Builder() {}
@@ -133,6 +138,18 @@ public record CapabilitiesConfig(
             return this;
         }
 
+        public Builder completions(Mode completions) {
+            this.completions = completions;
+            return this;
+        }
+
+        /** @deprecated Use {@link #completions(Mode)} with {@link Mode#ON} or {@link Mode#OFF}. */
+        @Deprecated
+        public Builder completions(boolean enabled) {
+            this.completions = enabled ? Mode.ON : Mode.OFF;
+            return this;
+        }
+
         public Builder tasksEnabled(boolean tasksEnabled) {
             tasksBuilder.enabled(tasksEnabled);
             return this;
@@ -158,11 +175,6 @@ public record CapabilitiesConfig(
             return this;
         }
 
-        public Builder completions(boolean completions) {
-            this.completions = completions;
-            return this;
-        }
-
         public Builder logging(boolean logging) {
             this.logging = logging;
             return this;
@@ -181,7 +193,11 @@ public record CapabilitiesConfig(
         // === Convenience defaults ===
 
         public Builder completions() {
-            return completions(true);
+            return completions(Mode.ON);
+        }
+
+        public Builder noCompletions() {
+            return completions(Mode.OFF);
         }
 
         public Builder logging() {

@@ -156,7 +156,11 @@ final class DefaultTachyonServer implements ServerEngine {
         final var capabilitiesConfig = config.capabilities();
 
         builder.logging(capabilitiesConfig.logging());
-        builder.completions(capabilitiesConfig.completions() || !completionRegistry.isEmpty());
+        switch (capabilitiesConfig.completions()) {
+            case ON -> builder.completions(true);
+            case OFF -> builder.completions(false);
+            case AUTO -> builder.completions(!completionRegistry.isEmpty());
+        }
 
         var hasTaskAugmentedTools = toolRegistry.getAll().stream()
                 .anyMatch(h ->
@@ -237,7 +241,7 @@ final class DefaultTachyonServer implements ServerEngine {
         this.resourceRegistry = new DefaultResourceRegistry(this, caps.resources());
         this.taskRegistry = new DefaultTaskRegistry(this, caps.tasks());
         this.promptRegistry = new DefaultPromptRegistry(inputValidator1, caps.prompts());
-        this.completionRegistry = new DefaultCompletionRegistry();
+        this.completionRegistry = new DefaultCompletionRegistry(caps.completions());
         registerDefaults();
         bootstrapExtensions();
         setupChangeListeners(config);

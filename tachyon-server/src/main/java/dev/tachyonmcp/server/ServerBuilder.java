@@ -48,12 +48,17 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Fluent builder for {@link TachyonServer}. Supports feature registration and configuration.
  */
 public final class ServerBuilder {
+
+    private static final Logger logger = LoggerFactory.getLogger(ServerBuilder.class);
 
     private final ServerIdentity.Builder identityBuilder = ServerIdentity.builder();
     private final CapabilitiesConfig.Builder capabilitiesConfig = CapabilitiesConfig.builder();
@@ -579,6 +584,7 @@ public final class ServerBuilder {
                 featuresConfig.payloadSerializer,
                 featuresConfig.payloadDeserializer,
                 allExtensions);
+        validateCompletions(featuresConfig);
         featuresConfig.tools.forEach(server.tools()::register);
         featuresConfig.resources.forEach(r -> server.resources().register(r.descriptor(), r.handler()));
         featuresConfig.prompts.forEach(p -> server.prompts().register(p.descriptor(), p.handler()));
@@ -629,6 +635,33 @@ public final class ServerBuilder {
                 networkBuilder.build(),
                 runtimeBuilder.build(),
                 monitoringBuilder.build());
+    }
+
+    private static void validateCompletions(FeaturesConfig config) {
+        if (!config.promptCompletions.isEmpty()) {
+            var knownPrompts =
+                    config.prompts.stream().map(p -> p.descriptor().name()).collect(Collectors.toSet());
+            for (var c : config.promptCompletions) {
+                if (!knownPrompts.contains(c.promptName())) {
+                    logger.warn(
+                            "promptCompletion('{}') references no registered prompt; " + "completion will never match",
+                            c.promptName());
+                }
+            }
+        }
+        if (!config.resourceCompletions.isEmpty()) {
+            var knownTemplates = config.templates.stream()
+                    .map(t -> t.descriptor().uriTemplate())
+                    .collect(Collectors.toSet());
+            for (var c : config.resourceCompletions) {
+                if (!knownTemplates.contains(c.uriOrTemplate())) {
+                    logger.warn(
+                            "resourceCompletion('{}') references no registered resource template; "
+                                    + "completion will never match",
+                            c.uriOrTemplate());
+                }
+            }
+        }
     }
 
     static final class FeaturesConfig {

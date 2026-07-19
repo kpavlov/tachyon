@@ -28,7 +28,9 @@ import java.io.IOException;
 import java.net.http.HttpClient;
 import java.util.Base64;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 
 public final class WeatherServer {
@@ -101,9 +103,14 @@ public final class WeatherServer {
                                 handleWeatherTemplate(weatherService, uri, params))
             .asyncResourceCompletion(
                 "weather://current/{city}",
-                (ctx, request) -> weatherService.searchCities(request.argumentValue())
-                    .thenApply(CompletionResult::of)
-                    .exceptionally(e -> CompletionResult.of(List.of())))
+                (ctx, request) -> {
+                    if (!"city".equals(request.argumentName())) {
+                        return CompletableFuture.completedFuture(CompletionResult.of(List.of()));
+                    }
+                    return weatherService.searchCities(request.argumentValue())
+                        .thenApply(CompletionResult::of)
+                        .exceptionally(e -> CompletionResult.of(List.of()));
+                })
                 .session(session -> session.enabled(true))
                 .network(network -> network.port(port))
                 .start();
@@ -116,7 +123,7 @@ public final class WeatherServer {
         if (!"style".equals(request.argumentName())) {
             return CompletionResult.of(List.of());
         }
-        var query = request.argumentValue().toLowerCase();
+        var query = request.argumentValue().toLowerCase(Locale.ROOT);
         var matches = NarrationStyle.styleNames().stream()
             .filter(style -> style.startsWith(query))
             .toList();

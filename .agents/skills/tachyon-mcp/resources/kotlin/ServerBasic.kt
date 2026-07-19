@@ -16,9 +16,7 @@ import dev.tachyonmcp.transport.netty.NettyIoEngine
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toKotlinDuration
-import kotlin.uuid.ExperimentalUuidApi
 
-@OptIn(ExperimentalUuidApi::class)
 fun createServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer =
     TachyonServer(port = port) {
         // ── identity ──────────────────────────────────────────────
@@ -59,7 +57,7 @@ fun createServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer =
                 cancel = true
                 requests = true
             }
-            completions = true
+            completionsMode = Mode.AUTO
             logging = true
         }
 
