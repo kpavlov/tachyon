@@ -7,6 +7,7 @@ package dev.tachyonmcp.server;
 import dev.tachyonmcp.runtime.Notifications;
 import dev.tachyonmcp.server.config.ServerConfig;
 import dev.tachyonmcp.server.extensions.ServerExtension;
+import dev.tachyonmcp.server.features.completions.CompletionRegistry;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptHandler;
 import dev.tachyonmcp.server.features.prompts.PromptRegistry;
@@ -42,6 +43,9 @@ public interface TachyonServer extends AutoCloseable {
 
     /** Returns the task registry. */
     TaskRegistry tasks();
+
+    /** Returns the completion registry. */
+    CompletionRegistry completions();
 
     Notifications notifications();
 

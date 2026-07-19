@@ -13,6 +13,8 @@ import dev.tachyonmcp.server.config.ServerIdentity;
 import dev.tachyonmcp.server.config.SessionConfig;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.extensions.ServerExtension;
+import dev.tachyonmcp.server.features.completions.AsyncCompletionHandler;
+import dev.tachyonmcp.server.features.completions.CompletionHandler;
 import dev.tachyonmcp.server.features.prompts.AsyncPromptHandler;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptHandler;
@@ -415,6 +417,53 @@ public final class ServerBuilder {
     }
 
     /**
+     * Registers a completion handler for a prompt's arguments.
+     *
+     * @param promptName the prompt name
+     * @param handler the handler invoked for {@code ref/prompt} completion requests
+     * @return this builder
+     */
+    public ServerBuilder promptCompletion(String promptName, CompletionHandler handler) {
+        featuresConfig.promptCompletions.add(new FeaturesConfig.PromptCompletionRegistration(promptName, handler));
+        return this;
+    }
+
+    /**
+     * Registers an asynchronous completion handler for a prompt's arguments.
+     *
+     * @param promptName the prompt name
+     * @param handler the asynchronous completion handler
+     * @return this builder
+     */
+    public ServerBuilder asyncPromptCompletion(String promptName, AsyncCompletionHandler handler) {
+        return promptCompletion(promptName, handler);
+    }
+
+    /**
+     * Registers a completion handler for a resource or resource-template's variables.
+     *
+     * @param uriOrTemplate the resource URI, or the resource template's {@code uriTemplate}
+     * @param handler the handler invoked for {@code ref/resource} completion requests
+     * @return this builder
+     */
+    public ServerBuilder resourceCompletion(String uriOrTemplate, CompletionHandler handler) {
+        featuresConfig.resourceCompletions.add(
+                new FeaturesConfig.ResourceCompletionRegistration(uriOrTemplate, handler));
+        return this;
+    }
+
+    /**
+     * Registers an asynchronous completion handler for a resource or resource-template's variables.
+     *
+     * @param uriOrTemplate the resource URI, or the resource template's {@code uriTemplate}
+     * @param handler the asynchronous completion handler
+     * @return this builder
+     */
+    public ServerBuilder asyncResourceCompletion(String uriOrTemplate, AsyncCompletionHandler handler) {
+        return resourceCompletion(uriOrTemplate, handler);
+    }
+
+    /**
      * Registers a server extension.
      */
     public ServerBuilder extension(ServerExtension extension) {
@@ -534,6 +583,10 @@ public final class ServerBuilder {
         featuresConfig.resources.forEach(r -> server.resources().register(r.descriptor(), r.handler()));
         featuresConfig.prompts.forEach(p -> server.prompts().register(p.descriptor(), p.handler()));
         featuresConfig.templates.forEach(t -> server.resources().registerTemplate(t.descriptor(), t.handler()));
+        featuresConfig.promptCompletions.forEach(
+                c -> server.completions().registerForPrompt(c.promptName(), c.handler()));
+        featuresConfig.resourceCompletions.forEach(
+                c -> server.completions().registerForResource(c.uriOrTemplate(), c.handler()));
         return server;
     }
 
@@ -584,6 +637,8 @@ public final class ServerBuilder {
         final List<ResourceRegistration> resources = new ArrayList<>();
         final List<ResourceTemplateEntry> templates = new ArrayList<>();
         final List<PromptRegistration> prompts = new ArrayList<>();
+        final List<PromptCompletionRegistration> promptCompletions = new ArrayList<>();
+        final List<ResourceCompletionRegistration> resourceCompletions = new ArrayList<>();
         final List<ServerExtension> extensions = new ArrayList<>();
 
         JsonSchemaValidator inputSchemaValidator = new NetworkntJsonSchemaValidator();
@@ -594,5 +649,9 @@ public final class ServerBuilder {
         record PromptRegistration(PromptDescriptor descriptor, PromptHandler handler) {}
 
         record ResourceRegistration(ResourceDescriptor descriptor, ResourceHandler handler) {}
+
+        record PromptCompletionRegistration(String promptName, CompletionHandler handler) {}
+
+        record ResourceCompletionRegistration(String uriOrTemplate, CompletionHandler handler) {}
     }
 }

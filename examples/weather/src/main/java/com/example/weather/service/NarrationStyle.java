@@ -5,6 +5,7 @@
 package com.example.weather.service;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public enum NarrationStyle {
@@ -20,6 +21,10 @@ public enum NarrationStyle {
 
     String value() {
         return value;
+    }
+
+    public static List<String> styleNames() {
+        return Arrays.stream(values()).map(NarrationStyle::value).toList();
     }
 
     public static NarrationStyle from(String value) {

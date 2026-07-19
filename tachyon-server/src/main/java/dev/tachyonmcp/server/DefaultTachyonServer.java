@@ -16,6 +16,8 @@ import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.config.ServerConfig;
 import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.extensions.ServerExtension;
+import dev.tachyonmcp.server.features.completions.CompletionRegistry;
+import dev.tachyonmcp.server.features.completions.DefaultCompletionRegistry;
 import dev.tachyonmcp.server.features.prompts.DefaultPromptRegistry;
 import dev.tachyonmcp.server.features.prompts.PromptRegistry;
 import dev.tachyonmcp.server.features.resources.DefaultResourceRegistry;
@@ -25,7 +27,6 @@ import dev.tachyonmcp.server.features.tasks.InternalTaskRegistry;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.features.tools.DefaultToolRegistry;
 import dev.tachyonmcp.server.features.tools.ToolRegistry;
-import dev.tachyonmcp.server.handlers.CompletionHandlers;
 import dev.tachyonmcp.server.handlers.InitializeHandler;
 import dev.tachyonmcp.server.handlers.LoggingHandlers;
 import dev.tachyonmcp.server.handlers.PingHandler;
@@ -76,6 +77,7 @@ final class DefaultTachyonServer implements ServerEngine {
     private final DefaultResourceRegistry resourceRegistry;
     private final DefaultTaskRegistry taskRegistry;
     private final DefaultPromptRegistry promptRegistry;
+    private final DefaultCompletionRegistry completionRegistry;
     private final Map<String, RpcMethodHandler> methodHandlers = new ConcurrentHashMap<>();
     final Map<String, LoggingLevel> loggingLevels = new ConcurrentHashMap<>();
     final ConcurrentHashMap<Object, CompletableFuture<String>> pendingRequests = new ConcurrentHashMap<>();
@@ -154,7 +156,7 @@ final class DefaultTachyonServer implements ServerEngine {
         final var capabilitiesConfig = config.capabilities();
 
         builder.logging(capabilitiesConfig.logging());
-        builder.completions(capabilitiesConfig.completions());
+        builder.completions(capabilitiesConfig.completions() || !completionRegistry.isEmpty());
 
         var hasTaskAugmentedTools = toolRegistry.getAll().stream()
                 .anyMatch(h ->
@@ -235,6 +237,7 @@ final class DefaultTachyonServer implements ServerEngine {
         this.resourceRegistry = new DefaultResourceRegistry(this, caps.resources());
         this.taskRegistry = new DefaultTaskRegistry(this, caps.tasks());
         this.promptRegistry = new DefaultPromptRegistry(inputValidator1, caps.prompts());
+        this.completionRegistry = new DefaultCompletionRegistry();
         registerDefaults();
         bootstrapExtensions();
         setupChangeListeners(config);
@@ -311,10 +314,10 @@ final class DefaultTachyonServer implements ServerEngine {
         resourceRegistry.registerHandlers(methodHandlers);
         taskRegistry.registerHandlers(methodHandlers);
         promptRegistry.registerHandlers(methodHandlers);
+        completionRegistry.registerHandlers(methodHandlers);
         if (config.capabilities().logging()) {
             LoggingHandlers.register(methodHandlers);
         }
-        CompletionHandlers.register(methodHandlers);
     }
 
     @Override
@@ -384,6 +387,11 @@ final class DefaultTachyonServer implements ServerEngine {
     @Override
     public PromptRegistry prompts() {
         return promptRegistry;
+    }
+
+    @Override
+    public CompletionRegistry completions() {
+        return completionRegistry;
     }
 
     @Override

@@ -2,7 +2,7 @@
 
 package com.example.weather;
 
-import com.example.weather.integration.OpenMeteoWeatherProvider;
+import com.example.weather.integration.OpenMeteoProvider;
 import com.example.weather.service.NarrationStyle;
 import com.example.weather.service.WeatherService;
 import com.example.weather.spi.CityNotFoundException;
@@ -15,6 +15,8 @@ import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.ResourceContents;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.domain.UriTemplateValue;
+import dev.tachyonmcp.server.features.completions.CompletionRequest;
+import dev.tachyonmcp.server.features.completions.CompletionResult;
 import dev.tachyonmcp.server.features.prompts.PromptRequest;
 import dev.tachyonmcp.server.features.prompts.PromptResult;
 import dev.tachyonmcp.server.features.resources.ResourceHandler;
@@ -35,10 +37,15 @@ public final class WeatherServer {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final String LOGO = classpathDataUri("/images/logo.png", "image/png");
 
-    private static final WeatherService weatherService = new WeatherService(
-        new OpenMeteoWeatherProvider(
-            HttpClient.newBuilder().executor(Executors.newVirtualThreadPerTaskExecutor()).build()
-        ));
+    private static final WeatherService weatherService;
+
+    static {
+        HttpClient httpClient = HttpClient.newBuilder()
+            .executor(Executors.newVirtualThreadPerTaskExecutor())
+            .build();
+        final var openMeteoProvider = new OpenMeteoProvider(httpClient);
+        weatherService = new WeatherService(openMeteoProvider, openMeteoProvider);
+    }
 
     public static void main(String... args) {
         final var server = createServer(8080);
@@ -83,6 +90,7 @@ public final class WeatherServer {
                                         PromptArgument.of("style", "Style", "plain, concise, or pirate", true))
                                 .inputSchema(NarrationStyle.inputSchema()),
                         (ctx, request) -> rewriteForecast(weatherService, request))
+            .promptCompletion("rewrite-forecast", (ctx, request) -> completeStyle(request))
                 .resourceTemplate(
                         template -> template.name("current-weather")
                                 .uriTemplate("weather://current/{city}")
@@ -91,12 +99,28 @@ public final class WeatherServer {
                                 .mimeType("application/json"),
                         (ctx, uri, params, uriTemplate) ->
                                 handleWeatherTemplate(weatherService, uri, params))
+            .asyncResourceCompletion(
+                "weather://current/{city}",
+                (ctx, request) -> weatherService.searchCities(request.argumentValue())
+                    .thenApply(CompletionResult::of)
+                    .exceptionally(e -> CompletionResult.of(List.of())))
                 .session(session -> session.enabled(true))
                 .network(network -> network.port(port))
                 .start();
     }
 
     private WeatherServer() {
+    }
+
+    private static CompletionResult completeStyle(CompletionRequest request) {
+        if (!"style".equals(request.argumentName())) {
+            return CompletionResult.of(List.of());
+        }
+        var query = request.argumentValue().toLowerCase();
+        var matches = NarrationStyle.styleNames().stream()
+            .filter(style -> style.startsWith(query))
+            .toList();
+        return CompletionResult.of(matches);
     }
 
     private static PromptResult rewriteForecast(WeatherService weatherService, PromptRequest request) {

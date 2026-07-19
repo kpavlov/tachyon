@@ -5,6 +5,7 @@
 package com.example.weather;
 
 import com.example.weather.service.WeatherService;
+import com.example.weather.spi.CityProvider;
 import com.example.weather.spi.WeatherObservation;
 import com.example.weather.spi.WeatherProvider;
 import dev.tachyonmcp.runtime.ContextNotifications;
@@ -30,12 +31,15 @@ import static org.awaitility.Awaitility.await;
 
 class GetWeatherToolTest {
 
+    private final WeatherProvider weatherProvider = new TestWeatherProvider();
+    private final CityProvider cityProvider = new TestCityProvider();
+
     @Test
     void returnsCityNotFoundWhenElicitationIsCancelled() throws Exception {
         var method = new AtomicReference<@Nullable String>();
         var context = context("{\"action\":\"cancel\"}", method);
 
-        var result = invoke(GetWeatherTool.create(new WeatherService(new TestWeatherProvider())), context);
+        var result = invoke(GetWeatherTool.create(new WeatherService(weatherProvider, cityProvider)), context);
 
         assertThat(method).hasValue("elicitation/create");
         assertThat(result).isEqualTo(ToolResult.error("City not found"));
@@ -43,10 +47,10 @@ class GetWeatherToolTest {
 
     @Test
     void returnsCityNotFoundWhenTheElicitedCityIsUnknown() throws Exception {
-        var method = new AtomicReference<String>();
+        var method = new AtomicReference<@Nullable String>();
         var context = context("{\"action\":\"accept\",\"content\":{\"city\":\"Unknown\"}}", method);
 
-        var result = invoke(GetWeatherTool.create(new WeatherService(new TestWeatherProvider())), context);
+        var result = invoke(GetWeatherTool.create(new WeatherService(weatherProvider, cityProvider)), context);
 
         assertThat(method).hasValue("elicitation/create");
         assertThat(result).isEqualTo(ToolResult.error("City not found"));
@@ -66,7 +70,9 @@ class GetWeatherToolTest {
             }
         };
 
-        var result = invoke(GetWeatherTool.create(new WeatherService(failing)), context("unused", new AtomicReference<>()));
+        var result = invoke(GetWeatherTool.create(
+            new WeatherService(failing, cityProvider)), context("unused", new AtomicReference<>()
+        ));
 
         assertThat(result).isEqualTo(ToolResult.error("Could not get weather"));
     }
@@ -82,7 +88,7 @@ class GetWeatherToolTest {
         public void comment(@Nullable String message) {}
     };
 
-    private static InteractionContext context(String response, AtomicReference<String> method) {
+    private static InteractionContext context(String response, AtomicReference<@Nullable String> method) {
         return new NoopInteractionContext() {
             @Override
             public CompletableFuture<String> sendRequest(String requestMethod, Object params) {

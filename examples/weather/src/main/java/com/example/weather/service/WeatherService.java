@@ -4,13 +4,17 @@
 
 package com.example.weather.service;
 
+import com.example.weather.spi.CityProvider;
 import com.example.weather.spi.WeatherObservation;
 import com.example.weather.spi.WeatherProvider;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public record WeatherService(WeatherProvider weatherProvider) {
+public record WeatherService(
+    WeatherProvider weatherProvider,
+    CityProvider cityProvider) {
 
     public WeatherObservation currentWeather(String city) throws Exception {
         return weatherProvider.currentWeather(city);
@@ -18,6 +22,10 @@ public record WeatherService(WeatherProvider weatherProvider) {
 
     public CompletableFuture<WeatherObservation> currentWeatherAsync(String city) {
         return weatherProvider.currentWeatherAsync(city);
+    }
+
+    public CompletableFuture<List<String>> searchCities(String query) {
+        return cityProvider.searchCities(query);
     }
 
     private static final String PREDICTION_ARTICLE = loadPredictionArticle();

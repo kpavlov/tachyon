@@ -25,6 +25,8 @@ import static org.awaitility.Awaitility.await;
 
 class WeatherServerTest {
 
+    private static final TestWeatherProvider weatherProvider = new TestWeatherProvider();
+    private static final TestCityProvider cityProvider = new TestCityProvider();
     private static TachyonServer handle;
     private static HttpClientStreamableHttpTransport clientTransport;
     private static McpSyncClient client;
@@ -33,7 +35,7 @@ class WeatherServerTest {
 
     @BeforeAll
     static void beforeAll() {
-        handle = WeatherServer.createServer(0, new WeatherService(new TestWeatherProvider()));
+        handle = WeatherServer.createServer(0, new WeatherService(weatherProvider, cityProvider));
         int port = handle.port();
 
         clientTransport = HttpClientStreamableHttpTransport
@@ -80,6 +82,7 @@ class WeatherServerTest {
             .tools(null)
             .resources(null, null)
             .prompts(null)
+            .completions()
             .build());
     }
 
@@ -245,6 +248,47 @@ class WeatherServerTest {
             .isInstanceOf(McpError.class)
             .extracting(e -> ((McpError) e).getJsonRpcError().code())
             .isEqualTo(-32602);
+    }
+
+    @Test
+    void shouldCompleteCityNameForCurrentWeatherTemplate() {
+        final var result = client.completeCompletion(McpSchema.CompleteRequest.builder(
+                new McpSchema.ResourceReference("weather://current/{city}"),
+                new McpSchema.CompleteRequest.CompleteArgument("city", "Lo"))
+            .build());
+
+        assertThat(result.completion().values()).containsExactlyInAnyOrder("London", "Los Angeles");
+        assertThat(result.completion().hasMore()).isNotEqualTo(true);
+    }
+
+    @Test
+    void shouldReturnEmptyCompletionForBlankQuery() {
+        final var result = client.completeCompletion(McpSchema.CompleteRequest.builder(
+                new McpSchema.ResourceReference("weather://current/{city}"),
+                new McpSchema.CompleteRequest.CompleteArgument("city", ""))
+            .build());
+
+        assertThat(result.completion().values()).isEmpty();
+    }
+
+    @Test
+    void shouldCompleteStyleNameForRewriteForecastPrompt() {
+        final var result = client.completeCompletion(McpSchema.CompleteRequest.builder(
+                new McpSchema.PromptReference("rewrite-forecast"),
+                new McpSchema.CompleteRequest.CompleteArgument("style", "pi"))
+            .build());
+
+        assertThat(result.completion().values()).containsExactly("pirate");
+    }
+
+    @Test
+    void shouldReturnEmptyCompletionForNonStyleArgumentOfRewriteForecastPrompt() {
+        final var result = client.completeCompletion(McpSchema.CompleteRequest.builder(
+                new McpSchema.PromptReference("rewrite-forecast"),
+                new McpSchema.CompleteRequest.CompleteArgument("forecast", "Rain"))
+            .build());
+
+        assertThat(result.completion().values()).isEmpty();
     }
 
     @Test
