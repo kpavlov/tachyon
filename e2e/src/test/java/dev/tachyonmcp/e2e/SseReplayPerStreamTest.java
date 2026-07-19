@@ -6,13 +6,14 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.server.domain.Args;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
@@ -54,11 +55,13 @@ class SseReplayPerStreamTest extends AbstractStatefulMcpE2eTest {
             // While the GET stream is down: tools/call → the inline notification upgrades the
             // POST to SSE, and both the notification and the response are DELIVERED there.
             var toolResponse = client.post(sessionId, """
-                    {"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"notifying-echo","arguments":{"message":"post-stream-payload"}}}
+                    {"jsonrpc":"2.0","id":7,"method":"tools/call",
+                     "params":{"name":"notifying-echo","arguments":{"message":"post-stream-payload"},
+                               "_meta":{"progressToken":"pt-replay"}}}
                     """);
             assertThat(toolResponse.headers().firstValue("Content-Type").orElse(""))
                     .contains("text/event-stream");
-            assertThat(toolResponse.body()).contains("notifications/tool/echoed");
+            assertThat(toolResponse.body()).contains("notifications/progress");
             assertThat(toolResponse.body()).contains("post-stream-payload");
             assertThat(toolResponse.body()).contains("\"result\"");
 
@@ -76,7 +79,7 @@ class SseReplayPerStreamTest extends AbstractStatefulMcpE2eTest {
                         .doesNotContain("\"result\"");
                 assertThat(replayed)
                         .as("GET resume must not replay notifications delivered on the POST stream")
-                        .doesNotContain("notifications/tool/echoed")
+                        .doesNotContain("notifications/progress")
                         .doesNotContain("post-stream-payload");
             }
         }
@@ -122,17 +125,19 @@ class SseReplayPerStreamTest extends AbstractStatefulMcpE2eTest {
     }
 
     private static ToolHandler notifyingEchoTool() {
-        return ToolHandler.of(
-                b -> b.name("notifying-echo")
-                        .description("Echoes the message, emitting a notification so the POST upgrades to SSE"),
-                (context, args) -> {
-                    String text = "";
-                    var msg = args.raw("message");
-                    if (msg instanceof tools.jackson.databind.JsonNode node) {
-                        text = node.asString();
-                    }
-                    context.notifications().send("notifications/tool/echoed", Map.of("message", text));
-                    return ToolResult.text(text);
-                });
+        var descriptor = ToolDescriptor.builder()
+                .name("notifying-echo")
+                .description("Echoes the message, emitting a notification so the POST upgrades to SSE")
+                .build();
+        return ToolHandler.ofRequest(descriptor, (context, request) -> {
+            var args = Args.of(request.arguments(), request.payloadDeserializer());
+            String text = "";
+            var msg = args.raw("message");
+            if (msg instanceof tools.jackson.databind.JsonNode node) {
+                text = node.asString();
+            }
+            context.notifications().progress(request.progressToken(), 1, 1, text);
+            return ToolResult.text(text);
+        });
     }
 }

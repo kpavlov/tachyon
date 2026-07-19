@@ -11,13 +11,18 @@ import io.modelcontextprotocol.spec.McpError;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
+import static org.awaitility.Awaitility.await;
 
 class WeatherServerTest {
 
@@ -25,6 +30,7 @@ class WeatherServerTest {
     private static HttpClientStreamableHttpTransport clientTransport;
     private static McpSyncClient client;
     private static McpSchema.InitializeResult initResult;
+    private static final List<McpSchema.ProgressNotification> progressNotifications = new CopyOnWriteArrayList<>();
 
     @BeforeAll
     static void beforeAll() {
@@ -37,9 +43,15 @@ class WeatherServerTest {
         client = McpClient.sync(clientTransport)
             .elicitation(request -> new McpSchema.ElicitResult(
                 McpSchema.ElicitResult.Action.ACCEPT, Map.of("city", "Tallinn")))
+            .progressConsumer(progressNotifications::add)
             .build();
 
         initResult = client.initialize();
+    }
+
+    @BeforeEach
+    void clearProgressNotifications() {
+        progressNotifications.clear();
     }
 
     @AfterAll
@@ -117,6 +129,27 @@ class WeatherServerTest {
             .contains("°C")
             .contains("Humidity:")
             .contains("Wind:");
+    }
+
+    @Test
+    void shouldEmitProgressWhileFetchingWeather() {
+        final var result = client.callTool(McpSchema.CallToolRequest.builder("get-weather")
+            .arguments(Map.of("city", "London"))
+            .progressToken("weather-progress")
+            .build());
+
+        assertThat(result.isError()).isNotEqualTo(true);
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
+            assertThat(progressNotifications).hasSize(2));
+        assertThat(progressNotifications)
+            .extracting(
+                McpSchema.ProgressNotification::progressToken,
+                McpSchema.ProgressNotification::progress,
+                McpSchema.ProgressNotification::total,
+                McpSchema.ProgressNotification::message)
+            .containsExactly(
+                tuple("weather-progress", 0.1, 1.0, "Fetching weather for London"),
+                tuple("weather-progress", 1.0, 1.0, "Weather retrieved for London"));
     }
 
     @Test

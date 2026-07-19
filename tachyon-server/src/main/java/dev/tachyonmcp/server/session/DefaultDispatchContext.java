@@ -8,13 +8,13 @@ import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.Protocols;
-import dev.tachyonmcp.runtime.AbstractNotifications;
 import dev.tachyonmcp.runtime.ChannelContext;
-import dev.tachyonmcp.runtime.InternalNotifications;
+import dev.tachyonmcp.runtime.ContextNotifications;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.OutboundSseStream;
 import dev.tachyonmcp.server.domain.LoggingLevel;
+import dev.tachyonmcp.server.internal.NotificationLogSupport;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.Map;
@@ -30,7 +30,7 @@ public class DefaultDispatchContext implements DispatchContext {
 
     private final ChannelContext channel;
     private final ServerEngine server;
-    private final InternalNotifications notifications = new NotificationsImpl();
+    private final ContextNotifications notifications = new NotificationsImpl();
     private volatile @Nullable OutboundSseStream outboundStream;
 
     public DefaultDispatchContext(ChannelContext channel, ServerEngine server) {
@@ -131,7 +131,7 @@ public class DefaultDispatchContext implements DispatchContext {
     }
 
     @Override
-    public InternalNotifications notifications() {
+    public ContextNotifications notifications() {
         return notifications;
     }
 
@@ -160,10 +160,9 @@ public class DefaultDispatchContext implements DispatchContext {
         return protocol().responseMapper();
     }
 
-    private class NotificationsImpl extends AbstractNotifications {
+    private class NotificationsImpl implements ContextNotifications {
 
-        @Override
-        public void send(String method, Object params) {
+        private void send(String method, Object params) {
             var s = session();
             if (s != null) {
                 server.sendNotification(s, method, params, outboundStream());
@@ -178,6 +177,13 @@ public class DefaultDispatchContext implements DispatchContext {
             stream.start();
             stream.writeEvent(
                     new SseEvent(ServerEngine.wireEventId(server.nextEventId(), stream.streamKey()), "message", json));
+        }
+
+        @Override
+        public void log(LoggingLevel level, @Nullable String logger, @Nullable Object data) {
+            if (shouldEmit(level)) {
+                send(NotificationLogSupport.LOG_METHOD, NotificationLogSupport.logParams(level, logger, data));
+            }
         }
 
         @Override
@@ -204,8 +210,7 @@ public class DefaultDispatchContext implements DispatchContext {
             stream.comment(message);
         }
 
-        @Override
-        public boolean shouldEmit(LoggingLevel level) {
+        private boolean shouldEmit(LoggingLevel level) {
             if (!server.config().capabilities().logging()) return false;
             var configuredLevel = getLoggingLevel();
             var threshold = configuredLevel != null ? configuredLevel : LoggingLevel.INFO;

@@ -13,8 +13,8 @@ import org.jspecify.annotations.Nullable;
  * <p>This is the public logging surface. The single abstract method
  * {@link #log(LoggingLevel, String, Object)} carries all behavior; the other methods are pure
  * delegating conveniences, so implementations (including lambdas) only implement that one method.
- * Threshold and capability gating, plus the wire-shape construction, live in
- * {@link AbstractNotifications} — never in this interface.
+ * Threshold and capability gating, plus the wire-shape construction, live in the internal
+ * implementation — never in this interface.
  */
 @FunctionalInterface
 public interface Notifications {

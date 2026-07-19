@@ -231,8 +231,8 @@ per session, with `INFO` used until the client sends `logging/setLevel`.
 Native transports need optional runtime jars (`netty-transport-native-epoll` / `-kqueue` / `-io_uring` with `${os.detected.classifier}`); otherwise `AUTO` falls back to NIO. Explicit unavailable engines throw `UnsupportedOperationException`. See `docs/configuration.md`.
 
 ⏳ **Long-tool keep-alive**: `readerIdleTimeout` (60s) closes connections with no **inbound** bytes; waiting clients send none, so >60s tools are reaped mid-compute. Set it to `Duration.ZERO` to disable idle-inbound closing; don't merely raise it. Emit an early server→client message. POST upgrades to SSE; a scheduler sends `:\r\n` every `heartbeatInterval` (15s) for the whole run. Request-level `ToolHandler` triggers (`Args` carries neither):
-- `ctx.notifications().progress(token, ...)` — forward the client's `ToolRequest.progressToken()`; **null token throws**.
-- `ctx.notifications().comment(msg)` — token-free SSE comment (`: msg`); `comment()` = bare `:` heartbeat. Use when no progress token.
+- `ctx.notifications().progress(token, ...)` — forward the client's `ToolRequest.progressToken()`; **`null` token is silently dropped** (no client opt-in) and sends nothing, so it does not keep the connection alive.
+- `ctx.notifications().comment(msg)` — token-free SSE comment (`: msg`); `comment()` = bare `:` heartbeat. Use when no progress token, since a dropped `progress(null, ...)` sends nothing.
 
 **Long task ⇒ emit progress or comment first**. Keep `heartbeatInterval < readerIdleTimeout`; size `readerIdleTimeout` for dead-peer detection, not runtime.
 

@@ -67,7 +67,7 @@ public class DefaultChannelContext implements ChannelContext {
     }
 
     @Override
-    public InternalNotifications notifications() {
+    public ContextNotifications notifications() {
         throw new UnsupportedOperationException("notifications are not supported in this context");
     }
 

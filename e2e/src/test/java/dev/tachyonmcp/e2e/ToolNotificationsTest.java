@@ -7,6 +7,8 @@ package dev.tachyonmcp.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.config.CapabilitiesConfig;
+import dev.tachyonmcp.server.domain.Args;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.Map;
@@ -31,11 +33,13 @@ class ToolNotificationsTest extends AbstractStatelessMcpE2eTest {
             client.post(setLevelBody);
 
             var toolResponse = client.post("""
-                {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"notifier","arguments":{"message":"hello from tool"}}}
+                {"jsonrpc":"2.0","id":3,"method":"tools/call",
+                 "params":{"name":"notifier","arguments":{"message":"hello from tool"},
+                           "_meta":{"progressToken":"pt-1"}}}
                 """);
             var body = toolResponse.body();
 
-            assertThat(body).contains("notifications/tool/test");
+            assertThat(body).contains("notifications/progress");
             assertThat(body).contains("\"message\":\"hello from tool\"");
 
             assertThat(body).contains("notifications/message");
@@ -48,19 +52,21 @@ class ToolNotificationsTest extends AbstractStatelessMcpE2eTest {
     }
 
     private static ToolHandler notifyingTool() {
-        return ToolHandler.of(
-                b -> b.name("notifier")
-                        .title("Notifier Tool")
-                        .description("Sends notifications and logs during execution"),
-                (context, args) -> {
-                    String text = "";
-                    var msg = args.raw("message");
-                    if (msg instanceof tools.jackson.databind.JsonNode node) {
-                        text = node.asString();
-                    }
-                    context.notifications().send("notifications/tool/test", Map.of("message", text));
-                    context.notifications().info("tool.notifier", Map.of("message", text));
-                    return ToolResult.text(text);
-                });
+        var descriptor = ToolDescriptor.builder()
+                .name("notifier")
+                .title("Notifier Tool")
+                .description("Sends notifications and logs during execution")
+                .build();
+        return ToolHandler.ofRequest(descriptor, (context, request) -> {
+            var args = Args.of(request.arguments(), request.payloadDeserializer());
+            String text = "";
+            var msg = args.raw("message");
+            if (msg instanceof tools.jackson.databind.JsonNode node) {
+                text = node.asString();
+            }
+            context.notifications().progress(request.progressToken(), 1, 1, text);
+            context.notifications().info("tool.notifier", Map.of("message", text));
+            return ToolResult.text(text);
+        });
     }
 }
