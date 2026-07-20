@@ -26,6 +26,10 @@ public interface Task extends HasMeta {
     @Nullable
     Duration ttl();
 
+    /** Suggested polling interval for {@code tasks/get}, or {@code null} to not suggest one. */
+    @Nullable
+    Duration pollInterval();
+
     @Nullable
     TaskResult result();
 

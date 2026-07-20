@@ -28,6 +28,10 @@ public interface TaskOptions {
     @Nullable
     Duration keepAlive();
 
+    /** Suggested {@code tasks/get} polling interval to advertise, or {@code null} to use the server default. */
+    @Nullable
+    Duration pollInterval();
+
     @Nullable
     Map<String, JsonNode> meta();
 
@@ -48,6 +52,8 @@ public interface TaskOptions {
         Builder ttl(@Nullable Duration ttl);
 
         Builder keepAlive(@Nullable Duration keepAlive);
+
+        Builder pollInterval(@Nullable Duration pollInterval);
 
         Builder meta(@Nullable Map<String, ? extends JsonNode> meta);
 

@@ -34,6 +34,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     private final long createdAt;
     private final @Nullable Duration ttl;
     private final Duration keepAlive;
+    private final @Nullable Duration pollInterval;
     private volatile long lastUpdatedAt;
     private volatile long expiredAt;
     private volatile @Nullable String statusMessage;
@@ -107,6 +108,19 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             @Nullable Object progressToken,
             @Nullable Map<String, JsonNode> meta,
             Duration keepAlive) {
+        this(descriptor, id, status, ttl, sessionId, progressToken, meta, keepAlive, null);
+    }
+
+    public TaskEntry(
+            TaskDescriptor descriptor,
+            String id,
+            TaskState status,
+            @Nullable Duration ttl,
+            @Nullable String sessionId,
+            @Nullable Object progressToken,
+            @Nullable Map<String, JsonNode> meta,
+            Duration keepAlive,
+            @Nullable Duration pollInterval) {
         this.descriptor = descriptor;
         this.id = id;
         this.sessionId = sessionId;
@@ -116,6 +130,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         this.lastUpdatedAt = this.createdAt;
         this.ttl = ttl;
         this.keepAlive = Objects.requireNonNull(keepAlive, "keepAlive");
+        this.pollInterval = pollInterval;
         this.progressToken = progressToken;
     }
 
@@ -171,6 +186,11 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     /** How long after this task reaches a terminal state its result stays retrievable. */
     public Duration keepAlive() {
         return keepAlive;
+    }
+
+    @Override
+    public @Nullable Duration pollInterval() {
+        return pollInterval;
     }
 
     @Override

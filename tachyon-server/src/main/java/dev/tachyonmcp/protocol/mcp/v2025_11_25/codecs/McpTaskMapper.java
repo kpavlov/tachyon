@@ -44,15 +44,19 @@ final class McpTaskMapper {
         return ttl != null ? (double) ttl.toMillis() : 0.0;
     }
 
+    private static @Nullable Double pollIntervalToMillis(@Nullable Duration pollInterval) {
+        return pollInterval != null ? (double) pollInterval.toMillis() : null;
+    }
+
     static Task toTaskProto(TaskEntry entry) {
         return new Task(
                 entry.id(),
                 toWireStatus(entry.status()),
-                entry.status().toString(),
+                entry.statusMessage(),
                 entry.createdAtIso(),
                 entry.lastUpdatedAtIso(),
                 ttlToMillis(entry.ttl()),
-                null);
+                pollIntervalToMillis(entry.pollInterval()));
     }
 
     static GetTaskResult toGetTaskResult(TaskEntry entry) {
@@ -60,11 +64,11 @@ final class McpTaskMapper {
                 null,
                 entry.id(),
                 toWireStatus(entry.status()),
-                entry.status().toString(),
+                entry.statusMessage(),
                 entry.createdAtIso(),
                 entry.lastUpdatedAtIso(),
                 ttlToMillis(entry.ttl()),
-                null);
+                pollIntervalToMillis(entry.pollInterval()));
     }
 
     public static CancelTaskResult toCancelTaskResult(TaskEntry entry) {
@@ -72,11 +76,11 @@ final class McpTaskMapper {
                 null,
                 entry.id(),
                 toWireStatus(entry.status()),
-                entry.status().toString(),
+                entry.statusMessage(),
                 entry.createdAtIso(),
                 entry.lastUpdatedAtIso(),
                 ttlToMillis(entry.ttl()),
-                null);
+                pollIntervalToMillis(entry.pollInterval()));
     }
 
     static CreateTaskResult toCreateTaskResult(TaskEntry entry) {
@@ -89,10 +93,10 @@ final class McpTaskMapper {
                 null,
                 entry.id(),
                 toWireStatus(entry.status()),
-                entry.status().toString(),
+                entry.statusMessage(),
                 entry.createdAtIso(),
                 entry.lastUpdatedAtIso(),
                 ttl != null ? ttl.toMillis() : null,
-                null);
+                pollIntervalToMillis(entry.pollInterval()));
     }
 }

@@ -11,6 +11,8 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Implementation;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.server.domain.TaskResult;
+import dev.tachyonmcp.server.features.tasks.DefaultTaskRegistry;
+import dev.tachyonmcp.server.features.tasks.TaskState;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -64,6 +66,33 @@ class TasksCoreTest extends AbstractStatefulMcpE2eTest {
                     """.formatted(task.id()));
             assertThatJson(getJson).inPath("$.result.taskId").isEqualTo(task.id());
             assertThatJson(getJson).inPath("$.result.status").isEqualTo("working");
+        }
+    }
+
+    @Test
+    void statusMessageReflectsCallerSuppliedTextNotTheBareStatusName() throws Exception {
+        // Regression test: the wire mapper used to hardcode statusMessage to entry.status().toString(),
+        // discarding whatever message updateStatus/complete callers actually set.
+        startDefaultServer();
+        try (var client = createTestClient()) {
+            client.initialize();
+            var task = server.tasks().create();
+            var registry = (DefaultTaskRegistry) server.tasks();
+            registry.updateStatus(task.id(), TaskState.WORKING, "step 1 of 3");
+
+            var workingJson = client.sendRpc("""
+                    {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"%s"}}
+                    """.formatted(task.id()));
+            assertThatJson(workingJson).inPath("$.result.statusMessage").isEqualTo("step 1 of 3");
+
+            task.complete(
+                    TaskResult.completed(JsonNodeFactory.instance.objectNode().put("output", "success")));
+
+            var completedJson = client.sendRpc("""
+                    {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
+                    """.formatted(task.id()));
+            assertThatJson(completedJson).inPath("$.result.status").isEqualTo("completed");
+            assertThatJson(completedJson).inPath("$.result.statusMessage").isEqualTo("step 1 of 3");
         }
     }
 
