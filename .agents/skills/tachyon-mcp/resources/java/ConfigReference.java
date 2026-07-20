@@ -41,7 +41,7 @@ final class ConfigReference {
                 .cancel(false)
                 .requests(false)
                 .build())
-            .completions(false)
+            .completions(Mode.AUTO)
             .logging(false)
             .build();
     }

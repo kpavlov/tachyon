@@ -146,13 +146,6 @@ public record CapabilitiesConfig(
             return this;
         }
 
-        /** @deprecated Use {@link #completions(Mode)} with {@link Mode#ON} or {@link Mode#OFF}. */
-        @Deprecated
-        public Builder completions(boolean enabled) {
-            this.completions = enabled ? Mode.ON : Mode.OFF;
-            return this;
-        }
-
         public Builder tasksEnabled(boolean tasksEnabled) {
             tasksBuilder.enabled(tasksEnabled);
             return this;

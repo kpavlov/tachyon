@@ -93,7 +93,7 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
      *
      * @param handler the tool handler to register
      * @return this registry
-     * @throws NullPointerException if the handler or its descriptor is null
+     * @throws NullPointerException     if the handler or its descriptor is null
      * @throws IllegalArgumentException if the tool name or schema root is invalid
      */
     @Override
@@ -244,13 +244,17 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
             return "tools/call";
         }
 
-        /** Compatibility fallback for callers invoking the blocking SPI method directly. */
+        /**
+         * Compatibility fallback for callers invoking the blocking SPI method directly.
+         */
         @Override
         public Object handle(DispatchContext context, Object params) throws Exception {
             return HandlerFutures.joinInterruptibly(handleAsync(context, params));
         }
 
-        /** Runs on the dispatcher's virtual thread; composes the handler's stage without blocking it. */
+        /**
+         * Runs on the dispatcher's virtual thread; composes the handler's stage without blocking it.
+         */
         @Override
         public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
             var parsed = parseCallParams(params);
@@ -339,7 +343,7 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
          * @param request  the tool request to execute
          * @param id       the tool identifier used for logging
          * @param taskMeta task execution metadata, including the optional time-to-live
-         * @return         the initial result representing the created task
+         * @return the initial result representing the created task
          */
         private Object dispatchTaskAugmented(
                 DispatchContext context, ToolHandler handler, ToolRequest request, String id, TaskMetadata taskMeta) {
@@ -396,7 +400,7 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                 if (e instanceof Exception ex) {
                     handleTaskError(task, ex);
                 } else {
-                    logger.error("Non-exception throwable in task handler for '{}'", task.name(), e);
+                    logger.error("Non-exception throwable in task handler for  taskId={}", task.id(), e);
                 }
                 taskRegistry.unregisterRunning(task.id());
                 return null;
@@ -466,7 +470,7 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
 
         private void handleTaskError(TaskEntry taskEntry, Exception e) {
             var cause = e instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : e;
-            logger.error("Task handler error for '{}'", taskEntry.name(), cause);
+            logger.error("Task handler error for taskId={}", taskEntry.id(), cause);
             taskEntry.fail(new TaskResult.Failed(List.of(TextContent.of("Internal server error")), null, null));
         }
 

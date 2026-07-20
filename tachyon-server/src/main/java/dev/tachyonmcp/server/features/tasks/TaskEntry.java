@@ -43,7 +43,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     private final @Nullable Object progressToken;
     private final Consumer<TaskEntry> statusListener;
 
-    public TaskEntry(String id, @Nullable String description) {
+    TaskEntry(String id) {
         this(
                 TaskDescriptor.builder().id(id).build(),
                 id,
@@ -155,7 +155,9 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         this.statusListener = Objects.requireNonNull(statusListener, "statusListener");
     }
 
-    /** The session that created this task, or {@code null} for programmatic/server-global tasks. */
+    /**
+     * The session that created this task, or {@code null} for programmatic/server-global tasks.
+     */
     public @Nullable String sessionId() {
         return sessionId;
     }
@@ -172,11 +174,6 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     @Override
     public TaskDescriptor descriptor() {
         return descriptor;
-    }
-
-    @Override
-    public String name() {
-        return id;
     }
 
     @Override
@@ -204,7 +201,9 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         return ttl;
     }
 
-    /** How long after this task reaches a terminal state its result stays retrievable. */
+    /**
+     * How long after this task reaches a terminal state its result stays retrievable.
+     */
     public Duration keepAlive() {
         return keepAlive;
     }
@@ -355,7 +354,9 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         return System.currentTimeMillis() - lastUpdatedAt > ttl;
     }
 
-    /** Whether this task's result has outlived its {@code keepAlive} retention window. */
+    /**
+     * Whether this task's result has outlived its {@code keepAlive} retention window.
+     */
     public boolean isResultExpired() {
         var deadline = expiredAt;
         return deadline != 0 && System.currentTimeMillis() > deadline;
