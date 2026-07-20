@@ -5,7 +5,7 @@
 package dev.tachyonmcp.server.features.prompts;
 
 import dev.tachyonmcp.runtime.InteractionContext;
-import java.util.concurrent.CompletableFuture;
+import dev.tachyonmcp.server.features.HandlerFutures;
 import java.util.concurrent.CompletionStage;
 
 /**
@@ -30,10 +30,6 @@ public interface PromptHandler {
      * Override to integrate async services.
      */
     default CompletionStage<? extends PromptResult> handleAsync(InteractionContext ctx, PromptRequest request) {
-        try {
-            return CompletableFuture.completedFuture(handle(ctx, request));
-        } catch (Exception e) {
-            return CompletableFuture.failedFuture(e);
-        }
+        return HandlerFutures.completedOrFailed(() -> handle(ctx, request));
     }
 }

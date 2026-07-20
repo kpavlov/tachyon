@@ -5,6 +5,8 @@
 package dev.tachyonmcp.server.features;
 
 import dev.tachyonmcp.annotations.InternalApi;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
@@ -64,5 +66,41 @@ public final class HandlerFutures {
             CompletionStage<T> stage, Executor executor, BiFunction<? super T, Throwable, ? extends R> fn) {
         var future = stage.toCompletableFuture();
         return future.isDone() ? future.handle(fn) : future.handleAsync(fn, executor);
+    }
+
+    /**
+     * Adapts a synchronous handler body into a {@code CompletionStage}: a completed stage on
+     * success, a failed one carrying the thrown exception otherwise. Shared by the sync-handler
+     * interfaces' default {@code handleAsync} (e.g. {@code ResourceHandler}, {@code PromptHandler},
+     * {@code CompletionHandler}).
+     */
+    public static <R> CompletionStage<R> completedOrFailed(Callable<? extends R> handler) {
+        try {
+            return CompletableFuture.completedFuture(handler.call());
+        } catch (Exception e) {
+            return CompletableFuture.failedFuture(e);
+        }
+    }
+
+    /**
+     * Invokes a handler, guards against a synchronous throw or a {@code null} returned stage, and
+     * maps the outcome via {@link #completeOn}. Shared registry-dispatch skeleton: obtain the
+     * handler's stage safely, then compose the result without blocking.
+     */
+    public static <R> CompletionStage<Object> invokeAndMap(
+            String nullStageMessage,
+            Callable<? extends CompletionStage<? extends R>> invocation,
+            Executor executor,
+            BiFunction<? super R, Throwable, Object> resultMapper) {
+        CompletionStage<? extends R> stage;
+        try {
+            stage = invocation.call();
+            if (stage == null) {
+                throw new NullPointerException(nullStageMessage);
+            }
+        } catch (Exception e) {
+            stage = CompletableFuture.failedFuture(e);
+        }
+        return completeOn(stage, executor, resultMapper);
     }
 }

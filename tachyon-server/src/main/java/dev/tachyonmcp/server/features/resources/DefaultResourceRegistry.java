@@ -523,30 +523,26 @@ public class DefaultResourceRegistry implements Resources {
 
         private CompletionStage<Object> readResult(
                 DispatchContext context, String uri, Callable<CompletionStage<? extends ResourceContents>> invoker) {
-            CompletionStage<? extends ResourceContents> stage;
-            try {
-                stage = invoker.call();
-                if (stage == null) {
-                    throw new NullPointerException(
-                            "Resource handler for '" + uri + "' returned a null CompletionStage");
-                }
-            } catch (Exception e) {
-                stage = CompletableFuture.<ResourceContents>failedFuture(e);
-            }
-            // completeOn: re-anchors onto a tachyon- virtual thread only when the handler's
-            // stage is still pending, so a foreign completer thread never leaks into response
-            // mapping, without adding an executor hop to the common already-resolved case.
-            return HandlerFutures.completeOn(stage, context.engine().executor(), (contents, ex) -> {
-                if (ex != null) {
-                    var cause = HandlerFutures.unwrap(ex);
-                    if (cause instanceof InvalidArgumentException e) {
-                        return JsonRpcErrors.invalidParams("invalid argument '" + e.argName() + "': " + e.getMessage());
-                    }
-                    logger.error("Resource handler error for '{}'", uri, cause);
-                    return JsonRpcErrors.internalError("Resource handler failed");
-                }
-                return context.responseMapper().readResourceResult(List.of(contents));
-            });
+            // invokeAndMap: guards the synchronous-throw/null-stage cases, then re-anchors onto a
+            // tachyon- virtual thread only when the handler's stage is still pending, so a
+            // foreign completer thread never leaks into response mapping, without adding an
+            // executor hop to the common already-resolved case.
+            return HandlerFutures.invokeAndMap(
+                    "Resource handler for '" + uri + "' returned a null CompletionStage",
+                    invoker,
+                    context.engine().executor(),
+                    (contents, ex) -> {
+                        if (ex != null) {
+                            var cause = HandlerFutures.unwrap(ex);
+                            if (cause instanceof InvalidArgumentException e) {
+                                return JsonRpcErrors.invalidParams(
+                                        "invalid argument '" + e.argName() + "': " + e.getMessage());
+                            }
+                            logger.error("Resource handler error for '{}'", uri, cause);
+                            return JsonRpcErrors.internalError("Resource handler failed");
+                        }
+                        return context.responseMapper().readResourceResult(List.of(contents));
+                    });
         }
 
         private static @Nullable String toRawUri(Object params) {

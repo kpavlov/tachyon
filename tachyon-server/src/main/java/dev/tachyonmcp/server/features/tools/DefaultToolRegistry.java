@@ -304,37 +304,32 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
             }
 
             sendLoggingIfEnabled(context, parsed.name(), "started");
-            CompletionStage<? extends ToolResult> stage;
-            try {
-                stage = handler.handleAsync(context, request);
-                if (stage == null) {
-                    throw new NullPointerException("Tool '" + parsed.name() + "' returned a null CompletionStage");
-                }
-            } catch (Exception e) {
-                stage = CompletableFuture.<ToolResult>failedFuture(e);
-            }
-            // completeOn: re-anchors onto a tachyon- virtual thread only when the handler's
-            // stage is still pending, so a foreign completer thread never leaks into output
-            // validation/response mapping, without adding an executor hop to the common
-            // already-resolved case (sync handlers, fast async ones).
-            return HandlerFutures.completeOn(stage, context.engine().executor(), (toolResult, ex) -> {
-                if (ex != null) {
-                    var cause = HandlerFutures.unwrap(ex);
-                    if (cause instanceof InvalidArgumentException e) {
-                        return invalidParams("invalid argument '" + e.argName() + "': " + e.getMessage());
-                    }
-                    if (cause instanceof CancellationException) {
-                        logger.debug("Tool call cancelled for '{}'", parsed.name());
-                        return internalError("Tool call cancelled");
-                    }
-                    logger.error("Tool handler error for '{}'", parsed.name(), cause);
-                    return internalError("Tool handler failed");
-                }
-                sendLoggingIfEnabled(context, parsed.name(), "completed");
-                validateOutput(handler.descriptor().outputSchema(), toolResult);
-                return context.responseMapper()
-                        .callToolResult(JsonUtils.serializeStructured(toolResult, payloadSerializer));
-            });
+            // invokeAndMap: guards the synchronous-throw/null-stage cases, then re-anchors onto a
+            // tachyon- virtual thread only when the handler's stage is still pending, so a
+            // foreign completer thread never leaks into output validation/response mapping,
+            // without adding an executor hop to the common already-resolved case.
+            return HandlerFutures.invokeAndMap(
+                    "Tool '" + parsed.name() + "' returned a null CompletionStage",
+                    () -> handler.handleAsync(context, request),
+                    context.engine().executor(),
+                    (toolResult, ex) -> {
+                        if (ex != null) {
+                            var cause = HandlerFutures.unwrap(ex);
+                            if (cause instanceof InvalidArgumentException e) {
+                                return invalidParams("invalid argument '" + e.argName() + "': " + e.getMessage());
+                            }
+                            if (cause instanceof CancellationException) {
+                                logger.debug("Tool call cancelled for '{}'", parsed.name());
+                                return internalError("Tool call cancelled");
+                            }
+                            logger.error("Tool handler error for '{}'", parsed.name(), cause);
+                            return internalError("Tool handler failed");
+                        }
+                        sendLoggingIfEnabled(context, parsed.name(), "completed");
+                        validateOutput(handler.descriptor().outputSchema(), toolResult);
+                        return context.responseMapper()
+                                .callToolResult(JsonUtils.serializeStructured(toolResult, payloadSerializer));
+                    });
         }
 
         /**

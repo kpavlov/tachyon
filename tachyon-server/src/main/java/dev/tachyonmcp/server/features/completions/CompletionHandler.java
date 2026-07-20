@@ -5,7 +5,7 @@
 package dev.tachyonmcp.server.features.completions;
 
 import dev.tachyonmcp.runtime.InteractionContext;
-import java.util.concurrent.CompletableFuture;
+import dev.tachyonmcp.server.features.HandlerFutures;
 import java.util.concurrent.CompletionStage;
 
 /**
@@ -30,10 +30,6 @@ public interface CompletionHandler {
      * Override to integrate async services.
      */
     default CompletionStage<? extends CompletionResult> handleAsync(InteractionContext ctx, CompletionRequest request) {
-        try {
-            return CompletableFuture.completedFuture(handle(ctx, request));
-        } catch (Exception e) {
-            return CompletableFuture.failedFuture(e);
-        }
+        return HandlerFutures.completedOrFailed(() -> handle(ctx, request));
     }
 }

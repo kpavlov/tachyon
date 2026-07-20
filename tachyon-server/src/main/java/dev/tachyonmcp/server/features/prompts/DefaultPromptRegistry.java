@@ -23,6 +23,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -145,15 +147,25 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
             return "prompts/get";
         }
 
+        /** Compatibility fallback for callers invoking the blocking SPI method directly. */
         @Override
         public Object handle(DispatchContext context, Object params) throws Exception {
+            return HandlerFutures.joinInterruptibly(handleAsync(context, params));
+        }
+
+        /** Runs on the dispatcher's virtual thread; composes the handler's stage without blocking it. */
+        @Override
+        public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
             var name = extractParamName(params);
-            if (name == null) return JsonRpcErrors.invalidRequest("Missing prompt name");
+            if (name == null) {
+                return CompletableFuture.completedFuture(JsonRpcErrors.invalidRequest("Missing prompt name"));
+            }
             var entry = registry.get(name);
-            if (entry == null) return JsonRpcErrors.invalidRequest("Prompt not found");
+            if (entry == null)
+                return CompletableFuture.completedFuture(JsonRpcErrors.invalidRequest("Prompt not found"));
             var extId = entry.descriptor().extensionId();
             if (extId != null && !context.isExtensionEnabled(extId)) {
-                return JsonRpcErrors.invalidRequest("Prompt not found");
+                return CompletableFuture.completedFuture(JsonRpcErrors.invalidRequest("Prompt not found"));
             }
             var inputSchema = entry.descriptor().inputSchema();
             if (inputSchema != null) {
@@ -161,10 +173,10 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
                 try {
                     argsMap = extractArgumentsMap(params);
                 } catch (RuntimeException e) {
-                    return JsonRpcErrors.invalidParams("Invalid arguments");
+                    return CompletableFuture.completedFuture(JsonRpcErrors.invalidParams("Invalid arguments"));
                 }
                 var error = JsonSchemaUtils.validateArguments(validator, inputSchema, argsMap);
-                if (error != null) return JsonRpcErrors.invalidParams(error);
+                if (error != null) return CompletableFuture.completedFuture(JsonRpcErrors.invalidParams(error));
             }
 
             var request = new PromptRequest(
@@ -172,23 +184,29 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
                     extractInputResponsesFromParams(params),
                     extractRequestStateFromParams(params));
 
-            // Runs on the dispatcher's virtual thread; blocking to join the handler is the SPI contract.
-            PromptResult result;
-            try {
-                result = HandlerFutures.joinInterruptibly(entry.handler().handleAsync(context, request));
-            } catch (Exception e) {
-                logger.error("Prompt handler error for '{}'", name, e);
-                return JsonRpcErrors.internalError("Prompt handler failed");
-            }
-            return switch (result) {
-                case PromptResult.Messages m -> {
-                    var messages = m.messages() != null ? m.messages() : List.<PromptMessage>of();
-                    yield context.responseMapper()
-                            .getPromptResult(entry.descriptor().description(), messages);
-                }
-                case PromptResult.InputRequired ir ->
-                    context.responseMapper().inputRequiredResult(ir.inputRequests(), ir.requestState());
-            };
+            // invokeAndMap: guards the synchronous-throw/null-stage cases, then re-anchors onto a
+            // tachyon- virtual thread only when the handler's stage is still pending, so a
+            // foreign completer thread never leaks into response mapping, without adding an
+            // executor hop to the common already-resolved case.
+            return HandlerFutures.invokeAndMap(
+                    "Prompt '" + name + "' returned a null CompletionStage",
+                    () -> entry.handler().handleAsync(context, request),
+                    context.engine().executor(),
+                    (result, ex) -> {
+                        if (ex != null) {
+                            logger.error("Prompt handler error for '{}'", name, HandlerFutures.unwrap(ex));
+                            return JsonRpcErrors.internalError("Prompt handler failed");
+                        }
+                        return switch (result) {
+                            case PromptResult.Messages m -> {
+                                var messages = m.messages() != null ? m.messages() : List.<PromptMessage>of();
+                                yield context.responseMapper()
+                                        .getPromptResult(entry.descriptor().description(), messages);
+                            }
+                            case PromptResult.InputRequired ir ->
+                                context.responseMapper().inputRequiredResult(ir.inputRequests(), ir.requestState());
+                        };
+                    });
         }
 
         private static @Nullable String extractArguments(Object params) {

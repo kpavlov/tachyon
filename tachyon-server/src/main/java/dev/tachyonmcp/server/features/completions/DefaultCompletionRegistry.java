@@ -15,6 +15,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -111,19 +113,29 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
             return "completion/complete";
         }
 
+        /** Compatibility fallback for callers invoking the blocking SPI method directly. */
         @Override
-        public Object handle(DispatchContext context, Object params) {
+        public Object handle(DispatchContext context, Object params) throws Exception {
+            return HandlerFutures.joinInterruptibly(handleAsync(context, params));
+        }
+
+        /** Runs on the dispatcher's virtual thread; composes the handler's stage without blocking it. */
+        @Override
+        public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
             var paramsMap = params instanceof Map<?, ?> m ? m : Map.of();
 
             if (!(paramsMap.get("ref") instanceof Map<?, ?> ref)) {
-                return JsonRpcErrors.invalidParams("Missing or invalid ref parameter");
+                return CompletableFuture.completedFuture(
+                        JsonRpcErrors.invalidParams("Missing or invalid ref parameter"));
             }
             if (!(paramsMap.get("argument") instanceof Map<?, ?> argument)) {
-                return JsonRpcErrors.invalidParams("Missing or invalid argument parameter");
+                return CompletableFuture.completedFuture(
+                        JsonRpcErrors.invalidParams("Missing or invalid argument parameter"));
             }
             if (!(argument.get("name") instanceof String argumentName)
                     || !(argument.get("value") instanceof String argumentValue)) {
-                return JsonRpcErrors.invalidParams("argument.name and argument.value are required");
+                return CompletableFuture.completedFuture(
+                        JsonRpcErrors.invalidParams("argument.name and argument.value are required"));
             }
 
             var refType = ref.get("type");
@@ -132,43 +144,55 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
             String uri;
             if ("ref/prompt".equals(refType)) {
                 if (!(ref.get("name") instanceof String pn)) {
-                    return JsonRpcErrors.invalidParams("ref.name is required for ref/prompt");
+                    return CompletableFuture.completedFuture(
+                            JsonRpcErrors.invalidParams("ref.name is required for ref/prompt"));
                 }
                 promptName = pn;
                 handler = registry.findForPrompt(promptName);
             } else if ("ref/resource".equals(refType)) {
                 if (!(ref.get("uri") instanceof String u)) {
-                    return JsonRpcErrors.invalidParams("ref.uri is required for ref/resource");
+                    return CompletableFuture.completedFuture(
+                            JsonRpcErrors.invalidParams("ref.uri is required for ref/resource"));
                 }
                 uri = u;
                 handler = registry.findForResource(uri);
             } else {
-                return JsonRpcErrors.invalidParams("Unknown ref.type: " + refType);
+                return CompletableFuture.completedFuture(JsonRpcErrors.invalidParams("Unknown ref.type: " + refType));
             }
 
             if (handler.isEmpty()) {
-                return context.responseMapper().completeResult(List.of(), null, false);
+                return CompletableFuture.completedFuture(
+                        context.responseMapper().completeResult(List.of(), null, false));
             }
 
             var request =
                     new CompletionRequest(argumentName, argumentValue, resolvedArguments(paramsMap.get("context")));
-            CompletionResult result;
-            try {
-                result = HandlerFutures.joinInterruptibly(handler.get().handleAsync(context, request));
-            } catch (InvalidArgumentException e) {
-                return JsonRpcErrors.invalidParams("invalid argument '" + e.argName() + "': " + e.getMessage());
-            } catch (Exception e) {
-                logger.error("Completion handler error for ref.type '{}'", refType, e);
-                return JsonRpcErrors.internalError("Completion handler failed");
-            }
-
-            var values = result.values();
-            var hasMore = result.hasMore();
-            if (values.size() > MAX_VALUES) {
-                values = values.subList(0, MAX_VALUES);
-                hasMore = true;
-            }
-            return context.responseMapper().completeResult(values, result.total(), hasMore);
+            // invokeAndMap: guards the synchronous-throw/null-stage cases, then re-anchors onto a
+            // tachyon- virtual thread only when the handler's stage is still pending, so a
+            // foreign completer thread never leaks into response mapping, without adding an
+            // executor hop to the common already-resolved case.
+            return HandlerFutures.invokeAndMap(
+                    "Completion handler for ref.type '" + refType + "' returned a null CompletionStage",
+                    () -> handler.get().handleAsync(context, request),
+                    context.engine().executor(),
+                    (result, ex) -> {
+                        if (ex != null) {
+                            var cause = HandlerFutures.unwrap(ex);
+                            if (cause instanceof InvalidArgumentException e) {
+                                return JsonRpcErrors.invalidParams(
+                                        "invalid argument '" + e.argName() + "': " + e.getMessage());
+                            }
+                            logger.error("Completion handler error for ref.type '{}'", refType, cause);
+                            return JsonRpcErrors.internalError("Completion handler failed");
+                        }
+                        var values = result.values();
+                        var hasMore = result.hasMore();
+                        if (values.size() > MAX_VALUES) {
+                            values = values.subList(0, MAX_VALUES);
+                            hasMore = true;
+                        }
+                        return context.responseMapper().completeResult(values, result.total(), hasMore);
+                    });
         }
 
         private static Map<String, String> resolvedArguments(@Nullable Object contextObj) {

@@ -9,7 +9,6 @@ import dev.tachyonmcp.server.domain.ResourceContents;
 import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.HandlerFutures;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.jspecify.annotations.Nullable;
 
@@ -41,11 +40,7 @@ public interface ResourceHandler {
             Map<String, UriTemplateValue> params,
             @Nullable String uriTemplate) {
         HandlerFutures.assumeVirtualThread();
-        try {
-            return CompletableFuture.completedFuture(handle(context, uri, params, uriTemplate));
-        } catch (Exception e) {
-            return CompletableFuture.failedFuture(e);
-        }
+        return HandlerFutures.completedOrFailed(() -> handle(context, uri, params, uriTemplate));
     }
 
     /**
