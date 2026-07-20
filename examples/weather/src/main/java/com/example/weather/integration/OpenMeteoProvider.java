@@ -5,6 +5,7 @@
 package com.example.weather.integration;
 
 import com.example.weather.spi.CityNotFoundException;
+import com.example.weather.spi.CityProvider;
 import com.example.weather.spi.WeatherCondition;
 import com.example.weather.spi.WeatherObservation;
 import com.example.weather.spi.WeatherProvider;
@@ -17,11 +18,13 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-public final class OpenMeteoWeatherProvider implements WeatherProvider {
+public final class OpenMeteoProvider implements WeatherProvider, CityProvider {
 
     private static final String GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
     private static final String FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
@@ -30,32 +33,54 @@ public final class OpenMeteoWeatherProvider implements WeatherProvider {
 
     private final HttpClient httpClient;
 
-    public OpenMeteoWeatherProvider(HttpClient httpClient) {
+    public OpenMeteoProvider(HttpClient httpClient) {
         this.httpClient = httpClient;
     }
 
     @Override
     public WeatherObservation currentWeather(String city) throws Exception {
-        var location = location(city, responseBody(httpClient.send(geocodingRequest(city), HttpResponse.BodyHandlers.ofString())));
+        var location = location(city, responseBody(httpClient.send(geocodingRequest(city, 1), HttpResponse.BodyHandlers.ofString())));
         var forecast = responseBody(httpClient.send(forecastRequest(location), HttpResponse.BodyHandlers.ofString()));
         return weather(city, forecast);
     }
 
     @Override
     public CompletableFuture<WeatherObservation> currentWeatherAsync(String city) {
-        return httpClient.sendAsync(geocodingRequest(city), HttpResponse.BodyHandlers.ofString())
-            .thenApplyAsync(OpenMeteoWeatherProvider::responseBody, executor)
+        return httpClient.sendAsync(geocodingRequest(city, 1), HttpResponse.BodyHandlers.ofString())
+            .thenApplyAsync(OpenMeteoProvider::responseBody, executor)
             .thenApply(response -> location(city, response))
             .thenCompose(location -> httpClient.sendAsync(forecastRequest(location), HttpResponse.BodyHandlers.ofString()))
-            .thenApplyAsync(OpenMeteoWeatherProvider::responseBody, executor)
+            .thenApplyAsync(OpenMeteoProvider::responseBody, executor)
             .thenApply(forecast -> weather(city, forecast));
     }
 
-    private static HttpRequest geocodingRequest(String city) {
-        var encodedCity = URLEncoder.encode(city, StandardCharsets.UTF_8);
-        return HttpRequest.newBuilder(URI.create(GEOCODING_URL + "?name=" + encodedCity + "&count=1&language=en"))
+    @Override
+    public CompletableFuture<List<String>> searchCities(String query) {
+        if (query == null || query.length() < 2) {
+            return CompletableFuture.completedFuture(List.of());
+        }
+        return httpClient.sendAsync(geocodingRequest(query, 10), HttpResponse.BodyHandlers.ofString())
+            .thenApplyAsync(OpenMeteoProvider::responseBody, executor)
+            .thenApply(OpenMeteoProvider::cityNames)
+            .exceptionally(e -> List.of());
+    }
+
+    private static HttpRequest geocodingRequest(String query, int count) {
+        var encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
+        return HttpRequest.newBuilder(URI.create(GEOCODING_URL + "?name=" + encoded + "&count=" + count + "&language=en"))
             .GET()
             .build();
+    }
+
+    private static List<String> cityNames(String response) {
+        var names = new LinkedHashSet<String>();
+        for (var result : parse(response).path("results")) {
+            var name = result.path("name").asString();
+            if (name != null && !name.isBlank()) {
+                names.add(name);
+            }
+        }
+        return List.copyOf(names);
     }
 
     private static HttpRequest forecastRequest(Location location) {

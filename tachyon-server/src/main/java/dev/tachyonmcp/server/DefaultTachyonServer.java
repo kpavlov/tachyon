@@ -16,16 +16,18 @@ import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.config.ServerConfig;
 import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.extensions.ServerExtension;
+import dev.tachyonmcp.server.features.completions.Completions;
+import dev.tachyonmcp.server.features.completions.DefaultCompletionRegistry;
 import dev.tachyonmcp.server.features.prompts.DefaultPromptRegistry;
-import dev.tachyonmcp.server.features.prompts.PromptRegistry;
+import dev.tachyonmcp.server.features.prompts.Prompts;
 import dev.tachyonmcp.server.features.resources.DefaultResourceRegistry;
-import dev.tachyonmcp.server.features.resources.ResourceRegistry;
+import dev.tachyonmcp.server.features.resources.Resources;
 import dev.tachyonmcp.server.features.tasks.DefaultTaskRegistry;
-import dev.tachyonmcp.server.features.tasks.InternalTaskRegistry;
+import dev.tachyonmcp.server.features.tasks.TaskRegistry;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
+import dev.tachyonmcp.server.features.tasks.Tasks;
 import dev.tachyonmcp.server.features.tools.DefaultToolRegistry;
-import dev.tachyonmcp.server.features.tools.ToolRegistry;
-import dev.tachyonmcp.server.handlers.CompletionHandlers;
+import dev.tachyonmcp.server.features.tools.Tools;
 import dev.tachyonmcp.server.handlers.InitializeHandler;
 import dev.tachyonmcp.server.handlers.LoggingHandlers;
 import dev.tachyonmcp.server.handlers.PingHandler;
@@ -76,6 +78,7 @@ final class DefaultTachyonServer implements ServerEngine {
     private final DefaultResourceRegistry resourceRegistry;
     private final DefaultTaskRegistry taskRegistry;
     private final DefaultPromptRegistry promptRegistry;
+    private final DefaultCompletionRegistry completionRegistry;
     private final Map<String, RpcMethodHandler> methodHandlers = new ConcurrentHashMap<>();
     final Map<String, LoggingLevel> loggingLevels = new ConcurrentHashMap<>();
     final ConcurrentHashMap<Object, CompletableFuture<String>> pendingRequests = new ConcurrentHashMap<>();
@@ -154,7 +157,11 @@ final class DefaultTachyonServer implements ServerEngine {
         final var capabilitiesConfig = config.capabilities();
 
         builder.logging(capabilitiesConfig.logging());
-        builder.completions(capabilitiesConfig.completions());
+        switch (capabilitiesConfig.completions()) {
+            case ON -> builder.completions(true);
+            case OFF -> builder.completions(false);
+            case AUTO -> builder.completions(!completionRegistry.isEmpty());
+        }
 
         var hasTaskAugmentedTools = toolRegistry.getAll().stream()
                 .anyMatch(h ->
@@ -235,6 +242,7 @@ final class DefaultTachyonServer implements ServerEngine {
         this.resourceRegistry = new DefaultResourceRegistry(this, caps.resources());
         this.taskRegistry = new DefaultTaskRegistry(this, caps.tasks());
         this.promptRegistry = new DefaultPromptRegistry(inputValidator1, caps.prompts());
+        this.completionRegistry = new DefaultCompletionRegistry(caps.completions());
         registerDefaults();
         bootstrapExtensions();
         setupChangeListeners(config);
@@ -311,10 +319,10 @@ final class DefaultTachyonServer implements ServerEngine {
         resourceRegistry.registerHandlers(methodHandlers);
         taskRegistry.registerHandlers(methodHandlers);
         promptRegistry.registerHandlers(methodHandlers);
+        completionRegistry.registerHandlers(methodHandlers);
         if (config.capabilities().logging()) {
             LoggingHandlers.register(methodHandlers);
         }
-        CompletionHandlers.register(methodHandlers);
     }
 
     @Override
@@ -372,22 +380,32 @@ final class DefaultTachyonServer implements ServerEngine {
     }
 
     @Override
-    public ToolRegistry tools() {
+    public Tools tools() {
         return toolRegistry;
     }
 
     @Override
-    public ResourceRegistry resources() {
+    public Resources resources() {
         return resourceRegistry;
     }
 
     @Override
-    public PromptRegistry prompts() {
+    public Prompts prompts() {
         return promptRegistry;
     }
 
     @Override
-    public InternalTaskRegistry tasks() {
+    public Completions completions() {
+        return completionRegistry;
+    }
+
+    @Override
+    public Tasks tasks() {
+        return taskRegistry;
+    }
+
+    @Override
+    public TaskRegistry tasksRegistry() {
         return taskRegistry;
     }
 

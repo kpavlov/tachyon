@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
 
 @InternalApi
-public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEntry> implements InternalTaskRegistry {
+public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEntry> implements TaskRegistry {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultTaskRegistry.class);
     private static final long TTL_JANITOR_INTERVAL_SECONDS = 30;
@@ -269,7 +269,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
         }
     }
 
-    private record TasksGetHandler(TaskRegistry registry) implements RpcMethodHandler {
+    private record TasksGetHandler(Tasks registry) implements RpcMethodHandler {
         @Override
         public String method() {
             return "tasks/get";

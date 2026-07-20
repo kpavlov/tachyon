@@ -142,7 +142,7 @@ class ResourceRegistryTest {
 
     @Test
     void interfaceDefaultBuilderOverloadsRegisterResourcesAndTemplates() throws Exception {
-        ResourceRegistry api = registry;
+        Resources api = registry;
 
         api.register(resource -> resource.name("sync").uri("test://sync"), EMPTY_HANDLER)
                 .registerAsync(

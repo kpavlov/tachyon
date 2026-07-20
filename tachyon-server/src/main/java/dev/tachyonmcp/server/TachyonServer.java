@@ -7,17 +7,18 @@ package dev.tachyonmcp.server;
 import dev.tachyonmcp.runtime.Notifications;
 import dev.tachyonmcp.server.config.ServerConfig;
 import dev.tachyonmcp.server.extensions.ServerExtension;
+import dev.tachyonmcp.server.features.completions.Completions;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptHandler;
-import dev.tachyonmcp.server.features.prompts.PromptRegistry;
+import dev.tachyonmcp.server.features.prompts.Prompts;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceHandler;
-import dev.tachyonmcp.server.features.resources.ResourceRegistry;
-import dev.tachyonmcp.server.features.tasks.TaskRegistry;
+import dev.tachyonmcp.server.features.resources.Resources;
+import dev.tachyonmcp.server.features.tasks.Tasks;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolFn;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolRegistry;
+import dev.tachyonmcp.server.features.tools.Tools;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -32,16 +33,19 @@ import org.jspecify.annotations.Nullable;
 public interface TachyonServer extends AutoCloseable {
 
     /** Returns the tool registry. */
-    ToolRegistry tools();
+    Tools tools();
 
     /** Returns the resource registry. */
-    ResourceRegistry resources();
+    Resources resources();
 
     /** Returns the prompt registry. */
-    PromptRegistry prompts();
+    Prompts prompts();
 
     /** Returns the task registry. */
-    TaskRegistry tasks();
+    Tasks tasks();
+
+    /** Returns the completion registry. */
+    Completions completions();
 
     Notifications notifications();
 
@@ -83,7 +87,7 @@ public interface TachyonServer extends AutoCloseable {
      * @param outputSchemaJson  the JSON schema for tool outputs
      * @param fn                the function that handles tool invocations
      * @deprecated Use {@link #tools()} and
-     *             {@link ToolRegistry#register(String, String, String, String, ToolFn)}.
+     *             {@link Tools#register(String, String, String, String, ToolFn)}.
      */
     @Deprecated(since = "1.0.0-beta.10")
     default void registerTool(

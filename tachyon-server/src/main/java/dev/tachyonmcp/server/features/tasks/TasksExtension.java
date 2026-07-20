@@ -77,7 +77,7 @@ public class TasksExtension implements ServerExtension {
 
     private static final class CreateTaskHandler extends AbstractToolHandler {
 
-        private final InternalTaskRegistry tasks;
+        private final Tasks tasks;
         private final Executor executor;
 
         CreateTaskHandler(ToolDescriptor descriptor, ServerEngine server) {

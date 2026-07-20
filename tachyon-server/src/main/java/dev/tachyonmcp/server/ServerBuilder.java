@@ -13,6 +13,8 @@ import dev.tachyonmcp.server.config.ServerIdentity;
 import dev.tachyonmcp.server.config.SessionConfig;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.extensions.ServerExtension;
+import dev.tachyonmcp.server.features.completions.AsyncCompletionHandler;
+import dev.tachyonmcp.server.features.completions.CompletionHandler;
 import dev.tachyonmcp.server.features.prompts.AsyncPromptHandler;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptHandler;
@@ -39,6 +41,7 @@ import dev.tachyonmcp.transport.netty.NettyServerConfig;
 import io.netty.channel.ChannelPipeline;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -46,12 +49,17 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Fluent builder for {@link TachyonServer}. Supports feature registration and configuration.
  */
 public final class ServerBuilder {
+
+    private static final Logger logger = LoggerFactory.getLogger(ServerBuilder.class);
 
     private final ServerIdentity.Builder identityBuilder = ServerIdentity.builder();
     private final CapabilitiesConfig.Builder capabilitiesConfig = CapabilitiesConfig.builder();
@@ -415,6 +423,53 @@ public final class ServerBuilder {
     }
 
     /**
+     * Registers a completion handler for a prompt's arguments.
+     *
+     * @param promptName the prompt name
+     * @param handler the handler invoked for {@code ref/prompt} completion requests
+     * @return this builder
+     */
+    public ServerBuilder promptCompletion(String promptName, CompletionHandler handler) {
+        featuresConfig.promptCompletions.add(new FeaturesConfig.PromptCompletionRegistration(promptName, handler));
+        return this;
+    }
+
+    /**
+     * Registers an asynchronous completion handler for a prompt's arguments.
+     *
+     * @param promptName the prompt name
+     * @param handler the asynchronous completion handler
+     * @return this builder
+     */
+    public ServerBuilder asyncPromptCompletion(String promptName, AsyncCompletionHandler handler) {
+        return promptCompletion(promptName, handler);
+    }
+
+    /**
+     * Registers a completion handler for a resource or resource-template's variables.
+     *
+     * @param uriOrTemplate the resource URI, or the resource template's {@code uriTemplate}
+     * @param handler the handler invoked for {@code ref/resource} completion requests
+     * @return this builder
+     */
+    public ServerBuilder resourceCompletion(String uriOrTemplate, CompletionHandler handler) {
+        featuresConfig.resourceCompletions.add(
+                new FeaturesConfig.ResourceCompletionRegistration(uriOrTemplate, handler));
+        return this;
+    }
+
+    /**
+     * Registers an asynchronous completion handler for a resource or resource-template's variables.
+     *
+     * @param uriOrTemplate the resource URI, or the resource template's {@code uriTemplate}
+     * @param handler the asynchronous completion handler
+     * @return this builder
+     */
+    public ServerBuilder asyncResourceCompletion(String uriOrTemplate, AsyncCompletionHandler handler) {
+        return resourceCompletion(uriOrTemplate, handler);
+    }
+
+    /**
      * Registers a server extension.
      */
     public ServerBuilder extension(ServerExtension extension) {
@@ -530,10 +585,15 @@ public final class ServerBuilder {
                 featuresConfig.payloadSerializer,
                 featuresConfig.payloadDeserializer,
                 allExtensions);
+        validateCompletions(featuresConfig);
         featuresConfig.tools.forEach(server.tools()::register);
         featuresConfig.resources.forEach(r -> server.resources().register(r.descriptor(), r.handler()));
         featuresConfig.prompts.forEach(p -> server.prompts().register(p.descriptor(), p.handler()));
         featuresConfig.templates.forEach(t -> server.resources().registerTemplate(t.descriptor(), t.handler()));
+        featuresConfig.promptCompletions.forEach(
+                c -> server.completions().registerForPrompt(c.promptName(), c.handler()));
+        featuresConfig.resourceCompletions.forEach(
+                c -> server.completions().registerForResource(c.uriOrTemplate(), c.handler()));
         return server;
     }
 
@@ -578,12 +638,42 @@ public final class ServerBuilder {
                 monitoringBuilder.build());
     }
 
+    private static void validateCompletions(FeaturesConfig config) {
+        if (!config.promptCompletions.isEmpty()) {
+            var knownPrompts =
+                    config.prompts.stream().map(p -> p.descriptor().name()).collect(Collectors.toSet());
+            for (var c : config.promptCompletions) {
+                if (!knownPrompts.contains(c.promptName())) {
+                    logger.warn(
+                            "promptCompletion('{}') references no registered prompt; " + "completion will never match",
+                            c.promptName());
+                }
+            }
+        }
+        if (!config.resourceCompletions.isEmpty()) {
+            var knownResources = config.resources.stream()
+                    .map(r -> r.descriptor().uri())
+                    .collect(Collectors.toCollection(HashSet::new));
+            config.templates.stream().map(t -> t.descriptor().uriTemplate()).forEach(knownResources::add);
+            for (var c : config.resourceCompletions) {
+                if (!knownResources.contains(c.uriOrTemplate())) {
+                    logger.warn(
+                            "resourceCompletion('{}') references no registered resource or resource template; "
+                                    + "completion will never match",
+                            c.uriOrTemplate());
+                }
+            }
+        }
+    }
+
     static final class FeaturesConfig {
 
         final List<ToolHandler> tools = new ArrayList<>();
         final List<ResourceRegistration> resources = new ArrayList<>();
         final List<ResourceTemplateEntry> templates = new ArrayList<>();
         final List<PromptRegistration> prompts = new ArrayList<>();
+        final List<PromptCompletionRegistration> promptCompletions = new ArrayList<>();
+        final List<ResourceCompletionRegistration> resourceCompletions = new ArrayList<>();
         final List<ServerExtension> extensions = new ArrayList<>();
 
         JsonSchemaValidator inputSchemaValidator = new NetworkntJsonSchemaValidator();
@@ -594,5 +684,9 @@ public final class ServerBuilder {
         record PromptRegistration(PromptDescriptor descriptor, PromptHandler handler) {}
 
         record ResourceRegistration(ResourceDescriptor descriptor, ResourceHandler handler) {}
+
+        record PromptCompletionRegistration(String promptName, CompletionHandler handler) {}
+
+        record ResourceCompletionRegistration(String uriOrTemplate, CompletionHandler handler) {}
     }
 }

@@ -404,7 +404,7 @@ public class McpDispatcher {
                 };
         var rawStatusMessage = map.get("statusMessage");
         var statusMessage = rawStatusMessage instanceof String s ? s : null;
-        var taskRegistry = server.tasks();
+        var taskRegistry = server.tasksRegistry();
         taskRegistry.updateStatus(taskId, newStatus, statusMessage);
     }
 

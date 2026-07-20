@@ -56,7 +56,7 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
      * @return this registry
      */
     @Override
-    public PromptRegistry register(PromptDescriptor descriptor, PromptHandler handler) {
+    public Prompts register(PromptDescriptor descriptor, PromptHandler handler) {
         if (config.mode() == Mode.OFF) {
             logger.debug("Prompt '{}' not registered: prompts capability is OFF", descriptor.name());
             return this;

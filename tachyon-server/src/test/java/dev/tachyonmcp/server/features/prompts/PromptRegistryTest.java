@@ -108,7 +108,7 @@ class PromptRegistryTest {
 
     @Test
     void interfaceDefaultBuilderOverloadsRegisterPrompts() {
-        PromptRegistry api = registry;
+        Prompts api = registry;
 
         api.register(prompt -> prompt.name("static"), List.of(PromptMessage.user("static")))
                 .register(

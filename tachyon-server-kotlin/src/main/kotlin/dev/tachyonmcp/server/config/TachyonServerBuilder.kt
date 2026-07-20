@@ -9,6 +9,9 @@ import dev.tachyonmcp.server.domain.Annotations
 import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.ResourceContents
+import dev.tachyonmcp.server.features.completions.CompletionResult
+import dev.tachyonmcp.server.features.completions.promptCompletionHandler
+import dev.tachyonmcp.server.features.completions.resourceCompletionHandler
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.server.features.prompts.promptHandler
 import dev.tachyonmcp.server.features.tools.ToolResult
@@ -187,6 +190,41 @@ public class TachyonServerBuilder
                     icons = icons,
                     annotations = annotations,
                     handler = block,
+                )
+            }
+
+        /**
+         * Registers a completion handler for a prompt's arguments.
+         *
+         * @param promptName the prompt name
+         * @param handler the suspend function that returns completion candidates
+         * @return this builder
+         */
+        @JvmSynthetic
+        public fun promptCompletion(
+            promptName: String,
+            handler: suspend CompletionScope.() -> CompletionResult,
+        ): TachyonServerBuilder =
+            this.also {
+                delegate.promptCompletion(promptName, promptCompletionHandler(promptName, handler))
+            }
+
+        /**
+         * Registers a completion handler for a resource template's variables.
+         *
+         * @param uriOrTemplate the resource URI or template
+         * @param handler the suspend function that returns completion candidates
+         * @return this builder
+         */
+        @JvmSynthetic
+        public fun resourceCompletion(
+            uriOrTemplate: String,
+            handler: suspend CompletionScope.() -> CompletionResult,
+        ): TachyonServerBuilder =
+            this.also {
+                delegate.resourceCompletion(
+                    uriOrTemplate,
+                    resourceCompletionHandler(uriOrTemplate, handler),
                 )
             }
 

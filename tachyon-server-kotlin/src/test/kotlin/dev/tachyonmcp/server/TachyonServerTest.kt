@@ -67,7 +67,7 @@ internal class TachyonServerTest {
                     requests = true
                     pageSize = 23
                 }
-                completions = true
+                completionsMode = Mode.ON
                 logging = true
             }
             network {
@@ -139,7 +139,7 @@ internal class TachyonServerTest {
                 tasks().cancel() shouldBe true
                 tasks().requests() shouldBe true
                 tasks().pageSize() shouldBe 23
-                completions() shouldBe true
+                completions() shouldBe Mode.ON
                 logging() shouldBe true
             }
 

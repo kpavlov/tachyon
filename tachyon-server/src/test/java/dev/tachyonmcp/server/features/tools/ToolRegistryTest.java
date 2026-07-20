@@ -205,7 +205,7 @@ class ToolRegistryTest {
 
     @Test
     void interfaceDefaultBuilderOverloadsRegisterSyncAndAsyncTools() {
-        ToolRegistry api = registry;
+        Tools api = registry;
 
         api.register(tool -> tool.name("builder-sync"), (ctx, args) -> ToolResult.text("sync"))
                 .registerAsync(

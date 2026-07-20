@@ -7,6 +7,7 @@ package com.example.weather;
 import com.example.weather.spi.CityNotFoundException;
 import com.example.weather.spi.WeatherObservation;
 import com.example.weather.spi.WeatherProvider;
+
 import java.util.concurrent.CompletableFuture;
 
 final class TestWeatherProvider implements WeatherProvider {
