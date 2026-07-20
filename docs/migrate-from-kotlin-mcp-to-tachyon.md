@@ -105,7 +105,7 @@ server.registerTool(
     inputSchema = """{"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}""",
     outputSchema = SearchResult::class.jsonSchemaString,   // nullable
 ) { // this: ToolScope
-    val query = args.string("query")
+    val query = args.stringValue("query")
     ToolResult.text(json.encodeToString(SearchResult.serializer(), run(query)))
 }
 ```
@@ -119,7 +119,7 @@ warns when a description exceeds 2048 chars (clients truncate there) pays off ac
 
 | Old                                                 | New                                                                                  |
 |-----------------------------------------------------|--------------------------------------------------------------------------------------|
-| `arguments["k"]?.jsonPrimitive?.content` (required) | `args.string("k")` — throws if missing                                               |
+| `arguments["k"]?.jsonPrimitive?.content` (required) | `args.stringValue("k")` — throws if missing                                          |
 | same, optional                                      | `args.stringOrNull("k")`                                                             |
 | with a default                                      | `args.stringOr("k", "d")`                                                            |
 | `…?.int` etc.                                       | `args.intValue/boolValue/doubleValue` (+ `…OrNull`, `…(k, default)`)                 |

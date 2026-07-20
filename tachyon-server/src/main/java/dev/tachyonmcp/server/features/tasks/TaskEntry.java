@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
@@ -38,9 +39,9 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     private volatile long lastUpdatedAt;
     private volatile long expiredAt;
     private volatile @Nullable String statusMessage;
-    private volatile @Nullable TaskResult result;
     private final CompletableFuture<TaskResult> completionFuture = new CompletableFuture<>();
     private final @Nullable Object progressToken;
+    private final Consumer<TaskEntry> statusListener;
 
     public TaskEntry(String id, @Nullable String description) {
         this(
@@ -121,6 +122,25 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             @Nullable Map<String, JsonNode> meta,
             Duration keepAlive,
             @Nullable Duration pollInterval) {
+        this(descriptor, id, status, ttl, sessionId, progressToken, meta, keepAlive, pollInterval, entry -> {});
+    }
+
+    /**
+     * Full constructor; {@code statusListener} is invoked with {@code this} after every
+     * successful status/message mutation, regardless of which method the caller used to reach
+     * it. Package-private: only {@link DefaultTaskRegistry} wires a non-default listener.
+     */
+    TaskEntry(
+            TaskDescriptor descriptor,
+            String id,
+            TaskState status,
+            @Nullable Duration ttl,
+            @Nullable String sessionId,
+            @Nullable Object progressToken,
+            @Nullable Map<String, JsonNode> meta,
+            Duration keepAlive,
+            @Nullable Duration pollInterval,
+            Consumer<TaskEntry> statusListener) {
         this.descriptor = descriptor;
         this.id = id;
         this.sessionId = sessionId;
@@ -132,6 +152,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         this.keepAlive = Objects.requireNonNull(keepAlive, "keepAlive");
         this.pollInterval = pollInterval;
         this.progressToken = progressToken;
+        this.statusListener = Objects.requireNonNull(statusListener, "statusListener");
     }
 
     /** The session that created this task, or {@code null} for programmatic/server-global tasks. */
@@ -195,7 +216,9 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
 
     @Override
     public @Nullable TaskResult result() {
-        return result;
+        return completionFuture.isDone() && !completionFuture.isCompletedExceptionally()
+                ? completionFuture.join()
+                : null;
     }
 
     @Override
@@ -215,37 +238,22 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
 
     @Override
     public boolean cancel(@Nullable String statusMessage) {
-        if (transitionTo(TaskState.CANCELLED)) {
-            if (statusMessage != null) {
-                this.statusMessage = statusMessage;
-            }
-            completionFuture.completeExceptionally(
-                    new IllegalStateException("Task cancelled" + (statusMessage != null ? ": " + statusMessage : "")));
-            return true;
+        if (!transitionTo(TaskState.CANCELLED, null, statusMessage)) {
+            return false;
         }
-        return false;
+        completionFuture.completeExceptionally(
+                new IllegalStateException("Task cancelled" + (statusMessage != null ? ": " + statusMessage : "")));
+        return true;
     }
 
     @Override
     public boolean requireInput(InputRequest request, @Nullable String statusMessage) {
-        if (transitionTo(TaskState.INPUT_REQUIRED)) {
-            if (statusMessage != null) {
-                this.statusMessage = statusMessage;
-            }
-            return true;
-        }
-        return false;
+        return transitionTo(TaskState.INPUT_REQUIRED, null, statusMessage);
     }
 
     @Override
     public boolean resume(@Nullable String statusMessage) {
-        if (transitionTo(TaskState.WORKING)) {
-            if (statusMessage != null) {
-                this.statusMessage = statusMessage;
-            }
-            return true;
-        }
-        return false;
+        return transitionTo(TaskState.WORKING, null, statusMessage);
     }
 
     @Override
@@ -255,6 +263,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         if (current == TaskState.WORKING || current == TaskState.INPUT_REQUIRED) {
             this.statusMessage = statusMessage;
             this.lastUpdatedAt = System.currentTimeMillis();
+            statusListener.accept(this);
             return true;
         }
         return false;
@@ -272,6 +281,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     }
 
     public @Nullable String resultJson() {
+        var result = result();
         if (result instanceof TaskResult.Completed c) {
             return serializeResult(c.content(), c.structuredContent());
         }
@@ -295,13 +305,21 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
      * Transitions to {@code newStatus} without a result value.
      */
     public boolean transitionTo(TaskState newStatus) {
-        return transitionTo(newStatus, (TaskResult) null);
+        return transitionTo(newStatus, null, null);
     }
 
     /**
      * Transitions to {@code newStatus}, publishing {@code result} (when non-null).
      */
     public boolean transitionTo(TaskState newStatus, @Nullable TaskResult result) {
+        return transitionTo(newStatus, result, null);
+    }
+
+    /**
+     * Transitions to {@code newStatus}, publishing {@code result} and {@code statusMessage}
+     * (when non-null) atomically with the state change, then notifying the status listener.
+     */
+    boolean transitionTo(TaskState newStatus, @Nullable TaskResult result, @Nullable String statusMessage) {
         Objects.requireNonNull(newStatus, "status is required");
         if (newStatus == TaskState.COMPLETED) {
             Objects.requireNonNull(result, "result is required when transitioning to completed status");
@@ -310,20 +328,21 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         if (!current.canTransitionTo(newStatus)) {
             return false;
         }
-        if (result != null) {
-            this.result = result;
-        }
         if (status.compareAndSet(current, newStatus)) {
             this.lastUpdatedAt = System.currentTimeMillis();
+            if (statusMessage != null) {
+                this.statusMessage = statusMessage;
+            }
             if (newStatus.isTerminal()) {
                 this.expiredAt = computeExpiredAt(this.lastUpdatedAt);
-                if (this.result != null) {
-                    completionFuture.complete(this.result);
+                if (result != null) {
+                    completionFuture.complete(result);
                 } else {
                     completionFuture.completeExceptionally(
                             new IllegalStateException("Terminal state reached without result"));
                 }
             }
+            statusListener.accept(this);
             return true;
         }
         return false;

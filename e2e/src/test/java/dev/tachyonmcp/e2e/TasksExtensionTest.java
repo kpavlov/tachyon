@@ -226,6 +226,116 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
         }
     }
 
+    @Test
+    void shouldNotifyOnEveryFacadeDrivenMutation() throws Exception {
+        // Regression test: a caller holding only the public `Task` reference (never
+        // touching DefaultTaskRegistry's taskId-keyed methods) must still get a
+        // notification for every mutation, not just the initial creation push.
+        startServer(it -> it.tool(
+                        new AbstractToolHandler(
+                                ToolDescriptor.builder().name("drive-task-sync").build()) {
+                            @Override
+                            public ToolResult handle(InteractionContext ctx, ToolRequest req) {
+                                var task =
+                                        ((DispatchContext) ctx).engine().tasks().create();
+                                task.resume("step 1");
+                                task.updateMessage("step 2");
+                                task.complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"done\"}")));
+                                return ToolResult.text("ok");
+                            }
+                        })
+                .extension(TasksExtension.instance())
+                .build());
+
+        try (var client = createTestClient()) {
+            var sessionId = initializeWithExtension(client);
+
+            var response = client.post(sessionId, """
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"drive-task-sync","arguments":{}}}
+                    """);
+
+            assertThat(response.body()).contains("\"statusMessage\":\"step 1\"");
+            assertThat(response.body()).contains("\"statusMessage\":\"step 2\"");
+            assertThat(response.body()).contains("\"status\":\"completed\"");
+            var notificationCount = response.body().split("notifications/tasks/status", -1).length - 1;
+            assertThat(notificationCount)
+                    .as("one notification each for create, resume, updateMessage, complete")
+                    .isEqualTo(4);
+        }
+    }
+
+    @Test
+    void shouldCancelAndNotifyBeforeRemovingActiveTask() throws Exception {
+        startServer(it -> it.tool(
+                        new AbstractToolHandler(ToolDescriptor.builder()
+                                .name("remove-active-sync")
+                                .build()) {
+                            @Override
+                            public ToolResult handle(InteractionContext ctx, ToolRequest req) {
+                                var task =
+                                        ((DispatchContext) ctx).engine().tasks().create();
+                                task.resume(null);
+                                ((DispatchContext) ctx).engine().tasks().remove(task.id());
+                                return ToolResult.text(task.id());
+                            }
+                        })
+                .extension(TasksExtension.instance())
+                .build());
+
+        try (var client = createTestClient()) {
+            var sessionId = initializeWithExtension(client);
+
+            var response = client.post(sessionId, """
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"remove-active-sync","arguments":{}}}
+                    """);
+            assertThat(response.body()).contains("\"status\":\"cancelled\"");
+            var taskId = extractText(extractJsonRpcResponse(response.body(), "2"));
+
+            var getAfterRemove = client.sendRpc("""
+                    {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
+                    """.formatted(taskId));
+            assertThatJson(getAfterRemove).inPath("$.error").isObject();
+        }
+    }
+
+    @Test
+    void shouldRemoveTerminalTaskSilently() throws Exception {
+        startServer(it -> it.tool(
+                        new AbstractToolHandler(ToolDescriptor.builder()
+                                .name("remove-terminal-sync")
+                                .build()) {
+                            @Override
+                            public ToolResult handle(InteractionContext ctx, ToolRequest req) {
+                                var task =
+                                        ((DispatchContext) ctx).engine().tasks().create();
+                                task.complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"done\"}")));
+                                ((DispatchContext) ctx).engine().tasks().remove(task.id());
+                                return ToolResult.text(task.id());
+                            }
+                        })
+                .extension(TasksExtension.instance())
+                .build());
+
+        try (var client = createTestClient()) {
+            var sessionId = initializeWithExtension(client);
+
+            var response = client.post(sessionId, """
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"remove-terminal-sync","arguments":{}}}
+                    """);
+            assertThat(response.body()).doesNotContain("\"status\":\"cancelled\"");
+            var notificationCount = response.body().split("notifications/tasks/status", -1).length - 1;
+            assertThat(notificationCount)
+                    .as("create + complete only, removal of an already-terminal task is silent")
+                    .isEqualTo(2);
+            var taskId = extractText(extractJsonRpcResponse(response.body(), "2"));
+
+            var getAfterRemove = client.sendRpc("""
+                    {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
+                    """.formatted(taskId));
+            assertThatJson(getAfterRemove).inPath("$.error").isObject();
+        }
+    }
+
     private static String buildInitializeJson(Map<String, JsonNode> extensions) {
         var capsBuilder = ClientCapabilities.builder();
         if (!extensions.isEmpty()) {

@@ -57,7 +57,7 @@ class WeatherTool extends AbstractToolHandler {
 
     @Override
     public ToolResult handle(InteractionContext ctx, Args args) {
-        String city = args.string("city");
+        String city = args.stringValue("city");
         return ToolResult.text("☀️ 22°C in " + city);
     }
 }
@@ -76,7 +76,7 @@ lambda via `ToolHandler.ofAsync`, or override `handleAsync(ctx, Args)` on
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 
 .tool(ToolHandler.ofAsync("get_weather_async",
-    (ctx, args) -> fetchWeather(args.string("city"))
+    (ctx, args) -> fetchWeather(args.stringValue("city"))
         .thenApply(w -> ToolResult.text(w.summary()))))
 ```
 
@@ -93,7 +93,7 @@ input responses — use the request-level entry points: the `ToolHandler.ofReque
 
 | Method                    | Returns    |
 |---------------------------|------------|
-| `args.string("key")`      | `String`   |
+| `args.stringValue("key")` | `String`   |
 | `args.intValue("key")`    | `int`      |
 | `args.boolValue("key")`   | `boolean`  |
 | `args.doubleValue("key")` | `double`   |
@@ -134,7 +134,7 @@ Tachyon uses **Jackson 3** (`tools.jackson.*`), not Jackson 2. Import `tools.jac
 
 ```kotlin
 tool(name = "reverse", description = "Reverse a string") {
-    val msg = args.string("message")
+    val msg = args.stringValue("message")
     ToolResult.text(msg.reversed())
 }
 ```

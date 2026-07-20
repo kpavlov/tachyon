@@ -443,14 +443,16 @@ class TaskRegistryTest {
 
     @Test
     void shouldFireOnChangeWhenExistingTaskRemoved() {
+        // Default single-arg constructor starts WORKING (non-terminal), so remove() cancels
+        // it first (1 onChange) before removing it from the index (2nd onChange).
         registry.add(new TaskEntry("id-x", "A task"));
 
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
-        registry.remove("id-x");
+        assertThat(registry.remove("id-x")).isTrue();
 
-        assertThat(callCount).hasValue(1);
+        assertThat(callCount).hasValue(2);
     }
 
     @Test
@@ -458,8 +460,34 @@ class TaskRegistryTest {
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
-        registry.remove("does-not-exist");
+        assertThat(registry.remove("does-not-exist")).isFalse();
 
         assertThat(callCount).hasValue(0);
+    }
+
+    @Test
+    void removeOfTerminalTaskSkipsCancelAndFiresOnChangeOnce() {
+        var entry = (TaskEntry) registry.create();
+        registry.completeTask(entry.id(), "{\"ok\":true}");
+
+        var callCount = new AtomicInteger(0);
+        registry.onChange(callCount::incrementAndGet);
+
+        assertThat(registry.remove(entry.id())).isTrue();
+
+        assertThat(callCount).hasValue(1);
+        assertThat(registry.get(entry.id())).isNull();
+    }
+
+    @Test
+    void removeOfActiveTaskCancelsFirstSoCompletionDoesNotHang() {
+        var entry = (TaskEntry) registry.create();
+        registry.updateStatus(entry.id(), TaskState.WORKING, null);
+
+        assertThat(registry.remove(entry.id())).isTrue();
+
+        assertThat(entry.status()).isEqualTo(TaskState.CANCELLED);
+        assertThat(entry.completion().toCompletableFuture()).isCompletedExceptionally();
+        assertThat(registry.get(entry.id())).isNull();
     }
 }

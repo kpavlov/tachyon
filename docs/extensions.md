@@ -4,9 +4,14 @@ Extensions add custom MCP methods and negotiate capabilities with clients via th
 
 ## The ServerExtension interface
 
+`bootstrap` receives a `ServerEngine` — Tachyon's internal server-side handle (`@InternalApi`:
+not a stability contract, but it's what extensions need to register raw JSON-RPC handlers).
+
 ```java
 import dev.tachyonmcp.server.extensions.ServerExtension;
-import dev.tachyonmcp.server.Server;
+import dev.tachyonmcp.server.internal.ServerEngine;
+import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.runtime.ChannelContext;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -26,10 +31,20 @@ public class AuditExtension implements ServerExtension {
     }
 
     @Override
-    public void bootstrap(Server server) {
-        server.registerHandler("audit/log", (ctx, params) -> {
-            // handle audit/log method
-            return server.responseMapper().emptyResult();
+    public void bootstrap(ServerEngine server) {
+        // RpcMethodHandler declares both method() and handle(...), so it isn't a
+        // lambda-friendly SAM — implement it with an anonymous class.
+        server.registerHandler("audit/log", new RpcMethodHandler() {
+            @Override
+            public String method() {
+                return "audit/log";
+            }
+
+            @Override
+            public Object handle(DispatchContext context, Object params) {
+                // handle audit/log method
+                return server.responseMapper().emptyResult();
+            }
         });
     }
 

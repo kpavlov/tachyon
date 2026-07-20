@@ -46,12 +46,12 @@ var server = TachyonServer.builder()
 | `.tool(name, desc, inJson, outJson, fn)` | shorthand — JSON **string** schemas + lambda |
 | `.resource(descriptor/configurer, handler)` | static resource with sync handler |
 | `.asyncResource(descriptor/configurer, handler)` | async static resource without casts |
-| `.resourceTemplate(...)` / `.resourceTemplateAsync(...)` | sync/async URI template |
+| `.resourceTemplate(...)` / `.asyncResourceTemplate(...)` | sync/async URI template |
 | `.prompt(descriptor/configurer, handler\|messages)` | sync prompt |
 | `.asyncPrompt(descriptor/configurer, handler)` | async prompt without casts |
 | `.extension(ext)` | `ServerExtension` plugin |
 | `.json(cfg)` | serde + input/output schema validators |
-| `.jsonSchemaValidator(v)` | ⚠️ deprecated (removal) → `.json(cfg)` / `.inputSchemaValidator` / `.outputSchemaValidator` |
+| ~~`.jsonSchemaValidator(v)`~~ | removed — use `.json(cfg -> cfg.inputSchemaValidator(v).outputSchemaValidator(v))` |
 | `.pipelineCustomizer(c)` | raw Netty pipeline escape hatch |
 
 ## Tools 🔧
@@ -185,6 +185,7 @@ Full: `resources/java/PromptHandlerExample.java`
 Configs: `FeatureConfig` (tools/prompts: `mode`, `listChanged`, `pageSize`), `ResourcesConfig` (+ `subscribe`), 
 `TasksConfig` (`enabled`, `list`, `cancel`, `requests`, `pageSize`, 
 `keepAlive` (default 5 min — retention window for a terminal task's result), 
+`pollInterval` (default none — suggested `tasks/get` polling cadence, wire-visible), 
 mapping 1:1 to MCP `tasks.list`/`tasks.cancel`/`tasks.requests.tools.call`).
 
 Default `Mode.AUTO` advertises only registered features. Force `Mode.ON`/`Mode.OFF`. **`OFF` also blocks registration**: registry `register` becomes a debug-logged no-op, not merely hidden from `initialize`.
@@ -283,7 +284,8 @@ ToolDescriptor.builder()
     .build();
 ```
 
-`builder(name)` and `builder(name, inJson, outJson)` remain deprecated. `.tool(name, desc, inJson, outJson, fn)` also takes String schemas.
+`ToolDescriptor.builder()` is no-arg only — the `builder(name)` / `builder(name, inJson, outJson)`
+overloads have been removed, use `.name(...)` on the builder instead. `.tool(name, desc, inJson, outJson, fn)` also takes String schemas.
 
 ## Extensions
 
