@@ -4,10 +4,12 @@
 
 package dev.tachyonmcp.server.features.completions;
 
+import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CompleteResult;
 import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
@@ -19,6 +21,7 @@ import org.junit.jupiter.api.Test;
 
 class CompletionRegistryTest {
 
+    private final ServerEngine server = newEngine(b -> {});
     private final CompletionRegistry registry = new DefaultCompletionRegistry();
     private final Completions completions = registry;
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
@@ -27,8 +30,8 @@ class CompletionRegistryTest {
         ((DefaultCompletionRegistry) registry).registerHandlers(handlers);
     }
 
-    private static Object complete(HashMap<String, RpcMethodHandler> handlers, Object params) throws Exception {
-        return handlers.get("completion/complete").handle(DefaultDispatchContext.noop(), params);
+    private Object complete(HashMap<String, RpcMethodHandler> handlers, Object params) throws Exception {
+        return handlers.get("completion/complete").handle(DefaultDispatchContext.stateless(server), params);
     }
 
     @Test

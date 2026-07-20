@@ -31,6 +31,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -483,21 +484,31 @@ public class DefaultResourceRegistry implements Resources {
             return "resources/read";
         }
 
-        /** Runs resource handlers on the server executor's virtual threads. */
+        /** Compatibility fallback for callers invoking the blocking SPI method directly. */
         @Override
         public Object handle(DispatchContext context, Object params) throws Exception {
+            return HandlerFutures.joinInterruptibly(handleAsync(context, params));
+        }
+
+        /** Runs resource handlers on the server executor's virtual threads without blocking it. */
+        @Override
+        public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
             var uri = toRawUri(params);
-            if (uri == null) return JsonRpcErrors.invalidRequest("Missing resource URI");
+            if (uri == null) {
+                return CompletableFuture.completedFuture(JsonRpcErrors.invalidRequest("Missing resource URI"));
+            }
             var entry = registry.getByUri(uri);
             if (entry != null) {
                 var extId = entry.descriptor().extensionId();
                 if (extId != null && !context.isExtensionEnabled(extId)) {
-                    return JsonRpcErrors.resourceNotFound("Resource not found");
+                    return CompletableFuture.completedFuture(JsonRpcErrors.resourceNotFound("Resource not found"));
                 }
                 return readResult(context, uri, () -> entry.handler().handleAsync(context, uri, Map.of(), null));
             }
             var match = registry.matchTemplate(uri);
-            if (match == null) return JsonRpcErrors.resourceNotFound("Resource not found");
+            if (match == null) {
+                return CompletableFuture.completedFuture(JsonRpcErrors.resourceNotFound("Resource not found"));
+            }
             return readResult(
                     context,
                     uri,
@@ -510,18 +521,27 @@ public class DefaultResourceRegistry implements Resources {
                                     match.entry().descriptor().uriTemplate()));
         }
 
-        private Object readResult(
+        private CompletionStage<Object> readResult(
                 DispatchContext context, String uri, Callable<CompletionStage<? extends ResourceContents>> invoker) {
-            ResourceContents contents;
-            try {
-                contents = HandlerFutures.joinInterruptibly(invoker.call());
-            } catch (InvalidArgumentException e) {
-                return JsonRpcErrors.invalidParams("invalid argument '" + e.argName() + "': " + e.getMessage());
-            } catch (Exception e) {
-                logger.error("Resource handler error for '{}'", uri, e);
-                return JsonRpcErrors.internalError("Resource handler failed");
-            }
-            return context.responseMapper().readResourceResult(List.of(contents));
+            // invokeAndMap: guards the synchronous-throw/null-stage cases, then re-anchors onto a
+            // tachyon- virtual thread only when the handler's stage is still pending, so a
+            // foreign completer thread never leaks into response mapping, without adding an
+            // executor hop to the common already-resolved case.
+            return HandlerFutures.invokeAndMap(
+                    "Resource handler for '" + uri + "' returned a null CompletionStage",
+                    invoker,
+                    context.engine().executor(),
+                    (contents, cause) -> {
+                        if (cause != null) {
+                            if (cause instanceof InvalidArgumentException e) {
+                                return JsonRpcErrors.invalidParams(
+                                        "invalid argument '" + e.argName() + "': " + e.getMessage());
+                            }
+                            logger.error("Resource handler error for '{}'", uri, cause);
+                            return JsonRpcErrors.internalError("Resource handler failed");
+                        }
+                        return context.responseMapper().readResourceResult(List.of(contents));
+                    });
         }
 
         private static @Nullable String toRawUri(Object params) {

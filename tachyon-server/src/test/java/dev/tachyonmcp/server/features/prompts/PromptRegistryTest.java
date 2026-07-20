@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.features.prompts;
 
+import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetPromptResult;
@@ -13,6 +14,7 @@ import dev.tachyonmcp.server.config.FeatureConfig;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.PromptArgument;
 import dev.tachyonmcp.server.domain.PromptMessage;
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
@@ -27,6 +29,7 @@ import org.junit.jupiter.api.Test;
 
 class PromptRegistryTest {
 
+    private final ServerEngine server = newEngine(b -> {});
     private final DefaultPromptRegistry registry = new DefaultPromptRegistry(
             JsonSchemaValidator.noop(), FeatureConfig.builder().build());
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
@@ -42,7 +45,7 @@ class PromptRegistryTest {
 
     @Test
     void shouldReturnEmptyListWhenNoPromptsRegistered() throws Exception {
-        var result = handlers.get("prompts/list").handle(DefaultDispatchContext.noop(), null);
+        var result = handlers.get("prompts/list").handle(DefaultDispatchContext.stateless(server), null);
 
         assertThat(result).isInstanceOf(ListPromptsResult.class);
         assertThat(((ListPromptsResult) result).prompts()).isEmpty();
@@ -129,7 +132,8 @@ class PromptRegistryTest {
 
     @Test
     void shouldReturnErrorWhenPromptNotFound() throws Exception {
-        var result = handlers.get("prompts/get").handle(DefaultDispatchContext.noop(), Map.of("name", "nonexistent"));
+        var result = handlers.get("prompts/get")
+                .handle(DefaultDispatchContext.stateless(server), Map.of("name", "nonexistent"));
 
         assertThat(result).isInstanceOf(JsonRpcError.class);
         assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
@@ -137,7 +141,7 @@ class PromptRegistryTest {
 
     @Test
     void shouldReturnErrorWhenPromptNameMissing() throws Exception {
-        var result = handlers.get("prompts/get").handle(DefaultDispatchContext.noop(), Map.of());
+        var result = handlers.get("prompts/get").handle(DefaultDispatchContext.stateless(server), Map.of());
 
         assertThat(result).isInstanceOf(JsonRpcError.class);
     }
@@ -146,7 +150,8 @@ class PromptRegistryTest {
     void shouldReturnPromptByName() throws Exception {
         registry.register(PromptDescriptor.of("greeting", "A greeting prompt"), List.of(PromptMessage.user("Hello!")));
 
-        var result = handlers.get("prompts/get").handle(DefaultDispatchContext.noop(), Map.of("name", "greeting"));
+        var result = handlers.get("prompts/get")
+                .handle(DefaultDispatchContext.stateless(server), Map.of("name", "greeting"));
 
         assertThat(result).isInstanceOf(GetPromptResult.class);
         assertThat(((GetPromptResult) result).description()).isEqualTo("A greeting prompt");
@@ -157,7 +162,8 @@ class PromptRegistryTest {
         registry.register(PromptDescriptor.of("prompt-1", "First prompt"), List.of());
         registry.register(PromptDescriptor.of("prompt-2", "Second prompt"), List.of());
 
-        var result = (ListPromptsResult) handlers.get("prompts/list").handle(DefaultDispatchContext.noop(), null);
+        var result =
+                (ListPromptsResult) handlers.get("prompts/list").handle(DefaultDispatchContext.stateless(server), null);
 
         assertThat(result.prompts()).hasSize(2);
     }
@@ -220,7 +226,7 @@ class PromptRegistryTest {
         registry.register(descriptor, List.of(PromptMessage.user("Hello")));
 
         var result = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListPromptsResult)
-                handlers.get("prompts/list").handle(DefaultDispatchContext.noop(), null);
+                handlers.get("prompts/list").handle(DefaultDispatchContext.stateless(server), null);
         var prompt = result.prompts().getFirst();
 
         assertThat(prompt.name()).isEqualTo("full-prompt");
@@ -240,7 +246,7 @@ class PromptRegistryTest {
                 (ctx, request) -> PromptResult.messages(List.of(PromptMessage.user("args=" + request.arguments()))));
 
         var result = (GetPromptResult)
-                handlers.get("prompts/get").handle(DefaultDispatchContext.noop(), Map.of("name", "dynamic"));
+                handlers.get("prompts/get").handle(DefaultDispatchContext.stateless(server), Map.of("name", "dynamic"));
 
         assertThat(result.messages()).hasSize(1);
         assertThat(result.messages().getFirst().content().toString()).contains("args=");
