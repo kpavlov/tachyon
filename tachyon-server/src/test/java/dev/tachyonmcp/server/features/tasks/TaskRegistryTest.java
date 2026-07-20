@@ -6,6 +6,7 @@ package dev.tachyonmcp.server.features.tasks;
 
 import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CancelTaskResult;
@@ -214,6 +215,26 @@ class TaskRegistryTest {
         var listHandler = handlers.get("tasks/list");
         var listResult = (ListTasksResult) listHandler.handle(DefaultDispatchContext.noop(), null);
         assertThat(listResult.tasks()).hasSize(1);
+    }
+
+    @Test
+    void createWithCallerSuppliedIdUsesThatId() throws Exception {
+        var entry = registry.create(TaskOptions.builder().id("my-task-1").build());
+        assertThat(entry.id()).isEqualTo("my-task-1");
+
+        var getHandler = handlers.get("tasks/get");
+        var result = (GetTaskResult) getHandler.handle(DefaultDispatchContext.noop(), Map.of("taskId", "my-task-1"));
+        assertThat(result.taskId()).isEqualTo("my-task-1");
+    }
+
+    @Test
+    void createWithDuplicateIdIsRejected() {
+        registry.create(TaskOptions.builder().id("dup-1").build());
+
+        assertThatThrownBy(
+                        () -> registry.create(TaskOptions.builder().id("dup-1").build()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("dup-1");
     }
 
     @Test

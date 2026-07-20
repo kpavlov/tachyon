@@ -74,7 +74,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
 
     @Override
     public Task create(TaskOptions options) {
-        return createSessionTask(options.ttl(), options.meta(), null, null);
+        return createTask(options.id(), options.ttl(), options.meta(), null, null);
     }
 
     @Override
@@ -83,10 +83,21 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
             @Nullable Map<String, JsonNode> meta,
             @Nullable String sessionId,
             @Nullable Object progressToken) {
-        var id = taskIdGenerator.generateTaskId(meta, sessionId);
-        var build = TaskDescriptor.builder().id(id).build();
-        var entry = new TaskEntry(build, id, TaskState.SUBMITTED, ttl, sessionId, progressToken, meta);
-        add(entry);
+        return createTask(null, ttl, meta, sessionId, progressToken);
+    }
+
+    private TaskEntry createTask(
+            @Nullable String requestedId,
+            @Nullable Duration ttl,
+            @Nullable Map<String, JsonNode> meta,
+            @Nullable String sessionId,
+            @Nullable Object progressToken) {
+        var id = requestedId != null ? requestedId : taskIdGenerator.generateTaskId(meta, sessionId);
+        var descriptor = TaskDescriptor.builder().id(id).build();
+        var entry = new TaskEntry(descriptor, id, TaskState.SUBMITTED, ttl, sessionId, progressToken, meta);
+        if (!addItemIfAbsent(entry)) {
+            throw new IllegalArgumentException("Task '" + id + "' already exists");
+        }
         fireStatusNotification(entry);
         return entry;
     }

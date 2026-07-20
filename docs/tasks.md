@@ -30,20 +30,28 @@ Tachyon enforces valid transitions. Invalid moves throw `IllegalStateException`.
 ## Create and update tasks
 
 ```java
-import dev.tachyonmcp.server.features.tasks.TaskEntry;
-import dev.tachyonmcp.server.features.tasks.TaskState;
+import dev.tachyonmcp.server.domain.Task;
+import dev.tachyonmcp.server.domain.TaskResult;
+import dev.tachyonmcp.server.features.tasks.TaskOptions;
 
 Server server = handle.server();
 
-// Create
-TaskEntry task = server.tasks().create("task-001", "Processing...", null);
+// Create — server generates the ID
+Task task = server.tasks().create();
 
-// Update state
-server.tasks().update(task.id(), TaskState.WORKING, "Running step 1...");
+// Create — correlate with your own task runner's ID
+Task ownedTask = server.tasks().create(
+        TaskOptions.builder().id("my-runner-task-42").build());
 
-// Complete
-server.tasks().update(task.id(), TaskState.COMPLETED, "Done");
+// Update state via the returned Task handle
+ownedTask.updateMessage("Running step 1...");
+ownedTask.complete(new TaskResult.Completed(...));
 ```
+
+Supply `TaskOptions.builder().id(...)` to map a task onto an ID from your own external task
+runner. IDs must be unique — `create` throws `IllegalArgumentException` if a task with that ID
+already exists. Leave `id` unset to let the server generate one (`UUID.randomUUID()`-backed,
+same idiom as session IDs).
 
 Status notifications are broadcast automatically on each transition.
 
