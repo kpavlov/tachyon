@@ -44,13 +44,12 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
     }
 
     @Override
-    public CompletionRegistry registerForPrompt(String promptName, CompletionHandler handler) {
+    public Completions registerForPrompt(String promptName, CompletionHandler handler) {
         return registerForPrompt(promptName, null, handler);
     }
 
     @Override
-    public CompletionRegistry registerForPrompt(
-            String promptName, @Nullable String extensionId, CompletionHandler handler) {
+    public Completions registerForPrompt(String promptName, @Nullable String extensionId, CompletionHandler handler) {
         if (mode == Mode.OFF) {
             logger.debug("Completion '{}' not registered: completions capability is OFF", promptName);
             return this;
@@ -63,12 +62,12 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
     }
 
     @Override
-    public CompletionRegistry registerForResource(String uriOrTemplate, CompletionHandler handler) {
+    public Completions registerForResource(String uriOrTemplate, CompletionHandler handler) {
         return registerForResource(uriOrTemplate, null, handler);
     }
 
     @Override
-    public CompletionRegistry registerForResource(
+    public Completions registerForResource(
             String uriOrTemplate, @Nullable String extensionId, CompletionHandler handler) {
         if (mode == Mode.OFF) {
             logger.debug("Completion for '{}' not registered: completions capability is OFF", uriOrTemplate);
@@ -106,6 +105,7 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
     /**
      * Returns whether no completion handlers are registered.
      */
+    @Override
     public boolean isEmpty() {
         return promptHandlers.isEmpty() && resourceHandlers.isEmpty();
     }

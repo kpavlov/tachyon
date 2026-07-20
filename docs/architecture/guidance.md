@@ -84,8 +84,9 @@ A new handler type's `ServerBuilder` method follows the prefix style (matching i
 - `XFn` / `XRequestFn` — companion throwing SAM(s), only when `XHandler` itself isn't lambda-friendly (carries a descriptor, exposes more than one method). Tools need this because `ToolHandler` isn't a `@FunctionalInterface` — `ToolFn`/`ToolRequestFn` fill the lambda-entry role instead.
 - Static factory composition on `XHandler.of…`: base verb `of`, then optional `Async` right after it, then optional `Request` last — `of` → `ofRequest` → `ofAsync` → `ofAsyncRequest`. Fixed order; don't invent `ofRequestAsync`.
 
-## 🪶 Registry API naming
+## 🪶 Registry/Façade API naming
 
+- Registry facade interface named as plural: `interface Completions`, `CompletionRegistry extends Completions`, `DefaultCompletionRegistry implements CompletionRegistry`. User-facing API uses facade.
 - Build-time `ServerBuilder` methods are declarative nouns: `tool`, `resource`, `prompt`, `resourceTemplate`.
 - Runtime feature registries use `register` / `registerAsync` and `unregister`.
 - Optional lookup uses `Optional<Descriptor> find(String name)`. Never nullable `get`.

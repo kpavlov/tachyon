@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.regex.Pattern;
@@ -52,7 +53,7 @@ import tools.jackson.databind.JsonNode;
  * AbstractRegistry for tool handlers with input/output schema validation.
  */
 @InternalApi
-public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHandler> implements ToolRegistry {
+public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHandler> implements Tools {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultToolRegistry.class);
 
@@ -94,7 +95,7 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
      * @throws IllegalArgumentException if the tool name or schema root is invalid
      */
     @Override
-    public ToolRegistry register(ToolHandler handler) {
+    public Tools register(ToolHandler handler) {
         Objects.requireNonNull(handler, "ToolHandler must not be null");
         var descriptor = handler.descriptor();
         Objects.requireNonNull(descriptor, "ToolDescriptor must not be null");
@@ -295,6 +296,9 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                 toolResult = HandlerFutures.joinInterruptibly(handler.handleAsync(context, request));
             } catch (InvalidArgumentException e) {
                 return invalidParams("invalid argument '" + e.argName() + "': " + e.getMessage());
+            } catch (CancellationException e) {
+                logger.debug("Tool call cancelled for '{}'", parsed.name());
+                return internalError("Tool call cancelled");
             } catch (Exception e) {
                 logger.error("Tool handler error for '{}'", parsed.name(), e);
                 return internalError("Tool handler failed");
@@ -319,11 +323,11 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                 DispatchContext context, ToolHandler handler, ToolRequest request, String id, TaskMetadata taskMeta) {
             sendLoggingIfEnabled(context, id, "started");
             var engine = context.engine();
-            var tasks = engine.tasks();
+            var taskRegistry = engine.tasksRegistry();
             var sessionId = OutboundSseStreamMessageRouter.currentSessionId();
             var ttl = taskMeta.ttl() != null ? Duration.ofMillis(taskMeta.ttl()) : null;
             var progressToken = parseProgressToken(request.meta());
-            var task = tasks.createSessionTask(ttl, request.meta(), sessionId, progressToken);
+            var task = taskRegistry.createSessionTask(ttl, request.meta(), sessionId, progressToken);
 
             var taskRequest = ToolRequest.builder()
                     .name(request.name())
@@ -348,7 +352,7 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                     },
                     engine.executor());
 
-            tasks.registerRunning(task.id(), future);
+            taskRegistry.registerRunning(task.id(), future);
 
             future.thenAccept(toolResult -> {
                 if (toolResult == null) {
@@ -367,7 +371,7 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                     var structured = JsonUtils.valueToObjectNode(structuredValue, payloadSerializer);
                     task.complete(new TaskResult.Completed(content, structured, null));
                 }
-                tasks.unregisterRunning(task.id());
+                taskRegistry.unregisterRunning(task.id());
             });
             future.exceptionally(throwable -> {
                 var e = throwable instanceof CompletionException ce && ce.getCause() != null
@@ -378,7 +382,7 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                 } else {
                     logger.error("Non-exception throwable in task handler for '{}'", task.name(), e);
                 }
-                tasks.unregisterRunning(task.id());
+                taskRegistry.unregisterRunning(task.id());
                 return null;
             });
 

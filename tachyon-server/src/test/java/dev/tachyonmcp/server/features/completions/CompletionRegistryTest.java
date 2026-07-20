@@ -15,17 +15,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class CompletionRegistryTest {
 
-    private final DefaultCompletionRegistry registry = new DefaultCompletionRegistry();
+    private final CompletionRegistry registry = new DefaultCompletionRegistry();
+    private final Completions completions = registry;
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
 
-    @BeforeEach
-    void setUp() {
-        registry.registerHandlers(handlers);
+    public CompletionRegistryTest() {
+        ((DefaultCompletionRegistry) registry).registerHandlers(handlers);
     }
 
     private static Object complete(HashMap<String, RpcMethodHandler> handlers, Object params) throws Exception {
@@ -34,32 +33,32 @@ class CompletionRegistryTest {
 
     @Test
     void interfaceDefaultOverloadsRegisterAndLookUp() {
-        CompletionRegistry api = registry;
-
-        api.registerForPrompt("greeting", (ctx, request) -> CompletionResult.of(List.of("sync")))
+        completions
+                .registerForPrompt("greeting", (ctx, request) -> CompletionResult.of(List.of("sync")))
                 .registerForPromptAsync(
                         "async-prompt",
                         (ctx, request) -> CompletableFuture.completedFuture(CompletionResult.of(List.of("async"))));
-        api.registerForResource("file:///{path}", (ctx, request) -> CompletionResult.of(List.of("resource")))
+        completions
+                .registerForResource("file:///{path}", (ctx, request) -> CompletionResult.of(List.of("resource")))
                 .registerForResourceAsync(
                         "file:///async/{path}",
                         (ctx, request) ->
                                 CompletableFuture.completedFuture(CompletionResult.of(List.of("resource-async"))));
 
-        assertThat(api.findForPrompt("greeting")).isPresent();
-        assertThat(api.findForPrompt("async-prompt")).isPresent();
-        assertThat(api.findForPrompt("missing")).isEmpty();
-        assertThat(api.findForResource("file:///{path}")).isPresent();
-        assertThat(api.findForResource("file:///async/{path}")).isPresent();
-        assertThat(api.findForResource("missing")).isEmpty();
+        assertThat(completions.findForPrompt("greeting")).isPresent();
+        assertThat(completions.findForPrompt("async-prompt")).isPresent();
+        assertThat(completions.findForPrompt("missing")).isEmpty();
+        assertThat(completions.findForResource("file:///{path}")).isPresent();
+        assertThat(completions.findForResource("file:///async/{path}")).isPresent();
+        assertThat(completions.findForResource("missing")).isEmpty();
 
-        assertThat(api.unregisterForPrompt("greeting")).isTrue();
-        assertThat(api.unregisterForPrompt("greeting")).isFalse();
-        assertThat(api.findForPrompt("greeting")).isEmpty();
+        assertThat(completions.unregisterForPrompt("greeting")).isTrue();
+        assertThat(completions.unregisterForPrompt("greeting")).isFalse();
+        assertThat(completions.findForPrompt("greeting")).isEmpty();
 
-        assertThat(api.unregisterForResource("file:///{path}")).isTrue();
-        assertThat(api.unregisterForResource("file:///{path}")).isFalse();
-        assertThat(api.findForResource("file:///{path}")).isEmpty();
+        assertThat(completions.unregisterForResource("file:///{path}")).isTrue();
+        assertThat(completions.unregisterForResource("file:///{path}")).isFalse();
+        assertThat(completions.findForResource("file:///{path}")).isEmpty();
     }
 
     @Test
@@ -76,7 +75,7 @@ class CompletionRegistryTest {
 
     @Test
     void completesPromptArgumentUsingRegisteredHandler() throws Exception {
-        registry.registerForPrompt(
+        completions.registerForPrompt(
                 "code_review",
                 (ctx, request) -> CompletionResult.of(List.of("python", "pytorch", "pyside"), 10.0, true));
 
@@ -95,7 +94,7 @@ class CompletionRegistryTest {
 
     @Test
     void completesResourceArgumentUsingRegisteredHandler() throws Exception {
-        registry.registerForResource("file:///{path}", (ctx, request) -> CompletionResult.of(List.of("a.txt")));
+        completions.registerForResource("file:///{path}", (ctx, request) -> CompletionResult.of(List.of("a.txt")));
 
         var result = complete(
                 handlers,

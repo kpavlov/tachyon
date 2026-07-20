@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
  * Registry for resources, templates, and subscriptions.
  */
 @InternalApi
-public class DefaultResourceRegistry implements ResourceRegistry {
+public class DefaultResourceRegistry implements Resources {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultResourceRegistry.class);
 
@@ -268,7 +268,7 @@ public class DefaultResourceRegistry implements ResourceRegistry {
      * @throws IllegalArgumentException if a template with the same name is already registered
      */
     @Override
-    public ResourceRegistry registerTemplate(ResourceTemplateDescriptor descriptor, ResourceHandler handler) {
+    public Resources registerTemplate(ResourceTemplateDescriptor descriptor, ResourceHandler handler) {
         if (config.mode() == Mode.OFF) {
             logger.debug("Resource template '{}' not registered: resources capability is OFF", descriptor.name());
             return this;

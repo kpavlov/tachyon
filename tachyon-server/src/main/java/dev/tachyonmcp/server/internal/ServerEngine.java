@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.internal;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseEvent;
@@ -12,7 +13,7 @@ import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.ServerCapabilities;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.LoggingLevel;
-import dev.tachyonmcp.server.features.tasks.InternalTaskRegistry;
+import dev.tachyonmcp.server.features.tasks.TaskRegistry;
 import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.server.session.SessionIdGenerator;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
@@ -31,13 +32,10 @@ import org.jspecify.annotations.Nullable;
  * inside the {@code tachyon-server} jar — transport handlers, dispatch plumbing, registry
  * implementations — should depend on it. External code that reaches for {@code ServerEngine} is
  * opting into a breakage-prone dependency.
- *
- * // ponytail: internal pkg not JPMS-sealed; module split later if a user pins ServerEngine.
  */
+// ponytail: internal pkg not JPMS-sealed; module split later if a user pins ServerEngine.
+@InternalApi
 public interface ServerEngine extends TachyonServer {
-
-    /** Returns the task registry. */
-    InternalTaskRegistry tasks();
 
     /** Returns the protocol response mapper for the default MCP version. */
     ProtocolResponseMapper responseMapper();
@@ -95,6 +93,8 @@ public interface ServerEngine extends TachyonServer {
 
     /** Returns the executor used for handler dispatch. */
     ExecutorService executor();
+
+    TaskRegistry tasksRegistry();
 
     /** Sends a request to the client and returns a future that completes with the response. */
     CompletableFuture<String> sendRequest(Session session, String method, Object params);
