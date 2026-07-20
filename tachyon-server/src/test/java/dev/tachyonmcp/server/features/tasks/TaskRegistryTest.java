@@ -56,17 +56,17 @@ class TaskRegistryTest {
 
     @Test
     void listWithZeroLimitUsesDefaultPageSize() {
-        registry.add(new TaskEntry("id-a", "A"));
-        registry.add(new TaskEntry("id-b", "B"));
+        registry.add(new TaskEntry("id-a"));
+        registry.add(new TaskEntry("id-b"));
         var result = registry.list(0, null);
         assertThat(result.items()).hasSize(2);
     }
 
     @Test
     void listWithCursorSkipsPastCursor() {
-        registry.add(new TaskEntry("id-alpha", "Alpha"));
-        registry.add(new TaskEntry("id-beta", "Beta"));
-        registry.add(new TaskEntry("id-gamma", "Gamma"));
+        registry.add(new TaskEntry("id-alpha"));
+        registry.add(new TaskEntry("id-beta"));
+        registry.add(new TaskEntry("id-gamma"));
         var result = registry.list(1, "id-alpha");
         assertThat(result.items()).hasSize(1);
         assertThat(result.items().getFirst().id()).isEqualTo("id-beta");
@@ -74,15 +74,15 @@ class TaskRegistryTest {
 
     @Test
     void listReturnsCursorWhenMoreItemsAvailable() {
-        registry.add(new TaskEntry("id-a", "A"));
-        registry.add(new TaskEntry("id-b", "B"));
+        registry.add(new TaskEntry("id-a"));
+        registry.add(new TaskEntry("id-b"));
         var result = registry.list(1, null);
         assertThat(result.nextCursor()).isEqualTo("id-a");
     }
 
     @Test
     void listReturnsNullCursorWhenAllItemsReturned() {
-        registry.add(new TaskEntry("id-a", "A"));
+        registry.add(new TaskEntry("id-a"));
         var result = registry.list(10, null);
         assertThat(result.nextCursor()).isNull();
     }
@@ -92,8 +92,8 @@ class TaskRegistryTest {
         try (var engine = newEngine(b -> {})) {
             var reg = new DefaultTaskRegistry(
                     engine, TasksConfig.builder().pageSize(1).build());
-            reg.add(new TaskEntry("id-a", "A"));
-            reg.add(new TaskEntry("id-b", "B"));
+            reg.add(new TaskEntry("id-a"));
+            reg.add(new TaskEntry("id-b"));
             var result = reg.list(0, null);
             assertThat(result.items()).hasSize(1);
             assertThat(result.nextCursor()).isEqualTo("id-a");
@@ -102,8 +102,8 @@ class TaskRegistryTest {
 
     @Test
     void listTasksReturnsRegisteredTasks() throws Exception {
-        registry.add(new TaskEntry("1", "First task"));
-        registry.add(new TaskEntry("2", "Second task"));
+        registry.add(new TaskEntry("1"));
+        registry.add(new TaskEntry("2"));
 
         var listHandler = handlers.get("tasks/list");
         var result = (ListTasksResult) listHandler.handle(DefaultDispatchContext.noop(), null);
@@ -121,7 +121,7 @@ class TaskRegistryTest {
 
     @Test
     void getTaskReturnsResult() throws Exception {
-        registry.add(new TaskEntry("task-1", "A task"));
+        registry.add(new TaskEntry("task-1"));
 
         var getHandler = handlers.get("tasks/get");
         var result = getHandler.handle(DefaultDispatchContext.noop(), Map.of("taskId", "task-1"));
@@ -140,7 +140,7 @@ class TaskRegistryTest {
 
     @Test
     void cancelTaskReturnsCancelTaskResult() throws Exception {
-        registry.add(new TaskEntry("task-1", "A task"));
+        registry.add(new TaskEntry("task-1"));
 
         var cancelHandler = handlers.get("tasks/cancel");
         var result = cancelHandler.handle(DefaultDispatchContext.noop(), Map.of("taskId", "task-1"));
@@ -168,7 +168,7 @@ class TaskRegistryTest {
     @Test
     @Timeout(5)
     void taskResultBlocksUntilTaskReachesTerminalState() throws Exception {
-        registry.add(new TaskEntry("task-1", "A task"));
+        registry.add(new TaskEntry("task-1"));
         var resultHandler = handlers.get("tasks/result");
 
         // SEP-1686: tasks/result MUST block a working task until it is terminal. Complete it from
@@ -193,7 +193,7 @@ class TaskRegistryTest {
 
     @Test
     void taskResultCompletedTaskReturnsPayload() throws Exception {
-        registry.add(new TaskEntry("task-1", "A task"));
+        registry.add(new TaskEntry("task-1"));
         registry.completeTask("task-1", "{\"result\":\"ok\"}");
 
         var resultHandler = handlers.get("tasks/result");
@@ -270,7 +270,7 @@ class TaskRegistryTest {
 
     @Test
     void taskNotExpiredWithoutTtl() {
-        var entry = new TaskEntry("exp-1", "Expiring task");
+        var entry = new TaskEntry("exp-1");
         assertThat(entry.isExpired()).isFalse();
     }
 
@@ -393,7 +393,7 @@ class TaskRegistryTest {
 
     @Test
     void updateStatusFromClientNotification() {
-        registry.add(new TaskEntry("task-1", "A task"));
+        registry.add(new TaskEntry("task-1"));
 
         var result = registry.updateStatus("task-1", TaskState.INPUT_REQUIRED, "Need more info");
 
@@ -411,7 +411,7 @@ class TaskRegistryTest {
 
     @Test
     void updateStatusFromClientNotificationInvalidTransition() {
-        registry.add(new TaskEntry("task-1", "A task"));
+        registry.add(new TaskEntry("task-1"));
         registry.completeTask("task-1", "{\"ok\":true}");
 
         var result = registry.updateStatus("task-1", TaskState.WORKING, null);
@@ -436,7 +436,7 @@ class TaskRegistryTest {
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);
 
-        registry.add(new TaskEntry("id-x", "A task"));
+        registry.add(new TaskEntry("id-x"));
 
         assertThat(callCount).hasValue(1);
     }
@@ -445,7 +445,7 @@ class TaskRegistryTest {
     void shouldFireOnChangeWhenExistingTaskRemoved() {
         // Default single-arg constructor starts WORKING (non-terminal), so remove() cancels
         // it first (1 onChange) before removing it from the index (2nd onChange).
-        registry.add(new TaskEntry("id-x", "A task"));
+        registry.add(new TaskEntry("id-x"));
 
         var callCount = new AtomicInteger(0);
         registry.onChange(callCount::incrementAndGet);

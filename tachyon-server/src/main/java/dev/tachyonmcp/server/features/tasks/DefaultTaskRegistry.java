@@ -250,7 +250,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
     private void expireStaleTasks() {
         for (var entry : getAll()) {
             if (entry.status().isActive() && entry.isExpired()) {
-                logger.info("Task expired: id={}, name={}", entry.id(), entry.name());
+                logger.info("Task expired: id={}", entry.id());
                 var failed = new TaskResult.Failed(List.of(TextContent.of("Task expired")), null, null);
                 if (entry.fail(failed)) {
                     fireOnChange();

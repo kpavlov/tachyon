@@ -12,14 +12,6 @@ public interface ServerFeature<D extends ServerFeature.Descriptor> {
 
     D descriptor();
 
-    /**
-     * @deprecated Use {@link #descriptor()}
-     */
-    @Deprecated
-    default String name() {
-        return descriptor().name();
-    }
-
     interface Descriptor {
         /** Unique name of this feature. */
         String name();

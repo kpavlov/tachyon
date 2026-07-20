@@ -73,7 +73,7 @@ public fun AudioContent(
     mimeType: String,
     annotations: Annotations? = null,
     meta: Map<String, JsonNode>? = null,
-): AudioContent = DefaultAudioContent.of(data, mimeType, annotations, meta)
+): AudioContent = AudioContent.of(data, mimeType, annotations, meta)
 
 /**
  * Creates an [AudioContent] block using a kotlinx-serialization metadata map.
@@ -85,7 +85,7 @@ public fun AudioContent(
     mimeType: String,
     annotations: Annotations? = null,
     meta: Map<String, JsonObject>?,
-): AudioContent = DefaultAudioContent.of(data, mimeType, annotations, meta?.toJacksonNodeMap())
+): AudioContent = AudioContent.of(data, mimeType, annotations, meta?.toJacksonNodeMap())
 
 /**
  * Creates an [EmbeddedResource] — a complete resource inlined within a result.
