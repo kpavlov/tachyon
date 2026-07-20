@@ -198,8 +198,6 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
 
     @Test
     void shouldNotifyTaskStatusWithCallerSuppliedMessage() throws Exception {
-        // Regression test: McpTaskMapper used to hardcode statusMessage to entry.status().toString(),
-        // silently discarding whatever message the caller passed to DefaultTaskRegistry.updateStatus.
         startServer(it -> it.tool(
                         new AbstractToolHandler(ToolDescriptor.builder()
                                 .name("update-status-sync")

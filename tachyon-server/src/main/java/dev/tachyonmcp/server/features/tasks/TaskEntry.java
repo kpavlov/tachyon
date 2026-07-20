@@ -32,7 +32,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     private final @Nullable Map<String, JsonNode> meta;
     private final AtomicReference<TaskState> status;
     private final long createdAt;
-    private final @Nullable Duration ttl;
+    private final @Nullable Long ttl;
     private final Duration keepAlive;
     private final @Nullable Duration pollInterval;
     private volatile long lastUpdatedAt;
@@ -128,7 +128,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         this.status = new AtomicReference<>(status);
         this.createdAt = System.currentTimeMillis();
         this.lastUpdatedAt = this.createdAt;
-        this.ttl = ttl;
+        this.ttl = ttl != null ? ttl.toMillis() : null;
         this.keepAlive = Objects.requireNonNull(keepAlive, "keepAlive");
         this.pollInterval = pollInterval;
         this.progressToken = progressToken;
@@ -179,7 +179,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     }
 
     @Override
-    public @Nullable Duration ttl() {
+    public @Nullable Long ttl() {
         return ttl;
     }
 
@@ -271,10 +271,6 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         return lastUpdatedAt;
     }
 
-    public double ttlSeconds() {
-        return ttl != null ? ttl.getSeconds() : 0.0;
-    }
-
     public @Nullable String resultJson() {
         if (result instanceof TaskResult.Completed c) {
             return serializeResult(c.content(), c.structuredContent());
@@ -334,10 +330,10 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     }
 
     public boolean isExpired() {
-        if (ttl == null || ttl.isNegative() || ttl.isZero()) {
+        if (ttl == null || ttl <= 0) {
             return false;
         }
-        return System.currentTimeMillis() - lastUpdatedAt > ttl.toMillis();
+        return System.currentTimeMillis() - lastUpdatedAt > ttl;
     }
 
     /** Whether this task's result has outlived its {@code keepAlive} retention window. */

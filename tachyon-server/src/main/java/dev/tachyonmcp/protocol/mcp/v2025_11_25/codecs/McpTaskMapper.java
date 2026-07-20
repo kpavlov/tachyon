@@ -30,22 +30,8 @@ final class McpTaskMapper {
         };
     }
 
-    static TaskState toInternalStatus(TaskStatus wireStatus) {
-        return switch (wireStatus) {
-            case WORKING -> TaskState.WORKING;
-            case INPUT_REQUIRED -> TaskState.INPUT_REQUIRED;
-            case COMPLETED -> TaskState.COMPLETED;
-            case FAILED -> TaskState.FAILED;
-            case CANCELLED -> TaskState.CANCELLED;
-        };
-    }
-
-    private static double ttlToMillis(@Nullable Duration ttl) {
-        return ttl != null ? (double) ttl.toMillis() : 0.0;
-    }
-
-    private static @Nullable Double pollIntervalToMillis(@Nullable Duration pollInterval) {
-        return pollInterval != null ? (double) pollInterval.toMillis() : null;
+    private static @Nullable Long pollIntervalToMillis(@Nullable Duration pollInterval) {
+        return pollInterval != null ? pollInterval.toMillis() : null;
     }
 
     static Task toTaskProto(TaskEntry entry) {
@@ -55,7 +41,7 @@ final class McpTaskMapper {
                 entry.statusMessage(),
                 entry.createdAtIso(),
                 entry.lastUpdatedAtIso(),
-                ttlToMillis(entry.ttl()),
+                entry.ttl(),
                 pollIntervalToMillis(entry.pollInterval()));
     }
 
@@ -67,7 +53,7 @@ final class McpTaskMapper {
                 entry.statusMessage(),
                 entry.createdAtIso(),
                 entry.lastUpdatedAtIso(),
-                ttlToMillis(entry.ttl()),
+                entry.ttl(),
                 pollIntervalToMillis(entry.pollInterval()));
     }
 
@@ -79,7 +65,7 @@ final class McpTaskMapper {
                 entry.statusMessage(),
                 entry.createdAtIso(),
                 entry.lastUpdatedAtIso(),
-                ttlToMillis(entry.ttl()),
+                entry.ttl(),
                 pollIntervalToMillis(entry.pollInterval()));
     }
 
@@ -88,7 +74,6 @@ final class McpTaskMapper {
     }
 
     static TaskStatusNotificationParams toStatusNotification(TaskEntry entry) {
-        final var ttl = entry.ttl();
         return new TaskStatusNotificationParams(
                 null,
                 entry.id(),
@@ -96,7 +81,7 @@ final class McpTaskMapper {
                 entry.statusMessage(),
                 entry.createdAtIso(),
                 entry.lastUpdatedAtIso(),
-                ttl != null ? ttl.toMillis() : null,
+                entry.ttl(),
                 pollIntervalToMillis(entry.pollInterval()));
     }
 }

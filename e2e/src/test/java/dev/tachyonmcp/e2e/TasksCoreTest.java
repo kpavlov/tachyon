@@ -71,8 +71,6 @@ class TasksCoreTest extends AbstractStatefulMcpE2eTest {
 
     @Test
     void statusMessageReflectsCallerSuppliedTextNotTheBareStatusName() throws Exception {
-        // Regression test: the wire mapper used to hardcode statusMessage to entry.status().toString(),
-        // discarding whatever message updateStatus/complete callers actually set.
         startDefaultServer();
         try (var client = createTestClient()) {
             client.initialize();
