@@ -67,7 +67,8 @@ by adding a `task` field to `tools/call`:
 ```java
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 
-var descriptor = ToolDescriptor.builder("import-data")
+var descriptor = ToolDescriptor.builder()
+    .name("import-data")
     .description("Long-running import")
     .taskSupport(TaskSupport.OPTIONAL)  // or REQUIRED; default FORBIDDEN
     .build();

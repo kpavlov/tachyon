@@ -69,8 +69,16 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
         addItem(entry);
     }
 
-    public void remove(String taskId) {
-        removeItem(taskId);
+    @Override
+    public boolean remove(String taskId) {
+        var entry = get(taskId);
+        if (entry == null) {
+            return false;
+        }
+        if (!entry.status().isTerminal()) {
+            getAndCancelTask(taskId);
+        }
+        return removeItem(taskId);
     }
 
     @Override
@@ -105,7 +113,16 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
         var id = requestedId != null ? requestedId : taskIdGenerator.generateTaskId(meta, sessionId);
         var descriptor = TaskDescriptor.builder().id(id).build();
         var entry = new TaskEntry(
-                descriptor, id, TaskState.SUBMITTED, ttl, sessionId, progressToken, meta, keepAlive, pollInterval);
+                descriptor,
+                id,
+                TaskState.SUBMITTED,
+                ttl,
+                sessionId,
+                progressToken,
+                meta,
+                keepAlive,
+                pollInterval,
+                this::fireStatusNotification);
         if (!addItemIfAbsent(entry)) {
             throw new IllegalArgumentException("Task '" + id + "' already exists");
         }
@@ -148,7 +165,6 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
             return false;
         }
         running.remove(entry.id());
-        fireStatusNotification(entry);
         fireOnChange();
         return true;
     }
@@ -158,7 +174,6 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
             return false;
         }
         running.remove(entry.id());
-        fireStatusNotification(entry);
         fireOnChange();
         return true;
     }
@@ -184,7 +199,6 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
         if (future != null) {
             future.cancel(true);
         }
-        fireStatusNotification(entry);
         fireOnChange();
         return entry;
     }
@@ -200,21 +214,14 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
         }
         if (statusMessage != null) {
             if (newStatus == TaskState.WORKING && entry.resume(statusMessage)) {
-                fireStatusNotification(entry);
                 return true;
             }
-            if (entry.transitionTo(newStatus)) {
-                entry.updateMessage(statusMessage);
-                fireStatusNotification(entry);
-                return true;
-            }
-            return false;
+            return entry.transitionTo(newStatus, null, statusMessage);
         }
         if (!entry.transitionTo(newStatus)) {
             logger.debug("Invalid status transition from {} to {} for task {}", entry.status(), newStatus, taskId);
             return false;
         }
-        fireStatusNotification(entry);
         return true;
     }
 
@@ -246,7 +253,6 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
                 logger.info("Task expired: id={}, name={}", entry.id(), entry.name());
                 var failed = new TaskResult.Failed(List.of(TextContent.of("Task expired")), null, null);
                 if (entry.fail(failed)) {
-                    fireStatusNotification(entry);
                     fireOnChange();
                 }
             }

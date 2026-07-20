@@ -91,7 +91,7 @@ fun createServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer =
             readerIdleTimeout = NetworkConfig.DEFAULT_READER_IDLE_TIMEOUT.toKotlinDuration()
             writerIdleTimeout = NetworkConfig.DEFAULT_WRITER_IDLE_TIMEOUT.toKotlinDuration()
             heartbeatInterval = NetworkConfig.DEFAULT_HEARTBEAT_INTERVAL.toKotlinDuration()
-            maxContentLength = NetworkConfig.DEFAULT_MAX_CONTENT_LENGTH
+            maxContentLength = 1024 * 1024 // 1 MB — the actual default (NetworkConfig.DEFAULT_MAX_CONTENT_LENGTH is a stale, unwired 65535 constant)
             ioEngine = NettyIoEngine.AUTO
         }
 

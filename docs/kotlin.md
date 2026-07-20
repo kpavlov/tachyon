@@ -75,7 +75,7 @@ tool(name = "reverse", description = "Reverse a string") {
     // this: ToolScope
     // ctx: InteractionContext
     // args: Args
-    val msg = args.string("message")
+    val msg = args.stringValue("message")
     ToolResult.text(msg.reversed())
 }
 ```
@@ -192,7 +192,7 @@ tool(name = "greet", inputSchema = ..., outputSchema = ...) {
 
 | Call | Behaviour |
 |---|---|
-| `args.string("k")` / `intValue` / `boolValue` / `doubleValue` | Required — throws when missing |
+| `args.stringValue("k")` / `intValue` / `boolValue` / `doubleValue` | Required — throws when missing |
 | `args.stringOrNull("k")` / `intOrNull` / `booleanOrNull` / `doubleOrNull` | Returns `null` when missing |
 | `args.stringOr("k", "d")` / `int("k", 0)` / `boolean("k", true)` / `double("k", 0.0)` | Falls back to default |
 | `args.decode<T>()` | typed decode via configured serde (default kotlinx ignores unknown keys) |
@@ -217,9 +217,9 @@ Add tools after the server starts — useful for dynamic registration:
 ```kotlin
 val server = buildServer { /* base config */ }
 server.registerTool(
-    ToolDescriptor.builder("echo").description("Echo a message").build(),
+    ToolDescriptor.builder().name("echo").description("Echo a message").build(),
 ) {
-    ToolResult.text(args.string("msg"))
+    ToolResult.text(args.stringValue("msg"))
 }
 ```
 
