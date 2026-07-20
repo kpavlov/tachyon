@@ -46,6 +46,16 @@ public abstract class AbstractRegistry<D extends ServerFeature.Descriptor, R ext
         fireOnChange();
     }
 
+    /** Adds the item if none is registered under the same name; returns {@code false} if one already exists. */
+    protected boolean addItemIfAbsent(R item) {
+        var previous = items.putIfAbsent(item.descriptor().name(), item);
+        if (previous == null) {
+            fireOnChange();
+            return true;
+        }
+        return false;
+    }
+
     /**
      * Removes the item with the specified name and notifies change listeners when an item is removed.
      *

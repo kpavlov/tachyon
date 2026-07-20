@@ -14,7 +14,6 @@ import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -103,8 +102,9 @@ public class TasksExtension implements ServerExtension {
                                 if (description != null) {
                                     meta.put("description", description);
                                 }
-                                final var task = tasks.create(new TaskOptions(
-                                        null, !meta.isEmpty() ? Collections.unmodifiableMap(meta) : null));
+                                final var task = tasks.create(TaskOptions.builder()
+                                        .meta(!meta.isEmpty() ? meta : null)
+                                        .build());
                                 return ToolResult.text(task.id());
                             });
                         } catch (Exception e) {
