@@ -43,6 +43,8 @@ import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -242,35 +244,46 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
             return "tools/call";
         }
 
-        /**
-         * Runs on the dispatcher's virtual thread; blocking to join the handler is the SPI contract.
-         */
+        /** Compatibility fallback for callers invoking the blocking SPI method directly. */
         @Override
-        public Object handle(DispatchContext context, Object params) {
+        public Object handle(DispatchContext context, Object params) throws Exception {
+            return HandlerFutures.joinInterruptibly(handleAsync(context, params));
+        }
+
+        /** Runs on the dispatcher's virtual thread; composes the handler's stage without blocking it. */
+        @Override
+        public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
             var parsed = parseCallParams(params);
-            if (parsed == null) return invalidRequest("Invalid params");
-            if (parsed.name().isBlank()) return invalidRequest("Missing tool name");
-            if (parsed.name().length() > 64) return invalidRequest("Tool name exceeds maximum length (SEP-986)");
+            if (parsed == null) return CompletableFuture.completedFuture(invalidRequest("Invalid params"));
+            if (parsed.name().isBlank()) {
+                return CompletableFuture.completedFuture(invalidRequest("Missing tool name"));
+            }
+            if (parsed.name().length() > 64) {
+                return CompletableFuture.completedFuture(invalidRequest("Tool name exceeds maximum length (SEP-986)"));
+            }
 
             var handler = registry.get(parsed.name());
-            if (handler == null) return invalidParams("Unknown tool: " + parsed.name());
+            if (handler == null) {
+                return CompletableFuture.completedFuture(invalidParams("Unknown tool: " + parsed.name()));
+            }
             var extId = handler.descriptor().extensionId();
             if (extId != null && !context.isExtensionEnabled(extId)) {
-                return invalidParams("Unknown tool: " + parsed.name());
+                return CompletableFuture.completedFuture(invalidParams("Unknown tool: " + parsed.name()));
             }
 
             var validationError = validateInput(handler.descriptor().inputSchema(), parsed.args());
-            if (validationError != null) return invalidParams(validationError);
+            if (validationError != null) return CompletableFuture.completedFuture(invalidParams(validationError));
 
             var taskSupport = handler.descriptor().taskSupport();
             if (taskSupport == null) taskSupport = TaskSupport.FORBIDDEN;
             var taskMeta = parsed.task();
 
             if (taskSupport == TaskSupport.FORBIDDEN && taskMeta != null) {
-                return invalidRequest("Task augmentation not supported for this tool");
+                return CompletableFuture.completedFuture(
+                        invalidRequest("Task augmentation not supported for this tool"));
             }
             if (taskSupport == TaskSupport.REQUIRED && taskMeta == null) {
-                return invalidRequest("Task augmentation required for this tool");
+                return CompletableFuture.completedFuture(invalidRequest("Task augmentation required for this tool"));
             }
 
             var request = ToolRequest.builder()
@@ -286,27 +299,42 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
             // Task-augmented path: branch BEFORE invoking handler so the dispatch thread
             // returns CreateTaskResult immediately (even for sync/suspend handlers).
             if (taskMeta != null) {
-                return dispatchTaskAugmented(context, handler, request, parsed.name(), taskMeta);
+                return CompletableFuture.completedFuture(
+                        dispatchTaskAugmented(context, handler, request, parsed.name(), taskMeta));
             }
 
-            // Non-task path: run the handler on this virtual thread, blocking as the SPI allows.
             sendLoggingIfEnabled(context, parsed.name(), "started");
-            ToolResult toolResult;
+            CompletionStage<? extends ToolResult> stage;
             try {
-                toolResult = HandlerFutures.joinInterruptibly(handler.handleAsync(context, request));
-            } catch (InvalidArgumentException e) {
-                return invalidParams("invalid argument '" + e.argName() + "': " + e.getMessage());
-            } catch (CancellationException e) {
-                logger.debug("Tool call cancelled for '{}'", parsed.name());
-                return internalError("Tool call cancelled");
+                stage = handler.handleAsync(context, request);
+                if (stage == null) {
+                    throw new NullPointerException("Tool '" + parsed.name() + "' returned a null CompletionStage");
+                }
             } catch (Exception e) {
-                logger.error("Tool handler error for '{}'", parsed.name(), e);
-                return internalError("Tool handler failed");
+                stage = CompletableFuture.<ToolResult>failedFuture(e);
             }
-            sendLoggingIfEnabled(context, parsed.name(), "completed");
-            validateOutput(handler.descriptor().outputSchema(), toolResult);
-            return context.responseMapper()
-                    .callToolResult(JsonUtils.serializeStructured(toolResult, payloadSerializer));
+            // completeOn: re-anchors onto a tachyon- virtual thread only when the handler's
+            // stage is still pending, so a foreign completer thread never leaks into output
+            // validation/response mapping, without adding an executor hop to the common
+            // already-resolved case (sync handlers, fast async ones).
+            return HandlerFutures.completeOn(stage, context.engine().executor(), (toolResult, ex) -> {
+                if (ex != null) {
+                    var cause = HandlerFutures.unwrap(ex);
+                    if (cause instanceof InvalidArgumentException e) {
+                        return invalidParams("invalid argument '" + e.argName() + "': " + e.getMessage());
+                    }
+                    if (cause instanceof CancellationException) {
+                        logger.debug("Tool call cancelled for '{}'", parsed.name());
+                        return internalError("Tool call cancelled");
+                    }
+                    logger.error("Tool handler error for '{}'", parsed.name(), cause);
+                    return internalError("Tool handler failed");
+                }
+                sendLoggingIfEnabled(context, parsed.name(), "completed");
+                validateOutput(handler.descriptor().outputSchema(), toolResult);
+                return context.responseMapper()
+                        .callToolResult(JsonUtils.serializeStructured(toolResult, payloadSerializer));
+            });
         }
 
         /**
@@ -340,17 +368,11 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                     .task(task)
                     .build();
 
+            // Hop onto engine.executor() so a blocking sync handler doesn't delay returning
+            // CreateTaskResult; thenCompose flattens the stage without blocking either thread.
             var future = CompletableFuture.supplyAsync(
-                    () -> {
-                        try {
-                            return HandlerFutures.joinInterruptibly(handler.handleAsync(context, taskRequest));
-                        } catch (CompletionException e) {
-                            throw e;
-                        } catch (Exception e) {
-                            throw new CompletionException(e);
-                        }
-                    },
-                    engine.executor());
+                            () -> handler.handleAsync(context, taskRequest), engine.executor())
+                    .thenCompose(Function.identity());
 
             taskRegistry.registerRunning(task.id(), future);
 

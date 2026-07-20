@@ -71,7 +71,7 @@ class ResourceRegistryTest {
 
     @Test
     void shouldReturnEmptyListWhenNoResourcesRegistered() throws Exception {
-        var result = handlers.get("resources/list").handle(DefaultDispatchContext.noop(), null);
+        var result = handlers.get("resources/list").handle(DefaultDispatchContext.stateless(server), null);
 
         assertThat(result).isInstanceOf(ListResourcesResult.class);
         assertThat(((ListResourcesResult) result).resources()).isEmpty();
@@ -224,7 +224,7 @@ class ResourceRegistryTest {
         registry.unregisterByUri("test://r1");
 
         var result = handlers.get("resources/read")
-                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "test://r1"));
+                .handle(DefaultDispatchContext.stateless(server), Map.<String, Object>of("uri", "test://r1"));
         assertThat(result).isInstanceOf(JsonRpcError.class);
         assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.RESOURCE_NOT_FOUND);
     }
@@ -252,7 +252,7 @@ class ResourceRegistryTest {
     @Test
     void shouldReturnErrorWhenResourceNotFound() throws Exception {
         var result = handlers.get("resources/read")
-                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "test://nonexistent"));
+                .handle(DefaultDispatchContext.stateless(server), Map.<String, Object>of("uri", "test://nonexistent"));
 
         assertThat(result).isInstanceOf(JsonRpcError.class);
         assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.RESOURCE_NOT_FOUND);
@@ -260,7 +260,7 @@ class ResourceRegistryTest {
 
     @Test
     void shouldReturnErrorWhenUriMissing() throws Exception {
-        var result = handlers.get("resources/read").handle(DefaultDispatchContext.noop(), Map.of());
+        var result = handlers.get("resources/read").handle(DefaultDispatchContext.stateless(server), Map.of());
 
         assertThat(result).isInstanceOf(JsonRpcError.class);
     }
@@ -274,7 +274,7 @@ class ResourceRegistryTest {
                 });
 
         var result = runInVirtualThread(() -> handlers.get("resources/read")
-                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "test://bad-input")));
+                .handle(DefaultDispatchContext.stateless(server), Map.<String, Object>of("uri", "test://bad-input")));
 
         assertThat(result).isInstanceOf(JsonRpcError.class);
         assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_PARAMS);
@@ -289,7 +289,7 @@ class ResourceRegistryTest {
                         TextResourceContents.of("test://resource/1", "text/plain", "content"));
 
         var result = runInVirtualThread(() -> handlers.get("resources/read")
-                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "test://resource/1")));
+                .handle(DefaultDispatchContext.stateless(server), Map.<String, Object>of("uri", "test://resource/1")));
 
         assertThat(result).isInstanceOf(ReadResourceResult.class);
         var readResult = (ReadResourceResult) result;
@@ -310,7 +310,7 @@ class ResourceRegistryTest {
         });
 
         runInVirtualThread(() -> handlers.get("resources/read")
-                .handle(DefaultDispatchContext.noop(), Map.of("uri", "test://static-request")));
+                .handle(DefaultDispatchContext.stateless(server), Map.of("uri", "test://static-request")));
 
         assertThat(capturedUri).hasValue("test://static-request");
         assertThat(capturedParams.get()).isEmpty();
@@ -331,8 +331,8 @@ class ResourceRegistryTest {
                     return TextResourceContents.of(rawUri, "text/plain", "template");
                 });
 
-        runInVirtualThread(() ->
-                handlers.get("resources/read").handle(DefaultDispatchContext.noop(), Map.of("uri", "test://items/42")));
+        runInVirtualThread(() -> handlers.get("resources/read")
+                .handle(DefaultDispatchContext.stateless(server), Map.of("uri", "test://items/42")));
 
         assertThat(capturedUri).hasValue("test://items/42");
         assertThat(capturedParams.get()).containsExactly(Map.entry("id", new UriTemplateValue.Scalar("42")));
@@ -348,39 +348,44 @@ class ResourceRegistryTest {
         });
 
         runInVirtualThread(() -> handlers.get("resources/read")
-                .handle(DefaultDispatchContext.noop(), Map.of("uri", "test://sync-thread")));
+                .handle(DefaultDispatchContext.stateless(server), Map.of("uri", "test://sync-thread")));
 
         assertThat(handlerThread.get()).isNotNull().matches(Thread::isVirtual);
     }
 
     @Test
-    void shouldRunAndAwaitAsynchronousResourceHandlerOnSameVirtualThread() throws Exception {
+    void shouldInvokeAsynchronousResourceHandlerOnVirtualThreadWithoutBlockingIt() throws Exception {
         var handlerThread = new AtomicReference<@Nullable Thread>();
-        var awaitThread = new AtomicReference<@Nullable Thread>();
+        var callerThread = new AtomicReference<@Nullable Thread>();
         var contents = TextResourceContents.of("test://async-thread", "text/plain", "async");
-        var completion = new CompletableFuture<TextResourceContents>() {
-            @Override
-            public CompletableFuture<TextResourceContents> toCompletableFuture() {
-                awaitThread.set(Thread.currentThread());
-                return this;
-            }
-        };
+        var completion = new CompletableFuture<TextResourceContents>();
         registry.registerAsync(resource("async-thread"), (ctx, rawUri, params, uriTemplate) -> {
             handlerThread.set(Thread.currentThread());
             return completion;
         });
-        CompletableFuture.runAsync(() -> completion.complete(contents));
 
-        runInVirtualThread(() -> handlers.get("resources/read")
-                .handle(DefaultDispatchContext.noop(), Map.of("uri", "test://async-thread")));
+        var stage = runInVirtualThread(() -> {
+            callerThread.set(Thread.currentThread());
+            return handlers.get("resources/read")
+                    .handleAsync(DefaultDispatchContext.stateless(server), Map.of("uri", "test://async-thread"));
+        });
 
-        assertThat(handlerThread.get()).isSameAs(awaitThread.get());
+        // handleAsync() returned before the handler's future completed: the calling
+        // virtual thread was never blocked joining the result.
+        assertThat(stage.toCompletableFuture()).isNotDone();
         assertThat(handlerThread.get()).isNotNull().matches(Thread::isVirtual);
+        assertThat(handlerThread.get()).isSameAs(callerThread.get());
+
+        completion.complete(contents);
+
+        var result = (ReadResourceResult) stage.toCompletableFuture().get();
+        assertThat(result.contents()).hasSize(1);
+        assertThat(result.contents().getFirst().uri()).isEqualTo(contents.uri());
     }
 
     @Test
     void shouldReturnEmptyTemplateList() throws Exception {
-        var result = handlers.get("resources/templates/list").handle(DefaultDispatchContext.noop(), null);
+        var result = handlers.get("resources/templates/list").handle(DefaultDispatchContext.stateless(server), null);
 
         assertThat(result).isInstanceOf(ListResourceTemplatesResult.class);
         assertThat(((ListResourceTemplatesResult) result).resourceTemplates()).isEmpty();
@@ -389,7 +394,7 @@ class ResourceRegistryTest {
     @Test
     void subscribeRejectsNullSession() throws Exception {
         var result = handlers.get("resources/subscribe")
-                .handle(DefaultDispatchContext.noop(), Map.of("uri", "test://resource/1"));
+                .handle(DefaultDispatchContext.stateless(server), Map.of("uri", "test://resource/1"));
 
         assertThat(result).isInstanceOf(JsonRpcError.class);
         assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
@@ -398,7 +403,7 @@ class ResourceRegistryTest {
     @Test
     void unsubscribeRejectsNullSession() throws Exception {
         var result = handlers.get("resources/unsubscribe")
-                .handle(DefaultDispatchContext.noop(), Map.of("uri", "test://resource/1"));
+                .handle(DefaultDispatchContext.stateless(server), Map.of("uri", "test://resource/1"));
 
         assertThat(result).isInstanceOf(JsonRpcError.class);
         assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
@@ -611,12 +616,12 @@ class ResourceRegistryTest {
 
         // old URI must no longer resolve
         var oldUriResult = handlers.get("resources/read")
-                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "resource://doc-v1"));
+                .handle(DefaultDispatchContext.stateless(server), Map.<String, Object>of("uri", "resource://doc-v1"));
         assertThat(oldUriResult).isInstanceOf(JsonRpcError.class);
 
         // new URI must resolve correctly
         var newUriResult = runInVirtualThread(() -> handlers.get("resources/read")
-                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "resource://doc-v2")));
+                .handle(DefaultDispatchContext.stateless(server), Map.<String, Object>of("uri", "resource://doc-v2")));
         assertThat(newUriResult).isInstanceOf(ReadResourceResult.class);
         assertThat(registry.descriptors()).hasSize(1);
     }
@@ -650,7 +655,8 @@ class ResourceRegistryTest {
                 descriptor,
                 (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "content"));
 
-        var result = (ListResourcesResult) handlers.get("resources/list").handle(DefaultDispatchContext.noop(), null);
+        var result = (ListResourcesResult)
+                handlers.get("resources/list").handle(DefaultDispatchContext.stateless(server), null);
 
         assertThat(result.resources()).hasSize(1);
         var resource = result.resources().getFirst();
@@ -723,7 +729,7 @@ class ResourceRegistryTest {
 
         var result = runInVirtualThread(() -> handlers.get("resources/read")
                 .handle(
-                        DefaultDispatchContext.noop(),
+                        DefaultDispatchContext.stateless(server),
                         Map.<String, Object>of("uri", "resource://files/one/two%20words")));
 
         assertThat(result).isInstanceOf(ReadResourceResult.class);
@@ -748,7 +754,9 @@ class ResourceRegistryTest {
                 });
 
         runInVirtualThread(() -> handlers.get("resources/read")
-                .handle(DefaultDispatchContext.noop(), Map.<String, Object>of("uri", "resource://users/42")));
+                .handle(
+                        DefaultDispatchContext.stateless(server),
+                        Map.<String, Object>of("uri", "resource://users/42")));
 
         assertThat(matched).hasValue("specific");
     }
@@ -770,7 +778,7 @@ class ResourceRegistryTest {
                         TextResourceContents.of(rawUri, "text/plain", "content-" + scalar(params, "id")));
 
         var result = (ListResourceTemplatesResult)
-                handlers.get("resources/templates/list").handle(DefaultDispatchContext.noop(), null);
+                handlers.get("resources/templates/list").handle(DefaultDispatchContext.stateless(server), null);
 
         assertThat(result.resourceTemplates()).hasSize(1);
         var tmpl = result.resourceTemplates().getFirst();
@@ -797,14 +805,14 @@ class ResourceRegistryTest {
         });
 
         // resources/list returns size WITHOUT loading content
-        var listResult =
-                (ListResourcesResult) handlers.get("resources/list").handle(DefaultDispatchContext.noop(), null);
+        var listResult = (ListResourcesResult)
+                handlers.get("resources/list").handle(DefaultDispatchContext.stateless(server), null);
         assertThat(listResult.resources().getFirst().size()).isEqualTo(4096L);
         assertThat(contentLoaded).isFalse();
 
         // resources/read triggers lazy content load
-        runInVirtualThread(() ->
-                handlers.get("resources/read").handle(DefaultDispatchContext.noop(), Map.of("uri", "test://sized")));
+        runInVirtualThread(() -> handlers.get("resources/read")
+                .handle(DefaultDispatchContext.stateless(server), Map.of("uri", "test://sized")));
         assertThat(contentLoaded).isTrue();
     }
 
