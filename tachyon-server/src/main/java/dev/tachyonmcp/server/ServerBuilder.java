@@ -41,6 +41,7 @@ import dev.tachyonmcp.transport.netty.NettyServerConfig;
 import io.netty.channel.ChannelPipeline;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -650,13 +651,14 @@ public final class ServerBuilder {
             }
         }
         if (!config.resourceCompletions.isEmpty()) {
-            var knownTemplates = config.templates.stream()
-                    .map(t -> t.descriptor().uriTemplate())
-                    .collect(Collectors.toSet());
+            var knownResources = config.resources.stream()
+                    .map(r -> r.descriptor().uri())
+                    .collect(Collectors.toCollection(HashSet::new));
+            config.templates.stream().map(t -> t.descriptor().uriTemplate()).forEach(knownResources::add);
             for (var c : config.resourceCompletions) {
-                if (!knownTemplates.contains(c.uriOrTemplate())) {
+                if (!knownResources.contains(c.uriOrTemplate())) {
                     logger.warn(
-                            "resourceCompletion('{}') references no registered resource template; "
+                            "resourceCompletion('{}') references no registered resource or resource template; "
                                     + "completion will never match",
                             c.uriOrTemplate());
                 }

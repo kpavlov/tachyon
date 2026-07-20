@@ -36,7 +36,8 @@ mvn spotless:apply  # auto-fix
 - **Tests**: JUnit 6 + Kotest (Kotlin) / AssertJ (Java) + Awaitility. `@TempDir` for unit, port 0 for E2E. Prefer E2E, esp. long scenarios; unit only when E2E can't cover, drop unit if E2E already does. No tautologies. Many asserts per test.
 - **Nullability**: JSpecify `@Nullable`/`@NonNull`. `@NullMarked` at package level.
 - **Copyright**: `Copyright (c) 2026 Konstantin Pavlov and contributors.` in file headers everywhere; don't overwrite existing attributions.
-- **No comments** unless spec needs explain.
+- **No comments in code** unless spec needs explain.
+- **Javadocs for public API** - this OSS library for users
 - `git mv` for files.
 - Use MCP tools.
 - **Format**: Check on `make lint`, fix with `make format`.

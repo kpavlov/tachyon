@@ -10,6 +10,9 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.domain.UriTemplateValue;
+import dev.tachyonmcp.server.features.completions.AsyncCompletionHandler;
+import dev.tachyonmcp.server.features.completions.CompletionHandler;
+import dev.tachyonmcp.server.features.completions.CompletionResult;
 import dev.tachyonmcp.server.features.prompts.PromptResult;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.io.IOException;
@@ -94,6 +97,41 @@ class ServerBuilderTest {
             assertThat(server.resources().find("async-resource")).isPresent();
             assertThat(((DefaultTachyonServer) server).resolveCapabilities().prompts())
                     .isNotNull();
+        }
+    }
+
+    @Test
+    void retainsCompletionRegistrationForPlainResource() {
+        CompletionHandler handler = (ctx, request) -> CompletionResult.of(List.of("sync-completion"));
+        try (var server = TachyonServer.builder()
+                .resource(
+                        resource -> resource.name("sync-resource").uri("test://sync-completed"),
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "text"))
+                .resourceCompletion("test://sync-completed", handler)
+                .build()) {
+            assertThat(server.completions().findForResource("test://sync-completed"))
+                    .contains(handler);
+        }
+    }
+
+    @Test
+    void retainsAsyncCompletionRegistrations() {
+        AsyncCompletionHandler promptHandler =
+                (ctx, request) -> CompletableFuture.completedFuture(CompletionResult.of(List.of("prompt-completion")));
+        AsyncCompletionHandler resourceHandler = (ctx, request) ->
+                CompletableFuture.completedFuture(CompletionResult.of(List.of("resource-completion")));
+        try (var server = TachyonServer.builder()
+                .prompt(prompt -> prompt.name("async-completed-prompt"), List.of(PromptMessage.user("prompt")))
+                .resource(
+                        resource -> resource.name("async-resource").uri("test://async-completed"),
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "text"))
+                .asyncPromptCompletion("async-completed-prompt", promptHandler)
+                .asyncResourceCompletion("test://async-completed", resourceHandler)
+                .build()) {
+            assertThat(server.completions().findForPrompt("async-completed-prompt"))
+                    .contains(promptHandler);
+            assertThat(server.completions().findForResource("test://async-completed"))
+                    .contains(resourceHandler);
         }
     }
 

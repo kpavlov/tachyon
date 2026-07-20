@@ -145,7 +145,7 @@ then `Thread.sleep(300)` before returning, so the response is appended only *aft
 reconnected and run its one-shot replay. Without the fallback the reconnecting client never receives
 the response; with it, the response is delivered live on the resumed stream.
 
-[SseReplayPerStreamTest](e2e/src/test/java/dev/tachyonmcp/e2e/SseReplayPerStreamTest.java) guards the companion invariant: a resumed stream must not receive another
+[SseReplayPerStreamTest](../e2e/src/test/java/dev/tachyonmcp/e2e/SseReplayPerStreamTest.java) guards the companion invariant: a resumed stream must not receive another
 stream's messages.
 
 ## Touch points

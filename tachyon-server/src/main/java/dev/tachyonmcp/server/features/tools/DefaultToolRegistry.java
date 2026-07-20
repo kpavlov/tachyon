@@ -53,7 +53,7 @@ import tools.jackson.databind.JsonNode;
  * AbstractRegistry for tool handlers with input/output schema validation.
  */
 @InternalApi
-public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHandler> implements Tools {
+public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHandler> implements ToolRegistry {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultToolRegistry.class);
 

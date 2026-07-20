@@ -9,8 +9,5 @@ import java.util.concurrent.CompletableFuture;
 
 public interface CityProvider {
 
-    /**
-     * Returns city names matching the given (possibly partial) query, for completion suggestions.
-     */
     CompletableFuture<List<String>> searchCities(String query);
 }
