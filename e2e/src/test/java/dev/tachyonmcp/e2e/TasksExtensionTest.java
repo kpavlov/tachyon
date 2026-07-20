@@ -13,6 +13,8 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.server.domain.TaskResult;
+import dev.tachyonmcp.server.features.tasks.DefaultTaskRegistry;
+import dev.tachyonmcp.server.features.tasks.TaskState;
 import dev.tachyonmcp.server.features.tasks.TasksExtension;
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
@@ -191,6 +193,36 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
             assertThat(response.body()).contains("\"status\":\"working\"");
             assertThat(response.body()).contains("\"taskId\":\"");
             assertThat(response.body()).contains("\"createdAt\":");
+        }
+    }
+
+    @Test
+    void shouldNotifyTaskStatusWithCallerSuppliedMessage() throws Exception {
+        startServer(it -> it.tool(
+                        new AbstractToolHandler(ToolDescriptor.builder()
+                                .name("update-status-sync")
+                                .build()) {
+                            @Override
+                            public ToolResult handle(InteractionContext ctx, ToolRequest req) {
+                                var task =
+                                        ((DispatchContext) ctx).engine().tasks().create();
+                                ((DefaultTaskRegistry)
+                                                ((DispatchContext) ctx).engine().tasks())
+                                        .updateStatus(task.id(), TaskState.WORKING, "step 1 of 3");
+                                return ToolResult.text("ok");
+                            }
+                        })
+                .extension(TasksExtension.instance())
+                .build());
+
+        try (var client = createTestClient()) {
+            var sessionId = initializeWithExtension(client);
+
+            var response = client.post(sessionId, """
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"update-status-sync","arguments":{}}}
+                    """);
+            assertThat(response.body()).contains("\"statusMessage\":\"step 1 of 3\"");
+            assertThat(response.body()).doesNotContain("\"statusMessage\":\"WORKING\"");
         }
     }
 

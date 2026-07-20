@@ -43,6 +43,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
     private final ServerEngine server;
     private final TaskIdGenerator taskIdGenerator;
     private final Duration defaultKeepAlive;
+    private final @Nullable Duration defaultPollInterval;
     private final AbstractJanitor janitor = new AbstractJanitor("task-janitor") {
         @Override
         protected void sweep() {
@@ -54,6 +55,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
         super(config.pageSize());
         this.taskIdGenerator = DefaultTaskIdGenerator.INSTANCE;
         this.defaultKeepAlive = config.keepAlive();
+        this.defaultPollInterval = config.pollInterval();
         this.server = server;
     }
 
@@ -79,7 +81,8 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
     @Override
     public Task create(TaskOptions options) {
         var keepAlive = options.keepAlive() != null ? options.keepAlive() : defaultKeepAlive;
-        return createTask(options.id(), options.ttl(), options.meta(), null, null, keepAlive);
+        var pollInterval = options.pollInterval() != null ? options.pollInterval() : defaultPollInterval;
+        return createTask(options.id(), options.ttl(), options.meta(), null, null, keepAlive, pollInterval);
     }
 
     @Override
@@ -88,7 +91,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
             @Nullable Map<String, JsonNode> meta,
             @Nullable String sessionId,
             @Nullable Object progressToken) {
-        return createTask(null, ttl, meta, sessionId, progressToken, defaultKeepAlive);
+        return createTask(null, ttl, meta, sessionId, progressToken, defaultKeepAlive, defaultPollInterval);
     }
 
     private TaskEntry createTask(
@@ -97,10 +100,12 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
             @Nullable Map<String, JsonNode> meta,
             @Nullable String sessionId,
             @Nullable Object progressToken,
-            Duration keepAlive) {
+            Duration keepAlive,
+            @Nullable Duration pollInterval) {
         var id = requestedId != null ? requestedId : taskIdGenerator.generateTaskId(meta, sessionId);
         var descriptor = TaskDescriptor.builder().id(id).build();
-        var entry = new TaskEntry(descriptor, id, TaskState.SUBMITTED, ttl, sessionId, progressToken, meta, keepAlive);
+        var entry = new TaskEntry(
+                descriptor, id, TaskState.SUBMITTED, ttl, sessionId, progressToken, meta, keepAlive, pollInterval);
         if (!addItemIfAbsent(entry)) {
             throw new IllegalArgumentException("Task '" + id + "' already exists");
         }

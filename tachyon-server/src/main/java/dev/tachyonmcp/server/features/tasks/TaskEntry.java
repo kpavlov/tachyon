@@ -32,8 +32,9 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     private final @Nullable Map<String, JsonNode> meta;
     private final AtomicReference<TaskState> status;
     private final long createdAt;
-    private final @Nullable Duration ttl;
+    private final @Nullable Long ttl;
     private final Duration keepAlive;
+    private final @Nullable Duration pollInterval;
     private volatile long lastUpdatedAt;
     private volatile long expiredAt;
     private volatile @Nullable String statusMessage;
@@ -107,6 +108,19 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             @Nullable Object progressToken,
             @Nullable Map<String, JsonNode> meta,
             Duration keepAlive) {
+        this(descriptor, id, status, ttl, sessionId, progressToken, meta, keepAlive, null);
+    }
+
+    public TaskEntry(
+            TaskDescriptor descriptor,
+            String id,
+            TaskState status,
+            @Nullable Duration ttl,
+            @Nullable String sessionId,
+            @Nullable Object progressToken,
+            @Nullable Map<String, JsonNode> meta,
+            Duration keepAlive,
+            @Nullable Duration pollInterval) {
         this.descriptor = descriptor;
         this.id = id;
         this.sessionId = sessionId;
@@ -114,8 +128,9 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         this.status = new AtomicReference<>(status);
         this.createdAt = System.currentTimeMillis();
         this.lastUpdatedAt = this.createdAt;
-        this.ttl = ttl;
+        this.ttl = ttl != null ? ttl.toMillis() : null;
         this.keepAlive = Objects.requireNonNull(keepAlive, "keepAlive");
+        this.pollInterval = pollInterval;
         this.progressToken = progressToken;
     }
 
@@ -164,13 +179,18 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     }
 
     @Override
-    public @Nullable Duration ttl() {
+    public @Nullable Long ttl() {
         return ttl;
     }
 
     /** How long after this task reaches a terminal state its result stays retrievable. */
     public Duration keepAlive() {
         return keepAlive;
+    }
+
+    @Override
+    public @Nullable Duration pollInterval() {
+        return pollInterval;
     }
 
     @Override
@@ -251,10 +271,6 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         return lastUpdatedAt;
     }
 
-    public double ttlSeconds() {
-        return ttl != null ? ttl.getSeconds() : 0.0;
-    }
-
     public @Nullable String resultJson() {
         if (result instanceof TaskResult.Completed c) {
             return serializeResult(c.content(), c.structuredContent());
@@ -314,10 +330,10 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     }
 
     public boolean isExpired() {
-        if (ttl == null || ttl.isNegative() || ttl.isZero()) {
+        if (ttl == null || ttl <= 0) {
             return false;
         }
-        return System.currentTimeMillis() - lastUpdatedAt > ttl.toMillis();
+        return System.currentTimeMillis() - lastUpdatedAt > ttl;
     }
 
     /** Whether this task's result has outlived its {@code keepAlive} retention window. */

@@ -6,7 +6,6 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.ObjectMapper;
 
 class ResourceTemplateTest extends AbstractStatelessMcpE2eTest {
 
@@ -195,8 +194,6 @@ class ResourceTemplateTest extends AbstractStatelessMcpE2eTest {
                 {"jsonrpc":"2.0","id":2,"method":"resources/templates/list"}
                 """);
 
-            var mapper = new ObjectMapper();
-            var templates = mapper.readTree(response.body()).at("/result/resourceTemplates");
             assertThatJson(response.body())
                     .inPath("$.result.resourceTemplates")
                     .isArray()

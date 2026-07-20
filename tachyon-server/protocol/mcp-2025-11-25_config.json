@@ -5,13 +5,20 @@
     "JSONValue": "tools.jackson.databind.ValueNode",
     "JSONObject": "tools.jackson.databind.node.ObjectNode",
     "JSONArray": "tools.jackson.databind.node.ArrayNode",
-    "Tool.inputSchema": "String",
-    "Tool.outputSchema": "String",
     "ElicitRequestFormParams.requestedSchema": "String",
     "Resource.size": "Long",
+    "CancelTaskResult.pollInterval": "Long",
+    "CancelTaskResult.ttl": "Long",
+    "GetTaskResult.pollInterval": "Long",
+    "GetTaskResult.ttl": "Long",
     "ResourceLink.size": "Long",
+    "Task.pollInterval": "Long",
+    "Task.ttl": "Long",
     "TaskMetadata.ttl": "Long",
-    "TaskStatusNotificationParams.ttl": "Long"
+    "TaskStatusNotificationParams.pollInterval": "Long",
+    "TaskStatusNotificationParams.ttl": "Long",
+    "Tool.inputSchema": "String",
+    "Tool.outputSchema": "String"
   },
   "additionalProperties": {
     "ClientCapabilities": [
