@@ -53,6 +53,10 @@ runner. IDs must be unique — `create` throws `IllegalArgumentException` if a t
 already exists. Leave `id` unset to let the server generate one (`UUID.randomUUID()`-backed,
 same idiom as session IDs).
 
+Supply `TaskOptions.builder().keepAlive(Duration.ofMinutes(30)).build()` to override how long
+this task's result stays retrievable via `tasks/get`/`tasks/result` after it reaches a terminal
+state, overriding the server-wide default (`TasksConfig.keepAlive`, 5 minutes).
+
 Status notifications are broadcast automatically on each transition.
 
 ## Task-augmented tool calls
@@ -99,7 +103,15 @@ Clients that include `"extensions": {"io.modelcontextprotocol/tasks": {}}` in th
 
 ## Task janitor
 
-Tachyon runs a background janitor that removes stale tasks past their TTL. Configure TTL per task or rely on the server default (30 s session TTL applies).
+A background janitor sweeps every 30s and does two independent things:
+
+- **Active tasks** (`WORKING`/`INPUT_REQUIRED`) past their `task.ttl` are transitioned to `FAILED`.
+- **Terminal tasks'** (`COMPLETED`/`FAILED`/`CANCELLED`) results are dropped from memory once
+  `keepAlive` has elapsed since they entered the terminal state — default 5 minutes, configurable
+  server-wide via `TasksConfig.keepAlive`/`CapabilitiesConfig.Builder.tasksKeepAlive(...)`
+  (Kotlin DSL: `tasks { keepAlive = 10.minutes }`), or per task via `TaskOptions.keepAlive(...)`.
+  Once dropped, `tasks/get`/`tasks/result` return "Task not found", same as an ID that never
+  existed.
 
 ## MCP methods
 

@@ -8,12 +8,10 @@ import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.runtime.SseConnection;
+import dev.tachyonmcp.server.internal.AbstractJanitor;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Optional;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,16 +23,11 @@ public class SessionManager implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(SessionManager.class);
 
     private final SessionStore store;
-    private final ScheduledExecutorService janitor;
+    private @Nullable AbstractJanitor janitor;
 
     /** Creates a session manager backed by the given store. */
     public SessionManager(SessionStore store) {
         this.store = store;
-        this.janitor = Executors.newSingleThreadScheduledExecutor(r -> {
-            var t = new Thread(r, "session-janitor");
-            t.setDaemon(true);
-            return t;
-        });
     }
 
     /** Creates a session with no initial connection. */
@@ -79,19 +72,14 @@ public class SessionManager implements AutoCloseable {
     /** Starts the background janitor that closes expired sessions. */
     public void startJanitor(Duration ttl, Duration interval) {
         final var ttlNanos = ttl.toNanos();
-        final var intervalMs = interval.toMillis();
-        janitor.scheduleWithFixedDelay(
-                () -> {
-                    try {
-                        sweep(ttlNanos);
-                    } catch (Exception e) {
-                        logger.warn("Janitor sweep failed", e);
-                    }
-                },
-                intervalMs,
-                intervalMs,
-                TimeUnit.MILLISECONDS);
-        logger.debug("Session janitor started (interval={}ms, ttl={}ms)", intervalMs, ttlNanos / 1_000_000);
+        janitor = new AbstractJanitor("session-janitor") {
+            @Override
+            protected void sweep() {
+                SessionManager.this.sweep(ttlNanos);
+            }
+        };
+        janitor.start(interval);
+        logger.debug("Session janitor started (interval={}ms, ttl={}ms)", interval.toMillis(), ttlNanos / 1_000_000);
     }
 
     /** One janitor pass: closes and evicts sessions that are CLOSED or idle beyond the TTL. */
@@ -118,7 +106,9 @@ public class SessionManager implements AutoCloseable {
 
     public void close() {
         try {
-            janitor.shutdownNow();
+            if (janitor != null) {
+                janitor.close();
+            }
             store.values().forEach(Session::close);
             store.close();
             logger.debug("SessionManager closed");

@@ -24,6 +24,10 @@ public interface TaskOptions {
     @Nullable
     Duration ttl();
 
+    /** How long after this task reaches a terminal state its result stays retrievable, or {@code null} to use the server default. */
+    @Nullable
+    Duration keepAlive();
+
     @Nullable
     Map<String, JsonNode> meta();
 
@@ -42,6 +46,8 @@ public interface TaskOptions {
         Builder id(@Nullable String id);
 
         Builder ttl(@Nullable Duration ttl);
+
+        Builder keepAlive(@Nullable Duration keepAlive);
 
         Builder meta(@Nullable Map<String, ? extends JsonNode> meta);
 

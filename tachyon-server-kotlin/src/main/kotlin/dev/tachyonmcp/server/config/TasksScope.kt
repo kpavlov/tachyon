@@ -3,7 +3,11 @@
 package dev.tachyonmcp.server.config
 
 import dev.tachyonmcp.server.TachyonDsl
+import dev.tachyonmcp.server.config.TasksConfig.DEFAULT_TASK_KEEP_ALIVE
 import dev.tachyonmcp.server.features.Pagination
+import kotlin.time.Duration
+import kotlin.time.toJavaDuration
+import kotlin.time.toKotlinDuration
 
 @TachyonDsl
 public class TasksScope
@@ -24,6 +28,12 @@ public class TasksScope
         /** Default page size when a list request omits its limit. */
         public var pageSize: Int = Pagination.DEFAULT_PAGE_SIZE
 
+        /**
+         * How long a completed/failed/cancelled task's result stays retrievable before eviction.
+         * Zero or negative disables eviction — the result is kept indefinitely.
+         */
+        public var keepAlive: Duration = DEFAULT_TASK_KEEP_ALIVE.toKotlinDuration()
+
         @PublishedApi
         internal fun toConfig(): TasksConfig =
             TasksConfig
@@ -33,5 +43,6 @@ public class TasksScope
                 .cancel(cancel)
                 .requests(requests)
                 .pageSize(pageSize)
+                .keepAlive(keepAlive.toJavaDuration())
                 .build()
     }

@@ -5,33 +5,44 @@
 package dev.tachyonmcp.server.config;
 
 import dev.tachyonmcp.server.features.Pagination;
+import java.time.Duration;
+import java.util.Objects;
 
 /**
  * Configuration for the tasks capability. Fields map 1:1 to the MCP {@code tasks} capability
  * object ({@code tasks.list}, {@code tasks.cancel}, {@code tasks.requests.tools.call}).
  *
- * @param enabled  whether the {@code tasks} capability is advertised at all (default
- *                 {@code false}); the capability is also advertised, regardless of this flag,
- *                 when a registered tool supports task augmentation
- * @param list     whether {@code tasks/list} is exposed (default {@code false})
- * @param cancel   whether {@code tasks/cancel} is supported (default {@code false})
- * @param requests whether task-augmented {@code tools/call} requests are accepted
- *                 (default {@code false})
- * @param pageSize default page size when a list request omits its limit
+ * @param enabled   whether the {@code tasks} capability is advertised at all (default
+ *                  {@code false}); the capability is also advertised, regardless of this flag,
+ *                  when a registered tool supports task augmentation
+ * @param list      whether {@code tasks/list} is exposed (default {@code false})
+ * @param cancel    whether {@code tasks/cancel} is supported (default {@code false})
+ * @param requests  whether task-augmented {@code tools/call} requests are accepted
+ *                  (default {@code false})
+ * @param pageSize  default page size when a list request omits its limit
+ * @param keepAlive default retention window for a terminal task's result before it's dropped
+ *                  from memory (default 5 minutes); overridable per task via
+ *                  {@code TaskOptions.keepAlive()}
  */
-public record TasksConfig(boolean enabled, boolean list, boolean cancel, boolean requests, int pageSize) {
+public record TasksConfig(
+        boolean enabled, boolean list, boolean cancel, boolean requests, int pageSize, Duration keepAlive) {
 
     static final boolean DEFAULT_TASKS_ENABLED = false;
     static final boolean DEFAULT_TASK_LIST = false;
     static final boolean DEFAULT_TASK_CANCEL = false;
     static final boolean DEFAULT_TASK_REQUESTS = false;
 
-    static final TasksConfig DEFAULT = new TasksConfig(false, false, false, false, Pagination.DEFAULT_PAGE_SIZE);
+    /** Public (unlike the defaults above) — {@code TaskEntry} in a different package reuses this as the resolved default. */
+    public static final Duration DEFAULT_TASK_KEEP_ALIVE = Duration.ofMinutes(5);
+
+    static final TasksConfig DEFAULT =
+            new TasksConfig(false, false, false, false, Pagination.DEFAULT_PAGE_SIZE, DEFAULT_TASK_KEEP_ALIVE);
 
     public TasksConfig {
         if (pageSize <= 0) {
             throw new IllegalArgumentException("pageSize must be positive, got: " + pageSize);
         }
+        Objects.requireNonNull(keepAlive, "keepAlive");
     }
 
     public static Builder builder() {
@@ -48,6 +59,7 @@ public record TasksConfig(boolean enabled, boolean list, boolean cancel, boolean
         private boolean cancel = DEFAULT.cancel;
         private boolean requests = DEFAULT.requests;
         private int pageSize = DEFAULT.pageSize;
+        private Duration keepAlive = DEFAULT.keepAlive;
 
         private Builder() {}
 
@@ -76,6 +88,12 @@ public record TasksConfig(boolean enabled, boolean list, boolean cancel, boolean
             return this;
         }
 
+        /** Sets the default retention window for a terminal task's result. Default is 5 minutes. */
+        public Builder keepAlive(Duration keepAlive) {
+            this.keepAlive = Objects.requireNonNull(keepAlive, "keepAlive cannot be null");
+            return this;
+        }
+
         /**
          * Enables the tasks capability with the list surface on.
          */
@@ -84,7 +102,7 @@ public record TasksConfig(boolean enabled, boolean list, boolean cancel, boolean
         }
 
         public TasksConfig build() {
-            return new TasksConfig(enabled, list, cancel, requests, pageSize);
+            return new TasksConfig(enabled, list, cancel, requests, pageSize, keepAlive);
         }
     }
 }

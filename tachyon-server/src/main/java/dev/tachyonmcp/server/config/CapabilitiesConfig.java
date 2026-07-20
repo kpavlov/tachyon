@@ -2,6 +2,8 @@
 
 package dev.tachyonmcp.server.config;
 
+import java.time.Duration;
+
 /**
  * Configuration of which MCP capabilities to enable and their behaviour.
  *
@@ -82,7 +84,8 @@ public record CapabilitiesConfig(
                     .list(config.list())
                     .cancel(config.cancel())
                     .requests(config.requests())
-                    .pageSize(config.pageSize());
+                    .pageSize(config.pageSize())
+                    .keepAlive(config.keepAlive());
             return this;
         }
 
@@ -172,6 +175,11 @@ public record CapabilitiesConfig(
 
         public Builder tasksPageSize(int tasksPageSize) {
             tasksBuilder.pageSize(tasksPageSize);
+            return this;
+        }
+
+        public Builder tasksKeepAlive(Duration tasksKeepAlive) {
+            tasksBuilder.keepAlive(tasksKeepAlive);
             return this;
         }
 
