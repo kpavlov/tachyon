@@ -5,7 +5,6 @@
 package dev.tachyonmcp.server.features.completions;
 
 import java.util.Optional;
-import org.jspecify.annotations.Nullable;
 
 /**
  * Façade interface for {@code completion/complete} providers, keyed by the MCP reference they answer for:
@@ -28,16 +27,6 @@ public interface Completions {
     Completions registerForPrompt(String promptName, CompletionHandler handler);
 
     /**
-     * Registers a completion handler for a prompt's arguments, scoped to an extension.
-     *
-     * @param promptName the prompt name
-     * @param extensionId the extension that owns this handler, or {@code null} if not extension-scoped
-     * @param handler the completion handler
-     * @return this registry
-     */
-    Completions registerForPrompt(String promptName, @Nullable String extensionId, CompletionHandler handler);
-
-    /**
      * Registers an asynchronous completion handler for a prompt's arguments.
      *
      * @param promptName the prompt name
@@ -46,19 +35,6 @@ public interface Completions {
      */
     default Completions registerForPromptAsync(String promptName, AsyncCompletionHandler handler) {
         return registerForPrompt(promptName, handler);
-    }
-
-    /**
-     * Registers an asynchronous completion handler for a prompt's arguments, scoped to an extension.
-     *
-     * @param promptName the prompt name
-     * @param extensionId the extension that owns this handler, or {@code null} if not extension-scoped
-     * @param handler the asynchronous completion handler
-     * @return this registry
-     */
-    default Completions registerForPromptAsync(
-            String promptName, @Nullable String extensionId, AsyncCompletionHandler handler) {
-        return registerForPrompt(promptName, extensionId, handler);
     }
 
     /**
@@ -71,17 +47,6 @@ public interface Completions {
     Completions registerForResource(String uriOrTemplate, CompletionHandler handler);
 
     /**
-     * Registers a completion handler for a resource or resource-template's variables, scoped to an
-     * extension.
-     *
-     * @param uriOrTemplate the resource URI or template
-     * @param extensionId the extension that owns this handler, or {@code null} if not extension-scoped
-     * @param handler the completion handler
-     * @return this registry
-     */
-    Completions registerForResource(String uriOrTemplate, @Nullable String extensionId, CompletionHandler handler);
-
-    /**
      * Registers an asynchronous completion handler for a resource or resource-template's variables.
      *
      * @param uriOrTemplate the resource URI, or the resource template's {@code uriTemplate}
@@ -90,20 +55,6 @@ public interface Completions {
      */
     default Completions registerForResourceAsync(String uriOrTemplate, AsyncCompletionHandler handler) {
         return registerForResource(uriOrTemplate, handler);
-    }
-
-    /**
-     * Registers an asynchronous completion handler for a resource or resource-template's variables,
-     * scoped to an extension.
-     *
-     * @param uriOrTemplate the resource URI or template
-     * @param extensionId the extension that owns this handler, or {@code null} if not extension-scoped
-     * @param handler the asynchronous completion handler
-     * @return this registry
-     */
-    default Completions registerForResourceAsync(
-            String uriOrTemplate, @Nullable String extensionId, AsyncCompletionHandler handler) {
-        return registerForResource(uriOrTemplate, extensionId, handler);
     }
 
     /**

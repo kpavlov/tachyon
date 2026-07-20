@@ -42,7 +42,7 @@ class McpOperationHandlerTest {
 
     @AfterEach
     void tearDown() {
-        channel.close();
+        channel.finish();
         server.close();
     }
 
