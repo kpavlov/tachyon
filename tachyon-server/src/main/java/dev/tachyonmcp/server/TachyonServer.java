@@ -73,7 +73,7 @@ public interface TachyonServer extends AutoCloseable {
      * @param handler the tool handler to register
      * @deprecated Use {@code tools().register(handler)}.
      */
-    @Deprecated(since = "1.0.0-beta.10")
+    @Deprecated(since = "1.0.0-beta.11")
     default void registerTool(ToolHandler handler) {
         tools().register(handler);
     }
@@ -89,7 +89,7 @@ public interface TachyonServer extends AutoCloseable {
      * @deprecated Use {@link #tools()} and
      *             {@link Tools#register(String, String, String, String, ToolFn)}.
      */
-    @Deprecated(since = "1.0.0-beta.10")
+    @Deprecated(since = "1.0.0-beta.11")
     default void registerTool(
             String name,
             @Nullable String description,
@@ -106,7 +106,7 @@ public interface TachyonServer extends AutoCloseable {
      * @param handler    the handler for resource requests
      * @deprecated Use {@code resources().register(descriptor, handler)}.
      */
-    @Deprecated(since = "1.0.0-beta.10")
+    @Deprecated(since = "1.0.0-beta.11")
     default void registerResource(ResourceDescriptor descriptor, ResourceHandler handler) {
         resources().register(descriptor, handler);
     }
@@ -116,7 +116,7 @@ public interface TachyonServer extends AutoCloseable {
      *
      * @deprecated Use {@code prompts().register(descriptor, handler)}.
      */
-    @Deprecated(since = "1.0.0-beta.10")
+    @Deprecated(since = "1.0.0-beta.11")
     default void registerPrompt(PromptDescriptor descriptor, PromptHandler handler) {
         prompts().register(descriptor, handler);
     }
@@ -128,7 +128,7 @@ public interface TachyonServer extends AutoCloseable {
      * @return the matching tool descriptor, or {@code null} if no tool is registered with that name
      * @deprecated Use {@code tools().find(name)}.
      */
-    @Deprecated(since = "1.0.0-beta.10")
+    @Deprecated(since = "1.0.0-beta.11")
     @Nullable
     default ToolDescriptor getTool(String name) {
         return tools().find(name).orElse(null);
