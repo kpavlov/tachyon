@@ -46,18 +46,20 @@
     import dev.tachyonmcp.server.features.tools.ToolHandler;
     import dev.tachyonmcp.server.features.tools.ToolResult;
 
-    void main() {
-        TachyonServer.builder()
-            .name("weather-mcp")
-            .tool(ToolHandler.of(
-                b -> b.name("get_forecast")
-                    .description("Get weather forecast")
-                    .inputSchema("""
-                    {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
-                    """),
-                (ctx, args) -> ToolResult.text("☀️ 22°C")))
-            .port(8080)
-            .start();
+    public class WeatherMcpServer {
+        public static void main(String... args) {
+            TachyonServer.builder()
+                .name("weather-mcp")
+                .tool(ToolHandler.of(
+                    b -> b.name("get_forecast")
+                        .description("Get weather forecast")
+                        .inputSchema("""
+                        {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
+                        """),
+                    (ctx, args) -> ToolResult.text("☀️ 22°C")))
+                .port(8080)
+                .start();
+        }
     }
     ```
 
@@ -97,7 +99,7 @@ Full **2025-11-25** MCP surface over Streamable HTTP, verified by the official c
 | **Resources** | Static + dynamic handlers, URI templates, subscribe/unsubscribe with `updated` notifications, text & blob content |
 | **Prompts** | List/get with resolver handlers, input-required (MRTR) flow, `list_changed` |
 | **Tasks** | Full `tasks/*` lifecycle with enforced state machine, status broadcast, stale-task janitor, `TasksExtension` (SEP-1686) |
-| **Client calls** | `sampling/createMessage`, elicitation (form **and** URL modes), bidirectional `cancelled` |
+| **Client calls** | `sampling/createMessage`, elicitation (form **and** URL modes), client-initiated `cancelled` |
 | **Sessions** | Stateless by default; opt-in SSE resumability, `Last-Event-ID` replay, TTL janitor, pluggable store/ID generator |
 | **Transport** | Native transport auto-detect, backpressure watermarks, graceful drain-on-shutdown, CORS + origin/DNS-rebinding protection |
 | **Extensions** | Negotiable protocol extensions (SEP-2133) with extension-gated tool visibility |
@@ -115,7 +117,7 @@ Full **2025-11-25** MCP surface over Streamable HTTP, verified by the official c
 
 **Tasks** — `tasks/list|get|cancel|result`; state machine `SUBMITTED → WORKING → INPUT_REQUIRED → COMPLETED/FAILED/CANCELLED` (+ `REJECTED`/`AUTH_REQUIRED`); `notifications/tasks/status` on every transition; stale-task janitor; per-tool `execution.taskSupport`; `TasksExtension` ([SEP-1686](https://modelcontextprotocol.io/seps/1686-tasks)) exposing `create_task` + `task://{id}`, hidden from clients that don't negotiate it.
 
-**Logging & client calls** — `logging/setLevel` per session, `notifications/message` above threshold, progress notifications; `sampling/createMessage`; elicitation form + URL modes; bidirectional `notifications/cancelled`.
+**Logging & client calls** — `logging/setLevel` per session, `notifications/message` above threshold, progress notifications; `sampling/createMessage`; elicitation form + URL modes; client-initiated `notifications/cancelled`.
 
 **Transport & sessions** — Netty 4.2, `io_uring`/`epoll`/`kqueue`/NIO auto-detect, platform-thread event loops + virtual-thread handlers, writability backpressure, configurable idle timeouts; stateless or in-memory sessions, 5s janitor / 30s TTL, SSE disconnect survives (event-log replay on reconnect), graceful drain (`shutdownGracePeriod`, default 5s) before force-interrupt.
 

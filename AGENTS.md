@@ -45,5 +45,5 @@ mvn spotless:apply  # auto-fix
   - Each scope class gets its own `*Scope.kt` file.
   - `TachyonServerBuilder` wraps `ServerBuilder` as the DSL receiver. Scope methods on `TachyonServerBuilder` use clean names (`info`, `capabilities`, `network`, `session`) with zero Java member conflicts.
   - Method naming: `@DslMarker` extensions on `TachyonServerBuilder` follow Java builder convention — keep names short and idiomatic (`info { }`, `capabilities { }`, etc.).
-  - Entry points: `TachyonServer(port) { }` (builds + starts transport), `tachyonServer(port) { }` (alias), `buildServer { }` (builds only, no transport).
+  - Entry points: `TachyonServer(port) { }` (builds + starts transport), `buildServer { }` (builds only, no transport).
   - Run Kotlin tests: `mvn test -pl tachyon-server-kotlin -am`.
