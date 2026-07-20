@@ -192,9 +192,9 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
                     "Prompt '" + name + "' returned a null CompletionStage",
                     () -> entry.handler().handleAsync(context, request),
                     context.engine().executor(),
-                    (result, ex) -> {
-                        if (ex != null) {
-                            logger.error("Prompt handler error for '{}'", name, HandlerFutures.unwrap(ex));
+                    (result, cause) -> {
+                        if (cause != null) {
+                            logger.error("Prompt handler error for '{}'", name, cause);
                             return JsonRpcErrors.internalError("Prompt handler failed");
                         }
                         return switch (result) {

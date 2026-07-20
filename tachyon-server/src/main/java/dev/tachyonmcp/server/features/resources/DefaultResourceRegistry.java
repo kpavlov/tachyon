@@ -531,9 +531,8 @@ public class DefaultResourceRegistry implements Resources {
                     "Resource handler for '" + uri + "' returned a null CompletionStage",
                     invoker,
                     context.engine().executor(),
-                    (contents, ex) -> {
-                        if (ex != null) {
-                            var cause = HandlerFutures.unwrap(ex);
+                    (contents, cause) -> {
+                        if (cause != null) {
                             if (cause instanceof InvalidArgumentException e) {
                                 return JsonRpcErrors.invalidParams(
                                         "invalid argument '" + e.argName() + "': " + e.getMessage());

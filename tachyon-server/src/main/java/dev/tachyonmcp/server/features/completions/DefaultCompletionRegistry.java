@@ -175,9 +175,8 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
                     "Completion handler for ref.type '" + refType + "' returned a null CompletionStage",
                     () -> handler.get().handleAsync(context, request),
                     context.engine().executor(),
-                    (result, ex) -> {
-                        if (ex != null) {
-                            var cause = HandlerFutures.unwrap(ex);
+                    (result, cause) -> {
+                        if (cause != null) {
                             if (cause instanceof InvalidArgumentException e) {
                                 return JsonRpcErrors.invalidParams(
                                         "invalid argument '" + e.argName() + "': " + e.getMessage());

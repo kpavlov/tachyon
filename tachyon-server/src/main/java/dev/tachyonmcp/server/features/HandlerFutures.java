@@ -85,7 +85,8 @@ public final class HandlerFutures {
     /**
      * Invokes a handler, guards against a synchronous throw or a {@code null} returned stage, and
      * maps the outcome via {@link #completeOn}. Shared registry-dispatch skeleton: obtain the
-     * handler's stage safely, then compose the result without blocking.
+     * handler's stage safely, then compose the result without blocking. The mapper receives the
+     * failure cause already {@link #unwrap unwrapped} (or {@code null} on success).
      */
     public static <R> CompletionStage<Object> invokeAndMap(
             String nullStageMessage,
@@ -101,6 +102,6 @@ public final class HandlerFutures {
         } catch (Exception e) {
             stage = CompletableFuture.failedFuture(e);
         }
-        return completeOn(stage, executor, resultMapper);
+        return completeOn(stage, executor, (result, ex) -> resultMapper.apply(result, ex == null ? null : unwrap(ex)));
     }
 }

@@ -312,9 +312,8 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                     "Tool '" + parsed.name() + "' returned a null CompletionStage",
                     () -> handler.handleAsync(context, request),
                     context.engine().executor(),
-                    (toolResult, ex) -> {
-                        if (ex != null) {
-                            var cause = HandlerFutures.unwrap(ex);
+                    (toolResult, cause) -> {
+                        if (cause != null) {
                             if (cause instanceof InvalidArgumentException e) {
                                 return invalidParams("invalid argument '" + e.argName() + "': " + e.getMessage());
                             }
