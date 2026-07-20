@@ -292,6 +292,78 @@ class TaskRegistryTest {
     }
 
     @Test
+    void taskResultNotExpiredBeforeKeepAliveElapses() {
+        var entry = new TaskEntry(
+                TaskDescriptor.builder().id("res-1").build(),
+                "res-1",
+                TaskState.WORKING,
+                null,
+                null,
+                null,
+                null,
+                Duration.ofMillis(200));
+        entry.complete(new TaskResult.Completed(null));
+        assertThat(entry.isResultExpired()).isFalse();
+    }
+
+    @Test
+    void taskResultExpiresAfterKeepAlive() throws Exception {
+        var entry = new TaskEntry(
+                TaskDescriptor.builder().id("res-2").build(),
+                "res-2",
+                TaskState.WORKING,
+                null,
+                null,
+                null,
+                null,
+                Duration.ofMillis(10));
+        entry.complete(new TaskResult.Completed(null));
+
+        var deadline = System.currentTimeMillis() + 500;
+        while (!entry.isResultExpired() && System.currentTimeMillis() < deadline) {
+            Thread.sleep(1);
+        }
+        assertThat(entry.isResultExpired()).isTrue();
+    }
+
+    @Test
+    void taskResultNeverExpiresWithZeroKeepAlive() {
+        var entry = new TaskEntry(
+                TaskDescriptor.builder().id("res-3").build(),
+                "res-3",
+                TaskState.WORKING,
+                null,
+                null,
+                null,
+                null,
+                Duration.ZERO);
+        entry.complete(new TaskResult.Completed(null));
+        assertThat(entry.isResultExpired()).isFalse();
+    }
+
+    @Test
+    void createWithKeepAliveOverrideAppliesToEntry() {
+        var entry = (TaskEntry) registry.create(
+                TaskOptions.builder().keepAlive(Duration.ofSeconds(1)).build());
+        assertThat(entry.keepAlive()).isEqualTo(Duration.ofSeconds(1));
+    }
+
+    @Test
+    void runJanitorSweepDropsExpiredTerminalTaskResult() throws Exception {
+        var entry = (TaskEntry) registry.create(
+                TaskOptions.builder().keepAlive(Duration.ofMillis(10)).build());
+        registry.completeTask(entry.id(), "{\"ok\":true}");
+
+        var deadline = System.currentTimeMillis() + 500;
+        while (!entry.isResultExpired() && System.currentTimeMillis() < deadline) {
+            Thread.sleep(1);
+        }
+        registry.runJanitorSweep();
+
+        assertThat(registry.get(entry.id())).isNull();
+    }
+
+    @Test
     void statusEnumFsmTerminalStates() {
         assertThat(TaskState.COMPLETED.isTerminal()).isTrue();
         assertThat(TaskState.FAILED.isTerminal()).isTrue();

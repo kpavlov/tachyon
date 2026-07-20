@@ -181,7 +181,11 @@ Full: `resources/java/PromptHandlerExample.java`
 ## Config️
 
 ### Capabilities `capabilities(cfg -> ...)`
-Configs: `FeatureConfig` (tools/prompts: `mode`, `listChanged`, `pageSize`), `ResourcesConfig` (+ `subscribe`), `TasksConfig` (`enabled`, `list`, `cancel`, `requests`, `pageSize`, mapping 1:1 to MCP `tasks.list`/`tasks.cancel`/`tasks.requests.tools.call`).
+
+Configs: `FeatureConfig` (tools/prompts: `mode`, `listChanged`, `pageSize`), `ResourcesConfig` (+ `subscribe`), 
+`TasksConfig` (`enabled`, `list`, `cancel`, `requests`, `pageSize`, 
+`keepAlive` (default 5 min — retention window for a terminal task's result), 
+mapping 1:1 to MCP `tasks.list`/`tasks.cancel`/`tasks.requests.tools.call`).
 
 Default `Mode.AUTO` advertises only registered features. Force `Mode.ON`/`Mode.OFF`. **`OFF` also blocks registration**: registry `register` becomes a debug-logged no-op, not merely hidden from `initialize`.
 

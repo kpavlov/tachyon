@@ -6,6 +6,7 @@ package dev.tachyonmcp.server.features.tasks;
 
 import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.server.ServerFeature;
+import dev.tachyonmcp.server.config.TasksConfig;
 import dev.tachyonmcp.server.domain.ContentBlock;
 import dev.tachyonmcp.server.domain.InputRequest;
 import dev.tachyonmcp.server.domain.Task;
@@ -32,22 +33,48 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     private final AtomicReference<TaskState> status;
     private final long createdAt;
     private final @Nullable Duration ttl;
+    private final Duration keepAlive;
     private volatile long lastUpdatedAt;
+    private volatile long expiredAt;
     private volatile @Nullable String statusMessage;
     private volatile @Nullable TaskResult result;
     private final CompletableFuture<TaskResult> completionFuture = new CompletableFuture<>();
     private final @Nullable Object progressToken;
 
     public TaskEntry(String id, @Nullable String description) {
-        this(TaskDescriptor.builder().id(id).build(), id, TaskState.WORKING, null, null, null, null);
+        this(
+                TaskDescriptor.builder().id(id).build(),
+                id,
+                TaskState.WORKING,
+                null,
+                null,
+                null,
+                null,
+                TasksConfig.DEFAULT_TASK_KEEP_ALIVE);
     }
 
     public TaskEntry(TaskDescriptor descriptor, String id, TaskState status, double ttl) {
-        this(descriptor, id, status, ttl > 0 ? Duration.ofSeconds((long) ttl) : null, null, null, null);
+        this(
+                descriptor,
+                id,
+                status,
+                ttl > 0 ? Duration.ofSeconds((long) ttl) : null,
+                null,
+                null,
+                null,
+                TasksConfig.DEFAULT_TASK_KEEP_ALIVE);
     }
 
     public TaskEntry(TaskDescriptor descriptor, String id, TaskState status, double ttl, @Nullable String sessionId) {
-        this(descriptor, id, status, ttl > 0 ? Duration.ofSeconds((long) ttl) : null, sessionId, null, null);
+        this(
+                descriptor,
+                id,
+                status,
+                ttl > 0 ? Duration.ofSeconds((long) ttl) : null,
+                sessionId,
+                null,
+                null,
+                TasksConfig.DEFAULT_TASK_KEEP_ALIVE);
     }
 
     public TaskEntry(
@@ -57,7 +84,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             @Nullable Duration ttl,
             @Nullable String sessionId,
             @Nullable Object progressToken) {
-        this(descriptor, id, status, ttl, sessionId, progressToken, null);
+        this(descriptor, id, status, ttl, sessionId, progressToken, null, TasksConfig.DEFAULT_TASK_KEEP_ALIVE);
     }
 
     public TaskEntry(
@@ -68,6 +95,18 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             @Nullable String sessionId,
             @Nullable Object progressToken,
             @Nullable Map<String, JsonNode> meta) {
+        this(descriptor, id, status, ttl, sessionId, progressToken, meta, TasksConfig.DEFAULT_TASK_KEEP_ALIVE);
+    }
+
+    public TaskEntry(
+            TaskDescriptor descriptor,
+            String id,
+            TaskState status,
+            @Nullable Duration ttl,
+            @Nullable String sessionId,
+            @Nullable Object progressToken,
+            @Nullable Map<String, JsonNode> meta,
+            Duration keepAlive) {
         this.descriptor = descriptor;
         this.id = id;
         this.sessionId = sessionId;
@@ -76,6 +115,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         this.createdAt = System.currentTimeMillis();
         this.lastUpdatedAt = this.createdAt;
         this.ttl = ttl;
+        this.keepAlive = Objects.requireNonNull(keepAlive, "keepAlive");
         this.progressToken = progressToken;
     }
 
@@ -126,6 +166,11 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     @Override
     public @Nullable Duration ttl() {
         return ttl;
+    }
+
+    /** How long after this task reaches a terminal state its result stays retrievable. */
+    public Duration keepAlive() {
+        return keepAlive;
     }
 
     @Override
@@ -255,6 +300,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         if (status.compareAndSet(current, newStatus)) {
             this.lastUpdatedAt = System.currentTimeMillis();
             if (newStatus.isTerminal()) {
+                this.expiredAt = computeExpiredAt(this.lastUpdatedAt);
                 if (this.result != null) {
                     completionFuture.complete(this.result);
                 } else {
@@ -272,6 +318,26 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             return false;
         }
         return System.currentTimeMillis() - lastUpdatedAt > ttl.toMillis();
+    }
+
+    /** Whether this task's result has outlived its {@code keepAlive} retention window. */
+    public boolean isResultExpired() {
+        var deadline = expiredAt;
+        return deadline != 0 && System.currentTimeMillis() > deadline;
+    }
+
+    /**
+     * Computes the absolute deadline at which the result expires, given the instant the task
+     * became terminal. {@code keepAlive <= 0} means "never expires" ({@link Long#MAX_VALUE}).
+     * Computed once at the terminal transition rather than on every {@link #isResultExpired()}
+     * call — {@code expiredAt} isn't exposed by the protocol, so there's no need to keep the raw
+     * terminal timestamp around.
+     */
+    private long computeExpiredAt(long terminalAtMillis) {
+        if (keepAlive.isNegative() || keepAlive.isZero()) {
+            return Long.MAX_VALUE;
+        }
+        return terminalAtMillis + keepAlive.toMillis();
     }
 
     public String createdAtIso() {

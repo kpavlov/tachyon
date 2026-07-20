@@ -15,6 +15,7 @@ import dev.tachyonmcp.server.domain.TaskResult;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.features.AbstractRegistry;
 import dev.tachyonmcp.server.features.ListRequests;
+import dev.tachyonmcp.server.internal.AbstractJanitor;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
@@ -23,11 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,11 +42,18 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
     private final ConcurrentHashMap<String, Future<?>> running = new ConcurrentHashMap<>();
     private final ServerEngine server;
     private final TaskIdGenerator taskIdGenerator;
-    private volatile @Nullable ScheduledExecutorService ttlJanitor;
+    private final Duration defaultKeepAlive;
+    private final AbstractJanitor janitor = new AbstractJanitor("task-janitor") {
+        @Override
+        protected void sweep() {
+            runJanitorSweep();
+        }
+    };
 
     public DefaultTaskRegistry(ServerEngine server, TasksConfig config) {
         super(config.pageSize());
         this.taskIdGenerator = DefaultTaskIdGenerator.INSTANCE;
+        this.defaultKeepAlive = config.keepAlive();
         this.server = server;
     }
 
@@ -74,7 +78,8 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
 
     @Override
     public Task create(TaskOptions options) {
-        return createTask(options.id(), options.ttl(), options.meta(), null, null);
+        var keepAlive = options.keepAlive() != null ? options.keepAlive() : defaultKeepAlive;
+        return createTask(options.id(), options.ttl(), options.meta(), null, null, keepAlive);
     }
 
     @Override
@@ -83,7 +88,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
             @Nullable Map<String, JsonNode> meta,
             @Nullable String sessionId,
             @Nullable Object progressToken) {
-        return createTask(null, ttl, meta, sessionId, progressToken);
+        return createTask(null, ttl, meta, sessionId, progressToken, defaultKeepAlive);
     }
 
     private TaskEntry createTask(
@@ -91,10 +96,11 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
             @Nullable Duration ttl,
             @Nullable Map<String, JsonNode> meta,
             @Nullable String sessionId,
-            @Nullable Object progressToken) {
+            @Nullable Object progressToken,
+            Duration keepAlive) {
         var id = requestedId != null ? requestedId : taskIdGenerator.generateTaskId(meta, sessionId);
         var descriptor = TaskDescriptor.builder().id(id).build();
-        var entry = new TaskEntry(descriptor, id, TaskState.SUBMITTED, ttl, sessionId, progressToken, meta);
+        var entry = new TaskEntry(descriptor, id, TaskState.SUBMITTED, ttl, sessionId, progressToken, meta, keepAlive);
         if (!addItemIfAbsent(entry)) {
             throw new IllegalArgumentException("Task '" + id + "' already exists");
         }
@@ -207,27 +213,25 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
         return true;
     }
 
-    private final AtomicBoolean ttlJanitorStarted = new AtomicBoolean();
-
     public void startTtlJanitor() {
-        if (!ttlJanitorStarted.compareAndSet(false, true)) {
-            return;
-        }
-        var executor = Executors.newSingleThreadScheduledExecutor(r -> {
-            var t = new Thread(r, "task-janitor");
-            t.setDaemon(true);
-            return t;
-        });
-        ttlJanitor = executor;
-        executor.scheduleAtFixedRate(
-                this::expireStaleTasks, TTL_JANITOR_INTERVAL_SECONDS, TTL_JANITOR_INTERVAL_SECONDS, TimeUnit.SECONDS);
+        janitor.start(Duration.ofSeconds(TTL_JANITOR_INTERVAL_SECONDS));
     }
 
     public void stopTtlJanitor() {
-        var executor = ttlJanitor;
-        if (executor != null) {
-            executor.shutdown();
-            ttlJanitor = null;
+        janitor.close();
+    }
+
+    void runJanitorSweep() {
+        expireStaleTasks();
+        dropExpiredResults();
+    }
+
+    private void dropExpiredResults() {
+        for (var entry : getAll()) {
+            if (entry.status().isTerminal() && entry.isResultExpired()) {
+                logger.debug("Dropping task result after keepAlive: id={}", entry.id());
+                remove(entry.id());
+            }
         }
     }
 
