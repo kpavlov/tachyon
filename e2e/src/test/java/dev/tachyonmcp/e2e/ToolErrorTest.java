@@ -36,7 +36,7 @@ class ToolErrorTest extends AbstractStatelessMcpE2eTest {
 
     private static ToolHandler throwingTool() {
         return ToolHandler.of(
-                b -> b.name("boom").description("Throws after sending a notification"), (context, args) -> {
+                b -> b.name("boom").description("Throws after sending a notification"), (context, request) -> {
                     context.notifications().comment("before-boom");
                     throw new RuntimeException("Simulated handler failure. Ignore it");
                 });

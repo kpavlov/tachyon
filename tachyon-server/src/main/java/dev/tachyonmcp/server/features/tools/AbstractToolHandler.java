@@ -64,7 +64,7 @@ public abstract class AbstractToolHandler implements ToolHandler {
     @Override
     public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolRequest request) {
         try {
-            return handleAsync(context, Args.of(request.arguments(), request.payloadDeserializer()));
+            return handleAsync(context, request.arguments());
         } catch (NotImplemented noAsyncArgs) {
             try {
                 return CompletableFuture.completedStage(handle(context, request));
@@ -89,7 +89,7 @@ public abstract class AbstractToolHandler implements ToolHandler {
      */
     public ToolResult handle(InteractionContext context, ToolRequest request) throws Exception {
         assumeVirtualThread(); // don't remove this guardrail!
-        return handle(context, Args.of(request.arguments(), request.payloadDeserializer()));
+        return handle(context, request.arguments());
     }
 
     /**

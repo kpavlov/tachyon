@@ -22,7 +22,7 @@ class EdgeConformanceServer extends AbstractConformanceServer {
     protected ServerEngine createServer(boolean isStateful) {
         return (ServerEngine) TachyonServer.builder()
                 .session(s -> s.enabled(isStateful))
-                .toolRequest(
+                .tool(
                         ToolDescriptor.builder()
                                 .name("test_missing_capability")
                                 .description("SEP-2575 requires an explicitly declared capability")
@@ -40,7 +40,7 @@ class EdgeConformanceServer extends AbstractConformanceServer {
                             }
                             return ToolResult.text("sampling capability present");
                         })
-                .toolRequest(
+                .tool(
                         ToolDescriptor.builder()
                                 .name("test_logging_tool")
                                 .description(
@@ -51,7 +51,7 @@ class EdgeConformanceServer extends AbstractConformanceServer {
                             ctx.notifications().log(LoggingLevel.INFO, "test", "diagnostic log message");
                             return ToolResult.text("logged");
                         })
-                .toolRequest(
+                .tool(
                         ToolDescriptor.builder()
                                 .name("test_streaming_elicitation")
                                 .description(
@@ -62,27 +62,28 @@ class EdgeConformanceServer extends AbstractConformanceServer {
                             ctx.notifications().progress(request.progressToken(), 1, 1, "working");
                             return ToolResult.text("streamed");
                         })
-                .toolRequest(
+                .tool(
                         ToolDescriptor.builder()
                                 .name("test_custom_header")
                                 .description("SEP-2243 x-mcp-header/Mcp-Param-* custom header validation")
-                                .inputSchema(parseJson("""
-                        {
-                          "type": "object",
-                          "properties": {
-                            "region": {"type": "string", "x-mcp-header": "Region"},
-                            "query": {"type": "string"}
-                          },
-                          "required": ["region", "query"]
-                        }
-                        """))
+                                .inputSchema(
+                                        // language=json
+                                        """
+                            {
+                              "type": "object",
+                              "properties": {
+                                "region": {"type": "string", "x-mcp-header": "Region"},
+                                "query": {"type": "string"}
+                              },
+                              "required": ["region", "query"]
+                            }
+                            """)
                                 .build(),
                         (ctx, request) -> {
                             var args = request.arguments();
-                            var region = args.get("region");
-                            var query = args.get("query");
-                            return ToolResult.text("region=" + (region != null ? region.asString("") : "") + " query="
-                                    + (query != null ? query.asString("") : ""));
+                            var region = args.stringOpt("region");
+                            var query = args.stringOpt("query");
+                            return ToolResult.text("region=" + region.orElse("") + " query=" + query.orElse(""));
                         })
                 .build();
     }

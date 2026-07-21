@@ -4,6 +4,7 @@ package dev.tachyonmcp.server.features.tools;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.server.domain.Args;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -22,14 +23,14 @@ class ToolRequestTest {
     @Test
     void argumentsDefaultsToEmptyMap() {
         var req = ToolRequest.builder().name("t").build();
-        assertThat(req.arguments()).isEmpty();
+        assertThat(req.arguments().asMap()).isEmpty();
     }
 
     @Test
     void builderSetsArguments() {
-        var args = Map.of("k", JSON.stringNode("v"));
-        var req = ToolRequest.builder().name("t").arguments(args).build();
-        assertThat(req.arguments()).isEqualTo(args);
+        var map = Map.<String, JsonNode>of("k", JSON.stringNode("v"));
+        var req = ToolRequest.builder().name("t").arguments(Args.of(map)).build();
+        assertThat(req.arguments().asMap()).isEqualTo(map);
     }
 
     @Test

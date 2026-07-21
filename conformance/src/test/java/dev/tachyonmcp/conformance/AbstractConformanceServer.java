@@ -194,28 +194,28 @@ abstract class AbstractConformanceServer {
                         b -> b.name("test_simple_text")
                                 .description("Returns simple text")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, args) -> ToolResult.text("This is a simple text response for testing.")));
+                        (ctx, request) -> ToolResult.text("This is a simple text response for testing.")));
 
         server.tools()
                 .register(ToolHandler.of(
                         b -> b.name("test_image_content")
                                 .description("Returns image content")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, args) -> ToolResult.blocks(ImageContent.of(MINI_PNG_BASE64, "image/png"))));
+                        (ctx, request) -> ToolResult.blocks(ImageContent.of(MINI_PNG_BASE64, "image/png"))));
 
         server.tools()
                 .register(ToolHandler.of(
                         b -> b.name("test_audio_content")
                                 .description("Returns audio content")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, args) -> ToolResult.blocks(AudioContent.of(MINI_WAV_BASE64, "audio/wav"))));
+                        (ctx, request) -> ToolResult.blocks(AudioContent.of(MINI_WAV_BASE64, "audio/wav"))));
 
         server.tools()
                 .register(ToolHandler.of(
                         b -> b.name("test_embedded_resource")
                                 .description("Returns embedded resource")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, args) -> {
+                        (ctx, request) -> {
                             var res = TextResourceContents.of(
                                     "test://embedded-resource", "text/plain", "This is an embedded resource content.");
                             return ToolResult.blocks(EmbeddedResource.of(res));
@@ -226,7 +226,7 @@ abstract class AbstractConformanceServer {
                         b -> b.name("test_multiple_content_types")
                                 .description("Returns multiple content types")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, args) -> {
+                        (ctx, request) -> {
                             var mixed = TextResourceContents.of(
                                     "test://mixed-content-resource",
                                     "application/json",
@@ -242,7 +242,7 @@ abstract class AbstractConformanceServer {
                         b -> b.name("test_error_handling")
                                 .description("Always returns error")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, args) -> ToolResult.error("This tool intentionally returns an error for testing")));
+                        (ctx, request) -> ToolResult.error("This tool intentionally returns an error for testing")));
 
         server.tools()
                 .register(
@@ -273,7 +273,7 @@ abstract class AbstractConformanceServer {
                                 .description("Tool with JSON Schema 2020-12 features")
                                 .inputSchema(inputSchema)
                                 .build(),
-                        (context, args) -> ToolResult.text("JSON Schema 2020-12 tool called")));
+                        (context, request) -> ToolResult.text("JSON Schema 2020-12 tool called")));
 
         server.tools()
                 .register(ToolHandler.of(
@@ -281,7 +281,7 @@ abstract class AbstractConformanceServer {
                                 .description(
                                         "A tool that triggers SSE stream closure to test client reconnection behavior")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, args) -> {
+                        (ctx, request) -> {
                             var stream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
                             if (stream != null) {
                                 stream.start();
@@ -594,6 +594,6 @@ abstract class AbstractConformanceServer {
             """);
         return ToolHandler.of(
                 b -> b.name("echo").description("Echo back the input message").inputSchema(schema),
-                (ctx, args) -> ToolResult.text(args.stringOr("message", "")));
+                (ctx, request) -> ToolResult.text(request.arguments().stringOr("message", "")));
     }
 }

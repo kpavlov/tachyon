@@ -94,7 +94,7 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
     @Test
     void shouldCancelTask() throws Exception {
         var started = new java.util.concurrent.CountDownLatch(1);
-        var handler = ToolHandler.of(b -> b.name("task_tool").taskSupport(TaskSupport.OPTIONAL), (context, args) -> {
+        var handler = ToolHandler.of(b -> b.name("task_tool").taskSupport(TaskSupport.OPTIONAL), (context, request) -> {
             started.countDown();
             try {
                 Thread.sleep(5000);
@@ -137,7 +137,7 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
         // Blocks the tool indefinitely so the manual fail() below — not the tool itself —
         // deterministically decides the outcome; released only after that outcome is asserted.
         var release = new java.util.concurrent.CountDownLatch(1);
-        var handler = ToolHandler.of(b -> b.name("sleep").taskSupport(TaskSupport.OPTIONAL), (context, args) -> {
+        var handler = ToolHandler.of(b -> b.name("sleep").taskSupport(TaskSupport.OPTIONAL), (context, request) -> {
             release.await();
             return ToolResult.text("done");
         });

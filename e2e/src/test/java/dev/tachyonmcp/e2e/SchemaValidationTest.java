@@ -202,7 +202,7 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
                 b -> b.name("validated")
                         .description("A tool with input schema validation")
                         .inputSchema(TOOL_SCHEMA),
-                (context, args) -> ToolResult.text("ok"));
+                (context, request) -> ToolResult.text("ok"));
     }
 
     private static ToolHandler validatedTool2() {
@@ -210,7 +210,7 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
                 b -> b.name("validated2")
                         .description("Another tool with a distinct input schema")
                         .inputSchema(buildToolSchema2()),
-                (context, args) -> ToolResult.text("ok"));
+                (context, request) -> ToolResult.text("ok"));
     }
 
     private static JsonNode buildToolSchema() {

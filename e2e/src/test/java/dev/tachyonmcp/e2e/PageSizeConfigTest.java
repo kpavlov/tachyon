@@ -52,7 +52,7 @@ class PageSizeConfigTest extends AbstractStatelessMcpE2eTest {
     private static ToolHandler handler(String name) {
         return ToolHandler.of(
                 b -> b.name(name).description("Tool " + name).inputSchema(INPUT_SCHEMA),
-                (ctx, args) -> ToolResult.text("ok"));
+                (ctx, request) -> ToolResult.text("ok"));
     }
 
     private static final JsonNode INPUT_SCHEMA = buildInputSchema();

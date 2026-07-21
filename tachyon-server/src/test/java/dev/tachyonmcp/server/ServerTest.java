@@ -238,7 +238,7 @@ class ServerTest {
                                     .description("Dynamically registered")
                                     // language=json
                                     .inputSchema("{\"type\": \"object\"}"),
-                            (context, args) -> ToolResult.empty()));
+                            (context, request) -> ToolResult.empty()));
 
             var listChanged = conn.sent.stream()
                     .filter(e -> e.data().contains("notifications/tools/list_changed"))
@@ -299,7 +299,7 @@ class ServerTest {
 
             server.tools()
                     .register(ToolHandler.of(
-                            builder -> builder.name("tool-during-init"), (context, args) -> ToolResult.empty()));
+                            builder -> builder.name("tool-during-init"), (context, request) -> ToolResult.empty()));
 
             var listChanged = conn.sent.stream()
                     .filter(e -> e.data().contains("list_changed"))

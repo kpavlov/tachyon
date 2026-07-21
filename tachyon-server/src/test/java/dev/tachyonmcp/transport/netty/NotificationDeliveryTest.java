@@ -34,7 +34,7 @@ class NotificationDeliveryTest {
     /**
      * Emits 3 progress events and 3 log events per invocation (plus 2 automatic lifecycle logs from ToolsCallHandler).
      */
-    private static final ToolHandler PROGRESS_AND_LOG_TOOL = ToolHandler.ofRequest(TOOL_DESCRIPTOR, (ctx, request) -> {
+    private static final ToolHandler PROGRESS_AND_LOG_TOOL = ToolHandler.of(TOOL_DESCRIPTOR, (ctx, request) -> {
         var pt = request.progressToken();
         ctx.notifications().progress(pt, 0, 100, "Starting");
         ctx.notifications().progress(pt, 50, 100, "Halfway");
@@ -46,7 +46,7 @@ class NotificationDeliveryTest {
         return ToolResult.text("ok");
     });
 
-    private static final ToolHandler FILTERED_LOG_TOOL = ToolHandler.of("filtered_log", (ctx, args) -> {
+    private static final ToolHandler FILTERED_LOG_TOOL = ToolHandler.of("filtered_log", (ctx, request) -> {
         ctx.notifications().log(LoggingLevel.INFO, "filtered.logger", Map.of("message", "skip"));
         ctx.notifications().log(LoggingLevel.ERROR, null);
         return ToolResult.text("ok");

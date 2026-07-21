@@ -17,6 +17,7 @@ import dev.tachyonmcp.server.OutboundSseStreamMessageRouter;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.FeatureConfig;
 import dev.tachyonmcp.server.config.Mode;
+import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.domain.MissingRequiredClientCapabilityException;
@@ -294,7 +295,8 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
 
             var request = ToolRequest.builder()
                     .name(parsed.name())
-                    .arguments(parsed.args() != null ? parsed.args() : Collections.emptyMap())
+                    .arguments(Args.of(
+                            parsed.args() != null ? parsed.args() : Collections.emptyMap(), payloadDeserializer))
                     .meta(parsed.meta())
                     .progressToken(parseProgressToken(parsed.meta()))
                     .payloadDeserializer(payloadDeserializer)

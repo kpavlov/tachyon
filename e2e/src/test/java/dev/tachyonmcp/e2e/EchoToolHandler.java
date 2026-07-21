@@ -27,6 +27,7 @@ class EchoToolHandler {
     static ToolHandler create() {
         return ToolHandler.ofAsync(
                 b -> b.name("echo").description("Echo back the input message").inputSchema(ECHO_INPUT_SCHEMA),
-                (ctx, args) -> CompletableFuture.supplyAsync(() -> ToolResult.text(args.stringOr("message", ""))));
+                (ctx, request) -> CompletableFuture.supplyAsync(
+                        () -> ToolResult.text(request.arguments().stringOr("message", ""))));
     }
 }

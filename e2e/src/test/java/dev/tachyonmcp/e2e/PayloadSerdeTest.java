@@ -44,7 +44,7 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
                 .tool(ToolHandler.of(
                         "gson-tool",
                         "Gson tool",
-                        (ctx, args) -> ToolResult.of(Map.of("message", "hello from Gson"), "text fallback"))));
+                        (ctx, request) -> ToolResult.of(Map.of("message", "hello from Gson"), "text fallback"))));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -68,7 +68,9 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
     @Test
     void shouldPassthroughRawJson() throws Exception {
         startServer(it -> it.tool(ToolHandler.of(
-                "raw-tool", "Raw JSON tool", (ctx, args) -> ToolResult.raw("{\"echo\":\"exact\"}", "raw fallback"))));
+                "raw-tool",
+                "Raw JSON tool",
+                (ctx, request) -> ToolResult.raw("{\"echo\":\"exact\"}", "raw fallback"))));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -106,7 +108,7 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
                                 .description("Validated output")
                                 .outputSchema(outputSchema)
                                 .build(),
-                        (ctx, args) -> ToolResult.of(Map.of("message", "valid", "extra", 42), "ok"))));
+                        (ctx, request) -> ToolResult.of(Map.of("message", "valid", "extra", 42), "ok"))));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -141,8 +143,8 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
         };
 
         startServer(it -> it.json(j -> j.serde(gsonSerde))
-                .tool(ToolHandler.of("decode-tool", "Decode tool", (ctx, args) -> {
-                    var decoded = args.decode(Map.class);
+                .tool(ToolHandler.of("decode-tool", "Decode tool", (ctx, request) -> {
+                    var decoded = request.arguments().decode(Map.class);
                     return ToolResult.text("decoded: " + decoded);
                 })));
 

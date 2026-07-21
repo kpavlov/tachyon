@@ -101,7 +101,7 @@ class SsePostReconnectRedeliveryTest extends AbstractStatefulMcpE2eTest {
     private static ToolHandler selfClosingTool() {
         return ToolHandler.of(
                 b -> b.name("self-closing").description("Closes its SSE stream mid-call, then returns after a delay"),
-                (ctx, args) -> {
+                (ctx, request) -> {
                     var stream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
                     if (stream != null) {
                         stream.start();

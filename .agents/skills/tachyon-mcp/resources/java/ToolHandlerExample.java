@@ -3,7 +3,6 @@
  */
 
 import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
@@ -38,7 +37,7 @@ final class ToolHandlerExample {
      * Lambda-style: use ToolHandler.of() inside a builder chain.
      */
     static ToolHandler lambdaHello() {
-        return ToolHandler.of("hello", "Say hello", (ctx, args) -> ToolResult.text("Hello, world!"));
+        return ToolHandler.of("hello", "Say hello", (ctx, request) -> ToolResult.text("Hello, world!"));
     }
 
     /**
@@ -49,8 +48,8 @@ final class ToolHandlerExample {
             b -> b.name("greeting")
                 .description("Generates a personalized greeting")
                 .inputSchema(GREET_SCHEMA),
-            (@NonNull InteractionContext ctx, Args args) -> {
-                String name = args.stringValue("name");
+            (@NonNull InteractionContext ctx, ToolRequest request) -> {
+                String name = request.arguments().stringValue("name");
                 return ToolResult.text("Hello, " + name + "!");
             });
     }
@@ -64,8 +63,8 @@ final class ToolHandlerExample {
                 .title("Greeting")
                 .description("Generates a personalized greeting")
                 .inputSchema(GREET_SCHEMA),
-            (ctx, args) -> {
-                var name = args.stringValue("name");
+            (ctx, request) -> {
+                var name = request.arguments().stringValue("name");
                 return ToolResult.text("Hello, " + name + "!");
             });
     }
@@ -80,8 +79,7 @@ final class ToolHandlerExample {
      * scheduler sends {@code :} heartbeats every {@code heartbeatInterval} (15s), keeping the
      * connection alive for the whole run.
      *
-     * <p>Two triggers, both reachable only from the request-level {@link ToolHandler} (the
-     * {@link Args} convenience overload carries neither):
+     * <p>Two triggers, both reachable off the {@link ToolRequest} every handler receives:
      *
      * <ul>
      *   <li>{@code progress(token, ...)} — when the client requested progress, forward its

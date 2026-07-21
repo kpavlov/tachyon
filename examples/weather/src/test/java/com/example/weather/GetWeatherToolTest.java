@@ -10,6 +10,7 @@ import com.example.weather.spi.WeatherObservation;
 import com.example.weather.spi.WeatherProvider;
 import dev.tachyonmcp.runtime.ContextNotifications;
 import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
@@ -112,7 +113,7 @@ class GetWeatherToolTest {
                         context,
                         ToolRequest.builder()
                                 .name("get-weather")
-                                .arguments(Map.of("city", JsonNodeFactory.instance.stringNode("Unknown")))
+                                .arguments(Args.of(Map.of("city", JsonNodeFactory.instance.stringNode("Unknown"))))
                                 .build())));
             } catch (Exception e) {
                 failure.set(e);
