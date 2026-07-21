@@ -9,7 +9,6 @@ import static dev.tachyonmcp.server.json.JsonUtils.TREE_READ_CONTEXT;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import tools.jackson.core.JsonToken;
 
 public final class ProtocolCodecUtil {
@@ -19,7 +18,7 @@ public final class ProtocolCodecUtil {
     public static <T> T decodeWithCodec(String json, Class<T> targetType) {
         try {
             var codec = CodecRegistry.codecFor(targetType);
-            try (var p = FACTORY.createParser(TREE_READ_CONTEXT, json.getBytes(StandardCharsets.UTF_8))) {
+            try (var p = FACTORY.createParser(TREE_READ_CONTEXT, json)) {
                 if (p.nextToken() != JsonToken.START_OBJECT) {
                     throw new IOException("Expected JSON object");
                 }

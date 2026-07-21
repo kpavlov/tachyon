@@ -10,6 +10,7 @@ import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.TasksConfig;
+import dev.tachyonmcp.server.domain.ServerErrors;
 import dev.tachyonmcp.server.domain.Task;
 import dev.tachyonmcp.server.domain.TaskResult;
 import dev.tachyonmcp.server.domain.TextContent;
@@ -18,7 +19,6 @@ import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.internal.AbstractJanitor;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DispatchContext;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -289,7 +289,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
             var cursor = ListRequests.parseCursor(params);
             var paginated = registry.listItems(limit, cursor);
             if (!paginated.cursorValid()) {
-                return JsonRpcErrors.invalidParams("Invalid cursor");
+                return ServerErrors.invalidParams("Invalid cursor");
             }
             return context.responseMapper().listTasksResult(paginated.items(), paginated.nextCursor());
         }
@@ -305,11 +305,11 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
         public Object handle(DispatchContext context, Object params) {
             var taskId = extractParamId(params);
             if (taskId == null) {
-                return JsonRpcErrors.invalidParams("Missing task ID");
+                return ServerErrors.invalidParams("Missing task ID");
             }
             var entry = registry.get(taskId);
             if (entry == null) {
-                return JsonRpcErrors.invalidParams("Failed to retrieve task: Task not found");
+                return ServerErrors.invalidParams("Failed to retrieve task: Task not found");
             }
             return context.responseMapper().getTaskResult(entry);
         }
@@ -340,14 +340,14 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
         public Object handle(DispatchContext context, Object params) {
             var taskId = TasksGetHandler.extractParamId(params);
             if (taskId == null) {
-                return JsonRpcErrors.invalidParams("Missing task ID");
+                return ServerErrors.invalidParams("Missing task ID");
             }
             final var task = registry.getAndCancelTask(taskId);
             if (task == null) {
-                return JsonRpcErrors.invalidParams("Failed to retrieve task: Task not found");
+                return ServerErrors.invalidParams("Failed to retrieve task: Task not found");
             }
             if (task.status() != TaskState.CANCELLED) {
-                return JsonRpcErrors.invalidParams("Task cannot be cancelled in current state: " + task.status());
+                return ServerErrors.invalidParams("Task cannot be cancelled in current state: " + task.status());
             }
             return context.responseMapper().cancelTaskResult(task);
         }
@@ -363,30 +363,30 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
         public Object handle(DispatchContext context, Object params) {
             var taskId = TasksGetHandler.extractParamId(params);
             if (taskId == null) {
-                return JsonRpcErrors.invalidRequest("Missing task ID");
+                return ServerErrors.invalidRequest("Missing task ID");
             }
             var entry = registry.get(taskId);
             if (entry == null) {
-                return JsonRpcErrors.invalidRequest("Task not found");
+                return ServerErrors.invalidRequest("Task not found");
             }
             var status = entry.status();
             if (status == TaskState.CANCELLED) {
-                return JsonRpcErrors.invalidRequest("Task was cancelled");
+                return ServerErrors.invalidRequest("Task was cancelled");
             }
             if (status == TaskState.UNKNOWN) {
-                return JsonRpcErrors.invalidRequest("Task is in unknown state");
+                return ServerErrors.invalidRequest("Task is in unknown state");
             }
             if (status.isActive()) {
                 try {
                     var result = entry.completion().toCompletableFuture().join();
                     return context.responseMapper().getTaskPayloadResult(result, entry.id());
                 } catch (Exception e) {
-                    return JsonRpcErrors.invalidRequest("Task result not available: " + e.getMessage());
+                    return ServerErrors.invalidRequest("Task result not available: " + e.getMessage());
                 }
             }
             var taskResult = entry.result();
             if (taskResult == null) {
-                return JsonRpcErrors.invalidRequest("Task result not available");
+                return ServerErrors.invalidRequest("Task result not available");
             }
             return context.responseMapper().getTaskPayloadResult(taskResult, entry.id());
         }

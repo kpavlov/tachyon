@@ -10,6 +10,7 @@ import dev.tachyonmcp.server.domain.InitializeResponse;
 import dev.tachyonmcp.server.domain.InputRequest;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.ResourceContents;
+import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.Task;
 import dev.tachyonmcp.server.domain.TaskResult;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
@@ -18,6 +19,7 @@ import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
@@ -35,6 +37,9 @@ public interface ProtocolResponseMapper {
 
     /** Returns the protocol-specific empty result sent for methods that return no data. */
     Object emptyResult();
+
+    /** Maps a protocol-neutral server error to this protocol version's JSON-RPC error payload. */
+    JsonRpcError error(ServerError error);
 
     /** Maps the server discovery response into a protocol-specific shape. */
     default Object discoverResult(

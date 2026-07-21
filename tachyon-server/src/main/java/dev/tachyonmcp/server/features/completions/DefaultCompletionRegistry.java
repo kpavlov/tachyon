@@ -8,9 +8,9 @@ import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.Mode;
 import dev.tachyonmcp.server.domain.InvalidArgumentException;
+import dev.tachyonmcp.server.domain.ServerErrors;
 import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.session.DispatchContext;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -126,16 +126,16 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
 
             if (!(paramsMap.get("ref") instanceof Map<?, ?> ref)) {
                 return CompletableFuture.completedFuture(
-                        JsonRpcErrors.invalidParams("Missing or invalid ref parameter"));
+                        ServerErrors.invalidParams("Missing or invalid ref parameter"));
             }
             if (!(paramsMap.get("argument") instanceof Map<?, ?> argument)) {
                 return CompletableFuture.completedFuture(
-                        JsonRpcErrors.invalidParams("Missing or invalid argument parameter"));
+                        ServerErrors.invalidParams("Missing or invalid argument parameter"));
             }
             if (!(argument.get("name") instanceof String argumentName)
                     || !(argument.get("value") instanceof String argumentValue)) {
                 return CompletableFuture.completedFuture(
-                        JsonRpcErrors.invalidParams("argument.name and argument.value are required"));
+                        ServerErrors.invalidParams("argument.name and argument.value are required"));
             }
 
             var refType = ref.get("type");
@@ -145,19 +145,19 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
             if ("ref/prompt".equals(refType)) {
                 if (!(ref.get("name") instanceof String pn)) {
                     return CompletableFuture.completedFuture(
-                            JsonRpcErrors.invalidParams("ref.name is required for ref/prompt"));
+                            ServerErrors.invalidParams("ref.name is required for ref/prompt"));
                 }
                 promptName = pn;
                 handler = registry.findForPrompt(promptName);
             } else if ("ref/resource".equals(refType)) {
                 if (!(ref.get("uri") instanceof String u)) {
                     return CompletableFuture.completedFuture(
-                            JsonRpcErrors.invalidParams("ref.uri is required for ref/resource"));
+                            ServerErrors.invalidParams("ref.uri is required for ref/resource"));
                 }
                 uri = u;
                 handler = registry.findForResource(uri);
             } else {
-                return CompletableFuture.completedFuture(JsonRpcErrors.invalidParams("Unknown ref.type: " + refType));
+                return CompletableFuture.completedFuture(ServerErrors.invalidParams("Unknown ref.type: " + refType));
             }
 
             if (handler.isEmpty()) {
@@ -178,11 +178,11 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
                     (result, cause) -> {
                         if (cause != null) {
                             if (cause instanceof InvalidArgumentException e) {
-                                return JsonRpcErrors.invalidParams(
+                                return ServerErrors.invalidParams(
                                         "invalid argument '" + e.argName() + "': " + e.getMessage());
                             }
                             logger.error("Completion handler error for ref.type '{}'", refType, cause);
-                            return JsonRpcErrors.internalError("Completion handler failed");
+                            return ServerErrors.internalError("Completion handler failed");
                         }
                         var values = result.values();
                         var hasMore = result.hasMore();

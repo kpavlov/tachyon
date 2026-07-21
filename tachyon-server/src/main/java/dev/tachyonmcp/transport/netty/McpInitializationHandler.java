@@ -116,7 +116,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                 .exceptionally(ex -> {
                     logger.error("Failed to parse POST body during initialization", ex);
                     ctx.executor().execute(() -> {
-                        var errorBytes = dispatcher.parseError();
+                        var errorBytes = dispatcher.parseError(ChannelHandlerUtils.getInteractionContext(ctx));
                         sendResponseAndClose(
                                 ctx, HttpResponseStatus.BAD_REQUEST, "application/json", errorBytes, origin);
                     });
@@ -133,7 +133,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                                 ctx,
                                 HttpResponseStatus.BAD_REQUEST,
                                 "application/json",
-                                dispatcher.parseError(),
+                                dispatcher.parseError(ChannelHandlerUtils.getInteractionContext(ctx)),
                                 origin));
             case JsonRpcMessage.Request<?> req
             when METHOD_INITIALIZE.equals(req.method()) -> handleInitialize(ctx, req.id(), req.params(), origin);
@@ -170,7 +170,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                                 ctx,
                                 HttpResponseStatus.INTERNAL_SERVER_ERROR,
                                 "application/json",
-                                dispatcher.parseError(),
+                                dispatcher.parseError(ChannelHandlerUtils.requireInteractionContext(ctx)),
                                 origin);
                         return;
                     }
@@ -212,7 +212,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                                 ctx,
                                 HttpResponseStatus.INTERNAL_SERVER_ERROR,
                                 "application/json",
-                                dispatcher.parseError(),
+                                dispatcher.parseError(ChannelHandlerUtils.requireInteractionContext(ctx)),
                                 origin);
                         return;
                     }

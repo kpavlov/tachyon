@@ -136,7 +136,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                                         ctx,
                                         HttpResponseStatus.BAD_REQUEST,
                                         "application/json",
-                                        dispatcher.parseError(),
+                                        dispatcher.parseError(ChannelHandlerUtils.getInteractionContext(ctx)),
                                         origin));
                         return null;
                     });
@@ -154,7 +154,11 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         if (message == null) {
             ctx.executor()
                     .execute(() -> sendResponseAndClose(
-                            ctx, HttpResponseStatus.BAD_REQUEST, "application/json", dispatcher.parseError(), origin));
+                            ctx,
+                            HttpResponseStatus.BAD_REQUEST,
+                            "application/json",
+                            dispatcher.parseError(ChannelHandlerUtils.getInteractionContext(ctx)),
+                            origin));
             return;
         }
         if (!server.isStateless() && sessionId == null && !(message instanceof JsonRpcMessage.Request<?>)) {
@@ -256,7 +260,13 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                 // Neutralize the stream so a late server→client message cannot start a
                 // second HTTP response on this channel, then send the JSON error.
                 postStream.terminate();
-                sendInternalError(ctx, requestId, origin);
+                sendInternalError(
+                        ctx,
+                        requestId,
+                        origin,
+                        ChannelHandlerUtils.requireInteractionContext(ctx)
+                                .protocol()
+                                .responseMapper());
             }
             return;
         }

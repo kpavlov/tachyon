@@ -23,13 +23,12 @@ import dev.tachyonmcp.server.domain.Annotations;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.server.domain.Role;
+import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.server.session.DispatchContext;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -225,8 +224,8 @@ class ResourceRegistryTest {
 
         var result = handlers.get("resources/read")
                 .handle(DefaultDispatchContext.stateless(server), Map.<String, Object>of("uri", "test://r1"));
-        assertThat(result).isInstanceOf(JsonRpcError.class);
-        assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.RESOURCE_NOT_FOUND);
+        assertThat(result).isInstanceOf(ServerError.class);
+        assertThat(((ServerError) result).kind()).isEqualTo(ServerError.Kind.RESOURCE_NOT_FOUND);
     }
 
     @Test
@@ -254,15 +253,15 @@ class ResourceRegistryTest {
         var result = handlers.get("resources/read")
                 .handle(DefaultDispatchContext.stateless(server), Map.<String, Object>of("uri", "test://nonexistent"));
 
-        assertThat(result).isInstanceOf(JsonRpcError.class);
-        assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.RESOURCE_NOT_FOUND);
+        assertThat(result).isInstanceOf(ServerError.class);
+        assertThat(((ServerError) result).kind()).isEqualTo(ServerError.Kind.RESOURCE_NOT_FOUND);
     }
 
     @Test
     void shouldReturnErrorWhenUriMissing() throws Exception {
         var result = handlers.get("resources/read").handle(DefaultDispatchContext.stateless(server), Map.of());
 
-        assertThat(result).isInstanceOf(JsonRpcError.class);
+        assertThat(result).isInstanceOf(ServerError.class);
     }
 
     @Test
@@ -276,8 +275,8 @@ class ResourceRegistryTest {
         var result = runInVirtualThread(() -> handlers.get("resources/read")
                 .handle(DefaultDispatchContext.stateless(server), Map.<String, Object>of("uri", "test://bad-input")));
 
-        assertThat(result).isInstanceOf(JsonRpcError.class);
-        assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_PARAMS);
+        assertThat(result).isInstanceOf(ServerError.class);
+        assertThat(((ServerError) result).kind()).isEqualTo(ServerError.Kind.INVALID_PARAMS);
     }
 
     @Test
@@ -396,8 +395,8 @@ class ResourceRegistryTest {
         var result = handlers.get("resources/subscribe")
                 .handle(DefaultDispatchContext.stateless(server), Map.of("uri", "test://resource/1"));
 
-        assertThat(result).isInstanceOf(JsonRpcError.class);
-        assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
+        assertThat(result).isInstanceOf(ServerError.class);
+        assertThat(((ServerError) result).kind()).isEqualTo(ServerError.Kind.INVALID_REQUEST);
     }
 
     @Test
@@ -405,8 +404,8 @@ class ResourceRegistryTest {
         var result = handlers.get("resources/unsubscribe")
                 .handle(DefaultDispatchContext.stateless(server), Map.of("uri", "test://resource/1"));
 
-        assertThat(result).isInstanceOf(JsonRpcError.class);
-        assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
+        assertThat(result).isInstanceOf(ServerError.class);
+        assertThat(((ServerError) result).kind()).isEqualTo(ServerError.Kind.INVALID_REQUEST);
     }
 
     @Test
@@ -617,7 +616,7 @@ class ResourceRegistryTest {
         // old URI must no longer resolve
         var oldUriResult = handlers.get("resources/read")
                 .handle(DefaultDispatchContext.stateless(server), Map.<String, Object>of("uri", "resource://doc-v1"));
-        assertThat(oldUriResult).isInstanceOf(JsonRpcError.class);
+        assertThat(oldUriResult).isInstanceOf(ServerError.class);
 
         // new URI must resolve correctly
         var newUriResult = runInVirtualThread(() -> handlers.get("resources/read")

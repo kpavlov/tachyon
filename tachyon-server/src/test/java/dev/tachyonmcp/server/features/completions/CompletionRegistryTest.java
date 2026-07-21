@@ -9,10 +9,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CompleteResult;
 import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -161,16 +160,16 @@ class CompletionRegistryTest {
     void returnsInvalidParamsWhenRefMissing() throws Exception {
         var result = complete(handlers, Map.of("argument", Map.of("name", "a", "value", "b")));
 
-        assertThat(result).isInstanceOf(JsonRpcError.class);
-        assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_PARAMS);
+        assertThat(result).isInstanceOf(ServerError.class);
+        assertThat(((ServerError) result).kind()).isEqualTo(ServerError.Kind.INVALID_PARAMS);
     }
 
     @Test
     void returnsInvalidParamsWhenArgumentMissing() throws Exception {
         var result = complete(handlers, Map.of("ref", Map.of("type", "ref/prompt", "name", "code_review")));
 
-        assertThat(result).isInstanceOf(JsonRpcError.class);
-        assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_PARAMS);
+        assertThat(result).isInstanceOf(ServerError.class);
+        assertThat(((ServerError) result).kind()).isEqualTo(ServerError.Kind.INVALID_PARAMS);
     }
 
     @Test
@@ -181,8 +180,8 @@ class CompletionRegistryTest {
                         "ref", Map.of("type", "ref/unknown", "name", "x"),
                         "argument", Map.of("name", "a", "value", "b")));
 
-        assertThat(result).isInstanceOf(JsonRpcError.class);
-        assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_PARAMS);
+        assertThat(result).isInstanceOf(ServerError.class);
+        assertThat(((ServerError) result).kind()).isEqualTo(ServerError.Kind.INVALID_PARAMS);
     }
 
     @Test
@@ -197,7 +196,7 @@ class CompletionRegistryTest {
                         "ref", Map.of("type", "ref/prompt", "name", "boom"),
                         "argument", Map.of("name", "a", "value", "b")));
 
-        assertThat(result).isInstanceOf(JsonRpcError.class);
-        assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INTERNAL_ERROR);
+        assertThat(result).isInstanceOf(ServerError.class);
+        assertThat(((ServerError) result).kind()).isEqualTo(ServerError.Kind.INTERNAL_ERROR);
     }
 }

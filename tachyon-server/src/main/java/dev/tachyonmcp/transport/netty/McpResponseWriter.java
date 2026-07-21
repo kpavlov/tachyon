@@ -4,9 +4,10 @@
 
 package dev.tachyonmcp.transport.netty;
 
+import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
+import dev.tachyonmcp.server.domain.ServerErrors;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -75,8 +76,10 @@ public final class McpResponseWriter {
         return ctx.writeAndFlush(response);
     }
 
-    public static ChannelFuture sendInternalError(ChannelHandlerContext ctx, Object id, @Nullable String origin) {
-        var body = JsonRpcCodec.serializeError(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error", null);
+    public static ChannelFuture sendInternalError(
+            ChannelHandlerContext ctx, Object id, @Nullable String origin, ProtocolResponseMapper mapper) {
+        var error = mapper.error(ServerErrors.internalError("Internal error"));
+        var body = JsonRpcCodec.serializeError(id, error.code(), error.message(), error.data());
         return sendJsonResponse(ctx, body, true, null, origin);
     }
 }

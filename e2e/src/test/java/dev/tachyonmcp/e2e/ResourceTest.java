@@ -170,7 +170,8 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
                   "id": 2,
                   "error": {
                     "code": -32002,
-                    "message": "Resource not found"
+                    "message": "Resource not found",
+                    "data":{"uri":"resource://unknown"}
                   }
                 }
                 """;

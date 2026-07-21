@@ -13,6 +13,7 @@ import dev.tachyonmcp.server.config.Mode;
 import dev.tachyonmcp.server.config.ResourcesConfig;
 import dev.tachyonmcp.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.server.domain.ResourceContents;
+import dev.tachyonmcp.server.domain.ServerErrors;
 import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.ChangeSupport;
 import dev.tachyonmcp.server.features.HandlerFutures;
@@ -21,7 +22,6 @@ import dev.tachyonmcp.server.features.PaginatedResult;
 import dev.tachyonmcp.server.features.Pagination;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DispatchContext;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -449,7 +449,7 @@ public class DefaultResourceRegistry implements Resources {
                 return extId == null || context.isExtensionEnabled(extId);
             });
             if (!paginated.cursorValid()) {
-                return JsonRpcErrors.invalidParams("Invalid cursor");
+                return ServerErrors.invalidParams("Invalid cursor");
             }
 
             return context.responseMapper().listResourcesResult(paginated.items(), paginated.nextCursor());
@@ -466,7 +466,7 @@ public class DefaultResourceRegistry implements Resources {
         @Override
         public Object handle(DispatchContext context, Object params) {
             if (ListRequests.parseCursor(params) != null) {
-                return JsonRpcErrors.invalidParams("Invalid cursor");
+                return ServerErrors.invalidParams("Invalid cursor");
             }
             var templates = registry.templates.values().stream()
                     .map(ResourceTemplateEntry::descriptor)
@@ -495,20 +495,20 @@ public class DefaultResourceRegistry implements Resources {
         public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
             var uri = toRawUri(params);
             if (uri == null) {
-                return CompletableFuture.completedFuture(JsonRpcErrors.invalidRequest("Missing resource URI"));
+                return CompletableFuture.completedFuture(ServerErrors.invalidRequest("Missing resource URI"));
             }
             var entry = registry.getByUri(uri);
             if (entry != null) {
                 var extId = entry.descriptor().extensionId();
                 if (extId != null && !context.isExtensionEnabled(extId)) {
-                    return CompletableFuture.completedFuture(JsonRpcErrors.resourceNotFound("Resource not found"));
+                    return CompletableFuture.completedFuture(ServerErrors.resourceNotFound("Resource not found"));
                 }
                 return readResult(context, uri, () -> entry.handler().handleAsync(context, uri, Map.of(), null));
             }
             var match = registry.matchTemplate(uri);
             if (match == null) {
                 return CompletableFuture.completedFuture(
-                        JsonRpcErrors.resourceNotFound("Resource not found", Map.of("uri", uri)));
+                        ServerErrors.resourceNotFound("Resource not found", Map.of("uri", uri)));
             }
             return readResult(
                     context,
@@ -535,11 +535,11 @@ public class DefaultResourceRegistry implements Resources {
                     (contents, cause) -> {
                         if (cause != null) {
                             if (cause instanceof InvalidArgumentException e) {
-                                return JsonRpcErrors.invalidParams(
+                                return ServerErrors.invalidParams(
                                         "invalid argument '" + e.argName() + "': " + e.getMessage());
                             }
                             logger.error("Resource handler error for '{}'", uri, cause);
-                            return JsonRpcErrors.internalError("Resource handler failed");
+                            return ServerErrors.internalError("Resource handler failed");
                         }
                         return context.responseMapper().readResourceResult(List.of(contents));
                     });
@@ -567,11 +567,11 @@ public class DefaultResourceRegistry implements Resources {
         public Object handle(DispatchContext context, Object params) {
             var uri = extractUri(params);
             if (uri == null) {
-                return JsonRpcErrors.invalidRequest("Missing resource URI");
+                return ServerErrors.invalidRequest("Missing resource URI");
             }
             var session = context.session();
             if (session == null) {
-                return JsonRpcErrors.invalidRequest("resources/subscribe requires a session");
+                return ServerErrors.invalidRequest("resources/subscribe requires a session");
             }
             registry.subscribe(uri, session.id());
             return context.responseMapper().emptyResult();
@@ -602,11 +602,11 @@ public class DefaultResourceRegistry implements Resources {
         public Object handle(DispatchContext context, Object params) {
             var uri = extractUri(params);
             if (uri == null) {
-                return JsonRpcErrors.invalidRequest("Missing resource URI");
+                return ServerErrors.invalidRequest("Missing resource URI");
             }
             var session = context.session();
             if (session == null) {
-                return JsonRpcErrors.invalidRequest("resources/unsubscribe requires a session");
+                return ServerErrors.invalidRequest("resources/unsubscribe requires a session");
             }
             registry.unsubscribe(uri, session.id());
             return context.responseMapper().emptyResult();

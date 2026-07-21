@@ -14,11 +14,10 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetTaskResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListTasksResult;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.TasksConfig;
+import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.TaskResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -114,9 +113,9 @@ class TaskRegistryTest {
     void getTaskNotFound() throws Exception {
         var getHandler = handlers.get("tasks/get");
         var result = getHandler.handle(DefaultDispatchContext.noop(), Map.of("taskId", "nonexistent"));
-        assertThat(result).isInstanceOf(JsonRpcError.class);
-        var err = (JsonRpcError) result;
-        assertThat(err.code()).isEqualTo(JsonRpcErrors.INVALID_PARAMS);
+        assertThat(result).isInstanceOf(ServerError.class);
+        var err = (ServerError) result;
+        assertThat(err.kind()).isEqualTo(ServerError.Kind.INVALID_PARAMS);
     }
 
     @Test
@@ -135,7 +134,7 @@ class TaskRegistryTest {
     void getTaskMissingId() throws Exception {
         var getHandler = handlers.get("tasks/get");
         var result = getHandler.handle(DefaultDispatchContext.noop(), Map.of());
-        assertThat(result).isInstanceOf(JsonRpcError.class);
+        assertThat(result).isInstanceOf(ServerError.class);
     }
 
     @Test
@@ -155,14 +154,14 @@ class TaskRegistryTest {
     void cancelNonExistentTaskReturnsError() throws Exception {
         var cancelHandler = handlers.get("tasks/cancel");
         var result = cancelHandler.handle(DefaultDispatchContext.noop(), Map.of("taskId", "nonexistent"));
-        assertThat(result).isInstanceOf(JsonRpcError.class);
+        assertThat(result).isInstanceOf(ServerError.class);
     }
 
     @Test
     void taskResultNotFoundReturnsError() throws Exception {
         var resultHandler = handlers.get("tasks/result");
         var result = resultHandler.handle(DefaultDispatchContext.noop(), Map.of("taskId", "task-1"));
-        assertThat(result).isInstanceOf(JsonRpcError.class);
+        assertThat(result).isInstanceOf(ServerError.class);
     }
 
     @Test
