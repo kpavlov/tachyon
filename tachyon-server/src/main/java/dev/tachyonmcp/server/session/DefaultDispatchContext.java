@@ -14,6 +14,7 @@ import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.OutboundSseStream;
 import dev.tachyonmcp.server.domain.LoggingLevel;
+import dev.tachyonmcp.server.domain.ProgressToken;
 import dev.tachyonmcp.server.internal.NotificationLogSupport;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
@@ -199,13 +200,18 @@ public class DefaultDispatchContext implements DispatchContext {
         }
 
         @Override
-        public void progress(@Nullable Object progressToken, double progress, double total, String message) {
+        public void progress(@Nullable ProgressToken progressToken, double progress, double total, String message) {
             if (progressToken == null) {
                 logger.debug("Dropping progress notification: no progressToken (client did not opt into progress)");
                 return;
             }
+            Object wireToken =
+                    switch (progressToken) {
+                        case ProgressToken.StringValue(var v) -> v;
+                        case ProgressToken.NumericValue(var v) -> v;
+                    };
             var paramsMap = Map.of(
-                    "progressToken", progressToken,
+                    "progressToken", wireToken,
                     "progress", progress,
                     "total", total,
                     "message", message);

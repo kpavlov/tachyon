@@ -12,6 +12,7 @@ import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.domain.LoggingLevel;
+import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
@@ -81,7 +82,7 @@ class NotificationDeliveryTest {
                 "arguments", java.util.Map.of(),
                 "_meta", java.util.Map.of("progressToken", 42));
         var result = dispatcher
-                .dispatchRequestAsync(1, "tools/call", params, "sess_test")
+                .dispatchRequestAsync(RequestId.of(1), "tools/call", params, "sess_test")
                 .join();
 
         assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Response.class);
@@ -102,7 +103,7 @@ class NotificationDeliveryTest {
     void shouldSendLoggingNotificationWhenLevelIsSet() {
         var levelParams = java.util.Map.of("level", "info");
         dispatcher
-                .dispatchRequestAsync(1, "logging/setLevel", levelParams, "sess_test")
+                .dispatchRequestAsync(RequestId.of(1), "logging/setLevel", levelParams, "sess_test")
                 .join();
 
         var toolParams = java.util.Map.of(
@@ -110,7 +111,7 @@ class NotificationDeliveryTest {
                 "arguments", java.util.Map.of(),
                 "_meta", java.util.Map.of("progressToken", 42));
         dispatcher
-                .dispatchRequestAsync(2, "tools/call", toolParams, "sess_test")
+                .dispatchRequestAsync(RequestId.of(2), "tools/call", toolParams, "sess_test")
                 .join();
 
         var logEvents = testConn.sent.stream()
@@ -124,12 +125,15 @@ class NotificationDeliveryTest {
     @Test
     void shouldFilterHandlerLogsAtClientThresholdAndAllowMissingLogger() {
         dispatcher
-                .dispatchRequestAsync(1, "logging/setLevel", Map.of("level", "warning"), "sess_test")
+                .dispatchRequestAsync(RequestId.of(1), "logging/setLevel", Map.of("level", "warning"), "sess_test")
                 .join();
 
         dispatcher
                 .dispatchRequestAsync(
-                        2, "tools/call", Map.of("name", "filtered_log", "arguments", Map.of()), "sess_test")
+                        RequestId.of(2),
+                        "tools/call",
+                        Map.of("name", "filtered_log", "arguments", Map.of()),
+                        "sess_test")
                 .join();
 
         var logEvents = testConn.sent.stream()
@@ -152,7 +156,7 @@ class NotificationDeliveryTest {
             var disabledDispatcher = new McpDispatcher(disabledServer, disabledServer.executor());
 
             var result = disabledDispatcher
-                    .dispatchRequestAsync(1, "logging/setLevel", Map.of("level", "info"), "sess_disabled")
+                    .dispatchRequestAsync(RequestId.of(1), "logging/setLevel", Map.of("level", "info"), "sess_disabled")
                     .join();
 
             assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Response.class);
@@ -161,7 +165,10 @@ class NotificationDeliveryTest {
 
             disabledDispatcher
                     .dispatchRequestAsync(
-                            2, "tools/call", Map.of("name", "filtered_log", "arguments", Map.of()), "sess_disabled")
+                            RequestId.of(2),
+                            "tools/call",
+                            Map.of("name", "filtered_log", "arguments", Map.of()),
+                            "sess_disabled")
                     .join();
             assertThat(disabledConnection.sent).noneMatch(event -> event.data().contains("notifications/message"));
         }
@@ -170,7 +177,7 @@ class NotificationDeliveryTest {
     @Test
     void shouldRejectMissingLogLevelAsInvalidParams() {
         var result = dispatcher
-                .dispatchRequestAsync(1, "logging/setLevel", Map.of(), "sess_test")
+                .dispatchRequestAsync(RequestId.of(1), "logging/setLevel", Map.of(), "sess_test")
                 .join();
 
         assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Response.class);
@@ -182,7 +189,9 @@ class NotificationDeliveryTest {
     @Test
     void shouldNotSendProgressWithoutMeta() {
         var params = java.util.Map.of("name", "test_tool", "arguments", java.util.Map.of());
-        dispatcher.dispatchRequestAsync(1, "tools/call", params, "sess_test").join();
+        dispatcher
+                .dispatchRequestAsync(RequestId.of(1), "tools/call", params, "sess_test")
+                .join();
 
         var progressEvents = testConn.sent.stream()
                 .filter(e -> e.data().contains("notifications/progress"))
@@ -196,7 +205,9 @@ class NotificationDeliveryTest {
                 "name", "test_tool",
                 "arguments", java.util.Map.of(),
                 "_meta", java.util.Map.of("progressToken", 42));
-        dispatcher.dispatchRequestAsync(1, "tools/call", params, "sess_test").join();
+        dispatcher
+                .dispatchRequestAsync(RequestId.of(1), "tools/call", params, "sess_test")
+                .join();
 
         var logEvents = testConn.sent.stream()
                 .filter(e -> e.data().contains("notifications/message"))
@@ -211,7 +222,8 @@ class NotificationDeliveryTest {
     @Test
     void shouldHandleMultipleToolsSequentially() {
         dispatcher
-                .dispatchRequestAsync(1, "logging/setLevel", java.util.Map.of("level", "debug"), "sess_test")
+                .dispatchRequestAsync(
+                        RequestId.of(1), "logging/setLevel", java.util.Map.of("level", "debug"), "sess_test")
                 .join();
 
         for (int i = 0; i < 3; i++) {
@@ -220,7 +232,7 @@ class NotificationDeliveryTest {
                     "arguments", java.util.Map.of(),
                     "_meta", java.util.Map.of("progressToken", i));
             dispatcher
-                    .dispatchRequestAsync(2 + i, "tools/call", params, "sess_test")
+                    .dispatchRequestAsync(RequestId.of(2 + i), "tools/call", params, "sess_test")
                     .join();
         }
 
@@ -255,17 +267,21 @@ class NotificationDeliveryTest {
         session2.activate();
 
         dispatcher
-                .dispatchRequestAsync(1, "logging/setLevel", java.util.Map.of("level", "info"), "sess_test")
+                .dispatchRequestAsync(
+                        RequestId.of(1), "logging/setLevel", java.util.Map.of("level", "info"), "sess_test")
                 .join();
         dispatcher
-                .dispatchRequestAsync(2, "logging/setLevel", java.util.Map.of("level", "warning"), "sess_other")
+                .dispatchRequestAsync(
+                        RequestId.of(2), "logging/setLevel", java.util.Map.of("level", "warning"), "sess_other")
                 .join();
 
         var params = java.util.Map.of(
                 "name", "test_tool",
                 "arguments", java.util.Map.of(),
                 "_meta", java.util.Map.of("progressToken", 1));
-        dispatcher.dispatchRequestAsync(3, "tools/call", params, "sess_test").join();
+        dispatcher
+                .dispatchRequestAsync(RequestId.of(3), "tools/call", params, "sess_test")
+                .join();
 
         var testLogEvents = testConn.sent.stream()
                 .filter(e -> e.data().contains("notifications/message"))

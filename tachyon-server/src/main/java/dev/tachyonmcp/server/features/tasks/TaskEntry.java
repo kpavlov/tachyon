@@ -9,6 +9,7 @@ import dev.tachyonmcp.server.ServerFeature;
 import dev.tachyonmcp.server.config.TasksConfig;
 import dev.tachyonmcp.server.domain.ContentBlock;
 import dev.tachyonmcp.server.domain.InputRequest;
+import dev.tachyonmcp.server.domain.ProgressToken;
 import dev.tachyonmcp.server.domain.Task;
 import dev.tachyonmcp.server.domain.TaskResult;
 import dev.tachyonmcp.server.domain.TextContent;
@@ -40,7 +41,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     private volatile long expiredAt;
     private volatile @Nullable String statusMessage;
     private final CompletableFuture<TaskResult> completionFuture = new CompletableFuture<>();
-    private final @Nullable Object progressToken;
+    private final @Nullable ProgressToken progressToken;
     private final Consumer<TaskEntry> statusListener;
 
     TaskEntry(String id) {
@@ -85,7 +86,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             TaskState status,
             @Nullable Duration ttl,
             @Nullable String sessionId,
-            @Nullable Object progressToken) {
+            @Nullable ProgressToken progressToken) {
         this(descriptor, id, status, ttl, sessionId, progressToken, null, TasksConfig.DEFAULT_TASK_KEEP_ALIVE);
     }
 
@@ -95,7 +96,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             TaskState status,
             @Nullable Duration ttl,
             @Nullable String sessionId,
-            @Nullable Object progressToken,
+            @Nullable ProgressToken progressToken,
             @Nullable Map<String, JsonNode> meta) {
         this(descriptor, id, status, ttl, sessionId, progressToken, meta, TasksConfig.DEFAULT_TASK_KEEP_ALIVE);
     }
@@ -106,7 +107,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             TaskState status,
             @Nullable Duration ttl,
             @Nullable String sessionId,
-            @Nullable Object progressToken,
+            @Nullable ProgressToken progressToken,
             @Nullable Map<String, JsonNode> meta,
             Duration keepAlive) {
         this(descriptor, id, status, ttl, sessionId, progressToken, meta, keepAlive, null);
@@ -118,7 +119,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             TaskState status,
             @Nullable Duration ttl,
             @Nullable String sessionId,
-            @Nullable Object progressToken,
+            @Nullable ProgressToken progressToken,
             @Nullable Map<String, JsonNode> meta,
             Duration keepAlive,
             @Nullable Duration pollInterval) {
@@ -136,7 +137,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             TaskState status,
             @Nullable Duration ttl,
             @Nullable String sessionId,
-            @Nullable Object progressToken,
+            @Nullable ProgressToken progressToken,
             @Nullable Map<String, JsonNode> meta,
             Duration keepAlive,
             @Nullable Duration pollInterval,
@@ -162,7 +163,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         return sessionId;
     }
 
-    public @Nullable Object progressToken() {
+    public @Nullable ProgressToken progressToken() {
         return progressToken;
     }
 

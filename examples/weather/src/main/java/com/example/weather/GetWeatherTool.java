@@ -7,6 +7,7 @@ import com.example.weather.service.WeatherService;
 import com.example.weather.spi.CityNotFoundException;
 import com.example.weather.spi.WeatherObservation;
 import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.domain.ProgressToken;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
@@ -74,7 +75,7 @@ class GetWeatherTool {
     }
 
     private static WeatherObservation fetchWithProgress(
-            InteractionContext ctx, Object progressToken, WeatherService weatherService, String city)
+            InteractionContext ctx, ProgressToken progressToken, WeatherService weatherService, String city)
             throws Exception {
         ctx.notifications().progress(progressToken, 0.1, 1.0, "Fetching weather for " + city);
         var weather = weatherService.currentWeather(city);

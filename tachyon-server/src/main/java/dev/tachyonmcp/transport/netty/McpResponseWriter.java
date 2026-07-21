@@ -6,6 +6,7 @@ package dev.tachyonmcp.transport.netty;
 
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
+import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.domain.ServerErrors;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import io.netty.buffer.Unpooled;
@@ -86,7 +87,7 @@ public final class McpResponseWriter {
     }
 
     public static ChannelFuture sendInternalError(
-            ChannelHandlerContext ctx, Object id, @Nullable String origin, ProtocolResponseMapper mapper) {
+            ChannelHandlerContext ctx, RequestId id, @Nullable String origin, ProtocolResponseMapper mapper) {
         var error = mapper.error(ServerErrors.internalError("Internal error"));
         var body = JsonRpcCodec.serializeError(id, error.code(), error.message(), error.data());
         return sendJsonResponse(ctx, body, HttpResponseStatus.valueOf(error.httpStatus()), true, null, origin);

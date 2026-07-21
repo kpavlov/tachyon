@@ -15,6 +15,7 @@ import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.InteractionEvent;
 import dev.tachyonmcp.server.McpDispatcher;
+import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
 import dev.tachyonmcp.transport.netty.sse.PostSseStream;
@@ -145,7 +146,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void dispatchPreSessionRequest(ChannelHandlerContext ctx, JsonRpcMessage message, @Nullable String origin) {
-        if (!(message instanceof JsonRpcMessage.Request(Object id, String method, Object params))) {
+        if (!(message instanceof JsonRpcMessage.Request(RequestId id, String method, Object params))) {
             ctx.executor().execute(() -> {
                 if (server.isStateless()) {
                     sendAccepted(ctx, origin);
@@ -192,7 +193,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                 }));
     }
 
-    private void handleInitialize(ChannelHandlerContext ctx, Object id, Object params, @Nullable String origin) {
+    private void handleInitialize(ChannelHandlerContext ctx, RequestId id, Object params, @Nullable String origin) {
         var heartbeatInterval = server.config().network().heartbeatInterval();
         var postStream = new PostSseStream(ctx.channel(), origin, server::nextEventId, heartbeatInterval);
         final var startNs = System.nanoTime();

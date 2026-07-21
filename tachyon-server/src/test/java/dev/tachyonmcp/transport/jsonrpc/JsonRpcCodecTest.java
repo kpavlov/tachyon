@@ -8,6 +8,7 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
+import dev.tachyonmcp.server.domain.RequestId;
 import org.junit.jupiter.api.Test;
 
 class JsonRpcCodecTest {
@@ -28,7 +29,8 @@ class JsonRpcCodecTest {
 
     @Test
     void serializeRequestAsStringContainsRequiredFields() {
-        var json = JsonRpcCodec.serializeRequestAsString("req-1", "sampling/createMessage", "{\"prompt\":\"hi\"}");
+        var json = JsonRpcCodec.serializeRequestAsString(
+                RequestId.of("req-1"), "sampling/createMessage", "{\"prompt\":\"hi\"}");
 
         // language=JSON
         assertThatJson(json).isEqualTo("""
@@ -43,7 +45,7 @@ class JsonRpcCodecTest {
 
     @Test
     void serializeNotificationAsStringWithNumericId() {
-        var json = JsonRpcCodec.serializeRequestAsString(99L, "ping", "{}");
+        var json = JsonRpcCodec.serializeRequestAsString(RequestId.of(99L), "ping", "{}");
 
         // language=JSON
         assertThatJson(json).isEqualTo("""

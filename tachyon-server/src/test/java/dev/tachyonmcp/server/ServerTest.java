@@ -10,6 +10,7 @@ import dev.tachyonmcp.runtime.Backpressure;
 import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.runtime.SseEvent;
+import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
@@ -51,7 +52,7 @@ class ServerTest {
                 (DefaultTachyonServer) TachyonServer.builder().build()) {
             var session = server.createSession("sess_1");
 
-            var response = new SessionEvent.ResponseEvent("sess_1", 1, "{\"ok\":true}", 1000L, -1, null);
+            var response = new SessionEvent.ResponseEvent("sess_1", RequestId.of(1), "{\"ok\":true}", 1000L, -1, null);
             var sseEvent = server.appendResponse(session, response);
 
             assertThat(sseEvent.event()).isEqualTo("message");
@@ -68,9 +69,9 @@ class ServerTest {
                 (DefaultTachyonServer) TachyonServer.builder().build()) {
             server.createSession("sess_1");
 
-            server.appendEvent(new SessionEvent.ResponseEvent("sess_1", 1, "{\"a\":1}", 100L, -1, null));
-            server.appendEvent(new SessionEvent.ResponseEvent("sess_1", 2, "{\"b\":2}", 200L, -1, null));
-            server.appendEvent(new SessionEvent.ResponseEvent("sess_1", 3, "{\"c\":3}", 300L, -1, null));
+            server.appendEvent(new SessionEvent.ResponseEvent("sess_1", RequestId.of(1), "{\"a\":1}", 100L, -1, null));
+            server.appendEvent(new SessionEvent.ResponseEvent("sess_1", RequestId.of(2), "{\"b\":2}", 200L, -1, null));
+            server.appendEvent(new SessionEvent.ResponseEvent("sess_1", RequestId.of(3), "{\"c\":3}", 300L, -1, null));
 
             var replayed = server.replay("sess_1", -1);
             assertThat(replayed).hasSize(3);
@@ -101,7 +102,7 @@ class ServerTest {
             var session = server.createSession("sess_1");
             session.connection(conn);
 
-            server.appendEvent(new SessionEvent.ResponseEvent("sess_1", 1, "{\"a\":1}", 100L, -1, null));
+            server.appendEvent(new SessionEvent.ResponseEvent("sess_1", RequestId.of(1), "{\"a\":1}", 100L, -1, null));
             server.appendEvent(
                     new SessionEvent.NotificationEvent("sess_1", "notifications/message", "{}", 200L, -1, null));
 
@@ -146,7 +147,7 @@ class ServerTest {
     @Test
     void toSseEventConvertsOutboundRequestEvent() {
         var event = new SessionEvent.OutboundRequestEvent(
-                "s", "req-1", "sampling/createMessage", "{\"p\":\"v\"}", 100L, 7L, null);
+                "s", RequestId.of("req-1"), "sampling/createMessage", "{\"p\":\"v\"}", 100L, 7L, null);
 
         var sseEvent = ServerEngine.toSseEvent(event);
 
@@ -161,8 +162,8 @@ class ServerTest {
     void toSseEventReturnsNullForNonSseEvents() {
         // RequestEvent and CancelEvent have sseEventId=-1 and must return null
         // to prevent NPE in replay path (replayEvents filter fix)
-        var requestEvent = new SessionEvent.RequestEvent("s", 1, "ping", "{}", 100L);
-        var cancelEvent = new SessionEvent.CancelEvent("s", 1, 100L);
+        var requestEvent = new SessionEvent.RequestEvent("s", RequestId.of(1), "ping", "{}", 100L);
+        var cancelEvent = new SessionEvent.CancelEvent("s", RequestId.of(1), 100L);
 
         assertThat(ServerEngine.toSseEvent(requestEvent)).isNull();
         assertThat(ServerEngine.toSseEvent(cancelEvent)).isNull();
@@ -170,7 +171,7 @@ class ServerTest {
 
     @Test
     void toSseEventConvertsResponseAndNotificationEvents() {
-        var response = new SessionEvent.ResponseEvent("s", 1, "{\"ok\":true}", 100L, 5L, null);
+        var response = new SessionEvent.ResponseEvent("s", RequestId.of(1), "{\"ok\":true}", 100L, 5L, null);
         var notification =
                 new SessionEvent.NotificationEvent("s", "notifications/tools/list_changed", "{}", 100L, 7L, null);
 
@@ -192,9 +193,10 @@ class ServerTest {
                 (DefaultTachyonServer) TachyonServer.builder().build()) {
             server.createSession("sess_replay");
 
-            server.appendEvent(new SessionEvent.RequestEvent("sess_replay", 1, "ping", "{}", 100L));
-            server.appendEvent(new SessionEvent.ResponseEvent("sess_replay", 1, "{\"pong\":true}", 200L, -1, null));
-            server.appendEvent(new SessionEvent.CancelEvent("sess_replay", 2, 300L));
+            server.appendEvent(new SessionEvent.RequestEvent("sess_replay", RequestId.of(1), "ping", "{}", 100L));
+            server.appendEvent(
+                    new SessionEvent.ResponseEvent("sess_replay", RequestId.of(1), "{\"pong\":true}", 200L, -1, null));
+            server.appendEvent(new SessionEvent.CancelEvent("sess_replay", RequestId.of(2), 300L));
 
             var allEvents = server.replay("sess_replay", -1);
             assertThat(allEvents).hasSize(3);

@@ -13,6 +13,7 @@ import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.server.domain.LoggingLevel;
+import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.ServerErrors;
 import dev.tachyonmcp.server.features.tasks.TaskState;
@@ -146,12 +147,12 @@ public class McpDispatcher {
     }
 
     public CompletableFuture<DispatchResult> dispatchRequestAsync(
-            Object id, String method, Object params, @Nullable String sessionId) {
+            RequestId id, String method, Object params, @Nullable String sessionId) {
         return dispatchRequestAsync(id, method, params, sessionId, null, null);
     }
 
     public CompletableFuture<DispatchResult> dispatchRequestAsync(
-            Object id,
+            RequestId id,
             String method,
             Object params,
             @Nullable String sessionId,
@@ -226,7 +227,7 @@ public class McpDispatcher {
     }
 
     private CompletableFuture<DispatchResult> invokeHandlerAsync(
-            Object id,
+            RequestId id,
             String method,
             Object params,
             @Nullable OutboundSseStream outboundSseStream,
@@ -289,7 +290,7 @@ public class McpDispatcher {
                 });
     }
 
-    private DispatchResult handleHandlerError(Object id, String method, Throwable ex, DispatchContext context) {
+    private DispatchResult handleHandlerError(RequestId id, String method, Throwable ex, DispatchContext context) {
         var unwrapped = ex instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : ex;
         if (unwrapped instanceof CancellationException) {
             logger.debug("Handler cancelled: method={}, id={}", method, id);
@@ -300,7 +301,7 @@ public class McpDispatcher {
     }
 
     private DispatchResult handleSuccessOrError(
-            Object id, String method, Object result, @Nullable String sessionId, DispatchContext context) {
+            RequestId id, String method, Object result, @Nullable String sessionId, DispatchContext context) {
         if (result instanceof ServerError error) {
             logger.debug("Handler error for {}: {}", method, error.message());
             return errorResult(id, error, context);
@@ -342,10 +343,10 @@ public class McpDispatcher {
     }
 
     private void handleCancellation(@Nullable Object params, @Nullable String sessionId) {
-        Object rawRequestId = null;
+        RequestId rawRequestId = null;
         String rawReason = null;
         if (params instanceof Map<?, ?> map) {
-            rawRequestId = map.get("requestId");
+            rawRequestId = RequestId.ofNullable(map.get("requestId"));
             var r = map.get("reason");
             rawReason = r instanceof String s ? s : null;
         }
@@ -427,7 +428,7 @@ public class McpDispatcher {
     }
 
     private CompletableFuture<DispatchResult> dispatchInitializeAsync(
-            Object id, Object rawParams, DispatchContext ic, @Nullable ChannelContext channelContext) {
+            RequestId id, Object rawParams, DispatchContext ic, @Nullable ChannelContext channelContext) {
         logger.debug("Client initialize: id={} stateless={}", id, server.isStateless());
         var handler = server.getHandler("initialize");
         if (handler == null) {
@@ -460,13 +461,13 @@ public class McpDispatcher {
                 });
     }
 
-    private DispatchResult errorResult(Object id, ServerError error, DispatchContext context) {
+    private DispatchResult errorResult(RequestId id, ServerError error, DispatchContext context) {
         var wireError = context.responseMapper().error(error);
         var body = JsonRpcCodec.serializeError(id, wireError.code(), wireError.message(), wireError.data());
         return new DispatchResult.Response(body, null, wireError.httpStatus());
     }
 
-    private static byte[] encodeResponse(Object id, Object result, ProtocolResponseMapper mapper) {
+    private static byte[] encodeResponse(RequestId id, Object result, ProtocolResponseMapper mapper) {
         if (result instanceof String s) {
             return JsonRpcCodec.serializeResponse(id, s);
         }
@@ -480,7 +481,7 @@ public class McpDispatcher {
         }
     }
 
-    private static byte[] encodeError(@Nullable Object id, ServerError error, ProtocolResponseMapper mapper) {
+    private static byte[] encodeError(@Nullable RequestId id, ServerError error, ProtocolResponseMapper mapper) {
         var wireError = mapper.error(error);
         return JsonRpcCodec.serializeError(id, wireError.code(), wireError.message(), wireError.data());
     }

@@ -18,6 +18,7 @@ import dev.tachyonmcp.runtime.ChannelContext;
 import dev.tachyonmcp.runtime.InteractionEvent;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.McpDispatcher;
+import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
@@ -242,7 +243,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
 
     private void completePostRequest(
             ChannelHandlerContext ctx,
-            Object requestId,
+            RequestId requestId,
             String method,
             @Nullable String sessionId,
             @Nullable String origin,
@@ -316,7 +317,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void finalizePostSseResponse(
-            Object requestId,
+            RequestId requestId,
             @Nullable String sessionId,
             PostSseStream postStream,
             McpDispatcher.@Nullable DispatchResult result) {

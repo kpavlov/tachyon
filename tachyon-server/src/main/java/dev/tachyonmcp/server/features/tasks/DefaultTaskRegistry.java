@@ -10,6 +10,7 @@ import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.TasksConfig;
+import dev.tachyonmcp.server.domain.ProgressToken;
 import dev.tachyonmcp.server.domain.ServerErrors;
 import dev.tachyonmcp.server.domain.Task;
 import dev.tachyonmcp.server.domain.TaskResult;
@@ -98,7 +99,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
             @Nullable Duration ttl,
             @Nullable Map<String, JsonNode> meta,
             @Nullable String sessionId,
-            @Nullable Object progressToken) {
+            @Nullable ProgressToken progressToken) {
         return createTask(null, ttl, meta, sessionId, progressToken, defaultKeepAlive, defaultPollInterval);
     }
 
@@ -107,7 +108,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
             @Nullable Duration ttl,
             @Nullable Map<String, JsonNode> meta,
             @Nullable String sessionId,
-            @Nullable Object progressToken,
+            @Nullable ProgressToken progressToken,
             Duration keepAlive,
             @Nullable Duration pollInterval) {
         var id = requestedId != null ? requestedId : taskIdGenerator.generateTaskId(meta, sessionId);

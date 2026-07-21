@@ -12,6 +12,7 @@ import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.runtime.ChannelContext;
 import dev.tachyonmcp.runtime.DefaultChannelContext;
+import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.server.session.DispatchContext;
@@ -94,7 +95,7 @@ class McpDispatcherProtocolContextTest {
             var dispatcher = new McpDispatcher(server, Runnable::run);
             var channelContext = protocol.createInteractionContext();
             var result = dispatcher
-                    .dispatchRequestAsync(1, "test/capture", Map.of(), "sess_p1", null, channelContext)
+                    .dispatchRequestAsync(RequestId.of(1), "test/capture", Map.of(), "sess_p1", null, channelContext)
                     .get(5, TimeUnit.SECONDS);
 
             assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Response.class);
@@ -120,7 +121,7 @@ class McpDispatcherProtocolContextTest {
             var channelContext = protocol.createInteractionContext();
 
             var result = dispatcher
-                    .dispatchRequestAsync(1, "ping", Map.of(), "sess_p2", null, channelContext)
+                    .dispatchRequestAsync(RequestId.of(1), "ping", Map.of(), "sess_p2", null, channelContext)
                     .get(5, TimeUnit.SECONDS);
 
             assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Response.class);
@@ -146,7 +147,7 @@ class McpDispatcherProtocolContextTest {
 
             var dispatcher = new McpDispatcher(server, Runnable::run);
             var result = dispatcher
-                    .dispatchRequestAsync(1, "test/capture", Map.of(), null)
+                    .dispatchRequestAsync(RequestId.of(1), "test/capture", Map.of(), null)
                     .get(5, TimeUnit.SECONDS);
 
             assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Response.class);

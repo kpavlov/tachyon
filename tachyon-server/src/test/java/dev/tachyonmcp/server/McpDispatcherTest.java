@@ -6,6 +6,7 @@ package dev.tachyonmcp.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -31,12 +32,12 @@ class McpDispatcherTest {
             var dispatcher = new McpDispatcher(server, server.executor());
 
             var first = asResponse(dispatcher
-                    .dispatchRequestAsync(1, "ping", null, "sess_diff")
+                    .dispatchRequestAsync(RequestId.of(1), "ping", null, "sess_diff")
                     .join());
             assertThat(first.responseBodyString()).contains("result");
 
             var second = asResponse(dispatcher
-                    .dispatchRequestAsync(2, "ping", null, "sess_diff")
+                    .dispatchRequestAsync(RequestId.of(2), "ping", null, "sess_diff")
                     .join());
             assertThat(second.responseBodyString()).contains("result");
         }
@@ -49,12 +50,14 @@ class McpDispatcherTest {
             server.createSession("sess_b");
             var dispatcher = new McpDispatcher(server, server.executor());
 
-            var first = asResponse(
-                    dispatcher.dispatchRequestAsync(42, "ping", null, "sess_a").join());
+            var first = asResponse(dispatcher
+                    .dispatchRequestAsync(RequestId.of(42), "ping", null, "sess_a")
+                    .join());
             assertThat(first.responseBodyString()).contains("result");
 
-            var second = asResponse(
-                    dispatcher.dispatchRequestAsync(42, "ping", null, "sess_b").join());
+            var second = asResponse(dispatcher
+                    .dispatchRequestAsync(RequestId.of(42), "ping", null, "sess_b")
+                    .join());
             assertThat(second.responseBodyString()).contains("result");
         }
     }
@@ -67,7 +70,7 @@ class McpDispatcherTest {
             var dispatcher = new McpDispatcher(server, server.executor());
 
             var result = asResponse(dispatcher
-                    .dispatchRequestAsync(1, "tools/list", null, "sess_init")
+                    .dispatchRequestAsync(RequestId.of(1), "tools/list", null, "sess_init")
                     .join());
             var body = result.responseBodyString();
             assertThat(body).contains("error");
@@ -82,7 +85,7 @@ class McpDispatcherTest {
             var dispatcher = new McpDispatcher(server, server.executor());
 
             var result = asResponse(dispatcher
-                    .dispatchRequestAsync(1, "ping", null, "sess_ping")
+                    .dispatchRequestAsync(RequestId.of(1), "ping", null, "sess_ping")
                     .join());
             var body = result.responseBodyString();
             assertThat(body).contains("result");
@@ -98,7 +101,7 @@ class McpDispatcherTest {
             var dispatcher = new McpDispatcher(server, server.executor());
 
             var result = asResponse(dispatcher
-                    .dispatchRequestAsync(1, "ping", null, "sess_active")
+                    .dispatchRequestAsync(RequestId.of(1), "ping", null, "sess_active")
                     .join());
             var body = result.responseBodyString();
             assertThat(body).contains("result");
@@ -115,7 +118,7 @@ class McpDispatcherTest {
 
             var requestId = "test-req-1";
             var pending = new java.util.concurrent.CompletableFuture<String>();
-            server.registerPendingRequest(requestId, pending);
+            server.registerPendingRequest(RequestId.of(requestId), pending);
 
             var params = Map.of("requestId", requestId, "reason", "User cancelled");
             var result = dispatcher.dispatchNotification("notifications/cancelled", params, "sess_cancel-pending");
@@ -181,7 +184,7 @@ class McpDispatcherTest {
             var dispatcher = new McpDispatcher(server, server.executor());
 
             var result = asResponse(dispatcher
-                    .dispatchRequestAsync(1, "ping", null, "sess_closed")
+                    .dispatchRequestAsync(RequestId.of(1), "ping", null, "sess_closed")
                     .join());
             var body = result.responseBodyString();
             assertThat(body).contains("error");

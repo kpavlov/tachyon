@@ -5,6 +5,7 @@
 package dev.tachyonmcp.server.features.tasks;
 
 import dev.tachyonmcp.annotations.InternalApi;
+import dev.tachyonmcp.server.domain.ProgressToken;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.Future;
@@ -18,7 +19,7 @@ public interface TaskRegistry extends Tasks {
             @Nullable Duration ttl,
             @Nullable Map<String, JsonNode> meta,
             @Nullable String sessionId,
-            @Nullable Object progressToken);
+            @Nullable ProgressToken progressToken);
 
     void registerRunning(String taskId, Future<?> future);
 

@@ -8,6 +8,7 @@ import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.config.RuntimeConfig;
+import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
@@ -66,7 +67,7 @@ class ServerShutdownGraceTest {
         server.createSession("sess-slow").activate();
         var dispatcher = new McpDispatcher(server, server.executor());
         dispatcher.dispatchRequestAsync(
-                1, "tools/call", Map.of("name", "slow_probe", "arguments", Map.of()), "sess-slow");
+                RequestId.of(1), "tools/call", Map.of("name", "slow_probe", "arguments", Map.of()), "sess-slow");
 
         assertThat(started.await(5, TimeUnit.SECONDS))
                 .as("handler must be running before close")

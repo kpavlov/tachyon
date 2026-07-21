@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.transport.jsonrpc;
 
+import dev.tachyonmcp.server.domain.RequestId;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
@@ -12,10 +13,10 @@ public sealed interface JsonRpcMessage {
 
     /** The request/response ID, or {@code null} for notifications. */
     @Nullable
-    Object id();
+    RequestId id();
 
     /** A JSON-RPC request with an ID (expecting a response). */
-    record Request<T>(Object id, String method, @Nullable T params) implements JsonRpcMessage {
+    record Request<T>(RequestId id, String method, @Nullable T params) implements JsonRpcMessage {
 
         public Request {
             Objects.requireNonNull(method, "method");
@@ -23,7 +24,7 @@ public sealed interface JsonRpcMessage {
     }
 
     /** A JSON-RPC success response. */
-    record Response(@Nullable Object id, String resultJson) implements JsonRpcMessage {
+    record Response(@Nullable RequestId id, String resultJson) implements JsonRpcMessage {
 
         public Response {
             Objects.requireNonNull(resultJson, "resultJson");
@@ -32,7 +33,7 @@ public sealed interface JsonRpcMessage {
 
     /** A JSON-RPC error response. */
     record Error(
-            @Nullable Object id,
+            @Nullable RequestId id,
             int code,
             String message,
             @Nullable String dataJson) implements JsonRpcMessage {
@@ -50,7 +51,7 @@ public sealed interface JsonRpcMessage {
         }
 
         @Override
-        public @Nullable Object id() {
+        public @Nullable RequestId id() {
             return null;
         }
     }
