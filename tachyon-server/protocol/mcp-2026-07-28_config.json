@@ -8,7 +8,14 @@
     "Tool.inputSchema": "tools.jackson.databind.JsonNode",
     "Tool.outputSchema": "tools.jackson.databind.JsonNode",
     "Resource.size": "Long",
-    "ResourceLink.size": "Long"
+    "ResourceLink.size": "Long",
+    "CacheableResult.ttlMs": "long",
+    "DiscoverResult.ttlMs": "long",
+    "ReadResourceResult.ttlMs": "long",
+    "ListResourcesResult.ttlMs": "long",
+    "ListResourceTemplatesResult.ttlMs": "long",
+    "ListPromptsResult.ttlMs": "long",
+    "ListToolsResult.ttlMs": "long"
   },
   "additionalProperties": {
     "ClientCapabilities": [

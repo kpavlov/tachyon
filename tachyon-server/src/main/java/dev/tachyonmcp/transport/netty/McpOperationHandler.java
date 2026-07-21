@@ -307,7 +307,12 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             logger.debug("POST response: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);
         }
         var response = (McpDispatcher.DispatchResult.Response) result;
-        sendJsonResponse(ctx, response.responseBody(), response.sessionId(), origin);
+        sendJsonResponse(
+                ctx,
+                response.responseBody(),
+                HttpResponseStatus.valueOf(response.httpStatus()),
+                response.sessionId(),
+                origin);
     }
 
     private void finalizePostSseResponse(

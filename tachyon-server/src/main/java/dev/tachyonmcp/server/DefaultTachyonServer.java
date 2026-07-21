@@ -557,7 +557,13 @@ final class DefaultTachyonServer implements ServerEngine {
     }
 
     @Override
-    public boolean completePendingRequest(Object requestId, String resultJson) {
+    public boolean completePendingRequest(@Nullable Object requestId, String resultJson) {
+        // ConcurrentHashMap#remove throws NPE on a null key; a null id (malformed client
+        // response, no JSON-RPC id) can never match a pending request, since registered ids are
+        // always server-generated and non-null.
+        if (requestId == null) {
+            return false;
+        }
         var future = pendingRequests.remove(requestId);
         if (future != null) {
             future.complete(resultJson);
@@ -567,7 +573,10 @@ final class DefaultTachyonServer implements ServerEngine {
     }
 
     @Override
-    public boolean failPendingRequest(Object requestId, String message) {
+    public boolean failPendingRequest(@Nullable Object requestId, String message) {
+        if (requestId == null) {
+            return false;
+        }
         var future = pendingRequests.remove(requestId);
         if (future != null) {
             future.completeExceptionally(new RuntimeException(message));

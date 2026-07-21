@@ -14,8 +14,8 @@ import dev.tachyonmcp.server.features.completions.AsyncCompletionHandler;
 import dev.tachyonmcp.server.features.completions.CompletionHandler;
 import dev.tachyonmcp.server.features.completions.CompletionResult;
 import dev.tachyonmcp.server.features.prompts.PromptResult;
+import dev.tachyonmcp.server.features.tools.ToolFn;
 import dev.tachyonmcp.server.features.tools.ToolResult;
-import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -39,7 +39,7 @@ class ServerBuilderTest {
     }
 
     @Test
-    void acceptsVirtualThreadPerTaskExecutor() throws IOException {
+    void acceptsVirtualThreadPerTaskExecutor() {
         try (var server = TachyonServer.builder()
                 .executor(Executors.newVirtualThreadPerTaskExecutor())
                 .build()) {
@@ -48,7 +48,7 @@ class ServerBuilderTest {
     }
 
     @Test
-    void acceptsDefaultExecutor() throws IOException {
+    void acceptsDefaultExecutor() {
         try (var server = TachyonServer.builder().build()) {
             assertThat(server).isNotNull();
         }
@@ -57,7 +57,7 @@ class ServerBuilderTest {
     @Test
     void acceptsDescriptorBuilderOverloads() {
         try (var server = TachyonServer.builder()
-                .tool(tool -> tool.name("sync-tool"), (ctx, args) -> ToolResult.empty())
+                .tool(tool -> tool.name("sync-tool"), (ToolFn) (ctx, args) -> ToolResult.empty())
                 .resource(
                         resource -> resource.name("sync-resource").uri("test://sync"),
                         (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "sync"))
@@ -77,7 +77,7 @@ class ServerBuilderTest {
     @Test
     void acceptsAsyncHandlersWithoutCasts() {
         try (var server = TachyonServer.builder()
-                .asyncTool(
+                .asyncToolRequest(
                         tool -> tool.name("async-tool"),
                         (ctx, args) -> CompletableFuture.completedFuture(ToolResult.empty()))
                 .asyncResource(

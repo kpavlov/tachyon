@@ -326,7 +326,7 @@ public class McpResponseMapper implements ProtocolResponseMapper {
                     gen.writeStringProperty("method", r.method());
                     if (r.params() != null) {
                         gen.writeName("params");
-                        CodecRegistry.codecFor(JsonNode.class).encode(gen, r.params());
+                        gen.writeRawValue(r.params().toString());
                     } else {
                         gen.writeObjectPropertyStart("params");
                         gen.writeEndObject();

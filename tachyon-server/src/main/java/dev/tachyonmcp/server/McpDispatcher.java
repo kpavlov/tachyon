@@ -8,11 +8,11 @@ import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatus;
-import dev.tachyonmcp.protocol.mcp.v2026_07_28.McpProtocol;
 import dev.tachyonmcp.runtime.ChannelContext;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
+import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.ServerErrors;
 import dev.tachyonmcp.server.features.tasks.TaskState;
@@ -57,7 +57,6 @@ public class McpDispatcher {
     private static final Logger logger = LoggerFactory.getLogger(McpDispatcher.class);
 
     private static final String METHOD_INITIALIZE = "initialize";
-    private static final String METHOD_DISCOVER = "server/discover";
     private static final String METHOD_PING = "ping";
 
     /**
@@ -104,7 +103,17 @@ public class McpDispatcher {
             static final Accepted INSTANCE = new Accepted();
         }
 
-        record Response(byte[] responseBody, @Nullable String sessionId) implements DispatchResult {
+        /**
+         * A dispatched JSON-RPC response (result or error envelope) ready to write to the wire.
+         *
+         * @param responseBody the encoded JSON-RPC response body
+         * @param sessionId    the session id to echo back, if any
+         * @param httpStatus   the real HTTP response status; JSON-RPC errors default to {@code 200}
+         *                     per the JSON-RPC-over-HTTP convention (see {@link
+         *                     dev.tachyonmcp.transport.jsonrpc.JsonRpcError}) — some protocol-level
+         *                     errors override it (e.g. {@code 400}/{@code 404})
+         */
+        record Response(byte[] responseBody, @Nullable String sessionId, int httpStatus) implements DispatchResult {
             public String responseBodyString() {
                 return new String(responseBody, StandardCharsets.UTF_8);
             }
@@ -133,7 +142,7 @@ public class McpDispatcher {
         var mapper = interactionContext != null
                 ? interactionContext.protocol().responseMapper()
                 : dispatchContext(null).responseMapper();
-        return encodeError(-1, ServerErrors.parseError(), mapper);
+        return encodeError(null, ServerErrors.parseError(), mapper);
     }
 
     public CompletableFuture<DispatchResult> dispatchRequestAsync(
@@ -152,6 +161,7 @@ public class McpDispatcher {
         Objects.requireNonNull(method, "method");
 
         var requestCtx = dispatchContext(channelContext);
+        requestCtx.setPermittedLogLevel(metaLogLevel(params));
         if (METHOD_INITIALIZE.equals(method)) {
             if (sessionId == null) {
                 return dispatchInitializeAsync(id, params, requestCtx, channelContext);
@@ -161,10 +171,8 @@ public class McpDispatcher {
         }
 
         if (server.isStateless()
-                || (sessionId == null
-                        && (METHOD_PING.equals(method)
-                                || (METHOD_DISCOVER.equals(method)
-                                        && McpProtocol.VERSION.equals(requestCtx.protocolVersion()))))) {
+                || !requestCtx.protocol().supportsSessions()
+                || (sessionId == null && METHOD_PING.equals(method))) {
 
             requestCtx.setOutboundStream(outboundSseStream);
             var handler = lookupHandler(method, params, requestCtx);
@@ -297,7 +305,7 @@ public class McpDispatcher {
             logger.debug("Handler error for {}: {}", method, error.message());
             return errorResult(id, error, context);
         }
-        return new DispatchResult.Response(encodeResponse(id, result, context.responseMapper()), sessionId);
+        return new DispatchResult.Response(encodeResponse(id, result, context.responseMapper()), sessionId, 200);
     }
 
     public DispatchResult dispatchNotification(String method, @Nullable Object params, @Nullable String sessionId) {
@@ -453,7 +461,9 @@ public class McpDispatcher {
     }
 
     private DispatchResult errorResult(Object id, ServerError error, DispatchContext context) {
-        return new DispatchResult.Response(encodeError(id, error, context.responseMapper()), null);
+        var wireError = context.responseMapper().error(error);
+        var body = JsonRpcCodec.serializeError(id, wireError.code(), wireError.message(), wireError.data());
+        return new DispatchResult.Response(body, null, wireError.httpStatus());
     }
 
     private static byte[] encodeResponse(Object id, Object result, ProtocolResponseMapper mapper) {
@@ -470,7 +480,7 @@ public class McpDispatcher {
         }
     }
 
-    private static byte[] encodeError(Object id, ServerError error, ProtocolResponseMapper mapper) {
+    private static byte[] encodeError(@Nullable Object id, ServerError error, ProtocolResponseMapper mapper) {
         var wireError = mapper.error(error);
         return JsonRpcCodec.serializeError(id, wireError.code(), wireError.message(), wireError.data());
     }
@@ -486,5 +496,20 @@ public class McpDispatcher {
             return meta.containsKey(key);
         }
         return false;
+    }
+
+    private static final String META_LOG_LEVEL_KEY = "io.modelcontextprotocol/logLevel";
+
+    private static @Nullable LoggingLevel metaLogLevel(Object params) {
+        if (params instanceof Map<?, ?> map
+                && map.get("_meta") instanceof Map<?, ?> meta
+                && meta.get(META_LOG_LEVEL_KEY) instanceof String level) {
+            try {
+                return LoggingLevel.fromValue(level);
+            } catch (IllegalArgumentException ignored) {
+                return null;
+            }
+        }
+        return null;
     }
 }

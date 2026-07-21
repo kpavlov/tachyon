@@ -32,6 +32,7 @@ public class DefaultDispatchContext implements DispatchContext {
     private final ServerEngine server;
     private final ContextNotifications notifications = new NotificationsImpl();
     private volatile @Nullable OutboundSseStream outboundStream;
+    private volatile @Nullable LoggingLevel permittedLogLevel;
 
     public DefaultDispatchContext(ChannelContext channel, ServerEngine server) {
         this.channel = channel;
@@ -131,6 +132,17 @@ public class DefaultDispatchContext implements DispatchContext {
     }
 
     @Override
+    public void setPermittedLogLevel(@Nullable LoggingLevel level) {
+        this.permittedLogLevel = level;
+    }
+
+    @Override
+    @Nullable
+    public LoggingLevel getPermittedLogLevel() {
+        return permittedLogLevel;
+    }
+
+    @Override
     public ContextNotifications notifications() {
         return notifications;
     }
@@ -212,6 +224,12 @@ public class DefaultDispatchContext implements DispatchContext {
 
         private boolean shouldEmit(LoggingLevel level) {
             if (!server.config().capabilities().logging()) return false;
+            if (!protocol().supportsSessions()) {
+                // No logging/setLevel RPC, no session: the client opts in per request via
+                // _meta.../logLevel. Absent that, the server MUST NOT log at any level.
+                var permitted = getPermittedLogLevel();
+                return permitted != null && level.ordinal() >= permitted.ordinal();
+            }
             var configuredLevel = getLoggingLevel();
             var threshold = configuredLevel != null ? configuredLevel : LoggingLevel.INFO;
             return level.ordinal() >= threshold.ordinal();

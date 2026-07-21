@@ -25,6 +25,16 @@ public interface DispatchContext extends ChannelContext {
     @Nullable
     LoggingLevel getLoggingLevel();
 
+    /**
+     * Sets the log level this specific request permits (from {@code _meta.../logLevel}, protocols
+     * without sessions). Unlike {@link #setLoggingLevel}, this is request-scoped, not session-scoped.
+     */
+    void setPermittedLogLevel(@Nullable LoggingLevel level);
+
+    /** Returns the log level this specific request permits, or {@code null} if it set none. */
+    @Nullable
+    LoggingLevel getPermittedLogLevel();
+
     /** Returns the protocol response mapper for the current protocol version. */
     ProtocolResponseMapper responseMapper();
 

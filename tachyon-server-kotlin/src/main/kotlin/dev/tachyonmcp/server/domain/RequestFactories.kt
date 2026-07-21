@@ -62,4 +62,4 @@ public fun UrlInputRequest(
     message: String,
     elicitationId: String,
     url: String,
-): UrlInputRequest = DefaultUrlInputRequest.of(message, elicitationId, url)
+): UrlInputRequest = UrlInputRequest.of(message, elicitationId, url)

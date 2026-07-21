@@ -92,6 +92,14 @@ public class NoopInteractionContext implements DispatchContext {
     }
 
     @Override
+    public void setPermittedLogLevel(@Nullable LoggingLevel level) {}
+
+    @Override
+    public @Nullable LoggingLevel getPermittedLogLevel() {
+        return null;
+    }
+
+    @Override
     public ProtocolResponseMapper responseMapper() {
         return Objects.requireNonNull(ProtocolMappers.getMapper("mcp", McpProtocol.VERSION));
     }

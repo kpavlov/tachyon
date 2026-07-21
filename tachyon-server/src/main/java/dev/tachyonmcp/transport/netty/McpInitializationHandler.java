@@ -183,7 +183,12 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                         return;
                     }
                     var response = (McpDispatcher.DispatchResult.Response) result;
-                    sendJsonResponse(ctx, response.responseBody(), response.sessionId(), origin);
+                    sendJsonResponse(
+                            ctx,
+                            response.responseBody(),
+                            HttpResponseStatus.valueOf(response.httpStatus()),
+                            response.sessionId(),
+                            origin);
                 }));
     }
 

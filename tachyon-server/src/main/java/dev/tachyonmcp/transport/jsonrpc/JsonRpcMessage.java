@@ -23,7 +23,7 @@ public sealed interface JsonRpcMessage {
     }
 
     /** A JSON-RPC success response. */
-    record Response(Object id, String resultJson) implements JsonRpcMessage {
+    record Response(@Nullable Object id, String resultJson) implements JsonRpcMessage {
 
         public Response {
             Objects.requireNonNull(resultJson, "resultJson");
@@ -32,7 +32,10 @@ public sealed interface JsonRpcMessage {
 
     /** A JSON-RPC error response. */
     record Error(
-            Object id, int code, String message, @Nullable String dataJson) implements JsonRpcMessage {
+            @Nullable Object id,
+            int code,
+            String message,
+            @Nullable String dataJson) implements JsonRpcMessage {
 
         public Error {
             Objects.requireNonNull(message, "message");

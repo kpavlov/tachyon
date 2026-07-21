@@ -103,11 +103,11 @@ public interface ServerEngine extends TachyonServer {
     CompletableFuture<String> sendRequest(
             Session session, String method, Object params, @Nullable OutboundSseStream stream);
 
-    /** Completes a pending client request with the given result JSON. */
-    boolean completePendingRequest(Object requestId, String resultJson);
+    /** Completes a pending client request with the given result JSON. {@code null} requestId is a no-op. */
+    boolean completePendingRequest(@Nullable Object requestId, String resultJson);
 
-    /** Fails a pending client request with the given error message. */
-    boolean failPendingRequest(Object requestId, String message);
+    /** Fails a pending client request with the given error message. {@code null} requestId is a no-op. */
+    boolean failPendingRequest(@Nullable Object requestId, String message);
 
     /** Registers a pending request with a timeout. */
     void registerPendingRequest(Object requestId, CompletableFuture<String> future);

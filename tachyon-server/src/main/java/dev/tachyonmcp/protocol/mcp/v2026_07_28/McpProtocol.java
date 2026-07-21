@@ -44,4 +44,10 @@ public final class McpProtocol implements Protocol {
     public ProtocolResponseMapper responseMapper() {
         return RESPONSE_MAPPER;
     }
+
+    /** 2026-07-28 removed protocol-level sessions: every request self-describes via {@code _meta}. */
+    @Override
+    public boolean supportsSessions() {
+        return false;
+    }
 }

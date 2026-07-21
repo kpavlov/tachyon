@@ -39,6 +39,17 @@ UNKNOWN_SIMPLE_MAP = {
     "byte[]": "byte[]",
 }
 
+# Jackson JSON-tree types (JsonNode and its concrete subtypes, e.g. via the JSONObject/JSONArray/
+# JSONValue schema aliases in typeMappings). decodeValue/encodeValue already handle any of these
+# generically (readValueAsTree / instanceof JsonNode) — a field resolving to one of these must use
+# that generic path, not CodecRegistry.codecFor, which only holds codecs for schema-modeled types.
+JSON_TREE_TYPES = (
+    "tools.jackson.databind.JsonNode",
+    "tools.jackson.databind.node.ObjectNode",
+    "tools.jackson.databind.node.ArrayNode",
+    "tools.jackson.databind.ValueNode",
+)
+
 STRING_NUMBER_UNIONS = {"ProgressToken", "RequestId"}
 
 
@@ -155,6 +166,29 @@ class TsParser:
         return text[start : i - 1], i - 1
 
     @staticmethod
+    def _unescape_ts_string(raw):
+        """Decodes backslash escapes in a quoted TS string literal to its semantic value."""
+        simple = {
+            "n": "\n",
+            "t": "\t",
+            "r": "\r",
+            "b": "\b",
+            "f": "\f",
+            "\\": "\\",
+            "'": "'",
+            '"': '"',
+            "/": "/",
+        }
+
+        def repl(m):
+            esc = m.group(1)
+            if esc.startswith("u") and len(esc) == 5:
+                return chr(int(esc[1:], 16))
+            return simple.get(esc, esc)
+
+        return re.sub(r"\\(u[0-9a-fA-F]{4}|.)", repl, raw)
+
+    @staticmethod
     def parse_fields(body):
         fields = []
         i = 0
@@ -206,6 +240,44 @@ class TsParser:
                     {
                         "kind": "field",
                         "name": name,
+                        "optional": optional,
+                        "type_str": type_str,
+                        "raw_type": raw_type,
+                        "jsdoc": jsdoc,
+                    }
+                )
+                i = semicolon + 1
+                jsdoc = ""
+                continue
+            # Quoted string-literal keys (e.g. reserved `_meta` namespaced keys like
+            # "io.modelcontextprotocol/serverInfo") aren't valid Java identifiers as-is.
+            # Derive a Java field name from the segment after the last '/', keep the
+            # original string as the wire-format JSON property name.
+            m = re.match(r"""(['"])(.+?)\1(\??)\s*:\s*""", body[i:])
+            if m:
+                json_name = TsParser._unescape_ts_string(m.group(2))
+                name = json_name.rsplit("/", 1)[-1]
+                name = re.sub(r"[^A-Za-z0-9_]", "_", name)
+                if not name or name[0].isdigit():
+                    name = "_" + name
+                existing_names = {f["name"] for f in fields if f["kind"] == "field"}
+                if name in existing_names:
+                    suffix = 2
+                    while f"{name}_{suffix}" in existing_names:
+                        suffix += 1
+                    name = f"{name}_{suffix}"
+                optional = m.group(3) == "?"
+                after_colon = i + m.end()
+                type_str, end_idx = TsParser.parse_type(body, after_colon)
+                semicolon = body.find(";", end_idx)
+                if semicolon == -1:
+                    break
+                raw_type = body[after_colon:semicolon].strip()
+                fields.append(
+                    {
+                        "kind": "field",
+                        "name": name,
+                        "json_name": json_name,
                         "optional": optional,
                         "type_str": type_str,
                         "raw_type": raw_type,
@@ -949,7 +1021,7 @@ class Generator:
             union_members = [p.strip() for p in f.get("raw_type", "").split("|")]
             if not optional and "null" in union_members:
                 optional = True
-                self.nullable_required.setdefault(class_name, set()).add(f["name"])
+                self.nullable_required.setdefault(class_name, set()).add(f.get("json_name", f["name"]))
             # Box optional/nullable primitives
             if optional and field_type in ("boolean", "long", "double"):
                 field_type = (
@@ -960,7 +1032,7 @@ class Generator:
             if self._is_ignored(f["name"], class_name):
                 continue
             fname = self.escape_name(f["name"])
-            json_name = f["name"]
+            json_name = f.get("json_name", f["name"])
             components.append(
                 (
                     field_type,
@@ -1567,7 +1639,7 @@ class Generator:
                 )
                 if item_ref in (
                         "String", "boolean", "Boolean", "long", "Long", "double", "Double",
-                        "tools.jackson.databind.JsonNode"):
+                        *JSON_TREE_TYPES):
                     out.append(
                         f"                            list.add(decodeValue(parser, {item_ref}.class));\n"
                     )
@@ -1578,7 +1650,7 @@ class Generator:
                 out.append(f"                        }}\n")
                 out.append(f"                        {fname}List = list;\n")
                 out.append(f"                    }}\n")
-            elif typ == self.unknown_java_type:
+            elif typ in JSON_TREE_TYPES:
                 out.append(
                     f"                    {fname} = decodeValue(parser, {typ}.class);\n"
                 )
@@ -1701,7 +1773,7 @@ class Generator:
                 item_ref = self.ref_for_type(item, model_name)
                 if item_ref in (
                         "String", "boolean", "Boolean", "long", "Long", "double", "Double",
-                        "tools.jackson.databind.JsonNode"):
+                        *JSON_TREE_TYPES):
                     out.append(f"{ind}    encodeValue(gen, item);\n")
                 else:
                     out.append(
@@ -1709,7 +1781,7 @@ class Generator:
                     )
                 out.append(f"{ind}}}\n")
                 out.append(f"{ind}gen.writeEndArray();\n")
-            elif typ == self.unknown_java_type:
+            elif typ in JSON_TREE_TYPES:
                 out.append(f'{ind}gen.writeName("{json_name}");\n')
                 out.append(f"{ind}encodeValue(gen, {acc});\n")
             elif "java.util.Map" in typ:
