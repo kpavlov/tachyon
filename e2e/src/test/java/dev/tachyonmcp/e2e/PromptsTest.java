@@ -121,7 +121,7 @@ class PromptsTest extends AbstractStatelessMcpE2eTest {
                 .register(
                         PromptDescriptor.of("embedded", "Prompt with embedded resource"),
                         List.of(PromptMessage.user(EmbeddedResource.of(
-                                TextResourceContents.of("test://embedded", "text/plain", "embedded content")))));
+                                TextResourceContents.of("test://embedded", "embedded content", "text/plain")))));
 
         try (var client = createTestClient()) {
             client.initialize();

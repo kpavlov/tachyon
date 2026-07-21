@@ -70,7 +70,7 @@ public class TasksExtension implements ServerExtension {
                             var id = params.get("id").scalarValue();
                             var entry = server.tasks().get(id);
                             var text = entry != null ? entry.status().name() : "not_found";
-                            return TextResourceContents.of(uri, "text/plain", text, null);
+                            return TextResourceContents.of(uri, text, "text/plain", null);
                         });
     }
 

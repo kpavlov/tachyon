@@ -50,7 +50,7 @@ public final class ServerBasic {
                     "config", "demo://config",
                     "Server configuration", "application/json"),
                 (ctx, uri, params, uriTemplate) ->
-                    TextResourceContents.of(uri, "application/json", "{\"mode\":\"production\"}"))
+                    TextResourceContents.of(uri, "{\"mode\":\"production\"}", "application/json"))
             .prompt(
                 PromptDescriptor.of("greet", "Generates a greeting"),
                 List.of(PromptMessage.user("Say hello")))
@@ -62,7 +62,7 @@ public final class ServerBasic {
                 (ctx, uri, params, uriTemplate) -> {
                     var userId = params.get("userId").scalarValue();
                     return TextResourceContents.of(
-                        uri, "application/json", "{\"userId\":\"" + userId + "\",\"name\":\"User\"}");
+                        uri, "{\"userId\":\"" + userId + "\",\"name\":\"User\"}", "application/json");
                 })
             .port(port)
             .start();

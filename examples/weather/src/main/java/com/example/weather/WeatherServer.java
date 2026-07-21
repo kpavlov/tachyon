@@ -76,14 +76,14 @@ public final class WeatherServer {
                                 .description("Weather prediction article")
                                 .mimeType("text/markdown"),
                     ResourceHandler.of((ctx, uri) ->
-                        TextResourceContents.of(uri, "text/markdown", weatherService.predictionArticle())))
+                        TextResourceContents.of(uri, weatherService.predictionArticle(), "text/markdown")))
                 .asyncResource(
                         resource -> resource.name("featured-current-weather")
                                 .uri("weather://featured/current")
                                 .description("Current weather in Tallinn")
                                 .mimeType("application/json"),
                     ResourceHandler.ofAsync((ctx, uri) -> weatherService.currentWeatherAsync("Tallinn")
-                        .thenApply(weather -> TextResourceContents.of(uri, "application/json", asJson(weather)))))
+                        .thenApply(weather -> TextResourceContents.of(uri, asJson(weather), "application/json"))))
                 .prompt(
                         prompt -> prompt.name("rewrite-forecast")
                                 .description("Rewrites a weather forecast in a chosen style")
@@ -143,7 +143,7 @@ public final class WeatherServer {
             Map<String, UriTemplateValue> params) {
         var city = ((UriTemplateValue.Scalar) params.get("city")).value();
         try {
-            return TextResourceContents.of(uri, "application/json", asJson(weatherService.currentWeather(city)));
+            return TextResourceContents.of(uri, asJson(weatherService.currentWeather(city)), "application/json");
         } catch (CityNotFoundException e) {
             throw new InvalidArgumentException("city", e.getMessage());
         } catch (Exception e) {

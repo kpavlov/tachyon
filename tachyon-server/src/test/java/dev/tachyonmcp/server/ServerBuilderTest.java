@@ -60,12 +60,12 @@ class ServerBuilderTest {
                 .tool(tool -> tool.name("sync-tool"), (ToolFn) (ctx, request) -> ToolResult.empty())
                 .resource(
                         resource -> resource.name("sync-resource").uri("test://sync"),
-                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "sync"))
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "sync", "text/plain"))
                 .prompt(prompt -> prompt.name("sync-prompt"), List.of(PromptMessage.user("sync")))
                 .resourceTemplate(
                         template -> template.name("sync-template").uriTemplate("test://sync/{id}"),
                         (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
-                                rawUri, "text/plain", ((UriTemplateValue.Scalar) params.get("id")).value()))
+                                rawUri, ((UriTemplateValue.Scalar) params.get("id")).value(), "text/plain"))
                 .build()) {
             assertThat(server.tools().find("sync-tool")).isPresent();
             assertThat(server.resources().find("sync-resource")).isPresent();
@@ -83,7 +83,7 @@ class ServerBuilderTest {
                 .asyncResource(
                         resource -> resource.name("async-resource").uri("test://async"),
                         (ctx, rawUri, params, uriTemplate) -> CompletableFuture.completedFuture(
-                                TextResourceContents.of(rawUri, "text/plain", "async")))
+                                TextResourceContents.of(rawUri, "async", "text/plain")))
                 .asyncPrompt(
                         prompt -> prompt.name("async-prompt"),
                         (ctx, request) -> CompletableFuture.completedFuture(
@@ -91,7 +91,7 @@ class ServerBuilderTest {
                 .asyncResourceTemplate(
                         template -> template.name("async-template").uriTemplate("test://async/{id}"),
                         (ctx, rawUri, params, uriTemplate) -> CompletableFuture.completedFuture(TextResourceContents.of(
-                                rawUri, "text/plain", ((UriTemplateValue.Scalar) params.get("id")).value())))
+                                rawUri, ((UriTemplateValue.Scalar) params.get("id")).value(), "text/plain")))
                 .build()) {
             assertThat(server.tools().find("async-tool")).isPresent();
             assertThat(server.resources().find("async-resource")).isPresent();
@@ -106,7 +106,7 @@ class ServerBuilderTest {
         try (var server = TachyonServer.builder()
                 .resource(
                         resource -> resource.name("sync-resource").uri("test://sync-completed"),
-                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "text"))
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text", "text/plain"))
                 .resourceCompletion("test://sync-completed", handler)
                 .build()) {
             assertThat(server.completions().findForResource("test://sync-completed"))
@@ -124,7 +124,7 @@ class ServerBuilderTest {
                 .prompt(prompt -> prompt.name("async-completed-prompt"), List.of(PromptMessage.user("prompt")))
                 .resource(
                         resource -> resource.name("async-resource").uri("test://async-completed"),
-                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "text"))
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text", "text/plain"))
                 .asyncPromptCompletion("async-completed-prompt", promptHandler)
                 .asyncResourceCompletion("test://async-completed", resourceHandler)
                 .build()) {

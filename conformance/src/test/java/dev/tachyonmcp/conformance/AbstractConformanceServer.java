@@ -217,7 +217,7 @@ abstract class AbstractConformanceServer {
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
                         (ctx, request) -> {
                             var res = TextResourceContents.of(
-                                    "test://embedded-resource", "text/plain", "This is an embedded resource content.");
+                                    "test://embedded-resource", "This is an embedded resource content.", "text/plain");
                             return ToolResult.blocks(EmbeddedResource.of(res));
                         }));
 
@@ -229,8 +229,8 @@ abstract class AbstractConformanceServer {
                         (ctx, request) -> {
                             var mixed = TextResourceContents.of(
                                     "test://mixed-content-resource",
-                                    "application/json",
-                                    "{\"test\":\"data\",\"value\":123}");
+                                    "{\"test\":\"data\",\"value\":123}",
+                                    "application/json");
                             return ToolResult.blocks(
                                     TextContent.of("Multiple content types test:"),
                                     ImageContent.of(MINI_PNG_BASE64, "image/png"),
@@ -524,21 +524,21 @@ abstract class AbstractConformanceServer {
                 .register(
                         ResourceDescriptor.of("hello", "hello://world", "Hello resource", "text/plain"),
                         (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "text/plain", "Hello, World!"));
+                                TextResourceContents.of(rawUri, "Hello, World!", "text/plain"));
 
         server.resources()
                 .register(
                         ResourceDescriptor.of(
                                 "static-text", "test://static-text", "Static text resource", "text/plain"),
                         (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
-                                rawUri, "text/plain", "This is static text content for testing."));
+                                rawUri, "This is static text content for testing.", "text/plain"));
 
         server.resources()
                 .register(
                         ResourceDescriptor.of(
                                 "static-binary", "test://static-binary", "Static binary resource", "image/png"),
                         (ctx, rawUri, params, uriTemplate) ->
-                                BlobResourceContents.of(rawUri, "image/png", MINI_PNG_BASE64));
+                                BlobResourceContents.of(rawUri, MINI_PNG_BASE64, "image/png"));
 
         server.resources()
                 .registerTemplate(
@@ -547,8 +547,8 @@ abstract class AbstractConformanceServer {
                                 .description("test-description"),
                         (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
                                 rawUri,
-                                "text/plain",
-                                "Resource content for id: " + ((UriTemplateValue.Scalar) params.get("id")).value()));
+                                "Resource content for id: " + ((UriTemplateValue.Scalar) params.get("id")).value(),
+                                "text/plain"));
     }
 
     private void registerPrompts(ServerEngine server) {
@@ -567,8 +567,8 @@ abstract class AbstractConformanceServer {
                         PromptDescriptor.of("test_prompt_with_embedded_resource", "Prompt with embedded resource"),
                         List.of(PromptMessage.user(EmbeddedResource.of(TextResourceContents.of(
                                 "test://embedded-resource-content",
-                                "text/plain",
-                                "Embedded resource content for testing.")))));
+                                "Embedded resource content for testing.",
+                                "text/plain")))));
 
         server.prompts()
                 .register(

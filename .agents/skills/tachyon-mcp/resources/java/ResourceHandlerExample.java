@@ -2,7 +2,6 @@
  * Copyright (c) 2026 Konstantin Pavlov and contributors.
  */
 
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.BlobResourceContents;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
@@ -22,7 +21,7 @@ final class ResourceHandlerExample {
      */
     static ResourceHandler configHandler() {
         return ResourceHandler.of((ctx, uri) ->
-            TextResourceContents.of(uri, "application/json", "{\"mode\":\"production\"}"));
+            TextResourceContents.of(uri, "{\"mode\":\"production\"}", "application/json"));
     }
 
     static ResourceDescriptor configDescriptor() {
@@ -34,7 +33,7 @@ final class ResourceHandlerExample {
      */
     static ResourceHandler imageHandler() {
         return ResourceHandler.of((ctx, uri) ->
-            BlobResourceContents.of(uri, "image/png", "iVBORw0KGgoAAAANS..."));
+            BlobResourceContents.of(uri, "iVBORw0KGgoAAAANS...", "image/png"));
     }
 
     /**
@@ -52,7 +51,7 @@ final class ResourceHandlerExample {
     static ResourceHandler userProfileTemplateHandler() {
         return (ctx, uri, params, uriTemplate) -> {
             var userId = params.get("userId").scalarValue();
-            return TextResourceContents.of(uri, "application/json", "{\"userId\":\"" + userId + "\"}");
+            return TextResourceContents.of(uri, "{\"userId\":\"" + userId + "\"}", "application/json");
         };
     }
 
@@ -68,8 +67,8 @@ final class ResourceHandlerExample {
 
     static ResourceHandler forecastTemplateHandler() {
         return (ctx, uri, params, uriTemplate) -> TextResourceContents.of(
-            uri, "application/json",
-            "{\"city\":\"" + params.get("city") + "\",\"temp\":22}");
+            uri, "{\"city\":\"" + params.get("city") + "\",\"temp\":22}", "application/json"
+        );
     }
 
     /**
@@ -79,6 +78,6 @@ final class ResourceHandlerExample {
      */
     static AsyncResourceHandler asyncConfigHandler() {
         return ResourceHandler.ofAsync((ctx, uri) -> CompletableFuture.supplyAsync(
-            () -> TextResourceContents.of(uri, "application/json", "{\"mode\":\"production\"}")));
+            () -> TextResourceContents.of(uri, "{\"mode\":\"production\"}", "application/json")));
     }
 }

@@ -19,7 +19,7 @@ class ResourceTemplateTest extends AbstractStatelessMcpE2eTest {
                                 .description("An item")
                                 .mimeType("text/plain"),
                         (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
-                                rawUri, "text/plain", "item=" + params.get("id").scalarValue()));
+                                rawUri, "item=" + params.get("id").scalarValue(), "text/plain"));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -55,25 +55,21 @@ class ResourceTemplateTest extends AbstractStatelessMcpE2eTest {
                                 .description("An item")
                                 .mimeType("text/plain"),
                         (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
-                                rawUri, "text/plain", "item=" + params.get("id").scalarValue()))
+                                rawUri, "item=" + params.get("id").scalarValue(), "text/plain"))
                 .registerTemplate(
                         builder -> builder.name("orders")
                                 .uriTemplate("resource://orders/{orderId}")
                                 .description("An order")
                                 .mimeType("text/plain"),
                         (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
-                                rawUri,
-                                "text/plain",
-                                "order=" + params.get("orderId").scalarValue()))
+                                rawUri, "order=" + params.get("orderId").scalarValue(), "text/plain"))
                 .registerTemplate(
                         builder -> builder.name("users")
                                 .uriTemplate("resource://users/{userId}")
                                 .description("A user")
                                 .mimeType("text/plain"),
                         (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
-                                rawUri,
-                                "text/plain",
-                                "user=" + params.get("userId").scalarValue()));
+                                rawUri, "user=" + params.get("userId").scalarValue(), "text/plain"));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -148,9 +144,9 @@ class ResourceTemplateTest extends AbstractStatelessMcpE2eTest {
                                 .mimeType("text/plain"),
                         (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
                                 rawUri,
-                                "text/plain",
                                 "user=" + params.get("userId").scalarValue() + ",post="
-                                        + params.get("postId").scalarValue()));
+                                        + params.get("postId").scalarValue(),
+                                "text/plain"));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -186,7 +182,7 @@ class ResourceTemplateTest extends AbstractStatelessMcpE2eTest {
                                 .description("An item")
                                 .mimeType("text/plain"),
                         (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
-                                rawUri, "text/plain", "item=" + params.get("id").scalarValue()));
+                                rawUri, "item=" + params.get("id").scalarValue(), "text/plain"));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -218,7 +214,7 @@ class ResourceTemplateTest extends AbstractStatelessMcpE2eTest {
         server.resources()
                 .registerTemplate(
                         builder -> builder.name("item").uriTemplate("resource://items/{id}"),
-                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "item"));
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "item", "text/plain"));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -249,7 +245,7 @@ class ResourceTemplateTest extends AbstractStatelessMcpE2eTest {
                                 .description("An item")
                                 .mimeType("text/plain"),
                         (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
-                                rawUri, "text/plain", "item=" + params.get("id").scalarValue()));
+                                rawUri, "item=" + params.get("id").scalarValue(), "text/plain"));
 
         try (var client = createTestClient()) {
             client.initialize();

@@ -27,11 +27,11 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
         server.resources()
                 .register(
                         ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "Hello"))
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "Hello", "text/plain"))
                 .register(
                         ResourceDescriptor.of("code", "resource://code", "Source code", "text/x-java"),
                         (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of("resource://code", "text/x-java", "package com.example;"));
+                                TextResourceContents.of("resource://code", "package com.example;", "text/x-java"));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -59,7 +59,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
                 .register(
                         descriptor,
                         (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "text/plain", "Hello world"));
+                                TextResourceContents.of(rawUri, "Hello world", "text/plain"));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -82,15 +82,15 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
                 .register(
                         ResourceDescriptor.of("alpha", "resource://alpha", "Alpha", "text/plain"),
                         (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "text/plain", "content-alpha"))
+                                TextResourceContents.of(rawUri, "content-alpha", "text/plain"))
                 .register(
                         ResourceDescriptor.of("beta", "resource://beta", "Beta", "text/plain"),
                         (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "text/plain", "content-beta"))
+                                TextResourceContents.of(rawUri, "content-beta", "text/plain"))
                 .register(
                         ResourceDescriptor.of("gamma", "resource://gamma", "Gamma", "text/plain"),
                         (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "text/plain", "content-gamma"));
+                                TextResourceContents.of(rawUri, "content-gamma", "text/plain"));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -120,7 +120,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
     void shouldReadResourceFromAsyncHandler() throws Exception {
         var descriptor = ResourceDescriptor.of("async-doc", "resource://async-doc", "Async document", "text/plain");
         AsyncResourceHandler handler = (ctx, rawUri, params, uriTemplate) -> CompletableFuture.supplyAsync(
-                () -> TextResourceContents.of("resource://async-doc", "text/plain", "async content"));
+                () -> TextResourceContents.of("resource://async-doc", "async content", "text/plain"));
         startEmptyServer();
         server.resources().register(descriptor, handler);
 
@@ -203,11 +203,11 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
                 .register(
                         ResourceDescriptor.of("alpha", "resource://alpha", "Alpha", "text/plain"),
                         (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "text/plain", "content-alpha"))
+                                TextResourceContents.of(rawUri, "content-alpha", "text/plain"))
                 .register(
                         ResourceDescriptor.of("beta", "resource://beta", "Beta", "text/plain"),
                         (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "text/plain", "content-beta"));
+                                TextResourceContents.of(rawUri, "content-beta", "text/plain"));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -240,7 +240,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
             if ("remove".equals(action)) {
                 builder.resource(
                         ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", ""));
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "", "text/plain"));
             }
         });
 
@@ -258,7 +258,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
     void shouldNotifyResourceUpdated() throws Exception {
         startServer(it -> it.resource(
                         ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", ""))
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "", "text/plain"))
                 .tool(notifyUpdatedTool()));
 
         try (var client = createTestClient()) {
@@ -282,7 +282,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
     void shouldNotNotifyAfterUnsubscribe() throws Exception {
         startServer(it -> it.resource(
                         ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", ""))
+                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "", "text/plain"))
                 .tool(notifyUpdatedTool()));
 
         try (var client = createTestClient()) {
@@ -312,7 +312,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
             builder.capabilities(c -> c.resourcesListChanged(true)).tool(unregisterByUriTool());
             builder.resource(
                     ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
-                    (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", ""));
+                    (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "", "text/plain"));
         });
 
         try (var client = createTestClient()) {
@@ -337,7 +337,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
                                 ResourceDescriptor.of(
                                         "added-resource", "resource://added", "Added by handler", "text/plain"),
                                 (ctx, rawUri, params, uriTemplate) ->
-                                        TextResourceContents.of(rawUri, "text/plain", "content"));
+                                        TextResourceContents.of(rawUri, "content", "text/plain"));
                     } else {
                         resources.unregister("doc");
                     }

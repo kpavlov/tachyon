@@ -23,7 +23,7 @@ public fun TextResourceContents(
     text: String,
     mimeType: String? = null,
     meta: Map<String, JsonNode>? = null,
-): TextResourceContents = TextResourceContents.of(uri, mimeType, text, meta)
+): TextResourceContents = TextResourceContents.of(uri, text, mimeType, meta)
 
 /**
  * Creates [TextResourceContents] using a kotlinx-serialization metadata map.
@@ -37,7 +37,7 @@ public fun TextResourceContents(
     text: String,
     mimeType: String? = null,
     meta: Map<String, JsonObject>?,
-): TextResourceContents = TextResourceContents.of(uri, mimeType, text, meta?.toJacksonNodeMap())
+): TextResourceContents = TextResourceContents.of(uri, text, mimeType, meta?.toJacksonNodeMap())
 
 /**
  * Creates [BlobResourceContents] — binary resource data encoded as base64.
@@ -53,7 +53,7 @@ public fun BlobResourceContents(
     blob: String,
     mimeType: String? = null,
     meta: Map<String, JsonNode> = emptyMap(),
-): BlobResourceContents = BlobResourceContents.of(uri, mimeType, blob, meta)
+): BlobResourceContents = BlobResourceContents.of(uri, blob, mimeType, meta)
 
 /**
  * Creates [BlobResourceContents] using a kotlinx-serialization metadata map.
@@ -67,4 +67,4 @@ public fun BlobResourceContents(
     blob: String,
     mimeType: String? = null,
     meta: Map<String, JsonObject>,
-): BlobResourceContents = BlobResourceContents.of(uri, mimeType, blob, meta.toJacksonNodeMap())
+): BlobResourceContents = BlobResourceContents.of(uri, blob, mimeType, meta.toJacksonNodeMap())
