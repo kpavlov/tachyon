@@ -78,7 +78,7 @@ class SseHeartbeatTest {
     }
 
     private String initializeSession() throws Exception {
-        try (var client = new TestMcpClient(port)) {
+        try (var client = new Mcp20251125TestClient(port)) {
             return client.initialize();
         }
     }

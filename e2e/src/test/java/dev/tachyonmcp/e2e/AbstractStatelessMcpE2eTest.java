@@ -4,7 +4,7 @@
 
 package dev.tachyonmcp.e2e;
 
-abstract class AbstractStatelessMcpE2eTest extends AbstractMcpE2eTest {
+public abstract class AbstractStatelessMcpE2eTest extends AbstractMcpE2eTest {
 
     @Override
     protected final SessionMode sessionMode() {

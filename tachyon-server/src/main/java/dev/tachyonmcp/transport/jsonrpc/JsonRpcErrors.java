@@ -4,6 +4,9 @@
 
 package dev.tachyonmcp.transport.jsonrpc;
 
+import dev.tachyonmcp.server.json.JsonUtils;
+import java.util.Map;
+
 /** Standard JSON-RPC error codes and factory methods. */
 public final class JsonRpcErrors {
 
@@ -50,5 +53,9 @@ public final class JsonRpcErrors {
     /** Creates a resource-not-found error with the given detail. */
     public static JsonRpcError resourceNotFound(String detail) {
         return new JsonRpcError(RESOURCE_NOT_FOUND, detail);
+    }
+
+    public static JsonRpcError resourceNotFound(String detail, Map<String, String> data) {
+        return new JsonRpcError(RESOURCE_NOT_FOUND, detail, JsonUtils.writeString(data));
     }
 }

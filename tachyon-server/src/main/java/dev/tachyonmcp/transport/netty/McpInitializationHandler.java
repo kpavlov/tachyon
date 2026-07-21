@@ -158,7 +158,8 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
         var heartbeatInterval = server.config().network().heartbeatInterval();
         var postStream = new PostSseStream(ctx.channel(), origin, server::nextEventId, heartbeatInterval);
         dispatcher
-                .dispatchRequestAsync(id, method, params, null, postStream, null)
+                .dispatchRequestAsync(
+                        id, method, params, null, postStream, ChannelHandlerUtils.requireInteractionContext(ctx))
                 .whenComplete((result, ex) -> ctx.executor().execute(() -> {
                     // Neutralize the unused stream so a late server→client message cannot open a
                     // second response on this (potentially keep-alive) channel.

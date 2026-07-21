@@ -10,6 +10,6 @@ package dev.tachyonmcp.conformance;
 class EdgeServerConformanceIT extends AbstractServerConformanceIT {
 
     EdgeServerConformanceIT() {
-        super(new EdgeConformanceServer(), "0.2.0-alpha.7", "conformance-baseline-0.2.yml", "edge", "2026-07-28");
+        super(new EdgeConformanceServer(), "0.2.0-alpha.9", "conformance-baseline-0.2.yml", "edge", "2026-07-28");
     }
 }

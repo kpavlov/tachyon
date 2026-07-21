@@ -6,10 +6,11 @@ package dev.tachyonmcp.transport.netty;
 
 import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendResponseAndClose;
 
+import dev.tachyonmcp.protocol.Protocol;
+import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
+import dev.tachyonmcp.protocol.mcp.v2026_07_28.McpProtocol;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -17,19 +18,25 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import java.util.Set;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 
 /**
- * Validates the {@code MCP-Protocol-Version} header on POST requests.
- * Rejects unsupported versions with a {@code 400 Bad Request} JSON-RPC error.
+ * Negotiates the protocol for each MCP POST and binds it to the interaction context.
  */
 @Sharable
 public class ProtocolVersionHandler extends ChannelInboundHandlerAdapter {
 
-    private static final Set<String> SUPPORTED_VERSIONS =
-            Set.of("2024-11-05", "2025-03-26", "2025-06-18", McpProtocol.VERSION);
-
     private final String mcpEndpoint;
+    private static final List<String> SUPPORTED_VERSIONS;
+
+    static {
+        SUPPORTED_VERSIONS = Protocols.list().stream()
+                .map(Protocol::versionString)
+                .sorted(Comparator.reverseOrder())
+                .toList();
+    }
 
     public ProtocolVersionHandler(String mcpEndpoint) {
         this.mcpEndpoint = mcpEndpoint;
@@ -41,12 +48,20 @@ public class ProtocolVersionHandler extends ChannelInboundHandlerAdapter {
                 && req.method() == HttpMethod.POST
                 && req.uri().startsWith(mcpEndpoint)) {
             var protoVersion = req.headers().get(McpHeaderNames.MCP_PROTOCOL_VERSION);
-            if (protoVersion != null && !SUPPORTED_VERSIONS.contains(protoVersion)) {
-                var err = JsonRpcErrors.invalidRequest("Unsupported protocol version");
-                var body = JsonRpcCodec.serializeError(-1, err.code(), err.message(), null);
+            var protocol = Protocols.resolve(req);
+            if (protocol.isEmpty()) {
+                var data = JsonRpcCodec.writeValueAsString(
+                        Map.of("supported", SUPPORTED_VERSIONS, "requested", protoVersion));
+                var body = JsonRpcCodec.serializeError(-1, -32022, "Unsupported protocol version", data);
                 var origin = req.headers().get(HttpHeaderNames.ORIGIN);
                 sendResponseAndClose(ctx, HttpResponseStatus.BAD_REQUEST, "application/json", body, origin);
                 return;
+            }
+            var interaction = ctx.channel().attr(InteractionHandler.INTERACTION_CONTEXT_KEY);
+            if (McpProtocol.VERSION.equals(protocol.get().versionString())) {
+                interaction.set(protocol.get().createInteractionContext());
+            } else {
+                interaction.setIfAbsent(protocol.get().createInteractionContext());
             }
         }
         ctx.fireChannelRead(msg);

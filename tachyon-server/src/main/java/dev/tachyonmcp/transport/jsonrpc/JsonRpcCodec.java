@@ -4,6 +4,8 @@
 
 package dev.tachyonmcp.transport.jsonrpc;
 
+import static dev.tachyonmcp.server.json.JsonUtils.FACTORY;
+
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.Codec;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.CodecRegistry;
 import io.netty.buffer.ByteBuf;
@@ -25,27 +27,11 @@ import tools.jackson.core.JsonParser;
 import tools.jackson.core.JsonToken;
 import tools.jackson.core.ObjectReadContext;
 import tools.jackson.core.ObjectWriteContext;
-import tools.jackson.core.TreeNode;
-import tools.jackson.core.json.JsonFactory;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
 /** Low-level JSON-RPC 2.0 codec: parse and serialize messages to/from Netty {@link ByteBuf}. */
 public final class JsonRpcCodec {
-
-    public static final ObjectReadContext TREE_READ_CONTEXT = new ObjectReadContext.Base() {
-        @Override
-        @SuppressWarnings("unchecked")
-        public <T extends TreeNode> T readTree(JsonParser p) {
-            try {
-                return (T) readTreeValue(p);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-        }
-    };
-
-    public static final JsonFactory FACTORY = new JsonFactory();
 
     private static final String JSONRPC = "jsonrpc";
     private static final String JSONRPC_VERSION = "2.0";

@@ -6,6 +6,7 @@ package dev.tachyonmcp.transport.netty;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.protocol.mcp.v2026_07_28.McpProtocol;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -70,6 +71,22 @@ class ProtocolVersionHandlerTest {
         channel.writeInbound(request);
 
         assertThat((Object) channel.readOutbound()).isNull();
+    }
+
+    @Test
+    void latestVersionBindsItsProtocolToTheInteraction() {
+        var negotiationChannel = new EmbeddedChannel(new ProtocolVersionHandler("/mcp"), new InteractionHandler());
+        var request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/mcp");
+        request.headers().set("MCP-Protocol-Version", McpProtocol.VERSION);
+
+        negotiationChannel.writeInbound(request);
+
+        assertThat(negotiationChannel
+                        .attr(InteractionHandler.INTERACTION_CONTEXT_KEY)
+                        .get())
+                .extracting(context -> context.protocolVersion())
+                .isEqualTo(McpProtocol.VERSION);
+        negotiationChannel.finishAndReleaseAll();
     }
 
     @Test

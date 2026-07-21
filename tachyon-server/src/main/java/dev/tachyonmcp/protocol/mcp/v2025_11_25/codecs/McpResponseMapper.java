@@ -53,7 +53,7 @@ import tools.jackson.core.JsonParser;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
-public final class McpResponseMapper implements ProtocolResponseMapper {
+public class McpResponseMapper implements ProtocolResponseMapper {
 
     private static final Object EMPTY = new EmptyResult(null, null);
 

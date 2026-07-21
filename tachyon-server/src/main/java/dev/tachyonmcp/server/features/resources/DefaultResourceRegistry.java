@@ -507,7 +507,8 @@ public class DefaultResourceRegistry implements Resources {
             }
             var match = registry.matchTemplate(uri);
             if (match == null) {
-                return CompletableFuture.completedFuture(JsonRpcErrors.resourceNotFound("Resource not found"));
+                return CompletableFuture.completedFuture(
+                        JsonRpcErrors.resourceNotFound("Resource not found", Map.of("uri", uri)));
             }
             return readResult(
                     context,
