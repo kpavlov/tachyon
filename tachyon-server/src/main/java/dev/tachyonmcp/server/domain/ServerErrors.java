@@ -38,4 +38,16 @@ public final class ServerErrors {
     public static ServerError resourceNotFound(String detail, Map<String, String> data) {
         return new ServerError(ServerError.Kind.RESOURCE_NOT_FOUND, detail, data);
     }
+
+    public static ServerError headerMismatch(String detail) {
+        return new ServerError(ServerError.Kind.HEADER_MISMATCH, detail);
+    }
+
+    /** {@code error.data.requiredCapabilities} is a {@code ClientCapabilities}-shaped map, not a name list. */
+    public static ServerError missingRequiredClientCapability(String detail, Map<String, Object> requiredCapabilities) {
+        return new ServerError(
+                ServerError.Kind.MISSING_REQUIRED_CLIENT_CAPABILITY,
+                detail,
+                Map.of("requiredCapabilities", requiredCapabilities));
+    }
 }

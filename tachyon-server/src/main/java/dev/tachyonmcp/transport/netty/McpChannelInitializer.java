@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.transport.netty;
 
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.transport.RequestValidationHandler;
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.netty.http.AcceptValidationHandler;
@@ -55,6 +56,8 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
     private final Duration writerIdleTimeout;
     private final int maxContentLength;
     private final ProtocolVersionHandler protocolVersionHandler;
+    private static final UnsupportedProtocolVersionHandler UNSUPPORTED_PROTOCOL_VERSION_HANDLER =
+            new UnsupportedProtocolVersionHandler();
     private final AcceptValidationHandler acceptHeaderValidator;
     private final boolean stateless;
     private final EndpointValidatorHandler endpointValidatorHandler;
@@ -65,6 +68,11 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
     private final CorsConfig corsConfig;
 
     private static final ChannelHandler statelessValidator = new StatelessValidatorHandler();
+    private static final ChannelHandler MCP_2025_11_25_REQUEST_VALIDATOR = new RequestValidationHandler();
+
+    // Per-server, not static: Mcp-Param-* validation resolves x-mcp-header tool-schema annotations
+    // via this server's own tool registry.
+    private final ChannelHandler mcp20260728RequestValidator;
 
     private final ServerEngine server;
     private final McpDispatcher dispatcher;
@@ -94,6 +102,8 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
         this.childChannels = childChannels;
         this.dispatcher = new McpDispatcher(server, server.executor());
         this.interactionHandler = new InteractionHandler();
+        this.mcp20260728RequestValidator =
+                new dev.tachyonmcp.protocol.mcp.v2026_07_28.transport.RequestValidationHandler(server);
 
         protocolVersionHandler = new ProtocolVersionHandler(endpointPath);
         acceptHeaderValidator = new AcceptValidationHandler(endpointPath);
@@ -128,13 +138,22 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
         if (stateless) {
             p.addLast("stateless-mcp", statelessValidator);
         }
-        p.addLast("interaction", interactionHandler);
 
         // HttpObjectAggregator owns `Expect: 100-continue`: it answers 100 Continue for
         // acceptable requests and rejects oversized ones (413/417) before the body is
         // transferred. A separate HttpServerExpectContinueHandler would defeat that by
         // always acking 100 Continue upstream of the aggregator.
         p.addLast("http-aggregator", new HttpObjectAggregator(maxContentLength));
+
+        // Rejects requests ProtocolVersionHandler flagged as an unsupported protocol version, now
+        // that the body (and its JSON-RPC id) is available. Placed before "interaction" so a
+        // rejected request never pays for the (redundant, since ProtocolVersionHandler already
+        // tried and failed) protocol re-resolution InteractionHandler does as a GET/DELETE fallback.
+        p.addLast("unsupported-protocol-version", UNSUPPORTED_PROTOCOL_VERSION_HANDLER);
+
+        // FullHttpRequest is still an HttpRequest, so this fallback protocol resolution (for GET/
+        // DELETE, which ProtocolVersionHandler doesn't cover) works the same post-aggregation.
+        p.addLast("interaction", interactionHandler);
         // On a plain HTTP keep-alive socket an idle tick closes the connection. On a channel carrying
         // an open SSE stream the SseHeartbeat scheduler drives heartbeats independently, so idle ticks
         // are a no-op for SSE channels. Lower readerIdleTimeout below any intermediary proxy's idle
@@ -145,6 +164,14 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
                     new IdleStateHandler(
                             readerIdleTimeout.toMillis(), writerIdleTimeout.toMillis(), 0, TimeUnit.MILLISECONDS));
         }
+
+        // Protocol-bound request validation, one handler per protocol version (see each handler's
+        // own package). Each checks the negotiated protocol on the interaction context and no-ops
+        // for any other version, so both can sit unconditionally ahead of dispatch — no dynamic
+        // pipeline surgery. Needs the aggregated body (peeked read-only), so it must run after
+        // http-aggregator and before the phase handlers below.
+        p.addLast("mcp-request-validation-2025-11-25", MCP_2025_11_25_REQUEST_VALIDATOR);
+        p.addLast("mcp-request-validation-2026-07-28", mcp20260728RequestValidator);
 
         // Both stateless and stateful modes go through the initialization phase handler.
         // It negotiates the protocol, fires InteractionEvent.OperationStarted, then the

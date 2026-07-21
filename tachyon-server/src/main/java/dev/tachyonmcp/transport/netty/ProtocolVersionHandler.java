@@ -4,34 +4,34 @@
 
 package dev.tachyonmcp.transport.netty;
 
-import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendResponseAndClose;
-
 import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.protocol.mcp.v2026_07_28.McpProtocol;
-import dev.tachyonmcp.server.domain.ServerError;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.AttributeKey;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 
 /**
- * Negotiates the protocol for each MCP POST and binds it to the interaction context.
+ * Negotiates the protocol for each MCP POST and binds it to the interaction context. A request
+ * naming an unsupported protocol version is flagged via {@link #UNSUPPORTED_VERSION_KEY} instead
+ * of being rejected here: the JSON-RPC {@code id} the error response must echo lives in the body,
+ * which {@code http-aggregator} hasn't assembled yet at this point in the pipeline. See {@link
+ * UnsupportedProtocolVersionHandler}, which runs after aggregation and does the actual rejection.
  */
 @Sharable
 public class ProtocolVersionHandler extends ChannelInboundHandlerAdapter {
 
+    static final AttributeKey<String> UNSUPPORTED_VERSION_KEY = AttributeKey.valueOf("unsupportedProtocolVersion");
+
     private final String mcpEndpoint;
-    private static final Protocol LATEST_PROTOCOL;
-    private static final List<String> SUPPORTED_VERSIONS;
+    static final Protocol LATEST_PROTOCOL;
+    static final List<String> SUPPORTED_VERSIONS;
 
     static {
         LATEST_PROTOCOL = Protocols.list().stream()
@@ -55,23 +55,14 @@ public class ProtocolVersionHandler extends ChannelInboundHandlerAdapter {
             var protoVersion = req.headers().get(McpHeaderNames.MCP_PROTOCOL_VERSION);
             var protocol = Protocols.resolve(req);
             if (protocol.isEmpty()) {
-                var requestedVersion = protoVersion != null ? protoVersion : "";
-                var error = LATEST_PROTOCOL
-                        .responseMapper()
-                        .error(new ServerError(
-                                ServerError.Kind.UNSUPPORTED_PROTOCOL_VERSION,
-                                "Unsupported protocol version",
-                                Map.of("supported", SUPPORTED_VERSIONS, "requested", requestedVersion)));
-                var body = JsonRpcCodec.serializeError(-1, error.code(), error.message(), error.data());
-                var origin = req.headers().get(HttpHeaderNames.ORIGIN);
-                sendResponseAndClose(ctx, HttpResponseStatus.BAD_REQUEST, "application/json", body, origin);
-                return;
-            }
-            var interaction = ctx.channel().attr(InteractionHandler.INTERACTION_CONTEXT_KEY);
-            if (McpProtocol.VERSION.equals(protocol.get().versionString())) {
-                interaction.set(protocol.get().createInteractionContext());
+                ctx.channel().attr(UNSUPPORTED_VERSION_KEY).set(protoVersion != null ? protoVersion : "");
             } else {
-                interaction.setIfAbsent(protocol.get().createInteractionContext());
+                var interaction = ctx.channel().attr(InteractionHandler.INTERACTION_CONTEXT_KEY);
+                if (McpProtocol.VERSION.equals(protocol.get().versionString())) {
+                    interaction.set(protocol.get().createInteractionContext());
+                } else {
+                    interaction.setIfAbsent(protocol.get().createInteractionContext());
+                }
             }
         }
         ctx.fireChannelRead(msg);

@@ -37,6 +37,19 @@ public interface Protocol {
     }
 
     /**
+     * Whether this protocol version supports a server-side session established via
+     * {@code initialize}. {@code true} for versions where sessions are part of the protocol (e.g.
+     * MCP 2025-11-25) — a deployment can still choose to run those statelessly via
+     * {@link dev.tachyonmcp.server.ServerBuilder} session config, that's an orthogonal server
+     * choice, not a protocol trait. {@code false} for fully stateless, per-request protocol
+     * versions (e.g. MCP 2026-07-28), which removed sessions from the protocol entirely — every
+     * request self-describes via {@code _meta}, and no {@code initialize} handshake exists.
+     */
+    default boolean supportsSessions() {
+        return true;
+    }
+
+    /**
      * Returns {@code true} when this implementation can handle the given HTTP request.
      * POST requests are matched by endpoint AND {@code MCP-Protocol-Version} header compatibility;
      * other methods (GET for SSE, DELETE for session close, OPTIONS) are matched by endpoint only.

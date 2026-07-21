@@ -57,7 +57,7 @@ public final class JsonRpcCodec {
     }
 
     /** Serializes a JSON-RPC response. */
-    public static byte[] serializeResponse(Object id, @Nullable String resultJson) {
+    public static byte[] serializeResponse(@Nullable Object id, @Nullable String resultJson) {
         return serialize(gen -> {
             gen.writeStartObject();
             gen.writeStringProperty(JSONRPC, JSONRPC_VERSION);
@@ -73,7 +73,7 @@ public final class JsonRpcCodec {
     }
 
     /** Serializes a JSON-RPC error response. */
-    public static byte[] serializeError(Object id, int code, String message, @Nullable String dataJson) {
+    public static byte[] serializeError(@Nullable Object id, int code, String message, @Nullable String dataJson) {
         return serialize(gen -> {
             gen.writeStartObject();
             gen.writeStringProperty(JSONRPC, JSONRPC_VERSION);
@@ -90,9 +90,10 @@ public final class JsonRpcCodec {
         });
     }
 
-    private static void writeId(JsonGenerator gen, Object id) {
+    private static void writeId(JsonGenerator gen, @Nullable Object id) {
         gen.writeName(ID);
         switch (id) {
+            case null -> gen.writeNull();
             case Long l -> gen.writeNumber(l);
             case Integer i -> gen.writeNumber(i);
             case Number n -> gen.writeNumber(n.doubleValue());
@@ -189,11 +190,11 @@ public final class JsonRpcCodec {
         }
 
         if (hasError && errorCode != null && errorMessage != null) {
-            return new JsonRpcMessage.Error(id != null ? id : -1, errorCode, errorMessage, errorDataJson);
+            return new JsonRpcMessage.Error(id, errorCode, errorMessage, errorDataJson);
         }
 
         if (hasResult) {
-            return new JsonRpcMessage.Response(id != null ? id : -1, resultJson != null ? resultJson : "null");
+            return new JsonRpcMessage.Response(id, resultJson != null ? resultJson : "null");
         }
 
         if (method != null) {

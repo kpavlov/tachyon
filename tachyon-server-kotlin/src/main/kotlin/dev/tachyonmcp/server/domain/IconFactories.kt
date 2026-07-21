@@ -18,4 +18,4 @@ public fun Icon(
     mimeType: String? = null,
     sizes: List<String>? = null,
     theme: String? = null,
-): Icon = DefaultIcon.of(src, mimeType, sizes, theme)
+): Icon = Icon.of(src, mimeType, sizes, theme)

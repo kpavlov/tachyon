@@ -49,19 +49,28 @@ public final class McpResponseWriter {
 
     public static ChannelFuture sendJsonResponse(
             ChannelHandlerContext ctx, byte[] body, @Nullable String sessionId, @Nullable String origin) {
-        return sendJsonResponse(ctx, body, false, sessionId, origin);
+        return sendJsonResponse(ctx, body, HttpResponseStatus.OK, false, sessionId, origin);
     }
 
     public static ChannelFuture sendJsonResponse(
             ChannelHandlerContext ctx,
             byte[] body,
+            HttpResponseStatus status,
+            @Nullable String sessionId,
+            @Nullable String origin) {
+        return sendJsonResponse(ctx, body, status, false, sessionId, origin);
+    }
+
+    public static ChannelFuture sendJsonResponse(
+            ChannelHandlerContext ctx,
+            byte[] body,
+            HttpResponseStatus status,
             boolean close,
             @Nullable String sessionId,
             @Nullable String origin) {
         // Zero-copy wrap on the event loop: the byte[] is GC-managed until this point, so a
         // dropped task on the shutdown path is plain garbage, never a pooled-buffer leak.
-        var response =
-                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.wrappedBuffer(body));
+        var response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, Unpooled.wrappedBuffer(body));
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json");
         response.headers().set(HttpHeaderNames.CONTENT_LENGTH, body.length);
         if (sessionId != null) {
@@ -80,6 +89,6 @@ public final class McpResponseWriter {
             ChannelHandlerContext ctx, Object id, @Nullable String origin, ProtocolResponseMapper mapper) {
         var error = mapper.error(ServerErrors.internalError("Internal error"));
         var body = JsonRpcCodec.serializeError(id, error.code(), error.message(), error.data());
-        return sendJsonResponse(ctx, body, true, null, origin);
+        return sendJsonResponse(ctx, body, HttpResponseStatus.valueOf(error.httpStatus()), true, null, origin);
     }
 }

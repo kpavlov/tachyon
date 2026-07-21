@@ -37,8 +37,9 @@ class DiscoverEndpointTest extends AbstractStatelessMcpE2eTest {
                         "supportedVersions": ["2026-07-28", "2025-11-25"],
                         "capabilities": {},
                         "serverInfo": {"name": "tachyon-mcp", "version": "0.1"},
+                        "_meta": {"io.modelcontextprotocol/serverInfo": {"name": "tachyon-mcp", "version": "0.1"}},
                         "resultType": "complete",
-                        "ttlMs": 0.0,
+                        "ttlMs": 0,
                         "cacheScope": "public"
                       }
                     }

@@ -7,6 +7,7 @@ package dev.tachyonmcp.server.features.tools;
 import static dev.tachyonmcp.server.domain.ServerErrors.internalError;
 import static dev.tachyonmcp.server.domain.ServerErrors.invalidParams;
 import static dev.tachyonmcp.server.domain.ServerErrors.invalidRequest;
+import static dev.tachyonmcp.server.domain.ServerErrors.missingRequiredClientCapability;
 
 import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
@@ -18,6 +19,7 @@ import dev.tachyonmcp.server.config.FeatureConfig;
 import dev.tachyonmcp.server.config.Mode;
 import dev.tachyonmcp.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.server.domain.LoggingLevel;
+import dev.tachyonmcp.server.domain.MissingRequiredClientCapabilityException;
 import dev.tachyonmcp.server.domain.TaskResult;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.features.AbstractRegistry;
@@ -320,6 +322,9 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                         if (cause != null) {
                             if (cause instanceof InvalidArgumentException e) {
                                 return invalidParams("invalid argument '" + e.argName() + "': " + e.getMessage());
+                            }
+                            if (cause instanceof MissingRequiredClientCapabilityException e) {
+                                return missingRequiredClientCapability(e.getMessage(), e.requiredCapabilities());
                             }
                             if (cause instanceof CancellationException) {
                                 logger.debug("Tool call cancelled for '{}'", parsed.name());

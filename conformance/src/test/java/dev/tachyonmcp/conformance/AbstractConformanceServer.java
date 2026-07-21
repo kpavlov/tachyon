@@ -26,7 +26,6 @@ import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,12 +41,12 @@ import tools.jackson.databind.node.JsonNodeFactory;
 abstract class AbstractConformanceServer {
 
     // language=json
-    private static final JsonNode INPUT_SCHEMA_NO_ARGS = parseJson("""
+    protected static final JsonNode INPUT_SCHEMA_NO_ARGS = parseJson("""
         {"type": "object", "properties": {}, "additionalProperties": false}
         """);
 
     // language=json
-    private static final JsonNode INPUT_SCHEMA_WITH_PROMPT = parseJson("""
+    protected static final JsonNode INPUT_SCHEMA_WITH_PROMPT = parseJson("""
         {
             "type": "object",
             "properties": {"prompt": {"type": "string"}},
@@ -57,7 +56,7 @@ abstract class AbstractConformanceServer {
         """);
 
     // language=json
-    private static final JsonNode INPUT_SCHEMA_WITH_MESSAGE = parseJson("""
+    protected static final JsonNode INPUT_SCHEMA_WITH_MESSAGE = parseJson("""
         {
             "type": "object",
             "properties": {"message": {"type": "string"}},
@@ -73,7 +72,7 @@ abstract class AbstractConformanceServer {
 
     private static final String HMAC_SECRET = "conformance-test-hmac-secret";
 
-    private static JsonNode parseJson(String json) {
+    protected static JsonNode parseJson(String json) {
         try {
             return new ObjectMapper().readTree(json);
         } catch (Exception e) {
@@ -81,7 +80,7 @@ abstract class AbstractConformanceServer {
         }
     }
 
-    private static FormInputRequest buildFormElicitation(String message, String propName, String propType) {
+    protected static FormInputRequest buildFormElicitation(String message, String propName, String propType) {
         var schema = new LinkedHashMap<String, JsonNode>();
         schema.put("type", JsonNodeFactory.instance.stringNode("object"));
         var props = JsonNodeFactory.instance.objectNode();
@@ -91,7 +90,7 @@ abstract class AbstractConformanceServer {
         return FormInputRequest.of(message, schema);
     }
 
-    private static RpcMethodRequest buildSamplingRequest(String questionText) {
+    protected static RpcMethodRequest buildSamplingRequest(String questionText) {
         var messages = JsonNodeFactory.instance.arrayNode();
         var msg = JsonNodeFactory.instance.objectNode();
         msg.put("role", "user");
@@ -105,11 +104,11 @@ abstract class AbstractConformanceServer {
         return RpcMethodRequest.of("sampling/createMessage", params);
     }
 
-    private static RpcMethodRequest buildRootsListRequest() {
+    protected static RpcMethodRequest buildRootsListRequest() {
         return RpcMethodRequest.of("roots/list", JsonNodeFactory.instance.objectNode());
     }
 
-    private static String signState(String payload) {
+    protected static String signState(String payload) {
         try {
             var mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(HMAC_SECRET.getBytes(), "HmacSHA256"));
@@ -120,7 +119,7 @@ abstract class AbstractConformanceServer {
         }
     }
 
-    private static boolean verifyState(String signedState) {
+    protected static boolean verifyState(String signedState) {
         if (signedState == null) return false;
         var lastDot = signedState.lastIndexOf('.');
         if (lastDot < 0) return false;
@@ -163,8 +162,8 @@ abstract class AbstractConformanceServer {
             """);
     }
 
-    private static void delay(long millis) {
-        Awaitility.await().timeout(millis, TimeUnit.MILLISECONDS);
+    protected static void delay(long millis) {
+        Awaitility.await().pollDelay(millis, TimeUnit.MILLISECONDS).until(() -> true);
     }
 
     protected abstract ServerEngine createServer(boolean isStateful);
@@ -266,214 +265,6 @@ abstract class AbstractConformanceServer {
                             }
                         });
 
-        server.tools()
-                .register(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("test_tool_with_logging")
-                                .description("Tool with logging")
-                                .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                ctx.notifications().info("tachyon.tools", Map.of("message", "Tool execution started"));
-                                delay(50);
-                                ctx.notifications().info("tachyon.tools", Map.of("message", "Tool processing data"));
-                                delay(50);
-                                ctx.notifications()
-                                        .info("tachyon.tools", Map.of("message", "Tool execution completed"));
-                                return ToolResult.text("Tool execution completed");
-                            }
-                        });
-
-        server.tools()
-                .register(ToolHandler.of(
-                        b -> b.name("test_sampling")
-                                .description("Tool that requests sampling")
-                                .inputSchema(INPUT_SCHEMA_WITH_PROMPT),
-                        (ctx, args) -> {
-                            var promptOpt = args.stringOpt("prompt");
-                            if (promptOpt.isPresent()) {
-                                var prompt = promptOpt.get();
-                                try {
-                                    Map<String, Object> paramsMap = Map.of(
-                                            "messages",
-                                            List.of(Map.of(
-                                                    "role", "user", "content", Map.of("type", "text", "text", prompt))),
-                                            "maxTokens",
-                                            100);
-                                    var responseJson = ctx.sendRequest(
-                                                    "sampling/createMessage",
-                                                    JsonRpcCodec.writeValueAsString(paramsMap))
-                                            .get(2, TimeUnit.SECONDS);
-                                    var responseObj = (Map<String, Object>) JsonRpcCodec.readValue(responseJson);
-                                    var content = responseObj.get("content");
-                                    var text = content instanceof Map<?, ?> cm && "text".equals(cm.get("type"))
-                                            ? (String) cm.get("text")
-                                            : "";
-                                    return ToolResult.text(text);
-                                } catch (Exception e) {
-                                    return ToolResult.error("Sampling request failed");
-                                }
-                            }
-                            return ToolResult.text("sampling not fully implemented");
-                        }));
-
-        server.tools()
-                .register(ToolHandler.of(
-                        b -> b.name("test_elicitation")
-                                .description("Tool that requests elicitation")
-                                .inputSchema(INPUT_SCHEMA_WITH_MESSAGE),
-                        (ctx, args) -> {
-                            var messageOpt = args.stringOpt("message");
-                            if (messageOpt.isPresent()) {
-                                var message = messageOpt.get();
-                                try {
-                                    var paramsMap = Map.of(
-                                            "mode",
-                                            "form",
-                                            "message",
-                                            message,
-                                            "requestedSchema",
-                                            Map.of(
-                                                    "type",
-                                                    "object",
-                                                    "properties",
-                                                    Map.of(
-                                                            "username", Map.of("type", "string"),
-                                                            "email", Map.of("type", "string")),
-                                                    "required",
-                                                    List.of("username", "email")));
-                                    var responseJson = ctx.sendRequest(
-                                                    "elicitation/create", JsonRpcCodec.writeValueAsString(paramsMap))
-                                            .get(2, TimeUnit.SECONDS);
-                                    var responseObj = (Map<String, Object>) JsonRpcCodec.readValue(responseJson);
-                                    var action = responseObj.get("action");
-                                    var content = responseObj.get("content");
-                                    var text = "User response: " + (action != null ? action : "unknown");
-                                    if (content instanceof Map<?, ?> cm) text += ", " + cm;
-                                    return ToolResult.text(text);
-                                } catch (Exception e) {
-                                    return ToolResult.error("Elicitation request failed");
-                                }
-                            }
-                            return ToolResult.text("elicitation not fully implemented");
-                        }));
-
-        server.tools()
-                .register(ToolHandler.of(
-                        b -> b.name("test_elicitation_sep1034_defaults")
-                                .description("Elicitation with defaults")
-                                .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, args) -> {
-                            try {
-                                var paramsMap = Map.of(
-                                        "mode",
-                                        "form",
-                                        "message",
-                                        "Please provide your details with defaults",
-                                        "requestedSchema",
-                                        Map.of(
-                                                "type",
-                                                "object",
-                                                "properties",
-                                                Map.<String, Object>of(
-                                                        "name",
-                                                        Map.of("type", "string", "default", "John Doe"),
-                                                        "age",
-                                                        Map.of("type", "integer", "default", 30),
-                                                        "score",
-                                                        Map.of("type", "number", "default", 95.5),
-                                                        "status",
-                                                        Map.of(
-                                                                "type",
-                                                                "string",
-                                                                "enum",
-                                                                List.of("active", "inactive"),
-                                                                "default",
-                                                                "active"),
-                                                        "verified",
-                                                        Map.of("type", "boolean", "default", true))));
-                                var responseJson = ctx.sendRequest(
-                                                "elicitation/create", JsonRpcCodec.writeValueAsString(paramsMap))
-                                        .get(2, TimeUnit.SECONDS);
-                                var responseObj = (Map<String, Object>) JsonRpcCodec.readValue(responseJson);
-                                var action = responseObj.get("action");
-                                var content = responseObj.get("content");
-                                var text = "Defaults " + (action != null ? action : "unknown");
-                                if (content instanceof Map<?, ?> cm) text += ", " + cm;
-                                return ToolResult.text(text);
-                            } catch (Exception e) {
-                                return ToolResult.error("Error: " + e.getMessage());
-                            }
-                        }));
-
-        server.tools()
-                .register(ToolHandler.of(
-                        b -> b.name("test_elicitation_sep1330_enums")
-                                .description("Elicitation with enums")
-                                .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, args) -> {
-                            try {
-                                var props = new LinkedHashMap<String, Object>();
-                                props.put(
-                                        "untitledSingle",
-                                        Map.of("type", "string", "enum", List.of("option1", "option2", "option3")));
-                                props.put(
-                                        "titledSingle",
-                                        Map.of(
-                                                "type",
-                                                "string",
-                                                "oneOf",
-                                                List.of(
-                                                        Map.of("const", "opt_a", "title", "Option A"),
-                                                        Map.of("const", "opt_b", "title", "Option B"))));
-                                props.put(
-                                        "legacyEnum",
-                                        Map.of(
-                                                "type",
-                                                "string",
-                                                "enum",
-                                                List.of("val1", "val2"),
-                                                "enumNames",
-                                                List.of("Value 1", "Value 2")));
-                                props.put(
-                                        "untitledMulti",
-                                        Map.of(
-                                                "type",
-                                                "array",
-                                                "items",
-                                                Map.of("type", "string", "enum", List.of("x", "y", "z"))));
-                                props.put(
-                                        "titledMulti",
-                                        Map.of(
-                                                "type",
-                                                "array",
-                                                "items",
-                                                Map.of(
-                                                        "type",
-                                                        "string",
-                                                        "anyOf",
-                                                        List.of(
-                                                                Map.of("const", "item1", "title", "Item One"),
-                                                                Map.of("const", "item2", "title", "Item Two")))));
-                                var paramsMap = Map.of(
-                                        "mode", "form",
-                                        "message", "Please select your preferences",
-                                        "requestedSchema", Map.of("type", "object", "properties", props));
-                                var responseJson = ctx.sendRequest(
-                                                "elicitation/create", JsonRpcCodec.writeValueAsString(paramsMap))
-                                        .get(2, TimeUnit.SECONDS);
-                                var responseObj = (Map<String, Object>) JsonRpcCodec.readValue(responseJson);
-                                var action = responseObj.get("action");
-                                var content = responseObj.get("content");
-                                var text = "Enums " + (action != null ? action : "unknown");
-                                if (content instanceof Map<?, ?> cm) text += ", " + cm;
-                                return ToolResult.text(text);
-                            } catch (Exception e) {
-                                return ToolResult.error("Error: " + e.getMessage());
-                            }
-                        }));
-
         var inputSchema = buildJsonSchema();
         server.tools()
                 .register(ToolHandler.of(
@@ -499,14 +290,21 @@ abstract class AbstractConformanceServer {
                             return ToolResult.text("reconnection triggered");
                         }));
 
-        registerInputRequiredTools(server);
+        registerVersionSpecificTools(server);
     }
+
+    /**
+     * Registers tools that are needed only for a specific protocol version's conformance suite;
+     * no-op by default. Overridden by version-specific subclasses.
+     */
+    protected void registerVersionSpecificTools(ServerEngine server) {}
 
     /**
      * Registers tools that exercise input-required results for elicitation, sampling, roots listing,
      * request-state handling, multi-round input, tamper detection, and client capability negotiation.
+     * Draft-only (SEP-2322, protocol version 2026-07-28): called by {@code EdgeConformanceServer}.
      */
-    private void registerInputRequiredTools(ServerEngine server) {
+    protected void registerInputRequiredTools(ServerEngine server) {
         server.tools()
                 .register(
                         new AbstractToolHandler(ToolDescriptor.builder()
@@ -777,31 +575,21 @@ abstract class AbstractConformanceServer {
                         PromptDescriptor.of("test_prompt_with_image", "Prompt with image"),
                         List.of(PromptMessage.user(ImageContent.of(MINI_PNG_BASE64, "image/png"))));
 
-        server.prompts()
-                .register(
-                        PromptDescriptor.of(
-                                "test_input_required_result_prompt", "Prompt requiring elicitation input (SEP-2322)"),
-                        (ctx, request) -> {
-                            var inputResponses = request.inputResponses();
-                            if (inputResponses != null && inputResponses.containsKey("user_context")) {
-                                return PromptResult.messages(List.of(PromptMessage.user("Context received")));
-                            }
-                            return PromptResult.inputRequired(
-                                    Map.of(
-                                            "user_context",
-                                            buildFormElicitation(
-                                                    "What context should the prompt use?", "context", "string")),
-                                    null);
-                        });
+        registerVersionSpecificPrompts(server);
     }
+
+    /**
+     * Registers prompts that are needed only for a specific protocol version's conformance suite;
+     * no-op by default. Overridden by version-specific subclasses.
+     */
+    protected void registerVersionSpecificPrompts(ServerEngine server) {}
 
     private static ToolHandler echoTool() {
         // language=json
         var schema = parseJson("""
             {
                 "type": "object",
-                "properties": {"message": {"type": "string", "description": "Message to echo"}},
-                "required": ["message"]
+                "properties": {"message": {"type": "string", "description": "Message to echo"}}
             }
             """);
         return ToolHandler.of(

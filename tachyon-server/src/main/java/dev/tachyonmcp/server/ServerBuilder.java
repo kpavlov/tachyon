@@ -25,9 +25,11 @@ import dev.tachyonmcp.server.features.resources.ResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
 import dev.tachyonmcp.server.features.tools.AsyncToolFn;
+import dev.tachyonmcp.server.features.tools.AsyncToolRequestFn;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolFn;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolRequestFn;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
 import dev.tachyonmcp.server.json.JsonConfig;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
@@ -198,11 +200,25 @@ public final class ServerBuilder {
      * Registers a synchronous tool handler with its descriptor.
      *
      * @param descriptor the tool descriptor
-     * @param handler the function that handles tool interactions
+     * @param handler    the function that handles tool interactions
      * @return this server builder
      */
     public ServerBuilder tool(ToolDescriptor descriptor, ToolFn handler) {
         return tool(ToolHandler.of(descriptor, handler));
+    }
+
+    /**
+     * Registers a synchronous tool handler that needs the raw request — progress token,
+     * cancellation, or task handle — instead of just parsed {@link
+     * dev.tachyonmcp.server.domain.Args}.
+     *
+     * @param descriptor the tool descriptor
+     * @param handler    the function that handles tool interactions, given the raw {@link
+     *                   dev.tachyonmcp.server.features.tools.ToolRequest}
+     * @return this server builder
+     */
+    public ServerBuilder toolRequest(ToolDescriptor descriptor, ToolRequestFn handler) {
+        return tool(ToolHandler.ofRequest(descriptor, handler));
     }
 
     /**
@@ -219,14 +235,58 @@ public final class ServerBuilder {
     }
 
     /**
+     * Registers a synchronous raw-request tool using a descriptor builder. See {@link
+     * #toolRequest(ToolDescriptor, ToolRequestFn)}.
+     *
+     * @param descriptor configures the tool descriptor
+     * @param handler    handles tool invocations, given the raw {@link
+     *                   dev.tachyonmcp.server.features.tools.ToolRequest}
+     * @return this server builder
+     */
+    public ServerBuilder toolRequest(Consumer<ToolDescriptor.Builder> descriptor, ToolRequestFn handler) {
+        var builder = ToolDescriptor.builder();
+        descriptor.accept(builder);
+        return toolRequest(builder.build(), handler);
+    }
+
+    /**
      * Registers an asynchronous tool handler with the specified descriptor.
      *
      * @param descriptor the tool descriptor
-     * @param handler the function that handles tool interactions asynchronously
+     * @param handler    the function that handles tool interactions asynchronously
      * @return this server builder
      */
     public ServerBuilder asyncTool(ToolDescriptor descriptor, AsyncToolFn handler) {
         return tool(ToolHandler.ofAsync(descriptor, handler));
+    }
+
+    /**
+     * Registers an asynchronous tool handler that needs the raw request — progress token,
+     * cancellation, or task handle — instead of just parsed {@link
+     * dev.tachyonmcp.server.domain.Args}.
+     *
+     * @param descriptor the tool descriptor
+     * @param handler    the function that handles tool interactions asynchronously, given the raw
+     *                   {@link dev.tachyonmcp.server.features.tools.ToolRequest}
+     * @return this server builder
+     */
+    public ServerBuilder asyncToolRequest(ToolDescriptor descriptor, AsyncToolRequestFn handler) {
+        return tool(ToolHandler.ofAsyncRequest(descriptor, handler));
+    }
+
+    /**
+     * Registers an asynchronous raw-request tool using a descriptor builder. See {@link
+     * #asyncToolRequest(ToolDescriptor, AsyncToolRequestFn)}.
+     *
+     * @param descriptor configures the tool descriptor
+     * @param handler    handles tool invocations asynchronously, given the raw {@link
+     *                   dev.tachyonmcp.server.features.tools.ToolRequest}
+     * @return this server builder
+     */
+    public ServerBuilder asyncToolRequest(Consumer<ToolDescriptor.Builder> descriptor, AsyncToolRequestFn handler) {
+        var builder = ToolDescriptor.builder();
+        descriptor.accept(builder);
+        return asyncToolRequest(builder.build(), handler);
     }
 
     /**
@@ -273,7 +333,7 @@ public final class ServerBuilder {
      * Registers a resource using a descriptor configured by the supplied builder.
      *
      * @param descriptor configures the resource descriptor
-     * @param handler handles requests for the registered resource
+     * @param handler    handles requests for the registered resource
      * @return this builder
      */
     public ServerBuilder resource(Consumer<ResourceDescriptor.Builder> descriptor, ResourceHandler handler) {
@@ -297,7 +357,7 @@ public final class ServerBuilder {
      * Registers an asynchronous resource using a descriptor configured by the supplied builder.
      *
      * @param descriptor configures the resource descriptor
-     * @param handler handles asynchronous resource requests
+     * @param handler    handles asynchronous resource requests
      * @return this server builder
      */
     public ServerBuilder asyncResource(Consumer<ResourceDescriptor.Builder> descriptor, AsyncResourceHandler handler) {
@@ -355,7 +415,7 @@ public final class ServerBuilder {
      * Registers an asynchronous prompt handler for a prompt descriptor.
      *
      * @param descriptor the prompt descriptor
-     * @param handler the asynchronous prompt handler
+     * @param handler    the asynchronous prompt handler
      * @return this server builder
      */
     public ServerBuilder asyncPrompt(PromptDescriptor descriptor, AsyncPromptHandler handler) {
@@ -366,7 +426,7 @@ public final class ServerBuilder {
      * Registers an asynchronous prompt using a descriptor configured by the supplied builder.
      *
      * @param descriptor configures the prompt descriptor
-     * @param handler handles prompt requests asynchronously
+     * @param handler    handles prompt requests asynchronously
      * @return this builder
      */
     public ServerBuilder asyncPrompt(Consumer<PromptDescriptor.Builder> descriptor, AsyncPromptHandler handler) {
@@ -401,7 +461,7 @@ public final class ServerBuilder {
      * Registers an asynchronous resource template handler.
      *
      * @param descriptor the resource template descriptor
-     * @param handler the handler invoked to resolve the resource template
+     * @param handler    the handler invoked to resolve the resource template
      * @return this builder
      */
     public ServerBuilder asyncResourceTemplate(ResourceTemplateDescriptor descriptor, AsyncResourceHandler handler) {
@@ -412,7 +472,7 @@ public final class ServerBuilder {
      * Registers an asynchronous resource template using a descriptor configured by the supplied builder.
      *
      * @param descriptor configures the resource template descriptor
-     * @param handler handles requests for the resource template
+     * @param handler    handles requests for the resource template
      * @return this builder
      */
     public ServerBuilder asyncResourceTemplate(
@@ -426,7 +486,7 @@ public final class ServerBuilder {
      * Registers a completion handler for a prompt's arguments.
      *
      * @param promptName the prompt name
-     * @param handler the handler invoked for {@code ref/prompt} completion requests
+     * @param handler    the handler invoked for {@code ref/prompt} completion requests
      * @return this builder
      */
     public ServerBuilder promptCompletion(String promptName, CompletionHandler handler) {
@@ -438,7 +498,7 @@ public final class ServerBuilder {
      * Registers an asynchronous completion handler for a prompt's arguments.
      *
      * @param promptName the prompt name
-     * @param handler the asynchronous completion handler
+     * @param handler    the asynchronous completion handler
      * @return this builder
      */
     public ServerBuilder asyncPromptCompletion(String promptName, AsyncCompletionHandler handler) {
@@ -449,7 +509,7 @@ public final class ServerBuilder {
      * Registers a completion handler for a resource or resource-template's variables.
      *
      * @param uriOrTemplate the resource URI, or the resource template's {@code uriTemplate}
-     * @param handler the handler invoked for {@code ref/resource} completion requests
+     * @param handler       the handler invoked for {@code ref/resource} completion requests
      * @return this builder
      */
     public ServerBuilder resourceCompletion(String uriOrTemplate, CompletionHandler handler) {
@@ -462,7 +522,7 @@ public final class ServerBuilder {
      * Registers an asynchronous completion handler for a resource or resource-template's variables.
      *
      * @param uriOrTemplate the resource URI, or the resource template's {@code uriTemplate}
-     * @param handler the asynchronous completion handler
+     * @param handler       the asynchronous completion handler
      * @return this builder
      */
     public ServerBuilder asyncResourceCompletion(String uriOrTemplate, AsyncCompletionHandler handler) {

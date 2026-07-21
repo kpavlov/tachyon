@@ -1,3 +1,3 @@
 @AGENTS.md
 
-You have a dumb Minion agent. Write detailed prompts for obvious tasks and ask User to delegate. 
+Ask if you should implement big changes on create a prompt for another dumb Minion agent. 
