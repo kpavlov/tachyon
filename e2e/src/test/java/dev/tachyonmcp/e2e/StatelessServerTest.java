@@ -42,7 +42,7 @@ class StatelessServerTest {
 
     @Test
     void shouldCompleteLifecycleAndDispatchWithoutSessionId() throws Exception {
-        try (var client = new TestMcpClient(port)) {
+        try (var client = new Mcp20251125TestClient(port)) {
             // MCP 2025-11-25 lifecycle: initialize first, then notify initialized.
             var sessionId = client.initialize();
 
@@ -80,7 +80,7 @@ class StatelessServerTest {
 
     @Test
     void shouldExecuteToolCallWithoutSessionId() throws Exception {
-        try (var client = new TestMcpClient(port)) {
+        try (var client = new Mcp20251125TestClient(port)) {
             client.initialize();
 
             var response = client.sendRpc("""
@@ -104,7 +104,7 @@ class StatelessServerTest {
 
     @Test
     void shouldAcceptNotificationWithoutSessionId() throws Exception {
-        try (var client = new TestMcpClient(port)) {
+        try (var client = new Mcp20251125TestClient(port)) {
             var response = client.post(null, """
                     {"jsonrpc":"2.0","method":"notifications/initialized"}
                     """);
@@ -116,7 +116,7 @@ class StatelessServerTest {
     @ParameterizedTest(name = "POST method={0}")
     @ValueSource(strings = {"tools/list", "tools/call", "ping"})
     void shouldReturn404WhenPostCarriesSessionId(String method) throws Exception {
-        try (var client = new TestMcpClient(port)) {
+        try (var client = new Mcp20251125TestClient(port)) {
             var response = client.post("sess_12345678", """
                     {"jsonrpc":"2.0","id":1,"method":"%s"}
                     """.formatted(method));

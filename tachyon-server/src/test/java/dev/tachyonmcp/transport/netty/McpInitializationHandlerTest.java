@@ -4,8 +4,10 @@
 
 package dev.tachyonmcp.transport.netty;
 
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.protocol.mcp.v2026_07_28.McpProtocol;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.TachyonServer;
@@ -34,7 +36,7 @@ class McpInitializationHandlerTest {
         server = (ServerEngine)
                 TachyonServer.builder().session(s -> s.enabled(true)).build();
         McpDispatcher dispatcher = new McpDispatcher(server, Runnable::run);
-        channel = new EmbeddedChannel(new InteractionHandler());
+        channel = new EmbeddedChannel(new ProtocolVersionHandler("/mcp"), new InteractionHandler());
         channel.pipeline()
                 .addLast(
                         McpHandlerManager.HANDLER_INIT,
@@ -101,6 +103,27 @@ class McpInitializationHandlerTest {
         assertThat(server.getSession(sessionId)).isPresent().map(Session::id).hasValue(sessionId);
 
         assertThat(channel.isOpen()).isTrue();
+    }
+
+    @Test
+    void pingWithLatestProtocolUsesModernEmptyResult() {
+        var body = "{" + "\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}";
+        var request = new DefaultFullHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.POST, "/mcp", Unpooled.copiedBuffer(body, StandardCharsets.UTF_8));
+        request.headers().set("MCP-Protocol-Version", McpProtocol.VERSION);
+
+        channel.writeInbound(request);
+
+        var response = readResponse();
+        assertThat(response.status()).isEqualTo(HttpResponseStatus.OK);
+        assertThatJson(response.content().toString(StandardCharsets.UTF_8)).isEqualTo("""
+                        {
+                          "jsonrpc": "2.0",
+                          "id": 1,
+                          "result": {"resultType": "complete"}
+                        }
+                        """);
+        response.release();
     }
 
     @Test

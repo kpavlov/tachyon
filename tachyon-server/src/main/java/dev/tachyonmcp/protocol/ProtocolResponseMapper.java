@@ -4,6 +4,8 @@
 
 package dev.tachyonmcp.protocol;
 
+import dev.tachyonmcp.server.ServerCapabilities;
+import dev.tachyonmcp.server.config.ServerIdentity;
 import dev.tachyonmcp.server.domain.InitializeResponse;
 import dev.tachyonmcp.server.domain.InputRequest;
 import dev.tachyonmcp.server.domain.PromptMessage;
@@ -33,6 +35,12 @@ public interface ProtocolResponseMapper {
 
     /** Returns the protocol-specific empty result sent for methods that return no data. */
     Object emptyResult();
+
+    /** Maps the server discovery response into a protocol-specific shape. */
+    default Object discoverResult(
+            List<String> supportedVersions, ServerCapabilities capabilities, ServerIdentity serverIdentity) {
+        throw new UnsupportedOperationException("server/discover is not supported by this protocol version");
+    }
 
     /** Builds a completion result from a list of candidate values with optional pagination. */
     Object completeResult(List<String> values, @Nullable Double total, @Nullable Boolean hasMore);

@@ -66,7 +66,7 @@ class SessionJanitorOutboundActivityTest {
                 assertThat(session.get().state()).isEqualTo(SessionState.ACTIVE);
             });
 
-            try (var client = new TestMcpClient(port)) {
+            try (var client = new Mcp20251125TestClient(port)) {
                 var ping = client.post(sessionId, """
                     {"jsonrpc":"2.0","id":1,"method":"ping"}
                     """);
@@ -117,7 +117,7 @@ class SessionJanitorOutboundActivityTest {
     }
 
     private String initializeAndActivate(int targetPort) throws Exception {
-        try (var client = new TestMcpClient(targetPort)) {
+        try (var client = new Mcp20251125TestClient(targetPort)) {
             return client.initialize();
         }
     }

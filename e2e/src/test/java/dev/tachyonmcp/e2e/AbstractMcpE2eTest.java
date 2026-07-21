@@ -6,6 +6,7 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.e2e.mcp20260728.Mcp20260728TestClient;
 import dev.tachyonmcp.server.ServerBuilder;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.internal.ServerEngine;
@@ -16,14 +17,14 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-abstract class AbstractMcpE2eTest {
+public abstract class AbstractMcpE2eTest {
 
     protected TachyonServer server;
     protected NettyServer nettyServer;
     protected int port;
     protected boolean usingCustomServer;
 
-    enum SessionMode {
+    protected enum SessionMode {
         STATEFUL,
         STATELESS
     }
@@ -47,7 +48,11 @@ abstract class AbstractMcpE2eTest {
     }
 
     protected TestMcpClient createTestClient() {
-        return new TestMcpClient(port);
+        return new Mcp20251125TestClient(port);
+    }
+
+    protected TestMcpClient createModernTestClient() {
+        return new Mcp20260728TestClient(port);
     }
 
     // region: ---- McpServer lifecycle management (call from subclass setup / teardown) ----

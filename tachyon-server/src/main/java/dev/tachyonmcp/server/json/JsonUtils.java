@@ -4,14 +4,22 @@
 
 package dev.tachyonmcp.server.json;
 
+import static dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec.readTreeValue;
+
 import dev.tachyonmcp.annotations.InternalApi;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.server.domain.ContentBlock;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.ObjectReadContext;
+import tools.jackson.core.TreeNode;
+import tools.jackson.core.json.JsonFactory;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -20,6 +28,19 @@ import tools.jackson.databind.node.JsonNodeFactory;
 public final class JsonUtils {
 
     private static final JsonMapper MAPPER = new JsonMapper();
+    public static final JsonFactory FACTORY = new JsonFactory();
+
+    public static final ObjectReadContext TREE_READ_CONTEXT = new ObjectReadContext.Base() {
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T extends TreeNode> T readTree(JsonParser p) {
+            try {
+                return (T) readTreeValue(p);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+    };
 
     private JsonUtils() {}
 
@@ -33,6 +54,15 @@ public final class JsonUtils {
 
     public static String writeString(Object value) {
         return MAPPER.writeValueAsString(value);
+    }
+
+    public static JsonNode parseJsonNode(String json) {
+        try (var p = FACTORY.createParser(TREE_READ_CONTEXT, json.getBytes(StandardCharsets.UTF_8))) {
+            p.nextToken();
+            return readTreeValue(p);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to parse JSON", e);
+        }
     }
 
     /**
@@ -64,7 +94,7 @@ public final class JsonUtils {
                     if (v instanceof JsonNode jn) {
                         contentNode.set(k, jn);
                     } else if (v != null) {
-                        contentNode.set(k, ProtocolCodecUtil.parseJsonNode(JsonRpcCodec.writeValueAsString(v)));
+                        contentNode.set(k, JsonUtils.parseJsonNode(JsonRpcCodec.writeValueAsString(v)));
                     }
                 }
             }

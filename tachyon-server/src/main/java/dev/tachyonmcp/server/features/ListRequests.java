@@ -5,7 +5,7 @@
 package dev.tachyonmcp.server.features;
 
 import dev.tachyonmcp.annotations.InternalApi;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
+import dev.tachyonmcp.server.json.JsonUtils;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -28,7 +28,7 @@ public final class ListRequests {
         var result = new LinkedHashMap<String, JsonNode>();
         for (var entry : rawMap.entrySet()) {
             if (entry.getKey() instanceof String k) {
-                result.put(k, ProtocolCodecUtil.parseJsonNode(JsonRpcCodec.writeValueAsString(entry.getValue())));
+                result.put(k, JsonUtils.parseJsonNode(JsonRpcCodec.writeValueAsString(entry.getValue())));
             }
         }
         return result.isEmpty() ? null : result;

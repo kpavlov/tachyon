@@ -4,15 +4,13 @@
 
 package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
-import static dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec.FACTORY;
-import static dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec.TREE_READ_CONTEXT;
-import static dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec.readTreeValue;
+import static dev.tachyonmcp.server.json.JsonUtils.FACTORY;
+import static dev.tachyonmcp.server.json.JsonUtils.TREE_READ_CONTEXT;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import tools.jackson.core.JsonToken;
-import tools.jackson.databind.JsonNode;
 
 public final class ProtocolCodecUtil {
 
@@ -29,15 +27,6 @@ public final class ProtocolCodecUtil {
             }
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to decode " + targetType.getSimpleName(), e);
-        }
-    }
-
-    public static JsonNode parseJsonNode(String json) {
-        try (var p = FACTORY.createParser(TREE_READ_CONTEXT, json.getBytes(StandardCharsets.UTF_8))) {
-            p.nextToken();
-            return readTreeValue(p);
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to parse JSON", e);
         }
     }
 }

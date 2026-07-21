@@ -7,6 +7,7 @@ package dev.tachyonmcp.server;
 import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatus;
+import dev.tachyonmcp.protocol.mcp.v2026_07_28.McpProtocol;
 import dev.tachyonmcp.runtime.ChannelContext;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
@@ -54,6 +55,7 @@ public class McpDispatcher {
     private static final Logger logger = LoggerFactory.getLogger(McpDispatcher.class);
 
     private static final String METHOD_INITIALIZE = "initialize";
+    private static final String METHOD_DISCOVER = "server/discover";
     private static final String METHOD_PING = "ping";
 
     /**
@@ -153,15 +155,20 @@ public class McpDispatcher {
             return CompletableFuture.completedFuture(errorResult(id, err.code(), err.message()));
         }
 
-        if (server.isStateless() || (METHOD_PING.equals(method) && sessionId == null)) {
-            var statelessIc = dispatchContext(channelContext);
-            statelessIc.setOutboundStream(outboundSseStream);
-            var handler = lookupHandler(method, params, statelessIc);
+        var requestCtx = dispatchContext(channelContext);
+        if (server.isStateless()
+                || (sessionId == null
+                        && (METHOD_PING.equals(method)
+                                || (METHOD_DISCOVER.equals(method)
+                                        && McpProtocol.VERSION.equals(requestCtx.protocolVersion()))))) {
+
+            requestCtx.setOutboundStream(outboundSseStream);
+            var handler = lookupHandler(method, params, requestCtx);
             if (handler == null) {
                 return CompletableFuture.completedFuture(
                         errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found"));
             }
-            return invokeHandlerAsync(id, method, params, outboundSseStream, statelessIc, null, handler);
+            return invokeHandlerAsync(id, method, params, outboundSseStream, requestCtx, null, handler);
         }
 
         if (sessionId == null) {
@@ -175,7 +182,6 @@ public class McpDispatcher {
         var session = sessionOpt.get();
         session.touch();
 
-        var requestCtx = dispatchContext(channelContext);
         requestCtx.setSession(session);
         requestCtx.setOutboundStream(outboundSseStream);
 
@@ -250,13 +256,13 @@ public class McpDispatcher {
                                             try {
                                                 return handler.handleAsync(context, params);
                                             } catch (Exception e) {
-                                                return CompletableFuture.<Object>failedFuture(e);
+                                                return CompletableFuture.failedFuture(e);
                                             }
                                         });
                                 return stage.whenComplete((r, e) -> watchdog.cancel(false));
                             } catch (Exception e) {
                                 watchdog.cancel(false);
-                                return CompletableFuture.<Object>failedFuture(e);
+                                return CompletableFuture.failedFuture(e);
                             }
                         },
                         executor)

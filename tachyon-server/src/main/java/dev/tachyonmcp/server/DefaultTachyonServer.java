@@ -28,6 +28,7 @@ import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.features.tasks.Tasks;
 import dev.tachyonmcp.server.features.tools.DefaultToolRegistry;
 import dev.tachyonmcp.server.features.tools.Tools;
+import dev.tachyonmcp.server.handlers.DiscoverHandler;
 import dev.tachyonmcp.server.handlers.InitializeHandler;
 import dev.tachyonmcp.server.handlers.LoggingHandlers;
 import dev.tachyonmcp.server.handlers.PingHandler;
@@ -316,6 +317,7 @@ final class DefaultTachyonServer implements ServerEngine {
 
     private void registerDefaults() {
         methodHandlers.put("initialize", new InitializeHandler(this, extensions));
+        methodHandlers.put("server/discover", new DiscoverHandler(this));
         methodHandlers.put("ping", new PingHandler());
         toolRegistry.registerHandlers(methodHandlers);
         resourceRegistry.registerHandlers(methodHandlers);

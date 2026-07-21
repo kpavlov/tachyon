@@ -19,18 +19,20 @@ import org.intellij.lang.annotations.Language;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.ObjectMapper;
 
-public final class TestMcpClient implements Closeable {
+public abstract class TestMcpClient implements Closeable {
     private static final Duration DEFAULT_TASK_POLL_INTERVAL = Duration.ofMillis(100);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    protected static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final int serverPort;
     private final HttpClient httpClient;
     private volatile @Nullable String sessionId;
 
-    TestMcpClient(int port) {
+    protected TestMcpClient(int port) {
         this.serverPort = port;
         this.httpClient = HttpClient.newHttpClient();
     }
+
+    protected abstract String protocolVersion();
 
     @Override
     public void close() {
@@ -94,8 +96,9 @@ public final class TestMcpClient implements Closeable {
      * DNS-rebinding protection, which validates {@code Origin} before {@code Host}.
      */
     public HttpResponse<String> postWithOrigin(String origin, @Language("json") String body) throws Exception {
+        body = requestBody(body);
         return httpClient.send(
-                baseRequest()
+                requestBuilder(body)
                         .header("Origin", origin)
                         .POST(HttpRequest.BodyPublishers.ofString(body))
                         .build(),
@@ -103,7 +106,8 @@ public final class TestMcpClient implements Closeable {
     }
 
     public HttpResponse<String> post(@Nullable String sessionId, @Language("json") String body) throws Exception {
-        var builder = baseRequest();
+        body = requestBody(body);
+        var builder = requestBuilder(body);
         if (sessionId != null) {
             builder.header("MCP-Session-Id", sessionId);
         }
@@ -118,7 +122,8 @@ public final class TestMcpClient implements Closeable {
 
     public HttpResponse<Stream<String>> sendStreamingRequest(@Nullable String sessionId, @Language("json") String body)
             throws Exception {
-        var builder = baseRequest();
+        body = requestBody(body);
+        var builder = requestBuilder(body);
         if (sessionId != null) builder.header("MCP-Session-Id", sessionId);
         return httpClient.send(
                 builder.POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofLines());
@@ -210,8 +215,20 @@ public final class TestMcpClient implements Closeable {
                 .uri(URI.create("http://localhost:" + serverPort + "/mcp"))
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json, text/event-stream")
-                .header("MCP-Protocol-Version", "2025-11-25");
+                .header("MCP-Protocol-Version", protocolVersion());
     }
+
+    private HttpRequest.Builder requestBuilder(String body) throws Exception {
+        var builder = baseRequest();
+        configureRequest(builder, body);
+        return builder;
+    }
+
+    protected String requestBody(String body) throws Exception {
+        return body;
+    }
+
+    protected void configureRequest(HttpRequest.Builder builder, String body) throws Exception {}
 
     private static TaskSnapshot taskSnapshot(String json, String taskId) {
         var response = MAPPER.readTree(json);

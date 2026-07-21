@@ -4,6 +4,8 @@
 
 package dev.tachyonmcp.test;
 
+import static dev.tachyonmcp.server.json.JsonUtils.TREE_READ_CONTEXT;
+
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.Codec;
 import dev.tachyonmcp.server.ServerBuilder;
 import dev.tachyonmcp.server.TachyonServer;
@@ -23,7 +25,7 @@ public class TestUtils {
     }
 
     public static JsonNode parseJson(String json) {
-        try (var p = Codec.FACTORY.createParser(JsonRpcCodec.TREE_READ_CONTEXT, json)) {
+        try (var p = Codec.FACTORY.createParser(TREE_READ_CONTEXT, json)) {
             p.nextToken();
             return JsonRpcCodec.readTreeValue(p);
         } catch (Exception e) {
