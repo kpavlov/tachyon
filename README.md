@@ -15,7 +15,7 @@
   />
 </div>
 
-**Tachyon MCP** is a Java 21 [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server built on [Netty](https://netty.io). It implements the **2025-11-25** Streamable HTTP transport, passes all official conformance tests, and runs stateless by default.
+**Tachyon MCP** is a Java 21 [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server built on [Netty](https://netty.io). It implements the **MCP 2025-11-25** and partially **MCP 2026-07-28** Streamable HTTP transport and runs stateless by default. It passes **all** official conformance tests for the latest protocol version and partially passes conformance tests for the Draft protocol.
 
 ## 💫 Why Tachyon?
 
