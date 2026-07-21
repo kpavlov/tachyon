@@ -13,8 +13,8 @@ class AsyncToolHandlerTest {
 
     @Test
     void descriptorUsesAllOptionalFields() {
-        var handler =
-                ToolHandler.ofAsync("my-tool", (ctx, args) -> CompletableFuture.completedStage(ToolResult.text("ok")));
+        var handler = ToolHandler.ofAsync(
+                "my-tool", (ctx, request) -> CompletableFuture.completedStage(ToolResult.text("ok")));
 
         var desc = handler.descriptor();
         assertThat(desc.name()).isEqualTo("my-tool");
@@ -29,7 +29,7 @@ class AsyncToolHandlerTest {
     @Test
     void handleAsyncReturnsResultForArgsOverride() throws Exception {
         var handler =
-                ToolHandler.ofAsync("t", (ctx, args) -> CompletableFuture.completedStage(ToolResult.text("async")));
+                ToolHandler.ofAsync("t", (ctx, request) -> CompletableFuture.completedStage(ToolResult.text("async")));
         var request = ToolRequest.builder().name("t").build();
         var result = handler.handleAsync(null, request).toCompletableFuture().get();
         assertThat(result).isInstanceOf(ToolResult.Success.class);
@@ -38,7 +38,7 @@ class AsyncToolHandlerTest {
     @Test
     void interruptExitsBlockedHandle() throws InterruptedException {
         var neverCompletes = new CompletableFuture<ToolResult>();
-        var handler = ToolHandler.ofAsync("blocking", (ctx, args) -> neverCompletes);
+        var handler = ToolHandler.ofAsync("blocking", (ctx, request) -> neverCompletes);
         var interrupted = new AtomicBoolean(false);
         var request = ToolRequest.builder().name("blocking").build();
         var thread = Thread.ofVirtual().start(() -> {
@@ -55,7 +55,8 @@ class AsyncToolHandlerTest {
 
     @Test
     void defaultsAreNull() {
-        var handler = ToolHandler.ofAsync("t", (ctx, args) -> CompletableFuture.completedStage(ToolResult.text("ok")));
+        var handler =
+                ToolHandler.ofAsync("t", (ctx, request) -> CompletableFuture.completedStage(ToolResult.text("ok")));
 
         var descriptor = handler.descriptor();
         assertThat(descriptor.name()).isEqualTo("t");
@@ -70,7 +71,7 @@ class AsyncToolHandlerTest {
     @Test
     void ofAsyncWithDescription() throws Exception {
         var handler = ToolHandler.ofAsync(
-                "greeter", "Says hello", (ctx, args) -> CompletableFuture.completedStage(ToolResult.text("Hello!")));
+                "greeter", "Says hello", (ctx, request) -> CompletableFuture.completedStage(ToolResult.text("Hello!")));
 
         assertThat(handler.descriptor().name()).isEqualTo("greeter");
         assertThat(handler.descriptor().description()).isEqualTo("Says hello");
@@ -89,7 +90,7 @@ class AsyncToolHandlerTest {
                 .name("echo")
                 .description("Echo request name")
                 .build();
-        var handler = ToolHandler.ofAsyncRequest(
+        var handler = ToolHandler.ofAsync(
                 descriptor, (ctx, request) -> CompletableFuture.completedStage(ToolResult.text(request.name())));
 
         assertThat(handler.descriptor()).isEqualTo(descriptor);
@@ -105,7 +106,7 @@ class AsyncToolHandlerTest {
                 .name("greeter")
                 .description("Returns the tool name")
                 .build();
-        var handler = ToolHandler.ofAsyncRequest(
+        var handler = ToolHandler.ofAsync(
                 descriptor, (ctx, request) -> CompletableFuture.completedStage(ToolResult.text(request.name())));
 
         var request = ToolRequest.builder().name("greeter").build();

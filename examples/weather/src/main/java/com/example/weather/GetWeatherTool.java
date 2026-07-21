@@ -7,7 +7,6 @@ import com.example.weather.service.WeatherService;
 import com.example.weather.spi.CityNotFoundException;
 import com.example.weather.spi.WeatherObservation;
 import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
@@ -48,8 +47,8 @@ class GetWeatherTool {
                 .description("Get current weather for a city")
                 .inputSchema(INPUT_SCHEMA)
                 .build();
-        return ToolHandler.ofRequest(descriptor, (ctx, request) -> {
-            var args = Args.of(request.arguments(), request.payloadDeserializer());
+        return ToolHandler.of(descriptor, (ctx, request) -> {
+            var args = request.arguments();
             var city = args.stringValue("city");
             var units = args.stringOr("units", "celsius");
             var progressToken = request.progressToken();

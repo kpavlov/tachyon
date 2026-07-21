@@ -57,7 +57,7 @@ class ServerBuilderTest {
     @Test
     void acceptsDescriptorBuilderOverloads() {
         try (var server = TachyonServer.builder()
-                .tool(tool -> tool.name("sync-tool"), (ToolFn) (ctx, args) -> ToolResult.empty())
+                .tool(tool -> tool.name("sync-tool"), (ToolFn) (ctx, request) -> ToolResult.empty())
                 .resource(
                         resource -> resource.name("sync-resource").uri("test://sync"),
                         (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "text/plain", "sync"))
@@ -77,9 +77,9 @@ class ServerBuilderTest {
     @Test
     void acceptsAsyncHandlersWithoutCasts() {
         try (var server = TachyonServer.builder()
-                .asyncToolRequest(
+                .asyncTool(
                         tool -> tool.name("async-tool"),
-                        (ctx, args) -> CompletableFuture.completedFuture(ToolResult.empty()))
+                        (ctx, request) -> CompletableFuture.completedFuture(ToolResult.empty()))
                 .asyncResource(
                         resource -> resource.name("async-resource").uri("test://async"),
                         (ctx, rawUri, params, uriTemplate) -> CompletableFuture.completedFuture(

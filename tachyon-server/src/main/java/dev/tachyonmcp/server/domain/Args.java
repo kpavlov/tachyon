@@ -10,6 +10,8 @@ import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
@@ -67,7 +69,7 @@ public final class Args {
     }
 
     public Optional<String> stringOpt(String key) {
-        return has(key) ? Optional.of(raw.get(key).asString()) : Optional.empty();
+        return has(key) ? raw.get(key).asStringOpt() : Optional.empty();
     }
 
     @Nullable
@@ -75,16 +77,33 @@ public final class Args {
         return has(key) ? raw.get(key).asString() : fallback;
     }
 
+    @Nullable
+    public String stringOrNull(String key) {
+        return has(key) ? raw.get(key).asString() : null;
+    }
+
     public int intOr(String key, int fallback) {
         return has(key) ? raw.get(key).asInt() : fallback;
+    }
+
+    public OptionalInt intOpt(String key) {
+        return has(key) ? raw.get(key).asIntOpt() : OptionalInt.empty();
     }
 
     public boolean boolOr(String key, boolean fallback) {
         return has(key) ? raw.get(key).asBoolean() : fallback;
     }
 
+    public Optional<Boolean> boolOpt(String key) {
+        return has(key) ? raw.get(key).asBooleanOpt() : Optional.empty();
+    }
+
     public double doubleOr(String key, double fallback) {
         return has(key) ? raw.get(key).asDouble() : fallback;
+    }
+
+    public OptionalDouble doubleOpt(String key) {
+        return has(key) ? raw.get(key).asDoubleOpt() : OptionalDouble.empty();
     }
 
     /** Returns the full arguments as a JSON string. */

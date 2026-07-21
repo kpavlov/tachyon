@@ -28,7 +28,7 @@ class StringSchemaTest extends AbstractStatelessMcpE2eTest {
                         .description("Tool with string schemas")
                         .inputSchema(INPUT_SCHEMA_JSON)
                         .outputSchema(OUTPUT_SCHEMA_JSON),
-                (ctx, args) -> ToolResult.text("ok"))));
+                (ctx, request) -> ToolResult.text("ok"))));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -53,12 +53,12 @@ class StringSchemaTest extends AbstractStatelessMcpE2eTest {
         startServer(it -> {
             it.tool(ToolHandler.of(
                     b -> b.name("from-string").description("Tool from string").inputSchema(INPUT_SCHEMA_JSON),
-                    (ctx, args) -> ToolResult.text("string")));
+                    (ctx, request) -> ToolResult.text("string")));
             var mapper = new ObjectMapper();
             var jsonNodeSchema = mapper.readTree(INPUT_SCHEMA_JSON);
             it.tool(ToolHandler.of(
                     b -> b.name("from-node").description("Tool from node").inputSchema(jsonNodeSchema),
-                    (ctx, args) -> ToolResult.text("node")));
+                    (ctx, request) -> ToolResult.text("node")));
         });
 
         try (var client = createTestClient()) {
@@ -83,8 +83,8 @@ class StringSchemaTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void shouldCallToolWithStringSchema() throws Exception {
-        startServer(it ->
-                it.tool("call-test", "Call test", INPUT_SCHEMA_JSON, null, (ctx, args) -> ToolResult.text("called")));
+        startServer(it -> it.tool(
+                "call-test", "Call test", INPUT_SCHEMA_JSON, null, (ctx, request) -> ToolResult.text("called")));
 
         try (var client = createTestClient()) {
             client.initialize();

@@ -44,17 +44,6 @@ public interface ToolHandler extends ServerFeature<ToolDescriptor> {
         return new AbstractToolHandler(descriptor) {
 
             @Override
-            public ToolResult handle(InteractionContext ctx, Args args) throws Exception {
-                assumeVirtualThread(); // don't remove this guardrail!
-                return fn.apply(ctx, args);
-            }
-        };
-    }
-
-    static ToolHandler ofRequest(ToolDescriptor descriptor, ToolRequestFn fn) {
-        return new AbstractToolHandler(descriptor) {
-
-            @Override
             public ToolResult handle(InteractionContext ctx, ToolRequest request) throws Exception {
                 assumeVirtualThread(); // don't remove this guardrail!
                 return fn.apply(ctx, request);
@@ -66,9 +55,9 @@ public interface ToolHandler extends ServerFeature<ToolDescriptor> {
         return new AbstractToolHandler(configurer) {
 
             @Override
-            public ToolResult handle(InteractionContext ctx, Args args) throws Exception {
+            public ToolResult handle(InteractionContext ctx, ToolRequest request) throws Exception {
                 assumeVirtualThread(); // don't remove this guardrail!
-                return fn.apply(ctx, args);
+                return fn.apply(ctx, request);
             }
         };
     }
@@ -91,16 +80,6 @@ public interface ToolHandler extends ServerFeature<ToolDescriptor> {
         return new AbstractToolHandler(descriptor) {
 
             @Override
-            public CompletionStage<? extends ToolResult> handleAsync(InteractionContext ctx, Args args) {
-                return fn.apply(ctx, args);
-            }
-        };
-    }
-
-    static ToolHandler ofAsyncRequest(ToolDescriptor descriptor, AsyncToolRequestFn fn) {
-        return new AbstractToolHandler(descriptor) {
-
-            @Override
             public CompletionStage<? extends ToolResult> handleAsync(InteractionContext ctx, ToolRequest request) {
                 return fn.apply(ctx, request);
             }
@@ -111,8 +90,8 @@ public interface ToolHandler extends ServerFeature<ToolDescriptor> {
         return new AbstractToolHandler(configurer) {
 
             @Override
-            public CompletionStage<? extends ToolResult> handleAsync(InteractionContext ctx, Args args) {
-                return fn.apply(ctx, args);
+            public CompletionStage<? extends ToolResult> handleAsync(InteractionContext ctx, ToolRequest request) {
+                return fn.apply(ctx, request);
             }
         };
     }

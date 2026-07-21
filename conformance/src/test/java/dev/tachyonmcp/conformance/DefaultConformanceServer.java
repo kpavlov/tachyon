@@ -60,8 +60,8 @@ class DefaultConformanceServer extends AbstractConformanceServer {
                         b -> b.name("test_sampling")
                                 .description("Tool that requests sampling")
                                 .inputSchema(INPUT_SCHEMA_WITH_PROMPT),
-                        (ctx, args) -> {
-                            var promptOpt = args.stringOpt("prompt");
+                        (ctx, request) -> {
+                            var promptOpt = request.arguments().stringOpt("prompt");
                             if (promptOpt.isPresent()) {
                                 var prompt = promptOpt.get();
                                 try {
@@ -93,8 +93,8 @@ class DefaultConformanceServer extends AbstractConformanceServer {
                         b -> b.name("test_elicitation")
                                 .description("Tool that requests elicitation")
                                 .inputSchema(INPUT_SCHEMA_WITH_MESSAGE),
-                        (ctx, args) -> {
-                            var messageOpt = args.stringOpt("message");
+                        (ctx, request) -> {
+                            var messageOpt = request.arguments().stringOpt("message");
                             if (messageOpt.isPresent()) {
                                 var message = messageOpt.get();
                                 try {
@@ -134,7 +134,7 @@ class DefaultConformanceServer extends AbstractConformanceServer {
                         b -> b.name("test_elicitation_sep1034_defaults")
                                 .description("Elicitation with defaults")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, args) -> {
+                        (ctx, request) -> {
                             try {
                                 var paramsMap = Map.of(
                                         "mode",
@@ -182,7 +182,7 @@ class DefaultConformanceServer extends AbstractConformanceServer {
                         b -> b.name("test_elicitation_sep1330_enums")
                                 .description("Elicitation with enums")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, args) -> {
+                        (ctx, request) -> {
                             try {
                                 var props = new LinkedHashMap<String, Object>();
                                 props.put(

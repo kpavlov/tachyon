@@ -39,8 +39,8 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
                     """.trimIndent(),
                     // language=json
                     """{"type":"object"}""",
-                ) { _, args ->
-                    val input = args.decode<GreetArgs>()
+                ) { _, request ->
+                    val input = request.arguments().decode<GreetArgs>()
                     ToolResult.of(
                         GreetReply("${input.greeting}, ${input.name}!"),
                         "greeting response",
@@ -78,8 +78,8 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
                     """.trimIndent(),
                     // language=json
                     """{"type":"object"}""",
-                ) { _, args ->
-                    val input = args.decode<GreetArgs>()
+                ) { _, request ->
+                    val input = request.arguments().decode<GreetArgs>()
                     ToolResult.of(GreetReply("${input.greeting}, ${input.name}!"))
                 }
         }
@@ -117,8 +117,8 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
                     "Strict typed greet tool",
                     """{"type":"object"}""",
                     """{"type":"object"}""",
-                ) { _, args ->
-                    val input = args.decode<GreetArgs>()
+                ) { _, request ->
+                    val input = request.arguments().decode<GreetArgs>()
                     ToolResult.of(
                         GreetReply("${input.greeting}, ${input.name}!"),
                         "greeting response",

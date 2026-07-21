@@ -4,7 +4,9 @@
 
 package dev.tachyonmcp.server.features.tools;
 
+import dev.tachyonmcp.annotations.ExperimentalApi;
 import dev.tachyonmcp.runtime.Cancellation;
+import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.domain.HasMeta;
 import dev.tachyonmcp.server.domain.Task;
 import dev.tachyonmcp.server.json.PayloadDeserializer;
@@ -20,6 +22,9 @@ import tools.jackson.databind.JsonNode;
         typeImmutable = "Default*")
 public interface ToolRequest extends HasMeta {
 
+    /**
+     * Tool name
+     */
     String name();
 
     @Value.Check
@@ -28,14 +33,20 @@ public interface ToolRequest extends HasMeta {
     }
 
     @Value.Default
-    default Map<String, JsonNode> arguments() {
-        return Map.of();
+    default Args arguments() {
+        return Args.empty();
     }
 
     @Nullable
     Map<String, JsonNode> meta();
 
-    /** Returns the payload deserializer configured for this request, or {@code null} if not set. */
+    /**
+     * Returns the payload deserializer configured for this request, or {@code null} if not set.
+     *
+     * <p>Superseded by {@link #arguments()}, which already carries the deserializer; this direct
+     * accessor may be removed once callers migrate off it.
+     */
+    @ExperimentalApi
     @Nullable
     PayloadDeserializer payloadDeserializer();
 
@@ -51,7 +62,9 @@ public interface ToolRequest extends HasMeta {
     @Nullable
     String requestState();
 
-    /** The task handle for task-augmented tool calls, or {@code null} for non-augmented calls. */
+    /**
+     * The task handle for task-augmented tool calls, or {@code null} for non-augmented calls.
+     */
     @Nullable
     Task task();
 
@@ -62,10 +75,11 @@ public interface ToolRequest extends HasMeta {
     interface Builder {
         Builder name(String name);
 
-        Builder arguments(Map<String, ? extends JsonNode> arguments);
+        Builder arguments(Args arguments);
 
         Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
 
+        @ExperimentalApi
         Builder payloadDeserializer(@Nullable PayloadDeserializer deserializer);
 
         Builder progressToken(@Nullable Object progressToken);

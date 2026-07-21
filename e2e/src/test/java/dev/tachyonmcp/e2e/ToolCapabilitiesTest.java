@@ -169,7 +169,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
     @Test
     void shouldRegisterWithMinimalDescriptor() throws Exception {
         startEmptyServer();
-        server.tools().register(ToolHandler.of("minimal-tool", (ctx, args) -> ToolResult.text("ok")));
+        server.tools().register(ToolHandler.of("minimal-tool", (ctx, request) -> ToolResult.text("ok")));
 
         try (var client = createTestClient()) {
             var response = listTools(client);
@@ -218,7 +218,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
                                 .outputSchema(OUTPUT_SCHEMA)
                                 .taskSupport(TaskSupport.OPTIONAL)
                                 .annotations(annotations),
-                        (ctx, args) -> ToolResult.text("ok")));
+                        (ctx, request) -> ToolResult.text("ok")));
 
         try (var client = createTestClient()) {
             var response = listTools(client);
@@ -247,13 +247,13 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
                         .description("A tool with output schema")
                         .inputSchema(INPUT_SCHEMA)
                         .outputSchema(outputSchemaNode),
-                (ctx, args) -> ToolResult.text("ok"));
+                (ctx, request) -> ToolResult.text("ok"));
     }
 
     private static ToolHandler simpleToolHandler(String name, String description) {
         return ToolHandler.of(
                 b -> b.name(name).description(description).inputSchema(INPUT_SCHEMA),
-                (ctx, args) -> ToolResult.text("ok"));
+                (ctx, request) -> ToolResult.text("ok"));
     }
 
     private static ToolHandler taskAwareToolHandler(TaskSupport taskSupport) {
@@ -262,7 +262,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
                         .description("A task-aware tool")
                         .inputSchema(INPUT_SCHEMA)
                         .taskSupport(taskSupport),
-                (ctx, args) -> ToolResult.text("ok"));
+                (ctx, request) -> ToolResult.text("ok"));
     }
 
     private static ToolHandler structuredToolHandler() {
@@ -270,8 +270,8 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
                 b -> b.name("structured")
                         .description("Returns structured content")
                         .inputSchema(INPUT_SCHEMA),
-                (ctx, args) -> {
-                    var msg = args.stringValue("message");
+                (ctx, request) -> {
+                    var msg = request.arguments().stringValue("message");
                     var echo = JsonNodeFactory.instance.objectNode().put("echo", msg);
                     return ToolResult.of(echo, "Echo: " + msg);
                 });

@@ -7,7 +7,6 @@ package dev.tachyonmcp.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.config.CapabilitiesConfig;
-import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
@@ -57,8 +56,8 @@ class ToolNotificationsTest extends AbstractStatelessMcpE2eTest {
                 .title("Notifier Tool")
                 .description("Sends notifications and logs during execution")
                 .build();
-        return ToolHandler.ofRequest(descriptor, (context, request) -> {
-            var args = Args.of(request.arguments(), request.payloadDeserializer());
+        return ToolHandler.of(descriptor, (context, request) -> {
+            var args = request.arguments();
             String text = "";
             var msg = args.raw("message");
             if (msg instanceof tools.jackson.databind.JsonNode node) {

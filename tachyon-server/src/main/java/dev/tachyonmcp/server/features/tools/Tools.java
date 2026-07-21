@@ -23,7 +23,7 @@ public interface Tools {
      * Registers a tool descriptor with a synchronous handler.
      *
      * @param descriptor the descriptor for the tool to register
-     * @param handler    the function that handles tool interactions
+     * @param handler    the function that handles tool interactions, given the raw {@link ToolRequest}
      * @return this tool registry
      */
     default Tools register(ToolDescriptor descriptor, ToolFn handler) {

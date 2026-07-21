@@ -45,7 +45,7 @@ class ForeignThreadContinuationTest {
                 .outputSchema(outputSchema)
                 .build();
 
-        var handler = ToolHandler.ofAsync(descriptor, (ctx, args) -> {
+        var handler = ToolHandler.ofAsync(descriptor, (ctx, request) -> {
             var future = new CompletableFuture<ToolResult>();
             var completer = new Thread(
                     () -> future.complete(ToolResult.of(Map.of("result", "from-foreign"), "from-foreign")),

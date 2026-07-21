@@ -329,7 +329,8 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
 
     private ToolHandler notifyListChangedTool(String action) {
         return ToolHandler.of(
-                b -> b.name("notify-list-changed").description("Notifies resources/list_changed"), (context, args) -> {
+                b -> b.name("notify-list-changed").description("Notifies resources/list_changed"),
+                (context, request) -> {
                     var resources = server.resources();
                     if ("add".equals(action)) {
                         resources.register(
@@ -346,7 +347,8 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
 
     private ToolHandler notifyUpdatedTool() {
         return ToolHandler.of(
-                b -> b.name("notify-update").description("Triggers resource updated notification"), (context, args) -> {
+                b -> b.name("notify-update").description("Triggers resource updated notification"),
+                (context, request) -> {
                     server.resources().notifyResourceUpdated("resource://doc");
                     return ToolResult.blocks(TextContent.of("resource update 'resource://doc' notified "));
                 });
@@ -354,7 +356,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
 
     private ToolHandler unregisterByUriTool() {
         return ToolHandler.of(
-                b -> b.name("unregister-by-uri").description("Unregisters resource by URI"), (context, args) -> {
+                b -> b.name("unregister-by-uri").description("Unregisters resource by URI"), (context, request) -> {
                     server.resources().unregisterByUri("resource://doc");
                     return ToolResult.blocks(TextContent.of("done"));
                 });

@@ -1,7 +1,7 @@
 [![Maven Central](https://img.shields.io/maven-central/v/dev.tachyonmcp/tachyon-server)](https://repo1.maven.org/maven2/dev/tachyonmcp/tachyon-server/)
 [![Java 21+](https://img.shields.io/badge/Java-21+-orange.svg?logo=jvm)](http://java.com)
 [![Build](https://github.com/kpavlov/tachyon/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/kpavlov/tachyon/actions/workflows/build.yml)
-[![Conformance: v0.1.16](https://img.shields.io/badge/Conformance-v0.1.16-green?logo=modelcontextprotocol)](https://github.com/modelcontextprotocol/conformance)
+[![MCPConformance: 2025-11-25+2026-07-28](https://img.shields.io/badge/MCP%20Conformance-2025.11.25%20+%202026.07.28-grass?logo=modelcontextprotocol)](https://github.com/modelcontextprotocol/conformance)
 [![codecov](https://codecov.io/gh/kpavlov/tachyon/graph/badge.svg?token=WUMD9A8T2T)](https://codecov.io/gh/kpavlov/tachyon)
 [![Docs](https://img.shields.io/badge/Docs-blue?logo=github)](https://github.com/kpavlov/tachyon/blob/main/docs/README.md)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/kpavlov/tachyon)
@@ -15,11 +15,11 @@
   />
 </div>
 
-**Tachyon MCP** is a Java 21 [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server built on [Netty](https://netty.io). It implements the **MCP 2025-11-25** and partially **MCP 2026-07-28** Streamable HTTP transport and runs stateless by default. It passes **all** official conformance tests for the latest protocol version and partially passes conformance tests for the Draft protocol.
+**Tachyon MCP** is a Java 21+ and Kotlin [Model Context Protocol](https://modelcontextprotocol.io) (MCP) SDK built with [Netty](https://netty.io). It implements the **MCP 2025-11-25** and **MCP 2026-07-28** Streamable HTTP transport and runs stateless by default. **It passes all official conformance tests for the _both latest and draft_ protocol versions!!!**
 
 ## 💫 Why Tachyon?
 
-🧵 **Synchronous code, asynchronous runtime** — write blocking handlers; Java 21 virtual threads run them off the Netty event loop. No thread pools, reactive pipelines, or `CompletableFuture` boilerplate. Coroutine-first Kotlin DSL included.
+🧵 **Synchronous code, asynchronous runtime** — write blocking handlers; Java virtual threads run them off the Netty event loop. No thread pools, reactive pipelines, or `CompletableFuture` boilerplate. Coroutine-first Kotlin DSL included.
 
 🛡️ **Stable APIs across spec changes** — domain types (`ToolHandler`, `ResourceHandler`, `PromptHandler`, tasks) sit behind an internal protocol mapper. Spec upgrades change the mapper, not your handlers.
 
@@ -35,7 +35,7 @@
     <dependency>
         <groupId>dev.tachyonmcp</groupId>
         <artifactId>tachyon-server</artifactId>
-        <version>1.0.0-beta.11</version>
+        <version>1.0.0-beta.12</version>
     </dependency>
     ```
 
@@ -56,7 +56,7 @@
                         .inputSchema("""
                         {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
                         """),
-                    (ctx, args) -> ToolResult.text("☀️ 22°C")))
+                    (ctx, request) -> ToolResult.text("☀️ 22°C")))
                 .port(8080)
                 .start();
         }
@@ -157,7 +157,7 @@ Handler interfaces (`ToolHandler`, `ResourceHandler`, `PromptHandler`) and descr
 
 - **HTTP/2** — transport is HTTP/1.1
 - **Rate limiting**
-- **2026-07-28 protocol version** — domain types already track its shape; negotiation pending
+- **Telemetry**
 
 ---
 

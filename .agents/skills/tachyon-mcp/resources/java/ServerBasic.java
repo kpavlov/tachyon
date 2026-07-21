@@ -44,7 +44,7 @@ public final class ServerBasic {
             )
             .runtime(r -> r.shutdownGracePeriod(ofSeconds(5)))
             .network(n -> n.allowedOrigins("*").allowNullOrigin(true))
-            .tool(ToolHandler.of(b -> b.name("ping"), (ctx, args) -> ToolResult.text("pong")))
+            .tool(ToolHandler.of(b -> b.name("ping"), (ctx, request) -> ToolResult.text("pong")))
             .resource(
                 ResourceDescriptor.of(
                     "config", "demo://config",

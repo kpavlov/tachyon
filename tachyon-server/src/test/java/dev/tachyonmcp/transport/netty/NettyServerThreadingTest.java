@@ -27,7 +27,7 @@ class NettyServerThreadingTest {
     void eventLoopsAreOnPlatformThreadsAndToolHandlerOnVirtualThread() throws Exception {
         var handlerThread = new CompletableFuture<String>();
 
-        try (var server = newEngine(b -> b.tool(ToolHandler.of("thread_probe", (ctx, args) -> {
+        try (var server = newEngine(b -> b.tool(ToolHandler.of("thread_probe", (ctx, request) -> {
                     Thread thread = Thread.currentThread();
                     handlerThread.complete(thread.getName() + " virtual:" + thread.isVirtual());
                     return ToolResult.empty();
@@ -64,7 +64,7 @@ class NettyServerThreadingTest {
 
         try (ServerEngine server = newEngine(b -> b.threadFactory(
                         Thread.ofVirtual().name("tenant-", 0).factory())
-                .tool(ToolHandler.of("name_probe", (ctx, args) -> {
+                .tool(ToolHandler.of("name_probe", (ctx, request) -> {
                     handlerThreadName.complete(Thread.currentThread().getName());
                     return ToolResult.empty();
                 })))) {
@@ -89,7 +89,7 @@ class NettyServerThreadingTest {
         var closed = new AtomicBoolean(false);
 
         var server = newEngine(
-                b -> b.executor(executor).tool(ToolHandler.of("exec_probe", (ctx, args) -> ToolResult.empty())));
+                b -> b.executor(executor).tool(ToolHandler.of("exec_probe", (ctx, request) -> ToolResult.empty())));
         server.close();
 
         // The executor should still be usable (not shut down)

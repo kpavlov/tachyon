@@ -25,11 +25,9 @@ import dev.tachyonmcp.server.features.resources.ResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateEntry;
 import dev.tachyonmcp.server.features.tools.AsyncToolFn;
-import dev.tachyonmcp.server.features.tools.AsyncToolRequestFn;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolFn;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolRequestFn;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
 import dev.tachyonmcp.server.json.JsonConfig;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
@@ -200,7 +198,8 @@ public final class ServerBuilder {
      * Registers a synchronous tool handler with its descriptor.
      *
      * @param descriptor the tool descriptor
-     * @param handler    the function that handles tool interactions
+     * @param handler    the function that handles tool interactions, given the raw {@link
+     *                   dev.tachyonmcp.server.features.tools.ToolRequest}
      * @return this server builder
      */
     public ServerBuilder tool(ToolDescriptor descriptor, ToolFn handler) {
@@ -208,24 +207,11 @@ public final class ServerBuilder {
     }
 
     /**
-     * Registers a synchronous tool handler that needs the raw request — progress token,
-     * cancellation, or task handle — instead of just parsed {@link
-     * dev.tachyonmcp.server.domain.Args}.
-     *
-     * @param descriptor the tool descriptor
-     * @param handler    the function that handles tool interactions, given the raw {@link
-     *                   dev.tachyonmcp.server.features.tools.ToolRequest}
-     * @return this server builder
-     */
-    public ServerBuilder toolRequest(ToolDescriptor descriptor, ToolRequestFn handler) {
-        return tool(ToolHandler.ofRequest(descriptor, handler));
-    }
-
-    /**
      * Registers a synchronous tool using a descriptor builder.
      *
      * @param descriptor configures the tool descriptor
-     * @param handler    handles tool invocations
+     * @param handler    handles tool invocations, given the raw {@link
+     *                   dev.tachyonmcp.server.features.tools.ToolRequest}
      * @return this server builder
      */
     public ServerBuilder tool(Consumer<ToolDescriptor.Builder> descriptor, ToolFn handler) {
@@ -235,25 +221,11 @@ public final class ServerBuilder {
     }
 
     /**
-     * Registers a synchronous raw-request tool using a descriptor builder. See {@link
-     * #toolRequest(ToolDescriptor, ToolRequestFn)}.
-     *
-     * @param descriptor configures the tool descriptor
-     * @param handler    handles tool invocations, given the raw {@link
-     *                   dev.tachyonmcp.server.features.tools.ToolRequest}
-     * @return this server builder
-     */
-    public ServerBuilder toolRequest(Consumer<ToolDescriptor.Builder> descriptor, ToolRequestFn handler) {
-        var builder = ToolDescriptor.builder();
-        descriptor.accept(builder);
-        return toolRequest(builder.build(), handler);
-    }
-
-    /**
      * Registers an asynchronous tool handler with the specified descriptor.
      *
      * @param descriptor the tool descriptor
-     * @param handler    the function that handles tool interactions asynchronously
+     * @param handler    the function that handles tool interactions asynchronously, given the raw
+     *                   {@link dev.tachyonmcp.server.features.tools.ToolRequest}
      * @return this server builder
      */
     public ServerBuilder asyncTool(ToolDescriptor descriptor, AsyncToolFn handler) {
@@ -261,39 +233,11 @@ public final class ServerBuilder {
     }
 
     /**
-     * Registers an asynchronous tool handler that needs the raw request — progress token,
-     * cancellation, or task handle — instead of just parsed {@link
-     * dev.tachyonmcp.server.domain.Args}.
-     *
-     * @param descriptor the tool descriptor
-     * @param handler    the function that handles tool interactions asynchronously, given the raw
-     *                   {@link dev.tachyonmcp.server.features.tools.ToolRequest}
-     * @return this server builder
-     */
-    public ServerBuilder asyncToolRequest(ToolDescriptor descriptor, AsyncToolRequestFn handler) {
-        return tool(ToolHandler.ofAsyncRequest(descriptor, handler));
-    }
-
-    /**
-     * Registers an asynchronous raw-request tool using a descriptor builder. See {@link
-     * #asyncToolRequest(ToolDescriptor, AsyncToolRequestFn)}.
+     * Registers an asynchronous tool using a descriptor builder configuration.
      *
      * @param descriptor configures the tool descriptor
      * @param handler    handles tool invocations asynchronously, given the raw {@link
      *                   dev.tachyonmcp.server.features.tools.ToolRequest}
-     * @return this server builder
-     */
-    public ServerBuilder asyncToolRequest(Consumer<ToolDescriptor.Builder> descriptor, AsyncToolRequestFn handler) {
-        var builder = ToolDescriptor.builder();
-        descriptor.accept(builder);
-        return asyncToolRequest(builder.build(), handler);
-    }
-
-    /**
-     * Registers an asynchronous tool using a descriptor builder configuration.
-     *
-     * @param descriptor configures the tool descriptor
-     * @param handler    handles tool invocations asynchronously
      * @return this server builder
      */
     public ServerBuilder asyncTool(Consumer<ToolDescriptor.Builder> descriptor, AsyncToolFn handler) {
