@@ -19,6 +19,7 @@ import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.FeatureConfig;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.InvalidArgumentException;
+import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.internal.ServerEngine;
@@ -27,8 +28,6 @@ import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
 import dev.tachyonmcp.server.json.PayloadSerde;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -141,9 +140,9 @@ class ToolRegistryTest {
         var params = Map.<String, Object>of("name", "nonexistent");
 
         var result = callHandler.handle(DefaultDispatchContext.noop(), params);
-        assertThat(result).isInstanceOf(JsonRpcError.class);
-        var err = (JsonRpcError) result;
-        assertThat(err.code()).isEqualTo(JsonRpcErrors.INVALID_PARAMS);
+        assertThat(result).isInstanceOf(ServerError.class);
+        var err = (ServerError) result;
+        assertThat(err.kind()).isEqualTo(ServerError.Kind.INVALID_PARAMS);
     }
 
     @Test
@@ -154,9 +153,9 @@ class ToolRegistryTest {
         var callHandler = handlers.get("tools/call");
 
         var result = callHandler.handle(DefaultDispatchContext.noop(), Map.of());
-        assertThat(result).isInstanceOf(JsonRpcError.class);
-        var err = (JsonRpcError) result;
-        assertThat(err.code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
+        assertThat(result).isInstanceOf(ServerError.class);
+        var err = (ServerError) result;
+        assertThat(err.kind()).isEqualTo(ServerError.Kind.INVALID_REQUEST);
     }
 
     @Test
@@ -167,9 +166,9 @@ class ToolRegistryTest {
         var callHandler = handlers.get("tools/call");
 
         var result = callHandler.handle(DefaultDispatchContext.noop(), null);
-        assertThat(result).isInstanceOf(JsonRpcError.class);
-        var err = (JsonRpcError) result;
-        assertThat(err.code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
+        assertThat(result).isInstanceOf(ServerError.class);
+        var err = (ServerError) result;
+        assertThat(err.kind()).isEqualTo(ServerError.Kind.INVALID_REQUEST);
     }
 
     @Test
@@ -559,8 +558,8 @@ class ToolRegistryTest {
             ctx.setSession(session);
             var params = Map.of("name", "invalid-arg-async", "arguments", Map.of());
             var result = runInVirtualThread(() -> callHandler.handle(ctx, params));
-            assertThat(result).isInstanceOf(JsonRpcError.class);
-            assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_PARAMS);
+            assertThat(result).isInstanceOf(ServerError.class);
+            assertThat(((ServerError) result).kind()).isEqualTo(ServerError.Kind.INVALID_PARAMS);
         }
     }
 
@@ -605,8 +604,8 @@ class ToolRegistryTest {
             ctx.setSession(session);
             var params = Map.of("name", "sync-fail", "arguments", Map.of());
             var result = runInVirtualThread(() -> callHandler.handle(ctx, params));
-            assertThat(result).isInstanceOf(JsonRpcError.class);
-            assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INTERNAL_ERROR);
+            assertThat(result).isInstanceOf(ServerError.class);
+            assertThat(((ServerError) result).kind()).isEqualTo(ServerError.Kind.INTERNAL_ERROR);
         }
     }
 
@@ -623,8 +622,8 @@ class ToolRegistryTest {
             ctx.setSession(session);
             var params = Map.of("name", "sync-checked-fail", "arguments", Map.of());
             var result = runInVirtualThread(() -> callHandler.handle(ctx, params));
-            assertThat(result).isInstanceOf(JsonRpcError.class);
-            assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INTERNAL_ERROR);
+            assertThat(result).isInstanceOf(ServerError.class);
+            assertThat(((ServerError) result).kind()).isEqualTo(ServerError.Kind.INTERNAL_ERROR);
         }
     }
 

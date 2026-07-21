@@ -5,20 +5,22 @@
 package dev.tachyonmcp.server;
 
 import dev.tachyonmcp.annotations.InternalApi;
+import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatus;
 import dev.tachyonmcp.protocol.mcp.v2026_07_28.McpProtocol;
 import dev.tachyonmcp.runtime.ChannelContext;
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
+import dev.tachyonmcp.server.domain.ServerError;
+import dev.tachyonmcp.server.domain.ServerErrors;
 import dev.tachyonmcp.server.features.tasks.TaskState;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -127,9 +129,11 @@ public class McpDispatcher {
         }
     }
 
-    public byte[] parseError() {
-        var err = JsonRpcErrors.parseError();
-        return JsonRpcCodec.serializeError(-1, err.code(), err.message(), null);
+    public byte[] parseError(@Nullable InteractionContext interactionContext) {
+        var mapper = interactionContext != null
+                ? interactionContext.protocol().responseMapper()
+                : dispatchContext(null).responseMapper();
+        return encodeError(-1, ServerErrors.parseError(), mapper);
     }
 
     public CompletableFuture<DispatchResult> dispatchRequestAsync(
@@ -147,15 +151,15 @@ public class McpDispatcher {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(method, "method");
 
+        var requestCtx = dispatchContext(channelContext);
         if (METHOD_INITIALIZE.equals(method)) {
             if (sessionId == null) {
-                return dispatchInitializeAsync(id, params, dispatchContext(channelContext), channelContext);
+                return dispatchInitializeAsync(id, params, requestCtx, channelContext);
             }
-            var err = JsonRpcErrors.invalidRequest("Session already initialized");
-            return CompletableFuture.completedFuture(errorResult(id, err.code(), err.message()));
+            return CompletableFuture.completedFuture(
+                    errorResult(id, ServerErrors.invalidRequest("Session already initialized"), requestCtx));
         }
 
-        var requestCtx = dispatchContext(channelContext);
         if (server.isStateless()
                 || (sessionId == null
                         && (METHOD_PING.equals(method)
@@ -166,7 +170,7 @@ public class McpDispatcher {
             var handler = lookupHandler(method, params, requestCtx);
             if (handler == null) {
                 return CompletableFuture.completedFuture(
-                        errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found"));
+                        errorResult(id, ServerErrors.methodNotFound("Method not found"), requestCtx));
             }
             return invokeHandlerAsync(id, method, params, outboundSseStream, requestCtx, null, handler);
         }
@@ -188,17 +192,17 @@ public class McpDispatcher {
         var sessionState = session.state();
         if (sessionState == SessionState.CLOSED) {
             return CompletableFuture.completedFuture(
-                    errorResult(id, JsonRpcErrors.INVALID_REQUEST, "Session is closed"));
+                    errorResult(id, ServerErrors.invalidRequest("Session is closed"), requestCtx));
         }
         if (sessionState == SessionState.INITIALIZING && !METHOD_PING.equals(method)) {
-            return CompletableFuture.completedFuture(
-                    errorResult(id, JsonRpcErrors.INVALID_REQUEST, "Session is not yet active, only ping allowed"));
+            return CompletableFuture.completedFuture(errorResult(
+                    id, ServerErrors.invalidRequest("Session is not yet active, only ping allowed"), requestCtx));
         }
 
         var handler = lookupHandler(method, params, requestCtx);
         if (handler == null) {
             return CompletableFuture.completedFuture(
-                    errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found"));
+                    errorResult(id, ServerErrors.methodNotFound("Method not found"), requestCtx));
         }
 
         return invokeHandlerAsync(id, method, params, outboundSseStream, requestCtx, session, handler);
@@ -271,29 +275,29 @@ public class McpDispatcher {
                 // completing thread is never the event loop — no need to burn a VT per request on it.
                 .handle((result, ex) -> {
                     if (ex != null) {
-                        return handleHandlerError(id, method, ex);
+                        return handleHandlerError(id, method, ex, context);
                     }
-                    return handleSuccessOrJsonRpcError(id, method, result, null);
+                    return handleSuccessOrError(id, method, result, null, context);
                 });
     }
 
-    private DispatchResult handleHandlerError(Object id, String method, Throwable ex) {
+    private DispatchResult handleHandlerError(Object id, String method, Throwable ex, DispatchContext context) {
         var unwrapped = ex instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : ex;
         if (unwrapped instanceof CancellationException) {
             logger.debug("Handler cancelled: method={}, id={}", method, id);
-            return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
+            return errorResult(id, ServerErrors.internalError("Internal error"), context);
         }
         logger.warn("Handler exception: method={}, id={}: {}", method, id, unwrapped.getMessage(), unwrapped);
-        return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
+        return errorResult(id, ServerErrors.internalError("Internal error"), context);
     }
 
-    private DispatchResult handleSuccessOrJsonRpcError(
-            Object id, String method, Object result, @Nullable String sessionId) {
-        if (result instanceof JsonRpcError error) {
+    private DispatchResult handleSuccessOrError(
+            Object id, String method, Object result, @Nullable String sessionId, DispatchContext context) {
+        if (result instanceof ServerError error) {
             logger.debug("Handler error for {}: {}", method, error.message());
-            return errorResult(id, error.code(), error.message());
+            return errorResult(id, error, context);
         }
-        return new DispatchResult.Response(encodeResponse(id, result), sessionId);
+        return new DispatchResult.Response(encodeResponse(id, result, context.responseMapper()), sessionId);
     }
 
     public DispatchResult dispatchNotification(String method, @Nullable Object params, @Nullable String sessionId) {
@@ -420,7 +424,7 @@ public class McpDispatcher {
         var handler = server.getHandler("initialize");
         if (handler == null) {
             return CompletableFuture.completedFuture(
-                    errorResult(id, JsonRpcErrors.METHOD_NOT_FOUND, "Method not found: initialize"));
+                    errorResult(id, ServerErrors.methodNotFound("Method not found: initialize"), ic));
         }
         // Stateful init creates the session before invoking the handler; stateless skips it. Both
         // then share one async pipeline — the response sessionId falls out of ic.session() (null
@@ -441,18 +445,18 @@ public class McpDispatcher {
                 .handle((result, ex) -> {
                     if (ex != null) {
                         logger.warn("Initialize handler exception", ex);
-                        return errorResult(id, JsonRpcErrors.INTERNAL_ERROR, "Internal error");
+                        return errorResult(id, ServerErrors.internalError("Internal error"), ic);
                     }
                     var sessionId = ic.session() != null ? ic.session().id() : null;
-                    return handleSuccessOrJsonRpcError(id, "initialize", result, sessionId);
+                    return handleSuccessOrError(id, "initialize", result, sessionId, ic);
                 });
     }
 
-    private DispatchResult errorResult(Object id, int code, String message) {
-        return new DispatchResult.Response(JsonRpcCodec.serializeError(id, code, message, null), null);
+    private DispatchResult errorResult(Object id, ServerError error, DispatchContext context) {
+        return new DispatchResult.Response(encodeError(id, error, context.responseMapper()), null);
     }
 
-    private static byte[] encodeResponse(Object id, Object result) {
+    private static byte[] encodeResponse(Object id, Object result, ProtocolResponseMapper mapper) {
         if (result instanceof String s) {
             return JsonRpcCodec.serializeResponse(id, s);
         }
@@ -462,8 +466,13 @@ public class McpDispatcher {
         } catch (Exception e) {
             logger.error(
                     "JSON serialization failed for {}: {}", result.getClass().getSimpleName(), e.getMessage(), e);
-            return JsonRpcCodec.serializeError(id, JsonRpcErrors.INTERNAL_ERROR, "Failed to encode response", null);
+            return encodeError(id, ServerErrors.internalError("Failed to encode response"), mapper);
         }
+    }
+
+    private static byte[] encodeError(Object id, ServerError error, ProtocolResponseMapper mapper) {
+        var wireError = mapper.error(error);
+        return JsonRpcCodec.serializeError(id, wireError.code(), wireError.message(), wireError.data());
     }
 
     private String generateSessionId(@Nullable ChannelContext channelContext) {

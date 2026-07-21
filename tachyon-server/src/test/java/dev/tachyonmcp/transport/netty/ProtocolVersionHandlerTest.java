@@ -44,6 +44,7 @@ class ProtocolVersionHandlerTest {
         assertThat(r.status()).isEqualTo(HttpResponseStatus.BAD_REQUEST);
         var content = r.content().toString(StandardCharsets.UTF_8);
         assertThat(content).contains("Unsupported protocol version");
+        assertThat(content).contains("\"code\":-32022");
         r.release();
     }
 
@@ -98,6 +99,20 @@ class ProtocolVersionHandlerTest {
         channel.writeInbound(request);
 
         assertThat((Object) channel.readOutbound()).isNull();
+    }
+
+    @Test
+    void missingVersionOnUnregisteredEndpointReturnsBadRequest() {
+        var customChannel = new EmbeddedChannel(new ProtocolVersionHandler("/custom"));
+        var request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/custom");
+
+        customChannel.writeInbound(request);
+
+        var response = (FullHttpResponse) customChannel.readOutbound();
+        assertThat(response.status()).isEqualTo(HttpResponseStatus.BAD_REQUEST);
+        assertThat(response.content().toString(StandardCharsets.UTF_8)).contains("\"requested\":\"\"");
+        response.release();
+        customChannel.finishAndReleaseAll();
     }
 
     @Test

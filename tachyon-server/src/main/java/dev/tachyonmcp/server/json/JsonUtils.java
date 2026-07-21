@@ -12,7 +12,6 @@ import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
@@ -57,7 +56,7 @@ public final class JsonUtils {
     }
 
     public static JsonNode parseJsonNode(String json) {
-        try (var p = FACTORY.createParser(TREE_READ_CONTEXT, json.getBytes(StandardCharsets.UTF_8))) {
+        try (var p = FACTORY.createParser(TREE_READ_CONTEXT, json)) {
             p.nextToken();
             return readTreeValue(p);
         } catch (IOException e) {

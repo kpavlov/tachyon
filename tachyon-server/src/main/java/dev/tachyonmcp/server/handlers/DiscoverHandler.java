@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.handlers;
 
+import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.internal.ServerEngine;
@@ -27,7 +28,7 @@ public final class DiscoverHandler implements RpcMethodHandler {
     @Override
     public Object handle(DispatchContext context, Object params) {
         var supportedVersions = Protocols.list().stream()
-                .map(protocol -> protocol.versionString())
+                .map(Protocol::versionString)
                 .sorted(Comparator.reverseOrder())
                 .toList();
         return context.responseMapper()

@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
 import dev.tachyonmcp.server.domain.ContentBlock;
+import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.TaskResult;
 import dev.tachyonmcp.server.domain.TextContent;
 import java.util.List;
@@ -75,6 +76,13 @@ class McpResponseMapperTest {
 
         assertThat(payload._meta()).containsEntry("trace", JSON.stringNode("abc"));
         assertThat(relatedTaskId(payload)).isEqualTo("task-5");
+    }
+
+    @Test
+    void resourceNotFoundKeepsTheLegacyCode() {
+        var error = mapper.error(new ServerError(ServerError.Kind.RESOURCE_NOT_FOUND, "Resource not found"));
+
+        assertThat(error.code()).isEqualTo(-32002);
     }
 
     private static String relatedTaskId(CallToolResult payload) {

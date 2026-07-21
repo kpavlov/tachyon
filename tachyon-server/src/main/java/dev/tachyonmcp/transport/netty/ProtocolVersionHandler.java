@@ -10,6 +10,7 @@ import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.protocol.mcp.v2026_07_28.McpProtocol;
+import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -29,9 +30,13 @@ import java.util.Map;
 public class ProtocolVersionHandler extends ChannelInboundHandlerAdapter {
 
     private final String mcpEndpoint;
+    private static final Protocol LATEST_PROTOCOL;
     private static final List<String> SUPPORTED_VERSIONS;
 
     static {
+        LATEST_PROTOCOL = Protocols.list().stream()
+                .max(Comparator.comparing(Protocol::versionString).thenComparingInt(Protocol::priority))
+                .orElseThrow();
         SUPPORTED_VERSIONS = Protocols.list().stream()
                 .map(Protocol::versionString)
                 .sorted(Comparator.reverseOrder())
@@ -50,9 +55,14 @@ public class ProtocolVersionHandler extends ChannelInboundHandlerAdapter {
             var protoVersion = req.headers().get(McpHeaderNames.MCP_PROTOCOL_VERSION);
             var protocol = Protocols.resolve(req);
             if (protocol.isEmpty()) {
-                var data = JsonRpcCodec.writeValueAsString(
-                        Map.of("supported", SUPPORTED_VERSIONS, "requested", protoVersion));
-                var body = JsonRpcCodec.serializeError(-1, -32022, "Unsupported protocol version", data);
+                var requestedVersion = protoVersion != null ? protoVersion : "";
+                var error = LATEST_PROTOCOL
+                        .responseMapper()
+                        .error(new ServerError(
+                                ServerError.Kind.UNSUPPORTED_PROTOCOL_VERSION,
+                                "Unsupported protocol version",
+                                Map.of("supported", SUPPORTED_VERSIONS, "requested", requestedVersion)));
+                var body = JsonRpcCodec.serializeError(-1, error.code(), error.message(), error.data());
                 var origin = req.headers().get(HttpHeaderNames.ORIGIN);
                 sendResponseAndClose(ctx, HttpResponseStatus.BAD_REQUEST, "application/json", body, origin);
                 return;

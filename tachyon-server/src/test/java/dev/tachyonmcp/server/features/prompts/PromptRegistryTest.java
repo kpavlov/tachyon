@@ -14,11 +14,10 @@ import dev.tachyonmcp.server.config.FeatureConfig;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.PromptArgument;
 import dev.tachyonmcp.server.domain.PromptMessage;
+import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -135,15 +134,15 @@ class PromptRegistryTest {
         var result = handlers.get("prompts/get")
                 .handle(DefaultDispatchContext.stateless(server), Map.of("name", "nonexistent"));
 
-        assertThat(result).isInstanceOf(JsonRpcError.class);
-        assertThat(((JsonRpcError) result).code()).isEqualTo(JsonRpcErrors.INVALID_REQUEST);
+        assertThat(result).isInstanceOf(ServerError.class);
+        assertThat(((ServerError) result).kind()).isEqualTo(ServerError.Kind.INVALID_REQUEST);
     }
 
     @Test
     void shouldReturnErrorWhenPromptNameMissing() throws Exception {
         var result = handlers.get("prompts/get").handle(DefaultDispatchContext.stateless(server), Map.of());
 
-        assertThat(result).isInstanceOf(JsonRpcError.class);
+        assertThat(result).isInstanceOf(ServerError.class);
     }
 
     @Test

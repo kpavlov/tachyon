@@ -11,6 +11,7 @@ import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.FeatureConfig;
 import dev.tachyonmcp.server.config.Mode;
 import dev.tachyonmcp.server.domain.PromptMessage;
+import dev.tachyonmcp.server.domain.ServerErrors;
 import dev.tachyonmcp.server.features.AbstractRegistry;
 import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.ListRequests;
@@ -18,7 +19,6 @@ import dev.tachyonmcp.server.json.JsonSchemaUtils;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -129,7 +129,7 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
                 return extId == null || context.isExtensionEnabled(extId);
             });
             if (!paginated.cursorValid()) {
-                return JsonRpcErrors.invalidParams("Invalid cursor");
+                return ServerErrors.invalidParams("Invalid cursor");
             }
 
             var descriptors = paginated.items();
@@ -158,14 +158,14 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
         public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
             var name = extractParamName(params);
             if (name == null) {
-                return CompletableFuture.completedFuture(JsonRpcErrors.invalidRequest("Missing prompt name"));
+                return CompletableFuture.completedFuture(ServerErrors.invalidRequest("Missing prompt name"));
             }
             var entry = registry.get(name);
             if (entry == null)
-                return CompletableFuture.completedFuture(JsonRpcErrors.invalidRequest("Prompt not found"));
+                return CompletableFuture.completedFuture(ServerErrors.invalidRequest("Prompt not found"));
             var extId = entry.descriptor().extensionId();
             if (extId != null && !context.isExtensionEnabled(extId)) {
-                return CompletableFuture.completedFuture(JsonRpcErrors.invalidRequest("Prompt not found"));
+                return CompletableFuture.completedFuture(ServerErrors.invalidRequest("Prompt not found"));
             }
             var inputSchema = entry.descriptor().inputSchema();
             if (inputSchema != null) {
@@ -173,10 +173,10 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
                 try {
                     argsMap = extractArgumentsMap(params);
                 } catch (RuntimeException e) {
-                    return CompletableFuture.completedFuture(JsonRpcErrors.invalidParams("Invalid arguments"));
+                    return CompletableFuture.completedFuture(ServerErrors.invalidParams("Invalid arguments"));
                 }
                 var error = JsonSchemaUtils.validateArguments(validator, inputSchema, argsMap);
-                if (error != null) return CompletableFuture.completedFuture(JsonRpcErrors.invalidParams(error));
+                if (error != null) return CompletableFuture.completedFuture(ServerErrors.invalidParams(error));
             }
 
             var request = new PromptRequest(
@@ -195,7 +195,7 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
                     (result, cause) -> {
                         if (cause != null) {
                             logger.error("Prompt handler error for '{}'", name, cause);
-                            return JsonRpcErrors.internalError("Prompt handler failed");
+                            return ServerErrors.internalError("Prompt handler failed");
                         }
                         return switch (result) {
                             case PromptResult.Messages m -> {

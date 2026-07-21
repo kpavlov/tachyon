@@ -11,6 +11,8 @@ import dev.tachyonmcp.protocol.mcp.v2026_07_28.models.Icon;
 import dev.tachyonmcp.protocol.mcp.v2026_07_28.models.Implementation;
 import dev.tachyonmcp.protocol.mcp.v2026_07_28.models.ServerCapabilities;
 import dev.tachyonmcp.server.config.ServerIdentity;
+import dev.tachyonmcp.server.domain.ServerError;
+import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import java.io.IOException;
 import java.util.List;
 import tools.jackson.core.JsonGenerator;
@@ -40,6 +42,20 @@ public final class McpResponseMapper extends dev.tachyonmcp.protocol.mcp.v2025_1
     @Override
     public Object emptyResult() {
         return new EmptyResult(null, COMPLETE, null);
+    }
+
+    @Override
+    public JsonRpcError error(ServerError error) {
+        var mapped = super.error(error);
+        var code =
+                switch (error.kind()) {
+                    case RESOURCE_NOT_FOUND -> -32602;
+                    case HEADER_MISMATCH -> -32020;
+                    case MISSING_REQUIRED_CLIENT_CAPABILITY -> -32021;
+                    case UNSUPPORTED_PROTOCOL_VERSION -> -32022;
+                    default -> mapped.code();
+                };
+        return new JsonRpcError(code, mapped.message(), mapped.data());
     }
 
     @Override

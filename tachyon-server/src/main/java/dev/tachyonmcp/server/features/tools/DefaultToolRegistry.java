@@ -4,9 +4,9 @@
 
 package dev.tachyonmcp.server.features.tools;
 
-import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.internalError;
-import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidParams;
-import static dev.tachyonmcp.transport.jsonrpc.JsonRpcErrors.invalidRequest;
+import static dev.tachyonmcp.server.domain.ServerErrors.internalError;
+import static dev.tachyonmcp.server.domain.ServerErrors.invalidParams;
+import static dev.tachyonmcp.server.domain.ServerErrors.invalidRequest;
 
 import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;

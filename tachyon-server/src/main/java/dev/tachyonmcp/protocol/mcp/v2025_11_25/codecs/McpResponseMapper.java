@@ -27,6 +27,7 @@ import dev.tachyonmcp.server.domain.InputRequest;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.ResourceContents;
 import dev.tachyonmcp.server.domain.RpcMethodRequest;
+import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.Task;
 import dev.tachyonmcp.server.domain.TaskResult;
 import dev.tachyonmcp.server.domain.TextContent;
@@ -42,6 +43,8 @@ import dev.tachyonmcp.server.features.tools.ToolResult.Success;
 import dev.tachyonmcp.server.features.tools.ToolResult.WithMeta;
 import dev.tachyonmcp.server.json.JsonUtils;
 import dev.tachyonmcp.server.json.RawJson;
+import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
+import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -71,6 +74,24 @@ public class McpResponseMapper implements ProtocolResponseMapper {
     @Override
     public Object emptyResult() {
         return EMPTY;
+    }
+
+    @Override
+    public JsonRpcError error(ServerError error) {
+        var code =
+                switch (error.kind()) {
+                    case PARSE_ERROR -> -32700;
+                    case INVALID_REQUEST -> -32600;
+                    case METHOD_NOT_FOUND -> -32601;
+                    case INVALID_PARAMS -> -32602;
+                    case INTERNAL_ERROR -> -32603;
+                    case RESOURCE_NOT_FOUND -> -32002;
+                    case HEADER_MISMATCH -> -32001;
+                    case MISSING_REQUIRED_CLIENT_CAPABILITY -> -32003;
+                    case UNSUPPORTED_PROTOCOL_VERSION -> -32004;
+                };
+        var data = error.data() != null ? JsonRpcCodec.writeValueAsString(error.data()) : null;
+        return new JsonRpcError(code, error.message(), data);
     }
 
     @Override
