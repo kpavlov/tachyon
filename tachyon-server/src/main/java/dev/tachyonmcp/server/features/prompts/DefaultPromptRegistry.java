@@ -11,6 +11,7 @@ import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.FeatureConfig;
 import dev.tachyonmcp.server.config.Mode;
 import dev.tachyonmcp.server.domain.PromptMessage;
+import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.ServerErrors;
 import dev.tachyonmcp.server.features.AbstractRegistry;
 import dev.tachyonmcp.server.features.HandlerFutures;
@@ -194,8 +195,13 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
                     context.engine().executor(),
                     (result, cause) -> {
                         if (cause != null) {
-                            logger.error("Prompt handler error for '{}'", name, cause);
-                            return ServerErrors.internalError("Prompt handler failed");
+                            var error = ServerErrors.fromUnhandledException(cause, "Prompt handler failed");
+                            if (error.kind() == ServerError.Kind.INVALID_PARAMS) {
+                                logger.debug("Prompt handler rejected invalid params for '{}'", name);
+                            } else {
+                                logger.error("Prompt handler error for '{}'", name, cause);
+                            }
+                            return error;
                         }
                         return switch (result) {
                             case PromptResult.Messages m -> {

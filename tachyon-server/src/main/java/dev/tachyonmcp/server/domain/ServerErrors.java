@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.domain;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import java.util.Map;
 
 /** Factories for protocol-neutral server errors. */
@@ -29,6 +30,24 @@ public final class ServerErrors {
 
     public static ServerError internalError(String detail) {
         return new ServerError(ServerError.Kind.INTERNAL_ERROR, detail);
+    }
+
+    /**
+     * Default mapping for an exception a handler didn't translate to a wire error itself. A bare
+     * {@link IllegalArgumentException} is treated as bad input (INVALID_PARAMS) without echoing its
+     * message, which may originate from arbitrary library code and isn't vetted for sensitive
+     * content — unlike {@link InvalidArgumentException}, which handler authors throw deliberately
+     * with a message they control. Everything else is INTERNAL_ERROR.
+     */
+    @InternalApi
+    public static ServerError fromUnhandledException(Throwable cause, String internalErrorDetail) {
+        if (cause instanceof InvalidArgumentException invalid) {
+            return invalidParams("invalid argument '" + invalid.argName() + "': " + invalid.getMessage());
+        }
+        if (cause instanceof IllegalArgumentException) {
+            return invalidParams("Invalid params");
+        }
+        return internalError(internalErrorDetail);
     }
 
     public static ServerError resourceNotFound(String detail) {

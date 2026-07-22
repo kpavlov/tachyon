@@ -13,6 +13,7 @@ import dev.tachyonmcp.server.config.Mode;
 import dev.tachyonmcp.server.config.ResourcesConfig;
 import dev.tachyonmcp.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.server.domain.ResourceContents;
+import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.ServerErrors;
 import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.ChangeSupport;
@@ -538,8 +539,13 @@ public class DefaultResourceRegistry implements Resources {
                                 return ServerErrors.invalidParams(
                                         "invalid argument '" + e.argName() + "': " + e.getMessage());
                             }
-                            logger.error("Resource handler error for '{}'", uri, cause);
-                            return ServerErrors.internalError("Resource handler failed");
+                            var error = ServerErrors.fromUnhandledException(cause, "Resource handler failed");
+                            if (error.kind() == ServerError.Kind.INVALID_PARAMS) {
+                                logger.debug("Resource handler rejected invalid params for '{}'", uri);
+                            } else {
+                                logger.error("Resource handler error for '{}'", uri, cause);
+                            }
+                            return error;
                         }
                         return context.responseMapper().readResourceResult(List.of(contents));
                     });

@@ -286,6 +286,9 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             return serializeResult(c.content(), c.structuredContent());
         }
         if (result instanceof TaskResult.Failed f) {
+            if (f.protocolError() != null) {
+                return f.protocolError().message();
+            }
             return serializeResult(f.content(), f.structuredContent());
         }
         return null;

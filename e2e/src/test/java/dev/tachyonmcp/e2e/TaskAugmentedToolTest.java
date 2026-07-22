@@ -191,6 +191,43 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
         }
     }
 
+    @Test
+    void taskResultReplaysInvalidParamsWithoutLeakingHandlerMessage() throws Exception {
+        // MCP 2025-11-25 Tasks: tasks/result MUST return the underlying JSON-RPC error.
+        var handler =
+                ToolHandler.of(b -> b.name("invalid-params").taskSupport(TaskSupport.OPTIONAL), (context, request) -> {
+                    throw new IllegalArgumentException("sensitive internal detail");
+                });
+        startServer(it -> it.tool(handler));
+        try (var client = createTestClient()) {
+            client.initialize();
+
+            var response = client.sendRpc("""
+                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{
+                  "name":"invalid-params","arguments":{},"task":{}}}
+                """);
+            var taskId = extractTaskId(response);
+            client.awaitTaskStatus(taskId, "failed");
+
+            var resultJson = client.sendRpc("""
+                {"jsonrpc":"2.0","id":4,"method":"tasks/result","params":{"taskId":"%s"}}
+                """.formatted(taskId));
+            // language=JSON
+            var expected = """
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 4,
+                      "error": {
+                        "code": -32602,
+                        "message": "Invalid params"
+                      }
+                    }
+                    """;
+            assertThatJson(resultJson).isEqualTo(expected);
+            assertThat(resultJson).doesNotContain("sensitive internal detail");
+        }
+    }
+
     private static String extractTaskId(String json) {
         try {
             var mapper = new tools.jackson.databind.ObjectMapper();

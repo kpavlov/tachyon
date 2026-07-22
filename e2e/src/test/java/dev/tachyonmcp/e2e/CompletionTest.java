@@ -5,6 +5,7 @@
 package dev.tachyonmcp.e2e;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.features.completions.CompletionResult;
 import java.util.List;
@@ -97,6 +98,34 @@ class CompletionTest extends AbstractStatelessMcpE2eTest {
                 """);
 
             assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32602);
+        }
+    }
+
+    @Test
+    void shouldRedactIllegalArgumentExceptionFromInvalidParamsError() throws Exception {
+        startEmptyServer();
+        server.completions().registerForPrompt("bad-arg", (ctx, request) -> {
+            throw new IllegalArgumentException("sensitive internal detail");
+        });
+
+        try (var client = createTestClient()) {
+            client.initialize();
+            var response = client.sendRpc("""
+                {"jsonrpc":"2.0","id":2,"method":"completion/complete","params":{
+                  "ref":{"type":"ref/prompt","name":"bad-arg"},
+                  "argument":{"name":"language","value":"java"}
+                }}
+                """);
+            // language=JSON
+            var expected = """
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 2,
+                      "error": {"code": -32602, "message": "Invalid params"}
+                    }
+                    """;
+            assertThatJson(response).isEqualTo(expected);
+            assertThat(response).doesNotContain("sensitive internal detail");
         }
     }
 

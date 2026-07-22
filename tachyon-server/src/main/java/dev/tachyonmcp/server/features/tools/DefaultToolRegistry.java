@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.server.features.tools;
 
+import static dev.tachyonmcp.server.domain.ServerErrors.fromUnhandledException;
 import static dev.tachyonmcp.server.domain.ServerErrors.internalError;
 import static dev.tachyonmcp.server.domain.ServerErrors.invalidParams;
 import static dev.tachyonmcp.server.domain.ServerErrors.invalidRequest;
@@ -22,6 +23,7 @@ import dev.tachyonmcp.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.domain.MissingRequiredClientCapabilityException;
 import dev.tachyonmcp.server.domain.ProgressToken;
+import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.TaskResult;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.features.AbstractRegistry;
@@ -333,8 +335,13 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                                 logger.debug("Tool call cancelled for '{}'", parsed.name());
                                 return internalError("Tool call cancelled");
                             }
-                            logger.error("Tool handler error for '{}'", parsed.name(), cause);
-                            return internalError("Tool handler failed");
+                            var error = fromUnhandledException(cause, "Tool handler failed");
+                            if (error.kind() == ServerError.Kind.INVALID_PARAMS) {
+                                logger.debug("Tool handler rejected invalid params for '{}'", parsed.name());
+                            } else {
+                                logger.error("Tool handler error for '{}'", parsed.name(), cause);
+                            }
+                            return error;
                         }
                         sendLoggingIfEnabled(context, parsed.name(), "completed");
                         validateOutput(handler.descriptor().outputSchema(), toolResult);
@@ -479,8 +486,20 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
 
         private void handleTaskError(TaskEntry taskEntry, Exception e) {
             var cause = e instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : e;
-            logger.error("Task handler error for taskId={}", taskEntry.id(), cause);
-            taskEntry.fail(new TaskResult.Failed(List.of(TextContent.of("Internal server error")), null, null));
+            var error =
+                    switch (cause) {
+                        case InvalidArgumentException invalid ->
+                            invalidParams("invalid argument '" + invalid.argName() + "': " + invalid.getMessage());
+                        case MissingRequiredClientCapabilityException missing ->
+                            missingRequiredClientCapability(missing.getMessage(), missing.requiredCapabilities());
+                        default -> fromUnhandledException(cause, "Tool handler failed");
+                    };
+            if (error.kind() == ServerError.Kind.INVALID_PARAMS) {
+                logger.debug("Task handler rejected invalid params for taskId={}", taskEntry.id());
+            } else if (error.kind() == ServerError.Kind.INTERNAL_ERROR) {
+                logger.error("Task handler error for taskId={}", taskEntry.id(), cause);
+            }
+            taskEntry.fail(TaskResult.failed(error));
         }
 
         private void sendLoggingIfEnabled(DispatchContext context, String toolName, String status) {
