@@ -2,6 +2,16 @@
 
 .DEFAULT_GOAL := help
 
+ifeq ($(CI),true)
+SUREFIRE_FORK_COUNT ?= 1
+NETTY_ARGS := -Dio.netty.eventLoopThreads=2
+else
+SUREFIRE_FORK_COUNT ?= 1C
+NETTY_ARGS :=
+endif
+
+MAVEN_TEST_ARGS := -Dsurefire.forkCount=$(SUREFIRE_FORK_COUNT) $(NETTY_ARGS)
+
 help: ## List available targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-22s %s\n", $$1, $$2}'
 
@@ -12,11 +22,11 @@ ci: clean build ## CI pipeline: clean + build
 build: ## Compile, test, verify (mvn verify)
 	@echo " 🏗️ Building..."
 	@./mvnw -version
-	@./mvnw verify --no-transfer-progress
+	@./mvnw verify $(MAVEN_TEST_ARGS) --no-transfer-progress
 
 test: ## Run unit + e2e tests
 	@echo " 🧪 Running tests..."
-	@./mvnw test --no-transfer-progress
+	@./mvnw test $(MAVEN_TEST_ARGS) --no-transfer-progress
 
 package: ## Install artifacts to local Maven repo (skip tests)
 	@echo "📦 Packaging and installing tachyon-server to local repository..."
@@ -38,11 +48,11 @@ examples-snapshot: package ## Build examples against local SNAPSHOT artifacts
 conformance: ## Run MCP conformance suite
 	@echo " 🔄  Running MCP conformance suite..."
 	@rm -rf conformance/target/surefire-reports
-	@./mvnw test -am -pl conformance
+	@./mvnw test -am -pl conformance $(MAVEN_TEST_ARGS)
 
 e2e: package ## Run end-to-end tests
 	@echo " 🔗  Running end-to-end tests..."
-	@./mvnw test -pl e2e -am
+	@./mvnw test -pl e2e -am $(MAVEN_TEST_ARGS)
 
 clean: ## Remove all build artifacts
 	@echo " 🧹  Cleaning..."
