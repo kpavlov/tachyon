@@ -8,6 +8,7 @@ import dev.tachyonmcp.runtime.SseEvent;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Serializes an outbound {@link SseEvent} into its {@code text/event-stream} wire framing, writing
@@ -53,19 +54,37 @@ public final class SseSerializer {
     }
 
     /**
-     * Encodes a raw {@code body} as a {@code message} event: {@code id: <wireId>\nevent:
-     * message\ndata: <body>\n\n}, straight into a single pooled buffer (no {@code String} decode).
-     * The returned buffer is owned by the caller and must be released after the write completes.
+     * Encodes a raw {@code body} as a {@code message} event, omitting the {@code id:} field when
+     * {@code wireId} is {@code null}, with one {@code data:} field per body line. A {@code null} or
+     * empty body produces one empty {@code data:} field. Encoding writes straight into a single
+     * pooled buffer (no {@code String} decode). The returned buffer is owned by the caller and must
+     * be released after the write completes.
      */
-    public static ByteBuf encode(ByteBufAllocator alloc, String wireId, byte[] body) {
+    public static ByteBuf encode(ByteBufAllocator alloc, @Nullable String wireId, byte @Nullable [] body) {
         var buf = alloc.buffer();
         try {
-            ByteBufUtil.writeAscii(buf, "id: ");
-            ByteBufUtil.writeUtf8(buf, wireId);
-            ByteBufUtil.writeAscii(buf, "\nevent: message\ndata: ");
-            // ponytail: JSON-RPC bodies are single-line; add \n-splitting if that changes.
-            buf.writeBytes(body);
-            ByteBufUtil.writeAscii(buf, "\n\n");
+            if (wireId != null) {
+                ByteBufUtil.writeAscii(buf, "id: ");
+                ByteBufUtil.writeUtf8(buf, wireId);
+                buf.writeByte('\n');
+            }
+            ByteBufUtil.writeAscii(buf, "event: message\n");
+            if (body == null) {
+                ByteBufUtil.writeAscii(buf, "data: \n\n");
+                return buf;
+            }
+            var start = 0;
+            while (true) {
+                var end = start;
+                while (end < body.length && body[end] != '\r' && body[end] != '\n') end++;
+                ByteBufUtil.writeAscii(buf, "data: ");
+                buf.writeBytes(body, start, end - start);
+                buf.writeByte('\n');
+                if (end == body.length) break;
+                if (body[end] == '\r' && end + 1 < body.length && body[end + 1] == '\n') end++;
+                start = end + 1;
+            }
+            buf.writeByte('\n');
             return buf;
         } catch (RuntimeException e) {
             buf.release();

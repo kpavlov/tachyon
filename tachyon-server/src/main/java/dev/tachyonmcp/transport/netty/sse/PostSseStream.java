@@ -32,8 +32,8 @@ import org.slf4j.LoggerFactory;
  * when the dispatching handler emits a server-to-client message.
  *
  * <p>All state transitions and queued-event mutations are serialized onto the channel's
- * {@link io.netty.channel.EventLoop}. The state is volatile only because {@link #started()} may be
- * queried from another thread; only the event loop writes it.
+ * {@link io.netty.channel.EventLoop}. The state is volatile only because {@link #started()} and
+ * {@link #writable()} may be queried from another thread; only the event loop writes it.
  */
 public final class PostSseStream implements OutboundSseStream {
 
@@ -87,6 +87,11 @@ public final class PostSseStream implements OutboundSseStream {
     @Override
     public boolean started() {
         return state.opened;
+    }
+
+    /** Returns whether the stream is currently open and its channel can accept a write. */
+    public boolean writable() {
+        return state == State.OPEN && channel.isActive();
     }
 
     @Override
