@@ -421,7 +421,9 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
             if (meta == null) return null;
             var ptNode = meta.get("progressToken");
             if (ptNode == null) return null;
-            return ProgressToken.of(ptNode.isIntegralNumber() ? ptNode.asLong() : ptNode.asString());
+            if (ptNode.isString()) return ProgressToken.of(ptNode.asString());
+            if (ptNode.isNumber()) return ProgressToken.of(ptNode.numberValue());
+            return null;
         }
 
         private record CallParams(

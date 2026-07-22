@@ -5,13 +5,16 @@ package dev.tachyonmcp.server.config
 import dev.tachyonmcp.runtime.InteractionContext
 import dev.tachyonmcp.server.TachyonDsl
 import dev.tachyonmcp.server.domain.Args
+import dev.tachyonmcp.server.features.tools.ToolRequest
 import dev.tachyonmcp.server.features.tools.ToolResult
 
 @TachyonDsl
 public class ToolScope
     internal constructor(
         public val ctx: InteractionContext,
+        @Deprecated("Use request instead", ReplaceWith("request.arguments()"))
         public val args: Args,
+        public val request: ToolRequest,
     )
 
 /**

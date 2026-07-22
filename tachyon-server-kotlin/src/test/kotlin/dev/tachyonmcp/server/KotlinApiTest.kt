@@ -13,8 +13,8 @@ import dev.tachyonmcp.server.domain.double
 import dev.tachyonmcp.server.domain.doubleOrNull
 import dev.tachyonmcp.server.domain.int
 import dev.tachyonmcp.server.domain.intOrNull
-import dev.tachyonmcp.server.domain.stringOrNull
 import dev.tachyonmcp.server.features.tools.Args
+import dev.tachyonmcp.server.features.tools.ToolRequest
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.internal.ServerEngine
 import dev.tachyonmcp.server.json.KxSerializationSerde
@@ -280,7 +280,14 @@ internal class KotlinApiTest {
         val value = GreetingArgs("Charlie", 25)
         TachyonServer.builder().build().use { server ->
             val ctx = DefaultDispatchContext.stateless(server as ServerEngine)
-            val scope = ToolScope(ctx, Args(raw = null))
+            val args = Args(raw = null)
+            val request =
+                ToolRequest
+                    .builder()
+                    .name("greet")
+                    .arguments(args)
+                    .build()
+            val scope = ToolScope(ctx, args = args, request = request)
             val result = scope.success(value)
             result.shouldBeInstanceOf<ToolResult.Success>()
             result.structured().get() shouldBe value
@@ -292,7 +299,14 @@ internal class KotlinApiTest {
         val value = GreetingArgs("Dave", 50)
         TachyonServer.builder().build().use { server ->
             val ctx = DefaultDispatchContext.stateless(server as ServerEngine)
-            val scope = ToolScope(ctx, Args(raw = null))
+            val args = Args(raw = null)
+            val request =
+                ToolRequest
+                    .builder()
+                    .name("greet")
+                    .arguments(args)
+                    .build()
+            val scope = ToolScope(ctx, args = args, request = request)
             val result = scope.success(value, "custom text")
             result.shouldBeInstanceOf<ToolResult.Success>()
             result.structured().get() shouldBe value

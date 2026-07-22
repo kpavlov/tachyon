@@ -43,11 +43,27 @@ public non-sealed interface BlobResourceContents extends ResourceContents {
         if (blob().isBlank()) throw new IllegalArgumentException("blob must not be blank");
     }
 
+    /**
+     * Creates binary resource contents with no {@code _meta}.
+     *
+     * @param uri      the resource URI
+     * @param blob     the base64-encoded binary content
+     * @param mimeType the content's MIME type, or {@code null} if unspecified
+     */
     static BlobResourceContents of(String uri, String blob, @Nullable String mimeType) {
         return DefaultBlobResourceContents.of(uri, mimeType, blob, null);
     }
 
-    static BlobResourceContents of(String uri, String blob, @Nullable String mimeType, Map<String, JsonNode> meta) {
+    /**
+     * Creates binary resource contents.
+     *
+     * @param uri      the resource URI
+     * @param blob     the base64-encoded binary content
+     * @param mimeType the content's MIME type, or {@code null} if unspecified
+     * @param meta     the {@code _meta} entries, or {@code null} if none
+     */
+    static BlobResourceContents of(
+            String uri, String blob, @Nullable String mimeType, @Nullable Map<String, JsonNode> meta) {
         return DefaultBlobResourceContents.of(uri, mimeType, blob, meta);
     }
 

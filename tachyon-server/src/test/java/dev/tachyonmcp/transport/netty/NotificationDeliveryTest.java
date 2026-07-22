@@ -100,6 +100,50 @@ class NotificationDeliveryTest {
     }
 
     @Test
+    void shouldSendProgressNotificationWithStringToken() {
+        var params = java.util.Map.of(
+                "name", "test_tool",
+                "arguments", java.util.Map.of(),
+                "_meta", java.util.Map.of("progressToken", "abc123"));
+        var result = dispatcher
+                .dispatchRequestAsync(RequestId.of(1), "tools/call", params, "sess_test")
+                .join();
+
+        assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Response.class);
+        assertThat(((McpDispatcher.DispatchResult.Response) result).responseBodyString())
+                .doesNotContain("\"error\":")
+                .doesNotContain("\"isError\":true");
+
+        var progressEvents = testConn.sent.stream()
+                .filter(e -> e.data().contains("notifications/progress"))
+                .toList();
+        assertThat(progressEvents).hasSize(3);
+        assertThat(progressEvents.get(0).data()).contains("\"progressToken\":\"abc123\"");
+    }
+
+    @Test
+    void shouldNotSendProgressWithMalformedToken() {
+        var params = java.util.Map.of(
+                "name", "test_tool",
+                "arguments", java.util.Map.of(),
+                "_meta", java.util.Map.of("progressToken", true));
+        var result = dispatcher
+                .dispatchRequestAsync(RequestId.of(1), "tools/call", params, "sess_test")
+                .join();
+
+        assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Response.class);
+        assertThat(((McpDispatcher.DispatchResult.Response) result).responseBodyString())
+                .doesNotContain("\"error\":")
+                .doesNotContain("\"isError\":true");
+        var progressEvents = testConn.sent.stream()
+                .filter(e -> e.data().contains("notifications/progress"))
+                .toList();
+        assertThat(progressEvents)
+                .as("a non-string/non-numeric progressToken must be treated as absent, not crash the call")
+                .isEmpty();
+    }
+
+    @Test
     void shouldSendLoggingNotificationWhenLevelIsSet() {
         var levelParams = java.util.Map.of("level", "info");
         dispatcher

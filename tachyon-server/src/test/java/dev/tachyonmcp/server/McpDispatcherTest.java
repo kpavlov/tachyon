@@ -153,6 +153,19 @@ class McpDispatcherTest {
     }
 
     @Test
+    void cancelsWithMalformedRequestIdIsAcceptedWithoutThrowing() {
+        try (ServerEngine server = newEngine(b -> {})) {
+            var session = server.createSession("sess_cancel-malformed");
+            session.activate();
+            var dispatcher = new McpDispatcher(server, server.executor());
+
+            var result = dispatcher.dispatchNotification(
+                    "notifications/cancelled", Map.of("requestId", true), "sess_cancel-malformed");
+            assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Accepted.class);
+        }
+    }
+
+    @Test
     void cancelsWithEmptyParamsIsAccepted() {
         try (ServerEngine server = newEngine(b -> {})) {
             server.createSession("sess_cancel-empty");

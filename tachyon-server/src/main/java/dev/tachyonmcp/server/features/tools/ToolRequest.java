@@ -51,6 +51,10 @@ public interface ToolRequest extends HasMeta {
     @Nullable
     PayloadDeserializer payloadDeserializer();
 
+    /**
+     * The client's {@code _meta.progressToken} from this request, or {@code null} if the client
+     * did not opt into progress notifications for this call.
+     */
     @Nullable
     ProgressToken progressToken();
 
@@ -83,6 +87,7 @@ public interface ToolRequest extends HasMeta {
         @ExperimentalApi
         Builder payloadDeserializer(@Nullable PayloadDeserializer deserializer);
 
+        /** Sets the progress token, or {@code null} to leave progress notifications disabled. */
         Builder progressToken(@Nullable ProgressToken progressToken);
 
         Builder cancellation(@Nullable Cancellation cancellation);

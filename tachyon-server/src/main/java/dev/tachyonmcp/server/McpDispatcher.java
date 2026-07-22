@@ -346,7 +346,12 @@ public class McpDispatcher {
         RequestId rawRequestId = null;
         String rawReason = null;
         if (params instanceof Map<?, ?> map) {
-            rawRequestId = RequestId.ofNullable(map.get("requestId"));
+            var rawId = map.get("requestId");
+            if (rawId != null && !(rawId instanceof CharSequence) && !(rawId instanceof Number)) {
+                logger.debug("Cancellation notification has invalid requestId: {}", rawId);
+                return;
+            }
+            rawRequestId = RequestId.ofNullable(rawId);
             var r = map.get("reason");
             rawReason = r instanceof String s ? s : null;
         }
@@ -366,7 +371,7 @@ public class McpDispatcher {
                             var reasonMsg = finalReason != null ? ": " + finalReason : "";
                             var cancelled = server.failPendingRequest(finalRequestId, "Cancelled" + reasonMsg);
                             if (cancelled) {
-                                logger.info(
+                                logger.debug(
                                         "Cancelled pending request: requestId={}, sessionId={}, reason={}",
                                         finalRequestId,
                                         sessionId,

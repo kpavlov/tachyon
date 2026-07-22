@@ -34,3 +34,16 @@ description: Apply Tachyon MCP project rules when designing, implementing, revie
 
 - Static schema → parse text block. `ObjectMapper.readTree("""...""")` or shared `parseJson(String)` helper. `// language=json` for IDE.
 - Imperative `JsonNodeFactory` only for runtime-computed schemas.
+
+## Logging
+
+[Logging policy](https://kpavlov.me/blog/logging-policy/)
+
+| Level | Use |
+|---|---|
+| ERROR | Immediate action — ops enables Rollbar+PagerDuty alerting |
+| WARN | Action needed, can wait to next business day |
+| INFO (default on) | Normal-operation info |
+| DEBUG (off on PROD, on DEV) | Trace business logic |
+| TRACE (off by default) | Raw request/response dump — leaks confidential data if left on |
+

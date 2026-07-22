@@ -86,6 +86,17 @@ public final class McpResponseWriter {
         return ctx.writeAndFlush(response);
     }
 
+    /**
+     * Writes a JSON-RPC internal-error response and closes the connection, for a dispatch failure
+     * that occurred after a POST-SSE stream had already started (so the normal response path can no
+     * longer send a result).
+     *
+     * @param ctx    the channel to write the response on
+     * @param id     the id of the request that failed
+     * @param origin the request's {@code Origin} header value, echoed via CORS headers, or {@code null}
+     * @param mapper the protocol response mapper used to encode the error
+     * @return the future for the write
+     */
     public static ChannelFuture sendInternalError(
             ChannelHandlerContext ctx, RequestId id, @Nullable String origin, ProtocolResponseMapper mapper) {
         var error = mapper.error(ServerErrors.internalError("Internal error"));

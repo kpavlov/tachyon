@@ -47,10 +47,25 @@ public non-sealed interface TextResourceContents extends ResourceContents {
         return DefaultTextResourceContents.builder();
     }
 
+    /**
+     * Creates text resource contents with no {@code _meta}.
+     *
+     * @param uri      the resource URI
+     * @param text     the text content
+     * @param mimeType the content's MIME type, or {@code null} if unspecified
+     */
     static TextResourceContents of(String uri, String text, @Nullable String mimeType) {
         return DefaultTextResourceContents.of(uri, mimeType, text, null);
     }
 
+    /**
+     * Creates text resource contents.
+     *
+     * @param uri      the resource URI
+     * @param text     the text content
+     * @param mimeType the content's MIME type, or {@code null} if unspecified
+     * @param meta     the {@code _meta} entries, or {@code null} if none
+     */
     static TextResourceContents of(
             String uri, String text, @Nullable String mimeType, @Nullable Map<String, JsonNode> meta) {
         return DefaultTextResourceContents.of(uri, mimeType, text, meta);

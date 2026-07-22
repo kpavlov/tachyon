@@ -19,6 +19,7 @@ public sealed interface JsonRpcMessage {
     record Request<T>(RequestId id, String method, @Nullable T params) implements JsonRpcMessage {
 
         public Request {
+            Objects.requireNonNull(id, "id");
             Objects.requireNonNull(method, "method");
         }
     }
