@@ -25,33 +25,36 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Tag("conformance")
-abstract class AbstractServerConformanceIT {
+abstract class AbstractServerConformanceTest {
 
-    private static final Logger log = LoggerFactory.getLogger(AbstractServerConformanceIT.class);
+    private static final Logger log = LoggerFactory.getLogger(AbstractServerConformanceTest.class);
     private final AbstractConformanceServer serverFactory;
     private final String conformanceVersion;
     private final String baselineFileName;
     private final String suiteName;
     private final String protocolVersion;
+    private final boolean stateful;
 
-    AbstractServerConformanceIT(
+    AbstractServerConformanceTest(
             AbstractConformanceServer serverFactory,
             String conformanceVersion,
             String baselineFileName,
             String suiteName,
-            String protocolVersion) {
+            String protocolVersion,
+            boolean stateful) {
         this.serverFactory = serverFactory;
         this.conformanceVersion = conformanceVersion;
         this.baselineFileName = baselineFileName;
         this.suiteName = suiteName;
         this.protocolVersion = protocolVersion;
+        this.stateful = stateful;
     }
 
     @TestFactory
     Stream<DynamicTest> serverConformance() throws Exception {
         assumeTrue(ConformanceRunner.isNpxAvailable(), "npx is not available on this system");
 
-        var outputDir = "target/failsafe-reports/" + suiteName + "-conformance-results";
+        var outputDir = "target/surefire-reports/" + suiteName + "-conformance-results";
 
         var baselinePath = Path.of(baselineFileName);
         var expectedFailures =
@@ -75,9 +78,9 @@ abstract class AbstractServerConformanceIT {
     @Disabled("Run it manually")
     void runAll() throws IOException, InterruptedException {
 
-        var outputDir = "target/failsafe-reports/" + suiteName + "-conformance-results";
+        var outputDir = "target/surefire-reports/" + suiteName + "-conformance-results";
 
-        var server = serverFactory.startServer(true);
+        var server = serverFactory.startServer(stateful);
         try (server;
                 var nettyServer = new NettyServer(0, server)) {
             var port = nettyServer.port();
@@ -87,7 +90,7 @@ abstract class AbstractServerConformanceIT {
 
             log.info("[conformance] Running suite {} successfully", suiteName);
 
-            var result = runner.runSuite("all");
+            var result = runner.runSuite("all", protocolVersion);
 
             System.out.println("[conformance] Result " + String.join("\n", result.outputLines()) + " successfully");
 
@@ -99,7 +102,7 @@ abstract class AbstractServerConformanceIT {
 
     private void runConformanceScenario(String scenario, String outputDir, List<String> expectedFailures)
             throws Exception {
-        var server = serverFactory.startServer(true);
+        var server = serverFactory.startServer(stateful);
         try (server;
                 var nettyServer = new NettyServer(0, server)) {
             var port = nettyServer.port();
@@ -107,7 +110,7 @@ abstract class AbstractServerConformanceIT {
                     "http://localhost:" + port + "/mcp", conformanceVersion, outputDir, baselineFileName);
 
             System.out.println("[conformance] Running: " + scenario);
-            var result = scenarioRunner.runScenario(scenario);
+            var result = scenarioRunner.runScenario(scenario, protocolVersion);
             var outputLines = result.outputLines();
             outputLines.forEach(line -> System.out.println("[conformance] " + line));
 

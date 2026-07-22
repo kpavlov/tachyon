@@ -35,10 +35,9 @@ examples-snapshot: package ## Build examples against local SNAPSHOT artifacts
 	@./mvnw verify -f examples/echo-kotlin/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
 	@echo " ✅  Done!"
 
-conformance: package ## Run MCP conformance suite
+conformance: ## Run MCP conformance suite
 	@echo " 🔄  Running MCP conformance suite..."
-	@rm -rf conformance/target/failsafe-reports/conformance-results/**
-	@./mvnw verify -am -pl conformance
+	@./mvnw test -am -pl conformance
 
 e2e: package ## Run end-to-end tests
 	@echo " 🔗  Running end-to-end tests..."

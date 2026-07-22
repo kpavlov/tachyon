@@ -162,10 +162,8 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                 .dispatchRequestAsync(
                         id, method, params, null, postStream, ChannelHandlerUtils.requireInteractionContext(ctx))
                 .whenComplete((result, ex) -> ctx.executor().execute(() -> {
-                    // Neutralize the unused stream so a late server→client message cannot open a
-                    // second response on this (potentially keep-alive) channel.
-                    postStream.terminate();
                     if (ex != null) {
+                        postStream.terminate();
                         logger.error("Dispatch failed for pre-session request: method={}", method, ex);
                         sendResponseAndClose(
                                 ctx,
@@ -176,14 +174,22 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                         return;
                     }
                     if (result instanceof McpDispatcher.DispatchResult.Accepted) {
+                        postStream.terminate();
                         sendAccepted(ctx, origin);
                         return;
                     }
                     if (result instanceof McpDispatcher.DispatchResult.Status(int code, String statusMessage)) {
+                        postStream.terminate();
                         sendPlainTextAndClose(ctx, HttpResponseStatus.valueOf(code), statusMessage, origin);
                         return;
                     }
                     var response = (McpDispatcher.DispatchResult.Response) result;
+                    if (postStream.started()) {
+                        postStream.writeEvent(server.nextEventId(), response.responseBody(), null);
+                        postStream.terminate();
+                        return;
+                    }
+                    postStream.terminate();
                     sendJsonResponse(
                             ctx,
                             response.responseBody(),
