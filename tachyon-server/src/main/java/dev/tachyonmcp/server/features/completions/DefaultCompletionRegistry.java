@@ -8,6 +8,7 @@ import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.Mode;
 import dev.tachyonmcp.server.domain.InvalidArgumentException;
+import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.ServerErrors;
 import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.session.DispatchContext;
@@ -181,8 +182,13 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
                                 return ServerErrors.invalidParams(
                                         "invalid argument '" + e.argName() + "': " + e.getMessage());
                             }
-                            logger.error("Completion handler error for ref.type '{}'", refType, cause);
-                            return ServerErrors.internalError("Completion handler failed");
+                            var error = ServerErrors.fromUnhandledException(cause, "Completion handler failed");
+                            if (error.kind() == ServerError.Kind.INVALID_PARAMS) {
+                                logger.debug("Completion handler rejected invalid params for ref.type '{}'", refType);
+                            } else {
+                                logger.error("Completion handler error for ref.type '{}'", refType, cause);
+                            }
+                            return error;
                         }
                         var values = result.values();
                         var hasMore = result.hasMore();

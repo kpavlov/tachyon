@@ -59,6 +59,14 @@ class McpResponseMapperTest {
     }
 
     @Test
+    void protocolFailurePayloadPreservesServerError() {
+        var error = new ServerError(ServerError.Kind.INVALID_PARAMS, "Invalid params");
+        var result = TaskResult.failed(error);
+
+        assertThat(mapper.getTaskPayloadResult(result, "task-3")).isSameAs(error);
+    }
+
+    @Test
     void nullResultYieldsEmptyContentWithRelatedTask() {
         var payload = (CallToolResult) mapper.getTaskPayloadResult(null, "task-4");
 

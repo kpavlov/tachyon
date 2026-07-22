@@ -4,7 +4,7 @@
 
 package dev.tachyonmcp.server.domain;
 
-public final class InvalidArgumentException extends RuntimeException {
+public final class InvalidArgumentException extends IllegalArgumentException {
 
     private final String argName;
 

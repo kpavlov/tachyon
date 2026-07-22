@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.domain.EmbeddedResource;
 import dev.tachyonmcp.server.domain.ImageContent;
+import dev.tachyonmcp.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
@@ -97,6 +98,58 @@ class PromptsTest extends AbstractStatelessMcpE2eTest {
                 """);
 
             assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32600);
+        }
+    }
+
+    @Test
+    void shouldRedactIllegalArgumentExceptionFromInvalidParamsError() throws Exception {
+        startEmptyServer();
+        server.prompts().register(prompt -> prompt.name("bad-arg"), (ctx, request) -> {
+            throw new IllegalArgumentException("sensitive internal detail");
+        });
+
+        try (var client = createTestClient()) {
+            client.initialize();
+            var response = client.sendRpc("""
+                {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"bad-arg"}}
+                """);
+            // language=JSON
+            var expected = """
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 2,
+                      "error": {"code": -32602, "message": "Invalid params"}
+                    }
+                    """;
+            assertThatJson(response).isEqualTo(expected);
+            assertThat(response).doesNotContain("sensitive internal detail");
+        }
+    }
+
+    @Test
+    void shouldPreserveInvalidArgumentExceptionDetails() throws Exception {
+        startEmptyServer();
+        server.prompts().register(prompt -> prompt.name("bad-city"), (ctx, request) -> {
+            throw new InvalidArgumentException("city", "unknown city");
+        });
+
+        try (var client = createTestClient()) {
+            client.initialize();
+            var response = client.sendRpc("""
+                {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"bad-city"}}
+                """);
+            // language=JSON
+            var expected = """
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 2,
+                      "error": {
+                        "code": -32602,
+                        "message": "invalid argument 'city': unknown city"
+                      }
+                    }
+                    """;
+            assertThatJson(response).isEqualTo(expected);
         }
     }
 

@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.e2e;
 
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.features.tools.ToolHandler;
@@ -31,6 +32,30 @@ class ToolErrorTest extends AbstractStatelessMcpE2eTest {
             assertThat(response.body()).contains("""
                 {"jsonrpc":"2.0","id":1,"error":{"code":-32603,"message":"Tool handler failed"}}
                 """.trim());
+        }
+    }
+
+    @Test
+    void shouldRedactIllegalArgumentExceptionFromInvalidParamsError() throws Exception {
+        startServer(it -> it.tool(ToolHandler.of("bad-arg", "Rejects input", (context, request) -> {
+            throw new IllegalArgumentException("sensitive internal detail");
+        })));
+
+        try (var client = createTestClient()) {
+            client.initialize();
+            var response = client.sendRpc("""
+                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"bad-arg","arguments":{}}}
+                """);
+            // language=JSON
+            var expected = """
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 2,
+                      "error": {"code": -32602, "message": "Invalid params"}
+                    }
+                    """;
+            assertThatJson(response).isEqualTo(expected);
+            assertThat(response).doesNotContain("sensitive internal detail");
         }
     }
 

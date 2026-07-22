@@ -76,6 +76,34 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
     }
 
     @Test
+    void shouldRedactIllegalArgumentExceptionFromInvalidParamsError() throws Exception {
+        startEmptyServer();
+        server.resources()
+                .register(
+                        ResourceDescriptor.of("bad-arg", "resource://bad-arg", null, "text/plain"),
+                        (ctx, rawUri, params, uriTemplate) -> {
+                            throw new IllegalArgumentException("sensitive internal detail");
+                        });
+
+        try (var client = createTestClient()) {
+            client.initialize();
+            var response = client.sendRpc("""
+                {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://bad-arg"}}
+                """);
+            // language=JSON
+            var expected = """
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 2,
+                      "error": {"code": -32602, "message": "Invalid params"}
+                    }
+                    """;
+            assertThatJson(response).isEqualTo(expected);
+            assertThat(response).doesNotContain("sensitive internal detail");
+        }
+    }
+
+    @Test
     void shouldReadCorrectResourceWhenMultipleRegistered() throws Exception {
         startEmptyServer();
         server.resources()

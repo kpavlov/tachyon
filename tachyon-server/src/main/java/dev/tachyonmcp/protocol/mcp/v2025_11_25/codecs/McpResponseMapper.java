@@ -260,6 +260,7 @@ public class McpResponseMapper implements ProtocolResponseMapper {
             case null -> new CallToolResult(List.of(), null, null, relatedTaskMeta(null, taskId), null);
             case TaskResult.Completed c ->
                 buildCallToolResult(c.content(), c.structuredContent(), null, relatedTaskMeta(c.meta(), taskId));
+            case TaskResult.Failed f when f.protocolError() != null -> f.protocolError();
             case TaskResult.Failed f ->
                 buildCallToolResult(f.content(), f.structuredContent(), true, relatedTaskMeta(f.meta(), taskId));
         };
