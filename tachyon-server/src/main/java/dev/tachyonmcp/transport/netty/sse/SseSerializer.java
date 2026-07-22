@@ -51,4 +51,25 @@ public final class SseSerializer {
             throw e;
         }
     }
+
+    /**
+     * Encodes a raw {@code body} as a {@code message} event: {@code id: <wireId>\nevent:
+     * message\ndata: <body>\n\n}, straight into a single pooled buffer (no {@code String} decode).
+     * The returned buffer is owned by the caller and must be released after the write completes.
+     */
+    public static ByteBuf encode(ByteBufAllocator alloc, String wireId, byte[] body) {
+        var buf = alloc.buffer();
+        try {
+            ByteBufUtil.writeAscii(buf, "id: ");
+            ByteBufUtil.writeUtf8(buf, wireId);
+            ByteBufUtil.writeAscii(buf, "\nevent: message\ndata: ");
+            // ponytail: JSON-RPC bodies are single-line; add \n-splitting if that changes.
+            buf.writeBytes(body);
+            ByteBufUtil.writeAscii(buf, "\n\n");
+            return buf;
+        } catch (RuntimeException e) {
+            buf.release();
+            throw e;
+        }
+    }
 }

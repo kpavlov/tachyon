@@ -11,7 +11,6 @@ import dev.tachyonmcp.server.OutboundSseStream;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.netty.http.HttpHelpers;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -199,15 +198,8 @@ public final class PostSseStream implements OutboundSseStream {
                     new String(body, StandardCharsets.UTF_8)));
             return;
         }
-        var alloc = channel.alloc();
-        var prefix = ByteBufUtil.writeAscii(
-                alloc, "id: " + ServerEngine.wireEventId(sseEventId, streamKey) + "\nevent: message\ndata: ");
-        var suffix = ByteBufUtil.writeAscii(alloc, "\n\n");
-        var frame = alloc.compositeBuffer(3)
-                .addComponent(true, prefix)
-                .addComponent(true, Unpooled.wrappedBuffer(body))
-                .addComponent(true, suffix);
-        channel.writeAndFlush(new DefaultHttpContent(frame)).addListener((ChannelFutureListener) f -> {
+        var buf = SseSerializer.encode(channel.alloc(), ServerEngine.wireEventId(sseEventId, streamKey), body);
+        channel.writeAndFlush(new DefaultHttpContent(buf)).addListener((ChannelFutureListener) f -> {
             if (!f.isSuccess()) channel.close();
         });
     }

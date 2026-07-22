@@ -10,21 +10,26 @@ import static org.junit.jupiter.api.Assumptions.abort;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
+import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.netty.NettyServer;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.TestInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Tag("conformance")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class AbstractServerConformanceTest {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractServerConformanceTest.class);
@@ -34,6 +39,8 @@ abstract class AbstractServerConformanceTest {
     private final String suiteName;
     private final String protocolVersion;
     private final boolean stateful;
+    private ServerInstance statefulServer;
+    private ServerInstance statelessServer;
 
     AbstractServerConformanceTest(
             AbstractConformanceServer serverFactory,
@@ -48,6 +55,21 @@ abstract class AbstractServerConformanceTest {
         this.suiteName = suiteName;
         this.protocolVersion = protocolVersion;
         this.stateful = stateful;
+    }
+
+    @BeforeAll
+    void startServers() {
+        statefulServer = startServer(true);
+        statelessServer = startServer(false);
+    }
+
+    @AfterAll
+    void stopServers() {
+        try {
+            statefulServer.close();
+        } finally {
+            statelessServer.close();
+        }
     }
 
     @TestFactory
@@ -102,41 +124,63 @@ abstract class AbstractServerConformanceTest {
 
     private void runConformanceScenario(String scenario, String outputDir, List<String> expectedFailures)
             throws Exception {
-        var server = serverFactory.startServer(stateful);
-        try (server;
-                var nettyServer = new NettyServer(0, server)) {
-            var port = nettyServer.port();
-            var scenarioRunner = new ConformanceRunner(
-                    "http://localhost:" + port + "/mcp", conformanceVersion, outputDir, baselineFileName);
+        var server = stateful ? statefulServer : statelessServer;
+        var scenarioRunner = new ConformanceRunner(
+                "http://localhost:" + server.port() + "/mcp", conformanceVersion, outputDir, baselineFileName);
 
-            System.out.println("[conformance] Running: " + scenario);
-            var result = scenarioRunner.runScenario(scenario, protocolVersion);
-            var outputLines = result.outputLines();
-            outputLines.forEach(line -> System.out.println("[conformance] " + line));
+        System.out.println("[conformance] Running: " + scenario);
+        var result = scenarioRunner.runScenario(scenario, protocolVersion);
+        var outputLines = result.outputLines();
+        outputLines.forEach(line -> System.out.println("[conformance] " + line));
 
-            var rawFile = Path.of(outputDir, suiteName + "-" + scenario + "-raw.log");
-            Files.createDirectories(rawFile.getParent());
-            Files.write(rawFile, outputLines);
+        var rawFile = Path.of(outputDir, suiteName + "-" + scenario + "-raw.log");
+        Files.createDirectories(rawFile.getParent());
+        Files.write(rawFile, outputLines);
 
-            var parsed = ConformanceReportWriter.parseResults(outputLines);
-            int failed = parsed.isEmpty() ? 0 : parsed.getFirst().failed();
-            boolean processFailed = !result.passed();
+        var parsed = ConformanceReportWriter.parseResults(outputLines);
+        int failed = parsed.isEmpty() ? 0 : parsed.getFirst().failed();
+        boolean processFailed = !result.passed();
 
-            if (processFailed && parsed.isEmpty()) {
-                fail("Conformance process failed for scenario " + scenario
-                        + " (exit code " + result.exitCode() + ")"
-                        + " and no summary was found in output");
+        if (processFailed && parsed.isEmpty()) {
+            fail("Conformance process failed for scenario " + scenario
+                    + " (exit code " + result.exitCode() + ")"
+                    + " and no summary was found in output");
+        }
+
+        if (failed > 0 && expectedFailures.contains(scenario)) {
+            abort("Expected failure (baseline) for scenario " + scenario);
+        }
+
+        if (processFailed) {
+            fail("Conformance process failed for scenario " + scenario + " (exit code " + result.exitCode() + ")");
+        }
+
+        assertThat(failed).as("Scenario %s failed unexpectedly", scenario).isEqualTo(0);
+    }
+
+    private ServerInstance startServer(boolean stateful) {
+        var engine = serverFactory.startServer(stateful);
+        try {
+            return new ServerInstance(engine, new NettyServer(0, engine));
+        } catch (RuntimeException e) {
+            engine.close();
+            throw e;
+        }
+    }
+
+    private record ServerInstance(ServerEngine engine, NettyServer transport) implements AutoCloseable {
+
+        int port() {
+            return transport.port();
+        }
+
+        @Override
+        public void close() {
+            try {
+                transport.close();
+            } finally {
+                engine.close();
             }
-
-            if (failed > 0 && expectedFailures.contains(scenario)) {
-                abort("Expected failure (baseline) for scenario " + scenario);
-            }
-
-            if (processFailed) {
-                fail("Conformance process failed for scenario " + scenario + " (exit code " + result.exitCode() + ")");
-            }
-
-            assertThat(failed).as("Scenario %s failed unexpectedly", scenario).isEqualTo(0);
         }
     }
 }
