@@ -32,9 +32,11 @@ Tachyon enforces valid transitions. Invalid moves throw `IllegalStateException`.
 ```java
 import dev.tachyonmcp.server.domain.Task;
 import dev.tachyonmcp.server.domain.TaskResult;
+import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.features.tasks.TaskOptions;
+import java.util.List;
 
-Server server = handle.server();
+TachyonServer server = TachyonServer.builder().port(8080).start();
 
 // Create — server generates the ID
 Task task = server.tasks().create();
@@ -45,7 +47,7 @@ Task ownedTask = server.tasks().create(
 
 // Update state via the returned Task handle
 ownedTask.updateMessage("Running step 1...");
-ownedTask.complete(new TaskResult.Completed(...));
+ownedTask.complete(TaskResult.completed(List.of(TextContent.of("done")), null, null));
 ```
 
 Supply `TaskOptions.builder().id(...)` to map a task onto an ID from your own external task
@@ -100,7 +102,7 @@ TachyonServer.builder()
     .start();
 ```
 
-Clients that include `"extensions": {"io.modelcontextprotocol/tasks": {}}` in their `initialize` capabilities receive the extension tool and resource. Clients that don't negotiate see standard `tasks/*` methods only.
+MCP 2025-11-25 clients that include `"extensions": {"io.modelcontextprotocol/tasks": {}}` in their `initialize` capabilities receive the extension tool and resource. Clients that don't negotiate see standard `tasks/*` methods only.
 
 ## Task janitor
 

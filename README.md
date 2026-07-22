@@ -15,7 +15,7 @@
   />
 </div>
 
-**Tachyon MCP** is a Java 21+ and Kotlin [Model Context Protocol](https://modelcontextprotocol.io) (MCP) SDK built with [Netty](https://netty.io). It implements the **MCP 2025-11-25** and **MCP 2026-07-28** Streamable HTTP transport and runs stateless by default. **It passes all official conformance tests for the _both latest and draft_ protocol versions!!!**
+**Tachyon MCP** is a Java 21+ and Kotlin [Model Context Protocol](https://modelcontextprotocol.io) (MCP) SDK built with [Netty](https://netty.io). It implements **MCP 2025-11-25** and the upcoming **MCP 2026-07-28** over Streamable HTTP and runs stateless by default. **It passes all official conformance tests for both protocol versions!**
 
 ## 💫 Why Tachyon?
 
@@ -35,7 +35,7 @@
     <dependency>
         <groupId>dev.tachyonmcp</groupId>
         <artifactId>tachyon-server</artifactId>
-        <version>1.0.0-beta.12</version>
+        <version>1.0.0-beta.13</version>
     </dependency>
     ```
 
@@ -91,7 +91,10 @@ Check out [Skills CLI](https://github.com/vercel-labs/skills) for more options.
 
 ## Features
 
-Full **2025-11-25** MCP surface over Streamable HTTP, verified by the official conformance suite:
+Full MCP surface over Streamable HTTP, verified by the official conformance suites for **2025-11-25** and **2026-07-28**:
+
+The wire lifecycle varies by negotiated version; the detailed method list below describes the
+2025-11-25 surface unless noted otherwise.
 
 | Area | What you get |
 |---|---|
@@ -132,13 +135,13 @@ See [docs/quickstart.md](docs/quickstart.md) for a full walkthrough with Java an
 ### TasksExtension (SEP-1686)
 
 ```java
-var handle = TachyonServer.builder()
+var server = TachyonServer.builder()
     .extension(TasksExtension.instance())  // exposes create_task tool + task://{id} resource
     .port(8080)
     .start();
 ```
 
-Clients that include `"extensions": {"io.modelcontextprotocol/tasks": {}}` in their `initialize` capabilities receive the extension's tool and resource template. Clients that don't negotiate it see standard `tasks/*` methods. See [docs/tasks.md](docs/tasks.md).
+MCP 2025-11-25 clients that include `"extensions": {"io.modelcontextprotocol/tasks": {}}` in their `initialize` capabilities receive the extension's tool and resource template. Clients that don't negotiate it see standard `tasks/*` methods. See [docs/tasks.md](docs/tasks.md).
 
 ### Protocol isolation
 

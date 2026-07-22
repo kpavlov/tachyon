@@ -67,7 +67,7 @@ final class ResourceHandlerExample {
 
     static ResourceHandler forecastTemplateHandler() {
         return (ctx, uri, params, uriTemplate) -> TextResourceContents.of(
-            uri, "{\"city\":\"" + params.get("city") + "\",\"temp\":22}", "application/json"
+            uri, "{\"city\":\"" + params.get("city").scalarValue() + "\",\"temp\":22}", "application/json"
         );
     }
 

@@ -78,12 +78,12 @@ class ConformanceRunner {
         return scenarios;
     }
 
-    ConformanceResult runSuite(String suiteName) throws IOException, InterruptedException {
-        return run("--suite", suiteName);
+    ConformanceResult runSuite(String suiteName, String protocolVersion) throws IOException, InterruptedException {
+        return run("--suite", suiteName, "--spec-version", protocolVersion);
     }
 
-    ConformanceResult runScenario(String scenario) throws IOException, InterruptedException {
-        return run("--scenario", scenario);
+    ConformanceResult runScenario(String scenario, String protocolVersion) throws IOException, InterruptedException {
+        return run("--scenario", scenario, "--spec-version", protocolVersion);
     }
 
     private ConformanceResult run(String... extraArgs) throws IOException, InterruptedException {

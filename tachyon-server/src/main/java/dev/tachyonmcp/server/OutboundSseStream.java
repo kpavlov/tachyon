@@ -41,7 +41,7 @@ public interface OutboundSseStream {
     void start();
 
     /**
-     * @return {@code true} once {@link #start()} has completed.
+     * @return {@code true} once the stream has been opened.
      */
     boolean started();
 

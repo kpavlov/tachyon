@@ -8,6 +8,7 @@ import dev.tachyonmcp.runtime.SseEvent;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Serializes an outbound {@link SseEvent} into its {@code text/event-stream} wire framing, writing
@@ -43,6 +44,45 @@ public final class SseSerializer {
                 buf.writeByte('\n');
                 if (nl < 0) break;
                 start = nl + 1;
+            }
+            buf.writeByte('\n');
+            return buf;
+        } catch (RuntimeException e) {
+            buf.release();
+            throw e;
+        }
+    }
+
+    /**
+     * Encodes a raw {@code body} as a {@code message} event, omitting the {@code id:} field when
+     * {@code wireId} is {@code null}, with one {@code data:} field per body line. A {@code null} or
+     * empty body produces one empty {@code data:} field. Encoding writes straight into a single
+     * pooled buffer (no {@code String} decode). The returned buffer is owned by the caller and must
+     * be released after the write completes.
+     */
+    public static ByteBuf encode(ByteBufAllocator alloc, @Nullable String wireId, byte @Nullable [] body) {
+        var buf = alloc.buffer();
+        try {
+            if (wireId != null) {
+                ByteBufUtil.writeAscii(buf, "id: ");
+                ByteBufUtil.writeUtf8(buf, wireId);
+                buf.writeByte('\n');
+            }
+            ByteBufUtil.writeAscii(buf, "event: message\n");
+            if (body == null) {
+                ByteBufUtil.writeAscii(buf, "data: \n\n");
+                return buf;
+            }
+            var start = 0;
+            while (true) {
+                var end = start;
+                while (end < body.length && body[end] != '\r' && body[end] != '\n') end++;
+                ByteBufUtil.writeAscii(buf, "data: ");
+                buf.writeBytes(body, start, end - start);
+                buf.writeByte('\n');
+                if (end == body.length) break;
+                if (body[end] == '\r' && end + 1 < body.length && body[end + 1] == '\n') end++;
+                start = end + 1;
             }
             buf.writeByte('\n');
             return buf;

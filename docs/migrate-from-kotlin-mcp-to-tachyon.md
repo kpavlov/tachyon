@@ -18,20 +18,20 @@ fail to compile and won't show up until a client hits them.
 | Icon | `sdk.types.Icon` | `dev.tachyonmcp.server.domain.Icon(src, mimeType, sizes, theme)` |
 | Register a tool | `server.addTool(name, desc, inputSchema: ToolSchema, outputSchema, handler)` | `server.registerTool(name, desc, inputSchema, outputSchema) { }` |
 | Handler receiver | `suspend ClientConnection.(CallToolRequest) -> CallToolResult` | `suspend ToolScope.() -> ToolResult` |
-| Read arguments | `request.arguments: JsonObject` | `args: Args` (typed accessors) |
+| Read arguments | `request.arguments: JsonObject` | `request.arguments(): Args` (typed accessors) |
 | Tool result | `CallToolResult(content = listOf(TextContent(x)), isError)` | `ToolResult.text(x)` / `.error(x)` / `success(v)` |
 | Schema type | `ToolSchema(properties, required)` | `String` **or** Jackson `JsonNode` **or** kotlinx `JsonObject` |
-| Logging | `server.sendLoggingMessage(LoggingMessageNotification(...))` | `server.log(session, level, logger, data: JsonNode)` |
+| Logging | `server.sendLoggingMessage(LoggingMessageNotification(...))` | `ctx.notifications().log(level, logger, data)` |
 | Log level | `LoggingLevel.Info/Debug/Error` (PascalCase) | `LoggingLevel.INFO/DEBUG/ERROR` (UPPER) |
 | Resources | `server.addResources(...)` per file | `server.resources().register(descriptor, handler)` / `.registerTemplate(...)` |
-| Elicitation | `Server.userFeedbackElicitor(sessionId)` | `InteractionContext.userFeedbackElicitor()` (via `ToolScope.ctx`) |
+| Client requests | SDK-specific elicitation helper | `InteractionContext.sendRequest(method, params)` (via `ToolScope.ctx`) |
 | JSON config | `McpJson` | `KxSerializationSerde(json = yourJson)` in `json { serde = ... }` |
 
 ## 1. Dependencies
 
 Swap the SDK for Tachyon's Kotlin module. Keep `kotlinx-serialization-json` — it's an
 *optional* Tachyon dependency, and you need it for `JsonObject` schemas and
-`args.decode<T>()`. Jackson 3 (`tools.jackson.*`) arrives transitively.
+`request.arguments().decode<T>()`. Jackson 3 (`tools.jackson.*`) arrives transitively.
 
 ```toml
 # out: io.modelcontextprotocol:kotlin-sdk
@@ -44,7 +44,7 @@ The SDK hands you a `Server` and leaves the streamable-HTTP transport, session l
 reaping to you. `TachyonServer { }` is the whole thing:
 
 ```kotlin
-val handle = TachyonServer(port = mcpPort) {
+val server = TachyonServer(port = mcpPort) {
     info {
         name = "example-server"
         title = "Example MCP"
@@ -66,9 +66,9 @@ val handle = TachyonServer(port = mcpPort) {
     session { enabled = true; sessionTtl = 10.minutes }
 }
 
-handle.server()   // dev.tachyonmcp.server.Server — register tools/resources here
-handle.port()
-handle.close()    // wire to your app's stop hook
+server.tools()    // register tools through feature registries or Kotlin extensions
+server.port()
+server.close()    // wire to your app's stop hook
 ```
 
 The identity block is easy to under-fill. `info { }` supports `title`, `websiteUrl`, and
@@ -86,15 +86,15 @@ val logoIcon = javaClass.getResourceAsStream("/logo-32x32.png")!!.use { s ->
 }
 ```
 
-> The SDK's `ServerOptions.timeout` has no equivalent and needs none — it never extended MCP
-> host per-call limits anyway. Long-running tools still need `wait=false` polling or a
-> log-file side channel.
+> Map any timeout for pending server-to-client requests to
+> `runtime { requestTimeout = ... }`. Long-running tool calls use MCP progress, SSE comments,
+> or task augmentation; see the runtime and task guides.
 
 ## 3. Tools
 
 `addTool` becomes `registerTool` (import from `dev.tachyonmcp.server.features.tools`). The
 handler receiver changes from `ClientConnection.(CallToolRequest)` to `ToolScope`, and it
-returns a `ToolResult`. `registerTool` returns the `Server`, so registrations chain.
+returns a `ToolResult`. `registerTool` returns the `TachyonServer`, so registrations chain.
 
 ```kotlin
 import dev.tachyonmcp.server.features.tools.registerTool
@@ -105,7 +105,7 @@ server.registerTool(
     inputSchema = """{"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}""",
     outputSchema = SearchResult::class.jsonSchemaString,   // nullable
 ) { // this: ToolScope
-    val query = args.stringValue("query")
+    val query = request.arguments().stringValue("query")
     ToolResult.text(json.encodeToString(SearchResult.serializer(), run(query)))
 }
 ```
@@ -115,17 +115,17 @@ warns when a description exceeds 2048 chars (clients truncate there) pays off ac
 
 ## 4. Arguments — `Args`
 
-`ToolScope.args` replaces digging through a `JsonObject`:
+`ToolScope.request.arguments()` replaces digging through a `JsonObject`:
 
 | Old                                                 | New                                                                                  |
 |-----------------------------------------------------|--------------------------------------------------------------------------------------|
-| `arguments["k"]?.jsonPrimitive?.content` (required) | `args.stringValue("k")` — throws if missing                                          |
-| same, optional                                      | `args.stringOrNull("k")`                                                             |
-| with a default                                      | `args.stringOr("k", "d")`                                                            |
-| `…?.int` etc.                                       | `args.intValue/boolValue/doubleValue` (+ `…OrNull`, `…(k, default)`)                 |
-| raw element                                         | `args.raw("k"): JsonNode?` → `.asString()`                                           |
-| membership                                          | `args.has("k")`                                                                      |
-| decode whole object                                 | `args.decode<MyArgs>()` (via configured serde; kotlinx default ignores unknown keys) |
+| `arguments["k"]?.jsonPrimitive?.content` (required) | `request.arguments().stringValue("k")` — throws if missing |
+| same, optional | `request.arguments().stringOrNull("k")` |
+| with a default | `request.arguments().stringOr("k", "d")` |
+| `…?.int` etc. | `request.arguments().intValue/boolValue/doubleValue` (+ `…OrNull`, `…(k, default)`) |
+| raw element | `request.arguments().raw("k"): JsonNode?` → `.asString()` |
+| membership | `request.arguments().has("k")` |
+| decode whole object | `request.arguments().decode<MyArgs>()` (via configured serde) |
 
 ## 5. Results — `ToolResult`
 
@@ -154,18 +154,16 @@ shim now.
 
 ## 7. Logging
 
-The `LoggingMessageNotification` wrapper is gone; call `server.log(...)` with a `Session`.
-Note the enum casing and that data is a **Jackson** node.
+The `LoggingMessageNotification` wrapper is gone. From a handler, publish through
+`ctx.notifications()`. Note the enum casing; data may be any JSON-serializable object.
 
 ```kotlin
 // before: server.sendLoggingMessage(LoggingMessageNotification(...LoggingLevel.Info, data = McpJson...))
-server.log(session, LoggingLevel.INFO, loggerName, entry.toJacksonNode())
-
-fun Entry.toJacksonNode(): JsonNode = ObjectMapper().readTree(Json.encodeToString(serializer(), this))
+ctx.notifications().log(LoggingLevel.INFO, loggerName, entry)
 ```
 
-`Info/Debug/Error` → `INFO/DEBUG/ERROR`. Logging is session-scoped — get the `Session` from the
-interaction/subscription context, not a global send.
+`Info/Debug/Error` → `INFO/DEBUG/ERROR`. The interaction context routes the notification to the
+current client and applies its selected threshold.
 
 ## 8. Resources
 
@@ -174,7 +172,7 @@ interaction/subscription context, not a global send.
 server.resources().register(
     ResourceDescriptor(name = uri, uri = uri, title = label, description = desc, mimeType = "text/markdown"),
 ) { _, uri, _, _ ->
-    TextResourceContents.of(uri, "text/markdown", read(uri) ?: error("not found"))
+    TextResourceContents.of(uri, read(uri) ?: error("not found"), "text/markdown")
 }
 
 // URI template (shows up in resources/templates/list)
@@ -188,8 +186,8 @@ server.resources().registerTemplate(
     { _, uri, _, _ ->
         TextResourceContents.of(
             uri,
-            "text/markdown",
             read(uri) ?: error("not found"),
+            "text/markdown",
         )
     },
 )
@@ -200,14 +198,13 @@ any manual `broadcastNotification("notifications/resources/list_changed", …)`.
 **`name`** as your remove key; make it unique (the URI is a safe choice — bare filenames collide
 across directories, and `remove(name)` won't find a stale entry keyed differently).
 
-## 9. Elicitation
+## 9. Client requests
 
-The elicitor now hangs off `InteractionContext` (available as `ToolScope.ctx`) instead of a
+Client requests now hang off `InteractionContext` (available as `ToolScope.ctx`) instead of a
 `Server` + `sessionId` pair:
 
 ```kotlin
-// before: server.userFeedbackElicitor(sessionId)
-val elicitor = ctx.userFeedbackElicitor()   // inside a tool handler
+val response = ctx.sendRequest("elicitation/create", params).join()
 ```
 
 ## Checklist
@@ -215,12 +212,12 @@ val elicitor = ctx.userFeedbackElicitor()   // inside a tool handler
 - [ ] Swap dependency; keep `kotlinx-serialization-json` if you use decode/structured/JsonObject schemas.
 - [ ] Delete the custom Ktor transport/session code — `TachyonServer { }` replaces it.
 - [ ] Port full identity: `title`, `websiteUrl`, `icons` — not just `name`/`version`.
-- [ ] `addTool` → `registerTool`; receiver → `ToolScope`; arguments → `args.*`; results → `ToolResult`.
+- [ ] `addTool` → `registerTool`; receiver → `ToolScope`; arguments → `request.arguments()`; results → `ToolResult`.
 - [ ] Fix Jackson imports to `tools.jackson.*`; convert kotlinx schemas with `readTree(...)`.
 - [ ] Re-emit `required` on every input schema.
-- [ ] `LoggingLevel.Info` → `INFO`; route logs through `server.log(session, …)`.
+- [ ] `LoggingLevel.Info` → `INFO`; route handler logs through `ctx.notifications().log(...)`.
 - [ ] Register concrete resources if clients call `resources/list`; drop manual list-changed broadcasts.
-- [ ] Elicitation → `ctx.userFeedbackElicitor()`.
+- [ ] Client requests, including elicitation, → `ctx.sendRequest(method, params)`.
 - [ ] Re-audit every input-validation check the SDK path enforced — confirm it still runs against a trusted value.
 
 Full API reference: [`docs/tools.md`](tools.md), [`docs/resources.md`](resources.md), and

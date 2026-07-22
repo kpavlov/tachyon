@@ -8,7 +8,7 @@ The `tachyon-server-kotlin` module wraps `ServerBuilder` with a coroutine-first 
 <dependency>
     <groupId>dev.tachyonmcp</groupId>
     <artifactId>tachyon-server-kotlin</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0-beta.13</version>
 </dependency>
 ```
 
@@ -30,7 +30,7 @@ import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.TextResourceContents
 import dev.tachyonmcp.server.features.tools.ToolResult
 
-val handle = TachyonServer(port = 8080) {
+val server = TachyonServer(port = 8080) {
     info {
         name = "demo-server"
         version = "1.0"
@@ -58,7 +58,7 @@ val handle = TachyonServer(port = 8080) {
         description = "Server configuration",
         mimeType = "application/json",
     ) {
-        TextResourceContents.of(uri, "application/json", """{"env":"prod"}""")
+        TextResourceContents.of(uri, """{"env":"prod"}""", "application/json")
     }
     prompt(name = "greet", description = "Greeting prompt") {
         listOf(PromptMessage.user("Say hello, ${arguments ?: "world"}"))
@@ -74,13 +74,13 @@ Tool lambdas are `suspend` functions with access to `ToolScope`:
 tool(name = "reverse", description = "Reverse a string") {
     // this: ToolScope
     // ctx: InteractionContext
-    // args: Args
-    val msg = args.stringValue("message")
+    // request: ToolRequest
+    val msg = request.arguments().stringValue("message")
     ToolResult.text(msg.reversed())
 }
 ```
 
-For class-based handlers, implement `ToolHandler` from `tachyon-server` — override `handle(ctx, args)` (sync) or `handleAsync(ctx, args)` (async); they work unchanged from Kotlin.
+For class-based handlers, extend `AbstractToolHandler` and override `handle(ctx, args)` (sync) or `handleAsync(ctx, args)` (async); they work unchanged from Kotlin.
 
 ## Resource & prompt handlers
 
@@ -88,9 +88,9 @@ Resource and prompt lambdas are `suspend` functions too — call suspending APIs
 
 ```kotlin
 resource(name = "config", uri = "demo://config") {
-    // this: ResourceScope — ctx, request, uri
+    // this: ResourceScope — ctx, uri, params, uriTemplate
     val config = fetchConfig()  // suspend call
-    TextResourceContents.of(uri, "application/json", config)
+    TextResourceContents.of(uri, config, "application/json")
 }
 
 prompt(name = "greet", description = "Greeting prompt") {
@@ -109,7 +109,7 @@ interruption (e.g. from `tasks/cancel`), which cancels the coroutine.
 ## Tool schemas
 
 `inputSchema` / `outputSchema` accept three shapes on every registration overload
-(`tool(...)` in the DSL, `Server.registerTool(...)` post-build, `toolDescriptor { }`):
+(`tool(...)` in the DSL, `TachyonServer.registerTool(...)` post-build, `toolDescriptor { }`):
 
 ```kotlin
 // Jackson JsonNode
@@ -134,7 +134,7 @@ clients may truncate them.
 ## kotlinx.serialization integration
 
 `kotlinx-serialization-json` is an **optional** dependency of `tachyon-server-kotlin`.
-Add it to use `JsonObject` schemas, `args.decode<T>()`, and `success(value)`:
+Add it to use `JsonObject` schemas, `request.arguments().decode<T>()`, and `success(value)`:
 
 ```xml
 <dependency>
@@ -153,7 +153,7 @@ tool(
     inputSchema = """{"type":"object","properties":{"message":{"type":"string"}}}""",
     outputSchema = """{"type":"object","properties":{"echo":{"type":"string"}}}""",
 ) {
-    val input = args.decode<EchoArgs>() // typed decode via configured serde
+    val input = request.arguments().decode<EchoArgs>() // typed decode via configured serde
     success(EchoReply(input.message)) // structuredContent via configured serde
 }
 ```
@@ -171,7 +171,7 @@ configured serde in the Kotlin DSL:
 
 | Method | Routes through | Behaviour |
 |---|---|---|
-| `args.decode<T>()` | server-configured `PayloadDeserializer` | Honors custom `Json` config |
+| `request.arguments().decode<T>()` | server-configured `PayloadDeserializer` | Honors custom `Json` config |
 | `scope.success(value)` | server-configured `PayloadSerializer` | Deferred serialization at encode time |
 | `scope.success(value, text)` | server-configured `PayloadSerializer` | Structured + human-readable text |
 
@@ -183,7 +183,7 @@ through the deserializer set in `json { serde = ... }`.
 @Serializable data class GreetReply(val message: String)
 
 tool(name = "greet", inputSchema = ..., outputSchema = ...) {
-    val input = args.decode<GreetArgs>()          // honors configured serde
+    val input = request.arguments().decode<GreetArgs>() // honors configured serde
     success(GreetReply("${input.greeting}, ${input.name}!"), "greeting response")  // symmetric typed result
 }
 ```
@@ -192,10 +192,10 @@ tool(name = "greet", inputSchema = ..., outputSchema = ...) {
 
 | Call | Behaviour |
 |---|---|
-| `args.stringValue("k")` / `intValue` / `boolValue` / `doubleValue` | Required — throws when missing |
-| `args.stringOrNull("k")` / `intOrNull` / `booleanOrNull` / `doubleOrNull` | Returns `null` when missing |
-| `args.stringOr("k", "d")` / `int("k", 0)` / `boolean("k", true)` / `double("k", 0.0)` | Falls back to default |
-| `args.decode<T>()` | typed decode via configured serde (default kotlinx ignores unknown keys) |
+| `request.arguments().stringValue("k")` / `intValue` / `boolValue` / `doubleValue` | Required — throws when missing |
+| `request.arguments().stringOrNull("k")` / `intOrNull` / `booleanOrNull` / `doubleOrNull` | Returns `null` when missing |
+| `request.arguments().stringOr("k", "d")` / `int("k", 0)` / `boolean("k", true)` / `double("k", 0.0)` | Falls back to default |
+| `request.arguments().decode<T>()` | typed decode via configured serde (default kotlinx ignores unknown keys) |
 
 ## Scope reference
 
@@ -206,8 +206,8 @@ tool(name = "greet", inputSchema = ..., outputSchema = ...) {
 | `NetworkScope` | `network { }` | `host`, `port`, `endpointPath`, `allowedOrigins`, `maxContentLength` |
 | `SessionScope` | `session { }` | `enabled`, `sessionTtl`, `sessionIdGenerator` |
 | `RuntimeScope` | `runtime { }` | `shutdownGracePeriod` |
-| `ToolScope` | tool lambda | `ctx`, `args` |
-| `ResourceScope` | resource lambda | `ctx`, `request`, `uri` |
+| `ToolScope` | tool lambda | `ctx`, `request` |
+| `ResourceScope` | resource lambda | `ctx`, `uri`, `params`, `uriTemplate` |
 | `PromptScope` | prompt lambda | `ctx`, `request`, `arguments` |
 
 ## Post-build registration
@@ -219,7 +219,7 @@ val server = buildServer { /* base config */ }
 server.registerTool(
     ToolDescriptor.builder().name("echo").description("Echo a message").build(),
 ) {
-    ToolResult.text(args.stringValue("msg"))
+    ToolResult.text(request.arguments().stringValue("msg"))
 }
 ```
 
@@ -247,8 +247,8 @@ TachyonServer(port = 8080) {
 `structuredContent` requires a JSON object shape. Tachyon rejects primitives and arrays at runtime.
 
 With kotlinx-serialization on the classpath, prefer `success(value)` inside a tool lambda —
-the configured serde encodes the value into `structuredContent`, with `value.toString()`
-(or an explicit `text` argument) as the text fallback.
+the configured serde encodes the value into `structuredContent`. Without an explicit `text`
+argument, Tachyon emits the serialized JSON as the backwards-compatible text block.
 
 ## Testing
 

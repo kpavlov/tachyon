@@ -11,7 +11,6 @@ import dev.tachyonmcp.server.OutboundSseStream;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.netty.http.HttpHelpers;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -32,13 +31,26 @@ import org.slf4j.LoggerFactory;
  * Per-POST SSE response stream. Lazily upgrades the POST response from JSON to an SSE stream
  * when the dispatching handler emits a server-to-client message.
  *
- * <p>All mutating operations are serialized onto the channel's {@link io.netty.channel.EventLoop},
- * matching Netty's "always work on the channel's EventLoop" idiom. The only field readable from
- * outside the EL is {@link #started} (queried by the dispatcher to decide JSON vs SSE response);
- * it is therefore {@code volatile}. The {@code closed} flag and the {@code queued} list are only
- * touched on the EL.
+ * <p>All state transitions and queued-event mutations are serialized onto the channel's
+ * {@link io.netty.channel.EventLoop}. The state is volatile only because {@link #started()} and
+ * {@link #writable()} may be queried from another thread; only the event loop writes it.
  */
 public final class PostSseStream implements OutboundSseStream {
+
+    private enum State {
+        NEW(false, false),
+        OPEN(true, false),
+        CLOSED_UNOPENED(false, true),
+        CLOSED_OPENED(true, true);
+
+        private final boolean opened;
+        private final boolean closed;
+
+        State(boolean opened, boolean closed) {
+            this.opened = opened;
+            this.closed = closed;
+        }
+    }
 
     private static final Logger logger = LoggerFactory.getLogger(PostSseStream.class);
 
@@ -48,8 +60,7 @@ public final class PostSseStream implements OutboundSseStream {
     private final String streamKey;
     private final Duration heartbeatInterval;
     private final List<SseEvent> queued = new ArrayList<>();
-    private volatile boolean started = false;
-    private boolean closed = false;
+    private volatile State state = State.NEW;
 
     public PostSseStream(
             Channel channel, @Nullable String origin, LongSupplier eventIdSupplier, Duration heartbeatInterval) {
@@ -75,7 +86,12 @@ public final class PostSseStream implements OutboundSseStream {
 
     @Override
     public boolean started() {
-        return started;
+        return state.opened;
+    }
+
+    /** Returns whether the stream is currently open and its channel can accept a write. */
+    public boolean writable() {
+        return state == State.OPEN && channel.isActive();
     }
 
     @Override
@@ -128,8 +144,12 @@ public final class PostSseStream implements OutboundSseStream {
     /* ------- methods below run on the channel's EventLoop only ------- */
 
     private void doStart() {
-        if (started || closed || !channel.isActive()) return;
-        started = true;
+        if (state != State.NEW) return;
+        if (!channel.isActive()) {
+            state = State.CLOSED_UNOPENED;
+            return;
+        }
+        state = State.OPEN;
 
         var response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         HttpHelpers.setSseStreamHeaders(response, origin);
@@ -149,10 +169,10 @@ public final class PostSseStream implements OutboundSseStream {
     }
 
     private void doWriteEvent(SseEvent event) {
-        if (closed || !channel.isActive()) {
+        if (state.closed || !channel.isActive()) {
             return;
         }
-        if (!started) {
+        if (state == State.NEW) {
             queued.add(event);
             logger.trace("POST-SSE queued event (not started), id={}, data={}", event.id(), abbreviate(event.data()));
             return;
@@ -171,11 +191,11 @@ public final class PostSseStream implements OutboundSseStream {
     }
 
     private void doWriteEvent(long sseEventId, byte[] body, @Nullable Runnable onDropped) {
-        if (closed || !channel.isActive()) {
+        if (state.closed || !channel.isActive()) {
             if (onDropped != null) onDropped.run();
             return;
         }
-        if (!started) {
+        if (state == State.NEW) {
             // Stream not yet upgraded — fall back to the String path; rare path, OK to decode here.
             queued.add(new SseEvent(
                     ServerEngine.wireEventId(sseEventId, streamKey),
@@ -183,21 +203,14 @@ public final class PostSseStream implements OutboundSseStream {
                     new String(body, StandardCharsets.UTF_8)));
             return;
         }
-        var alloc = channel.alloc();
-        var prefix = ByteBufUtil.writeAscii(
-                alloc, "id: " + ServerEngine.wireEventId(sseEventId, streamKey) + "\nevent: message\ndata: ");
-        var suffix = ByteBufUtil.writeAscii(alloc, "\n\n");
-        var frame = alloc.compositeBuffer(3)
-                .addComponent(true, prefix)
-                .addComponent(true, Unpooled.wrappedBuffer(body))
-                .addComponent(true, suffix);
-        channel.writeAndFlush(new DefaultHttpContent(frame)).addListener((ChannelFutureListener) f -> {
+        var buf = SseSerializer.encode(channel.alloc(), ServerEngine.wireEventId(sseEventId, streamKey), body);
+        channel.writeAndFlush(new DefaultHttpContent(buf)).addListener((ChannelFutureListener) f -> {
             if (!f.isSuccess()) channel.close();
         });
     }
 
     private void doWriteComment(@Nullable String message) {
-        if (closed || !channel.isActive() || !started) return;
+        if (state != State.OPEN || !channel.isActive()) return;
         // SSE comment = a line starting with ':'. Flatten embedded line breaks so the message
         // cannot inject extra SSE lines/events. Blank/null → bare ':' heartbeat.
         String line = message == null || message.isBlank()
@@ -210,9 +223,10 @@ public final class PostSseStream implements OutboundSseStream {
     }
 
     private void doClose(boolean reconnect) {
-        if (closed) return;
-        closed = true;
-        if (!channel.isActive() || !started) return;
+        if (state.closed) return;
+        var wasOpen = state.opened;
+        state = wasOpen ? State.CLOSED_OPENED : State.CLOSED_UNOPENED;
+        if (!channel.isActive() || !wasOpen) return;
         if (reconnect) {
             channel.write(new DefaultHttpContent(
                     ByteBufUtil.writeUtf8(channel.alloc(), "retry: " + SSE_RETRY_DELAY_MS + "\n")));

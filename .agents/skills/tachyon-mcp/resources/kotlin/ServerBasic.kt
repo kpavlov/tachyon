@@ -32,7 +32,7 @@ fun createServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer =
                     src = "https://example.com/icon.png",
                     mimeType = "image/png",
                     sizes = listOf("64x64"),
-                    theme = "white",
+                    theme = "light",
                 )
         }
 
@@ -97,7 +97,7 @@ fun createServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer =
 
         // ── json — serde + schema validation ──────────────────────
         json {
-            serde = KxSerializationSerde.Default // default Jackson
+            serde = KxSerializationSerde.Default // default Kotlin serde
             inputValidator = NetworkntJsonSchemaValidator() // default NetworkntJsonSchemaValidator
             outputValidator = inputValidator // default = inputValidator
         }

@@ -10,6 +10,7 @@ import dev.tachyonmcp.runtime.SseEvent;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import java.nio.charset.StandardCharsets;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 class SseSerializerTest {
@@ -31,8 +32,43 @@ class SseSerializerTest {
         assertThat(encode(new SseEvent("7", "message", ""))).isEqualTo("id: 7\nevent: message\ndata: \n\n");
     }
 
+    @Test
+    void encodesRawBodyWithLfAsSeparateDataLines() {
+        assertThat(encode("8", "line1\nline2")).isEqualTo("id: 8\nevent: message\ndata: line1\ndata: line2\n\n");
+    }
+
+    @Test
+    void encodesRawBodyWithCrLfAsSeparateDataLines() {
+        assertThat(encode("9", "line1\r\nline2")).isEqualTo("id: 9\nevent: message\ndata: line1\ndata: line2\n\n");
+    }
+
+    @Test
+    void encodesRawBodyWithoutId() {
+        assertThat(encode(null, "body")).isEqualTo("event: message\ndata: body\n\n");
+    }
+
+    @Test
+    void encodesNullRawBodyAsEmptyData() {
+        assertThat(encode("10", null)).isEqualTo("id: 10\nevent: message\ndata: \n\n");
+    }
+
+    @Test
+    void encodesEmptyRawBodyAsEmptyData() {
+        assertThat(encode("11", "")).isEqualTo("id: 11\nevent: message\ndata: \n\n");
+    }
+
     private static String encode(SseEvent event) {
         ByteBuf buf = SseSerializer.encode(ByteBufAllocator.DEFAULT, event);
+        try {
+            return buf.toString(StandardCharsets.UTF_8);
+        } finally {
+            buf.release();
+        }
+    }
+
+    private static String encode(@Nullable String wireId, @Nullable String body) {
+        ByteBuf buf = SseSerializer.encode(
+                ByteBufAllocator.DEFAULT, wireId, body == null ? null : body.getBytes(StandardCharsets.UTF_8));
         try {
             return buf.toString(StandardCharsets.UTF_8);
         } finally {

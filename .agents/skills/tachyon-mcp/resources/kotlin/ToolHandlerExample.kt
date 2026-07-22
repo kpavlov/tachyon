@@ -57,7 +57,7 @@ fun TachyonServerBuilder.registerGreeting() {
         description = "Generates a personalized greeting",
         inputSchema = GREET_SCHEMA,
     ) {
-        val name = args.stringValue("name")
+        val name = request.arguments().stringValue("name")
         ToolResult.text("Hello, $name!")
     }
 }
@@ -71,7 +71,7 @@ fun TachyonServerBuilder.registerTypedGreeting() {
         description = "Typed greet via configured serde",
         inputSchema = GREET_SCHEMA,
     ) {
-        val input = args.decode<GreetArgs>()
+        val input = request.arguments().decode<GreetArgs>()
         success(GreetReply("${input.greeting}, ${input.name}!"), "greeting response")
     }
 }
@@ -82,8 +82,8 @@ fun TachyonServerBuilder.registerTypedGreeting() {
  * `readerIdleTimeout` (default 60s) closes a connection with no inbound bytes; a client awaiting a
  * reply sends none, so a tool slower than the timeout is reaped mid-run. Emit an early SSE comment
  * via `ctx.notifications().comment(...)` — it upgrades the POST to `text/event-stream` and arms the
- * heartbeat, keeping the stream alive with no progress token. `comment(...)` is the natural fit for
- * the DSL, whose [ToolScope] exposes `ctx` + `args` but not the request's progress token.
+ * heartbeat, keeping the stream alive with no progress token. The DSL also exposes `request`, so a
+ * handler may forward `request.progressToken()` when the client opted into progress.
  */
 fun TachyonServerBuilder.registerSlowTask() {
     tool(name = "slow-task", description = "Long task kept alive via SSE comments") {

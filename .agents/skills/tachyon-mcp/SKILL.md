@@ -17,8 +17,8 @@ Make **Java 21+** MCP server. Tachyon lib. Transport = Streamable HTTP (Netty).
 - `.build()` → `TachyonServer` only, no transport.
 - `TachyonServer`: `.tools()`, `.resources()`, `.prompts()`, `.tasks()` first; then `.port()`, `.close()`, `.config()`.
 - Dynamic registration: `.tools().register(handler)`, `.resources().register(...)`, `.prompts().register(...)`.
-- Every handler gets `dev.tachyonmcp.runtime.InteractionContext` → session + notifications + server ctx.
-- ⚡ **Virtual threads**: All handlers (`ToolHandler`, `ResourceHandler`, `PromptHandler`) run on a virtual thread per request. Blocking for I/O is fine — never use `synchronized` (pins carrier thread). Use `ReentrantLock` instead. CPU-bound work → offload to `context.server().executor()`. See `RpcMethodHandler.java` javadoc.
+- Every handler gets `dev.tachyonmcp.runtime.InteractionContext` → protocol + optional session + notifications.
+- ⚡ **Virtual threads**: All synchronous handlers (`ToolHandler`, `ResourceHandler`, `PromptHandler`) run on a virtual thread per request. Blocking for I/O is fine — never use `synchronized` (pins carrier thread). Use `ReentrantLock` instead. Configure a custom handler executor with `ServerBuilder.executor(...)` when needed.
 
 ## Quickstart
 
@@ -42,7 +42,7 @@ var server = TachyonServer.builder()
 | `.monitoring(cfg)` | slow-request diagnostics (off by default) |
 | `.name(s)` `.port(p)` | shorthands |
 | `.tool(handler)` | Sync/Async/ToolHandler |
-| `.tool(configurer, fn)` / `.toolAsync(configurer, fn)` | descriptor-builder conveniences |
+| `.tool(configurer, fn)` / `.asyncTool(configurer, fn)` | descriptor-builder conveniences |
 | `.tool(name, desc, inJson, outJson, fn)` | shorthand — JSON **string** schemas + lambda |
 | `.resource(descriptor/configurer, handler)` | static resource with sync handler |
 | `.asyncResource(descriptor/configurer, handler)` | async static resource without casts |
@@ -56,16 +56,16 @@ var server = TachyonServer.builder()
 
 ## Tools 🔧
 
-One interface: `ToolHandler`. Use a `ToolHandler.of*` factory or override exactly one `handle`/`handleAsync` × `Args`/`ToolRequest` method. Dispatch calls `handleAsync(ctx, ToolRequest)`; defaults route to your override.
+One interface: `ToolHandler`. Use a `ToolHandler.of*` factory or override exactly one `handle`/`handleAsync` × `Args`/`ToolRequest` method on `AbstractToolHandler`. Dispatch calls `handleAsync(ctx, ToolRequest)`; defaults route to your override.
 
-| Need | Factory | Override |
-|---|---|---|
-| sync, args only | `ToolHandler.of(name, desc, fn)` / `of(configurer, fn)` | `handle(ctx, Args)` |
-| sync, full request (progress token) | `ToolHandler.ofRequest(descriptor, fn)` | `handle(ctx, ToolRequest)` |
-| async, args only | `ToolHandler.ofAsync(name, fn)` | `handleAsync(ctx, Args)` |
-| async, full request | `ToolHandler.ofAsyncRequest(descriptor, fn)` | `handleAsync(ctx, ToolRequest)` |
+| Need | Factory / class override |
+|---|---|
+| sync lambda, full request | `ToolHandler.of(...)`; lambda receives `ToolRequest` |
+| async lambda, full request | `ToolHandler.ofAsync(...)`; lambda receives `ToolRequest` |
+| sync class, args only | extend `AbstractToolHandler`; override `handle(ctx, Args)` |
+| async class, args only | extend `AbstractToolHandler`; override `handleAsync(ctx, Args)` |
 
-Sync `handle` runs on a virtual thread; async handlers stay async. Use the request form only for `_meta` (progress token, input responses); `Args` carries neither.
+Sync `handle` runs on a virtual thread; async handlers stay async. Factory lambdas receive the full request; call `request.arguments()` for `Args`. Class handlers may override the `Args` form when they do not need `_meta`, progress, cancellation, input responses, or task state.
 
 **Prefer `ToolHandler.of…` factories**: one call, no class. `ToolHandler` declares only `descriptor()` and `handleAsync(ctx, ToolRequest)`; sync/args overrides live on `AbstractToolHandler`. Use a class only for instance state or shared setup. Pass its descriptor to `super`:
 
@@ -86,10 +86,11 @@ Lambda: `ToolHandler.of(name, description, fn)` or `of(configurer, fn)` for a sc
 
 ```java
 .tool(ToolHandler.of("hello", "Say hello",
-    (ctx, args) -> ToolResult.text("Hello, world!")))
+    (ctx, request) -> ToolResult.text("Hello, world!")))
 
 .tool(ToolHandler.of(b -> b.name("hello").description("Say hello").inputSchema(schema),
-    (ctx, args) -> ToolResult.text("Hello, " + args.stringOr("name", "world"))))
+    (ctx, request) -> ToolResult.text(
+        "Hello, " + request.arguments().stringOr("name", "world"))))
 ```
 
 `inputSchema(...)`/`outputSchema(...)` take `JsonNode` or raw JSON `String`. `.tool(name, desc, inJson, outJson, fn)` builds a sync handler:
@@ -99,10 +100,11 @@ Lambda: `ToolHandler.of(name, description, fn)` or `of(configurer, fn)` for a sc
     """
     {"type":"object","properties":{"name":{"type":"string"}}}
     """, null, // inputSchemaJson, outputSchemaJson
-    (ctx, args) -> ToolResult.text("Hello, " + args.stringOr("name", "world")))
+    (ctx, request) -> ToolResult.text(
+        "Hello, " + request.arguments().stringOr("name", "world")))
 ```
 
-Async: `ToolHandler.ofAsync(name, (ctx, args) -> CompletionStage<ToolResult>)` or override `handleAsync`.
+Async: `ToolHandler.ofAsync(name, (ctx, request) -> CompletionStage<ToolResult>)` or override `handleAsync`.
 
 `ToolResult` (not generic): `.text(t)` · `.error(msg)` (isError=true) · `.blocks(ContentBlock...)` · `.of(payload)` (structuredContent; serialized JSON auto-added as text block) · `.of(payload, text)` · `.raw(json, text)` (pre-serialized JSON) · `.inputRequired(reqs, state)` · `.empty()` · `.withMeta(map)` / `.withMeta(key, value)`
 
@@ -120,7 +122,7 @@ Static fixed URI:
         .description("Description")
         .mimeType("application/json"),
     ResourceHandler.of((ctx, uri) ->
-        TextResourceContents.of(uri, "application/json", jsonData)))
+        TextResourceContents.of(uri, jsonData, "application/json")))
 ```
 
 Template via builder:
@@ -134,7 +136,7 @@ Template via builder:
         .mimeType("application/json"),
     (ctx, uri, params, uriTemplate) -> {
         var id = ((UriTemplateValue.Scalar) params.get("id")).value();
-        return TextResourceContents.of(uri, "application/json", data);
+        return TextResourceContents.of(uri, data, "application/json");
     })
 ```
 
@@ -149,7 +151,7 @@ Use explicit async methods. Sync handlers run blocking-first on virtual threads.
 .asyncResource(
     resource -> resource.name("config").uri("myapp://config"),
     ResourceHandler.ofAsync((ctx, uri) -> httpClient.sendAsync(request, BodyHandlers.ofString())
-        .thenApply(rsp -> TextResourceContents.of(uri, "application/json", rsp.body()))))
+        .thenApply(rsp -> TextResourceContents.of(uri, rsp.body(), "application/json"))))
 ```
 
 Full: `resources/java/ResourceHandlerExample.java`
@@ -236,9 +238,12 @@ per session, with `INFO` used until the client sends `logging/setLevel`.
 
 Native transports need optional runtime jars (`netty-transport-native-epoll` / `-kqueue` / `-io_uring` with `${os.detected.classifier}`); otherwise `AUTO` falls back to NIO. Explicit unavailable engines throw `UnsupportedOperationException`. See `docs/configuration.md`.
 
-⏳ **Long-tool keep-alive**: `readerIdleTimeout` (60s) closes connections with no **inbound** bytes; waiting clients send none, so >60s tools are reaped mid-compute. Set it to `Duration.ZERO` to disable idle-inbound closing; don't merely raise it. Emit an early server→client message. POST upgrades to SSE; a scheduler sends `:\r\n` every `heartbeatInterval` (15s) for the whole run. Request-level `ToolHandler` triggers (`Args` carries neither):
+⏳ **Long-tool keep-alive**: `readerIdleTimeout` (60s) closes connections with no **inbound** bytes; waiting clients send none, so >60s tools are reaped mid-compute. Set it to `Duration.ZERO` to disable idle-inbound closing; don't merely raise it. Emit an early server→client message. POST upgrades to SSE; a scheduler sends `:\r\n` every `heartbeatInterval` (15s) for the whole run:
 - `ctx.notifications().progress(token, ...)` — forward the client's `ToolRequest.progressToken()`; **`null` token is silently dropped** (no client opt-in) and sends nothing, so it does not keep the connection alive.
 - `ctx.notifications().comment(msg)` — token-free SSE comment (`: msg`); `comment()` = bare `:` heartbeat. Use when no progress token, since a dropped `progress(null, ...)` sends nothing.
+
+`progress(...)` needs the token from `ToolRequest`; `comment(...)` is available from every
+handler's `InteractionContext` and needs no token.
 
 **Long task ⇒ emit progress or comment first**. Keep `heartbeatInterval < readerIdleTimeout`; size `readerIdleTimeout` for dead-peer detection, not runtime.
 
@@ -326,7 +331,7 @@ val server = TachyonServer(8080) {
     }
     tool(name = "ping", description = "Simple ping") { ToolResult.text("pong") }
     resource(name = "config", uri = "demo://config", description = "Server configuration") {
-        TextResourceContents.of(uri, "application/json", """{"mode":"production"}""")
+        TextResourceContents.of(uri, """{"mode":"production"}""", "application/json")
     }
     prompt(name = "greet", description = "Generates a greeting") {
         listOf(PromptMessage.user("Say hello, ${arguments ?: "friend"}"))
@@ -338,7 +343,7 @@ val server = TachyonServer(8080) {
 
 ### Typed decode/result (Kotlin)
 
-`args.decode<T>()` uses configured serde (kotlinx by default); symmetric `success(value)` returns a typed result:
+`request.arguments().decode<T>()` uses configured serde (kotlinx by default); symmetric `success(value)` returns a typed result:
 
 ```kotlin
 @Serializable
@@ -348,12 +353,12 @@ data class GreetArgs(val name: String, val greeting: String = "Hello")
 data class GreetReply(val message: String)
 
 tool(name = "greet", description = "Typed greet", inputSchema = ..., outputSchema = ...) {
-    val input = args.decode<GreetArgs>()       // uses configured serde
+    val input = request.arguments().decode<GreetArgs>() // uses configured serde
     success(GreetReply("${input.greeting}, ${input.name}!"), "custom text")
 }
 ```
 
-- `args.decode<T>()` — decodes through the configured serde (kotlinx by default), honors custom `Json` config
+- `request.arguments().decode<T>()` — decodes through the configured serde (kotlinx by default), honors custom `Json` config
 - `scope.success(value)` — mirrors `decode`, defers serialization to the configured serializer
 - `scope.success(value, text)` — structured + human-readable text fallback
 
@@ -367,7 +372,7 @@ server.registerTool(
         .inputSchema(schema)
         .build(),
 ) {
-    ToolResult.text(args.string("message").reversed())
+    ToolResult.text(request.arguments().stringValue("message").reversed())
 }
 ```
 
