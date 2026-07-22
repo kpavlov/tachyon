@@ -5,6 +5,7 @@
 package dev.tachyonmcp.server;
 
 import dev.tachyonmcp.annotations.InternalApi;
+import dev.tachyonmcp.server.domain.RequestId;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -39,14 +40,14 @@ public final class HandlerWatchdog {
      * When debug logging is disabled the output can never be seen, so no timer is scheduled at
      * all — avoids per-request schedule/cancel churn on the single timer thread.
      */
-    public static Future<?> watch(Object method, Object id, long startNs, long delayMs) {
+    public static Future<?> watch(Object method, RequestId id, long startNs, long delayMs) {
         if (!logger.isDebugEnabled()) {
             return NOOP;
         }
         return SCHEDULER.schedule(() -> fire(method, id, startNs), delayMs, TimeUnit.MILLISECONDS);
     }
 
-    private static void fire(Object method, Object id, long startNs) {
+    private static void fire(Object method, RequestId id, long startNs) {
         var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
         logger.debug("Handler slow: method={}, id={}, elapsed={}ms", method, id, elapsedMs);
     }

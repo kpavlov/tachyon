@@ -13,6 +13,7 @@ import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.ServerCapabilities;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.LoggingLevel;
+import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.features.tasks.TaskRegistry;
 import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.server.session.SessionIdGenerator;
@@ -104,13 +105,13 @@ public interface ServerEngine extends TachyonServer {
             Session session, String method, Object params, @Nullable OutboundSseStream stream);
 
     /** Completes a pending client request with the given result JSON. {@code null} requestId is a no-op. */
-    boolean completePendingRequest(@Nullable Object requestId, String resultJson);
+    boolean completePendingRequest(@Nullable RequestId requestId, String resultJson);
 
     /** Fails a pending client request with the given error message. {@code null} requestId is a no-op. */
-    boolean failPendingRequest(@Nullable Object requestId, String message);
+    boolean failPendingRequest(@Nullable RequestId requestId, String message);
 
     /** Registers a pending request with a timeout. */
-    void registerPendingRequest(Object requestId, CompletableFuture<String> future);
+    void registerPendingRequest(RequestId requestId, CompletableFuture<String> future);
 
     /** Appends an event to the session log. */
     void appendEvent(SessionEvent event);

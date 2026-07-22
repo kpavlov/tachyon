@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.runtime.SseEvent;
+import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.SessionEvent;
 import java.util.ArrayList;
@@ -23,8 +24,8 @@ class SseManagerTest {
             var session = server.createSession("sess_replay");
             session.connection(conn);
             for (long id = 1; id <= 5; id++) {
-                server.appendEvent(
-                        new SessionEvent.ResponseEvent("sess_replay", id, "{\"n\":" + id + "}", 1000L + id, id, null));
+                server.appendEvent(new SessionEvent.ResponseEvent(
+                        "sess_replay", RequestId.of(id), "{\"n\":" + id + "}", 1000L + id, id, null));
             }
 
             var manager = new SseManager(server);
@@ -42,7 +43,7 @@ class SseManagerTest {
             var conn = new TrackingConnection();
             var session = server.createSession("sess_bad");
             session.connection(conn);
-            server.appendEvent(new SessionEvent.ResponseEvent("sess_bad", 1, "{}", 1000L, 1L, null));
+            server.appendEvent(new SessionEvent.ResponseEvent("sess_bad", RequestId.of(1), "{}", 1000L, 1L, null));
 
             var manager = new SseManager(server);
             manager.replayEvents(session, "not-a-number");
@@ -58,7 +59,8 @@ class SseManagerTest {
             var session = server.createSession("sess_future");
             session.connection(conn);
             for (long id = 1; id <= 3; id++) {
-                server.appendEvent(new SessionEvent.ResponseEvent("sess_future", id, "{}", 1000L + id, id, null));
+                server.appendEvent(
+                        new SessionEvent.ResponseEvent("sess_future", RequestId.of(id), "{}", 1000L + id, id, null));
             }
 
             var manager = new SseManager(server);
@@ -75,7 +77,8 @@ class SseManagerTest {
             var session = server.createSession("sess_zero");
             session.connection(conn);
             for (long id = 1; id <= 3; id++) {
-                server.appendEvent(new SessionEvent.ResponseEvent("sess_zero", id, "{}", 1000L + id, id, null));
+                server.appendEvent(
+                        new SessionEvent.ResponseEvent("sess_zero", RequestId.of(id), "{}", 1000L + id, id, null));
             }
 
             var manager = new SseManager(server);
@@ -94,9 +97,10 @@ class SseManagerTest {
             var conn = new TrackingConnection();
             var session = server.createSession("sess_mixed");
             session.connection(conn);
-            server.appendEvent(new SessionEvent.RequestEvent("sess_mixed", 1, "ping", "{}", 1000L));
-            server.appendEvent(new SessionEvent.ResponseEvent("sess_mixed", 1, "{\"pong\":true}", 1100L, 1L, null));
-            server.appendEvent(new SessionEvent.CancelEvent("sess_mixed", 2, 1200L));
+            server.appendEvent(new SessionEvent.RequestEvent("sess_mixed", RequestId.of(1), "ping", "{}", 1000L));
+            server.appendEvent(
+                    new SessionEvent.ResponseEvent("sess_mixed", RequestId.of(1), "{\"pong\":true}", 1100L, 1L, null));
+            server.appendEvent(new SessionEvent.CancelEvent("sess_mixed", RequestId.of(2), 1200L));
             server.appendEvent(
                     new SessionEvent.NotificationEvent("sess_mixed", "notifications/test", "{}", 1300L, 2L, null));
 

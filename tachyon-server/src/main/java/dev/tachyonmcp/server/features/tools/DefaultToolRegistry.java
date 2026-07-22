@@ -21,6 +21,7 @@ import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.domain.MissingRequiredClientCapabilityException;
+import dev.tachyonmcp.server.domain.ProgressToken;
 import dev.tachyonmcp.server.domain.TaskResult;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.features.AbstractRegistry;
@@ -416,12 +417,13 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
             return context.responseMapper().createTaskResult(task);
         }
 
-        private static @Nullable Object parseProgressToken(@Nullable Map<String, JsonNode> meta) {
+        private static @Nullable ProgressToken parseProgressToken(@Nullable Map<String, JsonNode> meta) {
             if (meta == null) return null;
             var ptNode = meta.get("progressToken");
             if (ptNode == null) return null;
-            if (ptNode.isIntegralNumber()) return ptNode.asLong();
-            return ptNode.asString();
+            if (ptNode.isString()) return ProgressToken.of(ptNode.asString());
+            if (ptNode.isNumber()) return ProgressToken.of(ptNode.numberValue());
+            return null;
         }
 
         private record CallParams(

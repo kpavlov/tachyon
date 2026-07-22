@@ -9,6 +9,7 @@ import static dev.tachyonmcp.transport.netty.ProtocolVersionHandler.LATEST_PROTO
 import static dev.tachyonmcp.transport.netty.ProtocolVersionHandler.SUPPORTED_VERSIONS;
 import static dev.tachyonmcp.transport.netty.ProtocolVersionHandler.UNSUPPORTED_VERSION_KEY;
 
+import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
@@ -50,7 +51,7 @@ public class UnsupportedProtocolVersionHandler extends ChannelInboundHandlerAdap
         sendResponseAndClose(ctx, HttpResponseStatus.BAD_REQUEST, "application/json", body, origin);
     }
 
-    private static @Nullable Object extractId(HttpRequest req) {
+    private static @Nullable RequestId extractId(HttpRequest req) {
         if (req instanceof FullHttpRequest fullHttpRequest) {
             try {
                 if (JsonRpcCodec.parseRequest(fullHttpRequest.content().duplicate())

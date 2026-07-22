@@ -12,6 +12,7 @@ import dev.tachyonmcp.runtime.ContextNotifications;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.domain.LoggingLevel;
+import dev.tachyonmcp.server.domain.ProgressToken;
 import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
@@ -80,13 +81,20 @@ class GetWeatherToolTest {
 
     private static final ContextNotifications NOOP_NOTIFICATIONS = new ContextNotifications() {
         @Override
-        public void log(LoggingLevel level, @Nullable String logger, @Nullable Object data) {}
+        public void log(LoggingLevel level, @Nullable String logger, @Nullable Object data) {
+            //noop
+        }
+
 
         @Override
-        public void progress(@Nullable Object progressToken, double progress, double total, String message) {}
+        public void progress(@Nullable ProgressToken progressToken, double progress, double total, String message) {
+            //noop
+        }
 
         @Override
-        public void comment(@Nullable String message) {}
+        public void comment(@Nullable String message) {
+            //noop
+        }
     };
 
     private static InteractionContext context(String response, AtomicReference<@Nullable String> method) {

@@ -5,6 +5,7 @@ package dev.tachyonmcp.server.features.tools;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.domain.Args;
+import dev.tachyonmcp.server.domain.ProgressToken;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -54,8 +55,11 @@ class ToolRequestTest {
 
     @Test
     void builderSetsProgressToken() {
-        var req = ToolRequest.builder().name("t").progressToken(42L).build();
-        assertThat(req.progressToken()).isEqualTo(42L);
+        var req = ToolRequest.builder()
+                .name("t")
+                .progressToken(ProgressToken.of(42L))
+                .build();
+        assertThat(req.progressToken()).isEqualTo(ProgressToken.of(42L));
     }
 
     @Test

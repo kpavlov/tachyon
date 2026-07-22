@@ -9,10 +9,10 @@ Resources/prompts are the reference pattern — one call shape, two interfaces:
 ```java
 @FunctionalInterface
 public interface XHandler {
-    XResult handle(InteractionContext ctx, /* args */) throws Exception;
-    default CompletionStage<? extends XResult> handleAsync(InteractionContext ctx, /* args */) {
+    XResult handle(InteractionContext ctx, XRequest request) throws Exception;
+    default CompletionStage<? extends XResult> handleAsync(InteractionContext ctx, XRequest request) {
         try {
-            return CompletableFuture.completedFuture(handle(ctx, /* args */));
+            return CompletableFuture.completedFuture(handle(ctx, request));
         } catch (Exception e) {
             return CompletableFuture.failedFuture(e);
         }
@@ -21,11 +21,11 @@ public interface XHandler {
 
 public interface AsyncXHandler extends XHandler {
     @Override
-    CompletionStage<? extends XResult> handleAsync(InteractionContext ctx, /* args */);
+    CompletionStage<? extends XResult> handleAsync(InteractionContext ctx, XRequest request);
     @Override
-    default XResult handle(InteractionContext ctx, /* args */) throws Exception {
+    default XResult handle(InteractionContext ctx, XRequest request) throws Exception {
         HandlerFutures.assumeVirtualThread();
-        return HandlerFutures.joinInterruptibly(handleAsync(ctx, /* args */));
+        return HandlerFutures.joinInterruptibly(handleAsync(ctx, request));
     }
 }
 ```
@@ -39,11 +39,11 @@ Implement `XHandler` for sync, `AsyncXHandler` for async — one override each (
 ```java
 @FunctionalInterface
 public interface XFn {
-    XResult apply(InteractionContext ctx, Args args) throws Exception;
+    XResult apply(InteractionContext ctx, XRequest request) throws Exception;
 }
 ```
 
-`ToolFn`/`ToolRequestFn` are this applied to tools (fixed 2026-07-18, was raw `BiFunction`). The dispatcher already logs/maps thrown exceptions to a JSON-RPC error — a throwing SAM lets a handler use that path instead of hand-rolling it.
+`ToolFn` are this applied to tools (was raw `BiFunction`). The dispatcher already logs/maps thrown exceptions to a JSON-RPC error — a throwing SAM lets a handler use that path instead of hand-rolling it. Functional interfaces take `InteractionContext` + a feature-specific request; the request carries `_meta` alongside arguments so the shape extends later without an interface change.
 
 **Async entry types don't declare `throws Exception`** — errors propagate via a failed `CompletionStage`, matching `AsyncResourceHandler`/`AsyncPromptHandler`. Don't add `throws` there "for symmetry."
 

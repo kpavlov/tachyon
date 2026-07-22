@@ -5,6 +5,7 @@
 package dev.tachyonmcp.runtime;
 
 import dev.tachyonmcp.annotations.ExperimentalApi;
+import dev.tachyonmcp.server.domain.ProgressToken;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -25,7 +26,7 @@ public interface ContextNotifications extends Notifications {
      * into progress, so the notification is silently dropped per the MCP spec — handlers may emit
      * progress unconditionally without null-checking the token.
      */
-    void progress(@Nullable Object progressToken, double progress, double total, String message);
+    void progress(@Nullable ProgressToken progressToken, double progress, double total, String message);
 
     /**
      * Sends a raw SSE comment line ({@code : message}) on the response stream, upgrading a buffered

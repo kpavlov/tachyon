@@ -13,6 +13,7 @@ import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.TachyonServer;
+import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
@@ -45,7 +46,7 @@ class ExtensionMethodRoutingTest {
         var ctx = DefaultDispatchContext.create(Protocols.list().get(0), server);
         ctx.setSession(session);
         var result = (McpDispatcher.DispatchResult.Response) dispatcher
-                .dispatchRequestAsync(1, "test/ext-method", null, "sess_routing", null, ctx)
+                .dispatchRequestAsync(RequestId.of(1), "test/ext-method", null, "sess_routing", null, ctx)
                 .join();
         var body = result.responseBodyString();
         assertThat(body).contains("error");
@@ -58,7 +59,7 @@ class ExtensionMethodRoutingTest {
         session.activate();
         var params = Map.of("_meta", Map.of("com.test/ext", JsonNodeFactory.instance.objectNode()));
         var result = (McpDispatcher.DispatchResult.Response) dispatcher
-                .dispatchRequestAsync(1, "test/ext-method", params, "sess_routing", null, context)
+                .dispatchRequestAsync(RequestId.of(1), "test/ext-method", params, "sess_routing", null, context)
                 .join();
         var body = result.responseBodyString();
         assertThat(body).contains("result");

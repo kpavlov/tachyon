@@ -6,6 +6,7 @@ package dev.tachyonmcp.server.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.server.domain.RequestId;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -17,7 +18,11 @@ import org.junitpioneer.jupiter.RetryingTest;
 class InMemorySessionEventStoreTest {
 
     private static SessionEvent requestEvent(String sessionId, int i) {
-        return new SessionEvent.RequestEvent(sessionId, i, "ping", "{}", System.currentTimeMillis());
+        return new SessionEvent.RequestEvent(sessionId, RequestId.of(i), "ping", "{}", System.currentTimeMillis());
+    }
+
+    private static int intId(SessionEvent.RequestEvent event) {
+        return ((RequestId.NumericValue) event.requestId()).value().intValue();
     }
 
     @Test
@@ -46,7 +51,7 @@ class InMemorySessionEventStoreTest {
             var result = store.replay("s1", 5);
             assertThat(result).hasSize(4);
             var first = (SessionEvent.RequestEvent) result.getFirst();
-            assertThat((Integer) first.requestId()).isEqualTo(6);
+            assertThat(intId(first)).isEqualTo(6);
         }
     }
 
@@ -148,7 +153,7 @@ class InMemorySessionEventStoreTest {
                     continue;
                 }
                 var ids = result.stream()
-                        .map(e -> (int) (Integer) ((SessionEvent.RequestEvent) e).requestId())
+                        .map(e -> intId((SessionEvent.RequestEvent) e))
                         .toList();
                 assertThat(ids.getLast()).isEqualTo(eventsPerThread - 1);
                 for (int i = 1; i < ids.size(); i++) {
@@ -171,14 +176,14 @@ class InMemorySessionEventStoreTest {
             var all = store.replay("s1", -1);
             assertThat(all).hasSize(store.maxEvents);
             var first = (SessionEvent.RequestEvent) all.getFirst();
-            assertThat((Integer) first.requestId()).isEqualTo(overflow);
+            assertThat(intId(first)).isEqualTo(overflow);
 
             // Global-index cursor from inside the window is not misaligned by the trim: replay
             // resumes AFTER lastSeq (exclusive, matching drain).
             var tail = store.replay("s1", total - 5);
             assertThat(tail).hasSize(4);
             var tailFirst = (SessionEvent.RequestEvent) tail.getFirst();
-            assertThat((Integer) tailFirst.requestId()).isEqualTo(total - 5 + 1);
+            assertThat(intId(tailFirst)).isEqualTo(total - 5 + 1);
         }
     }
 }

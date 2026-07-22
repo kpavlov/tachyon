@@ -8,6 +8,7 @@ import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.McpDispatcher;
+import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
@@ -48,7 +49,7 @@ class NettyServerThreadingTest {
             var dispatcher = new McpDispatcher(server, server.executor());
             var params = java.util.Map.of("name", "thread_probe", "arguments", java.util.Map.of());
             dispatcher
-                    .dispatchRequestAsync(1, "tools/call", params, "sess_thread-probe")
+                    .dispatchRequestAsync(RequestId.of(1), "tools/call", params, "sess_thread-probe")
                     .join();
 
             String toolThread = handlerThread.get(10, TimeUnit.SECONDS);
@@ -72,7 +73,7 @@ class NettyServerThreadingTest {
             var dispatcher = new McpDispatcher(server, server.executor());
             dispatcher
                     .dispatchRequestAsync(
-                            1,
+                            RequestId.of(1),
                             "tools/call",
                             java.util.Map.of("name", "name_probe", "arguments", java.util.Map.of()),
                             "sess-name")

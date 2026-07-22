@@ -15,6 +15,7 @@ import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.config.ServerConfig;
 import dev.tachyonmcp.server.domain.LoggingLevel;
+import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.features.completions.Completions;
 import dev.tachyonmcp.server.features.completions.DefaultCompletionRegistry;
@@ -82,7 +83,7 @@ final class DefaultTachyonServer implements ServerEngine {
     private final DefaultCompletionRegistry completionRegistry;
     private final Map<String, RpcMethodHandler> methodHandlers = new ConcurrentHashMap<>();
     final Map<String, LoggingLevel> loggingLevels = new ConcurrentHashMap<>();
-    final ConcurrentHashMap<Object, CompletableFuture<String>> pendingRequests = new ConcurrentHashMap<>();
+    final ConcurrentHashMap<RequestId, CompletableFuture<String>> pendingRequests = new ConcurrentHashMap<>();
     private final ExecutorService executor;
     private final boolean ownsExecutor;
     private final List<ServerExtension> extensions;
@@ -527,7 +528,7 @@ final class DefaultTachyonServer implements ServerEngine {
     public CompletableFuture<String> sendRequest(
             Session session, String method, Object params, @Nullable OutboundSseStream stream) {
         final var paramsStr = JsonRpcCodec.toJsonParams(params);
-        final var requestId = UUID.randomUUID().toString();
+        final var requestId = RequestId.of(UUID.randomUUID().toString());
         final var future = new CompletableFuture<String>();
         registerPendingRequest(requestId, future);
 
@@ -557,7 +558,7 @@ final class DefaultTachyonServer implements ServerEngine {
     }
 
     @Override
-    public boolean completePendingRequest(@Nullable Object requestId, String resultJson) {
+    public boolean completePendingRequest(@Nullable RequestId requestId, String resultJson) {
         // ConcurrentHashMap#remove throws NPE on a null key; a null id (malformed client
         // response, no JSON-RPC id) can never match a pending request, since registered ids are
         // always server-generated and non-null.
@@ -573,7 +574,7 @@ final class DefaultTachyonServer implements ServerEngine {
     }
 
     @Override
-    public boolean failPendingRequest(@Nullable Object requestId, String message) {
+    public boolean failPendingRequest(@Nullable RequestId requestId, String message) {
         if (requestId == null) {
             return false;
         }
@@ -586,7 +587,7 @@ final class DefaultTachyonServer implements ServerEngine {
     }
 
     @Override
-    public void registerPendingRequest(Object requestId, CompletableFuture<String> future) {
+    public void registerPendingRequest(RequestId requestId, CompletableFuture<String> future) {
         pendingRequests.put(requestId, future);
         var timeout = config.runtime().requestTimeout();
         future.orTimeout(timeout.toMillis(), TimeUnit.MILLISECONDS);

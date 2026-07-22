@@ -8,6 +8,7 @@ import static dev.tachyonmcp.server.json.JsonUtils.FACTORY;
 
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.Codec;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.CodecRegistry;
+import dev.tachyonmcp.server.domain.RequestId;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import java.io.ByteArrayOutputStream;
@@ -57,7 +58,7 @@ public final class JsonRpcCodec {
     }
 
     /** Serializes a JSON-RPC response. */
-    public static byte[] serializeResponse(@Nullable Object id, @Nullable String resultJson) {
+    public static byte[] serializeResponse(@Nullable RequestId id, @Nullable String resultJson) {
         return serialize(gen -> {
             gen.writeStartObject();
             gen.writeStringProperty(JSONRPC, JSONRPC_VERSION);
@@ -73,7 +74,7 @@ public final class JsonRpcCodec {
     }
 
     /** Serializes a JSON-RPC error response. */
-    public static byte[] serializeError(@Nullable Object id, int code, String message, @Nullable String dataJson) {
+    public static byte[] serializeError(@Nullable RequestId id, int code, String message, @Nullable String dataJson) {
         return serialize(gen -> {
             gen.writeStartObject();
             gen.writeStringProperty(JSONRPC, JSONRPC_VERSION);
@@ -90,14 +91,18 @@ public final class JsonRpcCodec {
         });
     }
 
-    private static void writeId(JsonGenerator gen, @Nullable Object id) {
+    private static void writeId(JsonGenerator gen, @Nullable RequestId id) {
         gen.writeName(ID);
         switch (id) {
             case null -> gen.writeNull();
-            case Long l -> gen.writeNumber(l);
-            case Integer i -> gen.writeNumber(i);
-            case Number n -> gen.writeNumber(n.doubleValue());
-            default -> gen.writeString(id.toString());
+            case RequestId.StringValue(var v) -> gen.writeString(v);
+            case RequestId.NumericValue(var v) -> {
+                switch (v) {
+                    case Long l -> gen.writeNumber(l);
+                    case Integer i -> gen.writeNumber(i);
+                    default -> gen.writeNumber(v.doubleValue());
+                }
+            }
         }
     }
 
@@ -114,7 +119,7 @@ public final class JsonRpcCodec {
     }
 
     /** Serializes a JSON-RPC request to a string. */
-    public static String serializeRequestAsString(Object id, String method, String paramsJson) {
+    public static String serializeRequestAsString(RequestId id, String method, String paramsJson) {
         return serializeToString(gen -> {
             gen.writeStartObject();
             gen.writeStringProperty(JSONRPC, JSONRPC_VERSION);
@@ -145,7 +150,7 @@ public final class JsonRpcCodec {
     }
 
     private static JsonRpcMessage parseMessage(JsonParser p) throws IOException {
-        Object id = null;
+        RequestId id = null;
         String method = null;
         Object paramsObj = null;
         String resultJson = null;
@@ -207,11 +212,11 @@ public final class JsonRpcCodec {
         throw new IllegalArgumentException("Invalid JSON-RPC message: no method, result, or error");
     }
 
-    private static @Nullable Object parseId(JsonParser p) {
+    private static @Nullable RequestId parseId(JsonParser p) {
         return switch (p.currentToken()) {
-            case VALUE_NUMBER_INT -> p.getLongValue();
-            case VALUE_NUMBER_FLOAT -> p.getDoubleValue();
-            case VALUE_STRING -> p.getString();
+            case VALUE_NUMBER_INT -> RequestId.of(p.getLongValue());
+            case VALUE_NUMBER_FLOAT -> RequestId.of(p.getDoubleValue());
+            case VALUE_STRING -> RequestId.of(p.getString());
             case VALUE_NULL -> null;
             default -> throw new IllegalArgumentException("Unexpected id token: " + p.currentToken());
         };

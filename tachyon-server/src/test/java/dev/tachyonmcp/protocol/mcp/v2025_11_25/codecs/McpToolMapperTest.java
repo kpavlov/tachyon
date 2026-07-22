@@ -69,7 +69,7 @@ class McpToolMapperTest {
 
     @Test
     void toProtocolEmbeddedResourceCarriesCorrectType() {
-        var contents = TextResourceContents.of("test://embedded", "text/plain", "content");
+        var contents = TextResourceContents.of("test://embedded", "content", "text/plain");
         var domain = EmbeddedResource.of(contents);
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.EmbeddedResource)
                 McpToolMapper.toProtocolContentBlock(domain);
@@ -129,7 +129,7 @@ class McpToolMapperTest {
     @Test
     void metaSurvivesEmbeddedResourceRoundTrip() {
         var meta = Map.of("key", META_VALUE);
-        var contents = TextResourceContents.of("test://embedded", "text/plain", "content");
+        var contents = TextResourceContents.of("test://embedded", "content", "text/plain");
         var domain = EmbeddedResource.of(contents, null, meta);
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.EmbeddedResource)
                 McpToolMapper.toProtocolContentBlock(domain);
@@ -142,7 +142,7 @@ class McpToolMapperTest {
     @Test
     void metaSurvivesTextResourceContentsRoundTrip() {
         var meta = Map.of("key", META_VALUE);
-        var domain = TextResourceContents.of("test://uri", "text/plain", "content", meta);
+        var domain = TextResourceContents.of("test://uri", "content", "text/plain", meta);
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextResourceContents)
                 McpToolMapper.toProtocolResourceContents(domain);
         assertThat(protocol._meta()).containsEntry("key", META_VALUE);
@@ -154,7 +154,7 @@ class McpToolMapperTest {
     @Test
     void metaSurvivesBlobResourceContentsRoundTrip() {
         var meta = Map.of("key", META_VALUE);
-        var domain = BlobResourceContents.of("test://blob", "application/octet-stream", "blobdata", meta);
+        var domain = BlobResourceContents.of("test://blob", "blobdata", "application/octet-stream", meta);
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.BlobResourceContents)
                 McpToolMapper.toProtocolResourceContents(domain);
         assertThat(protocol._meta()).containsEntry("key", META_VALUE);
@@ -313,7 +313,7 @@ class McpToolMapperTest {
         assertThat(ImageContent.of("data", "image/png").type()).isEqualTo(ContentBlock.Type.IMAGE);
         assertThat(AudioContent.of("data", "audio/wav").type()).isEqualTo(ContentBlock.Type.AUDIO);
         assertThat(ResourceLink.of("test://uri", "name").type()).isEqualTo(ContentBlock.Type.RESOURCE_LINK);
-        assertThat(EmbeddedResource.of(TextResourceContents.of("u", null, "c")).type())
+        assertThat(EmbeddedResource.of(TextResourceContents.of("u", "c", null)).type())
                 .isEqualTo(ContentBlock.Type.RESOURCE);
     }
 }

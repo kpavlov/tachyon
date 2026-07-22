@@ -11,17 +11,23 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 import dev.tachyonmcp.transport.netty.NettyServer;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Tag("conformance")
 abstract class AbstractServerConformanceIT {
 
+    private static final Logger log = LoggerFactory.getLogger(AbstractServerConformanceIT.class);
     private final AbstractConformanceServer serverFactory;
     private final String conformanceVersion;
     private final String baselineFileName;
@@ -63,6 +69,32 @@ abstract class AbstractServerConformanceIT {
         return scenarios.stream()
                 .map(scenario ->
                         dynamicTest(scenario, () -> runConformanceScenario(scenario, outputDir, expectedFailures)));
+    }
+
+    @Test
+    @Disabled("Run it manually")
+    void runAll() throws IOException, InterruptedException {
+
+        var outputDir = "target/failsafe-reports/" + suiteName + "-conformance-results";
+
+        var server = serverFactory.startServer(true);
+        try (server;
+                var nettyServer = new NettyServer(0, server)) {
+            var port = nettyServer.port();
+
+            var runner = new ConformanceRunner(
+                    "http://localhost:" + port + "/mcp", conformanceVersion, outputDir, baselineFileName);
+
+            log.info("[conformance] Running suite {} successfully", suiteName);
+
+            var result = runner.runSuite("all");
+
+            System.out.println("[conformance] Result " + String.join("\n", result.outputLines()) + " successfully");
+
+            if (!result.passed()) {
+                fail("[conformance] Suite " + suiteName + " failed");
+            }
+        }
     }
 
     private void runConformanceScenario(String scenario, String outputDir, List<String> expectedFailures)

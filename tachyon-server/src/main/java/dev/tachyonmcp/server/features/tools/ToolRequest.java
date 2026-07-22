@@ -8,6 +8,7 @@ import dev.tachyonmcp.annotations.ExperimentalApi;
 import dev.tachyonmcp.runtime.Cancellation;
 import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.domain.HasMeta;
+import dev.tachyonmcp.server.domain.ProgressToken;
 import dev.tachyonmcp.server.domain.Task;
 import dev.tachyonmcp.server.json.PayloadDeserializer;
 import java.util.Map;
@@ -50,8 +51,12 @@ public interface ToolRequest extends HasMeta {
     @Nullable
     PayloadDeserializer payloadDeserializer();
 
+    /**
+     * The client's {@code _meta.progressToken} from this request, or {@code null} if the client
+     * did not opt into progress notifications for this call.
+     */
     @Nullable
-    Object progressToken();
+    ProgressToken progressToken();
 
     @Nullable
     Cancellation cancellation();
@@ -82,7 +87,8 @@ public interface ToolRequest extends HasMeta {
         @ExperimentalApi
         Builder payloadDeserializer(@Nullable PayloadDeserializer deserializer);
 
-        Builder progressToken(@Nullable Object progressToken);
+        /** Sets the progress token, or {@code null} to leave progress notifications disabled. */
+        Builder progressToken(@Nullable ProgressToken progressToken);
 
         Builder cancellation(@Nullable Cancellation cancellation);
 

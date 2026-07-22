@@ -26,7 +26,11 @@ internal fun toolHandler(
             request: ToolRequest,
         ): ToolResult =
             runSuspendHandler(coroutineName) {
-                ToolScope(context, request.arguments()).block()
+                ToolScope(
+                    ctx = context,
+                    args = request.arguments(),
+                    request = request,
+                ).block()
             }
     }
 }

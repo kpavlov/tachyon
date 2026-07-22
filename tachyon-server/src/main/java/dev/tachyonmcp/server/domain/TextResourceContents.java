@@ -17,13 +17,25 @@ import tools.jackson.databind.JsonNode;
  * format (e.g. {@code application/json}, {@code text/markdown}).
  */
 @Value.Immutable
-@Value.Style(
-        allParameters = true,
-        visibility = Value.Style.ImplementationVisibility.PACKAGE,
-        typeImmutable = "Default*")
+@Value.Style(visibility = Value.Style.ImplementationVisibility.PACKAGE, typeImmutable = "Default*")
 public non-sealed interface TextResourceContents extends ResourceContents {
 
+    @Override
+    @Value.Parameter(order = 1)
+    String uri();
+
+    @Override
+    @Nullable
+    @Value.Parameter(order = 2)
+    String mimeType();
+
+    @Value.Parameter(order = 3)
     String text();
+
+    @Override
+    @Nullable
+    @Value.Parameter(order = 4)
+    Map<String, JsonNode> meta();
 
     @Value.Check
     default void check() {
@@ -35,23 +47,38 @@ public non-sealed interface TextResourceContents extends ResourceContents {
         return DefaultTextResourceContents.builder();
     }
 
-    static TextResourceContents of(String uri, @Nullable String mimeType, String text) {
-        return DefaultTextResourceContents.of(null, uri, mimeType, text);
+    /**
+     * Creates text resource contents with no {@code _meta}.
+     *
+     * @param uri      the resource URI
+     * @param text     the text content
+     * @param mimeType the content's MIME type, or {@code null} if unspecified
+     */
+    static TextResourceContents of(String uri, String text, @Nullable String mimeType) {
+        return DefaultTextResourceContents.of(uri, mimeType, text, null);
     }
 
+    /**
+     * Creates text resource contents.
+     *
+     * @param uri      the resource URI
+     * @param text     the text content
+     * @param mimeType the content's MIME type, or {@code null} if unspecified
+     * @param meta     the {@code _meta} entries, or {@code null} if none
+     */
     static TextResourceContents of(
-            String uri, @Nullable String mimeType, String text, @Nullable Map<String, JsonNode> meta) {
-        return DefaultTextResourceContents.of(meta, uri, mimeType, text);
+            String uri, String text, @Nullable String mimeType, @Nullable Map<String, JsonNode> meta) {
+        return DefaultTextResourceContents.of(uri, mimeType, text, meta);
     }
 
     interface Builder {
-        Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
-
         Builder uri(String uri);
+
+        Builder text(String text);
 
         Builder mimeType(@Nullable String mimeType);
 
-        Builder text(String text);
+        Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
 
         TextResourceContents build();
     }

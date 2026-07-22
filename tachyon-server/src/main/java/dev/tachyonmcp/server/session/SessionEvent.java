@@ -5,6 +5,7 @@
 package dev.tachyonmcp.server.session;
 
 import dev.tachyonmcp.annotations.InternalApi;
+import dev.tachyonmcp.server.domain.RequestId;
 import org.jspecify.annotations.Nullable;
 
 /** A recorded session event — request, response, notification, or cancellation. */
@@ -33,13 +34,13 @@ public sealed interface SessionEvent {
     }
 
     /** An inbound request from the client. */
-    record RequestEvent(String sessionId, Object requestId, String method, String paramsJson, long timestamp)
+    record RequestEvent(String sessionId, RequestId requestId, String method, String paramsJson, long timestamp)
             implements SessionEvent {}
 
     /** An outbound (server-to-client) request. */
     record OutboundRequestEvent(
             String sessionId,
-            Object requestId,
+            RequestId requestId,
             String method,
             String paramsJson,
             long timestamp,
@@ -50,7 +51,7 @@ public sealed interface SessionEvent {
     /** A response sent to the client. */
     record ResponseEvent(
             String sessionId,
-            Object requestId,
+            RequestId requestId,
             String resultJson,
             long timestamp,
             long sseEventId,
@@ -58,7 +59,7 @@ public sealed interface SessionEvent {
             implements SessionEvent {}
 
     /** A cancellation request. */
-    record CancelEvent(String sessionId, Object requestId, long timestamp) implements SessionEvent {}
+    record CancelEvent(String sessionId, RequestId requestId, long timestamp) implements SessionEvent {}
 
     /** A notification sent to or received from the client. */
     record NotificationEvent(

@@ -137,9 +137,9 @@ final class McpToolMapper {
         if (protocol == null) return null;
         return switch (protocol) {
             case dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextResourceContents t ->
-                TextResourceContents.of(t.uri(), t.mimeType(), t.text(), t._meta());
+                TextResourceContents.of(t.uri(), t.text(), t.mimeType(), t._meta());
             case dev.tachyonmcp.protocol.mcp.v2025_11_25.models.BlobResourceContents b ->
-                BlobResourceContents.of(b.uri(), b.mimeType(), b.blob(), b._meta());
+                BlobResourceContents.of(b.uri(), b.blob(), b.mimeType(), b._meta());
         };
     }
 

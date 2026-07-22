@@ -42,7 +42,7 @@ fun createServer(port: Int = 0): TachyonServer {
             .inputSchema(inputSchema)
             .build(),
     ) {
-        val message = args.stringValue("message")
+        val message = request.arguments().stringValue("message")
         ToolResult.text(message.reversed())
     }
     return server
