@@ -13,7 +13,7 @@ Build and run an MCP server in under 5 minutes.
 <dependency>
     <groupId>dev.tachyonmcp</groupId>
     <artifactId>tachyon-server</artifactId>
-    <version>1.0.0-beta.11</version>
+    <version>1.0.0-beta.13</version>
 </dependency>
 ```
 
@@ -31,7 +31,7 @@ void main() {
         .name("my-server")
         .version("1.0")
         .tool(ToolHandler.of("greet", "Say hello",
-            (ctx, args) -> ToolResult.text("Hello!")))
+            (ctx, request) -> ToolResult.text("Hello!")))
         .port(8080)
         .start();
 }

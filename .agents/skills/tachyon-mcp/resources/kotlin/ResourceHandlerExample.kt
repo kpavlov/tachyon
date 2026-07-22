@@ -34,7 +34,7 @@ fun richDescriptor(): ResourceDescriptor =
                     src = "https://example.com/user.png",
                     mimeType = "image/png",
                     sizes = listOf("32x32"),
-                    theme = "blue",
+                    theme = "dark",
                 ),
             )
     }

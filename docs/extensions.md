@@ -1,6 +1,6 @@
 # Extensions — Tachyon MCP Server
 
-Extensions add custom MCP methods and negotiate capabilities with clients via the `initialize` handshake. They implement [SEP-2133](https://modelcontextprotocol.io/seps/2133-extensions).
+Extensions add custom MCP methods. MCP 2025-11-25 clients negotiate them via the `initialize` handshake. They implement [SEP-2133](https://modelcontextprotocol.io/seps/2133-extensions).
 
 ## The ServerExtension interface
 

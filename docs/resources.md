@@ -13,7 +13,7 @@ import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 .resource(
     ResourceDescriptor.of("config", "app://config", "Server config", "application/json"),
     (ctx, uri, params, uriTemplate) ->
-        TextResourceContents.of(uri, "application/json", """{"env":"prod"}"""))
+        TextResourceContents.of(uri, """{"env":"prod"}""", "application/json"))
 ```
 
 ## URI template
@@ -24,7 +24,7 @@ Templates match parameterized URIs like `app://users/{id}`. Register after the s
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.server.domain.UriTemplateValue;
 
-handle.server().resources()
+server.resources()
     .registerTemplate(
         ResourceTemplateDescriptor.builder()
             .name("user-profile")
@@ -34,7 +34,7 @@ handle.server().resources()
             .build(),
         (ctx, uri, params, uriTemplate) -> {
             String id = params.get("id").scalarValue();
-            return TextResourceContents.of(uri, "application/json", loadUser(id));
+            return TextResourceContents.of(uri, loadUser(id), "application/json");
         });
 ```
 
@@ -60,9 +60,9 @@ AsyncResourceHandler handler = (ctx, uri, params, uriTemplate) ->
     httpClient.sendAsync(
             HttpRequest.newBuilder(URI.create(uri)).GET().build(),
             BodyHandlers.ofString())
-        .thenApply(rsp -> TextResourceContents.of(uri, "application/json", rsp.body()));
+        .thenApply(rsp -> TextResourceContents.of(uri, rsp.body(), "application/json"));
 
-.resource(descriptor, handler)
+.asyncResource(descriptor, handler)
 ```
 
 Prompts follow the same pattern with `AsyncPromptHandler`. In Kotlin, resource and prompt
@@ -75,7 +75,7 @@ Return binary content with `BlobResourceContents`:
 ```java
 import dev.tachyonmcp.server.domain.BlobResourceContents;
 
-(ctx, uri, params, uriTemplate) -> BlobResourceContents.of(uri, "image/png", imageBytes)
+(ctx, uri, params, uriTemplate) -> BlobResourceContents.of(uri, base64Image, "image/png")
 ```
 
 ## Subscribe to changes
@@ -87,14 +87,14 @@ Enable subscriptions in capabilities, then notify subscribers when content chang
 ```
 
 ```java
-handle.server().resources().notifyUpdated("app://config");
+server.resources().notifyResourceUpdated("app://config");
 ```
 
 ## Kotlin DSL
 
 ```kotlin
 resource(name = "config", uri = "app://config", mimeType = "application/json") {
-    TextResourceContents.of(uri, "application/json", """{"env":"prod"}""")
+    TextResourceContents.of(uri, """{"env":"prod"}""", "application/json")
 }
 ```
 

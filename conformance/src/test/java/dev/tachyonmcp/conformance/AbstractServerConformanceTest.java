@@ -108,9 +108,11 @@ abstract class AbstractServerConformanceTest {
             var runner = new ConformanceRunner(
                     "http://localhost:" + port + "/mcp", conformanceVersion, outputDir, baselineFileName);
 
-            log.info("[conformance] Running suite {} successfully", suiteName);
-
             var result = runner.runSuite("all", protocolVersion);
+
+            if (result.passed()) {
+                log.info("[conformance] Suite {} ran successfully", suiteName);
+            }
 
             System.out.println("[conformance] Result " + String.join("\n", result.outputLines()));
 

@@ -37,6 +37,7 @@ examples-snapshot: package ## Build examples against local SNAPSHOT artifacts
 
 conformance: ## Run MCP conformance suite
 	@echo " 🔄  Running MCP conformance suite..."
+	@rm -rf conformance/target/surefire-reports
 	@./mvnw test -am -pl conformance
 
 e2e: package ## Run end-to-end tests

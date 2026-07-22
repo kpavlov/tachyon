@@ -11,11 +11,11 @@ TachyonServer.builder()
 ```
 
 ```kotlin
-TachyonServer {
+val server = TachyonServer {
     info { name = "my-server"; version = "1.0" }
     network { port = 8080 }
     session { sessionTtl = 5.minutes }
-}.start()
+}
 ```
 
 ## Network
@@ -75,9 +75,9 @@ stream never looks idle. There are two ways to trigger the upgrade:
   token is available, since a dropped `progress(null, ...)` sends nothing. `comment()` emits a
   bare `:` heartbeat.
 
-Both are reachable only from the request-level entry points — override `handle(ctx, ToolRequest)`
-or `handleAsync(ctx, ToolRequest)` on `AbstractToolHandler` (the `Args` convenience overload
-carries neither the token nor a stream handle):
+The progress token is available only from `ToolRequest`, so override `handle(ctx, ToolRequest)` or
+`handleAsync(ctx, ToolRequest)` when forwarding progress. `comment(...)` needs no token and is
+available from any handler's `InteractionContext`:
 
 ```java
 class SlowTool extends AbstractToolHandler {
@@ -222,6 +222,7 @@ Configured via `runtime { }` / `RuntimeConfig.Builder`.
 | Option | Default | Description |
 |---|---|---|
 | `shutdownGracePeriod` | `5s` | Time in-flight handlers get to drain on `close()`; `ZERO` interrupts immediately |
+| `requestTimeout` | `60s` | Timeout for pending requests sent to the client |
 
 ## Monitoring
 
@@ -241,11 +242,12 @@ Both share the same threshold and are silenced at default (flag off, zero overhe
 ```java
 TachyonServer.builder()
     .monitoring(m -> m.slowRequestLogging().slowRequestThreshold(Duration.ofSeconds(5)))
+    .port(8080)
     .start();
 ```
 
 ```kotlin
-TachyonServer {
+TachyonServer(port = 8080) {
     monitoring {
         slowRequestLogging = true
         slowRequestThreshold = 5.seconds
@@ -269,13 +271,13 @@ uses `TasksConfig`, whose fields map 1:1 to the MCP `tasks` capability object (`
 |---|---|---|
 | `tools` / `prompts` (`FeatureConfig`) | `mode`, `listChanged`, `pageSize` | `AUTO`, `false`, `50` |
 | `resources` (`ResourcesConfig`) | `mode`, `listChanged`, `pageSize`, `subscribe` | `AUTO`, `false`, `50`, `false` |
-| `tasks` (`TasksConfig`) | `enabled`, `list`, `cancel`, `requests`, `pageSize` | `false` × 4, `50` |
-| — | `completions`, `logging` | `false`, `false` |
+| `tasks` (`TasksConfig`) | `enabled`, `list`, `cancel`, `requests`, `pageSize`, `keepAlive`, `pollInterval` | `false` × 4, `50`, `5m`, none |
+| — | `completions`, `logging` | `AUTO`, `false` |
 
 `mode`:
 - **`AUTO`** (default) — advertised only once a handler of that type is registered. No config needed for the common case.
 - **`ON`** — advertised from `initialize`, even with zero handlers registered yet (needed for dynamic registration + `list_changed` after startup).
-- **`OFF`** — never advertised, **and registration becomes a no-op**: `registerTool`/`resource().add(...)`/`prompt().add(...)` on that feature is silently skipped (logged at `debug`).
+- **`OFF`** — never advertised, **and registration becomes a no-op**: `tools().register(...)`, `resources().register(...)`, and `prompts().register(...)` are silently skipped (logged at `debug`).
 
 `tasks.enabled` works the same as `mode == ON` for tools/resources/prompts, except the `tasks`
 capability is *also* advertised — regardless of `enabled` — whenever a registered tool declares
@@ -289,11 +291,12 @@ TachyonServer.builder()
         .tasks(TasksConfig.builder().enabled(true).list(true).build())
         .completions()
         .logging())
+    .port(8080)
     .start();
 ```
 
 ```kotlin
-TachyonServer {
+TachyonServer(port = 8080) {
     capabilities {
         tools { mode = Mode.ON; listChanged = true }
         resources { mode = Mode.ON; subscribe = true }
@@ -316,7 +319,7 @@ equivalents) — they mutate the same nested sub-config, so chaining still works
 | `executor(ExecutorService)` | Handler executor; default runs handlers on virtual threads |
 | `threadFactory(ThreadFactory)` | Thread factory for the default executor |
 | `pipelineCustomizer(Consumer<ChannelPipeline>)` | Hook to mutate the Netty pipeline after MCP handlers are installed |
-| `jsonSchemaValidator(...)` | Custom JSON Schema validator for tool inputs |
+| `json(cfg -> cfg.inputSchemaValidator(...).outputSchemaValidator(...))` | Custom JSON Schema validators |
 
 ## Examples
 

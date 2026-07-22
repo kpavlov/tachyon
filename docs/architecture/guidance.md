@@ -43,7 +43,10 @@ public interface XFn {
 }
 ```
 
-`ToolFn` are this applied to tools (was raw `BiFunction`). The dispatcher already logs/maps thrown exceptions to a JSON-RPC error — a throwing SAM lets a handler use that path instead of hand-rolling it. Functional interfaces take `InteractionContext` + a feature-specific request; the request carries `_meta` alongside arguments so the shape extends later without an interface change.
+`ToolFn` applies this to tools (it replaced raw `BiFunction`) and receives the full `ToolRequest`.
+The dispatcher already logs/maps thrown exceptions to a JSON-RPC error — a throwing SAM lets a
+handler use that path instead of hand-rolling it. `ToolRequest.arguments()` exposes the ergonomic
+`Args`; the request also carries `_meta` so the shape extends later without an interface change.
 
 **Async entry types don't declare `throws Exception`** — errors propagate via a failed `CompletionStage`, matching `AsyncResourceHandler`/`AsyncPromptHandler`. Don't add `throws` there "for symmetry."
 
@@ -70,7 +73,7 @@ Default new types to the pair shape. Bundle the descriptor only if the registry 
 
 ## ⚠️ Naming: split sync/async by name, not overload
 
-`tool`/`asyncTool`, `register`/`registerAsync`, `of`/`ofAsync` — never overload one method name for both sync and async lambda shapes. Different shapes under one name throw Java's overload resolution into ambiguity for every lambda caller. Separate names sidestep it — keep doing that for any new handler's registration API.
+`tool`/`asyncTool`, `register`/`registerAsync`, `of`/`ofAsync` — never overload one method name for both sync and async lambda shapes: different shapes under one name throw Java's overload resolution into ambiguity for every lambda caller, and separate names sidestep it. Keep doing that for any new handler's registration API.
 
 **Two async markers, each consistent within its own layer — don't mix them:**
 - `ServerBuilder` build-time methods: `async` **prefix** on the noun — `tool`/`asyncTool`, `resource`/`asyncResource`, `prompt`/`asyncPrompt`, `resourceTemplate`/`asyncResourceTemplate`.
@@ -81,8 +84,10 @@ A new handler type's `ServerBuilder` method follows the prefix style (matching i
 **Interface/SAM naming:**
 - `XHandler` — the handler type. Also the lambda-entry SAM when the shape is simple: `ResourceHandler`/`PromptHandler` are plain `@FunctionalInterface`s, so the type doubles as both.
 - `AsyncXHandler extends XHandler` — async variant, for single-axis handlers only (`AsyncResourceHandler`, `AsyncPromptHandler`). Abstract `handleAsync`, default `handle` blocks via `HandlerFutures.joinInterruptibly`.
-- `XFn` / `XRequestFn` — companion throwing SAM(s), only when `XHandler` itself isn't lambda-friendly (carries a descriptor, exposes more than one method). Tools need this because `ToolHandler` isn't a `@FunctionalInterface` — `ToolFn`/`ToolRequestFn` fill the lambda-entry role instead.
-- Static factory composition on `XHandler.of…`: base verb `of`, then optional `Async` right after it, then optional `Request` last — `of` → `ofRequest` → `ofAsync` → `ofAsyncRequest`. Fixed order; don't invent `ofRequestAsync`.
+- `XFn` — companion throwing SAM, only when `XHandler` itself isn't lambda-friendly (carries a descriptor, exposes more than one method). Tools need this because `ToolHandler` isn't a `@FunctionalInterface`; `ToolFn` receives the full `ToolRequest`.
+- Static factory composition on `XHandler.of…`: base verb `of`, then optional `Async` —
+  `ToolHandler.of(...)` / `ToolHandler.ofAsync(...)`. Both tool factories receive `ToolRequest`;
+  class-based handlers may override the `Args` or `ToolRequest` form.
 
 ## 🪶 Registry/facade API naming
 
@@ -99,6 +104,8 @@ A new handler type's `ServerBuilder` method follows the prefix style (matching i
 
 `_meta` is the MCP runtime's protocol envelope — `progressToken`, reserved `io.modelcontextprotocol/*` keys, OpenTelemetry trace context — growing every protocol revision; implementations **must not** assume meaning for reserved keys (MCP spec, `_meta` section). Don't add `meta()` to an ergonomic type (`Args` and friends) — invites Hyrum's-law coupling to runtime internals, same failure mode as an `Internal*`-named type users are forced to hold.
 
-A handler needing raw request metadata (progress token, cancellation, task handle) uses the raw-request escape hatch (`ToolRequestFn`/`ToolRequest`), not a `_meta` field on the ergonomic path.
+A handler needing raw request metadata (progress token, cancellation, task handle) uses
+`ToolRequest` through a `ToolFn` or an `AbstractToolHandler` request override, not a `_meta` field
+on the ergonomic `Args` path.
 
 Testing handler dispatch/error mapping: see [`tachyon-development` skill](../../.agents/skills/tachyon-development/SKILL.md).

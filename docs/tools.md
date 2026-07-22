@@ -11,7 +11,7 @@ import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 
 .tool(ToolHandler.of("hello", "Say hello",
-    (ctx, args) -> ToolResult.text("Hello!")))
+    (ctx, request) -> ToolResult.text("Hello!")))
 ```
 
 Need an input schema? Configure the descriptor with the builder overload. `.inputSchema(...)` /
@@ -24,7 +24,8 @@ Need an input schema? Configure the descriptor with the builder overload. `.inpu
         .inputSchema("""
         {"type":"object","properties":{"name":{"type":"string"}}}
         """),
-    (ctx, args) -> ToolResult.text("Hello, " + args.stringOr("name", "world") + "!")))
+    (ctx, request) -> ToolResult.text(
+        "Hello, " + request.arguments().stringOr("name", "world") + "!")))
 ```
 
 ### Class (only when a factory won't do)
@@ -37,7 +38,7 @@ class only when the handler needs instance state or shared setup. Then extend
 
 ```java
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.server.features.tools.Args;
+import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.runtime.InteractionContext;
@@ -76,16 +77,16 @@ lambda via `ToolHandler.ofAsync`, or override `handleAsync(ctx, Args)` on
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 
 .tool(ToolHandler.ofAsync("get_weather_async",
-    (ctx, args) -> fetchWeather(args.stringValue("city"))
+    (ctx, request) -> fetchWeather(request.arguments().stringValue("city"))
         .thenApply(w -> ToolResult.text(w.summary()))))
 ```
 
 ### Progress token / full request
 
-`Args` carries only the parsed arguments. When you need the request `_meta` — a progress token,
-input responses — use the request-level entry points: the `ToolHandler.ofRequest(descriptor,
-(ctx, request) -> ...)` factory, or override `handle(ctx, ToolRequest)` (sync) /
-`handleAsync(ctx, ToolRequest)` (async) on `AbstractToolHandler`.
+`ToolHandler.of(...)` and `ToolHandler.ofAsync(...)` lambdas receive `ToolRequest`; call
+`request.arguments()` for parsed arguments. In a class, override `handle(ctx, Args)` for the
+ergonomic path, or `handle(ctx, ToolRequest)` / `handleAsync(ctx, ToolRequest)` when you need
+request `_meta`, progress, cancellation, input responses, or task state.
 
 ## Read arguments
 
@@ -134,7 +135,7 @@ Tachyon uses **Jackson 3** (`tools.jackson.*`), not Jackson 2. Import `tools.jac
 
 ```kotlin
 tool(name = "reverse", description = "Reverse a string") {
-    val msg = args.stringValue("message")
+    val msg = request.arguments().stringValue("message")
     ToolResult.text(msg.reversed())
 }
 ```
@@ -146,12 +147,12 @@ tool(name = "reverse", description = "Reverse a string") {
 @Serializable data class Reply(val echo: String)
 
 tool("echo", inputSchema = ..., outputSchema = ...) {
-    val input = args.decode<Args>()     // via configured serde
+    val input = request.arguments().decode<Args>() // via configured serde
     success(Reply(input.message))       // symmetric typed result
 }
 ```
 
-- `args.decode<T>()` — honors configured serde (kotlinx by default, ignores unknown keys)
+- `request.arguments().decode<T>()` — honors configured serde (kotlinx by default, ignores unknown keys)
 - `scope.success(value)` / `scope.success(value, text)` — symmetric typed result via configured serializer
 
 See [kotlin.md](kotlin.md) for the full Kotlin DSL reference.
