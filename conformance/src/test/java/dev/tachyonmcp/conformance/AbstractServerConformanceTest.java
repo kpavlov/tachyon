@@ -18,18 +18,20 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Tag("conformance")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Execution(ExecutionMode.CONCURRENT)
 abstract class AbstractServerConformanceTest {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractServerConformanceTest.class);
@@ -39,8 +41,8 @@ abstract class AbstractServerConformanceTest {
     private final String suiteName;
     private final String protocolVersion;
     private final boolean stateful;
-    private ServerInstance statefulServer;
-    private ServerInstance statelessServer;
+    private final ServerInstance statefulServer;
+    private final ServerInstance statelessServer;
 
     AbstractServerConformanceTest(
             AbstractConformanceServer serverFactory,
@@ -55,10 +57,6 @@ abstract class AbstractServerConformanceTest {
         this.suiteName = suiteName;
         this.protocolVersion = protocolVersion;
         this.stateful = stateful;
-    }
-
-    @BeforeAll
-    void startServers() {
         statefulServer = startServer(true);
         statelessServer = startServer(false);
     }
@@ -114,7 +112,7 @@ abstract class AbstractServerConformanceTest {
 
             var result = runner.runSuite("all", protocolVersion);
 
-            System.out.println("[conformance] Result " + String.join("\n", result.outputLines()) + " successfully");
+            System.out.println("[conformance] Result " + String.join("\n", result.outputLines()));
 
             if (!result.passed()) {
                 fail("[conformance] Suite " + suiteName + " failed");
