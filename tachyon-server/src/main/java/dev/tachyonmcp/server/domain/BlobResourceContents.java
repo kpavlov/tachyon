@@ -30,6 +30,7 @@ public non-sealed interface BlobResourceContents extends ResourceContents {
     String mimeType();
 
     @Value.Parameter(order = 3)
+    @Value.Redacted
     String blob();
 
     @Override

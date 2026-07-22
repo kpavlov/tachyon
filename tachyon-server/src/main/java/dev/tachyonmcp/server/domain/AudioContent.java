@@ -22,6 +22,7 @@ import tools.jackson.databind.JsonNode;
         visibility = Value.Style.ImplementationVisibility.PACKAGE)
 public non-sealed interface AudioContent extends ContentBlock, HasMeta {
 
+    @Value.Redacted
     String data();
 
     String mimeType();
