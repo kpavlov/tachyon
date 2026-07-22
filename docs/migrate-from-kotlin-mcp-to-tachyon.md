@@ -141,7 +141,7 @@ ToolResult.of(pojo)                                             // Jackson: POJO
 
 `inputSchema`/`outputSchema` accept a raw **String**, a Jackson **`JsonNode`**, or a kotlinx
 **`JsonObject`** on every overload. The `outputSchema` string overload arrived in
-**1.0.0-beta.11** — if you wrote a project-side shim for it against an earlier beta, delete the
+**1.0.0-beta.13** — if you wrote a project-side shim for it against an earlier beta, delete the
 shim now.
 
 - **Jackson 3**: `tools.jackson.databind.JsonNode`, *not* `com.fasterxml.jackson…`. Convert a
