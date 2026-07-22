@@ -22,8 +22,6 @@ class BinaryContentToStringTest {
         assertThat(icon.toString()).doesNotContain(BINARY_PAYLOAD).contains("image/png");
         assertThat(image.toString()).doesNotContain(BINARY_PAYLOAD).contains("image/png");
         assertThat(audio.toString()).doesNotContain(BINARY_PAYLOAD).contains("audio/wav");
-        assertThat(blob.toString())
-                .doesNotContain(BINARY_PAYLOAD)
-                .contains("test://blob", "application/octet-stream");
+        assertThat(blob.toString()).doesNotContain(BINARY_PAYLOAD).contains("test://blob", "application/octet-stream");
     }
 }
