@@ -71,6 +71,11 @@ server.port()
 server.close()    // wire to your app's stop hook
 ```
 
+Use `TachyonServer { }` or `buildServer { }` as the Kotlin construction surface. The DSL delegates
+to Java `ServerBuilder`, then adds suspend handlers and Kotlin-specific types. Don't build a second
+Kotlin extension surface on `ServerBuilder`; it can skip Kotlin defaults and split construction
+logic across two APIs.
+
 The identity block is easy to under-fill. `info { }` supports `title`, `websiteUrl`, and
 `icons` — port all of them, not just `name`/`version`:
 

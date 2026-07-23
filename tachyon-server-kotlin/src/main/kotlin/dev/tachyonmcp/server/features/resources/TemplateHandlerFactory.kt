@@ -13,11 +13,18 @@ import kotlinx.coroutines.CoroutineName
 internal fun templateHandler(
     descriptor: ResourceTemplateDescriptor,
     block: suspend TemplateScope.() -> ResourceContents,
+): ResourceHandler = templateHandler(descriptor.name(), descriptor.mimeType(), block)
+
+@JvmSynthetic
+internal fun templateHandler(
+    name: String,
+    mimeType: String?,
+    block: suspend TemplateScope.() -> ResourceContents,
 ): ResourceHandler {
-    val coroutineName = CoroutineName("resource-template:${descriptor.name()}")
+    val coroutineName = CoroutineName("resource-template:$name")
     return ResourceHandler { ctx, request ->
         runSuspendHandler(coroutineName) {
-            TemplateScope(ctx, request, descriptor.mimeType()).block()
+            TemplateScope(ctx, request, mimeType).block()
         }
     }
 }

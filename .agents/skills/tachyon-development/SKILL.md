@@ -8,6 +8,10 @@ description: Apply Tachyon MCP project rules when designing, implementing, revie
 - ATDD: prefer E2E, unit only for edge cases E2E can't cover. Start e2e tests before prod code.
 - Kotlin API refactors follow the adapter shapes in
   [`docs/architecture/guidance.md`](../../../docs/architecture/guidance.md#kotlin-adapter-shape).
+- Java `ServerBuilder` is the implementation source of truth. Kotlin adds only thin adaptation for
+  suspend lambdas and Kotlin-specific types; never duplicate validation or registration logic.
+- Keep Kotlin source files focused. At more than 300 lines, consider splitting by owned
+  responsibility before adding code.
 
 # Test Rules 🧪
 

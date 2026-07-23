@@ -39,6 +39,8 @@ public class TachyonServerBuilder
         @PublishedApi
         internal var networkPortExplicitlySet: Boolean = false
 
+        private val featureRegistrar: KotlinFeatureRegistrar = KotlinFeatureRegistrar(delegate)
+
         @OptIn(ExperimentalContracts::class)
         public inline fun info(
             crossinline configure: (@TachyonDsl ServerInfoScope).() -> Unit,
@@ -116,7 +118,15 @@ public class TachyonServerBuilder
             outputSchema: JsonNode? = null,
             handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
-            this.also { delegate.tool(name, description, inputSchema, outputSchema, handler) }
+            this.also {
+                featureRegistrar.tool(
+                    name,
+                    description,
+                    inputSchema,
+                    outputSchema,
+                    handler,
+                )
+            }
 
         @JvmSynthetic
         public fun tool(
@@ -126,7 +136,15 @@ public class TachyonServerBuilder
             outputSchema: String? = null,
             handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
-            this.also { delegate.tool(name, description, inputSchema, outputSchema, handler) }
+            this.also {
+                featureRegistrar.tool(
+                    name,
+                    description,
+                    inputSchema,
+                    outputSchema,
+                    handler,
+                )
+            }
 
         @JvmSynthetic
         public fun resource(
@@ -136,7 +154,7 @@ public class TachyonServerBuilder
             mimeType: String? = null,
             handler: suspend ResourceScope.() -> ResourceContents,
         ): TachyonServerBuilder =
-            this.also { delegate.resource(name, uri, description, mimeType, handler) }
+            this.also { featureRegistrar.resource(name, uri, description, mimeType, handler) }
 
         /**
          * Registers a prompt with the server.
@@ -182,7 +200,7 @@ public class TachyonServerBuilder
             block: suspend TemplateScope.() -> ResourceContents,
         ): TachyonServerBuilder =
             this.also {
-                delegate.resourceTemplate(
+                featureRegistrar.resourceTemplate(
                     name = name,
                     uriTemplate = uriTemplate,
                     description = description,
@@ -205,7 +223,7 @@ public class TachyonServerBuilder
         public fun resourceTemplate(
             descriptor: ResourceTemplateDescriptor,
             block: suspend TemplateScope.() -> ResourceContents,
-        ): TachyonServerBuilder = this.also { delegate.resourceTemplate(descriptor, block) }
+        ): TachyonServerBuilder = this.also { featureRegistrar.resourceTemplate(descriptor, block) }
 
         /**
          * Registers a completion handler for a prompt's arguments.

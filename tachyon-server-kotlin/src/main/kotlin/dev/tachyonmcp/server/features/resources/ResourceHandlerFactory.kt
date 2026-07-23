@@ -16,8 +16,14 @@ import kotlinx.coroutines.CoroutineName
 internal fun resourceHandler(
     descriptor: ResourceDescriptor,
     block: suspend ResourceScope.() -> ResourceContents,
+): ResourceHandler = resourceHandler(descriptor.name(), block)
+
+@JvmSynthetic
+internal fun resourceHandler(
+    name: String,
+    block: suspend ResourceScope.() -> ResourceContents,
 ): ResourceHandler {
-    val coroutineName = CoroutineName("resource:${descriptor.name()}")
+    val coroutineName = CoroutineName("resource:$name")
     return ResourceHandler { ctx, request ->
         runSuspendHandler(coroutineName) {
             ResourceScope(ctx, request).block()

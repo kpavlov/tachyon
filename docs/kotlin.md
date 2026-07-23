@@ -22,6 +22,10 @@ val server = TachyonServer(port = 8080) { /* configure */ }
 val server: TachyonServer = buildServer { /* configure */ }
 ```
 
+Use `TachyonServerBuilder` through these entry points for Kotlin construction. The Java
+`ServerBuilder` remains the implementation source of truth, while the Kotlin DSL adds suspend
+handlers and Kotlin-specific types without duplicating registration or validation logic.
+
 ## Structured value factories
 
 Kotlin factories use receiver blocks for structured values with more than three fields.

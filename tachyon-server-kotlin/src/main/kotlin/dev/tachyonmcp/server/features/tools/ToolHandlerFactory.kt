@@ -19,18 +19,28 @@ internal fun toolHandler(
     descriptor: ToolDescriptor,
     block: suspend ToolScope.() -> ToolResult,
 ): AbstractToolHandler {
-    val coroutineName = CoroutineName("tool:${descriptor.name()}")
+    val fn = toolFn(descriptor.name(), block)
     return object : AbstractToolHandler(descriptor) {
         override fun handle(
             context: InteractionContext,
             request: ToolRequest,
-        ): ToolResult =
-            runSuspendHandler(coroutineName) {
-                ToolScope(
-                    ctx = context,
-                    args = request.arguments(),
-                    request = request,
-                ).block()
-            }
+        ): ToolResult = fn.apply(context, request)
+    }
+}
+
+@JvmSynthetic
+internal fun toolFn(
+    name: String,
+    block: suspend ToolScope.() -> ToolResult,
+): ToolFn {
+    val coroutineName = CoroutineName("tool:$name")
+    return ToolFn { context, request ->
+        runSuspendHandler(coroutineName) {
+            ToolScope(
+                ctx = context,
+                args = request.arguments(),
+                request = request,
+            ).block()
+        }
     }
 }
