@@ -29,6 +29,7 @@ class WeatherServerTest {
     companion object {
         private val weatherProvider = TestWeatherProvider()
         private val cityProvider = TestCityProvider()
+        private val weatherService = WeatherService(weatherProvider, cityProvider)
         private lateinit var handle: TachyonServer
         private lateinit var clientTransport: HttpClientStreamableHttpTransport
         private lateinit var client: McpSyncClient
@@ -38,7 +39,7 @@ class WeatherServerTest {
         @JvmStatic
         @BeforeAll
         fun beforeAll() {
-            handle = createServer(0, WeatherService(weatherProvider, cityProvider))
+            handle = createServer(0, weatherService)
             val port = handle.port()
 
             clientTransport = HttpClientStreamableHttpTransport.builder("http://localhost:$port").build()
@@ -151,11 +152,26 @@ class WeatherServerTest {
         result.resources() shouldHaveSize 2
         val article = result.resources().first { it.uri() == "weather://prediction/article" }
         article.name() shouldBe "prediction-article"
+        article.title() shouldBe "Weather Prediction"
+        article.description() shouldBe "Weather prediction article"
         article.mimeType() shouldBe "text/markdown"
+        article.size() shouldBe weatherService.predictionArticle.toByteArray().size.toLong()
+        article.annotations().audience() shouldContainExactly
+            listOf(McpSchema.Role.USER, McpSchema.Role.ASSISTANT)
+        article.annotations().priority() shouldBe 0.8
+        article.annotations().lastModified() shouldBe "2026-07-23T00:00:00Z"
+        article.icons().single().src() shouldStartWith "data:image/png;base64,"
+        article.icons().single().mimeType() shouldBe "image/png"
+        article.icons().single().sizes() shouldContainExactly listOf("256x256")
+        article.icons().single().theme() shouldBe "light"
 
         val weather = result.resources().first { it.uri() == "weather://featured/current" }
         weather.name() shouldBe "featured-current-weather"
+        weather.title() shouldBe "Featured Current Weather"
+        weather.description() shouldBe "Current weather in Tallinn"
         weather.mimeType() shouldBe "application/json"
+        weather.annotations() shouldBe article.annotations()
+        weather.icons() shouldBe article.icons()
     }
 
     @Test

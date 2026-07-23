@@ -8,11 +8,13 @@ import com.example.weather.service.WeatherService;
 import com.example.weather.spi.CityNotFoundException;
 import com.example.weather.spi.WeatherObservation;
 import dev.tachyonmcp.server.TachyonServer;
+import dev.tachyonmcp.server.domain.Annotations;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.server.domain.PromptArgument;
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.ResourceContents;
+import dev.tachyonmcp.server.domain.Role;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.completions.CompletionRequest;
@@ -26,6 +28,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
@@ -60,6 +63,10 @@ public final class WeatherServer {
     }
 
     static TachyonServer createServer(int port, WeatherService weatherService) {
+        var predictionArticle = weatherService.predictionArticle();
+        var resourceAnnotations =
+            Annotations.of(List.of(Role.USER, Role.ASSISTANT), 0.8, "2026-07-23T00:00:00Z");
+        var resourceIcon = Icon.of(LOGO, "image/png", List.of("256x256"), "light");
         return TachyonServer.builder()
                 .info(it -> it
                         .name("weather-server")
@@ -74,13 +81,20 @@ public final class WeatherServer {
                         resource -> resource.name("prediction-article")
                                 .uri("weather://prediction/article")
                                 .description("Weather prediction article")
+                                .title("Weather Prediction")
+                                .annotations(resourceAnnotations)
+                                .size((long) predictionArticle.getBytes(StandardCharsets.UTF_8).length)
+                                .icons(List.of(resourceIcon))
                                 .mimeType("text/markdown"),
                     ResourceHandler.of((ctx, uri) ->
-                        TextResourceContents.of(uri, weatherService.predictionArticle(), "text/markdown")))
+                        TextResourceContents.of(uri, predictionArticle, "text/markdown")))
                 .asyncResource(
                         resource -> resource.name("featured-current-weather")
                                 .uri("weather://featured/current")
                                 .description("Current weather in Tallinn")
+                                .title("Featured Current Weather")
+                                .annotations(resourceAnnotations)
+                                .icons(List.of(resourceIcon))
                                 .mimeType("application/json"),
                     ResourceHandler.ofAsync((ctx, uri) -> weatherService.currentWeatherAsync("Tallinn")
                         .thenApply(weather -> TextResourceContents.of(uri, asJson(weather), "application/json"))))

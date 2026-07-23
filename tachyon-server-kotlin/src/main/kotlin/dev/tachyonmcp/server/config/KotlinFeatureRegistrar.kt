@@ -9,6 +9,7 @@ import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.ResourceContents
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.server.features.prompts.promptHandler
+import dev.tachyonmcp.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.server.features.resources.resourceHandler
 import dev.tachyonmcp.server.features.resources.templateHandler
@@ -25,7 +26,11 @@ internal class KotlinFeatureRegistrar(
         uri: String,
         description: String?,
         mimeType: String?,
-        handler: suspend ResourceScope.() -> ResourceContents,
+        title: String?,
+        annotations: Annotations?,
+        size: Long?,
+        icons: List<Icon>?,
+        block: suspend ResourceScope.() -> ResourceContents,
     ) {
         delegate.resource(
             { descriptor ->
@@ -34,9 +39,20 @@ internal class KotlinFeatureRegistrar(
                     .uri(uri)
                     .description(description)
                     .mimeType(mimeType)
+                    .title(title)
+                    .annotations(annotations)
+                    .size(size)
+                    .icons(icons)
             },
-            resourceHandler(name, mimeType, handler),
+            resourceHandler(name, mimeType, block),
         )
+    }
+
+    fun resource(
+        descriptor: ResourceDescriptor,
+        block: suspend ResourceScope.() -> ResourceContents,
+    ) {
+        delegate.resource(descriptor, resourceHandler(descriptor, block))
     }
 
     fun resourceTemplate(

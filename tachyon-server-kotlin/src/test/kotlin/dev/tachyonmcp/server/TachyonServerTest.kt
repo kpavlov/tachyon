@@ -11,6 +11,7 @@ import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.TextContent
 import dev.tachyonmcp.server.domain.TextResourceContents
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
+import dev.tachyonmcp.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
@@ -261,24 +262,47 @@ internal class TachyonServerTest {
 
     @Test
     fun `static resource contents inherit registered uri and mime type`() {
+        val icon = Icon { src = "https://example.com/resource.svg" }
+        val expectedAnnotations = Annotations { priority = 0.8 }
+        val blobDescriptor =
+            ResourceDescriptor {
+                name = "blob"
+                uri = "test://blob"
+                mimeType = "application/octet-stream"
+                title = "Binary resource"
+                annotations = expectedAnnotations
+                size = 2
+                icons = listOf(icon)
+            }
         TachyonServer(port = 0) {
             name("contextual-resource-contents-test")
             session { enabled = true }
             resource(
                 name = "text",
                 uri = "test://text",
+                description = "Text resource",
                 mimeType = "text/plain",
+                title = "Text resource title",
+                annotations = expectedAnnotations,
+                size = 5,
+                icons = listOf(icon),
             ) {
                 TextResourceContents { text = "hello" }
             }
-            resource(
-                name = "blob",
-                uri = "test://blob",
-                mimeType = "application/octet-stream",
-            ) {
+            resource(blobDescriptor) {
                 BlobResourceContents { blob = "AQI=" }
             }
         }.use { handle ->
+            with(handle.resources().find("text").orElseThrow()) {
+                description() shouldBe "Text resource"
+                mimeType() shouldBe "text/plain"
+                title() shouldBe "Text resource title"
+                annotations() shouldBe expectedAnnotations
+                size() shouldBe 5
+                icons() shouldBe listOf(icon)
+            }
+            handle.resources().find("blob").orElseThrow() shouldBe blobDescriptor
+
             McpProbe(handle.port()).use { probe ->
                 probe.initialize()
 

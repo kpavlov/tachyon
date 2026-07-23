@@ -7,8 +7,13 @@ package dev.tachyonmcp.transport.jsonrpc;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Annotations;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListResourcesResult;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Resource;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Role;
 import dev.tachyonmcp.server.domain.RequestId;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class JsonRpcCodecTest {
@@ -86,6 +91,34 @@ class JsonRpcCodecTest {
         // language=JSON
         assertThatJson(json).isEqualTo("""
             {"content":[{"type":"text","text":"ok"}]}
+            """);
+    }
+
+    @Test
+    void writeValueAsStringSerializesEnumLists() {
+        var annotations = new Annotations(List.of(Role.USER, Role.ASSISTANT), 0.8, "2026-07-23T00:00:00Z");
+        var resource = Resource.builder()
+                .uri("weather://prediction/article")
+                .name("prediction-article")
+                .annotations(annotations)
+                .build();
+
+        var json = JsonRpcCodec.writeValueAsString(
+                ListResourcesResult.builder().resources(List.of(resource)).build());
+
+        // language=JSON
+        assertThatJson(json).isEqualTo("""
+            {
+              "resources": [{
+                "uri": "weather://prediction/article",
+                "name": "prediction-article",
+                "annotations": {
+                  "audience": ["user", "assistant"],
+                  "priority": 0.8,
+                  "lastModified": "2026-07-23T00:00:00Z"
+                }
+              }]
+            }
             """);
     }
 }

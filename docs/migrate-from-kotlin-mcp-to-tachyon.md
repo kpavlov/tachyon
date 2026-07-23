@@ -182,6 +182,7 @@ val server = TachyonServer(port = mcpPort) {
         uri = "example://docs/readme",
         description = "Project documentation",
         mimeType = "text/markdown",
+        title = "README",
     ) {
         TextResourceContents {
             text = read(uri) ?: error("not found")
