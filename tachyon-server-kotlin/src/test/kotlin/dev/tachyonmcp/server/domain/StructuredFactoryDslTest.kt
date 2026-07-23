@@ -6,7 +6,10 @@ import dev.tachyonmcp.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
+import io.kotest.assertions.assertSoftly
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import org.junit.jupiter.api.Test
 
 internal class StructuredFactoryDslTest {
@@ -40,10 +43,26 @@ internal class StructuredFactoryDslTest {
                 openWorldHint = false
             }
 
-        annotations.priority() shouldBe 0.7
-        icon.src() shouldBe "https://example.com/icon.svg"
-        promptArgument.required() shouldBe true
-        toolAnnotations.readOnlyHint() shouldBe true
+        assertSoftly {
+            annotations.audience() shouldBe listOf(Role.USER)
+            annotations.priority() shouldBe 0.7
+
+            icon.src() shouldBe "https://example.com/icon.svg"
+            icon.mimeType() shouldBe "image/svg+xml"
+            icon.sizes() shouldBe listOf("any")
+            icon.theme() shouldBe "light"
+
+            promptArgument.name() shouldBe "topic"
+            promptArgument.title() shouldBe "Topic"
+            promptArgument.description() shouldBe "Topic to discuss"
+            promptArgument.required() shouldBe true
+
+            toolAnnotations.title() shouldBe "Read"
+            toolAnnotations.readOnlyHint() shouldBe true
+            toolAnnotations.destructiveHint() shouldBe false
+            toolAnnotations.idempotentHint() shouldBe true
+            toolAnnotations.openWorldHint() shouldBe false
+        }
     }
 
     @Test
@@ -71,10 +90,21 @@ internal class StructuredFactoryDslTest {
                 mimeType = "application/octet-stream"
             }
 
-        image.mimeType() shouldBe "image/png"
-        audio.mimeType() shouldBe "audio/mpeg"
-        textResource.uri() shouldBe "text://resource"
-        blobResource.uri() shouldBe "blob://resource"
+        assertSoftly {
+            image.data() shouldBe "AQID"
+            image.mimeType() shouldBe "image/png"
+
+            audio.data() shouldBe "AQID"
+            audio.mimeType() shouldBe "audio/mpeg"
+
+            textResource.uri() shouldBe "text://resource"
+            textResource.text() shouldBe "hello"
+            textResource.mimeType() shouldBe "text/plain"
+
+            blobResource.uri() shouldBe "blob://resource"
+            blobResource.blob() shouldBe "AQID"
+            blobResource.mimeType() shouldBe "application/octet-stream"
+        }
     }
 
     @Test
@@ -126,9 +156,50 @@ internal class StructuredFactoryDslTest {
                 icons = listOf(icon)
             }
 
-        prompt.name() shouldBe "prompt"
-        resource.name() shouldBe "resource"
-        resourceTemplate.name() shouldBe "template"
-        tool.name() shouldBe "tool"
+        assertSoftly {
+            prompt.name() shouldBe "prompt"
+            prompt.description() shouldBe "Prompt"
+            prompt.arguments() shouldBe listOf(promptArgument)
+            prompt.icons() shouldBe listOf(icon)
+
+            resource.name() shouldBe "resource"
+            resource.uri() shouldBe "resource://one"
+            resource.description() shouldBe "Resource"
+            resource.annotations() shouldBe annotations
+            resource.icons() shouldBe listOf(icon)
+
+            resourceTemplate.name() shouldBe "template"
+            resourceTemplate.uriTemplate() shouldBe "resource://{id}"
+            resourceTemplate.description() shouldBe "Template"
+            resourceTemplate.annotations() shouldBe annotations
+            resourceTemplate.icons() shouldBe listOf(icon)
+
+            tool.name() shouldBe "tool"
+            tool.description() shouldBe "Tool"
+            tool.annotations() shouldBe toolAnnotations
+            tool.icons() shouldBe listOf(icon)
+        }
+    }
+
+    @Test
+    fun `TextResourceContents without a scope requires an explicit uri`() {
+        val failure =
+            shouldThrow<IllegalArgumentException> {
+                TextResourceContents { text = "hello" }
+            }
+
+        failure.message shouldContain "TextResourceContents.uri is required"
+        failure.message shouldContain "TextResourceContents { }"
+    }
+
+    @Test
+    fun `BlobResourceContents without a scope requires an explicit uri`() {
+        val failure =
+            shouldThrow<IllegalArgumentException> {
+                BlobResourceContents { blob = "AQID" }
+            }
+
+        failure.message shouldContain "BlobResourceContents.uri is required"
+        failure.message shouldContain "BlobResourceContents { }"
     }
 }

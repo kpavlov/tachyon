@@ -8,8 +8,6 @@ import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolRequest
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.features.tools.toolHandler
-import dev.tachyonmcp.server.internal.ServerEngine
-import dev.tachyonmcp.server.session.DefaultDispatchContext
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
@@ -40,8 +38,7 @@ internal class ToolHandlerFactoryTest {
                 ToolResult.text("never")
             }
 
-        TachyonServer.builder().build().use { server ->
-            val ctx = DefaultDispatchContext.stateless(server as ServerEngine)
+        withStatelessContext { ctx ->
             val request = ToolRequest.builder().name("interrupt-test").build()
 
             val thread =
@@ -74,8 +71,7 @@ internal class ToolHandlerFactoryTest {
                 ToolResult.text("ok")
             }
 
-        TachyonServer.builder().build().use { server ->
-            val ctx = DefaultDispatchContext.stateless(server as ServerEngine)
+        withStatelessContext { ctx ->
             val request = ToolRequest.builder().name("supervisor-test").build()
 
             val failure = shouldThrow<Exception> { handler.handle(ctx, request) }

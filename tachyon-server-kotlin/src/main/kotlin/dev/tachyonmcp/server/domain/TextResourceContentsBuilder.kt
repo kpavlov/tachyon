@@ -53,7 +53,10 @@ public class TextResourceContentsBuilder
         @PublishedApi
         internal fun build(): TextResourceContents =
             TextResourceContents.of(
-                requireNotNull(uri) { "TextResourceContents.uri is required" },
+                requireNotNull(uri) {
+                    "TextResourceContents.uri is required: set it explicitly, or build inside a " +
+                        "resource/template handler where TextResourceContents { } defaults it from the request"
+                },
                 requireNotNull(text) { "TextResourceContents.text is required" },
                 mimeType,
                 meta,

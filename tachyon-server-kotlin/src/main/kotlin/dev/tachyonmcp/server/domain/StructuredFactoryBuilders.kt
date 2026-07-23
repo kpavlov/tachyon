@@ -185,7 +185,10 @@ public class BlobResourceContentsBuilder
         @PublishedApi
         internal fun build(): BlobResourceContents =
             BlobResourceContents.of(
-                requireNotNull(uri) { "BlobResourceContents.uri is required" },
+                requireNotNull(uri) {
+                    "BlobResourceContents.uri is required: set it explicitly, or build inside a " +
+                        "resource/template handler where BlobResourceContents { } defaults it from the request"
+                },
                 requireNotNull(blob) { "BlobResourceContents.blob is required" },
                 mimeType,
                 meta,
