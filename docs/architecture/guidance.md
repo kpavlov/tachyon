@@ -1,10 +1,10 @@
 # Handler Design Guidance
 
-Rules for implementing a new server-feature handler type (tools, resources, prompts, future ones). Read before adding or touching a handler SAM.
+Rules for a new server-feature handler type (tools, resources, prompts, future ones). Read before adding or touching a handler SAM.
 
 ## 🎯 Default shape: two interfaces, sync-first
 
-Resources/prompts are the reference pattern — one call shape, two interfaces:
+Resources/prompts are the reference — one call shape, two interfaces:
 
 ```java
 @FunctionalInterface
@@ -34,7 +34,7 @@ Implement `XHandler` for sync, `AsyncXHandler` for async — one override each (
 
 ## 🐛 Own SAM, `throws Exception` — never raw `java.util.function.*`
 
-`BiFunction`/`Function` can't declare checked exceptions — reusing them forces every I/O handler into `try/catch` boilerplate and drops the real exception type/stacktrace from the dispatcher's error log. Define a purpose-built SAM instead, `throws Exception` on the sync method:
+`BiFunction`/`Function` can't declare checked exceptions — reusing them forces every I/O handler into `try/catch` boilerplate and drops the real exception type/stacktrace from the dispatcher's error log. Define a purpose-built SAM, `throws Exception` on the sync method:
 
 ```java
 @FunctionalInterface
@@ -43,10 +43,7 @@ public interface XFn {
 }
 ```
 
-`ToolFn` applies this to tools (it replaced raw `BiFunction`) and receives the full `ToolRequest`.
-The dispatcher already logs/maps thrown exceptions to a JSON-RPC error — a throwing SAM lets a
-handler use that path instead of hand-rolling it. `ToolRequest.arguments()` exposes the ergonomic
-`Args`; the request also carries `_meta` so the shape extends later without an interface change.
+`ToolFn` applies this to tools (it replaced raw `BiFunction`) and receives the full `ToolRequest`. The dispatcher already logs/maps thrown exceptions to a JSON-RPC error — a throwing SAM lets a handler use that path instead of hand-rolling it. `ToolRequest.arguments()` exposes the ergonomic `Args`; the request also carries `_meta` so the shape extends later without an interface change.
 
 **Async entry types don't declare `throws Exception`** — errors propagate via a failed `CompletionStage`, matching `AsyncResourceHandler`/`AsyncPromptHandler`. Don't add `throws` there "for symmetry."
 
@@ -85,9 +82,7 @@ A new handler type's `ServerBuilder` method follows the prefix style (matching i
 - `XHandler` — the handler type. Also the lambda-entry SAM when the shape is simple: `ResourceHandler`/`PromptHandler` are plain `@FunctionalInterface`s, so the type doubles as both.
 - `AsyncXHandler extends XHandler` — async variant, for single-axis handlers only (`AsyncResourceHandler`, `AsyncPromptHandler`). Abstract `handleAsync`, default `handle` blocks via `HandlerFutures.joinInterruptibly`.
 - `XFn` — companion throwing SAM, only when `XHandler` itself isn't lambda-friendly (carries a descriptor, exposes more than one method). Tools need this because `ToolHandler` isn't a `@FunctionalInterface`; `ToolFn` receives the full `ToolRequest`.
-- Static factory composition on `XHandler.of…`: base verb `of`, then optional `Async` —
-  `ToolHandler.of(...)` / `ToolHandler.ofAsync(...)`. Both tool factories receive `ToolRequest`;
-  class-based handlers may override the `Args` or `ToolRequest` form.
+- Static factory composition on `XHandler.of…`: base verb `of`, then optional `Async` — `ToolHandler.of(...)` / `ToolHandler.ofAsync(...)`. Both tool factories receive `ToolRequest`; class-based handlers may override the `Args` or `ToolRequest` form.
 
 ## 🪶 Registry/facade API naming
 
@@ -100,12 +95,60 @@ A new handler type's `ServerBuilder` method follows the prefix style (matching i
 - Keep typed registration methods on each registry. No public generic base registry.
 - `TaskRegistry` is excluded. Tasks use runtime lifecycle methods such as `create` and `get`.
 
+## Kotlin adapter shape
+
+- Structured object factories with more than three fields use a type-named receiver builder: `Icon { src = "..."; mimeType = "image/svg+xml" }`. `Annotations` follows this shape despite having three fields because it is nested metadata commonly composed inside other builders.
+- Keep flat factory overloads when needed for source compatibility, but use the receiver form in new Kotlin code. Required builder fields start nullable and fail with `requireNotNull` in `build()`.
+- Type-named receiver factories are `inline`, declare an `EXACTLY_ONCE` contract, and suppress `FunctionName`. Their public builder has an `@PublishedApi internal` constructor and `build()`.
+- Keep DSL operations as receiver-class members when the receiver is owned by this module. Use a top-level extension only for types that cannot own the operation. Type-named factories remain top-level when the Java model has no Kotlin companion.
+- Keep required values first and flexible metadata as defaulted named parameters on the common call. Named arguments remove ambiguity; do not hide useful descriptor fields in a registration sub-DSL.
+- Keep a value overload accepting the prebuilt descriptor for reuse, testing, and advanced construction.
+- Name a trailing behavioral lambda `block`. Do not add a ceremonial `handler {}` or `read {}` wrapper inside another configuration lambda.
+- Use a result DSL when it removes repeated request data. Seed contextual defaults such as the requested resource URI and registered MIME type, while allowing explicit overrides.
+- A nested result builder must forward handler context used in expressions inside its block, such as URI-template `param` and `sequence` accessors.
+
+Reference shape:
+
+```kotlin
+resourceTemplate(
+    name = "user-profile",
+    uriTemplate = "user://{userId}/profile",
+    description = "User profile template",
+    mimeType = "application/json",
+    title = "User profile",
+    annotations = annotations,
+    icons = icons,
+) {
+    TextResourceContents {
+        text = """{"id":"${param("userId")}"}"""
+    }
+}
+```
+
+Keep both overload families:
+
+```kotlin
+fun resourceTemplate(
+    name: String,
+    uriTemplate: String,
+    description: String? = null,
+    mimeType: String? = null,
+    title: String? = null,
+    annotations: Annotations? = null,
+    icons: List<Icon>? = null,
+    block: suspend TemplateScope.() -> ResourceContents,
+)
+
+fun resourceTemplate(
+    descriptor: ResourceTemplateDescriptor,
+    block: suspend TemplateScope.() -> ResourceContents,
+)
+```
+
 ## ⚠️ `_meta` stays out of the ergonomic surface
 
 `_meta` is the MCP runtime's protocol envelope — `progressToken`, reserved `io.modelcontextprotocol/*` keys, OpenTelemetry trace context — growing every protocol revision; implementations **must not** assume meaning for reserved keys (MCP spec, `_meta` section). Don't add `meta()` to an ergonomic type (`Args` and friends) — invites Hyrum's-law coupling to runtime internals, same failure mode as an `Internal*`-named type users are forced to hold.
 
-A handler needing raw request metadata (progress token, cancellation, task handle) uses
-`ToolRequest` through a `ToolFn` or an `AbstractToolHandler` request override, not a `_meta` field
-on the ergonomic `Args` path.
+A handler needing raw request metadata (progress token, cancellation, task handle) uses `ToolRequest` through a `ToolFn` or an `AbstractToolHandler` request override, not a `_meta` field on the ergonomic `Args` path.
 
 Testing handler dispatch/error mapping: see [`tachyon-development` skill](../../.agents/skills/tachyon-development/SKILL.md).

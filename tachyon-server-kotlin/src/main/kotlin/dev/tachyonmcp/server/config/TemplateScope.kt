@@ -4,8 +4,13 @@ package dev.tachyonmcp.server.config
 
 import dev.tachyonmcp.runtime.InteractionContext
 import dev.tachyonmcp.server.TachyonDsl
+import dev.tachyonmcp.server.domain.TextResourceContents
+import dev.tachyonmcp.server.domain.TextResourceContentsBuilder
 import dev.tachyonmcp.server.domain.UriTemplateValue
 import dev.tachyonmcp.server.features.resources.ResourceRequest
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 /**
  * Receiver for a matched resource-template handler.
@@ -17,6 +22,7 @@ public class TemplateScope
         public val ctx: InteractionContext,
         /** Full resource request, including URI-template data and request metadata. */
         public val request: ResourceRequest,
+        internal val registeredMimeType: String?,
     ) {
         /** Requested resource URI. */
         public val uri: String
@@ -57,6 +63,19 @@ public class TemplateScope
                     throw IllegalArgumentException("template variable is not a sequence: $name")
                 is UriTemplateValue.Sequence -> value.values()
             }
+
+        /**
+         * Builds text resource contents using this request's URI and the registered template MIME
+         * type as defaults.
+         */
+        @Suppress("FunctionName")
+        @OptIn(ExperimentalContracts::class)
+        public inline fun TextResourceContents(
+            configure: (@TachyonDsl TextResourceContentsBuilder).() -> Unit,
+        ): TextResourceContents {
+            contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
+            return TextResourceContentsBuilder(this).apply(configure).build()
+        }
 
         /**
          * Retrieves a template variable by name.

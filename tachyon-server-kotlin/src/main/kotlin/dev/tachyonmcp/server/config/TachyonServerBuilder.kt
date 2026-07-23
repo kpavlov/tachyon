@@ -14,6 +14,7 @@ import dev.tachyonmcp.server.features.completions.promptCompletionHandler
 import dev.tachyonmcp.server.features.completions.resourceCompletionHandler
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.server.features.prompts.promptHandler
+import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.json.KxSerializationSerde
 import dev.tachyonmcp.server.json.toJacksonNode
@@ -173,9 +174,9 @@ public class TachyonServerBuilder
         public fun resourceTemplate(
             name: String,
             uriTemplate: String,
-            title: String? = null,
             description: String? = null,
             mimeType: String? = null,
+            title: String? = null,
             annotations: Annotations? = null,
             icons: List<Icon>? = null,
             block: suspend TemplateScope.() -> ResourceContents,
@@ -184,14 +185,27 @@ public class TachyonServerBuilder
                 delegate.resourceTemplate(
                     name = name,
                     uriTemplate = uriTemplate,
-                    title = title,
                     description = description,
                     mimeType = mimeType,
-                    icons = icons,
+                    title = title,
                     annotations = annotations,
-                    handler = block,
+                    icons = icons,
+                    block = block,
                 )
             }
+
+        /**
+         * Registers a prebuilt resource-template descriptor.
+         *
+         * @param descriptor resource-template descriptor
+         * @param block handler invoked for matching resource requests
+         * @return This builder.
+         */
+        @JvmSynthetic
+        public fun resourceTemplate(
+            descriptor: ResourceTemplateDescriptor,
+            block: suspend TemplateScope.() -> ResourceContents,
+        ): TachyonServerBuilder = this.also { delegate.resourceTemplate(descriptor, block) }
 
         /**
          * Registers a completion handler for a prompt's arguments.

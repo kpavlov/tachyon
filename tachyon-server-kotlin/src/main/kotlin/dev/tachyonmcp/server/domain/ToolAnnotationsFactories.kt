@@ -5,6 +5,17 @@
 
 package dev.tachyonmcp.server.domain
 
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
+
+/** Builds [ToolAnnotations] with a receiver DSL. */
+@OptIn(ExperimentalContracts::class)
+public inline fun ToolAnnotations(block: ToolAnnotationsBuilder.() -> Unit): ToolAnnotations {
+    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+    return ToolAnnotationsBuilder().apply(block).build()
+}
+
 /**
  * Creates [ToolAnnotations] — hints about tool behaviour for safety or UX.
  *

@@ -53,3 +53,13 @@ public inline fun resourceDescriptor(
             configure()
         }.build()
 }
+
+/** Builds a [ResourceDescriptor] with a receiver DSL. */
+@Suppress("FunctionName")
+@OptIn(ExperimentalContracts::class)
+public inline fun ResourceDescriptor(
+    block: ResourceDescriptorScope.() -> Unit,
+): ResourceDescriptor {
+    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+    return ResourceDescriptorScope().apply(block).build()
+}

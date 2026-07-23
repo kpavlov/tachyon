@@ -3,10 +3,12 @@
 package dev.tachyonmcp.server
 
 import dev.tachyonmcp.server.config.Mode
+import dev.tachyonmcp.server.domain.Annotations
 import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.TextContent
 import dev.tachyonmcp.server.domain.TextResourceContents
+import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.internal.ServerEngine
 import dev.tachyonmcp.server.session.InMemorySessionEventStore
@@ -27,12 +29,12 @@ internal class TachyonServerTest {
     fun `all DSL parameters`() {
         val appName = "tachyon-e2e"
         val expectedIcon =
-            Icon(
-                src = "https://example.com/s/icon.png",
-                mimeType = "image/png",
-                sizes = listOf("64x64"),
-                theme = "white",
-            )
+            Icon {
+                src = "https://example.com/s/icon.png"
+                mimeType = "image/png"
+                sizes = listOf("64x64")
+                theme = "white"
+            }
         TachyonServer(port = 0) {
             info {
                 name = appName
@@ -208,6 +210,12 @@ internal class TachyonServerTest {
     @Test
     fun `name-based suspend resourceTemplate registers and lists template`() {
         val schema = """{"type":"object"}"""
+        val icon =
+            Icon {
+                src = "https://example.com/user.svg"
+                mimeType = "image/svg+xml"
+            }
+        val annotations = Annotations { priority = 0.7 }
         TachyonServer(port = 0) {
             name("template-test")
             session { enabled = true }
@@ -217,12 +225,13 @@ internal class TachyonServerTest {
                 uriTemplate = "user://{userId}/profile",
                 description = "User profile template",
                 mimeType = "application/json",
+                title = "User profile",
+                annotations = annotations,
+                icons = listOf(icon),
             ) {
-                TextResourceContents(
-                    uri = uri,
-                    mimeType = "application/json",
-                    text = "{\"id\":\"${param("userId")}\"}",
-                )
+                TextResourceContents {
+                    text = "{\"id\":\"${param("userId")}\"}"
+                }
             }
         }.use { handle ->
             McpProbe(handle.port()).use { probe ->
@@ -231,7 +240,40 @@ internal class TachyonServerTest {
                 response.statusCode() shouldBe 200
                 response.body() shouldContain "user-profile"
                 response.body() shouldContain "user://{userId}/profile"
+                response.body() shouldContain "User profile"
+                response.body() shouldContain "https://example.com/user.svg"
+
+                val readResponse =
+                    probe.post(
+                        """{"jsonrpc":"2.0","id":3,"method":"resources/read","params":{"uri":"user://42/profile"}}""",
+                    )
+                readResponse.statusCode() shouldBe 200
+                readResponse.body() shouldContain """"uri":"user://42/profile""""
+                readResponse.body() shouldContain """"mimeType":"application/json""""
+                readResponse.body() shouldContain """{\"id\":\"42\"}"""
             }
+        }
+    }
+
+    @Test
+    fun `resourceTemplate accepts a prebuilt descriptor`() {
+        val descriptor =
+            ResourceTemplateDescriptor {
+                name = "descriptor-template"
+                uriTemplate = "descriptor://{id}"
+                description = "Prebuilt descriptor"
+                mimeType = "text/plain"
+                title = "Descriptor title"
+            }
+
+        buildServer {
+            resourceTemplate(descriptor) {
+                TextResourceContents {
+                    text = param("id")
+                }
+            }
+        }.use { server ->
+            server.resources().findTemplate("descriptor-template").orElseThrow() shouldBe descriptor
         }
     }
 

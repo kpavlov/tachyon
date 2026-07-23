@@ -36,6 +36,16 @@ public class ToolDescriptorScope
             outputSchema = parseSchema(json)
         }
 
+        /** Sets the input schema from a kotlinx-serialization [JsonObject]. */
+        public fun inputSchema(json: JsonObject) {
+            inputSchema = json.toJacksonNode()
+        }
+
+        /** Sets the output schema from a kotlinx-serialization [JsonObject]. */
+        public fun outputSchema(json: JsonObject) {
+            outputSchema = json.toJacksonNode()
+        }
+
         @PublishedApi
         internal fun build(): ToolDescriptor {
             val n = requireNotNull(name) { "ToolDescriptor.name is required" }
@@ -65,12 +75,9 @@ public inline fun toolDescriptor(
         }.build()
 }
 
-/** Sets the input schema from a [JsonObject]. Requires kotlinx-serialization-json on the classpath. */
-public fun ToolDescriptorScope.inputSchema(json: JsonObject) {
-    inputSchema = json.toJacksonNode()
-}
-
-/** Sets the output schema from a [JsonObject]. Requires kotlinx-serialization-json on the classpath. */
-public fun ToolDescriptorScope.outputSchema(json: JsonObject) {
-    outputSchema = json.toJacksonNode()
+/** Builds a [ToolDescriptor] with a receiver DSL. */
+@OptIn(ExperimentalContracts::class)
+public inline fun ToolDescriptor(block: ToolDescriptorScope.() -> Unit): ToolDescriptor {
+    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+    return ToolDescriptorScope().apply(block).build()
 }

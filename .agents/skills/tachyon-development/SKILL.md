@@ -6,6 +6,8 @@ description: Apply Tachyon MCP project rules when designing, implementing, revie
 # Prime directives
 
 - ATDD: prefer E2E, unit only for edge cases E2E can't cover. Start e2e tests before prod code.
+- Kotlin API refactors follow the adapter shapes in
+  [`docs/architecture/guidance.md`](../../../docs/architecture/guidance.md#kotlin-adapter-shape).
 
 # Test Rules 🧪
 
@@ -46,4 +48,3 @@ description: Apply Tachyon MCP project rules when designing, implementing, revie
 | INFO (default on) | Normal-operation info |
 | DEBUG (off on PROD, on DEV) | Trace business logic |
 | TRACE (off by default) | Raw request/response dump — leaks confidential data if left on |
-

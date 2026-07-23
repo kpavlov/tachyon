@@ -45,9 +45,9 @@ public fun ServerBuilder.resourceTemplate(
     description: String? = null,
     mimeType: String? = null,
     title: String? = null,
-    icons: List<Icon>? = null,
     annotations: Annotations? = null,
-    handler: suspend TemplateScope.() -> ResourceContents,
+    icons: List<Icon>? = null,
+    block: suspend TemplateScope.() -> ResourceContents,
 ): ServerBuilder {
     val descriptor =
         ResourceTemplateDescriptor
@@ -60,8 +60,21 @@ public fun ServerBuilder.resourceTemplate(
             .icons(icons)
             .annotations(annotations)
             .build()
-    return resourceTemplate(descriptor, templateHandler(name, handler))
+    return resourceTemplate(descriptor, block)
 }
+
+/**
+ * Registers a prebuilt resource-template descriptor with a suspending handler block.
+ *
+ * @param descriptor resource-template descriptor
+ * @param block handler invoked for matching resource requests
+ * @return this server builder
+ */
+@JvmSynthetic
+public fun ServerBuilder.resourceTemplate(
+    descriptor: ResourceTemplateDescriptor,
+    block: suspend TemplateScope.() -> ResourceContents,
+): ServerBuilder = resourceTemplate(descriptor, templateHandler(descriptor, block))
 
 /**
  * Registers a tool with optional descriptions and JSON schemas.
