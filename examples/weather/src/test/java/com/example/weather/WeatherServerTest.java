@@ -18,11 +18,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.awaitility.Awaitility.await;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 class WeatherServerTest {
 
@@ -176,7 +176,7 @@ class WeatherServerTest {
         assertThat(article.title()).isEqualTo("Weather Prediction");
         assertThat(article.description()).isEqualTo("Weather prediction article");
         assertThat(article.mimeType()).isEqualTo("text/markdown");
-        assertThat(article.size()).isEqualTo((long) weatherService.predictionArticle().getBytes(UTF_8).length);
+        assertThat(article.size()).isEqualTo(weatherService.predictionArticle().getBytes(UTF_8).length);
         assertThat(article.annotations().audience())
             .containsExactly(McpSchema.Role.USER, McpSchema.Role.ASSISTANT);
         assertThat(article.annotations().priority()).isEqualTo(0.8);

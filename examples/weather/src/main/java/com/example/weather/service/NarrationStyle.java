@@ -40,7 +40,6 @@ public enum NarrationStyle {
             .collect(Collectors.joining(", "));
         // language=json
         return """
-
             {
                   "type": "object",
                   "properties": {

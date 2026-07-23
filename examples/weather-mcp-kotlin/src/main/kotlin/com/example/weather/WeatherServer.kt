@@ -14,7 +14,6 @@ import dev.tachyonmcp.server.domain.InvalidArgumentException
 import dev.tachyonmcp.server.domain.PromptArgument
 import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.Role
-import dev.tachyonmcp.server.domain.TextResourceContents
 import dev.tachyonmcp.server.features.completions.CompletionResult
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.server.json.JsonSchemaUtils
@@ -100,12 +99,21 @@ fun createServer(
             annotations = resourceAnnotations,
             icons = listOf(resourceIcon),
         ) {
-            TextResourceContents { text = asJson(weatherService.currentWeather("Tallinn")) }
+            TextResourceContents {
+                text = asJson(weatherService.currentWeather("Tallinn"))
+            }
         }
 
-        prompt(rewriteForecastPromptDescriptor()) { rewriteForecast(weatherService, arguments) }
+        prompt(rewriteForecastPromptDescriptor()) {
+            rewriteForecast(weatherService, arguments)
+        }
 
-        promptCompletion("rewrite-forecast") { completeStyle(request.argumentName(), request.argumentValue()) }
+        promptCompletion("rewrite-forecast") {
+            completeStyle(
+                request.argumentName(),
+                request.argumentValue(),
+            )
+        }
 
         resourceTemplate(
             name = "current-weather",
@@ -119,7 +127,7 @@ fun createServer(
 
         resourceCompletion("weather://current/{city}") {
             if (request.argumentName() != "city") {
-                CompletionResult.of(emptyList())
+                CompletionResult.empty()
             } else {
                 CompletionResult.of(weatherService.searchCities(request.argumentValue()))
             }

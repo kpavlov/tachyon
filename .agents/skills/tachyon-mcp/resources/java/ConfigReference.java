@@ -2,7 +2,14 @@
  * Copyright (c) 2026 Konstantin Pavlov and contributors.
  */
 
-import dev.tachyonmcp.server.config.*;
+import dev.tachyonmcp.server.config.CapabilitiesConfig;
+import dev.tachyonmcp.server.config.FeatureConfig;
+import dev.tachyonmcp.server.config.Mode;
+import dev.tachyonmcp.server.config.NetworkConfig;
+import dev.tachyonmcp.server.config.ResourcesConfig;
+import dev.tachyonmcp.server.config.RuntimeConfig;
+import dev.tachyonmcp.server.config.SessionConfig;
+import dev.tachyonmcp.server.config.TasksConfig;
 import dev.tachyonmcp.server.session.InMemorySessionEventStore;
 import dev.tachyonmcp.server.session.InMemorySessionStore;
 import dev.tachyonmcp.server.session.SessionIdGenerator;

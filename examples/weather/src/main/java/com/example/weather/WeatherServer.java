@@ -83,7 +83,7 @@ public final class WeatherServer {
                                 .description("Weather prediction article")
                                 .title("Weather Prediction")
                                 .annotations(resourceAnnotations)
-                                .size((long) predictionArticle.getBytes(StandardCharsets.UTF_8).length)
+                                .size(predictionArticle.getBytes(StandardCharsets.UTF_8).length)
                                 .icons(List.of(resourceIcon))
                                 .mimeType("text/markdown"),
                     ResourceHandler.of((ctx, uri) ->

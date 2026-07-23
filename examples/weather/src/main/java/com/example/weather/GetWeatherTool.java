@@ -43,11 +43,11 @@ class GetWeatherTool {
 
     static ToolHandler create(WeatherService weatherService) {
         var descriptor = ToolDescriptor.builder()
-                .name("get-weather")
-                .title("Current Weather")
-                .description("Get current weather for a city")
-                .inputSchema(INPUT_SCHEMA)
-                .build();
+            .name("get-weather")
+            .title("Current Weather")
+            .description("Get current weather for a city")
+            .inputSchema(INPUT_SCHEMA)
+            .build();
         return ToolHandler.of(descriptor, (ctx, request) -> {
             var args = request.arguments();
             var city = args.stringValue("city");
@@ -61,12 +61,10 @@ class GetWeatherTool {
                     return ToolResult.error("City not found");
                 }
                 try {
-                    return ToolResult.text(
-                            format(fetchWithProgress(ctx, progressToken, weatherService, elicitedCity.get()), units));
+                    final var fetched = fetchWithProgress(ctx, progressToken, weatherService, elicitedCity.get());
+                    return ToolResult.text(format(fetched, units));
                 } catch (CityNotFoundException ignored) {
                     return ToolResult.error("City not found");
-                } catch (Exception x) {
-                    return internalError(x);
                 }
             } catch (Exception e) {
                 return internalError(e);
@@ -75,8 +73,8 @@ class GetWeatherTool {
     }
 
     private static WeatherObservation fetchWithProgress(
-            InteractionContext ctx, ProgressToken progressToken, WeatherService weatherService, String city)
-            throws Exception {
+        InteractionContext ctx, ProgressToken progressToken, WeatherService weatherService, String city)
+        throws Exception {
         ctx.notifications().progress(progressToken, 0.1, 1.0, "Fetching weather for " + city);
         var weather = weatherService.currentWeather(city);
         ctx.notifications().progress(progressToken, 1.0, 1.0, "Weather retrieved for " + city);
@@ -93,15 +91,15 @@ class GetWeatherTool {
 
     private static Optional<String> elicitCity(InteractionContext ctx, String city) throws Exception {
         var future = ctx.sendRequest(
-                "elicitation/create",
+            "elicitation/create",
+            Map.of(
+                "mode", "form",
+                "message", "City '%s' was not found. Enter another city.".formatted(city),
+                "requestedSchema",
                 Map.of(
-                        "mode", "form",
-                        "message", "City '%s' was not found. Enter another city.".formatted(city),
-                        "requestedSchema",
-                        Map.of(
-                                "type", "object",
-                                "properties", Map.of("city", Map.of("type", "string", "title", "City")),
-                                "required", List.of("city"))));
+                    "type", "object",
+                    "properties", Map.of("city", Map.of("type", "string", "title", "City")),
+                    "required", List.of("city"))));
         String response;
         try {
             response = future.get();
@@ -119,8 +117,8 @@ class GetWeatherTool {
 
     private static String format(WeatherObservation weather, String units) {
         var temperature = "celsius".equals(units)
-                ? "%.1f°C".formatted(weather.temperatureCelsius())
-                : "%.1f°F".formatted(weather.temperatureCelsius() * 9 / 5 + 32);
+            ? "%.1f°C".formatted(weather.temperatureCelsius())
+            : "%.1f°F".formatted(weather.temperatureCelsius() * 9 / 5 + 32);
         return """
             Weather in %s:
               Condition: %s
@@ -128,6 +126,11 @@ class GetWeatherTool {
               Humidity: %d%%
               Wind: %.1f km/h
             """.formatted(
-                weather.city(), weather.condition(), temperature, weather.humidity(), weather.windSpeed());
+            weather.city(),
+            weather.condition(),
+            temperature,
+            weather.humidity(),
+            weather.windSpeed()
+        );
     }
 }

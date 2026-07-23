@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="conformance-tests" type="JUnit" factoryName="JUnit">
-    <module name="conformance" />
+  <configuration default="false" name="weather-mcp-kotlin-example" type="JUnit" factoryName="JUnit">
+    <module name="weather-mcp-kotlin-example" />
     <extension name="net.ashald.envfile">
       <option name="IS_ENABLED" value="false" />
       <option name="IS_SUBST" value="false" />
@@ -16,6 +16,7 @@
     <option name="METHOD_NAME" value="" />
     <option name="TEST_OBJECT" value="package" />
     <option name="VM_PARAMETERS" value="-ea -Dio.netty.leakDetection.level=PARANOID -Djdk.tracePinnedThreads=short" />
+    <option name="WORKING_DIRECTORY" value="$MODULE_DIR$" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>

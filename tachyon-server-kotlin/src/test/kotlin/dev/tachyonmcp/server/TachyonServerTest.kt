@@ -4,7 +4,6 @@ package dev.tachyonmcp.server
 
 import dev.tachyonmcp.server.config.Mode
 import dev.tachyonmcp.server.domain.Annotations
-import dev.tachyonmcp.server.domain.BlobResourceContents
 import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.PromptArgument
 import dev.tachyonmcp.server.domain.PromptMessage

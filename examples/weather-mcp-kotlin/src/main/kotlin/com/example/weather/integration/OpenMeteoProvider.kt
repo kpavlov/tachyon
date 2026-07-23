@@ -19,7 +19,8 @@ import java.time.Duration
 
 class OpenMeteoProvider(
     private val httpClient: HttpClient,
-) : WeatherProvider, CityProvider {
+) : WeatherProvider,
+    CityProvider {
     override fun currentWeather(city: String): WeatherObservation {
         val location = location(city, get(geocodingRequest(city, count = 1)))
         val forecast = get(forecastRequest(location))
@@ -28,12 +29,16 @@ class OpenMeteoProvider(
 
     override fun searchCities(query: String): List<String> {
         if (query.length < 2) return emptyList()
-        return runCatching { cityNames(get(geocodingRequest(query, count = 10))) }.getOrDefault(emptyList())
+        return runCatching { cityNames(get(geocodingRequest(query, count = 10))) }.getOrDefault(
+            emptyList(),
+        )
     }
 
     private fun get(request: HttpRequest): String {
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-        check(response.statusCode() == 200) { "Open-Meteo request failed with HTTP ${response.statusCode()}" }
+        check(response.statusCode() == 200) {
+            "Open-Meteo request failed with HTTP ${response.statusCode()}"
+        }
         return response.body()
     }
 
@@ -66,7 +71,10 @@ class OpenMeteoProvider(
             .mapNotNull { it.path("name").asString()?.takeIf(String::isNotBlank) }
             .distinct()
 
-    private data class Location(val latitude: Double, val longitude: Double)
+    private data class Location(
+        val latitude: Double,
+        val longitude: Double,
+    )
 
     companion object {
         private const val GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
@@ -91,7 +99,11 @@ class OpenMeteoProvider(
                 "$FORECAST_URL?latitude=${location.latitude}&longitude=${location.longitude}" +
                     "&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m" +
                     "&wind_speed_unit=kmh"
-            return HttpRequest.newBuilder(URI.create(uri)).timeout(REQUEST_TIMEOUT).GET().build()
+            return HttpRequest
+                .newBuilder(URI.create(uri))
+                .timeout(REQUEST_TIMEOUT)
+                .GET()
+                .build()
         }
 
         private fun parse(response: String): JsonNode =
