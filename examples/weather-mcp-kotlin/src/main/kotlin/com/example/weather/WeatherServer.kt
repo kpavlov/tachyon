@@ -11,7 +11,6 @@ import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.domain.Annotations
 import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.InvalidArgumentException
-import dev.tachyonmcp.server.domain.PromptArgument
 import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.Role
 import dev.tachyonmcp.server.features.completions.CompletionResult
@@ -139,11 +138,18 @@ private fun rewriteForecastPromptDescriptor(): PromptDescriptor =
     PromptDescriptor {
         name = "rewrite-forecast"
         description = "Rewrites a weather forecast in a chosen style"
-        arguments =
-            listOf(
-                PromptArgument.of("forecast", "Forecast", "Weather forecast to rewrite", true),
-                PromptArgument.of("style", "Style", "plain, concise, or pirate", true),
-            )
+        argument {
+            name = "forecast"
+            title = "Forecast"
+            description = "Weather forecast to rewrite"
+            required = true
+        }
+        argument {
+            name = "style"
+            title = "Style"
+            description = "plain, concise, or pirate"
+            required = true
+        }
         inputSchema = JsonSchemaUtils.parseSchema(NarrationStyle.inputSchema())
     }
 

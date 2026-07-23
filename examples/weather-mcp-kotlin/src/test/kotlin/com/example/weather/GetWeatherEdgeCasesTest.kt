@@ -9,7 +9,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.modelcontextprotocol.client.McpClient
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport
 import io.modelcontextprotocol.spec.McpSchema
-import io.modelcontextprotocol.spec.McpSchema.ElicitResult.*
+import io.modelcontextprotocol.spec.McpSchema.ElicitResult.Action
 import org.junit.jupiter.api.Test
 import java.io.IOException
 
@@ -19,7 +19,8 @@ class GetWeatherEdgeCasesTest {
         elicitationResponse: (McpSchema.ElicitRequest) -> McpSchema.ElicitResult,
     ): McpSchema.CallToolResult {
         val server = createServer(0, weatherService)
-        val transport = HttpClientStreamableHttpTransport.builder("http://localhost:${server.port()}").build()
+        val transport =
+            HttpClientStreamableHttpTransport.builder("http://localhost:${server.port()}").build()
         val client = McpClient.sync(transport).elicitation(elicitationResponse).build()
         try {
             client.initialize()

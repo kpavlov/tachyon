@@ -132,7 +132,13 @@ internal class StructuredFactoryDslTest {
             PromptDescriptor {
                 name = "prompt"
                 description = "Prompt"
-                arguments = listOf(promptArgument)
+                argument(promptArgument)
+                argument {
+                    name = "style"
+                    title = "Style"
+                    description = "Response style"
+                    required = true
+                }
                 icons = listOf(icon)
             }
         val resource =
@@ -162,7 +168,11 @@ internal class StructuredFactoryDslTest {
         assertSoftly {
             prompt.name() shouldBe "prompt"
             prompt.description() shouldBe "Prompt"
-            prompt.arguments() shouldBe listOf(promptArgument)
+            prompt.arguments() shouldBe
+                listOf(
+                    promptArgument,
+                    PromptArgument.of("style", "Style", "Response style", true),
+                )
             prompt.icons() shouldBe listOf(icon)
 
             resource.name() shouldBe "resource"

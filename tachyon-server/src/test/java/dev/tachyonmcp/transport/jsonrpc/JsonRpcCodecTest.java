@@ -14,6 +14,7 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Resource;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Role;
 import dev.tachyonmcp.server.domain.RequestId;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class JsonRpcCodecTest {
@@ -120,5 +121,12 @@ class JsonRpcCodecTest {
               }]
             }
             """);
+
+        var decoded = (Map<String, ?>) JsonRpcCodec.readValue(json);
+        var resources = (List<Map<String, ?>>) decoded.get("resources");
+        var ann = (Map<String, ?>) resources.get(0).get("annotations");
+        var audience = ((List<?>) ann.get("audience"))
+                .stream().map(s -> Role.fromValue((String) s)).toList();
+        assertThat(audience).containsExactly(Role.USER, Role.ASSISTANT);
     }
 }

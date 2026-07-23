@@ -104,6 +104,10 @@ public non-sealed interface ResourceLink extends ContentBlock {
 
         Builder size(@Nullable Long size);
 
+        default Builder size(int size) {
+            return size((long) size);
+        }
+
         Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
 
         ResourceLink build();
