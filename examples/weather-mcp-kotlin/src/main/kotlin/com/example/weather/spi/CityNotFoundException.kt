@@ -2,4 +2,6 @@
 
 package com.example.weather.spi
 
-class CityNotFoundException(city: String) : RuntimeException("City not found: $city")
+class CityNotFoundException(
+    city: String,
+) : RuntimeException("City not found: $city")

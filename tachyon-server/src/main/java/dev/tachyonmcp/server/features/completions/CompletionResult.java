@@ -25,6 +25,10 @@ public record CompletionResult(
         values = values != null ? List.copyOf(values) : List.of();
     }
 
+    public static CompletionResult empty() {
+        return new CompletionResult(List.of(), null, false);
+    }
+
     /** Creates a result with candidate values and no total/hasMore metadata. */
     public static CompletionResult of(List<String> values) {
         return new CompletionResult(values, null, null);

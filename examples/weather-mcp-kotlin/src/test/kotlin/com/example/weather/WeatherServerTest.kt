@@ -8,6 +8,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
@@ -17,7 +18,18 @@ import io.modelcontextprotocol.client.McpClient
 import io.modelcontextprotocol.client.McpSyncClient
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport
 import io.modelcontextprotocol.spec.McpError
-import io.modelcontextprotocol.spec.McpSchema
+import io.modelcontextprotocol.spec.McpSchema.CallToolRequest
+import io.modelcontextprotocol.spec.McpSchema.CompleteRequest
+import io.modelcontextprotocol.spec.McpSchema.ElicitResult
+import io.modelcontextprotocol.spec.McpSchema.GetPromptRequest
+import io.modelcontextprotocol.spec.McpSchema.InitializeResult
+import io.modelcontextprotocol.spec.McpSchema.ProgressNotification
+import io.modelcontextprotocol.spec.McpSchema.PromptReference
+import io.modelcontextprotocol.spec.McpSchema.ReadResourceRequest
+import io.modelcontextprotocol.spec.McpSchema.ResourceReference
+import io.modelcontextprotocol.spec.McpSchema.Role
+import io.modelcontextprotocol.spec.McpSchema.TextContent
+import io.modelcontextprotocol.spec.McpSchema.TextResourceContents
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -29,24 +41,29 @@ class WeatherServerTest {
     companion object {
         private val weatherProvider = TestWeatherProvider()
         private val cityProvider = TestCityProvider()
-        private lateinit var handle: TachyonServer
+        private val weatherService = WeatherService(weatherProvider, cityProvider)
+        private lateinit var server: TachyonServer
         private lateinit var clientTransport: HttpClientStreamableHttpTransport
         private lateinit var client: McpSyncClient
-        private lateinit var initResult: McpSchema.InitializeResult
-        private val progressNotifications = CopyOnWriteArrayList<McpSchema.ProgressNotification>()
+        private lateinit var initResult: InitializeResult
+        private val progressNotifications = CopyOnWriteArrayList<ProgressNotification>()
 
         @JvmStatic
         @BeforeAll
         fun beforeAll() {
-            handle = createServer(0, WeatherService(weatherProvider, cityProvider))
-            val port = handle.port()
+            server = createServer(0, weatherService)
+            val port = server.port()
 
-            clientTransport = HttpClientStreamableHttpTransport.builder("http://localhost:$port").build()
+            clientTransport =
+                HttpClientStreamableHttpTransport.builder("http://localhost:$port").build()
             client =
                 McpClient
                     .sync(clientTransport)
                     .elicitation { _ ->
-                        McpSchema.ElicitResult(McpSchema.ElicitResult.Action.ACCEPT, mapOf("city" to "Tallinn"))
+                        ElicitResult(
+                            ElicitResult.Action.ACCEPT,
+                            mapOf("city" to "Tallinn"),
+                        )
                     }.progressConsumer { progressNotifications.add(it) }
                     .build()
 
@@ -58,19 +75,21 @@ class WeatherServerTest {
         fun afterAll() {
             client.close()
             clientTransport.close()
-            handle.close()
+            server.close()
         }
     }
 
     @Test
-    fun `should get server info`() {
-        initResult.serverInfo().name() shouldBe "weather-server-kotlin"
-        initResult.serverInfo().title() shouldBe "Weather Server (Kotlin)"
-        initResult.serverInfo().description() shouldBe "Weather MCP server built with Tachyon Kotlin DSL"
-        initResult.serverInfo().websiteUrl() shouldBe
-            "https://github.com/kpavlov/tachyon/tree/main/examples/weather-mcp-kotlin"
-        initResult.serverInfo().icons() shouldHaveSize 1
-        initResult.serverInfo().icons().first().src() shouldStartWith "data:image/png;base64,"
+    fun verifyInitResult() {
+        with(initResult.serverInfo()) {
+            name() shouldBe "weather-server-kotlin"
+            title() shouldBe "Weather Server (Kotlin)"
+            description() shouldBe "Weather MCP server built with Tachyon Kotlin DSL"
+            websiteUrl() shouldBe
+                "https://github.com/kpavlov/tachyon/tree/main/examples/weather-mcp-kotlin"
+            icons() shouldHaveSize 1
+            icons().first().src() shouldStartWith "data:image/png;base64,"
+        }
         initResult.protocolVersion() shouldBe "2025-11-25"
         initResult.instructions() shouldBe "Test instructions"
     }
@@ -80,25 +99,26 @@ class WeatherServerTest {
         val result = client.listTools()
 
         result.tools() shouldHaveSize 1
-        val tool = result.tools().first()
-        tool.name() shouldBe "get-weather"
-        tool.title() shouldBe "Current Weather"
-        tool.description() shouldBe "Get current weather for a city"
-        tool.outputSchema() shouldBe null
+        result.tools().first() shouldNotBeNull {
+            name() shouldBe "get-weather"
+            title() shouldBe "Current Weather"
+            description() shouldBe "Get current weather for a city"
+            outputSchema() shouldBe null
+        }
     }
 
     @Test
     fun `should call weather tool`() {
         val result =
             client.callTool(
-                McpSchema.CallToolRequest
+                CallToolRequest
                     .builder("get-weather")
                     .arguments(mapOf("city" to "London", "units" to "celsius"))
                     .build(),
             )
 
         val content = result.content().first()
-        content.shouldBeInstanceOf<McpSchema.TextContent>()
+        content.shouldBeInstanceOf<TextContent>()
         val text = content.text()
         text shouldStartWith "Weather in London:"
         text shouldContain "Temperature:"
@@ -111,7 +131,7 @@ class WeatherServerTest {
     fun `should emit progress while fetching weather`() {
         val result =
             client.callTool(
-                McpSchema.CallToolRequest
+                CallToolRequest
                     .builder("get-weather")
                     .arguments(mapOf("city" to "London"))
                     .progressToken("weather-progress")
@@ -133,14 +153,14 @@ class WeatherServerTest {
     fun `should call weather tool after eliciting another city`() {
         val result =
             client.callTool(
-                McpSchema.CallToolRequest
+                CallToolRequest
                     .builder("get-weather")
                     .arguments(mapOf("city" to "Unknown"))
                     .build(),
             )
 
         val content = result.content().first()
-        content.shouldBeInstanceOf<McpSchema.TextContent>()
+        content.shouldBeInstanceOf<TextContent>()
         content.text() shouldStartWith "Weather in Tallinn:"
     }
 
@@ -150,41 +170,75 @@ class WeatherServerTest {
 
         result.resources() shouldHaveSize 2
         val article = result.resources().first { it.uri() == "weather://prediction/article" }
-        article.name() shouldBe "prediction-article"
-        article.mimeType() shouldBe "text/markdown"
+        with(article) {
+            name() shouldBe "prediction-article"
+            title() shouldBe "Weather Prediction"
+            description() shouldBe "Weather prediction article"
+            mimeType() shouldBe "text/markdown"
+            size() shouldBe
+                weatherService.predictionArticle
+                    .toByteArray()
+                    .size
+                    .toLong()
+            with(annotations()) {
+                audience() shouldContainExactly
+                    listOf(Role.USER, Role.ASSISTANT)
+                priority() shouldBe 0.8
+                lastModified() shouldBe "2026-07-23T00:00:00Z"
+            }
+            with(icons().single()) {
+                src() shouldStartWith "data:image/png;base64,"
+                mimeType() shouldBe "image/png"
+                sizes() shouldContainExactly listOf("256x256")
+                theme() shouldBe "light"
+            }
+        }
 
-        val weather = result.resources().first { it.uri() == "weather://featured/current" }
-        weather.name() shouldBe "featured-current-weather"
-        weather.mimeType() shouldBe "application/json"
+        val weather =
+            result.resources().first {
+                it.uri() == "weather://featured/current"
+            }
+        with(weather) {
+            name() shouldBe "featured-current-weather"
+            title() shouldBe "Featured Current Weather"
+            description() shouldBe "Current weather in Tallinn"
+            mimeType() shouldBe "application/json"
+            annotations() shouldBe article.annotations()
+            icons() shouldBe article.icons()
+        }
     }
 
     @Test
     fun `should read text resource`() {
-        val article = client.listResources().resources().first { it.uri() == "weather://prediction/article" }
+        val article =
+            client.listResources().resources().first { it.uri() == "weather://prediction/article" }
 
         val result = client.readResource(article)
 
         val contents = result.contents().first()
-        contents.shouldBeInstanceOf<McpSchema.TextResourceContents>()
-        val text = contents
-        text.uri() shouldBe "weather://prediction/article"
-        text.mimeType() shouldBe "text/markdown"
-        text.text().trim() shouldStartWith "# Weather Prediction"
+        with(contents) {
+            shouldBeInstanceOf<TextResourceContents>()
+            uri() shouldBe "weather://prediction/article"
+            mimeType() shouldBe "text/markdown"
+            text().trim() shouldStartWith "# Weather Prediction"
+        }
     }
 
     @Test
     fun `should read current weather resource`() {
-        val weather = client.listResources().resources().first { it.uri() == "weather://featured/current" }
+        val weather =
+            client.listResources().resources().first { it.uri() == "weather://featured/current" }
 
         val result = client.readResource(weather)
 
         val contents = result.contents().first()
-        contents.shouldBeInstanceOf<McpSchema.TextResourceContents>()
-        val text = contents
-        text.uri() shouldBe "weather://featured/current"
-        text.mimeType() shouldBe "application/json"
-        text.text() shouldContain "Tallinn"
-        text.text() shouldContain "Clear sky"
+        with(contents) {
+            shouldBeInstanceOf<TextResourceContents>()
+            uri() shouldBe "weather://featured/current"
+            mimeType() shouldBe "application/json"
+            text() shouldContain "Tallinn"
+            text() shouldContain "Clear sky"
+        }
     }
 
     @Test
@@ -192,30 +246,34 @@ class WeatherServerTest {
         val result = client.listResourceTemplates()
 
         result.resourceTemplates() shouldHaveSize 1
-        val template = result.resourceTemplates().first()
-        template.uriTemplate() shouldBe "weather://current/{city}"
-        template.name() shouldBe "current-weather"
-        template.mimeType() shouldBe "application/json"
+        result.resourceTemplates().first() shouldNotBeNull {
+            uriTemplate() shouldBe "weather://current/{city}"
+            name() shouldBe "current-weather"
+            mimeType() shouldBe "application/json"
+        }
     }
 
     @Test
     fun `should read current weather from template`() {
         val result =
-            client.readResource(McpSchema.ReadResourceRequest.builder("weather://current/London").build())
+            client.readResource(
+                ReadResourceRequest.builder("weather://current/London").build(),
+            )
 
         val contents = result.contents().first()
-        contents.shouldBeInstanceOf<McpSchema.TextResourceContents>()
-        val text = contents
-        text.uri() shouldBe "weather://current/London"
-        text.mimeType() shouldBe "application/json"
-        text.text() shouldContain "London"
+        contents.shouldBeInstanceOf<TextResourceContents>()
+        contents.uri() shouldBe "weather://current/London"
+        contents.mimeType() shouldBe "application/json"
+        contents.text() shouldContain "London"
     }
 
     @Test
     fun `should return invalid params when template city is unknown`() {
         val error =
             shouldThrow<McpError> {
-                client.readResource(McpSchema.ReadResourceRequest.builder("weather://current/Unknown").build())
+                client.readResource(
+                    ReadResourceRequest.builder("weather://current/Unknown").build(),
+                )
             }
         error.jsonRpcError.code() shouldBe -32602
     }
@@ -224,10 +282,10 @@ class WeatherServerTest {
     fun `should complete city name for current weather template`() {
         val result =
             client.completeCompletion(
-                McpSchema.CompleteRequest
+                CompleteRequest
                     .builder(
-                        McpSchema.ResourceReference("weather://current/{city}"),
-                        McpSchema.CompleteRequest.CompleteArgument("city", "Lo"),
+                        ResourceReference("weather://current/{city}"),
+                        CompleteRequest.CompleteArgument("city", "Lo"),
                     ).build(),
             )
 
@@ -239,10 +297,10 @@ class WeatherServerTest {
     fun `should return empty completion for blank query`() {
         val result =
             client.completeCompletion(
-                McpSchema.CompleteRequest
+                CompleteRequest
                     .builder(
-                        McpSchema.ResourceReference("weather://current/{city}"),
-                        McpSchema.CompleteRequest.CompleteArgument("city", ""),
+                        ResourceReference("weather://current/{city}"),
+                        CompleteRequest.CompleteArgument("city", ""),
                     ).build(),
             )
 
@@ -253,10 +311,10 @@ class WeatherServerTest {
     fun `should complete style name for rewrite-forecast prompt`() {
         val result =
             client.completeCompletion(
-                McpSchema.CompleteRequest
+                CompleteRequest
                     .builder(
-                        McpSchema.PromptReference("rewrite-forecast"),
-                        McpSchema.CompleteRequest.CompleteArgument("style", "pi"),
+                        PromptReference("rewrite-forecast"),
+                        CompleteRequest.CompleteArgument("style", "pi"),
                     ).build(),
             )
 
@@ -267,10 +325,10 @@ class WeatherServerTest {
     fun `should return empty completion for non-style argument of rewrite-forecast prompt`() {
         val result =
             client.completeCompletion(
-                McpSchema.CompleteRequest
+                CompleteRequest
                     .builder(
-                        McpSchema.PromptReference("rewrite-forecast"),
-                        McpSchema.CompleteRequest.CompleteArgument("forecast", "Rain"),
+                        PromptReference("rewrite-forecast"),
+                        CompleteRequest.CompleteArgument("forecast", "Rain"),
                     ).build(),
             )
 
@@ -292,7 +350,7 @@ class WeatherServerTest {
     fun `should get prompt`() {
         val result =
             client.getPrompt(
-                McpSchema.GetPromptRequest
+                GetPromptRequest
                     .builder("rewrite-forecast")
                     .arguments(mapOf("forecast" to "Rain in London", "style" to "pirate"))
                     .build(),
@@ -300,9 +358,9 @@ class WeatherServerTest {
 
         result.messages() shouldHaveSize 1
         val message = result.messages().first()
-        message.role() shouldBe McpSchema.Role.USER
-        message.content().shouldBeInstanceOf<McpSchema.TextContent>()
-        (message.content() as McpSchema.TextContent).text() shouldBe
+        message.role() shouldBe Role.USER
+        message.content().shouldBeInstanceOf<TextContent>()
+        (message.content() as TextContent).text() shouldBe
             "Rewrite the following weather forecast in pirate style. Preserve factual details:\n\n```Rain in London\n```"
     }
 }

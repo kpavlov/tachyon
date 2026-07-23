@@ -101,6 +101,10 @@ public interface ResourceDescriptor extends ServerFeature.Descriptor {
 
         Builder size(@Nullable Long size);
 
+        default Builder size(int size) {
+            return size((long) size);
+        }
+
         Builder icons(@Nullable Iterable<? extends Icon> elements);
 
         Builder extensionId(@Nullable String extensionId);

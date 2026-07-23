@@ -124,7 +124,12 @@ Resource and prompt lambdas are `suspend` functions too — call suspending APIs
 resource(
     name = "config",
     uri = "demo://config",
+    description = "Application configuration",
     mimeType = "application/json",
+    title = "Configuration",
+    annotations = Annotations { priority = 0.8 },
+    size = 1024,
+    icons = listOf(Icon { src = "https://example.com/config.svg" }),
 ) {
     // this: ResourceScope — ctx, uri, params, uriTemplate
     val config = fetchConfig()  // suspend call
@@ -140,6 +145,22 @@ prompt(name = "greet", description = "Greeting prompt") {
 Inside a resource handler, `TextResourceContents { }` and `BlobResourceContents { }` default `uri`
 to the requested URI and `mimeType` to the registered resource MIME type. You can override either
 property.
+
+For metadata shared across registrations, pass a prebuilt descriptor:
+
+```kotlin
+val descriptor = ResourceDescriptor {
+    name = "config"
+    uri = "demo://config"
+    description = "Application configuration"
+    mimeType = "application/json"
+    title = "Configuration"
+}
+
+resource(descriptor) {
+    TextResourceContents { text = fetchConfig() }
+}
+```
 
 Handlers run via `runBlocking` on a virtual thread; cancellation is delivered by thread
 interruption (e.g. from `tasks/cancel`), which cancels the coroutine.

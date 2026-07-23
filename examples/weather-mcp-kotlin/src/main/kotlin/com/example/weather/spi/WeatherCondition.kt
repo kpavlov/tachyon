@@ -2,7 +2,9 @@
 
 package com.example.weather.spi
 
-enum class WeatherCondition(val displayName: String) {
+enum class WeatherCondition(
+    val displayName: String,
+) {
     CLEAR_SKY("Clear sky"),
     PARTLY_CLOUDY("Partly cloudy"),
     OVERCAST("Overcast"),

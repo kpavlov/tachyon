@@ -5,6 +5,7 @@ package dev.tachyonmcp.server.features.prompts
 import dev.tachyonmcp.server.TachyonDsl
 import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.PromptArgument
+import dev.tachyonmcp.server.domain.PromptArgumentBuilder
 import dev.tachyonmcp.server.json.toJacksonNode
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
@@ -26,6 +27,18 @@ public class PromptDescriptorScope
         /** Sets the input schema from a kotlinx-serialization [JsonObject]. */
         public fun inputSchema(json: JsonObject) {
             inputSchema = json.toJacksonNode()
+        }
+
+        /** Adds a prebuilt prompt argument. */
+        public fun argument(argument: PromptArgument) {
+            arguments = arguments.orEmpty() + argument
+        }
+
+        /** Builds and adds a prompt argument. */
+        @OptIn(ExperimentalContracts::class)
+        public inline fun argument(block: PromptArgumentBuilder.() -> Unit) {
+            contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+            argument(PromptArgument(block))
         }
 
         @PublishedApi

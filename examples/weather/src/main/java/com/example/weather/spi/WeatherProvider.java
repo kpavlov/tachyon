@@ -4,7 +4,6 @@
 
 package com.example.weather.spi;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public interface WeatherProvider {

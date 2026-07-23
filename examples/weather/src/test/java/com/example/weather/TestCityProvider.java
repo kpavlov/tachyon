@@ -4,10 +4,7 @@
 
 package com.example.weather;
 
-import com.example.weather.spi.CityNotFoundException;
 import com.example.weather.spi.CityProvider;
-import com.example.weather.spi.WeatherObservation;
-import com.example.weather.spi.WeatherProvider;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;

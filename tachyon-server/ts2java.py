@@ -1643,6 +1643,10 @@ class Generator:
                     out.append(
                         f"                            list.add(decodeValue(parser, {item_ref}.class));\n"
                     )
+                elif self.is_enum_type(item):
+                    out.append(
+                        f"                            list.add({item_ref}.fromValue(parser.getString()));\n"
+                    )
                 else:
                     out.append(
                         f"                            list.add(CodecRegistry.<{item_ref}>codecFor({item_ref}.class).decode(parser));\n"
@@ -1775,6 +1779,8 @@ class Generator:
                         "String", "boolean", "Boolean", "long", "Long", "double", "Double",
                         *JSON_TREE_TYPES):
                     out.append(f"{ind}    encodeValue(gen, item);\n")
+                elif self.is_enum_type(item):
+                    out.append(f"{ind}    gen.writeString(item.getValue());\n")
                 else:
                     out.append(
                         f"{ind}    CodecRegistry.<{item_ref}>codecFor({item_ref}.class).encode(gen, item);\n"

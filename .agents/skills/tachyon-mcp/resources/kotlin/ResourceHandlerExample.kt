@@ -5,7 +5,6 @@ package dev.tachyonmcp.skill
 import dev.tachyonmcp.server.domain.Annotations
 import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.TextResourceContents
-import dev.tachyonmcp.server.domain.UriTemplateValue
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.server.features.resources.ResourceHandler
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor

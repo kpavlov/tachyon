@@ -5,36 +5,45 @@ package dev.tachyonmcp.skill
 import dev.tachyonmcp.server.domain.PromptArgument
 import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
-import dev.tachyonmcp.server.features.prompts.promptArgument
-import dev.tachyonmcp.server.features.prompts.promptDescriptor
 import dev.tachyonmcp.server.features.prompts.promptMessagesOf
 
 /** Simplest — name + description. */
 fun simpleDescriptor(): PromptDescriptor =
-    PromptDescriptor(
-        name = "rewrite-forecast",
+    PromptDescriptor {
+        name = "rewrite-forecast"
         description = "Rewrites a weather forecast in a given style"
-    )
+    }
 
 /** DSL — all properties. */
 fun argDescriptor(): PromptDescriptor =
-    promptDescriptor("rewrite") {
+    PromptDescriptor {
+        name = "rewrite"
         description = "Rewrites text in a style"
         title = "Rewrite Tool"
-        arguments = listOf(
-            promptArgument(name = "text", description = "Original text", required = true),
-            promptArgument(name = "style", description = "Desired writing style", required = false),
-        )
+        argument {
+            name = "text"
+            description = "Original text"
+            required = true
+        }
+        argument {
+            name = "style"
+            description = "Desired writing style"
+            required = false
+        }
         // inputSchema also settable
     }
 
-/** No-arg convenience: promptArgument(name, description, required). */
+/** Receiver factory with required and optional properties. */
 fun singleArg(): PromptArgument =
-    promptArgument(name = "city", description = "City name", required = true)
+    PromptArgument {
+        name = "city"
+        description = "City name"
+        required = true
+    }
 
-/** DSL builder for promptArgument — all properties shown. */
+/** Receiver factory with all properties shown. */
 fun dslArg(): PromptArgument =
-    promptArgument {
+    PromptArgument {
         name = "country"
         title = "Country"
         description = "Country code (ISO)"

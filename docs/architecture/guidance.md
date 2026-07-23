@@ -97,21 +97,13 @@ A new handler type's `ServerBuilder` method follows the prefix style (matching i
 
 ## Kotlin adapter shape
 
-- Structured object factories with more than three fields use a type-named receiver builder: `Icon { src = "..."; mimeType = "image/svg+xml" }`. `Annotations` follows this shape despite having three fields because it is nested metadata commonly composed inside other builders.
-- Keep flat factory overloads when needed for source compatibility, but use the receiver form in new Kotlin code. Required builder fields start nullable and fail with `requireNotNull` in `build()`.
+- Structured object factories with more than three fields use one canonical type-named receiver builder: `Icon { src = "..."; mimeType = "image/svg+xml" }` (`Annotations` follows this shape despite having three fields — it's nested metadata commonly composed inside other builders). Don't duplicate it with lowercase receiver factories or flat overloads; an owned enclosing DSL may add a singular member such as `argument { }` that delegates to the canonical factory. Required builder fields start nullable and fail with `requireNotNull` in `build()`.
 - Type-named receiver factories are `inline`, declare an `EXACTLY_ONCE` contract, and suppress `FunctionName`. Their public builder has an `@PublishedApi internal` constructor and `build()`.
 - Keep DSL operations as receiver-class members when the receiver is owned by this module. Use a top-level extension only for types that cannot own the operation. Type-named factories remain top-level when the Java model has no Kotlin companion.
-- Java `ServerBuilder` is the implementation source of truth for server construction, descriptor
-  building, validation, and feature registration. Kotlin delegates to it and adds only thin
-  adaptation for suspend lambdas and Kotlin-specific types.
-- Do not reimplement Java builder validation, defaulting, or registration collections in Kotlin.
-  Add missing reusable behavior to Java first, then expose it through the Kotlin DSL.
-- Expose one Kotlin server-construction surface: `TachyonServerBuilder`. Do not publish Kotlin
-  extensions on the Java `ServerBuilder`; they bypass Kotlin defaults and duplicate autocomplete.
-  Use an internal owned collaborator when thin adaptation would make the public builder too large.
-- Keep Kotlin files focused. Once a file exceeds 300 lines, consider splitting it by owned
-  responsibility. Do not split member DSLs into global extensions merely to reduce line count;
-  prefer composition with an internal class.
+- Java `ServerBuilder` is the implementation source of truth for server construction, descriptor building, validation, and feature registration. Kotlin delegates to it and adds only thin adaptation for suspend lambdas and Kotlin-specific types.
+- Do not reimplement Java builder validation, defaulting, or registration collections in Kotlin. Add missing reusable behavior to Java first, then expose it through the Kotlin DSL.
+- Expose one Kotlin server-construction surface: `TachyonServerBuilder`. Do not publish Kotlin extensions on the Java `ServerBuilder`; they bypass Kotlin defaults and duplicate autocomplete. Use an internal owned collaborator when thin adaptation would make the public builder too large.
+- Keep Kotlin files focused. Once a file exceeds 300 lines, consider splitting it by owned responsibility. Do not split member DSLs into global extensions merely to reduce line count; prefer composition with an internal class.
 - Keep required values first and flexible metadata as defaulted named parameters on the common call. Named arguments remove ambiguity; do not hide useful descriptor fields in a registration sub-DSL.
 - Keep a value overload accepting the prebuilt descriptor for reuse, testing, and advanced construction.
 - Name a trailing behavioral lambda `block`. Do not add a ceremonial `handler {}` or `read {}` wrapper inside another configuration lambda.

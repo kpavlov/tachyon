@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
@@ -27,6 +28,7 @@ class WeatherServerTest {
 
     private static final TestWeatherProvider weatherProvider = new TestWeatherProvider();
     private static final TestCityProvider cityProvider = new TestCityProvider();
+    private static final WeatherService weatherService = new WeatherService(weatherProvider, cityProvider);
     private static TachyonServer handle;
     private static HttpClientStreamableHttpTransport clientTransport;
     private static McpSyncClient client;
@@ -35,7 +37,7 @@ class WeatherServerTest {
 
     @BeforeAll
     static void beforeAll() {
-        handle = WeatherServer.createServer(0, new WeatherService(weatherProvider, cityProvider));
+        handle = WeatherServer.createServer(0, weatherService);
         int port = handle.port();
 
         clientTransport = HttpClientStreamableHttpTransport
@@ -171,14 +173,31 @@ class WeatherServerTest {
             .findFirst().orElseThrow();
         assertThat(article.uri()).isEqualTo("weather://prediction/article");
         assertThat(article.name()).isEqualTo("prediction-article");
+        assertThat(article.title()).isEqualTo("Weather Prediction");
+        assertThat(article.description()).isEqualTo("Weather prediction article");
         assertThat(article.mimeType()).isEqualTo("text/markdown");
+        assertThat(article.size()).isEqualTo(weatherService.predictionArticle().getBytes(UTF_8).length);
+        assertThat(article.annotations().audience())
+            .containsExactly(McpSchema.Role.USER, McpSchema.Role.ASSISTANT);
+        assertThat(article.annotations().priority()).isEqualTo(0.8);
+        assertThat(article.annotations().lastModified()).isEqualTo("2026-07-23T00:00:00Z");
+        assertThat(article.icons()).singleElement().satisfies(icon -> {
+            assertThat(icon.src()).startsWith("data:image/png;base64,");
+            assertThat(icon.mimeType()).isEqualTo("image/png");
+            assertThat(icon.sizes()).containsExactly("256x256");
+            assertThat(icon.theme()).isEqualTo("light");
+        });
 
         var weather = result.resources().stream()
             .filter(resource -> resource.uri().equals("weather://featured/current"))
             .findFirst().orElseThrow();
         assertThat(weather.uri()).isEqualTo("weather://featured/current");
         assertThat(weather.name()).isEqualTo("featured-current-weather");
+        assertThat(weather.title()).isEqualTo("Featured Current Weather");
+        assertThat(weather.description()).isEqualTo("Current weather in Tallinn");
         assertThat(weather.mimeType()).isEqualTo("application/json");
+        assertThat(weather.annotations()).isEqualTo(article.annotations());
+        assertThat(weather.icons()).isEqualTo(article.icons());
     }
 
     @Test

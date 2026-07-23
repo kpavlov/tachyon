@@ -19,7 +19,7 @@
         <java.version>21</java.version>
         <kotlin.version>2.2.21</kotlin.version>
         <tachyon-server.version>1.0.0-SNAPSHOT</tachyon-server.version>
-        <junit.version>6.1.1</junit.version>
+        <junit.version>6.1.2</junit.version>
         <kotest.version>6.2.1</kotest.version>
         <jackson.version>3.2.0</jackson.version>
         <slf4j.version>2.0.18</slf4j.version>
@@ -57,8 +57,15 @@
 
         <dependency>
             <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>${slf4j.version}</version>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- Required at runtime: TachyonServerBuilder wires KxSerializationSerde.Default
@@ -70,12 +77,6 @@
         </dependency>
 
         <!-- Test -->
-        <dependency>
-            <groupId>io.modelcontextprotocol.sdk</groupId>
-            <artifactId>mcp-core</artifactId>
-            <version>${mcp-sdk.version}</version>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>io.modelcontextprotocol.sdk</groupId>
             <artifactId>mcp-json-jackson3</artifactId>
@@ -106,8 +107,8 @@
         </dependency>
         <dependency>
             <groupId>org.awaitility</groupId>
-            <artifactId>awaitility</artifactId>
-            <version>${awaitility.version}</version>
+            <artifactId>awaitility-kotlin</artifactId>
+            <version>4.3.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -115,7 +116,8 @@
     <build>
         <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
         <testSourceDirectory
-        >${project.basedir}/src/test/kotlin</testSourceDirectory>
+        >${project.basedir}/src/test/kotlin
+        </testSourceDirectory>
         <extensions>
             <extension>
                 <groupId>kr.motd.maven</groupId>
@@ -158,27 +160,20 @@
                 </configuration>
             </plugin>
             <plugin>
-                <!-- Repackages the thin jar above into a runnable fat jar for `java -jar`. -->
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.6.0</version>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>4.0.6</version>
                 <executions>
                     <execution>
-                        <phase>package</phase>
                         <goals>
-                            <goal>shade</goal>
+                            <goal>repackage</goal>
                         </goals>
-                        <configuration>
-                            <transformers>
-                                <transformer
-                                    implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"
-                                >
-                                    <mainClass>com.example.weather.WeatherServerKt</mainClass>
-                                </transformer>
-                            </transformers>
-                        </configuration>
                     </execution>
                 </executions>
+                <configuration>
+                    <finalName>${project.artifactId}</finalName>
+                    <mainClass>com.example.weather.WeatherServerKt</mainClass>
+                </configuration>
             </plugin>
         </plugins>
     </build>

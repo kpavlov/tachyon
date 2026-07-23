@@ -12,18 +12,20 @@
 
     <name>Weather MCP Example</name>
     <description
-    >Example MCP server and client using Tachyon MCP Server and MCP Java SDK 2.0</description>
+    >Example MCP server and client using Tachyon MCP Server and MCP Java SDK 2.0
+    </description>
     <url>https://github.com/kpavlov/tachyon</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>21</maven.compiler.release>
         <jackson.version>3.2.0</jackson.version>
-        <junit.version>6.1.1</junit.version>
-        <tachyon-server.version>1.0.0-beta.13</tachyon-server.version>
-<!--        <tachyon-server.version>1.0.0-SNAPSHOT</tachyon-server.version>-->
+        <junit.version>6.1.2</junit.version>
+        <!--        <tachyon-server.version>1.0.0-beta.13</tachyon-server.version>-->
+        <tachyon-server.version>1.0.0-SNAPSHOT</tachyon-server.version>
         <assertj.version>3.27.7</assertj.version>
         <netty.version>4.2.15.Final</netty.version>
+        <slf4j.version>2.0.18</slf4j.version>
     </properties>
 
     <dependencyManagement>
@@ -54,20 +56,21 @@
 
         <dependency>
             <groupId>io.modelcontextprotocol.sdk</groupId>
-            <artifactId>mcp-core</artifactId>
-            <version>2.0.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>io.modelcontextprotocol.sdk</groupId>
             <artifactId>mcp-json-jackson3</artifactId>
             <version>2.0.0</version>
         </dependency>
 
         <dependency>
             <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
-            <version>2.0.18</version>
+            <version>${slf4j.version}</version>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- Test -->

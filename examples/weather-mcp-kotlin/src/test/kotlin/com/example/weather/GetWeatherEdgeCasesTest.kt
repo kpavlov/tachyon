@@ -9,6 +9,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.modelcontextprotocol.client.McpClient
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport
 import io.modelcontextprotocol.spec.McpSchema
+import io.modelcontextprotocol.spec.McpSchema.ElicitResult.Action
 import org.junit.jupiter.api.Test
 import java.io.IOException
 
@@ -17,8 +18,9 @@ class GetWeatherEdgeCasesTest {
         weatherService: WeatherService,
         elicitationResponse: (McpSchema.ElicitRequest) -> McpSchema.ElicitResult,
     ): McpSchema.CallToolResult {
-        val handle = createServer(0, weatherService)
-        val transport = HttpClientStreamableHttpTransport.builder("http://localhost:${handle.port()}").build()
+        val server = createServer(0, weatherService)
+        val transport =
+            HttpClientStreamableHttpTransport.builder("http://localhost:${server.port()}").build()
         val client = McpClient.sync(transport).elicitation(elicitationResponse).build()
         try {
             client.initialize()
@@ -31,7 +33,7 @@ class GetWeatherEdgeCasesTest {
         } finally {
             client.close()
             transport.close()
-            handle.close()
+            server.close()
         }
     }
 
@@ -39,7 +41,7 @@ class GetWeatherEdgeCasesTest {
     fun `returns city not found when elicitation is cancelled`() {
         val result =
             callGetWeather(WeatherService(TestWeatherProvider(), TestCityProvider())) {
-                McpSchema.ElicitResult(McpSchema.ElicitResult.Action.CANCEL, null)
+                McpSchema.ElicitResult(Action.CANCEL, null)
             }
 
         val content = result.content().first()
@@ -52,7 +54,7 @@ class GetWeatherEdgeCasesTest {
     fun `returns city not found when the elicited city is unknown`() {
         val result =
             callGetWeather(WeatherService(TestWeatherProvider(), TestCityProvider())) {
-                McpSchema.ElicitResult(McpSchema.ElicitResult.Action.ACCEPT, mapOf("city" to "Unknown"))
+                McpSchema.ElicitResult(Action.ACCEPT, mapOf("city" to "Unknown"))
             }
 
         val content = result.content().first()
@@ -68,7 +70,7 @@ class GetWeatherEdgeCasesTest {
 
         val result =
             callGetWeather(WeatherService(failingProvider, TestCityProvider())) {
-                McpSchema.ElicitResult(McpSchema.ElicitResult.Action.CANCEL, null)
+                McpSchema.ElicitResult(Action.CANCEL, null)
             }
 
         val content = result.content().first()

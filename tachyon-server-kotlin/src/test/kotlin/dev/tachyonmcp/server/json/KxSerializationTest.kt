@@ -22,7 +22,7 @@ internal class KxSerializationTest {
         val json = serde.serialize(Payload("hi", 7))
 
         json shouldBe """{"message":"hi","count":7}"""
-        serde.deserialize<Payload>(json, Payload::class.java) shouldBe Payload("hi", 7)
+        serde.deserialize(json, Payload::class.java) shouldBe Payload("hi", 7)
     }
 
     @Test
@@ -31,13 +31,13 @@ internal class KxSerializationTest {
 
         val json = serde.serialize(payload)
 
-        serde.deserialize<Payload>(json, Payload::class.java) shouldBe payload
+        serde.deserialize(json, Payload::class.java) shouldBe payload
     }
 
     @Test
     fun `malformed json fails with serialization error`() {
         shouldThrow<SerializationException> {
-            serde.deserialize<Payload>("not json", Payload::class.java)
+            serde.deserialize("not json", Payload::class.java)
         }
     }
 }

@@ -8,11 +8,11 @@ import com.example.weather.service.WeatherService
 import com.example.weather.spi.CityNotFoundException
 import com.example.weather.spi.WeatherObservation
 import dev.tachyonmcp.server.TachyonServer
+import dev.tachyonmcp.server.domain.Annotations
 import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.InvalidArgumentException
-import dev.tachyonmcp.server.domain.PromptArgument
 import dev.tachyonmcp.server.domain.PromptMessage
-import dev.tachyonmcp.server.domain.TextResourceContents
+import dev.tachyonmcp.server.domain.Role
 import dev.tachyonmcp.server.features.completions.CompletionResult
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.server.json.JsonSchemaUtils
@@ -47,8 +47,22 @@ fun createWeatherService(): WeatherService {
 fun createServer(
     port: Int,
     weatherService: WeatherService = createWeatherService(),
-): TachyonServer =
-    TachyonServer(port = port) {
+): TachyonServer {
+    val predictionArticle = weatherService.predictionArticle
+    val resourceAnnotations =
+        Annotations {
+            audience = listOf(Role.USER, Role.ASSISTANT)
+            priority = 0.8
+            lastModified = "2026-07-23T00:00:00Z"
+        }
+    val resourceIcon =
+        Icon {
+            src = LOGO
+            mimeType = "image/png"
+            sizes = listOf("256x256")
+            theme = "light"
+        }
+    return TachyonServer(port = port) {
         info {
             name = "weather-server-kotlin"
             title = "Weather Server (Kotlin)"
@@ -67,8 +81,12 @@ fun createServer(
             uri = "weather://prediction/article",
             description = "Weather prediction article",
             mimeType = "text/markdown",
+            title = "Weather Prediction",
+            annotations = resourceAnnotations,
+            size = predictionArticle.toByteArray().size.toLong(),
+            icons = listOf(resourceIcon),
         ) {
-            TextResourceContents { text = weatherService.predictionArticle }
+            TextResourceContents { text = predictionArticle }
         }
 
         resource(
@@ -76,13 +94,25 @@ fun createServer(
             uri = "weather://featured/current",
             description = "Current weather in Tallinn",
             mimeType = "application/json",
+            title = "Featured Current Weather",
+            annotations = resourceAnnotations,
+            icons = listOf(resourceIcon),
         ) {
-            TextResourceContents { text = asJson(weatherService.currentWeather("Tallinn")) }
+            TextResourceContents {
+                text = asJson(weatherService.currentWeather("Tallinn"))
+            }
         }
 
-        prompt(rewriteForecastPromptDescriptor()) { rewriteForecast(weatherService, arguments) }
+        prompt(rewriteForecastPromptDescriptor()) {
+            rewriteForecast(weatherService, arguments)
+        }
 
-        promptCompletion("rewrite-forecast") { completeStyle(request.argumentName(), request.argumentValue()) }
+        promptCompletion("rewrite-forecast") {
+            completeStyle(
+                request.argumentName(),
+                request.argumentValue(),
+            )
+        }
 
         resourceTemplate(
             name = "current-weather",
@@ -96,22 +126,30 @@ fun createServer(
 
         resourceCompletion("weather://current/{city}") {
             if (request.argumentName() != "city") {
-                CompletionResult.of(emptyList())
+                CompletionResult.empty()
             } else {
                 CompletionResult.of(weatherService.searchCities(request.argumentValue()))
             }
         }
     }
+}
 
 private fun rewriteForecastPromptDescriptor(): PromptDescriptor =
     PromptDescriptor {
         name = "rewrite-forecast"
         description = "Rewrites a weather forecast in a chosen style"
-        arguments =
-            listOf(
-                PromptArgument.of("forecast", "Forecast", "Weather forecast to rewrite", true),
-                PromptArgument.of("style", "Style", "plain, concise, or pirate", true),
-            )
+        argument {
+            name = "forecast"
+            title = "Forecast"
+            description = "Weather forecast to rewrite"
+            required = true
+        }
+        argument {
+            name = "style"
+            title = "Style"
+            description = "plain, concise, or pirate"
+            required = true
+        }
         inputSchema = JsonSchemaUtils.parseSchema(NarrationStyle.inputSchema())
     }
 
