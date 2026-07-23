@@ -1,4 +1,4 @@
-.PHONY: all ci build test lint package conformance e2e clean format help inspector examples examples-snapshot
+.PHONY: all ci build test lint package conformance e2e clean format help mcp-inspector examples examples-snapshot
 
 .DEFAULT_GOAL := help
 
@@ -36,12 +36,14 @@ package: ## Install artifacts to local Maven repo (skip tests)
 examples: ## Build live examples against published artifacts
 	@echo "🌤️ 📡  Building LIVE examples..."
 	@./mvnw verify -f examples/weather/pom.xml --no-transfer-progress
+	@./mvnw verify -f examples/weather-mcp-kotlin/pom.xml --no-transfer-progress
 	@./mvnw verify -f examples/echo-kotlin/pom.xml --no-transfer-progress
 	@echo " ✅ Done!"
 
 examples-snapshot: package ## Build examples against local SNAPSHOT artifacts
 	@echo "🌤️ 🎬 Building SNAPSHOT examples..."
 	@./mvnw verify -f examples/weather/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
+	@./mvnw verify -f examples/weather-mcp-kotlin/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
 	@./mvnw verify -f examples/echo-kotlin/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
 	@echo " ✅  Done!"
 
@@ -73,6 +75,6 @@ lint: ## Check code style and bugs (Spotless + Detekt + SpotBugs)
 	@./mvnw spotbugs:check -pl !reports,!e2e
 	@echo " ✅  Done..."
 
-inspector: ## Launch MCP Inspector UI
+mcp-inspector: ## Launch MCP Inspector UI
 	@echo "🧐 MCP Inspector"
 	@npx -y @modelcontextprotocol/inspector --config mcp-inspector.json

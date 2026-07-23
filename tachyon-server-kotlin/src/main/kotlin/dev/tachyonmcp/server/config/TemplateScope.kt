@@ -13,21 +13,12 @@ import dev.tachyonmcp.server.features.resources.ResourceRequest
 @TachyonDsl
 public class TemplateScope
     internal constructor(
-        /** Interaction context for the resource read. */
-        public val ctx: InteractionContext,
-        /** Full resource request, including URI-template data and request metadata. */
-        public val request: ResourceRequest,
-    ) {
-        /** Requested resource URI. */
-        public val uri: String
-            get() = request.uri()
-
-        /** Parsed URI-template parameters for the match. */
-        public val params: Map<String, UriTemplateValue>
-            get() = request.params()
-
-        /** Original URI template, always present for a template match. */
-        public val uriTemplate: String
+        ctx: InteractionContext,
+        request: ResourceRequest,
+        registeredMimeType: String?,
+    ) : ResourceScope(ctx, request, registeredMimeType) {
+        /** Original URI template. */
+        public override val uriTemplate: String
             get() = requireNotNull(request.uriTemplate())
 
         /**
@@ -39,9 +30,13 @@ public class TemplateScope
          */
         public fun param(name: String): String =
             when (val value = value(name)) {
-                is UriTemplateValue.Scalar -> value.value()
-                is UriTemplateValue.Sequence ->
+                is UriTemplateValue.Scalar -> {
+                    value.value()
+                }
+
+                is UriTemplateValue.Sequence -> {
                     throw IllegalArgumentException("template variable is not scalar: $name")
+                }
             }
 
         /**
@@ -53,9 +48,13 @@ public class TemplateScope
          */
         public fun sequence(name: String): List<String> =
             when (val value = value(name)) {
-                is UriTemplateValue.Scalar ->
+                is UriTemplateValue.Scalar -> {
                     throw IllegalArgumentException("template variable is not a sequence: $name")
-                is UriTemplateValue.Sequence -> value.values()
+                }
+
+                is UriTemplateValue.Sequence -> {
+                    value.values()
+                }
             }
 
         /**

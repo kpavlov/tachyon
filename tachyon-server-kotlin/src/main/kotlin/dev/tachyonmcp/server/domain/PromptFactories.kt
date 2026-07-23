@@ -5,6 +5,10 @@
 
 package dev.tachyonmcp.server.domain
 
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
+
 /**
  * Creates a [PromptMessage] associating a [Role] with its [ContentBlock].
  *
@@ -16,6 +20,13 @@ public fun PromptMessage(
     role: Role,
     content: ContentBlock,
 ): PromptMessage = PromptMessage.of(role, content)
+
+/** Builds a [PromptArgument] with a receiver DSL. */
+@OptIn(ExperimentalContracts::class)
+public inline fun PromptArgument(block: PromptArgumentBuilder.() -> Unit): PromptArgument {
+    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+    return PromptArgumentBuilder().apply(block).build()
+}
 
 /**
  * Creates a [PromptArgument] describing an argument accepted by a prompt template.

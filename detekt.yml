@@ -16,6 +16,10 @@ config:
 #    - 'LiteIssuesReport'
 
 complexity:
+  LongMethod:
+    active: true
+    excludes:
+      - '**/*Test.kt'
   TooManyFunctions:
     active: true
     excludes:

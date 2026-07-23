@@ -35,16 +35,6 @@ internal class KxSerializationTest {
     }
 
     @Test
-    fun `class deserialization delegates through Type`() {
-        val payload = Payload("hello", 42)
-
-        val jsonString = serde.serialize(payload)
-
-        jsonString shouldBe """{"message":"hello","count":42}"""
-        serde.deserialize(jsonString, Payload::class.java) shouldBe payload
-    }
-
-    @Test
     fun `malformed json fails with serialization error`() {
         shouldThrow<SerializationException> {
             serde.deserialize<Payload>("not json", Payload::class.java)

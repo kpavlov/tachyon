@@ -3,8 +3,8 @@
 package dev.tachyonmcp.server.features.prompts
 
 import dev.tachyonmcp.server.TachyonDsl
+import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.PromptArgument
-import dev.tachyonmcp.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.server.json.toJacksonNode
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
@@ -21,6 +21,12 @@ public class PromptDescriptorScope
         public var title: String? = null
         public var arguments: List<PromptArgument>? = null
         public var inputSchema: JsonNode? = null
+        public var icons: List<Icon>? = null
+
+        /** Sets the input schema from a kotlinx-serialization [JsonObject]. */
+        public fun inputSchema(json: JsonObject) {
+            inputSchema = json.toJacksonNode()
+        }
 
         @PublishedApi
         internal fun build(): PromptDescriptor {
@@ -31,14 +37,10 @@ public class PromptDescriptorScope
                 title = title,
                 arguments = arguments,
                 inputSchema = inputSchema,
+                icons = icons,
             )
         }
     }
-
-/** Sets the input schema from a [JsonObject]. Requires kotlinx-serialization-json on the classpath. */
-public fun PromptDescriptorScope.inputSchema(json: JsonObject) {
-    inputSchema = json.toJacksonNode()
-}
 
 @OptIn(ExperimentalContracts::class)
 public inline fun promptDescriptor(
@@ -51,4 +53,11 @@ public inline fun promptDescriptor(
             this.name = name
             configure()
         }.build()
+}
+
+/** Builds a [PromptDescriptor] with a receiver DSL. */
+@OptIn(ExperimentalContracts::class)
+public inline fun PromptDescriptor(block: PromptDescriptorScope.() -> Unit): PromptDescriptor {
+    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+    return PromptDescriptorScope().apply(block).build()
 }

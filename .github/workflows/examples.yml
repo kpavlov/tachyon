@@ -25,6 +25,7 @@ jobs:
           - 21
         example:
           - weather
+          - weather-mcp-kotlin
           - echo-kotlin
 
     runs-on: ubuntu-latest

@@ -5,6 +5,17 @@
 
 package dev.tachyonmcp.server.domain
 
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
+
+/** Builds [Annotations] with a receiver DSL. */
+@OptIn(ExperimentalContracts::class)
+public inline fun Annotations(block: AnnotationsBuilder.() -> Unit): Annotations {
+    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+    return AnnotationsBuilder().apply(block).build()
+}
+
 /**
  * Creates [Annotations] — optional metadata for tailoring content presentation.
  *

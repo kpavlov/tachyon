@@ -14,6 +14,8 @@ import dev.tachyonmcp.server.features.completions.promptCompletionHandler
 import dev.tachyonmcp.server.features.completions.resourceCompletionHandler
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.server.features.prompts.promptHandler
+import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
+import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.json.KxSerializationSerde
 import dev.tachyonmcp.server.json.toJacksonNode
@@ -37,6 +39,8 @@ public class TachyonServerBuilder
 
         @PublishedApi
         internal var networkPortExplicitlySet: Boolean = false
+
+        private val featureRegistrar: KotlinFeatureRegistrar = KotlinFeatureRegistrar(delegate)
 
         @OptIn(ExperimentalContracts::class)
         public inline fun info(
@@ -115,7 +119,15 @@ public class TachyonServerBuilder
             outputSchema: JsonNode? = null,
             handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
-            this.also { delegate.tool(name, description, inputSchema, outputSchema, handler) }
+            this.also {
+                featureRegistrar.tool(
+                    name,
+                    description,
+                    inputSchema,
+                    outputSchema,
+                    handler,
+                )
+            }
 
         @JvmSynthetic
         public fun tool(
@@ -125,7 +137,28 @@ public class TachyonServerBuilder
             outputSchema: String? = null,
             handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
-            this.also { delegate.tool(name, description, inputSchema, outputSchema, handler) }
+            this.also {
+                featureRegistrar.tool(
+                    name,
+                    description,
+                    inputSchema,
+                    outputSchema,
+                    handler,
+                )
+            }
+
+        /**
+         * Registers a prebuilt tool descriptor with a suspending handler block.
+         *
+         * @param descriptor tool descriptor
+         * @param handler handler invoked for tool calls
+         * @return this builder
+         */
+        @JvmSynthetic
+        public fun tool(
+            descriptor: ToolDescriptor,
+            handler: suspend ToolScope.() -> ToolResult,
+        ): TachyonServerBuilder = this.also { featureRegistrar.tool(descriptor, handler) }
 
         @JvmSynthetic
         public fun resource(
@@ -135,7 +168,7 @@ public class TachyonServerBuilder
             mimeType: String? = null,
             handler: suspend ResourceScope.() -> ResourceContents,
         ): TachyonServerBuilder =
-            this.also { delegate.resource(name, uri, description, mimeType, handler) }
+            this.also { featureRegistrar.resource(name, uri, description, mimeType, handler) }
 
         /**
          * Registers a prompt with the server.
@@ -157,6 +190,19 @@ public class TachyonServerBuilder
             }
 
         /**
+         * Registers a prebuilt prompt descriptor with a suspending handler block.
+         *
+         * @param descriptor prompt descriptor
+         * @param handler handler invoked for prompt requests
+         * @return this builder
+         */
+        @JvmSynthetic
+        public fun prompt(
+            descriptor: PromptDescriptor,
+            handler: suspend PromptScope.() -> List<PromptMessage>,
+        ): TachyonServerBuilder = this.also { featureRegistrar.prompt(descriptor, handler) }
+
+        /**
          * Registers a resource template with the server.
          *
          * @param name The template name.
@@ -173,25 +219,38 @@ public class TachyonServerBuilder
         public fun resourceTemplate(
             name: String,
             uriTemplate: String,
-            title: String? = null,
             description: String? = null,
             mimeType: String? = null,
+            title: String? = null,
             annotations: Annotations? = null,
             icons: List<Icon>? = null,
             block: suspend TemplateScope.() -> ResourceContents,
         ): TachyonServerBuilder =
             this.also {
-                delegate.resourceTemplate(
+                featureRegistrar.resourceTemplate(
                     name = name,
                     uriTemplate = uriTemplate,
-                    title = title,
                     description = description,
                     mimeType = mimeType,
-                    icons = icons,
+                    title = title,
                     annotations = annotations,
-                    handler = block,
+                    icons = icons,
+                    block = block,
                 )
             }
+
+        /**
+         * Registers a prebuilt resource-template descriptor.
+         *
+         * @param descriptor resource-template descriptor
+         * @param block handler invoked for matching resource requests
+         * @return This builder.
+         */
+        @JvmSynthetic
+        public fun resourceTemplate(
+            descriptor: ResourceTemplateDescriptor,
+            block: suspend TemplateScope.() -> ResourceContents,
+        ): TachyonServerBuilder = this.also { featureRegistrar.resourceTemplate(descriptor, block) }
 
         /**
          * Registers a completion handler for a prompt's arguments.

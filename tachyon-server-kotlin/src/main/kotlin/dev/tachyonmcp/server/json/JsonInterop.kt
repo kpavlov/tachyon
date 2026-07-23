@@ -42,30 +42,42 @@ internal fun ToolDescriptor.Builder.schemas(
 
 internal fun JsonElement.toJacksonNode(): JsonNode =
     when (this) {
-        is JsonNull -> nodes.nullNode()
-        is JsonPrimitive -> toValueNode()
-        is JsonArray ->
+        is JsonNull -> {
+            nodes.nullNode()
+        }
+
+        is JsonPrimitive -> {
+            toValueNode()
+        }
+
+        is JsonArray -> {
             nodes.arrayNode(size).also { array ->
                 forEach { array.add(it.toJacksonNode()) }
             }
+        }
 
-        is JsonObject ->
+        is JsonObject -> {
             nodes.objectNode().also { obj ->
                 forEach { (key, value) -> obj.set(key, value.toJacksonNode()) }
             }
+        }
     }
 
 // node types must mirror what JsonUtils.parse produces, so both routes compare equal
 private fun JsonPrimitive.toValueNode(): JsonNode =
     when {
-        isString -> nodes.stringNode(content)
-        else ->
+        isString -> {
+            nodes.stringNode(content)
+        }
+
+        else -> {
             booleanOrNull?.let(nodes::booleanNode)
                 ?: intOrNull?.let(nodes::numberNode)
                 ?: longOrNull?.let(nodes::numberNode)
                 ?: content.toBigIntegerOrNull()?.let(nodes::numberNode)
                 ?: doubleOrNull?.let(nodes::numberNode)
                 ?: nodes.numberNode(BigDecimal(content))
+        }
     }
 
 internal fun JsonObject?.toJacksonNodeOrNull(): JsonNode? = this?.toJacksonNode()

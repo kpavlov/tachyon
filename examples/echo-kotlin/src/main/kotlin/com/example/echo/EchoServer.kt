@@ -30,17 +30,16 @@ fun createServer(port: Int = 0): TachyonServer {
                 description = "Echo message",
                 inputSchema = inputSchema,
             ) {
-                ToolResult.text(args.stringValue("message"))
+                ToolResult.text(request.arguments().stringValue("message"))
             }
         }
 
     server.registerTool(
-        ToolDescriptor
-            .builder()
-            .name("reverse-echo")
-            .description("Echo reverse message")
-            .inputSchema(inputSchema)
-            .build(),
+        ToolDescriptor {
+            name = "reverse-echo"
+            description = "Echo reverse message"
+            this.inputSchema = inputSchema
+        },
     ) {
         val message = request.arguments().stringValue("message")
         ToolResult.text(message.reversed())

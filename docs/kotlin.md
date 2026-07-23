@@ -8,7 +8,7 @@ The `tachyon-server-kotlin` module wraps `ServerBuilder` with a coroutine-first 
 <dependency>
     <groupId>dev.tachyonmcp</groupId>
     <artifactId>tachyon-server-kotlin</artifactId>
-    <version>1.0.0-beta.13</version>
+    <version>1.0.0-beta.14</version>
 </dependency>
 ```
 
@@ -21,6 +21,33 @@ val server = TachyonServer(port = 8080) { /* configure */ }
 // Server logic only, no transport — for testing
 val server: TachyonServer = buildServer { /* configure */ }
 ```
+
+Use `TachyonServerBuilder` through these entry points for Kotlin construction. The Java
+`ServerBuilder` remains the implementation source of truth, while the Kotlin DSL adds suspend
+handlers and Kotlin-specific types without duplicating registration or validation logic.
+
+## Structured value factories
+
+Kotlin factories use receiver blocks for structured values with more than three fields.
+`Annotations` follows the same shape because it is commonly nested inside descriptors:
+
+```kotlin
+val annotations = Annotations {
+    audience = listOf(Role.USER)
+    priority = 0.8
+}
+
+val icon = Icon {
+    src = "https://example.com/icon.svg"
+    mimeType = "image/svg+xml"
+    sizes = listOf("any")
+    theme = "light"
+}
+```
+
+Required fields fail fast when the block finishes. Flat overloads remain available for source
+compatibility, but new Kotlin code should use receiver factories for `Icon`, `Annotations`,
+content objects, and resource, prompt, and tool descriptors.
 
 ## Full example
 
@@ -37,9 +64,12 @@ val server = TachyonServer(port = 8080) {
         description = "Demo MCP server"
     }
     capabilities {
-        tools(listChanged = true)
-        resources(subscribe = true, listChanged = true)
-        prompts(listChanged = true)
+        tools { listChanged = true }
+        resources {
+            subscribe = true
+            listChanged = true
+        }
+        prompts { listChanged = true }
     }
     session {
         enabled = true
@@ -58,7 +88,11 @@ val server = TachyonServer(port = 8080) {
         description = "Server configuration",
         mimeType = "application/json",
     ) {
-        TextResourceContents.of(uri, """{"env":"prod"}""", "application/json")
+        TextResourceContents {
+            uri = this@resource.uri
+            text = """{"env":"prod"}"""
+            mimeType = "application/json"
+        }
     }
     prompt(name = "greet", description = "Greeting prompt") {
         listOf(PromptMessage.user("Say hello, ${arguments ?: "world"}"))
@@ -87,10 +121,14 @@ For class-based handlers, extend `AbstractToolHandler` and override `handle(ctx,
 Resource and prompt lambdas are `suspend` functions too — call suspending APIs directly:
 
 ```kotlin
-resource(name = "config", uri = "demo://config") {
+resource(
+    name = "config",
+    uri = "demo://config",
+    mimeType = "application/json",
+) {
     // this: ResourceScope — ctx, uri, params, uriTemplate
     val config = fetchConfig()  // suspend call
-    TextResourceContents.of(uri, config, "application/json")
+    TextResourceContents { text = config }
 }
 
 prompt(name = "greet", description = "Greeting prompt") {
@@ -99,17 +137,62 @@ prompt(name = "greet", description = "Greeting prompt") {
 }
 ```
 
+Inside a resource handler, `TextResourceContents { }` and `BlobResourceContents { }` default `uri`
+to the requested URI and `mimeType` to the registered resource MIME type. You can override either
+property.
+
 Handlers run via `runBlocking` on a virtual thread; cancellation is delivered by thread
 interruption (e.g. from `tasks/cancel`), which cancels the coroutine.
 
-> **Breaking (beta.5):** resource/prompt handler lambdas became `suspend` and the prompt
-> lambda receiver changed from `(String?) -> List<PromptMessage>` to
-> `suspend PromptScope.() -> List<PromptMessage>` — replace `it` with `arguments`.
+### Resource templates
+
+Template metadata stays in named parameters. The trailing `block` handles matched requests:
+
+```kotlin
+resourceTemplate(
+    name = "user-profile",
+    uriTemplate = "user://{userId}/profile",
+    description = "User profile template",
+    mimeType = "application/json",
+    title = "User profile",
+    annotations = Annotations { priority = 0.8 },
+    icons = listOf(
+        Icon {
+            src = "https://example.com/user.svg"
+            mimeType = "image/svg+xml"
+        },
+    ),
+) {
+    TextResourceContents {
+        text = """{"id":"${param("userId")}"}"""
+    }
+}
+```
+
+Template handlers use the same contextual defaults. Their text builder also exposes `param(name)`
+and `sequence(name)`.
+
+For a descriptor shared across registrations, build it once and use the descriptor overload:
+
+```kotlin
+val descriptor = ResourceTemplateDescriptor {
+    name = "document"
+    uriTemplate = "docs://{path}"
+    description = "Documentation"
+    mimeType = "text/markdown"
+}
+
+resourceTemplate(descriptor) {
+    TextResourceContents {
+        text = loadDocument(param("path"))
+    }
+}
+```
 
 ## Tool schemas
 
 `inputSchema` / `outputSchema` accept three shapes on every registration overload
-(`tool(...)` in the DSL, `TachyonServer.registerTool(...)` post-build, `toolDescriptor { }`):
+(`tool(...)` in the DSL, `TachyonServer.registerTool(...)` post-build, `ToolDescriptor { }`):
 
 ```kotlin
 // Jackson JsonNode
@@ -208,6 +291,7 @@ tool(name = "greet", inputSchema = ..., outputSchema = ...) {
 | `RuntimeScope` | `runtime { }` | `shutdownGracePeriod` |
 | `ToolScope` | tool lambda | `ctx`, `request` |
 | `ResourceScope` | resource lambda | `ctx`, `uri`, `params`, `uriTemplate` |
+| `TemplateScope` | resource-template lambda | `ctx`, `uri`, `params`, `uriTemplate`; contextual `TextResourceContents { }` |
 | `PromptScope` | prompt lambda | `ctx`, `request`, `arguments` |
 
 ## Post-build registration
@@ -217,7 +301,10 @@ Add tools after the server starts — useful for dynamic registration:
 ```kotlin
 val server = buildServer { /* base config */ }
 server.registerTool(
-    ToolDescriptor.builder().name("echo").description("Echo a message").build(),
+    ToolDescriptor {
+        name = "echo"
+        description = "Echo a message"
+    },
 ) {
     ToolResult.text(request.arguments().stringValue("msg"))
 }

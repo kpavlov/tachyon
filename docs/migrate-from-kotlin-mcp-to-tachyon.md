@@ -15,7 +15,7 @@ fail to compile and won't show up until a client hits them.
 | JSON node type | kotlinx `JsonElement` / `McpJson` | **Jackson 3** `tools.jackson.databind.JsonNode` |
 | Server + HTTP | `Server(...)` + you wire Ktor, sessions, reaper | `TachyonServer(port) { ... }` — transport & sessions built in |
 | Identity | `Implementation(name, version, title, websiteUrl, icons)` | `info { name; version; title; websiteUrl; icons.add(...) }` |
-| Icon | `sdk.types.Icon` | `dev.tachyonmcp.server.domain.Icon(src, mimeType, sizes, theme)` |
+| Icon | `sdk.types.Icon` | `dev.tachyonmcp.server.domain.Icon { src = …; mimeType = … }` |
 | Register a tool | `server.addTool(name, desc, inputSchema: ToolSchema, outputSchema, handler)` | `server.registerTool(name, desc, inputSchema, outputSchema) { }` |
 | Handler receiver | `suspend ClientConnection.(CallToolRequest) -> CallToolResult` | `suspend ToolScope.() -> ToolResult` |
 | Read arguments | `request.arguments: JsonObject` | `request.arguments(): Args` (typed accessors) |
@@ -71,19 +71,26 @@ server.port()
 server.close()    // wire to your app's stop hook
 ```
 
+Use `TachyonServer { }` or `buildServer { }` as the Kotlin construction surface. The DSL delegates
+to Java `ServerBuilder`, then adds suspend handlers and Kotlin-specific types. Don't build a second
+Kotlin extension surface on `ServerBuilder`; it can skip Kotlin defaults and split construction
+logic across two APIs.
+
 The identity block is easy to under-fill. `info { }` supports `title`, `websiteUrl`, and
 `icons` — port all of them, not just `name`/`version`:
 
 ```kotlin
 import dev.tachyonmcp.server.domain.Icon
+import java.util.Base64
 
-val logoIcon = javaClass.getResourceAsStream("/logo-32x32.png")!!.use { s ->
-    Icon(
-        src = "data:image/png;base64,${Base64.Mime.encode(s.readAllBytes())}",
-        sizes = listOf("32x32"),
-        mimeType = "image/png",
-    )
-}
+val logoIcon =
+    object {}.javaClass.getResourceAsStream("/logo-32x32.png")!!.use { s ->
+        Icon {
+            src = "data:image/png;base64,${Base64.getEncoder().encodeToString(s.readAllBytes())}"
+            sizes = listOf("32x32")
+            mimeType = "image/png"
+        }
+    }
 ```
 
 > Map any timeout for pending server-to-client requests to
@@ -168,29 +175,54 @@ current client and applies its selected threshold.
 ## 8. Resources
 
 ```kotlin
-// concrete, per-item resource (shows up in resources/list)
-server.resources().register(
-    ResourceDescriptor(name = uri, uri = uri, title = label, description = desc, mimeType = "text/markdown"),
-) { _, uri, _, _ ->
-    TextResourceContents.of(uri, read(uri) ?: error("not found"), "text/markdown")
+val server = TachyonServer(port = mcpPort) {
+    // Concrete resource: appears in resources/list.
+    resource(
+        name = "readme",
+        uri = "example://docs/readme",
+        description = "Project documentation",
+        mimeType = "text/markdown",
+    ) {
+        TextResourceContents {
+            text = read(uri) ?: error("not found")
+        }
+    }
+
+    // URI template: appears in resources/templates/list.
+    resourceTemplate(
+        name = "docs",
+        uriTemplate = "example://docs/{path}",
+        description = "Docs",
+        mimeType = "text/markdown",
+    ) {
+        TextResourceContents {
+            text = read(this@resourceTemplate.uri) ?: error("not found")
+        }
+    }
+}
+```
+
+Static and template result builders inherit the requested URI and registered MIME type.
+`TextResourceContents { }` and `BlobResourceContents { }` let you override either value. Template
+text builders also keep `param("path")` and `sequence("segments")` in scope.
+
+Use a receiver factory when you need a reusable descriptor:
+
+```kotlin
+val docs = ResourceTemplateDescriptor {
+    name = "docs"
+    uriTemplate = "example://docs/{path}"
+    description = "Docs"
+    mimeType = "text/markdown"
 }
 
-// URI template (shows up in resources/templates/list)
-server.resources().registerTemplate(
-    ResourceTemplateDescriptor.builder()
-        .name("docs")
-        .uriTemplate("example://docs/{path}")
-        .description("Docs")
-        .mimeType("text/markdown")
-        .build(),
-    { _, uri, _, _ ->
-        TextResourceContents.of(
-            uri,
-            read(uri) ?: error("not found"),
-            "text/markdown",
-        )
-    },
-)
+val server = TachyonServer(port = mcpPort) {
+    resourceTemplate(docs) {
+        TextResourceContents {
+            text = read(this@resourceTemplate.uri) ?: error("not found")
+        }
+    }
+}
 ```
 
 `list_changed` fires automatically when the registry changes (given `listChanged = true`) — drop

@@ -8,6 +8,27 @@ package dev.tachyonmcp.server.domain
 import dev.tachyonmcp.server.json.toJacksonNodeMap
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
+
+/** Builds [TextResourceContents] with a receiver DSL. */
+@OptIn(ExperimentalContracts::class)
+public inline fun TextResourceContents(
+    block: TextResourceContentsBuilder.() -> Unit,
+): TextResourceContents {
+    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+    return TextResourceContentsBuilder().apply(block).build()
+}
+
+/** Builds [BlobResourceContents] with a receiver DSL. */
+@OptIn(ExperimentalContracts::class)
+public inline fun BlobResourceContents(
+    block: BlobResourceContentsBuilder.() -> Unit,
+): BlobResourceContents {
+    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+    return BlobResourceContentsBuilder().apply(block).build()
+}
 
 /**
  * Creates [TextResourceContents] — text-based resource data returned by a handler.

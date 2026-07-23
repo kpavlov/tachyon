@@ -8,6 +8,9 @@ package dev.tachyonmcp.server.domain
 import dev.tachyonmcp.server.json.toJacksonNodeMap
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 /**
  * Creates a [TextContent] block — plain text provided to or from an LLM.
@@ -21,6 +24,20 @@ public fun TextContent(
     meta: Map<String, JsonNode>? = null,
     annotations: Annotations? = null,
 ): TextContent = TextContent.of(text, meta, annotations)
+
+/** Builds [ImageContent] with a receiver DSL. */
+@OptIn(ExperimentalContracts::class)
+public inline fun ImageContent(block: ImageContentBuilder.() -> Unit): ImageContent {
+    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+    return ImageContentBuilder().apply(block).build()
+}
+
+/** Builds [AudioContent] with a receiver DSL. */
+@OptIn(ExperimentalContracts::class)
+public inline fun AudioContent(block: AudioContentBuilder.() -> Unit): AudioContent {
+    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+    return AudioContentBuilder().apply(block).build()
+}
 
 /**
  * Creates a [TextContent] block using a kotlinx-serialization metadata map.
