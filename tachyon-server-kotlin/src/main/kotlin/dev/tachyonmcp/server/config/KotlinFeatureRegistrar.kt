@@ -5,10 +5,14 @@ package dev.tachyonmcp.server.config
 import dev.tachyonmcp.server.ServerBuilder
 import dev.tachyonmcp.server.domain.Annotations
 import dev.tachyonmcp.server.domain.Icon
+import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.ResourceContents
+import dev.tachyonmcp.server.features.prompts.PromptDescriptor
+import dev.tachyonmcp.server.features.prompts.promptHandler
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.server.features.resources.resourceHandler
 import dev.tachyonmcp.server.features.resources.templateHandler
+import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.features.tools.toolFn
 import tools.jackson.databind.JsonNode
@@ -94,5 +98,19 @@ internal class KotlinFeatureRegistrar(
         handler: suspend ToolScope.() -> ToolResult,
     ) {
         delegate.tool(name, description, inputSchema, outputSchema, toolFn(name, handler))
+    }
+
+    fun tool(
+        descriptor: ToolDescriptor,
+        handler: suspend ToolScope.() -> ToolResult,
+    ) {
+        delegate.tool(descriptor, toolFn(descriptor.name(), handler))
+    }
+
+    fun prompt(
+        descriptor: PromptDescriptor,
+        handler: suspend PromptScope.() -> List<PromptMessage>,
+    ) {
+        delegate.prompt(descriptor, promptHandler(descriptor, handler))
     }
 }

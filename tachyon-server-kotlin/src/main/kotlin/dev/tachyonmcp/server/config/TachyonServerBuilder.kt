@@ -15,6 +15,7 @@ import dev.tachyonmcp.server.features.completions.resourceCompletionHandler
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.server.features.prompts.promptHandler
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
+import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.json.KxSerializationSerde
 import dev.tachyonmcp.server.json.toJacksonNode
@@ -146,6 +147,19 @@ public class TachyonServerBuilder
                 )
             }
 
+        /**
+         * Registers a prebuilt tool descriptor with a suspending handler block.
+         *
+         * @param descriptor tool descriptor
+         * @param handler handler invoked for tool calls
+         * @return this builder
+         */
+        @JvmSynthetic
+        public fun tool(
+            descriptor: ToolDescriptor,
+            handler: suspend ToolScope.() -> ToolResult,
+        ): TachyonServerBuilder = this.also { featureRegistrar.tool(descriptor, handler) }
+
         @JvmSynthetic
         public fun resource(
             name: String,
@@ -174,6 +188,19 @@ public class TachyonServerBuilder
                 val descriptor = PromptDescriptor(name = name, description = description)
                 delegate.prompt(descriptor, promptHandler(descriptor, handler))
             }
+
+        /**
+         * Registers a prebuilt prompt descriptor with a suspending handler block.
+         *
+         * @param descriptor prompt descriptor
+         * @param handler handler invoked for prompt requests
+         * @return this builder
+         */
+        @JvmSynthetic
+        public fun prompt(
+            descriptor: PromptDescriptor,
+            handler: suspend PromptScope.() -> List<PromptMessage>,
+        ): TachyonServerBuilder = this.also { featureRegistrar.prompt(descriptor, handler) }
 
         /**
          * Registers a resource template with the server.

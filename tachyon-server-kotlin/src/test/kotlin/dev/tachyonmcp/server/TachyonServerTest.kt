@@ -5,10 +5,13 @@ package dev.tachyonmcp.server
 import dev.tachyonmcp.server.config.Mode
 import dev.tachyonmcp.server.domain.Annotations
 import dev.tachyonmcp.server.domain.Icon
+import dev.tachyonmcp.server.domain.PromptArgument
 import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.TextContent
 import dev.tachyonmcp.server.domain.TextResourceContents
+import dev.tachyonmcp.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
+import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.internal.ServerEngine
 import dev.tachyonmcp.server.session.InMemorySessionEventStore
@@ -274,6 +277,59 @@ internal class TachyonServerTest {
             }
         }.use { server ->
             server.resources().findTemplate("descriptor-template").orElseThrow() shouldBe descriptor
+        }
+    }
+
+    @Test
+    fun `tool accepts a prebuilt descriptor`() {
+        val descriptor =
+            ToolDescriptor {
+                name = "descriptor-tool"
+                title = "Descriptor Tool"
+                description = "Tool built from a prebuilt descriptor"
+            }
+
+        TachyonServer(port = 0) {
+            name("descriptor-tool-test")
+            session { enabled = true }
+            tool(descriptor) { ToolResult.text("descriptor-ok") }
+        }.use { handle ->
+            handle.tools().find("descriptor-tool").orElseThrow() shouldBe descriptor
+            McpProbe(handle.port()).use { probe ->
+                probe.initialize()
+                val response = probe.callTool("descriptor-tool")
+                response.statusCode() shouldBe 200
+                response.body() shouldContain "descriptor-ok"
+            }
+        }
+    }
+
+    @Test
+    fun `prompt accepts a prebuilt descriptor with arguments`() {
+        val descriptor =
+            PromptDescriptor {
+                name = "descriptor-prompt"
+                description = "Prompt built from a prebuilt descriptor"
+                arguments = listOf(PromptArgument.of("style", "Style", "Narration style", true))
+            }
+
+        TachyonServer(port = 0) {
+            name("descriptor-prompt-test")
+            session { enabled = true }
+            prompt(descriptor) {
+                listOf(PromptMessage.user(TextContent("styled: ${arguments ?: "none"}")))
+            }
+        }.use { handle ->
+            handle.prompts().find("descriptor-prompt").orElseThrow() shouldBe descriptor
+            McpProbe(handle.port()).use { probe ->
+                probe.initialize()
+                val response =
+                    probe.post(
+                        """{"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"descriptor-prompt"}}""",
+                    )
+                response.statusCode() shouldBe 200
+                response.body() shouldContain "styled: none"
+            }
         }
     }
 
