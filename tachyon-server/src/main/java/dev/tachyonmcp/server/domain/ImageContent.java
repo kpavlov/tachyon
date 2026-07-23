@@ -22,6 +22,7 @@ import tools.jackson.databind.JsonNode;
         typeImmutable = "Default*")
 public non-sealed interface ImageContent extends ContentBlock {
 
+    @Value.Redacted
     String data();
 
     String mimeType();

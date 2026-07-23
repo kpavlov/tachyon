@@ -22,6 +22,7 @@ import org.jspecify.annotations.Nullable;
         visibility = Value.Style.ImplementationVisibility.PACKAGE)
 public interface Icon {
 
+    @Value.Redacted
     String src();
 
     @Nullable
