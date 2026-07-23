@@ -6,15 +6,11 @@ package dev.tachyonmcp.server.features.resources;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.ResourceContents;
-import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.HandlerFutures;
-import java.util.Map;
 import java.util.concurrent.CompletionStage;
-import org.jspecify.annotations.Nullable;
 
 /**
- * Reads static and templated resource contents. {@code uriTemplate} is null for static resources;
- * templated requests include the original URI template text and parsed parameters.
+ * Reads static and templated resource contents.
  *
  * <p>{@link #handle} and {@link #handleAsync} run on a server-executor virtual thread. Blocking for I/O
  * is the intended synchronous contract.
@@ -25,9 +21,7 @@ import org.jspecify.annotations.Nullable;
 public interface ResourceHandler {
 
     /** Reads and returns the resource contents. */
-    ResourceContents handle(
-            InteractionContext context, String uri, Map<String, UriTemplateValue> params, @Nullable String uriTemplate)
-            throws Exception;
+    ResourceContents handle(InteractionContext context, ResourceRequest request) throws Exception;
 
     /**
      * Reads asynchronously. Default delegates to {@link #handle}. The registry awaits the returned
@@ -35,12 +29,9 @@ public interface ResourceHandler {
      * Override to integrate async services.
      */
     default CompletionStage<? extends ResourceContents> handleAsync(
-            InteractionContext context,
-            String uri,
-            Map<String, UriTemplateValue> params,
-            @Nullable String uriTemplate) {
+            InteractionContext context, ResourceRequest request) {
         HandlerFutures.assumeVirtualThread();
-        return HandlerFutures.completedOrFailed(() -> handle(context, uri, params, uriTemplate));
+        return HandlerFutures.completedOrFailed(() -> handle(context, request));
     }
 
     /**
@@ -48,7 +39,7 @@ public interface ResourceHandler {
      * fixed-URI resource — no {@code params}/{@code uriTemplate} to ignore.
      */
     static ResourceHandler of(StaticResourceFn fn) {
-        return (context, uri, params, uriTemplate) -> fn.handle(context, uri);
+        return (context, request) -> fn.handle(context, request.uri());
     }
 
     /**
@@ -56,6 +47,6 @@ public interface ResourceHandler {
      * static, fixed-URI resource — no {@code params}/{@code uriTemplate} to ignore.
      */
     static AsyncResourceHandler ofAsync(AsyncStaticResourceFn fn) {
-        return (context, uri, params, uriTemplate) -> fn.handle(context, uri);
+        return (context, request) -> fn.handle(context, request.uri());
     }
 }

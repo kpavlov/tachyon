@@ -5,6 +5,7 @@
 package dev.tachyonmcp.server.features.resources;
 
 import dev.tachyonmcp.annotations.InternalApi;
+import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ReadResourceRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.SubscribeRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.UnsubscribeRequestParams;
@@ -23,6 +24,7 @@ import dev.tachyonmcp.server.features.PaginatedResult;
 import dev.tachyonmcp.server.features.Pagination;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DispatchContext;
+import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -41,6 +43,7 @@ import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.databind.JsonNode;
 
 /**
  * Registry for resources, templates, and subscriptions.
@@ -494,33 +497,28 @@ public class DefaultResourceRegistry implements Resources {
         /** Runs resource handlers on the server executor's virtual threads without blocking it. */
         @Override
         public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
-            var uri = toRawUri(params);
-            if (uri == null) {
+            var parsed = parseRequest(params);
+            if (parsed == null) {
                 return CompletableFuture.completedFuture(ServerErrors.invalidRequest("Missing resource URI"));
             }
+            var uri = parsed.uri();
             var entry = registry.getByUri(uri);
             if (entry != null) {
                 var extId = entry.descriptor().extensionId();
                 if (extId != null && !context.isExtensionEnabled(extId)) {
                     return CompletableFuture.completedFuture(ServerErrors.resourceNotFound("Resource not found"));
                 }
-                return readResult(context, uri, () -> entry.handler().handleAsync(context, uri, Map.of(), null));
+                var request = new ResourceRequest(uri, Map.of(), null, parsed.meta());
+                return readResult(context, uri, () -> entry.handler().handleAsync(context, request));
             }
             var match = registry.matchTemplate(uri);
             if (match == null) {
                 return CompletableFuture.completedFuture(
                         ServerErrors.resourceNotFound("Resource not found", Map.of("uri", uri)));
             }
-            return readResult(
-                    context,
-                    uri,
-                    () -> match.entry()
-                            .handler()
-                            .handleAsync(
-                                    context,
-                                    uri,
-                                    match.params(),
-                                    match.entry().descriptor().uriTemplate()));
+            var request = new ResourceRequest(
+                    uri, match.params(), match.entry().descriptor().uriTemplate(), parsed.meta());
+            return readResult(context, uri, () -> match.entry().handler().handleAsync(context, request));
         }
 
         private CompletionStage<Object> readResult(
@@ -551,15 +549,19 @@ public class DefaultResourceRegistry implements Resources {
                     });
         }
 
-        private static @Nullable String toRawUri(Object params) {
-            if (params instanceof ReadResourceRequestParams p) {
-                return p.uri();
+        private static @Nullable RequestParams parseRequest(Object params) {
+            if (params instanceof ReadResourceRequestParams(Map<String, JsonNode> meta, String uri)) {
+                return uri == null ? null : new RequestParams(uri, meta);
             }
-            if (params instanceof Map<?, ?> map && map.get("uri") instanceof String uri) {
-                return uri;
+            if (params instanceof Map<?, ?> map) {
+                var json = JsonRpcCodec.writeValueAsString(map);
+                var typed = ProtocolCodecUtil.decodeWithCodec(json, ReadResourceRequestParams.class);
+                return typed.uri() == null ? null : new RequestParams(typed.uri(), typed._meta());
             }
             return null;
         }
+
+        private record RequestParams(String uri, @Nullable Map<String, JsonNode> meta) {}
     }
 
     private record ResourcesSubscribeHandler(DefaultResourceRegistry registry) implements RpcMethodHandler {

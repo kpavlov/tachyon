@@ -18,7 +18,7 @@ class ListPaginationE2eTest extends AbstractStatelessMcpE2eTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final ResourceHandler EMPTY_RESOURCE =
-            (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "", "text/plain");
+            (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain");
 
     @Test
     void resourcesListReturnsConfiguredPageSize() throws Exception {

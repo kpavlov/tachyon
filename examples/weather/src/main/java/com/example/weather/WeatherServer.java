@@ -99,8 +99,8 @@ public final class WeatherServer {
                                 .title("Weather in the city")
                                 .description("Weather forecast for a city")
                                 .mimeType("application/json"),
-                        (ctx, uri, params, uriTemplate) ->
-                                handleWeatherTemplate(weatherService, uri, params))
+                        (ctx, request) ->
+                                handleWeatherTemplate(weatherService, request.uri(), request.params()))
             .asyncResourceCompletion(
                 "weather://current/{city}",
                 (ctx, request) -> {

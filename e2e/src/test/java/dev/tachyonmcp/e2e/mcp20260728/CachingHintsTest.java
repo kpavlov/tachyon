@@ -29,13 +29,12 @@ class CachingHintsTest extends AbstractStatelessMcpE2eTest {
         startServer(b -> b.capabilities(c -> c.tools().resources().prompts())
                 .resource(
                         ResourceDescriptor.of("hello", "hello://world", "Hello resource", "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "Hello, World!", "text/plain"))
+                        (ctx, request) -> TextResourceContents.of(request.uri(), "Hello, World!", "text/plain"))
                 .resourceTemplate(
                         builder -> builder.name("tmpl")
                                 .uriTemplate("test://tmpl/{id}")
                                 .description("d"),
-                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "x", "text/plain"))
+                        (ctx, request) -> TextResourceContents.of(request.uri(), "x", "text/plain"))
                 .prompt(PromptDescriptor.of("greeting", "A greeting"), java.util.List.of()));
     }
 

@@ -12,6 +12,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Static utilities for common CompletionStage patterns.
@@ -90,9 +91,9 @@ public final class HandlerFutures {
      */
     public static <R> CompletionStage<Object> invokeAndMap(
             String nullStageMessage,
-            Callable<? extends CompletionStage<? extends R>> invocation,
+            Callable<? extends @Nullable CompletionStage<? extends R>> invocation,
             Executor executor,
-            BiFunction<? super R, Throwable, Object> resultMapper) {
+            BiFunction<? super R, @Nullable Throwable, @Nullable Object> resultMapper) {
         CompletionStage<? extends R> stage;
         try {
             stage = invocation.call();

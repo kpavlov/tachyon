@@ -5,15 +5,31 @@ package dev.tachyonmcp.server.config
 import dev.tachyonmcp.runtime.InteractionContext
 import dev.tachyonmcp.server.TachyonDsl
 import dev.tachyonmcp.server.domain.UriTemplateValue
+import dev.tachyonmcp.server.features.resources.ResourceRequest
 
+/**
+ * Receiver for a matched resource-template handler.
+ */
 @TachyonDsl
 public class TemplateScope
     internal constructor(
+        /** Interaction context for the resource read. */
         public val ctx: InteractionContext,
-        public val uri: String,
-        public val params: Map<String, UriTemplateValue>,
-        public val uriTemplate: String,
+        /** Full resource request, including URI-template data and request metadata. */
+        public val request: ResourceRequest,
     ) {
+        /** Requested resource URI. */
+        public val uri: String
+            get() = request.uri()
+
+        /** Parsed URI-template parameters for the match. */
+        public val params: Map<String, UriTemplateValue>
+            get() = request.params()
+
+        /** Original URI template, always present for a template match. */
+        public val uriTemplate: String
+            get() = requireNotNull(request.uriTemplate())
+
         /**
          * Retrieves a scalar template variable.
          *
