@@ -12,9 +12,13 @@ import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
 import org.slf4j.LoggerFactory
 import tools.jackson.databind.ObjectMapper
+import java.util.Locale
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 private val log = LoggerFactory.getLogger("com.example.weather.GetWeatherTool")
 private val MAPPER = ObjectMapper()
+private const val ELICITATION_TIMEOUT_SECONDS = 600L
 
 // language=json
 private const val INPUT_SCHEMA = """
@@ -80,10 +84,14 @@ private fun fetchWithProgress(
     return weather
 }
 
-private fun internalError(e: Exception): ToolResult {
+internal fun restoreInterruptStatus(e: Exception) {
     if (e is InterruptedException) {
         Thread.currentThread().interrupt()
     }
+}
+
+private fun internalError(e: Exception): ToolResult {
+    restoreInterruptStatus(e)
     log.warn("get-weather failed", e)
     return ToolResult.error("Could not get weather")
 }
@@ -115,10 +123,12 @@ private fun elicitCity(
         )
     val response =
         try {
-            future.get()
+            future.get(ELICITATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         } catch (e: InterruptedException) {
             Thread.currentThread().interrupt()
             throw e
+        } catch (_: TimeoutException) {
+            return null
         }
     val result = MAPPER.readTree(response)
     if (result.path("action").asString() != "accept") return null
@@ -135,9 +145,9 @@ private fun format(
 ): String {
     val temperature =
         if (units == "celsius") {
-            "%.1f°C".format(weather.temperatureCelsius)
+            "%.1f°C".format(Locale.ROOT, weather.temperatureCelsius)
         } else {
-            "%.1f°F".format(weather.temperatureCelsius * 9 / 5 + 32)
+            "%.1f°F".format(Locale.ROOT, weather.temperatureCelsius * 9 / 5 + 32)
         }
     return """
         Weather in ${weather.city}:

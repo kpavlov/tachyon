@@ -19,6 +19,7 @@ import dev.tachyonmcp.server.json.JsonSchemaUtils
 import org.slf4j.LoggerFactory
 import tools.jackson.databind.ObjectMapper
 import java.net.http.HttpClient
+import java.time.Duration
 import java.util.Base64
 import java.util.Locale
 import java.util.concurrent.Executors
@@ -36,6 +37,7 @@ fun createWeatherService(): WeatherService {
     val httpClient =
         HttpClient
             .newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
             .executor(Executors.newVirtualThreadPerTaskExecutor())
             .build()
     val openMeteoProvider = OpenMeteoProvider(httpClient)
@@ -140,11 +142,9 @@ private fun handleWeatherTemplate(
     try {
         asJson(weatherService.currentWeather(city))
     } catch (e: CityNotFoundException) {
-        throw InvalidArgumentException("city", e.message ?: "City not found: $city")
+        throw InvalidArgumentException("city", e.message ?: "City not found: $city", e)
     } catch (e: Exception) {
-        if (e is InterruptedException) {
-            Thread.currentThread().interrupt()
-        }
+        restoreInterruptStatus(e)
         throw IllegalStateException("Could not get weather", e)
     }
 

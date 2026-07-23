@@ -81,14 +81,16 @@ The identity block is easy to under-fill. `info { }` supports `title`, `websiteU
 
 ```kotlin
 import dev.tachyonmcp.server.domain.Icon
+import java.util.Base64
 
-val logoIcon = javaClass.getResourceAsStream("/logo-32x32.png")!!.use { s ->
-    Icon {
-        src = "data:image/png;base64,${Base64.Mime.encode(s.readAllBytes())}"
-        sizes = listOf("32x32")
-        mimeType = "image/png"
+val logoIcon =
+    object {}.javaClass.getResourceAsStream("/logo-32x32.png")!!.use { s ->
+        Icon {
+            src = "data:image/png;base64,${Base64.getEncoder().encodeToString(s.readAllBytes())}"
+            sizes = listOf("32x32")
+            mimeType = "image/png"
+        }
     }
-}
 ```
 
 > Map any timeout for pending server-to-client requests to

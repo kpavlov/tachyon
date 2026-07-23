@@ -10,7 +10,10 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import org.junit.jupiter.api.Test
+import tools.jackson.databind.node.JsonNodeFactory
 
 internal class StructuredFactoryDslTest {
     @Test
@@ -178,6 +181,60 @@ internal class StructuredFactoryDslTest {
             tool.description() shouldBe "Tool"
             tool.annotations() shouldBe toolAnnotations
             tool.icons() shouldBe listOf(icon)
+        }
+    }
+
+    @Test
+    fun `ToolDescriptor schema builders accept string, JsonObject, or omission`() {
+        val inputSchemaJson = """{"type":"object","properties":{"q":{"type":"string"}}}"""
+        val outputSchemaJson = """{"type":"object","properties":{"r":{"type":"integer"}}}"""
+        val inputSchemaJsonObject = buildJsonObject { put("type", JsonPrimitive("object")) }
+        val outputSchemaJsonObject = buildJsonObject { put("type", JsonPrimitive("array")) }
+
+        val fromString =
+            ToolDescriptor {
+                name = "from-string"
+                inputSchema(inputSchemaJson)
+                outputSchema(outputSchemaJson)
+            }
+        val fromJsonObject =
+            ToolDescriptor {
+                name = "from-json-object"
+                inputSchema(inputSchemaJsonObject)
+                outputSchema(outputSchemaJsonObject)
+            }
+        val omitted = ToolDescriptor { name = "omitted" }
+
+        val expectedInputFromString =
+            JsonNodeFactory.instance.objectNode().also {
+                it.put("type", "object")
+                it.putObject("properties").putObject("q").put("type", "string")
+            }
+        val expectedOutputFromString =
+            JsonNodeFactory.instance.objectNode().also {
+                it.put("type", "object")
+                it.putObject("properties").putObject("r").put("type", "integer")
+            }
+        val expectedInputFromJsonObject =
+            JsonNodeFactory.instance.objectNode().put(
+                "type",
+                "object",
+            )
+        val expectedOutputFromJsonObject =
+            JsonNodeFactory.instance.objectNode().put(
+                "type",
+                "array",
+            )
+
+        assertSoftly {
+            fromString.inputSchema() shouldBe expectedInputFromString
+            fromString.outputSchema() shouldBe expectedOutputFromString
+
+            fromJsonObject.inputSchema() shouldBe expectedInputFromJsonObject
+            fromJsonObject.outputSchema() shouldBe expectedOutputFromJsonObject
+
+            omitted.inputSchema() shouldBe null
+            omitted.outputSchema() shouldBe null
         }
     }
 

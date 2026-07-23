@@ -15,6 +15,7 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
+import java.time.Duration
 
 class OpenMeteoProvider(
     private val httpClient: HttpClient,
@@ -70,6 +71,7 @@ class OpenMeteoProvider(
     companion object {
         private const val GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
         private const val FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+        private val REQUEST_TIMEOUT = Duration.ofSeconds(10)
         private val MAPPER = ObjectMapper()
 
         private fun geocodingRequest(
@@ -79,6 +81,7 @@ class OpenMeteoProvider(
             val encoded = URLEncoder.encode(query, StandardCharsets.UTF_8)
             return HttpRequest
                 .newBuilder(URI.create("$GEOCODING_URL?name=$encoded&count=$count&language=en"))
+                .timeout(REQUEST_TIMEOUT)
                 .GET()
                 .build()
         }
@@ -88,7 +91,7 @@ class OpenMeteoProvider(
                 "$FORECAST_URL?latitude=${location.latitude}&longitude=${location.longitude}" +
                     "&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m" +
                     "&wind_speed_unit=kmh"
-            return HttpRequest.newBuilder(URI.create(uri)).GET().build()
+            return HttpRequest.newBuilder(URI.create(uri)).timeout(REQUEST_TIMEOUT).GET().build()
         }
 
         private fun parse(response: String): JsonNode =

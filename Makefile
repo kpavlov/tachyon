@@ -1,4 +1,4 @@
-.PHONY: all ci build test lint package conformance e2e clean format help inspector examples examples-snapshot
+.PHONY: all ci build test lint package conformance e2e clean format help mcp-inspector examples examples-snapshot
 
 .DEFAULT_GOAL := help
 
