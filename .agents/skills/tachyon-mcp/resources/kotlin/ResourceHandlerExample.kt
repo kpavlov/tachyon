@@ -50,10 +50,10 @@ fun userProfileTemplateDescriptor(): ResourceTemplateDescriptor =
         .build()
 
 fun userProfileTemplateHandler(): ResourceHandler =
-    ResourceHandler { _, uri, params, _ ->
-        val userId = params["userId"]?.scalarValue()
+    ResourceHandler { _, request ->
+        val userId = request.params()["userId"]?.scalarValue()
         TextResourceContents(
-            uri = uri,
+            uri = request.uri(),
             mimeType = "application/json",
             text = """{"userId":"$userId"}""",
         )
@@ -70,10 +70,10 @@ fun forecastTemplateDescriptor(): ResourceTemplateDescriptor =
         .build()
 
 fun forecastTemplateHandler(): ResourceHandler =
-    ResourceHandler { _, uri, params, _ ->
-        val city = params["city"]?.scalarValue()
+    ResourceHandler { _, request ->
+        val city = request.params()["city"]?.scalarValue()
         TextResourceContents(
-            uri = uri,
+            uri = request.uri(),
             mimeType = "application/json",
             text = """{"city":"$city","temp":22}""",
         )

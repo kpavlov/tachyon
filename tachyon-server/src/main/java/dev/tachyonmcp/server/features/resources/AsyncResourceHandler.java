@@ -6,11 +6,8 @@ package dev.tachyonmcp.server.features.resources;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.ResourceContents;
-import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.HandlerFutures;
-import java.util.Map;
 import java.util.concurrent.CompletionStage;
-import org.jspecify.annotations.Nullable;
 
 /**
  * Convenient base for asynchronous resource handlers. The registry invokes {@link #handleAsync} and
@@ -21,14 +18,11 @@ public interface AsyncResourceHandler extends ResourceHandler {
     /**
      * Reads the resource asynchronously and returns a future of its contents.
      */
-    CompletionStage<? extends ResourceContents> handleAsync(
-            InteractionContext context, String uri, Map<String, UriTemplateValue> params, @Nullable String uriTemplate);
+    CompletionStage<? extends ResourceContents> handleAsync(InteractionContext context, ResourceRequest request);
 
     @Override
-    default ResourceContents handle(
-            InteractionContext context, String uri, Map<String, UriTemplateValue> params, @Nullable String uriTemplate)
-            throws Exception {
+    default ResourceContents handle(InteractionContext context, ResourceRequest request) throws Exception {
         HandlerFutures.assumeVirtualThread();
-        return HandlerFutures.joinInterruptibly(handleAsync(context, uri, params, uriTemplate));
+        return HandlerFutures.joinInterruptibly(handleAsync(context, request));
     }
 }

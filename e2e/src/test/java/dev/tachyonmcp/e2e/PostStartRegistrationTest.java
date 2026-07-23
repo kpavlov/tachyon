@@ -29,7 +29,7 @@ class PostStartRegistrationTest extends AbstractStatelessMcpE2eTest {
                 .register(
                         ResourceDescriptor.of(
                                 "post-start-res", "test://post-start", "Post-start resource", "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "", "text/plain"));
+                        (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain"));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -66,8 +66,8 @@ class PostStartRegistrationTest extends AbstractStatelessMcpE2eTest {
         server.resources()
                 .register(
                         ResourceDescriptor.of("handled-res", "test://handled", "Handled resource", "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "post-start data", "text/plain", null));
+                        (ctx, request) ->
+                                TextResourceContents.of(request.uri(), "post-start data", "text/plain", null));
 
         try (var client = createTestClient()) {
             client.initialize();

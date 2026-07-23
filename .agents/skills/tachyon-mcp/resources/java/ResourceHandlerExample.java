@@ -49,9 +49,10 @@ final class ResourceHandlerExample {
     }
 
     static ResourceHandler userProfileTemplateHandler() {
-        return (ctx, uri, params, uriTemplate) -> {
-            var userId = params.get("userId").scalarValue();
-            return TextResourceContents.of(uri, "{\"userId\":\"" + userId + "\"}", "application/json");
+        return (ctx, request) -> {
+            var userId = request.params().get("userId").scalarValue();
+            return TextResourceContents.of(
+                request.uri(), "{\"userId\":\"" + userId + "\"}", "application/json");
         };
     }
 
@@ -66,8 +67,10 @@ final class ResourceHandlerExample {
     }
 
     static ResourceHandler forecastTemplateHandler() {
-        return (ctx, uri, params, uriTemplate) -> TextResourceContents.of(
-            uri, "{\"city\":\"" + params.get("city").scalarValue() + "\",\"temp\":22}", "application/json"
+        return (ctx, request) -> TextResourceContents.of(
+            request.uri(),
+            "{\"city\":\"" + request.params().get("city").scalarValue() + "\",\"temp\":22}",
+            "application/json"
         );
     }
 

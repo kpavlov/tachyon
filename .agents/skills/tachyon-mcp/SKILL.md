@@ -134,16 +134,17 @@ Template via builder:
         .uriTemplate("myapp://data/{id}")
         .description("Description")
         .mimeType("application/json"),
-    (ctx, uri, params, uriTemplate) -> {
-        var id = ((UriTemplateValue.Scalar) params.get("id")).value();
-        return TextResourceContents.of(uri, data, "application/json");
+    (ctx, request) -> {
+        var id = ((UriTemplateValue.Scalar) request.params().get("id")).value();
+        return TextResourceContents.of(request.uri(), data, "application/json");
     })
 ```
 
-Static resources and templates share `ResourceHandler`. Its full parameters are `(context, uri,
-params, uriTemplate)`; templates receive immutable parsed values and the original template text,
-`UriTemplate` performs matching. Static resources get an empty params map and null template, so
-use `ResourceHandler.of((ctx, uri) -> ...)` to drop the two unused parameters.
+Static resources and templates share `ResourceHandler`. Its canonical shape is
+`(InteractionContext, ResourceRequest)`. `ResourceRequest` carries `uri`, immutable template
+`params`, nullable `uriTemplate`, and request `_meta`. `UriTemplate` performs matching. Static
+resources get an empty params map and null template. Use `ResourceHandler.of((ctx, uri) -> ...)`
+only when a static handler does not need request metadata.
 
 Use explicit async methods. Sync handlers run blocking-first on virtual threads.
 

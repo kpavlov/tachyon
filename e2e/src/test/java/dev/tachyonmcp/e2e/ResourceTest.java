@@ -27,10 +27,10 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
         server.resources()
                 .register(
                         ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "Hello", "text/plain"))
+                        (ctx, request) -> TextResourceContents.of(request.uri(), "Hello", "text/plain"))
                 .register(
                         ResourceDescriptor.of("code", "resource://code", "Source code", "text/x-java"),
-                        (ctx, rawUri, params, uriTemplate) ->
+                        (ctx, request) ->
                                 TextResourceContents.of("resource://code", "package com.example;", "text/x-java"));
 
         try (var client = createTestClient()) {
@@ -58,8 +58,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
         server.resources()
                 .register(
                         descriptor,
-                        (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "Hello world", "text/plain"));
+                        (ctx, request) -> TextResourceContents.of(request.uri(), "Hello world", "text/plain"));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -80,8 +79,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
         startEmptyServer();
         server.resources()
                 .register(
-                        ResourceDescriptor.of("bad-arg", "resource://bad-arg", null, "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) -> {
+                        ResourceDescriptor.of("bad-arg", "resource://bad-arg", null, "text/plain"), (ctx, request) -> {
                             throw new IllegalArgumentException("sensitive internal detail");
                         });
 
@@ -109,16 +107,13 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
         server.resources()
                 .register(
                         ResourceDescriptor.of("alpha", "resource://alpha", "Alpha", "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "content-alpha", "text/plain"))
+                        (ctx, request) -> TextResourceContents.of(request.uri(), "content-alpha", "text/plain"))
                 .register(
                         ResourceDescriptor.of("beta", "resource://beta", "Beta", "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "content-beta", "text/plain"))
+                        (ctx, request) -> TextResourceContents.of(request.uri(), "content-beta", "text/plain"))
                 .register(
                         ResourceDescriptor.of("gamma", "resource://gamma", "Gamma", "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "content-gamma", "text/plain"));
+                        (ctx, request) -> TextResourceContents.of(request.uri(), "content-gamma", "text/plain"));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -147,7 +142,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
     @Test
     void shouldReadResourceFromAsyncHandler() throws Exception {
         var descriptor = ResourceDescriptor.of("async-doc", "resource://async-doc", "Async document", "text/plain");
-        AsyncResourceHandler handler = (ctx, rawUri, params, uriTemplate) -> CompletableFuture.supplyAsync(
+        AsyncResourceHandler handler = (ctx, request) -> CompletableFuture.supplyAsync(
                 () -> TextResourceContents.of("resource://async-doc", "async content", "text/plain"));
         startEmptyServer();
         server.resources().register(descriptor, handler);
@@ -164,10 +159,47 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
     }
 
     @Test
+    void shouldPassMetaToResourceHandler() throws Exception {
+        startServer(builder -> builder.resource(
+                resource -> resource.name("meta-doc").uri("resource://meta-doc"),
+                (ctx, request) -> TextResourceContents.of(
+                        request.uri(), request.meta().get("tenant").asString(), "text/plain")));
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+            var response = client.post(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{
+                  "uri":"resource://meta-doc",
+                  "_meta":{"tenant":"acme"}
+                }}
+                """);
+
+            assertThatJson(response.body())
+                    .isEqualTo(
+                            // language=JSON
+                            """
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 2,
+                      "result": {
+                        "contents": [
+                          {
+                            "uri": "resource://meta-doc",
+                            "mimeType": "text/plain",
+                            "text": "acme"
+                          }
+                        ]
+                      }
+                    }
+                    """);
+        }
+    }
+
+    @Test
     void shouldReturnErrorWhenAsyncHandlerFails() throws Exception {
         var descriptor = ResourceDescriptor.of("failing", "resource://failing", "Failing resource", "text/plain");
-        AsyncResourceHandler handler = (ctx, rawUri, params, uriTemplate) ->
-                CompletableFuture.failedFuture(new IllegalStateException("backend down"));
+        AsyncResourceHandler handler =
+                (ctx, request) -> CompletableFuture.failedFuture(new IllegalStateException("backend down"));
         startEmptyServer();
         server.resources().register(descriptor, handler);
 
@@ -230,12 +262,10 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
         server.resources()
                 .register(
                         ResourceDescriptor.of("alpha", "resource://alpha", "Alpha", "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "content-alpha", "text/plain"))
+                        (ctx, request) -> TextResourceContents.of(request.uri(), "content-alpha", "text/plain"))
                 .register(
                         ResourceDescriptor.of("beta", "resource://beta", "Beta", "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "content-beta", "text/plain"));
+                        (ctx, request) -> TextResourceContents.of(request.uri(), "content-beta", "text/plain"));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -268,7 +298,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
             if ("remove".equals(action)) {
                 builder.resource(
                         ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "", "text/plain"));
+                        (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain"));
             }
         });
 
@@ -286,7 +316,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
     void shouldNotifyResourceUpdated() throws Exception {
         startServer(it -> it.resource(
                         ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "", "text/plain"))
+                        (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain"))
                 .tool(notifyUpdatedTool()));
 
         try (var client = createTestClient()) {
@@ -310,7 +340,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
     void shouldNotNotifyAfterUnsubscribe() throws Exception {
         startServer(it -> it.resource(
                         ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "", "text/plain"))
+                        (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain"))
                 .tool(notifyUpdatedTool()));
 
         try (var client = createTestClient()) {
@@ -340,7 +370,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
             builder.capabilities(c -> c.resourcesListChanged(true)).tool(unregisterByUriTool());
             builder.resource(
                     ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
-                    (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(rawUri, "", "text/plain"));
+                    (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain"));
         });
 
         try (var client = createTestClient()) {
@@ -364,8 +394,8 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
                         resources.register(
                                 ResourceDescriptor.of(
                                         "added-resource", "resource://added", "Added by handler", "text/plain"),
-                                (ctx, rawUri, params, uriTemplate) ->
-                                        TextResourceContents.of(rawUri, "content", "text/plain"));
+                                (ctx, resourceRequest) ->
+                                        TextResourceContents.of(resourceRequest.uri(), "content", "text/plain"));
                     } else {
                         resources.unregister("doc");
                     }

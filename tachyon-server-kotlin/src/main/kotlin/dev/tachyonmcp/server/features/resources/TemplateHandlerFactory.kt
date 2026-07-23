@@ -15,9 +15,9 @@ internal fun templateHandler(
     block: suspend TemplateScope.() -> ResourceContents,
 ): ResourceHandler {
     val coroutineName = CoroutineName("resource-template:$name")
-    return ResourceHandler { ctx, uri, params, uriTemplate ->
+    return ResourceHandler { ctx, request ->
         runSuspendHandler(coroutineName) {
-            TemplateScope(ctx, uri, params, requireNotNull(uriTemplate)).block()
+            TemplateScope(ctx, request).block()
         }
     }
 }

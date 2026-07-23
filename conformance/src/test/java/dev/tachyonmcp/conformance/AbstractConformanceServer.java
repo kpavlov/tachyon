@@ -16,7 +16,6 @@ import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.RpcMethodRequest;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.domain.TextResourceContents;
-import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.prompts.PromptResult;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
@@ -34,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.awaitility.Awaitility;
+import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -119,7 +119,7 @@ abstract class AbstractConformanceServer {
         }
     }
 
-    protected static boolean verifyState(String signedState) {
+    protected static boolean verifyState(@Nullable String signedState) {
         if (signedState == null) return false;
         var lastDot = signedState.lastIndexOf('.');
         if (lastDot < 0) return false;
@@ -472,7 +472,7 @@ abstract class AbstractConformanceServer {
                                 var inputResponses = request.inputResponses();
                                 var requestState = request.requestState();
                                 if (inputResponses != null && inputResponses.containsKey("confirm")) {
-                                    if (requestState == null || !verifyState(requestState)) {
+                                    if (!verifyState(requestState)) {
                                         throw new IllegalArgumentException("Invalid or tampered requestState");
                                     }
                                     return ToolResult.text("State verified");
@@ -523,31 +523,30 @@ abstract class AbstractConformanceServer {
         server.resources()
                 .register(
                         ResourceDescriptor.of("hello", "hello://world", "Hello resource", "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) ->
-                                TextResourceContents.of(rawUri, "Hello, World!", "text/plain"));
+                        (ctx, request) -> TextResourceContents.of(request.uri(), "Hello, World!", "text/plain"));
 
         server.resources()
                 .register(
                         ResourceDescriptor.of(
                                 "static-text", "test://static-text", "Static text resource", "text/plain"),
-                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
-                                rawUri, "This is static text content for testing.", "text/plain"));
+                        (ctx, request) -> TextResourceContents.of(
+                                request.uri(), "This is static text content for testing.", "text/plain"));
 
         server.resources()
                 .register(
                         ResourceDescriptor.of(
                                 "static-binary", "test://static-binary", "Static binary resource", "image/png"),
-                        (ctx, rawUri, params, uriTemplate) ->
-                                BlobResourceContents.of(rawUri, MINI_PNG_BASE64, "image/png"));
+                        (ctx, request) -> BlobResourceContents.of(request.uri(), MINI_PNG_BASE64, "image/png"));
 
         server.resources()
                 .registerTemplate(
                         builder -> builder.name("test-template")
                                 .uriTemplate("test://template/{id}/data")
                                 .description("test-description"),
-                        (ctx, rawUri, params, uriTemplate) -> TextResourceContents.of(
-                                rawUri,
-                                "Resource content for id: " + ((UriTemplateValue.Scalar) params.get("id")).value(),
+                        (ctx, request) -> TextResourceContents.of(
+                                request.uri(),
+                                "Resource content for id: "
+                                        + request.params().get("id").scalarValue(),
                                 "text/plain"));
     }
 
