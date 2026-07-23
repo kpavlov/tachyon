@@ -4,6 +4,7 @@ package dev.tachyonmcp.server
 
 import dev.tachyonmcp.server.config.Mode
 import dev.tachyonmcp.server.domain.Annotations
+import dev.tachyonmcp.server.domain.BlobResourceContents
 import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.PromptArgument
 import dev.tachyonmcp.server.domain.PromptMessage
@@ -254,6 +255,50 @@ internal class TachyonServerTest {
                 readResponse.body() shouldContain """"uri":"user://42/profile""""
                 readResponse.body() shouldContain """"mimeType":"application/json""""
                 readResponse.body() shouldContain """{\"id\":\"42\"}"""
+            }
+        }
+    }
+
+    @Test
+    fun `static resource contents inherit registered uri and mime type`() {
+        TachyonServer(port = 0) {
+            name("contextual-resource-contents-test")
+            session { enabled = true }
+            resource(
+                name = "text",
+                uri = "test://text",
+                mimeType = "text/plain",
+            ) {
+                TextResourceContents { text = "hello" }
+            }
+            resource(
+                name = "blob",
+                uri = "test://blob",
+                mimeType = "application/octet-stream",
+            ) {
+                BlobResourceContents { blob = "AQI=" }
+            }
+        }.use { handle ->
+            McpProbe(handle.port()).use { probe ->
+                probe.initialize()
+
+                val text =
+                    probe.post(
+                        """{"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"test://text"}}""",
+                    )
+                text.statusCode() shouldBe 200
+                text.body() shouldContain """"uri":"test://text""""
+                text.body() shouldContain """"mimeType":"text/plain""""
+                text.body() shouldContain """"text":"hello""""
+
+                val blob =
+                    probe.post(
+                        """{"jsonrpc":"2.0","id":3,"method":"resources/read","params":{"uri":"test://blob"}}""",
+                    )
+                blob.statusCode() shouldBe 200
+                blob.body() shouldContain """"uri":"test://blob""""
+                blob.body() shouldContain """"mimeType":"application/octet-stream""""
+                blob.body() shouldContain """"blob":"AQI=""""
             }
         }
     }

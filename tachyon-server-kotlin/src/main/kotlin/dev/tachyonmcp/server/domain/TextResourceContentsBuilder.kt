@@ -3,6 +3,7 @@
 package dev.tachyonmcp.server.domain
 
 import dev.tachyonmcp.server.TachyonDsl
+import dev.tachyonmcp.server.config.ResourceScope
 import dev.tachyonmcp.server.config.TemplateScope
 import tools.jackson.databind.JsonNode
 
@@ -15,7 +16,7 @@ import tools.jackson.databind.JsonNode
 public class TextResourceContentsBuilder
     @PublishedApi
     internal constructor(
-        private val scope: TemplateScope? = null,
+        private val scope: ResourceScope? = null,
     ) {
         /** Resource URI. Defaults to the requested URI. */
         public var uri: String? = scope?.uri
@@ -35,7 +36,9 @@ public class TextResourceContentsBuilder
          * @param name template parameter name
          */
         public fun param(name: String): String =
-            requireNotNull(scope) { "URI-template parameters require a TemplateScope" }.param(name)
+            requireNotNull(scope as? TemplateScope) {
+                "URI-template parameters require a TemplateScope"
+            }.param(name)
 
         /**
          * Returns a sequence URI-template parameter.
@@ -44,7 +47,7 @@ public class TextResourceContentsBuilder
          */
         public fun sequence(name: String): List<String> =
             requireNotNull(
-                scope,
+                scope as? TemplateScope,
             ) { "URI-template parameters require a TemplateScope" }.sequence(name)
 
         @PublishedApi

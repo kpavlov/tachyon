@@ -121,14 +121,14 @@ For class-based handlers, extend `AbstractToolHandler` and override `handle(ctx,
 Resource and prompt lambdas are `suspend` functions too — call suspending APIs directly:
 
 ```kotlin
-resource(name = "config", uri = "demo://config") {
+resource(
+    name = "config",
+    uri = "demo://config",
+    mimeType = "application/json",
+) {
     // this: ResourceScope — ctx, uri, params, uriTemplate
     val config = fetchConfig()  // suspend call
-    TextResourceContents {
-        uri = this@resource.uri
-        text = config
-        mimeType = "application/json"
-    }
+    TextResourceContents { text = config }
 }
 
 prompt(name = "greet", description = "Greeting prompt") {
@@ -136,6 +136,10 @@ prompt(name = "greet", description = "Greeting prompt") {
     listOf(PromptMessage.user("Hello, ${arguments ?: "world"}"))
 }
 ```
+
+Inside a resource handler, `TextResourceContents { }` and `BlobResourceContents { }` default `uri`
+to the requested URI and `mimeType` to the registered resource MIME type. You can override either
+property.
 
 Handlers run via `runBlocking` on a virtual thread; cancellation is delivered by thread
 interruption (e.g. from `tasks/cancel`), which cancels the coroutine.
@@ -165,9 +169,8 @@ resourceTemplate(
 }
 ```
 
-Inside a template handler, `TextResourceContents { }` defaults `uri` to the requested URI and
-`mimeType` to the registered template MIME type. You can override either property. The builder
-also exposes `param(name)` and `sequence(name)`.
+Template handlers use the same contextual defaults. Their text builder also exposes `param(name)`
+and `sequence(name)`.
 
 For a descriptor shared across registrations, build it once and use the descriptor overload:
 

@@ -3,6 +3,7 @@
 package dev.tachyonmcp.server.domain
 
 import dev.tachyonmcp.server.TachyonDsl
+import dev.tachyonmcp.server.config.ResourceScope
 import tools.jackson.databind.JsonNode
 
 /** Builds [Annotations]. */
@@ -166,15 +167,17 @@ public class AudioContentBuilder
 @TachyonDsl
 public class BlobResourceContentsBuilder
     @PublishedApi
-    internal constructor() {
+    internal constructor(
+        scope: ResourceScope? = null,
+    ) {
         /** Resource URI. */
-        public var uri: String? = null
+        public var uri: String? = scope?.uri
 
         /** Base64-encoded resource bytes. */
         public var blob: String? = null
 
         /** Resource MIME type. */
-        public var mimeType: String? = null
+        public var mimeType: String? = scope?.registeredMimeType
 
         /** Optional resource metadata. */
         public var meta: Map<String, JsonNode> = emptyMap()

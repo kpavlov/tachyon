@@ -35,7 +35,7 @@ internal class KotlinFeatureRegistrar(
                     .description(description)
                     .mimeType(mimeType)
             },
-            resourceHandler(name, handler),
+            resourceHandler(name, mimeType, handler),
         )
     }
 

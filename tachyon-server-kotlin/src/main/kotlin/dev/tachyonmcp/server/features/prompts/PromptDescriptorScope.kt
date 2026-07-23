@@ -56,7 +56,6 @@ public inline fun promptDescriptor(
 }
 
 /** Builds a [PromptDescriptor] with a receiver DSL. */
-@Suppress("FunctionName")
 @OptIn(ExperimentalContracts::class)
 public inline fun PromptDescriptor(block: PromptDescriptorScope.() -> Unit): PromptDescriptor {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }

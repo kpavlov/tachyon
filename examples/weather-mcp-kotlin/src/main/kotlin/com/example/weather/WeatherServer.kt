@@ -66,7 +66,7 @@ fun createServer(
             description = "Weather prediction article",
             mimeType = "text/markdown",
         ) {
-            TextResourceContents.of(uri, weatherService.predictionArticle, "text/markdown")
+            TextResourceContents { text = weatherService.predictionArticle }
         }
 
         resource(
@@ -75,7 +75,7 @@ fun createServer(
             description = "Current weather in Tallinn",
             mimeType = "application/json",
         ) {
-            TextResourceContents.of(uri, asJson(weatherService.currentWeather("Tallinn")), "application/json")
+            TextResourceContents { text = asJson(weatherService.currentWeather("Tallinn")) }
         }
 
         prompt(rewriteForecastPromptDescriptor()) { rewriteForecast(weatherService, arguments) }
