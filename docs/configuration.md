@@ -141,7 +141,7 @@ Guidance:
 Netty I/O engine: KQUEUE
 ```
 
-Native transports are optional runtime dependencies — `tachyon-server` itself depends only on the portable NIO transport. To enable a native transport, add the matching jar with your platform classifier (via [os-maven-plugin](https://github.com/trustin/os-maven-plugin)):
+Native transports are optional runtime dependencies — `tachyon-core` itself depends only on the portable NIO transport. To enable a native transport, add the matching jar with your platform classifier (via [os-maven-plugin](https://github.com/trustin/os-maven-plugin)):
 
 ```xml
 <build>

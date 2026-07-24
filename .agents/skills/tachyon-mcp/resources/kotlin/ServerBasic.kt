@@ -5,13 +5,16 @@ package dev.tachyonmcp.skill
 import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.config.Mode
 import dev.tachyonmcp.server.config.NetworkConfig
-import dev.tachyonmcp.server.domain.Icon
-import dev.tachyonmcp.server.domain.PromptMessage
-import dev.tachyonmcp.server.domain.TextResourceContents
-import dev.tachyonmcp.server.features.prompts.promptMessagesOf
+import dev.tachyonmcp.server.domain.Role
 import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.json.KxSerializationSerde
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator
+import dev.tachyonmcp.kotlin.server.TachyonServer
+import dev.tachyonmcp.kotlin.server.domain.Icon
+import dev.tachyonmcp.kotlin.server.domain.PromptMessage
+import dev.tachyonmcp.kotlin.server.domain.TextContent
+import dev.tachyonmcp.kotlin.server.domain.TextResourceContents
+import dev.tachyonmcp.kotlin.server.features.prompts.promptMessagesOf
+import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
 import dev.tachyonmcp.transport.netty.NettyIoEngine
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -91,7 +94,8 @@ fun createServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer =
             readerIdleTimeout = NetworkConfig.DEFAULT_READER_IDLE_TIMEOUT.toKotlinDuration()
             writerIdleTimeout = NetworkConfig.DEFAULT_WRITER_IDLE_TIMEOUT.toKotlinDuration()
             heartbeatInterval = NetworkConfig.DEFAULT_HEARTBEAT_INTERVAL.toKotlinDuration()
-            maxContentLength = 1024 * 1024 // 1 MB — the actual default (NetworkConfig.DEFAULT_MAX_CONTENT_LENGTH is a stale, unwired 65535 constant)
+            maxContentLength =
+                1024 * 1024 // 1 MB — the actual default (NetworkConfig.DEFAULT_MAX_CONTENT_LENGTH)
             ioEngine = NettyIoEngine.AUTO
         }
 
@@ -123,7 +127,12 @@ fun createServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer =
 
         // ── prompts ───────────────────────────────────────────────
         prompt(name = "greet", description = "Generates a greeting") {
-            promptMessagesOf(PromptMessage.user("Say hello"))
+            promptMessagesOf(
+                PromptMessage(
+                    role = Role.USER,
+                    content = TextContent("Say hello"),
+                ),
+            )
         }
 
         // ── netty pipeline customiser (escape hatch) ──────────────

@@ -4,21 +4,22 @@ package dev.tachyonmcp.skill
 
 import dev.tachyonmcp.runtime.InteractionContext
 import dev.tachyonmcp.server.TachyonServer
-import dev.tachyonmcp.server.buildServer
-import dev.tachyonmcp.server.config.TachyonServerBuilder
-import dev.tachyonmcp.server.config.success
 import dev.tachyonmcp.server.domain.Args
-import dev.tachyonmcp.server.domain.decode
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler
 import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.features.tools.registerTool
-import dev.tachyonmcp.server.features.tools.toolDescriptor
+import dev.tachyonmcp.kotlin.server.buildServer
+import dev.tachyonmcp.kotlin.server.config.TachyonServerBuilder
+import dev.tachyonmcp.kotlin.server.config.success
+import dev.tachyonmcp.kotlin.server.domain.decode
+import dev.tachyonmcp.kotlin.server.features.tools.registerTool
+import dev.tachyonmcp.kotlin.server.features.tools.toolDescriptor
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
+import kotlin.time.Duration.Companion.seconds
 
 private val MAPPER = ObjectMapper()
 private val GREET_SCHEMA: JsonNode =
@@ -88,8 +89,10 @@ fun TachyonServerBuilder.registerTypedGreeting() {
 fun TachyonServerBuilder.registerSlowTask() {
     tool(name = "slow-task", description = "Long task kept alive via SSE comments") {
         repeat(10) { i ->
-            ctx.notifications().comment("step $i") // upgrades POST -> SSE, keeps the connection alive
-            delay(1_000) // suspend handler — use delay(), not Thread.sleep
+            ctx
+                .notifications()
+                .comment("step $i") // upgrades POST -> SSE, keeps the connection alive
+            delay(1.seconds) // suspend handler — use delay(), not Thread.sleep
         }
         ToolResult.text("done")
     }

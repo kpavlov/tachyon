@@ -42,9 +42,9 @@ mvn spotless:apply  # auto-fix
 - Use MCP tools.
 - **Format**: Check on `make lint`, fix with `make format`.
 - **API/Registry design**: see [`docs/architecture/guidance.md`](docs/architecture/guidance.md) before adding/changing a handler SAM (sync/async shape, checked exceptions, descriptor bundling, `_meta`) or naming registry APIs (`ServerBuilder` nouns, `register`/`registerAsync`/`unregister`, `find`, `descriptors()`).
-- **Kotlin DSL** (`tachyon-server-kotlin`):
+- **Kotlin DSL** (`tachyon-kotlin`):
   - Each scope class gets its own `*Scope.kt` file.
   - `TachyonServerBuilder` wraps `ServerBuilder` as the DSL receiver. Scope methods on `TachyonServerBuilder` use clean names (`info`, `capabilities`, `network`, `session`) with zero Java member conflicts.
   - Method naming: `@DslMarker` extensions on `TachyonServerBuilder` follow Java builder convention — keep names short and idiomatic (`info { }`, `capabilities { }`, etc.).
   - Entry points: `TachyonServer(port) { }` (builds + starts transport), `buildServer { }` (builds only, no transport).
-  - Run Kotlin tests: `mvn test -pl tachyon-server-kotlin -am`.
+  - Run Kotlin tests: `mvn test -pl tachyon-kotlin -am`.

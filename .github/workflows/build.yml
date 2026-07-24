@@ -119,12 +119,12 @@ jobs:
       - name: Install jar
         run: |
           rm -rf ~/.m2/repository/dev/tachyonmcp
-          ./mvnw install -pl tachyon-server,tachyon-server-kotlin -am -DskipTests
+          ./mvnw install -pl tachyon-api,tachyon-core,tachyon-kotlin -am -DskipTests
 
       - name: Verify examples
         working-directory: 'examples/${{ matrix.example }}'
         run: |
-          ./mvnw verify -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
+          ./mvnw verify -Dtachyon.version=1.0.0-SNAPSHOT --no-transfer-progress
           rm -rf ~/.m2/repository/dev/tachyonmcp
 
       - name: Publish test results

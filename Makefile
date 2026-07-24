@@ -29,9 +29,9 @@ test: ## Run unit + e2e tests
 	@./mvnw test $(MAVEN_TEST_ARGS) --no-transfer-progress
 
 package: ## Install artifacts to local Maven repo (skip tests)
-	@echo "📦 Packaging and installing tachyon-server to local repository..."
+	@echo "📦 Packaging and installing to local repository..."
 	@rm -rf ~/.m2/repository/dev/tachyonmcp/
-	@./mvnw install -pl tachyon-server-kotlin -am -DskipTests -Dspotbugs.skip -Dspotless.skip
+	@./mvnw install -pl tachyon-kotlin -am -DskipTests -Dspotbugs.skip -Dspotless.skip
 
 examples: ## Build live examples against published artifacts
 	@echo "🌤️ 📡  Building LIVE examples..."
@@ -42,9 +42,9 @@ examples: ## Build live examples against published artifacts
 
 examples-snapshot: package ## Build examples against local SNAPSHOT artifacts
 	@echo "🌤️ 🎬 Building SNAPSHOT examples..."
-	@./mvnw verify -f examples/weather/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
-	@./mvnw verify -f examples/weather-mcp-kotlin/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
-	@./mvnw verify -f examples/echo-kotlin/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
+	@./mvnw verify -f examples/weather/pom.xml -Dtachyon.version=1.0.0-SNAPSHOT --no-transfer-progress
+	@./mvnw verify -f examples/weather-mcp-kotlin/pom.xml -Dtachyon.version=1.0.0-SNAPSHOT --no-transfer-progress
+	@./mvnw verify -f examples/echo-kotlin/pom.xml -Dtachyon.version=1.0.0-SNAPSHOT --no-transfer-progress
 	@echo " ✅  Done!"
 
 conformance: ## Run MCP conformance suite
@@ -58,20 +58,21 @@ e2e: package ## Run end-to-end tests
 
 clean: ## Remove all build artifacts
 	@echo " 🧹  Cleaning..."
+	@rm -rf ~/.m2/repository/dev/tachyonmcp
 	@find . -type d -name target -exec rm -rf {} +
 	@echo " ✅  All clean!"
 
 format: ## Auto-format code (Spotless + Detekt)
 	@echo " 🎨  Formatting code..."
 	@./mvnw spotless:apply -q
-	@./mvnw install -pl tachyon-server -DskipTests -Dspotbugs.skip -Dspotless.skip -q
-	@./mvnw exec:java@detekt-format -pl tachyon-server-kotlin -am -q
+	@./mvnw install -pl tachyon-api,tachyon-core -DskipTests -Dspotbugs.skip -Dspotless.skip -q
+	@./mvnw exec:java@detekt-format -pl tachyon-kotlin -am -q
 	@echo " ✅  Done..."
 
 lint: ## Check code style and bugs (Spotless + Detekt + SpotBugs)
 	@echo " 🔍  Linting code..."
 	@./mvnw spotless:check -pl !reports
-	@./mvnw exec:java@detekt -pl tachyon-server-kotlin
+	@./mvnw exec:java@detekt -pl tachyon-kotlin
 	@./mvnw spotbugs:check -pl !reports,!e2e
 	@echo " ✅  Done..."
 
