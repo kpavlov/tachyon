@@ -6,9 +6,9 @@ package dev.tachyonmcp.server.features.tools
 
 import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.config.ToolScope
-import dev.tachyonmcp.server.json.schemas
-import dev.tachyonmcp.server.json.toJacksonNode
-import dev.tachyonmcp.server.json.toJacksonNodeOrNull
+import dev.tachyonmcp.server.kotlin.json.schemas
+import dev.tachyonmcp.server.kotlin.json.toJacksonNode
+import dev.tachyonmcp.server.kotlin.json.toJacksonNodeOrNull
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
 import kotlin.contracts.ExperimentalContracts

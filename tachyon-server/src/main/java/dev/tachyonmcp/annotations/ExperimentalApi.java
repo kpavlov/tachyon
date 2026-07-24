@@ -22,6 +22,6 @@ import java.lang.annotation.Target;
  * feedback and are not guaranteed to be part of the final API.
  */
 @Documented
-@Retention(RetentionPolicy.SOURCE)
+@Retention(RetentionPolicy.CLASS)
 @Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD, ElementType.PACKAGE})
 public @interface ExperimentalApi {}

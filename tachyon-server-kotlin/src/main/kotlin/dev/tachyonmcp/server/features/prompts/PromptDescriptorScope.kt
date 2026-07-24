@@ -6,7 +6,7 @@ import dev.tachyonmcp.server.TachyonDsl
 import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.PromptArgument
 import dev.tachyonmcp.server.domain.PromptArgumentBuilder
-import dev.tachyonmcp.server.json.toJacksonNode
+import dev.tachyonmcp.server.kotlin.json.toJacksonNode
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
 import kotlin.contracts.ExperimentalContracts
@@ -44,29 +44,9 @@ public class PromptDescriptorScope
         @PublishedApi
         internal fun build(): PromptDescriptor {
             val n = requireNotNull(name) { "PromptDescriptor.name is required" }
-            return PromptDescriptor(
-                name = n,
-                description = description,
-                title = title,
-                arguments = arguments,
-                inputSchema = inputSchema,
-                icons = icons,
-            )
+            return PromptDescriptor.of(n, description, title, arguments, inputSchema, icons)
         }
     }
-
-@OptIn(ExperimentalContracts::class)
-public inline fun promptDescriptor(
-    name: String,
-    configure: PromptDescriptorScope.() -> Unit = {},
-): PromptDescriptor {
-    contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
-    return PromptDescriptorScope()
-        .apply {
-            this.name = name
-            configure()
-        }.build()
-}
 
 /** Builds a [PromptDescriptor] with a receiver DSL. */
 @OptIn(ExperimentalContracts::class)

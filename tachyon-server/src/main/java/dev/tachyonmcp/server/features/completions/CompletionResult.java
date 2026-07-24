@@ -25,6 +25,11 @@ public record CompletionResult(
         values = values != null ? List.copyOf(values) : List.of();
     }
 
+    /**
+     * An empty completion result with no candidates, unknown total, and no more results.
+     *
+     * @return a result with an empty values list, {@code null} total, and {@code false} hasMore
+     */
     public static CompletionResult empty() {
         return new CompletionResult(List.of(), null, false);
     }

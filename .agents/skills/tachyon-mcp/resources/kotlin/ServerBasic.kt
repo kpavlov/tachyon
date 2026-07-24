@@ -10,7 +10,7 @@ import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.domain.TextResourceContents
 import dev.tachyonmcp.server.features.prompts.promptMessagesOf
 import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.json.KxSerializationSerde
+import dev.tachyonmcp.server.kotlin.json.KxSerializationSerde
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator
 import dev.tachyonmcp.transport.netty.NettyIoEngine
 import kotlin.time.Duration.Companion.minutes
@@ -91,7 +91,8 @@ fun createServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer =
             readerIdleTimeout = NetworkConfig.DEFAULT_READER_IDLE_TIMEOUT.toKotlinDuration()
             writerIdleTimeout = NetworkConfig.DEFAULT_WRITER_IDLE_TIMEOUT.toKotlinDuration()
             heartbeatInterval = NetworkConfig.DEFAULT_HEARTBEAT_INTERVAL.toKotlinDuration()
-            maxContentLength = 1024 * 1024 // 1 MB — the actual default (NetworkConfig.DEFAULT_MAX_CONTENT_LENGTH is a stale, unwired 65535 constant)
+            maxContentLength =
+                1024 * 1024 // 1 MB — the actual default (NetworkConfig.DEFAULT_MAX_CONTENT_LENGTH is a stale, unwired 65535 constant)
             ioEngine = NettyIoEngine.AUTO
         }
 

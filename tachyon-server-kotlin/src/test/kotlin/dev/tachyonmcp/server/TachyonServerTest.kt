@@ -39,79 +39,82 @@ internal class TachyonServerTest {
                 sizes = listOf("64x64")
                 theme = "white"
             }
-        TachyonServer(port = 0) {
-            info {
-                name = appName
-                title = "My Test MCP Server"
-                icons += expectedIcon
-                websiteUrl = "https://example.com/mcp"
-                version = "2.0.0"
-                description = "e2e test server"
-                instructions = "ignore me"
-            }
-            capabilities {
-                tools {
-                    mode = Mode.ON
-                    listChanged = true
-                    pageSize = 20
+        TachyonServer(
+            port = 0,
+            {
+                info {
+                    name = appName
+                    title = "My Test MCP Server"
+                    icons += expectedIcon
+                    websiteUrl = "https://example.com/mcp"
+                    version = "2.0.0"
+                    description = "e2e test server"
+                    instructions = "ignore me"
                 }
-                resources {
-                    mode = Mode.ON
-                    subscribe = true
-                    listChanged = true
-                    pageSize = 21
+                capabilities {
+                    tools {
+                        mode = Mode.ON
+                        listChanged = true
+                        pageSize = 20
+                    }
+                    resources {
+                        mode = Mode.ON
+                        subscribe = true
+                        listChanged = true
+                        pageSize = 21
+                    }
+                    prompts {
+                        mode = Mode.ON
+                        listChanged = true
+                        pageSize = 22
+                    }
+                    tasks {
+                        enabled = true
+                        list = true
+                        cancel = true
+                        requests = true
+                        pageSize = 23
+                    }
+                    completionsMode = Mode.ON
+                    logging = true
                 }
-                prompts {
-                    mode = Mode.ON
-                    listChanged = true
-                    pageSize = 22
+                network {
+                    host = "127.0.0.1"
+                    port = 0
+                    endpointPath = "/mcp"
+                    allowedOrigins.add("*")
+                    allowNullOrigin = true
+                    allowPrivateNetworks = true
+                    readerIdleTimeout = 124.seconds
+                    writerIdleTimeout = 60.seconds
+                    maxContentLength = 1_000_000
                 }
-                tasks {
+                session {
                     enabled = true
-                    list = true
-                    cancel = true
-                    requests = true
-                    pageSize = 23
+                    sessionTtl = 15.seconds
+                    sessionStore = InMemorySessionStore()
+                    sessionEventStore = InMemorySessionEventStore()
+                    sessionIdGenerator { it.headers().get("X-Tenant-Id") ?: "anon" }
                 }
-                completionsMode = Mode.ON
-                logging = true
-            }
-            network {
-                host = "127.0.0.1"
-                port = 0
-                endpointPath = "/mcp"
-                allowedOrigins.add("*")
-                allowNullOrigin = true
-                allowPrivateNetworks = true
-                readerIdleTimeout = 124.seconds
-                writerIdleTimeout = 60.seconds
-                maxContentLength = 1_000_000
-            }
-            session {
-                enabled = true
-                sessionTtl = 15.seconds
-                sessionStore = InMemorySessionStore()
-                sessionEventStore = InMemorySessionEventStore()
-                sessionIdGenerator { it.headers().get("X-Tenant-Id") ?: "anon" }
-            }
-            monitoring {
-                slowRequestLogging = true
-                slowRequestThreshold = 15.seconds
-            }
-            pipelineCustomizer { }
-            tool("ping", "Health check") { ToolResult.text("pong") }
-            resource(
-                "config",
-                "file:///config.yaml",
-                description = "App config",
-                mimeType = "text/yaml",
-            ) {
-                TextResourceContents(uri = uri, mimeType = "text/yaml", text = "key: value")
-            }
-            prompt("greet", "Say hello") {
-                listOf(PromptMessage.user(TextContent("Hello, ${arguments ?: "world"}!")))
-            }
-        }.use { handle ->
+                monitoring {
+                    slowRequestLogging = true
+                    slowRequestThreshold = 15.seconds
+                }
+                pipelineCustomizer { }
+                tool("ping", "Health check") { ToolResult.text("pong") }
+                resource(
+                    "config",
+                    "file:///config.yaml",
+                    description = "App config",
+                    mimeType = "text/yaml",
+                ) {
+                    TextResourceContents(uri = uri, mimeType = "text/yaml", text = "key: value")
+                }
+                prompt("greet", "Say hello") {
+                    listOf(PromptMessage.user(TextContent("Hello, ${arguments ?: "world"}!")))
+                }
+            },
+        ).use { handle ->
             (handle.port() > 0) shouldBe true
             handle.host() shouldBe "127.0.0.1"
             val config = handle.config()
@@ -202,11 +205,13 @@ internal class TachyonServerTest {
 
     @Test
     fun `network port set via DSL without factory port parameter`() {
-        TachyonServer {
-            name("dsl-port-test")
-            session { enabled = true }
-            network { port = 0 }
-        }.use { handle ->
+        TachyonServer(
+            configure = {
+                name("dsl-port-test")
+                session { enabled = true }
+                network { port = 0 }
+            },
+        ).use { handle ->
             (handle.port() > 0) shouldBe true
         }
     }
@@ -220,24 +225,27 @@ internal class TachyonServerTest {
                 mimeType = "image/svg+xml"
             }
         val annotations = Annotations { priority = 0.7 }
-        TachyonServer(port = 0) {
-            name("template-test")
-            session { enabled = true }
-            tool("check", inputSchema = schema) { ToolResult.text("ok") }
-            resourceTemplate(
-                name = "user-profile",
-                uriTemplate = "user://{userId}/profile",
-                description = "User profile template",
-                mimeType = "application/json",
-                title = "User profile",
-                annotations = annotations,
-                icons = listOf(icon),
-            ) {
-                TextResourceContents {
-                    text = "{\"id\":\"${param("userId")}\"}"
+        TachyonServer(
+            port = 0,
+            {
+                name("template-test")
+                session { enabled = true }
+                tool("check", inputSchema = schema) { ToolResult.text("ok") }
+                resourceTemplate(
+                    name = "user-profile",
+                    uriTemplate = "user://{userId}/profile",
+                    description = "User profile template",
+                    mimeType = "application/json",
+                    title = "User profile",
+                    annotations = annotations,
+                    icons = listOf(icon),
+                ) {
+                    TextResourceContents {
+                        text = "{\"id\":\"${param("userId")}\"}"
+                    }
                 }
-            }
-        }.use { handle ->
+            },
+        ).use { handle ->
             McpProbe(handle.port()).use { probe ->
                 probe.initialize()
                 val response = probe.request(2, "resources/templates/list")
@@ -273,25 +281,28 @@ internal class TachyonServerTest {
                 size = 2
                 icons = listOf(icon)
             }
-        TachyonServer(port = 0) {
-            name("contextual-resource-contents-test")
-            session { enabled = true }
-            resource(
-                name = "text",
-                uri = "test://text",
-                description = "Text resource",
-                mimeType = "text/plain",
-                title = "Text resource title",
-                annotations = expectedAnnotations,
-                size = 5,
-                icons = listOf(icon),
-            ) {
-                TextResourceContents { text = "hello" }
-            }
-            resource(blobDescriptor) {
-                BlobResourceContents { blob = "AQI=" }
-            }
-        }.use { handle ->
+        TachyonServer(
+            port = 0,
+            {
+                name("contextual-resource-contents-test")
+                session { enabled = true }
+                resource(
+                    name = "text",
+                    uri = "test://text",
+                    description = "Text resource",
+                    mimeType = "text/plain",
+                    title = "Text resource title",
+                    annotations = expectedAnnotations,
+                    size = 5,
+                    icons = listOf(icon),
+                ) {
+                    TextResourceContents { text = "hello" }
+                }
+                resource(blobDescriptor) {
+                    BlobResourceContents { blob = "AQI=" }
+                }
+            },
+        ).use { handle ->
             with(handle.resources().find("text").orElseThrow()) {
                 description() shouldBe "Text resource"
                 mimeType() shouldBe "text/plain"
@@ -357,11 +368,14 @@ internal class TachyonServerTest {
                 description = "Tool built from a prebuilt descriptor"
             }
 
-        TachyonServer(port = 0) {
-            name("descriptor-tool-test")
-            session { enabled = true }
-            tool(descriptor) { ToolResult.text("descriptor-ok") }
-        }.use { handle ->
+        TachyonServer(
+            port = 0,
+            {
+                name("descriptor-tool-test")
+                session { enabled = true }
+                tool(descriptor) { ToolResult.text("descriptor-ok") }
+            },
+        ).use { handle ->
             handle.tools().find("descriptor-tool").orElseThrow() shouldBe descriptor
             McpProbe(handle.port()).use { probe ->
                 probe.initialize()
@@ -381,13 +395,16 @@ internal class TachyonServerTest {
                 arguments = listOf(PromptArgument.of("style", "Style", "Narration style", true))
             }
 
-        TachyonServer(port = 0) {
-            name("descriptor-prompt-test")
-            session { enabled = true }
-            prompt(descriptor) {
-                listOf(PromptMessage.user(TextContent("styled: ${arguments ?: "none"}")))
-            }
-        }.use { handle ->
+        TachyonServer(
+            port = 0,
+            {
+                name("descriptor-prompt-test")
+                session { enabled = true }
+                prompt(descriptor) {
+                    listOf(PromptMessage.user(TextContent("styled: ${arguments ?: "none"}")))
+                }
+            },
+        ).use { handle ->
             handle.prompts().find("descriptor-prompt").orElseThrow() shouldBe descriptor
             McpProbe(handle.port()).use { probe ->
                 probe.initialize()
@@ -403,14 +420,17 @@ internal class TachyonServerTest {
 
     @Test
     fun `suspend tool with delay returns correct result`() {
-        TachyonServer(port = 0) {
-            name("delay-test")
-            session { enabled = true }
-            tool("slow", "Delayed") {
-                delay(10.milliseconds)
-                ToolResult.text("delayed-ok")
-            }
-        }.use { handle ->
+        TachyonServer(
+            port = 0,
+            {
+                name("delay-test")
+                session { enabled = true }
+                tool("slow", "Delayed") {
+                    delay(10.milliseconds)
+                    ToolResult.text("delayed-ok")
+                }
+            },
+        ).use { handle ->
             McpProbe(handle.port()).use { probe ->
                 val init = probe.initialize()
                 init.statusCode() shouldBe 200
@@ -426,18 +446,21 @@ internal class TachyonServerTest {
     fun `tool with outputSchema appears in tools list`() {
         val schema = """{"type":"object"}"""
         val outputSchema = """{"type":"object","properties":{"result":{"type":"string"}}}"""
-        TachyonServer(port = 0) {
-            name("output-test")
-            session { enabled = true }
-            tool(
-                "with-output",
-                "Has output schema",
-                inputSchema = schema,
-                outputSchema = outputSchema,
-            ) {
-                ToolResult.text("done")
-            }
-        }.use { handle ->
+        TachyonServer(
+            port = 0,
+            {
+                name("output-test")
+                session { enabled = true }
+                tool(
+                    "with-output",
+                    "Has output schema",
+                    inputSchema = schema,
+                    outputSchema = outputSchema,
+                ) {
+                    ToolResult.text("done")
+                }
+            },
+        ).use { handle ->
             McpProbe(handle.port()).use { probe ->
                 probe.initialize()
                 val response = probe.request(2, "tools/list")
@@ -450,24 +473,30 @@ internal class TachyonServerTest {
     @Test
     fun `tool with string overload schema`() {
         val schema = """{"type":"object"}"""
-        TachyonServer(port = 0) {
-            name("string-schema-test")
-            session { enabled = true }
-            tool("string-schema", inputSchema = schema) {
-                ToolResult.text("ok")
-            }
-        }.use { handle ->
+        TachyonServer(
+            port = 0,
+            {
+                name("string-schema-test")
+                session { enabled = true }
+                tool("string-schema", inputSchema = schema) {
+                    ToolResult.text("ok")
+                }
+            },
+        ).use { handle ->
             handle.tools().find("string-schema").orElse(null) shouldNotBe null
         }
     }
 
     @Test
     fun `sync tool body compiles and works with suspend signature`() {
-        TachyonServer(port = 0) {
-            name("sync-test")
-            session { enabled = true }
-            tool("ping", "Health check") { ToolResult.text("pong") }
-        }.use { handle ->
+        TachyonServer(
+            port = 0,
+            {
+                name("sync-test")
+                session { enabled = true }
+                tool("ping", "Health check") { ToolResult.text("pong") }
+            },
+        ).use { handle ->
             McpProbe(handle.port()).use { probe ->
                 probe.initialize()
                 val response = probe.callTool("ping")
@@ -479,17 +508,20 @@ internal class TachyonServerTest {
 
     @Test
     fun `notification sent during suspend tool arrives on the request stream`() {
-        TachyonServer(port = 0) {
-            name("notify-test")
-            capabilities { logging = true }
-            session { enabled = true }
-            tool("notify", "Notifies mid-run") {
-                delay(10.milliseconds)
-                ctx.notifications().info("notify-test", "mid-run-note")
-                delay(10.milliseconds)
-                ToolResult.text("notify-done")
-            }
-        }.use { handle ->
+        TachyonServer(
+            port = 0,
+            {
+                name("notify-test")
+                capabilities { logging = true }
+                session { enabled = true }
+                tool("notify", "Notifies mid-run") {
+                    delay(10.milliseconds)
+                    ctx.notifications().info("notify-test", "mid-run-note")
+                    delay(10.milliseconds)
+                    ToolResult.text("notify-done")
+                }
+            },
+        ).use { handle ->
             McpProbe(handle.port()).use { probe ->
                 probe.initialize()
                 val response = probe.callTool("notify")

@@ -2,6 +2,7 @@
 
 package dev.tachyonmcp.server.json
 
+import dev.tachyonmcp.server.kotlin.json.KxSerializationSerde
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import kotlinx.serialization.Serializable

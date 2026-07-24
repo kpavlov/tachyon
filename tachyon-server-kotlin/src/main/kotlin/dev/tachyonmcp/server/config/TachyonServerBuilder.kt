@@ -2,6 +2,7 @@
 
 package dev.tachyonmcp.server.config
 
+import dev.tachyonmcp.annotations.ExperimentalApi
 import dev.tachyonmcp.server.ServerBuilder
 import dev.tachyonmcp.server.TachyonDsl
 import dev.tachyonmcp.server.TachyonServer
@@ -18,9 +19,9 @@ import dev.tachyonmcp.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.json.KxSerializationSerde
-import dev.tachyonmcp.server.json.toJacksonNode
-import dev.tachyonmcp.server.json.toJacksonNodeOrNull
+import dev.tachyonmcp.server.kotlin.json.KxSerializationSerde
+import dev.tachyonmcp.server.kotlin.json.toJacksonNode
+import dev.tachyonmcp.server.kotlin.json.toJacksonNodeOrNull
 import io.netty.channel.ChannelPipeline
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
@@ -229,7 +230,7 @@ public class TachyonServerBuilder
             handler: suspend PromptScope.() -> List<PromptMessage>,
         ): TachyonServerBuilder =
             this.also {
-                val descriptor = PromptDescriptor(name = name, description = description)
+                val descriptor = PromptDescriptor.of(name, description, null, null, null)
                 delegate.prompt(descriptor, promptHandler(descriptor, handler))
             }
 
@@ -363,6 +364,7 @@ public class TachyonServerBuilder
             return this
         }
 
+        @ExperimentalApi
         public fun pipelineCustomizer(
             customizer: (@TachyonDsl ChannelPipeline).() -> Unit,
         ): TachyonServerBuilder = this.also { delegate.pipelineCustomizer { it.customizer() } }

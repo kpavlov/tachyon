@@ -113,7 +113,16 @@ internal class KotlinFeatureRegistrar(
         outputSchema: String?,
         handler: suspend ToolScope.() -> ToolResult,
     ) {
-        delegate.tool(name, description, inputSchema, outputSchema, toolFn(name, handler))
+        delegate.tool(
+            { descriptor ->
+                descriptor
+                    .name(name)
+                    .description(description)
+                    .inputSchema(inputSchema)
+                    .outputSchema(outputSchema)
+            },
+            toolFn(name, handler),
+        )
     }
 
     fun tool(

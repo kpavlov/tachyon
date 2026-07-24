@@ -5,8 +5,8 @@
 
 package dev.tachyonmcp.server.domain
 
-import dev.tachyonmcp.server.json.toJacksonNode
-import dev.tachyonmcp.server.json.toJacksonNodeMap
+import dev.tachyonmcp.server.kotlin.json.toJacksonNode
+import dev.tachyonmcp.server.kotlin.json.toJacksonNodeMap
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
 

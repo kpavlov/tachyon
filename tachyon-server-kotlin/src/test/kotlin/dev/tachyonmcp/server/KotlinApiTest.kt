@@ -4,6 +4,7 @@ package dev.tachyonmcp.server
 
 import dev.tachyonmcp.server.config.ToolScope
 import dev.tachyonmcp.server.config.success
+import dev.tachyonmcp.server.domain.Args
 import dev.tachyonmcp.server.domain.InvalidArgumentException
 import dev.tachyonmcp.server.domain.TextContent
 import dev.tachyonmcp.server.domain.boolean
@@ -13,11 +14,10 @@ import dev.tachyonmcp.server.domain.double
 import dev.tachyonmcp.server.domain.doubleOrNull
 import dev.tachyonmcp.server.domain.int
 import dev.tachyonmcp.server.domain.intOrNull
-import dev.tachyonmcp.server.features.tools.Args
 import dev.tachyonmcp.server.features.tools.ToolRequest
 import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.json.KxSerializationSerde
-import dev.tachyonmcp.server.json.toJsonNode
+import dev.tachyonmcp.server.kotlin.json.KxSerializationSerde
+import dev.tachyonmcp.server.kotlin.json.toJsonNode
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
@@ -39,10 +39,13 @@ internal class KotlinApiTest {
     @Test
     fun `JsonNode overload registers a tool with input and output schema`() {
         val schema: JsonNode = JsonNodeFactory.instance.objectNode().put("type", "object")
-        TachyonServer(port = 0) {
-            name("test")
-            tool("t1", inputSchema = schema, outputSchema = schema) { ToolResult.text("ok") }
-        }.use { handle ->
+        TachyonServer(
+            port = 0,
+            {
+                name("test")
+                tool("t1", inputSchema = schema, outputSchema = schema) { ToolResult.text("ok") }
+            },
+        ).use { handle ->
             handle.tools().find("t1").orElse(null) shouldNotBe null
         }
     }
@@ -50,10 +53,13 @@ internal class KotlinApiTest {
     @Test
     fun `String overload registers a tool with input and output schema`() {
         val json = """{"type":"object"}"""
-        TachyonServer(port = 0) {
-            name("test")
-            tool("t2", inputSchema = json, outputSchema = json) { ToolResult.text("ok") }
-        }.use { handle ->
+        TachyonServer(
+            port = 0,
+            {
+                name("test")
+                tool("t2", inputSchema = json, outputSchema = json) { ToolResult.text("ok") }
+            },
+        ).use { handle ->
             handle.tools().find("t2").orElse(null) shouldNotBe null
         }
     }
@@ -61,10 +67,13 @@ internal class KotlinApiTest {
     @Test
     fun `JsonObject overload registers a tool with input and output schema`() {
         val schema = buildJsonObject { put("type", "object") }
-        TachyonServer(port = 0) {
-            name("test")
-            tool("t3", inputSchema = schema, outputSchema = schema) { ToolResult.text("ok") }
-        }.use { handle ->
+        TachyonServer(
+            port = 0,
+            {
+                name("test")
+                tool("t3", inputSchema = schema, outputSchema = schema) { ToolResult.text("ok") }
+            },
+        ).use { handle ->
             handle.tools().find("t3").orElse(null) shouldNotBe null
         }
     }
@@ -96,14 +105,14 @@ internal class KotlinApiTest {
     @Test
     fun `orNull accessors return the value when the key is present`() {
         val args =
-            Args(
-                raw =
-                    mapOf(
-                        "str" to JsonNodeFactory.instance.stringNode("v"),
-                        "int" to JsonNodeFactory.instance.numberNode(42),
-                        "bool" to JsonNodeFactory.instance.booleanNode(true),
-                        "double" to JsonNodeFactory.instance.numberNode(3.14),
-                    ),
+            Args.of(
+                mapOf(
+                    "str" to JsonNodeFactory.instance.stringNode("v"),
+                    "int" to JsonNodeFactory.instance.numberNode(42),
+                    "bool" to JsonNodeFactory.instance.booleanNode(true),
+                    "double" to JsonNodeFactory.instance.numberNode(3.14),
+                ),
+                null,
             )
 
         assertSoftly {
@@ -116,7 +125,7 @@ internal class KotlinApiTest {
 
     @Test
     fun `orNull accessors return null when the key is missing`() {
-        val args = Args()
+        val args = Args.of(null, null)
 
         assertSoftly {
             args.stringOrNull("k") shouldBe null
@@ -133,13 +142,13 @@ internal class KotlinApiTest {
     @Test
     fun `accessors with default return the value when the key is present`() {
         val args =
-            Args(
-                raw =
-                    mapOf(
-                        "bool" to JsonNodeFactory.instance.booleanNode(true),
-                        "int" to JsonNodeFactory.instance.numberNode(42),
-                        "double" to JsonNodeFactory.instance.numberNode(3.14),
-                    ),
+            Args.of(
+                mapOf(
+                    "bool" to JsonNodeFactory.instance.booleanNode(true),
+                    "int" to JsonNodeFactory.instance.numberNode(42),
+                    "double" to JsonNodeFactory.instance.numberNode(3.14),
+                ),
+                null,
             )
 
         assertSoftly {
@@ -151,7 +160,7 @@ internal class KotlinApiTest {
 
     @Test
     fun `accessors with default return the default when the key is missing`() {
-        val args = Args()
+        val args = Args.of(null, null)
 
         assertSoftly {
             args.boolean("k", true) shouldBe true
@@ -177,7 +186,7 @@ internal class KotlinApiTest {
                 "name" to JsonNodeFactory.instance.stringNode("Alice"),
                 "age" to JsonNodeFactory.instance.numberNode(30),
             )
-        val args = Args(raw = raw, deserializer = KxSerializationSerde.Default)
+        val args = Args.of(raw, KxSerializationSerde.Default)
         val decoded = args.decode<GreetingArgs>()
         decoded shouldBe GreetingArgs("Alice", 30)
     }
@@ -185,7 +194,7 @@ internal class KotlinApiTest {
     @Test
     fun `decode uses default values`() {
         val raw = mapOf("name" to JsonNodeFactory.instance.stringNode("Bob"))
-        val args = Args(raw = raw, deserializer = KxSerializationSerde.Default)
+        val args = Args.of(raw, KxSerializationSerde.Default)
         val decoded = args.decode<GreetingArgs>()
         decoded shouldBe GreetingArgs("Bob", 0)
     }
@@ -197,7 +206,7 @@ internal class KotlinApiTest {
                 "name" to JsonNodeFactory.instance.stringNode("Eve"),
                 "unexpected" to JsonNodeFactory.instance.stringNode("extra"),
             )
-        val args = Args(raw = raw, deserializer = KxSerializationSerde.Default)
+        val args = Args.of(raw, KxSerializationSerde.Default)
         val decoded = args.decode<GreetingArgs>()
         decoded shouldBe GreetingArgs("Eve", 0)
     }
@@ -213,7 +222,7 @@ internal class KotlinApiTest {
         // Default serde ignores unknown keys; a strict serde rejects them — proving the
         // configured deserializer is used, mapped to InvalidArgumentException (invalid params).
         val strictSerde = KxSerializationSerde(Json { ignoreUnknownKeys = false })
-        val args = Args(raw = raw, deserializer = strictSerde)
+        val args = Args.of(raw, strictSerde)
         shouldThrow<InvalidArgumentException> {
             args.decode<GreetingArgs>()
         }.argName() shouldBe "arguments"
@@ -222,7 +231,7 @@ internal class KotlinApiTest {
     @Test
     fun `decode throws when no deserializer configured`() {
         val raw = mapOf("name" to JsonNodeFactory.instance.stringNode("Bob"))
-        val args = Args(raw = raw)
+        val args = Args.of(raw, null)
         shouldThrow<IllegalStateException> {
             args.decode<GreetingArgs>()
         }.message shouldContain "PayloadDeserializer is not configured"
@@ -236,7 +245,7 @@ internal class KotlinApiTest {
     fun `success returns ToolResult with raw value`() {
         val value = GreetingArgs("Charlie", 25)
         withStatelessContext { ctx ->
-            val args = Args(raw = null)
+            val args = Args.of(null, null)
             val request =
                 ToolRequest
                     .builder()
@@ -254,7 +263,7 @@ internal class KotlinApiTest {
     fun `success with text sets content text`() {
         val value = GreetingArgs("Dave", 50)
         withStatelessContext { ctx ->
-            val args = Args(raw = null)
+            val args = Args.of(null, null)
             val request =
                 ToolRequest
                     .builder()

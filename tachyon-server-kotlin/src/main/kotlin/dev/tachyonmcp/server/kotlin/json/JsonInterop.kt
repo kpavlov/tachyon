@@ -1,9 +1,10 @@
 // Copyright (c) 2026 Konstantin Pavlov and contributors.
 
-package dev.tachyonmcp.server.json
+package dev.tachyonmcp.server.kotlin.json
 
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.json.JsonSchemaUtils.parseSchema
+import dev.tachyonmcp.server.json.JsonUtils
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull

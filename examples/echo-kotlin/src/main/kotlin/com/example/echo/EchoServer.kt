@@ -4,7 +4,6 @@ package com.example.echo
 
 import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.config.Mode
-import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.features.tools.registerTool
 import tools.jackson.databind.node.JsonNodeFactory
@@ -12,7 +11,8 @@ import tools.jackson.databind.node.JsonNodeFactory
 fun createServer(port: Int = 0): TachyonServer {
     val inputSchema = buildEchoSchema()
     val server =
-        TachyonServer(port = port) {
+        TachyonServer(port = port)
+        {
             info {
                 name = "echo-server"
                 title = "Echo Server"
@@ -35,11 +35,9 @@ fun createServer(port: Int = 0): TachyonServer {
         }
 
     server.registerTool(
-        ToolDescriptor {
-            name = "reverse-echo"
-            description = "Echo reverse message"
-            this.inputSchema = inputSchema
-        },
+        name = "reverse-echo",
+        description = "Echo reverse message",
+        inputSchema = inputSchema,
     ) {
         val message = request.arguments().stringValue("message")
         ToolResult.text(message.reversed())

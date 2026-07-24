@@ -70,7 +70,7 @@ public final class ServerBuilder {
     private final MonitoringConfig.Builder monitoringBuilder = MonitoringConfig.builder();
 
     @Nullable
-    Consumer<ChannelPipeline> pipelineCustomizer;
+    private Consumer<ChannelPipeline> pipelineCustomizer;
 
     private @Nullable ExecutorService executor;
     private @Nullable ThreadFactory threadFactory;
@@ -250,7 +250,9 @@ public final class ServerBuilder {
      * Registers a tool with string JSON schemas and a handler function (build-time DSL).
      *
      * <p>Use {@link TachyonServer#tools()} for post-build dynamic registration.
+     * @deprecated Use {@link #tool(ToolDescriptor, ToolFn)}
      */
+    @Deprecated(forRemoval = true)
     public ServerBuilder tool(
             String name,
             @Nullable String description,

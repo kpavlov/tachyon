@@ -7,7 +7,7 @@ import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.ToolAnnotations
 import dev.tachyonmcp.server.features.tasks.TaskSupport
 import dev.tachyonmcp.server.json.JsonSchemaUtils.parseSchema
-import dev.tachyonmcp.server.json.toJacksonNode
+import dev.tachyonmcp.server.kotlin.json.toJacksonNode
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
 import kotlin.contracts.ExperimentalContracts

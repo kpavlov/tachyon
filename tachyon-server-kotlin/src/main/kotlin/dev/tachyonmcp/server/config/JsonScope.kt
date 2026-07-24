@@ -23,7 +23,8 @@ public class JsonScope
     internal constructor() {
         /**
          * Payload serializer/deserializer for structured values and arguments.
-         * `null` keeps the module-wide default ([dev.tachyonmcp.server.json.KxSerializationSerde] in the Kotlin DSL).
+         * `null` keeps the module-wide default
+         * ([dev.tachyonmcp.server.kotlin.json.KxSerializationSerde] in the Kotlin DSL).
          * Sets both [serializer] and [deserializer] when assigned.
          * Assign a non-null value to override; the Kx default is set once at builder level,
          * not as a side effect of opening this block.
