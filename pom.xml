@@ -49,7 +49,7 @@
 
     <modules>
         <module>tachyon-server</module>
-        <module>tachyon-server-kotlin</module>
+        <module>tachyon-kotlin</module>
         <module>e2e</module>
         <module>conformance</module>
         <module>tachyon-extensions</module>

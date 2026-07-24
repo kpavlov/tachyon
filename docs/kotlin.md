@@ -1,13 +1,13 @@
 # Kotlin DSL — Tachyon MCP Server
 
-The `tachyon-server-kotlin` module wraps `ServerBuilder` with a coroutine-first DSL, suspend tool handlers, and type-safe scope classes.
+The `tachyon-kotlin` module wraps `ServerBuilder` with a coroutine-first DSL, suspend tool handlers, and type-safe scope classes.
 
 ## Dependency
 
 ```xml
 <dependency>
     <groupId>dev.tachyonmcp</groupId>
-    <artifactId>tachyon-server-kotlin</artifactId>
+    <artifactId>tachyon-kotlin</artifactId>
     <version>1.0.0-beta.14</version>
 </dependency>
 ```
@@ -237,7 +237,7 @@ clients may truncate them.
 
 ## kotlinx.serialization integration
 
-`kotlinx-serialization-json` is an **optional** dependency of `tachyon-server-kotlin`.
+`kotlinx-serialization-json` is an **optional** dependency of `tachyon-kotlin`.
 Add it to use `JsonObject` schemas, `request.arguments().decode<T>()`, and `success(value)`:
 
 ```xml
@@ -370,7 +370,7 @@ val server = TachyonServer(port = 0) { tool("ping") { ToolResult.text("pong") } 
 Run Kotlin tests only:
 
 ```bash
-mvn test -am -f tachyon-server-kotlin/pom.xml
+mvn test -am -f tachyon-kotlin/pom.xml
 ```
 
 ---

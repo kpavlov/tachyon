@@ -30,7 +30,7 @@
         </dependency>
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
-            <artifactId>tachyon-server-kotlin</artifactId>
+            <artifactId>tachyon-kotlin</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>

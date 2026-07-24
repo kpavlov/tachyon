@@ -51,7 +51,7 @@
     <dependencies>
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
-            <artifactId>tachyon-server-kotlin</artifactId>
+            <artifactId>tachyon-kotlin</artifactId>
             <version>${tachyon-server.version}</version>
         </dependency>
 
@@ -69,7 +69,7 @@
         </dependency>
 
         <!-- Required at runtime: TachyonServerBuilder wires KxSerializationSerde.Default
-             unconditionally, even though tachyon-server-kotlin declares this dependency optional. -->
+             unconditionally, even though tachyon-kotlin declares this dependency optional. -->
         <dependency>
             <groupId>org.jetbrains.kotlinx</groupId>
             <artifactId>kotlinx-serialization-json</artifactId>

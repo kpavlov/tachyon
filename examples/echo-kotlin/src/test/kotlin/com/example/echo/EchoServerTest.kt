@@ -2,7 +2,7 @@
 
 package com.example.echo
 
-import dev.tachyonmcp.server.kotlin.TachyonServer
+import dev.tachyonmcp.server.TachyonServer
 import io.kotest.assertions.json.shouldEqualJson
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll

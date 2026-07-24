@@ -74,7 +74,7 @@
 | [Tasks](docs/tasks.md) | Long-running operations, state machine, `TasksExtension` |
 | [Extensions](docs/extensions.md) | Custom protocol extensions, negotiation |
 | [Kotlin DSL](docs/kotlin.md) | Coroutine-first DSL, `TachyonServer { }`, scope reference |
-| [Kotlin module](tachyon-server-kotlin/README.md) | `tachyon-server-kotlin` module overview |
+| [Kotlin module](tachyon-kotlin/README.md) | `tachyon-kotlin` module overview |
 
 ## Agent Skill
 

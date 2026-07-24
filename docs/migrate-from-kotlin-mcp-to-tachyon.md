@@ -35,7 +35,7 @@ Swap the SDK for Tachyon's Kotlin module. Keep `kotlinx-serialization-json` — 
 
 ```toml
 # out: io.modelcontextprotocol:kotlin-sdk
-tachyon-server-kotlin = { module = "dev.tachyonmcp:tachyon-server-kotlin", version.ref = "tachyon" }
+tachyon-kotlin = { module = "dev.tachyonmcp:tachyon-kotlin", version.ref = "tachyon" }
 ```
 
 ## 2. Server and transport — where most of the code disappears

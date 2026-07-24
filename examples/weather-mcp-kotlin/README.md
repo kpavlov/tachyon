@@ -1,7 +1,7 @@
 # Weather MCP Kotlin Example
 
 Kotlin-DSL port of [`examples/weather`](../weather), demonstrating the Tachyon MCP Server's
-Kotlin builder (`tachyon-server-kotlin`) with the MCP Java SDK 2.0 client in tests.
+Kotlin builder (`tachyon-kotlin`) with the MCP Java SDK 2.0 client in tests.
 
 ## Features
 

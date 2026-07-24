@@ -31,7 +31,7 @@ test: ## Run unit + e2e tests
 package: ## Install artifacts to local Maven repo (skip tests)
 	@echo "📦 Packaging and installing tachyon-server to local repository..."
 	@rm -rf ~/.m2/repository/dev/tachyonmcp/
-	@./mvnw install -pl tachyon-server-kotlin -am -DskipTests -Dspotbugs.skip -Dspotless.skip
+	@./mvnw install -pl tachyon-kotlin -am -DskipTests -Dspotbugs.skip -Dspotless.skip
 
 examples: ## Build live examples against published artifacts
 	@echo "🌤️ 📡  Building LIVE examples..."
@@ -65,13 +65,13 @@ format: ## Auto-format code (Spotless + Detekt)
 	@echo " 🎨  Formatting code..."
 	@./mvnw spotless:apply -q
 	@./mvnw install -pl tachyon-server -DskipTests -Dspotbugs.skip -Dspotless.skip -q
-	@./mvnw exec:java@detekt-format -pl tachyon-server-kotlin -am -q
+	@./mvnw exec:java@detekt-format -pl tachyon-kotlin -am -q
 	@echo " ✅  Done..."
 
 lint: ## Check code style and bugs (Spotless + Detekt + SpotBugs)
 	@echo " 🔍  Linting code..."
 	@./mvnw spotless:check -pl !reports
-	@./mvnw exec:java@detekt -pl tachyon-server-kotlin
+	@./mvnw exec:java@detekt -pl tachyon-kotlin
 	@./mvnw spotbugs:check -pl !reports,!e2e
 	@echo " ✅  Done..."
 

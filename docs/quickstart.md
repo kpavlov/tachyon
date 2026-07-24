@@ -17,7 +17,7 @@ Build and run an MCP server in under 5 minutes.
 </dependency>
 ```
 
-For the Kotlin DSL, add `tachyon-server-kotlin` instead (it includes `tachyon-server` transitively).
+For the Kotlin DSL, add `tachyon-kotlin` instead (it includes `tachyon-server` transitively).
 
 ## 2. Create a server
 

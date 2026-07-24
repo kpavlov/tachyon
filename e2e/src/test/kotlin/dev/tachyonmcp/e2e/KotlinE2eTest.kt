@@ -4,9 +4,9 @@
 
 package dev.tachyonmcp.e2e
 
+import dev.tachyonmcp.kotlin.server.domain.decode
+import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
 import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.kotlin.domain.decode
-import dev.tachyonmcp.server.kotlin.json.KxSerializationSerde
 import io.kotest.assertions.json.shouldEqualJson
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
