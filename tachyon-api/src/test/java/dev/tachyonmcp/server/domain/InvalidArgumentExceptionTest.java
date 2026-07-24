@@ -1,10 +1,9 @@
 /* Copyright (c) 2026 Konstantin Pavlov and contributors. */
 
-package dev.tachyonmcp.server.features.tools;
+package dev.tachyonmcp.server.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.domain.InvalidArgumentException;
 import org.junit.jupiter.api.Test;
 
 class InvalidArgumentExceptionTest {
