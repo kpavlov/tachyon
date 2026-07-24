@@ -7,11 +7,10 @@ package dev.tachyonmcp.server.features.prompts;
 import dev.tachyonmcp.server.domain.InputRequest;
 import dev.tachyonmcp.server.domain.InputRequestBundle;
 import dev.tachyonmcp.server.domain.PromptMessage;
-import org.jspecify.annotations.Nullable;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 public sealed interface PromptResult permits PromptResult.Messages, PromptResult.InputRequired {
 
@@ -40,7 +39,7 @@ public sealed interface PromptResult permits PromptResult.Messages, PromptResult
     }
 
     static PromptResult inputRequired(
-        Map<String, ? extends InputRequest> inputRequests, @Nullable String requestState) {
+            Map<String, ? extends InputRequest> inputRequests, @Nullable String requestState) {
         return new InputRequired(new InputRequestBundle(inputRequests, requestState));
     }
 }

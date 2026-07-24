@@ -9,7 +9,6 @@ import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatus;
 import dev.tachyonmcp.runtime.ChannelContext;
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.server.domain.LoggingLevel;
@@ -139,9 +138,9 @@ public class McpDispatcher {
         }
     }
 
-    public byte[] parseError(@Nullable InteractionContext interactionContext) {
-        var mapper = interactionContext != null
-                ? interactionContext.protocol().responseMapper()
+    public byte[] parseError(@Nullable ChannelContext channelContext) {
+        var mapper = channelContext != null
+                ? channelContext.protocol().responseMapper()
                 : dispatchContext(null).responseMapper();
         return encodeError(null, ServerErrors.parseError(), mapper);
     }

@@ -15,8 +15,11 @@ class DefaultChannelContextTest {
     @Test
     void shouldCreateContextWithProtocol() {
         var ctx = new DefaultChannelContext(new FakeProtocol());
+        InteractionContext handlerContext = ctx;
 
         assertThat(ctx.protocol()).isNotNull();
+        assertThat(handlerContext.protocolVersion()).isEqualTo("1.0");
+        assertThat(handlerContext.sessionId()).isNull();
         assertThat(ctx.lifecycle()).isEqualTo(Lifecycle.INITIALIZATION);
         assertThat(ctx.session()).isNull();
     }
@@ -27,6 +30,16 @@ class DefaultChannelContextTest {
 
         ctx.setLifecycle(Lifecycle.OPERATION);
         assertThat(ctx.lifecycle()).isEqualTo(Lifecycle.OPERATION);
+    }
+
+    @Test
+    void shouldExposeSessionIdWithoutExposingSession() {
+        var ctx = new DefaultChannelContext(new FakeProtocol());
+        InteractionContext handlerContext = ctx;
+
+        ctx.setSession(new Session("sess-1", SseConnection.NOOP));
+
+        assertThat(handlerContext.sessionId()).isEqualTo("sess-1");
     }
 
     private static final class FakeProtocol implements Protocol {

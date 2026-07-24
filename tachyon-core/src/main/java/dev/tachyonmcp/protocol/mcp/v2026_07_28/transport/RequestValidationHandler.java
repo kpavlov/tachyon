@@ -6,7 +6,6 @@ package dev.tachyonmcp.protocol.mcp.v2026_07_28.transport;
 
 import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.protocol.mcp.v2026_07_28.McpProtocol;
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.ServerErrors;
@@ -213,7 +212,7 @@ public final class RequestValidationHandler extends ChannelInboundHandlerAdapter
     }
 
     private void reject(ChannelHandlerContext ctx, FullHttpRequest req, RequestId id, ServerError error) {
-        InteractionContext interaction = ChannelHandlerUtils.requireInteractionContext(ctx);
+        var interaction = ChannelHandlerUtils.requireInteractionContext(ctx);
         var wireError = interaction.protocol().responseMapper().error(error);
         var body = JsonRpcCodec.serializeError(id, wireError.code(), wireError.message(), wireError.data());
         var origin = req.headers().get(HttpHeaderNames.ORIGIN);

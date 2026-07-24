@@ -40,7 +40,6 @@ import dev.tachyonmcp.transport.netty.NettyServer;
 import dev.tachyonmcp.transport.netty.NettyServerConfig;
 import io.netty.channel.ChannelPipeline;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
