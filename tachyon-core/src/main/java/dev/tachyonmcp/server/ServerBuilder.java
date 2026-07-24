@@ -565,7 +565,7 @@ public final class ServerBuilder {
                 ? sessionConfig.sessionEventStore()
                 : new InMemorySessionEventStore();
         var store = sessionConfig.sessionStore() != null ? sessionConfig.sessionStore() : new InMemorySessionStore();
-        var allExtensions = Collections.unmodifiableList(featuresConfig.extensions);
+        var allExtensions = List.copyOf(featuresConfig.extensions);
         var serverConfig = buildConfig();
         ExecutorService resolvedExecutor;
         boolean ownsExecutor;
