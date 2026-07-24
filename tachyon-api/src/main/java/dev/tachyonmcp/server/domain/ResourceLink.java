@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
 /**
  * A reference to another resource, embedded within a content block.
@@ -46,7 +45,7 @@ public non-sealed interface ResourceLink extends ContentBlock {
     Long size();
 
     @Nullable
-    Map<String, JsonNode> meta();
+    Map<String, Object> meta();
 
     @Value.Check
     default void check() {
@@ -108,7 +107,7 @@ public non-sealed interface ResourceLink extends ContentBlock {
             return size((long) size);
         }
 
-        Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
+        Builder meta(@Nullable Map<String, ?> entries);
 
         ResourceLink build();
     }

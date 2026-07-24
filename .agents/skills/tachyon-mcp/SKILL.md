@@ -93,7 +93,7 @@ Lambda: `ToolHandler.of(name, description, fn)` or `of(configurer, fn)` for a sc
         "Hello, " + request.arguments().stringOr("name", "world"))))
 ```
 
-`inputSchema(...)`/`outputSchema(...)` take `JsonNode` or raw JSON `String`. `.tool(name, desc, inJson, outJson, fn)` builds a sync handler:
+`inputSchema(...)`/`outputSchema(...)` take `JsonSchema` or raw JSON `String`. `.tool(name, desc, inJson, outJson, fn)` builds a sync handler:
 
 ```java
 .tool("hello", "Say hello",
@@ -274,10 +274,8 @@ handler's `InteractionContext` and needs no token.
 
 ## JSON Schema
 
-> ⚠️ **Jackson 3** — `tools.jackson:jackson-databind:3.x`, NOT Jackson 2. Import `tools.jackson.databind.{ObjectMapper,JsonNode}` (**not** `com.fasterxml.jackson.*`). Use `JsonNode.asString()` (**not** `asText()`).
-
 `ToolDescriptor.builder().inputSchema(...)` / `.outputSchema(...)` accept a raw JSON `String`
-**or** a Jackson `JsonNode` (same for `PromptDescriptor.builder().inputSchema(...)`):
+or provider-neutral `JsonSchema` (same for `PromptDescriptor.builder().inputSchema(...)`):
 
 ```java
 ToolDescriptor.builder()
@@ -340,7 +338,7 @@ val server = TachyonServer(8080) {
 }
 ```
 
-`tool(inputSchema = ...)` accepts a `JsonNode`, a raw JSON `String`, or a kotlinx `JsonObject`.
+`tool(inputSchema = ...)` accepts a `JsonSchema`, raw JSON `String`, or kotlinx `JsonObject`.
 
 ### Typed decode/result (Kotlin)
 

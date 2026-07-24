@@ -14,6 +14,7 @@ import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
+import dev.tachyonmcp.server.json.JsonSchema;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -43,7 +44,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 /**
  * Covers {@link McpOperationHandler}'s POST request-dispatch paths and connection-lifecycle
@@ -57,7 +57,7 @@ class McpOperationHandlerRequestTest {
     private static final ToolDescriptor PROGRESS_DESCRIPTOR = ToolDescriptor.builder()
             .name("progress_tool")
             .description("emits progress notifications")
-            .inputSchema(JsonNodeFactory.instance.objectNode().put("type", "object"))
+            .inputSchema(JsonSchema.objectSchema())
             .build();
 
     /**
@@ -175,7 +175,7 @@ class McpOperationHandlerRequestTest {
         var descriptor = ToolDescriptor.builder()
                 .name("stalled_tool")
                 .description("upgrades to SSE then never completes")
-                .inputSchema(JsonNodeFactory.instance.objectNode().put("type", "object"))
+                .inputSchema(JsonSchema.objectSchema())
                 .build();
         var upgraded = new CountDownLatch(1);
         var neverComplete = new CompletableFuture<ToolResult>();
@@ -352,7 +352,7 @@ class McpOperationHandlerRequestTest {
     private static final ToolDescriptor SLOW_DESCRIPTOR = ToolDescriptor.builder()
             .name("slow_tool")
             .description("takes 50ms")
-            .inputSchema(JsonNodeFactory.instance.objectNode().put("type", "object"))
+            .inputSchema(JsonSchema.objectSchema())
             .build();
 
     private static final ToolHandler SLOW_TOOL = new ToolHandler() {

@@ -4,7 +4,6 @@
 
 package dev.tachyonmcp.server.json;
 
-import static dev.tachyonmcp.test.TestUtils.parseJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
@@ -15,10 +14,10 @@ class NetworkntJsonSchemaValidatorTest {
 
     @Test
     void shouldReturnNoErrorsForValidArguments() {
-        var schema = parseJson("""
+        var schema = JsonSchema.of("""
             {"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}
             """);
-        var arguments = parseJson("""
+        var arguments = JsonDocument.of("""
             {"name":"John"}
             """);
 
@@ -27,10 +26,10 @@ class NetworkntJsonSchemaValidatorTest {
 
     @Test
     void shouldReturnErrorWithPathAndKeywordForMissingRequiredProperty() {
-        var schema = parseJson("""
+        var schema = JsonSchema.of("""
             {"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}
             """);
-        var arguments = parseJson("{}");
+        var arguments = JsonDocument.of("{}");
 
         var errors = validator.validate(schema, arguments);
 
@@ -41,10 +40,10 @@ class NetworkntJsonSchemaValidatorTest {
 
     @Test
     void shouldReturnErrorForWrongType() {
-        var schema = parseJson("""
+        var schema = JsonSchema.of("""
             {"type":"object","properties":{"age":{"type":"integer"}}}
             """);
-        var arguments = parseJson("""
+        var arguments = JsonDocument.of("""
             {"age":"not a number"}
             """);
 
@@ -56,38 +55,46 @@ class NetworkntJsonSchemaValidatorTest {
 
     @Test
     void shouldValidateDistinctSchemasIndependently() {
-        var nameSchema = parseJson("""
+        var nameSchema = JsonSchema.of("""
             {"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}
             """);
-        var emailSchema = parseJson("""
+        var emailSchema = JsonSchema.of("""
             {"type":"object","properties":{"email":{"type":"string"}},"required":["email"]}
             """);
 
         // Same validator instance compiles and caches both schemas; calls must not cross-contaminate.
-        assertThat(validator.validate(nameSchema, parseJson("""
+        assertThat(validator.validate(nameSchema, JsonDocument.of("""
             {"name":"John"}
             """))).isEmpty();
-        assertThat(validator.validate(emailSchema, parseJson("""
+        assertThat(validator.validate(emailSchema, JsonDocument.of("""
             {"email":"john@example.com"}
             """))).isEmpty();
-        assertThat(validator.validate(nameSchema, parseJson("""
+        assertThat(validator.validate(nameSchema, JsonDocument.of("""
             {"email":"john@example.com"}
             """))).hasSize(1);
-        assertThat(validator.validate(emailSchema, parseJson("""
+        assertThat(validator.validate(emailSchema, JsonDocument.of("""
             {"name":"John"}
             """))).hasSize(1);
     }
 
     @Test
     void shouldReuseCompiledSchemaForRepeatedCallsWithEquivalentSchemaContent() {
-        var schema1 = parseJson("""
+        var schema1 = JsonSchema.of("""
             {"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}
             """);
-        var schema2 = parseJson("""
+        var schema2 = JsonSchema.of("""
             {"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}
             """);
 
-        assertThat(validator.validate(schema1, parseJson("{}"))).hasSize(1);
-        assertThat(validator.validate(schema2, parseJson("{}"))).hasSize(1);
+        assertThat(validator.validate(schema1, JsonDocument.of("{}"))).hasSize(1);
+        assertThat(validator.validate(schema2, JsonDocument.of("{}"))).hasSize(1);
+    }
+
+    @Test
+    void shouldSupportBooleanSchemas() {
+        assertThat(validator.validate(JsonSchema.of("true"), JsonDocument.of("{\"value\":1}")))
+                .isEmpty();
+        assertThat(validator.validate(JsonSchema.of("false"), JsonDocument.of("{\"value\":1}")))
+                .hasSize(1);
     }
 }

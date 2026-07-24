@@ -7,7 +7,6 @@ package dev.tachyonmcp.server.domain;
 import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
 /**
  * Binary resource contents, encoded as a base64 string.
@@ -36,7 +35,7 @@ public non-sealed interface BlobResourceContents extends ResourceContents {
     @Override
     @Nullable
     @Value.Parameter(order = 4)
-    Map<String, JsonNode> meta();
+    Map<String, Object> meta();
 
     @Value.Check
     default void check() {
@@ -64,7 +63,7 @@ public non-sealed interface BlobResourceContents extends ResourceContents {
      * @param meta     the {@code _meta} entries, or {@code null} if none
      */
     static BlobResourceContents of(
-            String uri, String blob, @Nullable String mimeType, @Nullable Map<String, JsonNode> meta) {
+            String uri, String blob, @Nullable String mimeType, @Nullable Map<String, Object> meta) {
         return DefaultBlobResourceContents.of(uri, mimeType, blob, meta);
     }
 
@@ -79,7 +78,7 @@ public non-sealed interface BlobResourceContents extends ResourceContents {
 
         Builder mimeType(@Nullable String mimeType);
 
-        Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
+        Builder meta(@Nullable Map<String, ?> entries);
 
         BlobResourceContents build();
     }

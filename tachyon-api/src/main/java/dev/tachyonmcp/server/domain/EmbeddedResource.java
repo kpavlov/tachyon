@@ -7,7 +7,6 @@ package dev.tachyonmcp.server.domain;
 import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
 /**
  * A complete resource embedded inline within a tool result, prompt, or other content.
@@ -29,7 +28,7 @@ public non-sealed interface EmbeddedResource extends ContentBlock, HasMeta {
     Annotations annotations();
 
     @Nullable
-    Map<String, JsonNode> meta();
+    Map<String, Object> meta();
 
     @Override
     default Type type() {
@@ -52,7 +51,7 @@ public non-sealed interface EmbeddedResource extends ContentBlock, HasMeta {
 
     /** Creates an embedded resource with metadata and optional annotations. */
     static EmbeddedResource of(
-            ResourceContents resource, @Nullable Annotations annotations, @Nullable Map<String, JsonNode> meta) {
+            ResourceContents resource, @Nullable Annotations annotations, @Nullable Map<String, Object> meta) {
         return DefaultEmbeddedResource.of(resource, annotations, meta);
     }
 
@@ -61,7 +60,7 @@ public non-sealed interface EmbeddedResource extends ContentBlock, HasMeta {
 
         Builder annotations(@Nullable Annotations annotations);
 
-        Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
+        Builder meta(@Nullable Map<String, ?> entries);
 
         EmbeddedResource build();
     }

@@ -7,24 +7,22 @@ import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.JsonNodeFactory;
+import dev.tachyonmcp.server.json.JsonSchema;
 
 public class EchoToolHandler extends AbstractToolHandler {
 
-    static final JsonNode ECHO_INPUT_SCHEMA = buildEchoSchema();
-
-    private static JsonNode buildEchoSchema() {
-        var schema = JsonNodeFactory.instance.objectNode();
-        schema.put("type", "object");
-        var props = schema.putObject("properties");
-        var msg = props.putObject("message");
-        msg.put("type", "string");
-        msg.put("description", "Message to echo");
-        var req = schema.putArray("required");
-        req.add("message");
-        return schema;
-    }
+    static final JsonSchema ECHO_INPUT_SCHEMA = JsonSchema.of("""
+        {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string",
+              "description": "Message to echo"
+            }
+          },
+          "required": ["message"]
+        }
+        """);
 
     public EchoToolHandler() {
         super(ToolDescriptor.builder()

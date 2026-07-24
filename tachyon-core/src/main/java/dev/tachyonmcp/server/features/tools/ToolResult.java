@@ -6,14 +6,13 @@ import dev.tachyonmcp.server.domain.ContentBlock;
 import dev.tachyonmcp.server.domain.InputRequest;
 import dev.tachyonmcp.server.domain.InputRequestBundle;
 import dev.tachyonmcp.server.domain.TextContent;
-import dev.tachyonmcp.server.json.RawJson;
+import dev.tachyonmcp.server.json.JsonDocument;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
 public sealed interface ToolResult
         permits ToolResult.Success,
@@ -38,7 +37,7 @@ public sealed interface ToolResult
 
     record Error(String message) implements ToolResult {}
 
-    record WithMeta(ToolResult inner, Map<String, JsonNode> meta) implements ToolResult {
+    record WithMeta(ToolResult inner, Map<String, Object> meta) implements ToolResult {
         public WithMeta {
             Objects.requireNonNull(inner, "inner");
             Objects.requireNonNull(meta, "meta");
@@ -60,9 +59,9 @@ public sealed interface ToolResult
         }
     }
 
-    default ToolResult withMeta(Map<String, JsonNode> m) {
+    default ToolResult withMeta(Map<String, Object> m) {
         if (m.isEmpty()) return this;
-        if (this instanceof WithMeta(ToolResult inner, Map<String, JsonNode> meta)) {
+        if (this instanceof WithMeta(ToolResult inner, Map<String, Object> meta)) {
             var merged = new HashMap<>(meta);
             merged.putAll(m);
             return new WithMeta(inner, merged);
@@ -70,7 +69,7 @@ public sealed interface ToolResult
         return new WithMeta(this, m);
     }
 
-    default ToolResult withMeta(String key, JsonNode value) {
+    default ToolResult withMeta(String key, Object value) {
         return withMeta(Map.of(key, value));
     }
 
@@ -114,7 +113,7 @@ public sealed interface ToolResult
      * @param text the text content for the content block
      */
     static ToolResult raw(String json, String text) {
-        return new Success(RawJson.of(json), List.of(TextContent.of(text)));
+        return new Success(JsonDocument.of(json), List.of(TextContent.of(text)));
     }
 
     static ToolResult inputRequired(Map<String, ? extends InputRequest> reqs, @Nullable String state) {

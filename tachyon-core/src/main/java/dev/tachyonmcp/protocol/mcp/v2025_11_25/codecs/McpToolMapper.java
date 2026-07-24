@@ -21,15 +21,12 @@ import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.json.JsonSchema;
+import dev.tachyonmcp.server.json.JsonUtils;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.node.JsonNodeFactory;
-import tools.jackson.databind.node.ObjectNode;
 
 final class McpToolMapper {
-
-    private static final ObjectNode DEFAULT_SCHEMA =
-            JsonNodeFactory.instance.objectNode().put("type", "object");
 
     private McpToolMapper() {}
 
@@ -41,18 +38,15 @@ final class McpToolMapper {
 
     public static Tool toTool(ToolDescriptor d) {
         var schema = d.inputSchema();
-        if (schema == null) {
-            schema = DEFAULT_SCHEMA;
-        }
         ToolExecution execution = null;
         if (d.taskSupport() != null) {
             execution = new ToolExecution(d.taskSupport().getValue());
         }
         return new Tool(
                 d.description(),
-                schema.toString(),
+                schema != null ? schema.json() : JsonSchema.objectSchema().json(),
                 execution,
-                d.outputSchema() != null ? d.outputSchema().toString() : null,
+                d.outputSchema() != null ? d.outputSchema().json() : null,
                 toProtocolToolAnnotations(d.annotations()),
                 null,
                 d.name(),
@@ -90,11 +84,13 @@ final class McpToolMapper {
         if (protocol == null) return null;
         return switch (protocol) {
             case dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextContent t ->
-                TextContent.of(t.text(), t._meta(), toDomainAnnotations(t.annotations()));
+                TextContent.of(t.text(), JsonUtils.toObjectMap(t._meta()), toDomainAnnotations(t.annotations()));
             case dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ImageContent i ->
-                ImageContent.of(i.data(), i.mimeType(), toDomainAnnotations(i.annotations()), i._meta());
+                ImageContent.of(
+                        i.data(), i.mimeType(), toDomainAnnotations(i.annotations()), JsonUtils.toObjectMap(i._meta()));
             case dev.tachyonmcp.protocol.mcp.v2025_11_25.models.AudioContent a ->
-                AudioContent.of(a.data(), a.mimeType(), toDomainAnnotations(a.annotations()), a._meta());
+                AudioContent.of(
+                        a.data(), a.mimeType(), toDomainAnnotations(a.annotations()), JsonUtils.toObjectMap(a._meta()));
             case dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ResourceLink r ->
                 ResourceLink.builder(r.uri(), r.name())
                         .title(r.title())
@@ -103,11 +99,13 @@ final class McpToolMapper {
                         .mimeType(r.mimeType())
                         .annotations(toDomainAnnotations(r.annotations()))
                         .size(r.size())
-                        .meta(r._meta())
+                        .meta(JsonUtils.toObjectMap(r._meta()))
                         .build();
             case dev.tachyonmcp.protocol.mcp.v2025_11_25.models.EmbeddedResource e ->
                 EmbeddedResource.of(
-                        toDomainResourceContents(e.resource()), toDomainAnnotations(e.annotations()), e._meta());
+                        toDomainResourceContents(e.resource()),
+                        toDomainAnnotations(e.annotations()),
+                        JsonUtils.toObjectMap(e._meta()));
         };
     }
 
@@ -137,9 +135,9 @@ final class McpToolMapper {
         if (protocol == null) return null;
         return switch (protocol) {
             case dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextResourceContents t ->
-                TextResourceContents.of(t.uri(), t.text(), t.mimeType(), t._meta());
+                TextResourceContents.of(t.uri(), t.text(), t.mimeType(), JsonUtils.toObjectMap(t._meta()));
             case dev.tachyonmcp.protocol.mcp.v2025_11_25.models.BlobResourceContents b ->
-                BlobResourceContents.of(b.uri(), b.blob(), b.mimeType(), b._meta());
+                BlobResourceContents.of(b.uri(), b.blob(), b.mimeType(), JsonUtils.toObjectMap(b._meta()));
         };
     }
 

@@ -10,10 +10,10 @@ import dev.tachyonmcp.server.ServerFeature;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
+import dev.tachyonmcp.server.json.JsonSchema;
 import java.util.List;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
 @Value.Immutable
 @Value.Style(
@@ -31,10 +31,10 @@ public interface ToolDescriptor extends ServerFeature.Descriptor {
     String description();
 
     @Nullable
-    JsonNode inputSchema();
+    JsonSchema inputSchema();
 
     @Nullable
-    JsonNode outputSchema();
+    JsonSchema outputSchema();
 
     @Nullable
     TaskSupport taskSupport();
@@ -72,9 +72,9 @@ public interface ToolDescriptor extends ServerFeature.Descriptor {
 
         Builder description(@Nullable String description);
 
-        Builder inputSchema(@Nullable JsonNode inputSchema);
+        Builder inputSchema(@Nullable JsonSchema inputSchema);
 
-        Builder outputSchema(@Nullable JsonNode outputSchema);
+        Builder outputSchema(@Nullable JsonSchema outputSchema);
 
         default Builder inputSchema(@Nullable String inputSchema) {
             return inputSchema(parseSchema(inputSchema));

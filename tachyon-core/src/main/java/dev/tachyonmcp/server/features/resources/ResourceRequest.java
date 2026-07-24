@@ -8,7 +8,6 @@ import dev.tachyonmcp.server.domain.HasMeta;
 import dev.tachyonmcp.server.domain.UriTemplateValue;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
 /**
  * Request passed to a resource handler.
@@ -22,7 +21,7 @@ public record ResourceRequest(
         String uri,
         Map<String, UriTemplateValue> params,
         @Nullable String uriTemplate,
-        @Nullable Map<String, JsonNode> meta)
+        @Nullable Map<String, Object> meta)
         implements HasMeta {
 
     public ResourceRequest {

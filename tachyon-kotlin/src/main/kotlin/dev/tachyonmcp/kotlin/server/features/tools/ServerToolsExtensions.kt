@@ -6,13 +6,13 @@ package dev.tachyonmcp.kotlin.server.features.tools
 
 import dev.tachyonmcp.kotlin.server.config.ToolScope
 import dev.tachyonmcp.kotlin.server.json.schemas
-import dev.tachyonmcp.kotlin.server.json.toJacksonNode
-import dev.tachyonmcp.kotlin.server.json.toJacksonNodeOrNull
+import dev.tachyonmcp.kotlin.server.json.toJsonSchema
+import dev.tachyonmcp.kotlin.server.json.toJsonSchemaOrNull
 import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.server.json.JsonSchema
 import kotlinx.serialization.json.JsonObject
-import tools.jackson.databind.JsonNode
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -21,8 +21,8 @@ import kotlin.contracts.contract
 public fun TachyonServer.registerTool(
     name: String,
     description: String? = null,
-    inputSchema: JsonNode? = null,
-    outputSchema: JsonNode? = null,
+    inputSchema: JsonSchema? = null,
+    outputSchema: JsonSchema? = null,
     block: suspend ToolScope.() -> dev.tachyonmcp.server.features.tools.ToolResult,
 ): TachyonServer =
     registerTool(configure = {
@@ -95,7 +95,7 @@ public fun TachyonServer.registerTool(
     registerTool(
         name = name,
         description = description,
-        inputSchema = inputSchema.toJacksonNode(),
-        outputSchema = outputSchema.toJacksonNodeOrNull(),
+        inputSchema = inputSchema.toJsonSchema(),
+        outputSchema = outputSchema.toJsonSchemaOrNull(),
         block = block,
     )

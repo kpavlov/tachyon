@@ -3,11 +3,11 @@
 package com.example.echo
 
 import dev.tachyonmcp.kotlin.server.TachyonServer
-import dev.tachyonmcp.server.config.Mode
-import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.kotlin.server.features.tools.registerTool
 import dev.tachyonmcp.server.TachyonServer
-import tools.jackson.databind.node.JsonNodeFactory
+import dev.tachyonmcp.server.config.Mode
+import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.server.json.JsonSchema
 
 fun createServer(port: Int = 0): TachyonServer {
     val inputSchema = buildEchoSchema()
@@ -47,16 +47,21 @@ fun createServer(port: Int = 0): TachyonServer {
 }
 
 private fun buildEchoSchema() =
-    JsonNodeFactory.instance.objectNode().apply {
-        put("type", "object")
-        putObject("properties").apply {
-            putObject("message").apply {
-                put("type", "string")
-                put("description", "Message to echo")
+    JsonSchema.of(
+        // language=json
+        """
+        {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string",
+              "description": "Message to echo"
             }
+          },
+          "required": ["message"]
         }
-        putArray("required").add("message")
-    }
+        """,
+    )
 
 fun main() {
     val server = createServer(8080)

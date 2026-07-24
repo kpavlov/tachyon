@@ -10,17 +10,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
 @ExperimentalApi
 public sealed interface TaskResult extends HasMeta permits TaskResult.Completed, TaskResult.Failed {
 
     static Completed completed(
-            List<ContentBlock> content, @Nullable JsonNode structuredContent, @Nullable Map<String, JsonNode> meta) {
+            List<ContentBlock> content, @Nullable Object structuredContent, @Nullable Map<String, Object> meta) {
         return new Completed(content, structuredContent, meta);
     }
 
-    static Completed completed(JsonNode structuredContent) {
+    static Completed completed(Object structuredContent) {
         return new Completed(Collections.emptyList(), structuredContent, null);
     }
 
@@ -40,28 +39,26 @@ public sealed interface TaskResult extends HasMeta permits TaskResult.Completed,
 
     record Completed(
             List<ContentBlock> content,
-            @Nullable JsonNode structuredContent,
-            @Nullable Map<String, JsonNode> meta) implements TaskResult {
+            @Nullable Object structuredContent,
+            @Nullable Map<String, Object> meta) implements TaskResult {
         public Completed {
             Objects.requireNonNull(content, "content");
             content = List.copyOf(content);
         }
 
-        public Completed(@Nullable Map<String, JsonNode> meta) {
+        public Completed(@Nullable Map<String, Object> meta) {
             this(List.of(), null, meta);
         }
     }
 
     record Failed(
             List<ContentBlock> content,
-            @Nullable JsonNode structuredContent,
-            @Nullable Map<String, JsonNode> meta,
+            @Nullable Object structuredContent,
+            @Nullable Map<String, Object> meta,
             @Nullable ServerError protocolError)
             implements TaskResult {
         public Failed(
-                List<ContentBlock> content,
-                @Nullable JsonNode structuredContent,
-                @Nullable Map<String, JsonNode> meta) {
+                List<ContentBlock> content, @Nullable Object structuredContent, @Nullable Map<String, Object> meta) {
             this(content, structuredContent, meta, null);
         }
 
@@ -70,7 +67,7 @@ public sealed interface TaskResult extends HasMeta permits TaskResult.Completed,
             content = List.copyOf(content);
         }
 
-        public Failed(@Nullable Map<String, JsonNode> meta) {
+        public Failed(@Nullable Map<String, Object> meta) {
             this(List.of(), null, meta, null);
         }
     }

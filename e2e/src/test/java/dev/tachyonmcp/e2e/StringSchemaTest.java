@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.json.JsonSchema;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -49,15 +50,28 @@ class StringSchemaTest extends AbstractStatelessMcpE2eTest {
     }
 
     @Test
-    void shouldHaveIdenticalResultToJsonNodeSchemas() throws Exception {
+    void shouldHaveIdenticalResultToProviderBackedSchemas() throws Exception {
         startServer(it -> {
             it.tool(ToolHandler.of(
                     b -> b.name("from-string").description("Tool from string").inputSchema(INPUT_SCHEMA_JSON),
                     (ctx, request) -> ToolResult.text("string")));
             var mapper = new ObjectMapper();
             var jsonNodeSchema = mapper.readTree(INPUT_SCHEMA_JSON);
+            var providerBackedSchema = new JsonSchema() {
+                @Override
+                public String json() {
+                    return jsonNodeSchema.toString();
+                }
+
+                @Override
+                public <T> java.util.Optional<T> unwrap(Class<T> type) {
+                    return type.isInstance(jsonNodeSchema)
+                            ? java.util.Optional.of(type.cast(jsonNodeSchema))
+                            : java.util.Optional.empty();
+                }
+            };
             it.tool(ToolHandler.of(
-                    b -> b.name("from-node").description("Tool from node").inputSchema(jsonNodeSchema),
+                    b -> b.name("from-node").description("Tool from node").inputSchema(providerBackedSchema),
                     (ctx, request) -> ToolResult.text("node")));
         });
 

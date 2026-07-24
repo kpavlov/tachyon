@@ -13,7 +13,6 @@ import java.net.URI;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 public class YouComSearchToolTest {
 
@@ -83,8 +82,9 @@ public class YouComSearchToolTest {
     @Test
     void descriptorInputSchemaHasRequiredQuery() {
         var tool = new YouComSearchTool(YouComSearchConfig.builder().build());
-        var schema = tool.descriptor().inputSchema();
-        assertThat(schema).isNotNull();
+        var document = tool.descriptor().inputSchema();
+        assertThat(document).isNotNull();
+        var schema = MAPPER.readTree(document.json());
         assertThat(schema.get("type").asString()).isEqualTo("object");
         assertThat(schema.get("required").get(0).asString()).isEqualTo("query");
         assertThat(schema.path("properties").has("query")).isTrue();
@@ -97,7 +97,7 @@ public class YouComSearchToolTest {
     @Test
     void handleReturnsErrorForEmptyQuery() {
         var tool = new YouComSearchTool(YouComSearchConfig.builder().build());
-        var args = Args.of(Map.of("query", JsonNodeFactory.instance.stringNode("")));
+        var args = Args.of(Map.of("query", ""));
         assertThat(tool.handle(NOOP_CTX, args)).isInstanceOf(ToolResult.Error.class);
     }
 
@@ -111,7 +111,7 @@ public class YouComSearchToolTest {
     @Test
     void buildRequestReturnsNullForEmptyQuery() {
         var tool = new YouComSearchTool(YouComSearchConfig.builder().build());
-        var args = Args.of(Map.of("query", JsonNodeFactory.instance.stringNode("")));
+        var args = Args.of(Map.of("query", ""));
         assertThat(tool.buildRequest(args)).isNull();
     }
 
@@ -124,7 +124,7 @@ public class YouComSearchToolTest {
     @Test
     void buildRequestUriContainsQuery() {
         var tool = new YouComSearchTool(YouComSearchConfig.builder().build());
-        var args = Args.of(Map.of("query", JsonNodeFactory.instance.stringNode("hello")));
+        var args = Args.of(Map.of("query", "hello"));
         assertThat(tool.buildRequest(args).uri())
                 .isEqualTo(URI.create("https://api.you.com/v1/search?query=hello&count=5"));
     }
@@ -133,14 +133,14 @@ public class YouComSearchToolTest {
     void buildRequestIncludesProfileFreeWhenFreeTier() {
         var tool =
                 new YouComSearchTool(YouComSearchConfig.builder().freeTier(true).build());
-        var args = Args.of(Map.of("query", JsonNodeFactory.instance.stringNode("test")));
+        var args = Args.of(Map.of("query", "test"));
         assertThat(tool.buildRequest(args).uri().toString()).contains("profile=free");
     }
 
     @Test
     void buildRequestOmitsProfileFreeWhenNotFreeTier() {
         var tool = new YouComSearchTool(YouComSearchConfig.builder().build());
-        var args = Args.of(Map.of("query", JsonNodeFactory.instance.stringNode("test")));
+        var args = Args.of(Map.of("query", "test"));
         assertThat(tool.buildRequest(args).uri().toString()).doesNotContain("profile");
     }
 
@@ -148,7 +148,7 @@ public class YouComSearchToolTest {
     void buildRequestIncludesAuthHeaderWhenKeyProvided() {
         var tool = new YouComSearchTool(
                 YouComSearchConfig.builder().apiKey("sk-123").build());
-        var args = Args.of(Map.of("query", JsonNodeFactory.instance.stringNode("x")));
+        var args = Args.of(Map.of("query", "x"));
         assertThat(tool.buildRequest(args).headers().firstValue("X-API-Key")).hasValue("sk-123");
     }
 
@@ -156,7 +156,7 @@ public class YouComSearchToolTest {
     void buildRequestOmitsAuthHeaderWhenFreeTier() {
         var tool = new YouComSearchTool(
                 YouComSearchConfig.builder().apiKey("sk-123").freeTier(true).build());
-        var args = Args.of(Map.of("query", JsonNodeFactory.instance.stringNode("x")));
+        var args = Args.of(Map.of("query", "x"));
         assertThat(tool.buildRequest(args).headers().firstValue("X-API-Key")).isEmpty();
     }
 

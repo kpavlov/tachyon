@@ -26,7 +26,8 @@ import tools.jackson.databind.node.JsonNodeFactory;
 class McpToolMapperTest {
 
     private static final JsonNodeFactory JSON = JsonNodeFactory.instance;
-    private static final JsonNode META_VALUE = JSON.stringNode("v1");
+    private static final String META_VALUE = "v1";
+    private static final JsonNode PROTOCOL_META_VALUE = JSON.stringNode(META_VALUE);
 
     @Test
     void toProtocolTextContentCarriesCorrectType() {
@@ -78,11 +79,11 @@ class McpToolMapperTest {
 
     @Test
     void metaSurvivesTextContentRoundTrip() {
-        var meta = Map.of("key", META_VALUE);
+        var meta = Map.<String, Object>of("key", META_VALUE);
         var domain = TextContent.of("hello", meta, null);
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextContent)
                 McpToolMapper.toProtocolContentBlock(domain);
-        assertThat(protocol._meta()).containsEntry("key", META_VALUE);
+        assertThat(protocol._meta()).containsEntry("key", PROTOCOL_META_VALUE);
 
         var back = (TextContent) McpToolMapper.toDomainContentBlock(protocol);
         assertThat(back.meta()).containsEntry("key", META_VALUE);
@@ -90,11 +91,11 @@ class McpToolMapperTest {
 
     @Test
     void metaSurvivesImageContentRoundTrip() {
-        var meta = Map.of("key", META_VALUE);
+        var meta = Map.<String, Object>of("key", META_VALUE);
         var domain = ImageContent.of("data", "image/png", null, meta);
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ImageContent)
                 McpToolMapper.toProtocolContentBlock(domain);
-        assertThat(protocol._meta()).containsEntry("key", META_VALUE);
+        assertThat(protocol._meta()).containsEntry("key", PROTOCOL_META_VALUE);
 
         var back = (ImageContent) McpToolMapper.toDomainContentBlock(protocol);
         assertThat(back.meta()).containsEntry("key", META_VALUE);
@@ -102,11 +103,11 @@ class McpToolMapperTest {
 
     @Test
     void metaSurvivesAudioContentRoundTrip() {
-        var meta = Map.of("key", META_VALUE);
+        var meta = Map.<String, Object>of("key", META_VALUE);
         var domain = AudioContent.of("data", "audio/wav", null, meta);
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.AudioContent)
                 McpToolMapper.toProtocolContentBlock(domain);
-        assertThat(protocol._meta()).containsEntry("key", META_VALUE);
+        assertThat(protocol._meta()).containsEntry("key", PROTOCOL_META_VALUE);
 
         var back = (AudioContent) McpToolMapper.toDomainContentBlock(protocol);
         assertThat(back.meta()).containsEntry("key", META_VALUE);
@@ -114,13 +115,13 @@ class McpToolMapperTest {
 
     @Test
     void metaSurvivesResourceLinkRoundTrip() {
-        var meta = Map.of("key", META_VALUE);
+        var meta = Map.<String, Object>of("key", META_VALUE);
         var domain = ResourceLink.builder("test://resource", "My Resource")
                 .meta(meta)
                 .build();
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ResourceLink)
                 McpToolMapper.toProtocolContentBlock(domain);
-        assertThat(protocol._meta()).containsEntry("key", META_VALUE);
+        assertThat(protocol._meta()).containsEntry("key", PROTOCOL_META_VALUE);
 
         var back = (ResourceLink) McpToolMapper.toDomainContentBlock(protocol);
         assertThat(back.meta()).containsEntry("key", META_VALUE);
@@ -128,12 +129,12 @@ class McpToolMapperTest {
 
     @Test
     void metaSurvivesEmbeddedResourceRoundTrip() {
-        var meta = Map.of("key", META_VALUE);
+        var meta = Map.<String, Object>of("key", META_VALUE);
         var contents = TextResourceContents.of("test://embedded", "content", "text/plain");
         var domain = EmbeddedResource.of(contents, null, meta);
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.EmbeddedResource)
                 McpToolMapper.toProtocolContentBlock(domain);
-        assertThat(protocol._meta()).containsEntry("key", META_VALUE);
+        assertThat(protocol._meta()).containsEntry("key", PROTOCOL_META_VALUE);
 
         var back = (EmbeddedResource) McpToolMapper.toDomainContentBlock(protocol);
         assertThat(back.meta()).containsEntry("key", META_VALUE);
@@ -141,11 +142,11 @@ class McpToolMapperTest {
 
     @Test
     void metaSurvivesTextResourceContentsRoundTrip() {
-        var meta = Map.of("key", META_VALUE);
+        var meta = Map.<String, Object>of("key", META_VALUE);
         var domain = TextResourceContents.of("test://uri", "content", "text/plain", meta);
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextResourceContents)
                 McpToolMapper.toProtocolResourceContents(domain);
-        assertThat(protocol._meta()).containsEntry("key", META_VALUE);
+        assertThat(protocol._meta()).containsEntry("key", PROTOCOL_META_VALUE);
 
         var back = (TextResourceContents) McpToolMapper.toDomainResourceContents(protocol);
         assertThat(back.meta()).containsEntry("key", META_VALUE);
@@ -153,11 +154,11 @@ class McpToolMapperTest {
 
     @Test
     void metaSurvivesBlobResourceContentsRoundTrip() {
-        var meta = Map.of("key", META_VALUE);
+        var meta = Map.<String, Object>of("key", META_VALUE);
         var domain = BlobResourceContents.of("test://blob", "blobdata", "application/octet-stream", meta);
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.BlobResourceContents)
                 McpToolMapper.toProtocolResourceContents(domain);
-        assertThat(protocol._meta()).containsEntry("key", META_VALUE);
+        assertThat(protocol._meta()).containsEntry("key", PROTOCOL_META_VALUE);
 
         var back = (BlobResourceContents) McpToolMapper.toDomainResourceContents(protocol);
         assertThat(back.meta()).containsEntry("key", META_VALUE);

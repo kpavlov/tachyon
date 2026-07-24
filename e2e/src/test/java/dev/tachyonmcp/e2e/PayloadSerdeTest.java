@@ -11,6 +11,7 @@ import com.google.gson.Gson;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.json.JsonSchema;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
 import dev.tachyonmcp.server.json.PayloadSerde;
@@ -63,10 +64,10 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
 
     // endregion
 
-    // region: RawJson byte-exact passthrough
+    // region: JsonDocument byte-exact passthrough
 
     @Test
-    void shouldPassthroughRawJson() throws Exception {
+    void shouldPassthroughJsonDocument() throws Exception {
         startServer(it -> it.tool(ToolHandler.of(
                 "raw-tool",
                 "Raw JSON tool",
@@ -106,7 +107,7 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
                         ToolDescriptor.builder()
                                 .name("validated-output")
                                 .description("Validated output")
-                                .outputSchema(outputSchema)
+                                .outputSchema(JsonSchema.of(outputSchema.toString()))
                                 .build(),
                         (ctx, request) -> ToolResult.of(Map.of("message", "valid", "extra", 42), "ok"))));
 

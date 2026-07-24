@@ -48,6 +48,6 @@ class ResourceRequestDispatchTest {
         assertThat(captured.get().uri()).isEqualTo("test://meta-request");
         assertThat(captured.get().params()).isEmpty();
         assertThat(captured.get().uriTemplate()).isNull();
-        assertThat(captured.get().meta()).isEqualTo(meta);
+        assertThat(captured.get().meta()).isEqualTo(Map.of("trace-id", "trace-42"));
     }
 }

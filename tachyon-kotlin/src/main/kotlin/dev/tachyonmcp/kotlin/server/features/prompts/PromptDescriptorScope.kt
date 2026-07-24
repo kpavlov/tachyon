@@ -5,12 +5,12 @@ package dev.tachyonmcp.kotlin.server.features.prompts
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.domain.PromptArgument
 import dev.tachyonmcp.kotlin.server.domain.PromptArgumentBuilder
-import dev.tachyonmcp.kotlin.server.json.toJacksonNode
+import dev.tachyonmcp.kotlin.server.json.toJsonSchema
 import dev.tachyonmcp.server.domain.Icon
 import dev.tachyonmcp.server.domain.PromptArgument
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
+import dev.tachyonmcp.server.json.JsonSchema
 import kotlinx.serialization.json.JsonObject
-import tools.jackson.databind.JsonNode
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -23,12 +23,12 @@ public class PromptDescriptorScope
         public var description: String? = null
         public var title: String? = null
         public var arguments: List<PromptArgument>? = null
-        public var inputSchema: JsonNode? = null
+        public var inputSchema: JsonSchema? = null
         public var icons: List<Icon>? = null
 
         /** Sets the input schema from a kotlinx-serialization [JsonObject]. */
         public fun inputSchema(json: JsonObject) {
-            inputSchema = json.toJacksonNode()
+            inputSchema = json.toJsonSchema()
         }
 
         /** Adds a prebuilt prompt argument. */

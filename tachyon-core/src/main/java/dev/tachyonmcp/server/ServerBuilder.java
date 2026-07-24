@@ -40,7 +40,6 @@ import dev.tachyonmcp.transport.netty.NettyServer;
 import dev.tachyonmcp.transport.netty.NettyServerConfig;
 import io.netty.channel.ChannelPipeline;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -565,7 +564,7 @@ public final class ServerBuilder {
                 ? sessionConfig.sessionEventStore()
                 : new InMemorySessionEventStore();
         var store = sessionConfig.sessionStore() != null ? sessionConfig.sessionStore() : new InMemorySessionStore();
-        var allExtensions = Collections.unmodifiableList(featuresConfig.extensions);
+        var allExtensions = List.copyOf(featuresConfig.extensions);
         var serverConfig = buildConfig();
         ExecutorService resolvedExecutor;
         boolean ownsExecutor;

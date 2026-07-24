@@ -8,9 +8,8 @@ import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.json.JsonSchema;
 import org.jspecify.annotations.NonNull;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Demonstrates tool-handler patterns:
@@ -20,18 +19,18 @@ import tools.jackson.databind.ObjectMapper;
  */
 final class ToolHandlerExample {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final JsonNode GREET_SCHEMA = MAPPER.createObjectNode()
-        .put("type", "object")
-        .set(
-            "properties",
-            MAPPER.createObjectNode()
-                .set(
-                    "name",
-                    MAPPER.createObjectNode()
-                        .put("type", "string")
-                        .put("description", "Name to greet")))
-        .set("required", MAPPER.createArrayNode().add("name"));
+    private static final JsonSchema GREET_SCHEMA = JsonSchema.of("""
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Name to greet"
+            }
+          },
+          "required": ["name"]
+        }
+        """);
 
     /**
      * Lambda-style: use ToolHandler.of() inside a builder chain.

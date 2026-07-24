@@ -7,15 +7,19 @@ package dev.tachyonmcp.server.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.tachyonmcp.server.json.JsonObject;
+import dev.tachyonmcp.server.json.PayloadDeserializer;
+import java.lang.reflect.Type;
+import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 class ArgsTest {
-
-    private static final JsonNodeFactory JSON = JsonNodeFactory.instance;
 
     @Test
     void ofNullRawProducesEmptyArgs() {
@@ -25,49 +29,49 @@ class ArgsTest {
 
     @Test
     void ofNonNullRawProducesNonEmptyArgs() {
-        var args = Args.of(Map.of("key", JSON.stringNode("val")));
+        var args = Args.of(Map.of("key", "val"));
         assertThat(args.isEmpty()).isFalse();
     }
 
     @Test
-    void hasReturnsTrueForExistingKey() {
-        var args = Args.of(Map.of("k", JSON.stringNode("v")));
-        assertThat(args.has("k")).isTrue();
+    void containsReturnsTrueForExistingKey() {
+        var args = Args.of(Map.of("k", "v"));
+        assertThat(args.contains("k")).isTrue();
     }
 
     @Test
-    void hasReturnsFalseForMissingKey() {
+    void containsReturnsFalseForMissingKey() {
         var args = Args.of(Map.of());
-        assertThat(args.has("k")).isFalse();
+        assertThat(args.contains("k")).isFalse();
     }
 
     @Test
     void stringValueReturnsValue() {
-        var args = Args.of(Map.of("k", JSON.stringNode("hello")));
+        var args = Args.of(Map.of("k", "hello"));
         assertThat(args.stringValue("k")).isEqualTo("hello");
     }
 
     @Test
     void intValueReturnsValue() {
-        var args = Args.of(Map.of("k", JSON.numberNode(42)));
+        var args = Args.of(Map.of("k", 42));
         assertThat(args.intValue("k")).isEqualTo(42);
     }
 
     @Test
     void boolValueReturnsValue() {
-        var args = Args.of(Map.of("k", JSON.booleanNode(true)));
+        var args = Args.of(Map.of("k", true));
         assertThat(args.boolValue("k")).isTrue();
     }
 
     @Test
     void doubleValueReturnsValue() {
-        var args = Args.of(Map.of("k", JSON.numberNode(3.14)));
+        var args = Args.of(Map.of("k", 3.14));
         assertThat(args.doubleValue("k")).isEqualTo(3.14);
     }
 
     @Test
     void stringOptReturnsValueWhenPresent() {
-        var args = Args.of(Map.of("k", JSON.stringNode("v")));
+        var args = Args.of(Map.of("k", "v"));
         assertThat(args.stringOpt("k")).contains("v");
     }
 
@@ -79,7 +83,7 @@ class ArgsTest {
 
     @Test
     void stringOrReturnsValueWhenPresent() {
-        var args = Args.of(Map.of("k", JSON.stringNode("v")));
+        var args = Args.of(Map.of("k", "v"));
         assertThat(args.stringOr("k", "def")).isEqualTo("v");
     }
 
@@ -90,55 +94,23 @@ class ArgsTest {
     }
 
     @Test
-    void nodeReturnsValueWhenPresent() {
-        var args = Args.of(Map.of("k", JSON.stringNode("v")));
-        assertThat(args.node("k").asString()).isEqualTo("v");
+    void isAJsonObject() {
+        JsonObject args = Args.of(Map.of("nested", Map.of("name", "tachyon")));
+
+        assertThat(args.objectValue("nested").stringValue("name")).isEqualTo("tachyon");
     }
 
     @Test
-    void nodeThrowsWhenMissing() {
+    void requiredValueThrowsWhenMissing() {
         var args = Args.of(Map.of());
-        assertThatThrownBy(() -> args.node("k"))
-                .isInstanceOf(InvalidArgumentException.class)
-                .hasMessage("required argument missing");
-    }
-
-    @Test
-    void nodeThrowsWithArgName() {
-        var args = Args.of(Map.of());
-        assertThatThrownBy(() -> args.node("missingArg"))
-                .isInstanceOf(InvalidArgumentException.class)
-                .satisfies(e ->
-                        assertThat(((InvalidArgumentException) e).argName()).isEqualTo("missingArg"));
-    }
-
-    @Test
-    void rawReturnsNullForMissingKey() {
-        var args = Args.of(Map.of());
-        assertThat(args.raw("k")).isNull();
-    }
-
-    @Test
-    void rawReturnsValueForPresentKey() {
-        var args = Args.of(Map.of("k", JSON.stringNode("v")));
-        assertThat(args.raw("k")).isNotNull();
-    }
-
-    @Test
-    void rawReturnsNullForDifferentMissingKey() {
-        var args = Args.of(Map.of("a", JSON.stringNode("x")));
-        assertThat(args.raw("b")).isNull();
-    }
-
-    @Test
-    void rawReturnsNodeWithText() {
-        var args = Args.of(Map.of("k", JSON.stringNode("v")));
-        assertThat(Objects.requireNonNull(args.raw("k")).asString()).isEqualTo("v");
+        assertThatThrownBy(() -> args.stringValue("missingArg"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("missingArg");
     }
 
     @Test
     void asMapReturnsUnmodifiableView() {
-        java.util.Map<String, JsonNode> raw = new java.util.HashMap<>(Map.of("k", JSON.stringNode("v")));
+        var raw = new HashMap<String, Object>(Map.of("k", "v"));
         var args = Args.of(raw);
         assertThat(args.asMap()).containsOnlyKeys("k");
         assertThat(args.asMap()).isUnmodifiable();
@@ -146,7 +118,7 @@ class ArgsTest {
 
     @Test
     void boolOrReturnsValueWhenPresent() {
-        var args = Args.of(Map.of("k", JSON.booleanNode(true)));
+        var args = Args.of(Map.of("k", true));
         assertThat(args.boolOr("k", false)).isTrue();
     }
 
@@ -158,7 +130,7 @@ class ArgsTest {
 
     @Test
     void intOrReturnsValueWhenPresent() {
-        var args = Args.of(Map.of("k", JSON.numberNode(42)));
+        var args = Args.of(Map.of("k", 42));
         assertThat(args.intOr("k", 0)).isEqualTo(42);
     }
 
@@ -170,7 +142,7 @@ class ArgsTest {
 
     @Test
     void doubleOrReturnsValueWhenPresent() {
-        var args = Args.of(Map.of("k", JSON.numberNode(3.14)));
+        var args = Args.of(Map.of("k", 3.14));
         assertThat(args.doubleOr("k", 0.0)).isEqualTo(3.14);
     }
 
@@ -178,5 +150,88 @@ class ArgsTest {
     void doubleOrReturnsFallbackWhenMissing() {
         var args = Args.of(Map.of());
         assertThat(args.doubleOr("k", 1.5)).isEqualTo(1.5);
+    }
+
+    @Test
+    void supportsLongAndDecimalValues() {
+        var args = Args.of(Map.of("long", Long.MAX_VALUE, "decimal", new BigDecimal("1.25")));
+
+        assertThat(args.longValue("long")).isEqualTo(Long.MAX_VALUE);
+        assertThat(args.decimalValue("decimal")).isEqualTo(new BigDecimal("1.25"));
+    }
+
+    @Test
+    void fromRetainsProviderJsonForRawAndDecodedArguments() {
+        var provider = new Object();
+        var values =
+                new RetainedJsonObject("{\"source\":\"provider\"}", JsonObject.of(Map.of("source", "map")), provider);
+        var args = Args.from(values, new EchoingPayloadDeserializer());
+
+        assertThat(args.stringValue("source")).isEqualTo("map");
+        assertThat(args.rawJson()).isEqualTo("{\"source\":\"provider\"}");
+        assertThat(args.decode(String.class)).isEqualTo("{\"source\":\"provider\"}");
+        assertThat(args.unwrap(Object.class)).containsSame(provider);
+    }
+
+    private record RetainedJsonObject(String json, JsonObject delegate, Object provider) implements JsonObject {
+
+        @Override
+        public boolean contains(String name) {
+            return delegate.contains(name);
+        }
+
+        @Override
+        public Optional<JsonObject> objectOpt(String name) {
+            return delegate.objectOpt(name);
+        }
+
+        @Override
+        public Optional<String> stringOpt(String name) {
+            return delegate.stringOpt(name);
+        }
+
+        @Override
+        public Optional<Boolean> boolOpt(String name) {
+            return delegate.boolOpt(name);
+        }
+
+        @Override
+        public Optional<BigDecimal> decimalOpt(String name) {
+            return delegate.decimalOpt(name);
+        }
+
+        @Override
+        public OptionalInt intOpt(String name) {
+            return delegate.intOpt(name);
+        }
+
+        @Override
+        public OptionalLong longOpt(String name) {
+            return delegate.longOpt(name);
+        }
+
+        @Override
+        public OptionalDouble doubleOpt(String name) {
+            return delegate.doubleOpt(name);
+        }
+
+        @Override
+        public Map<String, Object> asMap() {
+            return delegate.asMap();
+        }
+
+        @Override
+        public <T> Optional<T> unwrap(Class<T> type) {
+            return type.isInstance(provider) ? Optional.of(type.cast(provider)) : delegate.unwrap(type);
+        }
+    }
+
+    private static final class EchoingPayloadDeserializer implements PayloadDeserializer {
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T> T deserialize(String json, Type targetType) {
+            return (T) json;
+        }
     }
 }

@@ -5,16 +5,16 @@
 package dev.tachyonmcp.kotlin.server.domain
 
 public fun dev.tachyonmcp.server.domain.Args.stringOrNull(key: String): String? =
-    if (has(key)) stringValue(key) else null
+    stringOpt(key).orElse(null)
 
 public fun dev.tachyonmcp.server.domain.Args.intOrNull(key: String): Int? =
-    if (has(key)) intValue(key) else null
+    intOpt(key).let { if (it.isPresent) it.asInt else null }
 
 public fun dev.tachyonmcp.server.domain.Args.booleanOrNull(key: String): Boolean? =
-    if (has(key)) boolValue(key) else null
+    boolOpt(key).orElse(null)
 
 public fun dev.tachyonmcp.server.domain.Args.doubleOrNull(key: String): Double? =
-    if (has(key)) doubleValue(key) else null
+    doubleOpt(key).let { if (it.isPresent) it.asDouble else null }
 
 public fun dev.tachyonmcp.server.domain.Args.boolean(
     key: String,

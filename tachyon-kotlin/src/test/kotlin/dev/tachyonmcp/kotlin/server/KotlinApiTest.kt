@@ -10,6 +10,7 @@ import dev.tachyonmcp.kotlin.server.domain.double
 import dev.tachyonmcp.kotlin.server.domain.doubleOrNull
 import dev.tachyonmcp.kotlin.server.domain.int
 import dev.tachyonmcp.kotlin.server.domain.intOrNull
+import dev.tachyonmcp.kotlin.server.domain.stringOrNull
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
 import dev.tachyonmcp.kotlin.server.json.toJsonNode
 import dev.tachyonmcp.server.domain.Args
@@ -28,16 +29,15 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.jupiter.api.Test
-import tools.jackson.databind.JsonNode
-import tools.jackson.databind.node.JsonNodeFactory
+import dev.tachyonmcp.server.json.JsonSchema as JavaJsonSchema
 
 internal class KotlinApiTest {
     // region: Overload resolution — all shapes compile
     // These tests verify overloads compile for all schema types
 
     @Test
-    fun `JsonNode overload registers a tool with input and output schema`() {
-        val schema: JsonNode = JsonNodeFactory.instance.objectNode().put("type", "object")
+    fun `JsonSchema overload registers a tool with input and output schema`() {
+        val schema = JavaJsonSchema.objectSchema()
         TachyonServer(
             port = 0,
             {
@@ -106,10 +106,10 @@ internal class KotlinApiTest {
         val args =
             Args.of(
                 mapOf(
-                    "str" to JsonNodeFactory.instance.stringNode("v"),
-                    "int" to JsonNodeFactory.instance.numberNode(42),
-                    "bool" to JsonNodeFactory.instance.booleanNode(true),
-                    "double" to JsonNodeFactory.instance.numberNode(3.14),
+                    "str" to "v",
+                    "int" to 42,
+                    "bool" to true,
+                    "double" to 3.14,
                 ),
                 null,
             )
@@ -143,9 +143,9 @@ internal class KotlinApiTest {
         val args =
             Args.of(
                 mapOf(
-                    "bool" to JsonNodeFactory.instance.booleanNode(true),
-                    "int" to JsonNodeFactory.instance.numberNode(42),
-                    "double" to JsonNodeFactory.instance.numberNode(3.14),
+                    "bool" to true,
+                    "int" to 42,
+                    "double" to 3.14,
                 ),
                 null,
             )
@@ -182,8 +182,8 @@ internal class KotlinApiTest {
     fun `decode round-trip via configured serde`() {
         val raw =
             mapOf(
-                "name" to JsonNodeFactory.instance.stringNode("Alice"),
-                "age" to JsonNodeFactory.instance.numberNode(30),
+                "name" to "Alice",
+                "age" to 30,
             )
         val args = Args.of(raw, KxSerializationSerde.Default)
         val decoded = args.decode(GreetingArgs::class.java)
@@ -192,7 +192,7 @@ internal class KotlinApiTest {
 
     @Test
     fun `decode uses default values`() {
-        val raw = mapOf("name" to JsonNodeFactory.instance.stringNode("Bob"))
+        val raw = mapOf("name" to "Bob")
         val args = Args.of(raw, KxSerializationSerde.Default)
         val decoded = args.decode(GreetingArgs::class.java)
         decoded shouldBe GreetingArgs("Bob", 0)
@@ -202,8 +202,8 @@ internal class KotlinApiTest {
     fun `decode ignores unknown keys with default serde`() {
         val raw =
             mapOf(
-                "name" to JsonNodeFactory.instance.stringNode("Eve"),
-                "unexpected" to JsonNodeFactory.instance.stringNode("extra"),
+                "name" to "Eve",
+                "unexpected" to "extra",
             )
         val args = Args.of(raw, KxSerializationSerde.Default)
         val decoded = args.decode(GreetingArgs::class.java)
@@ -214,9 +214,9 @@ internal class KotlinApiTest {
     fun `decode uses configured serde not hardcoded json`() {
         val raw =
             mapOf(
-                "name" to JsonNodeFactory.instance.stringNode("Eve"),
-                "age" to JsonNodeFactory.instance.numberNode(25),
-                "unknown" to JsonNodeFactory.instance.stringNode("extra"),
+                "name" to "Eve",
+                "age" to 25,
+                "unknown" to "extra",
             )
         // Default serde ignores unknown keys; a strict serde rejects them — proving the
         // configured deserializer is used, mapped to InvalidArgumentException (invalid params).
@@ -229,7 +229,7 @@ internal class KotlinApiTest {
 
     @Test
     fun `decode throws when no deserializer configured`() {
-        val raw = mapOf("name" to JsonNodeFactory.instance.stringNode("Bob"))
+        val raw = mapOf("name" to "Bob")
         val args = Args.of(raw, null)
         shouldThrow<IllegalStateException> {
             args.decode(GreetingArgs::class.java)

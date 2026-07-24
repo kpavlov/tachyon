@@ -4,115 +4,107 @@
 
 package dev.tachyonmcp.server.domain;
 
-import dev.tachyonmcp.server.json.JsonUtils;
+import dev.tachyonmcp.server.json.JsonObject;
 import dev.tachyonmcp.server.json.PayloadDeserializer;
 import java.lang.reflect.Type;
-import java.util.Collections;
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
-public final class Args {
+public final class Args implements JsonObject {
 
-    private final Map<String, JsonNode> raw;
+    private final JsonObject values;
     private final @Nullable PayloadDeserializer deserializer;
 
-    private static final Args EMPTY = new Args(Collections.emptyMap(), null);
+    private static final Args EMPTY = new Args(JsonObject.empty(), null);
 
-    private Args(@Nullable Map<String, JsonNode> raw, @Nullable PayloadDeserializer deserializer) {
-        this.raw = raw == null ? Map.of() : Map.copyOf(raw);
+    private Args(JsonObject values, @Nullable PayloadDeserializer deserializer) {
+        this.values = values;
         this.deserializer = deserializer;
     }
 
-    public static Args of(@Nullable Map<String, JsonNode> raw) {
-        return new Args(raw, null);
+    public static Args of(@Nullable Map<String, ?> values) {
+        return new Args(values == null ? JsonObject.empty() : JsonObject.of(values), null);
     }
 
     public static Args empty() {
         return EMPTY;
     }
 
-    public static Args of(@Nullable Map<String, JsonNode> raw, @Nullable PayloadDeserializer deserializer) {
-        return new Args(raw, deserializer);
+    public static Args of(@Nullable Map<String, ?> values, @Nullable PayloadDeserializer deserializer) {
+        return new Args(values == null ? JsonObject.empty() : JsonObject.of(values), deserializer);
+    }
+
+    public static Args from(JsonObject values, @Nullable PayloadDeserializer deserializer) {
+        return new Args(values, deserializer);
     }
 
     public boolean isEmpty() {
-        return raw.isEmpty();
+        return values.asMap().isEmpty();
     }
 
-    public boolean has(String key) {
-        return raw.containsKey(key);
+    @Override
+    public boolean contains(String name) {
+        return values.contains(name);
     }
 
-    /** Returns an unmodifiable view of the raw argument map. */
-    public Map<String, JsonNode> asMap() {
-        return raw;
+    @Override
+    public Optional<JsonObject> objectOpt(String name) {
+        return values.objectOpt(name);
     }
 
-    public String stringValue(String key) {
-        return node(key).asString();
+    @Override
+    public Optional<String> stringOpt(String name) {
+        return values.stringOpt(name);
     }
 
-    public int intValue(String key) {
-        return node(key).asInt();
+    @Override
+    public Optional<Boolean> boolOpt(String name) {
+        return values.boolOpt(name);
     }
 
-    public boolean boolValue(String key) {
-        return node(key).asBoolean();
+    @Override
+    public Optional<BigDecimal> decimalOpt(String name) {
+        return values.decimalOpt(name);
     }
 
-    public double doubleValue(String key) {
-        return node(key).asDouble();
+    @Override
+    public OptionalInt intOpt(String name) {
+        return values.intOpt(name);
     }
 
-    public Optional<String> stringOpt(String key) {
-        return has(key) ? raw.get(key).asStringOpt() : Optional.empty();
+    @Override
+    public OptionalLong longOpt(String name) {
+        return values.longOpt(name);
     }
 
-    @Nullable
-    public String stringOr(String key, @Nullable String fallback) {
-        return has(key) ? raw.get(key).asString() : fallback;
+    @Override
+    public OptionalDouble doubleOpt(String name) {
+        return values.doubleOpt(name);
     }
 
-    @Nullable
-    public String stringOrNull(String key) {
-        return has(key) ? raw.get(key).asString() : null;
+    @Override
+    public Map<String, Object> asMap() {
+        return values.asMap();
     }
 
-    public int intOr(String key, int fallback) {
-        return has(key) ? raw.get(key).asInt() : fallback;
+    @Override
+    public <T> Optional<T> unwrap(Class<T> type) {
+        return values.unwrap(type);
     }
 
-    public OptionalInt intOpt(String key) {
-        return has(key) ? raw.get(key).asIntOpt() : OptionalInt.empty();
-    }
-
-    public boolean boolOr(String key, boolean fallback) {
-        return has(key) ? raw.get(key).asBoolean() : fallback;
-    }
-
-    public Optional<Boolean> boolOpt(String key) {
-        return has(key) ? raw.get(key).asBooleanOpt() : Optional.empty();
-    }
-
-    public double doubleOr(String key, double fallback) {
-        return has(key) ? raw.get(key).asDouble() : fallback;
-    }
-
-    public OptionalDouble doubleOpt(String key) {
-        return has(key) ? raw.get(key).asDoubleOpt() : OptionalDouble.empty();
+    @Override
+    public String json() {
+        return values.json();
     }
 
     /** Returns the full arguments as a JSON string. */
     public String rawJson() {
-        try {
-            return JsonUtils.writeString(raw);
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to serialize arguments to JSON", e);
-        }
+        return json();
     }
 
     /**
@@ -149,31 +141,5 @@ public final class Args {
      */
     public <T> T decode(Class<T> targetClass) {
         return decode((Type) targetClass);
-    }
-
-    /**
-     * Returns the argument {@code key} as a {@link JsonNode}, throwing if missing.
-     *
-     * @throws InvalidArgumentException if the key is not present
-     */
-    public JsonNode node(String key) {
-        var n = raw.get(key);
-        if (n == null) throw new InvalidArgumentException(key, "required argument missing");
-        return n;
-    }
-
-    public @Nullable JsonNode nodeOr(String key, @Nullable JsonNode fallback) {
-        var n = raw.get(key);
-        if (n == null) return fallback;
-        return n;
-    }
-
-    /**
-     * Returns the argument {@code key} as a {@link JsonNode}, or {@code null} if missing.
-     * Unlike {@link #node(String)} this never throws — use when the key is optional.
-     */
-    @Nullable
-    public JsonNode raw(String key) {
-        return raw.get(key);
     }
 }

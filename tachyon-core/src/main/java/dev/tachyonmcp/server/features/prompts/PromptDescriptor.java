@@ -7,11 +7,11 @@ package dev.tachyonmcp.server.features.prompts;
 import dev.tachyonmcp.server.ServerFeature;
 import dev.tachyonmcp.server.domain.Icon;
 import dev.tachyonmcp.server.domain.PromptArgument;
+import dev.tachyonmcp.server.json.JsonSchema;
 import dev.tachyonmcp.server.json.JsonSchemaUtils;
 import java.util.List;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
 @Value.Immutable
 @Value.Style(
@@ -32,7 +32,7 @@ public interface PromptDescriptor extends ServerFeature.Descriptor {
     List<PromptArgument> arguments();
 
     @Nullable
-    JsonNode inputSchema();
+    JsonSchema inputSchema();
 
     @Nullable
     List<Icon> icons();
@@ -54,7 +54,7 @@ public interface PromptDescriptor extends ServerFeature.Descriptor {
             @Nullable String description,
             @Nullable String title,
             @Nullable List<PromptArgument> arguments,
-            @Nullable JsonNode inputSchema) {
+            @Nullable JsonSchema inputSchema) {
         return DefaultPromptDescriptor.of(name, title, description, arguments, inputSchema, null, null);
     }
 
@@ -63,7 +63,7 @@ public interface PromptDescriptor extends ServerFeature.Descriptor {
             @Nullable String description,
             @Nullable String title,
             @Nullable List<PromptArgument> arguments,
-            @Nullable JsonNode inputSchema,
+            @Nullable JsonSchema inputSchema,
             @Nullable List<Icon> icons) {
         return DefaultPromptDescriptor.of(name, title, description, arguments, inputSchema, icons, null);
     }
@@ -83,7 +83,7 @@ public interface PromptDescriptor extends ServerFeature.Descriptor {
 
         Builder arguments(@Nullable Iterable<? extends PromptArgument> elements);
 
-        Builder inputSchema(@Nullable JsonNode inputSchema);
+        Builder inputSchema(@Nullable JsonSchema inputSchema);
 
         default Builder inputSchema(@Nullable String inputSchema) {
             return inputSchema(JsonSchemaUtils.parseSchema(inputSchema));

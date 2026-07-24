@@ -11,6 +11,7 @@ import dev.tachyonmcp.server.domain.ImageContent;
 import dev.tachyonmcp.server.domain.ResourceLink;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.domain.TextResourceContents;
+import dev.tachyonmcp.server.json.JsonUtils;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -48,21 +49,24 @@ public final class ContentBlockMappers {
         return switch (domain) {
             case TextContent t ->
                 new dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextContent(
-                        t.type().discriminator(), t.text(), toProtocolAnnotations(t.annotations()), t.meta());
+                        t.type().discriminator(),
+                        t.text(),
+                        toProtocolAnnotations(t.annotations()),
+                        JsonUtils.toJsonNodeMap(t.meta()));
             case ImageContent i ->
                 new dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ImageContent(
                         i.type().discriminator(),
                         i.data(),
                         i.mimeType(),
                         toProtocolAnnotations(i.annotations()),
-                        i.meta());
+                        JsonUtils.toJsonNodeMap(i.meta()));
             case AudioContent a ->
                 new dev.tachyonmcp.protocol.mcp.v2025_11_25.models.AudioContent(
                         a.type().discriminator(),
                         a.data(),
                         a.mimeType(),
                         toProtocolAnnotations(a.annotations()),
-                        a.meta());
+                        JsonUtils.toJsonNodeMap(a.meta()));
             case ResourceLink r ->
                 new dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ResourceLink(
                         r.type().discriminator(),
@@ -74,13 +78,13 @@ public final class ContentBlockMappers {
                         r.mimeType(),
                         toProtocolAnnotations(r.annotations()),
                         r.size(),
-                        r.meta());
+                        JsonUtils.toJsonNodeMap(r.meta()));
             case EmbeddedResource e ->
                 new dev.tachyonmcp.protocol.mcp.v2025_11_25.models.EmbeddedResource(
                         e.type().discriminator(),
                         toProtocolResourceContents(e.resource()),
                         toProtocolAnnotations(e.annotations()),
-                        e.meta());
+                        JsonUtils.toJsonNodeMap(e.meta()));
         };
     }
 
@@ -90,10 +94,10 @@ public final class ContentBlockMappers {
         return switch (domain) {
             case TextResourceContents t ->
                 new dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextResourceContents(
-                        t.text(), t.uri(), t.mimeType(), t.meta());
+                        t.text(), t.uri(), t.mimeType(), JsonUtils.toJsonNodeMap(t.meta()));
             case BlobResourceContents b ->
                 new dev.tachyonmcp.protocol.mcp.v2025_11_25.models.BlobResourceContents(
-                        b.blob(), b.uri(), b.mimeType(), b.meta());
+                        b.blob(), b.uri(), b.mimeType(), JsonUtils.toJsonNodeMap(b.meta()));
         };
     }
 }

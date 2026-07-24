@@ -11,7 +11,6 @@ import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.NoopInteractionContext;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 class EchoToolHandlerTest {
 
@@ -20,7 +19,7 @@ class EchoToolHandlerTest {
     @Test
     void echoReturnsInputMessage() {
         var handler = new EchoToolHandler();
-        var args = Args.of(Map.of("message", JsonNodeFactory.instance.stringNode("hello")));
+        var args = Args.of(Map.of("message", "hello"));
 
         var result = (ToolResult.Success) handler.handle(NOOP_CTX, args);
 

@@ -11,6 +11,7 @@ import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.json.JsonSchema;
 import java.net.http.HttpResponse;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
@@ -241,12 +242,12 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
                 """);
     }
 
-    private static ToolHandler outputSchemaToolHandler(JsonNode outputSchemaNode) {
+    private static ToolHandler outputSchemaToolHandler(JsonSchema outputSchema) {
         return ToolHandler.of(
                 b -> b.name("output-schema-tool")
                         .description("A tool with output schema")
                         .inputSchema(INPUT_SCHEMA)
-                        .outputSchema(outputSchemaNode),
+                        .outputSchema(outputSchema),
                 (ctx, request) -> ToolResult.text("ok"));
     }
 
@@ -279,7 +280,8 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
 
     // ---- JSON schemas ----
 
-    private static final JsonNode OUTPUT_SCHEMA = buildOutputSchema();
+    private static final JsonSchema OUTPUT_SCHEMA =
+            JsonSchema.of(buildOutputSchema().toString());
 
     private static JsonNode buildOutputSchema() {
         var schema = JsonNodeFactory.instance.objectNode();
@@ -291,7 +293,8 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
         return schema;
     }
 
-    private static final JsonNode INPUT_SCHEMA = buildInputSchema();
+    private static final JsonSchema INPUT_SCHEMA =
+            JsonSchema.of(buildInputSchema().toString());
 
     private static JsonNode buildInputSchema() {
         var schema = JsonNodeFactory.instance.objectNode();

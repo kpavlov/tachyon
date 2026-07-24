@@ -4,6 +4,7 @@
 
 package dev.tachyonmcp.e2e
 
+import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.kotlin.server.domain.decode
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
 import dev.tachyonmcp.server.features.tools.ToolResult
@@ -26,11 +27,12 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
 
     @Test
     fun `decode and ToolResult-of round-trip via configured serde`() {
-        startServer {
-            it
-                .json { j ->
-                    j.serde(KxSerializationSerde.Default)
-                }.tool(
+        val sv =
+            TachyonServer(port = 0) {
+                json {
+                    serde = KxSerializationSerde.Default
+                }
+                tool(
                     "greet",
                     "Typed greet tool",
                     //language=json
@@ -39,14 +41,15 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
                     """.trimIndent(),
                     // language=json
                     """{"type":"object"}""",
-                ) { _, request ->
+                ) {
                     val input = request.arguments().decode<GreetArgs>()
                     ToolResult.of(
                         GreetReply("${input.greeting}, ${input.name}!"),
                         "greeting response",
                     )
                 }
-        }
+            }
+        port = sv.port()
 
         val client = createTestClient()
         client.initialize()
@@ -61,15 +64,18 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
         val body = response.body()
         assert(body.contains("\"message\":\"Hello, World!\"")) { "Missing message in: $body" }
         assert(body.contains("\"text\":\"greeting response\"")) { "Missing text in: $body" }
+
+        sv.close()
     }
 
     @Test
     fun `structured result without text emits serialized JSON text block`() {
-        startServer {
-            it
-                .json { j ->
-                    j.serde(KxSerializationSerde.Default)
-                }.tool(
+        val sv =
+            TachyonServer(port = 0) {
+                json {
+                    serde = KxSerializationSerde.Default
+                }
+                tool(
                     "greet",
                     "Typed greet tool",
                     //language=json
@@ -78,11 +84,12 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
                     """.trimIndent(),
                     // language=json
                     """{"type":"object"}""",
-                ) { _, request ->
+                ) {
                     val input = request.arguments().decode<GreetArgs>()
                     ToolResult.of(GreetReply("${input.greeting}, ${input.name}!"))
                 }
-        }
+            }
+        port = sv.port()
 
         val client = createTestClient()
         client.initialize()
@@ -104,27 +111,31 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
         assert(body.contains("{\\\"message\\\":\\\"Hello, World!\\\"}")) {
             "Missing serialized-JSON text block in: $body"
         }
+
+        sv.close()
     }
 
     @Test
     fun `decode with strict serde rejects unknown key as error`() {
-        startServer {
-            it
-                .json { j ->
-                    j.serde(KxSerializationSerde(Json { ignoreUnknownKeys = false }))
-                }.tool(
+        val sv =
+            TachyonServer(port = 0) {
+                json {
+                    serde = KxSerializationSerde(Json { ignoreUnknownKeys = false })
+                }
+                tool(
                     "strict-greet",
                     "Strict typed greet tool",
                     """{"type":"object"}""",
                     """{"type":"object"}""",
-                ) { _, request ->
+                ) {
                     val input = request.arguments().decode<GreetArgs>()
                     ToolResult.of(
                         GreetReply("${input.greeting}, ${input.name}!"),
                         "greeting response",
                     )
                 }
-        }
+            }
+        port = sv.port()
 
         val client = createTestClient()
         client.initialize()
@@ -148,5 +159,7 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
               }
             }
             """.trimIndent()
+
+        sv.close()
     }
 }

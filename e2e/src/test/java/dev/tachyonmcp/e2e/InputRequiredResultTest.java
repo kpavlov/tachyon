@@ -18,18 +18,15 @@ import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.time.Duration;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.awaitility.Awaitility;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
-
-    private static final JsonNodeFactory FACTORY = JsonNodeFactory.instance;
 
     @Test
     void basicElicitationFlow() throws Exception {
@@ -203,7 +200,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
             var inputResponses = request.inputResponses();
             if (inputResponses != null && inputResponses.containsKey("user_name")) {
                 var resp = inputResponses.get("user_name");
-                var name = resp != null && resp.has("name") ? resp.get("name").asString() : "World";
+                var name = stringField(resp, "name", "World");
                 return ToolResult.text("Hello, " + name + "!");
             }
             var inputRequests = Map.of("user_name", buildFormElicitation("What is your name?", "name", "string"));
@@ -212,12 +209,10 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
     }
 
     private static FormInputRequest buildFormElicitation(String message, String propName, String propType) {
-        var schemaMap = new LinkedHashMap<String, JsonNode>();
-        schemaMap.put("type", FACTORY.stringNode("object"));
-        var propsNode = FACTORY.objectNode();
-        propsNode.putObject(propName).put("type", propType);
-        schemaMap.put("properties", propsNode);
-        schemaMap.put("required", FACTORY.arrayNode().add(propName));
+        var schemaMap = new LinkedHashMap<String, Object>();
+        schemaMap.put("type", "object");
+        schemaMap.put("properties", Map.of(propName, Map.of("type", propType)));
+        schemaMap.put("required", List.of(propName));
         return FormInputRequest.of(message, schemaMap);
     }
 
@@ -242,13 +237,13 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
             if (requestState != null && requestState.startsWith("state-round-2:")) {
                 var name = requestState.substring("state-round-2:".length());
                 var color = inputResponses != null && inputResponses.containsKey("step2")
-                        ? inputResponses.get("step2").path("color").asString("unknown")
+                        ? stringField(inputResponses.get("step2"), "color", "unknown")
                         : "unknown";
                 return ToolResult.text("Hello, " + name + "! Your favorite color is " + color + ".");
             }
 
             if ("state-round-1".equals(requestState) && inputResponses != null && inputResponses.containsKey("step1")) {
-                var name = inputResponses.get("step1").path("name").asString("unknown");
+                var name = stringField(inputResponses.get("step1"), "name", "unknown");
                 var inputRequests = new LinkedHashMap<String, InputRequest>();
                 inputRequests.put(
                         "step2", buildFormElicitation("Step 2: What is your favorite color?", "color", "string"));
@@ -273,7 +268,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
         @Override
         public ToolResult handle(InteractionContext context, ToolRequest request) {
             var inputRequests = Map.of("user_name", buildFormElicitation("What is your name?", "name", "string"));
-            return ToolResult.inputRequired(inputRequests, null).withMeta("trace-id", FACTORY.stringNode("abc-123"));
+            return ToolResult.inputRequired(inputRequests, null).withMeta("trace-id", "abc-123");
         }
     }
 
@@ -297,8 +292,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
             var inputResponses = request.inputResponses();
             if (inputResponses != null && inputResponses.containsKey("auth")) {
                 var resp = inputResponses.get("auth");
-                var action =
-                        resp != null && resp.has("action") ? resp.get("action").asString() : "";
+                var action = stringField(resp, "action", "");
                 if ("accept".equals(action)) {
                     return CompletableFuture.completedFuture(ToolResult.text("Authenticated successfully!"));
                 }
@@ -315,5 +309,12 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                 return ToolResult.inputRequired(inputRequests, null);
             });
         }
+    }
+
+    private static String stringField(@Nullable Object value, String name, String defaultValue) {
+        if (value instanceof Map<?, ?> map && map.get(name) instanceof String text) {
+            return text;
+        }
+        return defaultValue;
     }
 }

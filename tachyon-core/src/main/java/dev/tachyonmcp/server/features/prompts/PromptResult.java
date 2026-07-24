@@ -14,7 +14,11 @@ import org.jspecify.annotations.Nullable;
 
 public sealed interface PromptResult permits PromptResult.Messages, PromptResult.InputRequired {
 
-    record Messages(@Nullable List<PromptMessage> messages) implements PromptResult {}
+    record Messages(@Nullable List<PromptMessage> messages) implements PromptResult {
+        public Messages {
+            messages = messages == null ? null : List.copyOf(messages);
+        }
+    }
 
     record InputRequired(InputRequestBundle request) implements PromptResult {
         public InputRequired {

@@ -14,7 +14,6 @@ import dev.tachyonmcp.server.json.PayloadDeserializer;
 import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
 @Value.Immutable
 @Value.Style(
@@ -39,7 +38,7 @@ public interface ToolRequest extends HasMeta {
     }
 
     @Nullable
-    Map<String, JsonNode> meta();
+    Map<String, Object> meta();
 
     /**
      * Returns the payload deserializer configured for this request, or {@code null} if not set.
@@ -62,7 +61,7 @@ public interface ToolRequest extends HasMeta {
     Cancellation cancellation();
 
     @Nullable
-    Map<String, JsonNode> inputResponses();
+    Map<String, Object> inputResponses();
 
     @Nullable
     String requestState();
@@ -82,7 +81,7 @@ public interface ToolRequest extends HasMeta {
 
         Builder arguments(Args arguments);
 
-        Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
+        Builder meta(@Nullable Map<String, ?> entries);
 
         @ExperimentalApi
         Builder payloadDeserializer(@Nullable PayloadDeserializer deserializer);
@@ -92,7 +91,7 @@ public interface ToolRequest extends HasMeta {
 
         Builder cancellation(@Nullable Cancellation cancellation);
 
-        Builder inputResponses(@Nullable Map<String, ? extends JsonNode> inputResponses);
+        Builder inputResponses(@Nullable Map<String, ?> inputResponses);
 
         Builder requestState(@Nullable String requestState);
 

@@ -17,19 +17,19 @@ import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
+import dev.tachyonmcp.server.json.JsonSchema;
 import java.util.ArrayList;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 class NotificationDeliveryTest {
 
     private static final ToolDescriptor TOOL_DESCRIPTOR = ToolDescriptor.builder()
             .name("test_tool")
             .description("Test tool")
-            .inputSchema(JsonNodeFactory.instance.objectNode().put("type", "object"))
+            .inputSchema(JsonSchema.objectSchema())
             .build();
 
     /**

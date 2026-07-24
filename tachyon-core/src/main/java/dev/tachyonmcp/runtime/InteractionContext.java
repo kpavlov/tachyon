@@ -4,19 +4,18 @@
 
 package dev.tachyonmcp.runtime;
 
-import dev.tachyonmcp.protocol.Protocol;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Handler-facing view of the per-channel interaction: the current lifecycle phase, the bound
- * {@link Session}, protocol version, and the collaboration channels a tool/resource/prompt handler
- * legitimately needs ({@link #notifications()} and {@link #sendRequest(String, Object)}).
+ * Handler-facing view of the per-channel interaction: the current lifecycle phase, protocol
+ * version, optional session identifier, and the collaboration channels a tool/resource/prompt
+ * handler legitimately needs ({@link #notifications()} and {@link #sendRequest(String, Object)}).
  *
  * <p>This interface deliberately exposes <em>no</em> mutators — handlers may read state and use the
- * {@link #attributes() attribute} scratch space, but lifecycle/session/extension mutation lives on
- * {@link ChannelContext}, handed to extension and dispatch code only.
+ * {@link #attributes() attribute} scratch space, but lifecycle and session mutation live on the
+ * internal channel context handed to extension and dispatch code only.
  */
 public interface InteractionContext {
     enum Lifecycle {
@@ -25,20 +24,14 @@ public interface InteractionContext {
         SHUTDOWN
     }
 
-    Protocol protocol();
-
-    default String protocolVersion() {
-        return protocol().versionString();
-    }
+    String protocolVersion();
 
     @Nullable
     Lifecycle lifecycle();
 
-    /**
-     * Optional Session. Session is <code>null</code> in stateless mode.
-     */
+    /** Returns the session identifier, or {@code null} in stateless mode. */
     @Nullable
-    Session session();
+    String sessionId();
 
     boolean isExtensionEnabled(String extensionId);
 

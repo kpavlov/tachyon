@@ -3,12 +3,12 @@
 package dev.tachyonmcp.kotlin.server.features.tools
 
 import dev.tachyonmcp.kotlin.server.TachyonDsl
-import dev.tachyonmcp.kotlin.server.json.toJacksonNode
+import dev.tachyonmcp.kotlin.server.json.toJsonSchema
 import dev.tachyonmcp.server.features.tasks.TaskSupport
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
+import dev.tachyonmcp.server.json.JsonSchema
 import dev.tachyonmcp.server.json.JsonSchemaUtils.parseSchema
 import kotlinx.serialization.json.JsonObject
-import tools.jackson.databind.JsonNode
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -20,8 +20,8 @@ public class ToolDescriptorScope
         public var name: String? = null
         public var title: String? = null
         public var description: String? = null
-        public var inputSchema: JsonNode? = null
-        public var outputSchema: JsonNode? = null
+        public var inputSchema: JsonSchema? = null
+        public var outputSchema: JsonSchema? = null
         public var taskSupport: TaskSupport? = null
         public var annotations: dev.tachyonmcp.server.domain.ToolAnnotations? = null
         public var icons: List<dev.tachyonmcp.server.domain.Icon>? = null
@@ -37,12 +37,12 @@ public class ToolDescriptorScope
 
         /** Sets the input schema from a kotlinx-serialization [JsonObject]. */
         public fun inputSchema(json: JsonObject) {
-            inputSchema = json.toJacksonNode()
+            inputSchema = json.toJsonSchema()
         }
 
         /** Sets the output schema from a kotlinx-serialization [JsonObject]. */
         public fun outputSchema(json: JsonObject) {
-            outputSchema = json.toJacksonNode()
+            outputSchema = json.toJsonSchema()
         }
 
         @PublishedApi

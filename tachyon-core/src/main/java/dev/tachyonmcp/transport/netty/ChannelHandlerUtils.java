@@ -6,7 +6,7 @@ package dev.tachyonmcp.transport.netty;
 
 import static dev.tachyonmcp.transport.netty.InteractionHandler.INTERACTION_CONTEXT_KEY;
 
-import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.runtime.ChannelContext;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.internal.ServerEngine;
@@ -50,15 +50,14 @@ public final class ChannelHandlerUtils {
     }
 
     /** Returns the protocol interaction context bound to this channel, or {@code null}. */
-    public static @Nullable InteractionContext getInteractionContext(ChannelHandlerContext ctx) {
+    public static @Nullable ChannelContext getInteractionContext(ChannelHandlerContext ctx) {
         return ctx.channel().attr(INTERACTION_CONTEXT_KEY).get();
     }
 
-    @SuppressWarnings({"unchecked"})
-    public static <T extends InteractionContext> T requireInteractionContext(ChannelHandlerContext ctx) {
-        var raw = getInteractionContext(ctx);
-        return (T) Objects.requireNonNull(
-                raw, "InteractionContext is null. Check if InteractionHandler is configured correctly.");
+    public static ChannelContext requireInteractionContext(ChannelHandlerContext ctx) {
+        return Objects.requireNonNull(
+                getInteractionContext(ctx),
+                "InteractionContext is null. Check if InteractionHandler is configured correctly.");
     }
 
     /**

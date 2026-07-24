@@ -23,7 +23,6 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
 @InternalApi
 public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
@@ -31,7 +30,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     private final TaskDescriptor descriptor;
     private final String id;
     private final @Nullable String sessionId;
-    private final @Nullable Map<String, JsonNode> meta;
+    private final @Nullable Map<String, Object> meta;
     private final AtomicReference<TaskState> status;
     private final long createdAt;
     private final @Nullable Long ttl;
@@ -97,7 +96,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             @Nullable Duration ttl,
             @Nullable String sessionId,
             @Nullable ProgressToken progressToken,
-            @Nullable Map<String, JsonNode> meta) {
+            @Nullable Map<String, Object> meta) {
         this(descriptor, id, status, ttl, sessionId, progressToken, meta, TasksConfig.DEFAULT_TASK_KEEP_ALIVE);
     }
 
@@ -108,7 +107,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             @Nullable Duration ttl,
             @Nullable String sessionId,
             @Nullable ProgressToken progressToken,
-            @Nullable Map<String, JsonNode> meta,
+            @Nullable Map<String, Object> meta,
             Duration keepAlive) {
         this(descriptor, id, status, ttl, sessionId, progressToken, meta, keepAlive, null);
     }
@@ -120,7 +119,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             @Nullable Duration ttl,
             @Nullable String sessionId,
             @Nullable ProgressToken progressToken,
-            @Nullable Map<String, JsonNode> meta,
+            @Nullable Map<String, Object> meta,
             Duration keepAlive,
             @Nullable Duration pollInterval) {
         this(descriptor, id, status, ttl, sessionId, progressToken, meta, keepAlive, pollInterval, entry -> {});
@@ -138,7 +137,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             @Nullable Duration ttl,
             @Nullable String sessionId,
             @Nullable ProgressToken progressToken,
-            @Nullable Map<String, JsonNode> meta,
+            @Nullable Map<String, Object> meta,
             Duration keepAlive,
             @Nullable Duration pollInterval,
             Consumer<TaskEntry> statusListener) {
@@ -168,7 +167,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     }
 
     @Override
-    public @Nullable Map<String, JsonNode> meta() {
+    public @Nullable Map<String, Object> meta() {
         return meta;
     }
 

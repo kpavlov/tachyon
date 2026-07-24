@@ -3,6 +3,7 @@
 package dev.tachyonmcp.kotlin.server.json
 
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
+import dev.tachyonmcp.server.json.JsonSchema
 import dev.tachyonmcp.server.json.JsonSchemaUtils.parseSchema
 import dev.tachyonmcp.server.json.JsonUtils
 import kotlinx.serialization.json.JsonArray
@@ -85,3 +86,7 @@ internal fun JsonObject?.toJacksonNodeOrNull(): JsonNode? = this?.toJacksonNode(
 
 internal fun Map<String, JsonObject>.toJacksonNodeMap(): Map<String, JsonNode> =
     mapValues { (_, v) -> v.toJacksonNode() }
+
+internal fun JsonObject.toJsonSchema(): JsonSchema = JsonSchema.of(toString())
+
+internal fun JsonObject?.toJsonSchemaOrNull(): JsonSchema? = this?.toJsonSchema()

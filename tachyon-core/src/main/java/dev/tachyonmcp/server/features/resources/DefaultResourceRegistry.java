@@ -23,6 +23,7 @@ import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.features.PaginatedResult;
 import dev.tachyonmcp.server.features.Pagination;
 import dev.tachyonmcp.server.internal.ServerEngine;
+import dev.tachyonmcp.server.json.JsonUtils;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.Comparator;
@@ -508,7 +509,7 @@ public class DefaultResourceRegistry implements Resources {
                 if (extId != null && !context.isExtensionEnabled(extId)) {
                     return CompletableFuture.completedFuture(ServerErrors.resourceNotFound("Resource not found"));
                 }
-                var request = new ResourceRequest(uri, Map.of(), null, parsed.meta());
+                var request = new ResourceRequest(uri, Map.of(), null, JsonUtils.toObjectMap(parsed.meta()));
                 return readResult(context, uri, () -> entry.handler().handleAsync(context, request));
             }
             var match = registry.matchTemplate(uri);
@@ -517,7 +518,10 @@ public class DefaultResourceRegistry implements Resources {
                         ServerErrors.resourceNotFound("Resource not found", Map.of("uri", uri)));
             }
             var request = new ResourceRequest(
-                    uri, match.params(), match.entry().descriptor().uriTemplate(), parsed.meta());
+                    uri,
+                    match.params(),
+                    match.entry().descriptor().uriTemplate(),
+                    JsonUtils.toObjectMap(parsed.meta()));
             return readResult(context, uri, () -> match.entry().handler().handleAsync(context, request));
         }
 

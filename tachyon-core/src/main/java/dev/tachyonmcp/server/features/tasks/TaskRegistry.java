@@ -10,14 +10,13 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.Future;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
 @InternalApi
 public interface TaskRegistry extends Tasks {
 
     TaskEntry createSessionTask(
             @Nullable Duration ttl,
-            @Nullable Map<String, JsonNode> meta,
+            @Nullable Map<String, Object> meta,
             @Nullable String sessionId,
             @Nullable ProgressToken progressToken);
 

@@ -7,7 +7,6 @@ package dev.tachyonmcp.server.domain;
 import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
 /**
  * An image provided to or from an LLM.
@@ -31,7 +30,7 @@ public non-sealed interface ImageContent extends ContentBlock {
     Annotations annotations();
 
     @Nullable
-    Map<String, JsonNode> meta();
+    Map<String, Object> meta();
 
     @Override
     default Type type() {
@@ -60,7 +59,7 @@ public non-sealed interface ImageContent extends ContentBlock {
 
     /** Creates an image content block with metadata and optional annotations. */
     static ImageContent of(
-            String data, String mimeType, @Nullable Annotations annotations, @Nullable Map<String, JsonNode> meta) {
+            String data, String mimeType, @Nullable Annotations annotations, @Nullable Map<String, Object> meta) {
         return DefaultImageContent.of(data, mimeType, annotations, meta);
     }
 
@@ -71,7 +70,7 @@ public non-sealed interface ImageContent extends ContentBlock {
 
         Builder annotations(@Nullable Annotations annotations);
 
-        Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
+        Builder meta(@Nullable Map<String, ?> entries);
 
         ImageContent build();
     }

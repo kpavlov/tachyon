@@ -27,6 +27,7 @@ import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.json.JsonSchema;
 import dev.tachyonmcp.server.json.JsonUtils;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import java.io.ByteArrayOutputStream;
@@ -154,7 +155,15 @@ public final class McpResponseMapper extends dev.tachyonmcp.protocol.mcp.v2025_1
     }
 
     private static Tool toTool(ToolDescriptor d) {
-        return new Tool(d.description(), d.inputSchema(), d.outputSchema(), null, null, d.name(), d.title(), null);
+        return new Tool(
+                d.description(),
+                JsonUtils.parse(d.inputSchema() != null ? d.inputSchema() : JsonSchema.objectSchema()),
+                d.outputSchema() != null ? JsonUtils.parse(d.outputSchema()) : null,
+                null,
+                null,
+                d.name(),
+                d.title(),
+                null);
     }
 
     private static Resource toResource(ResourceDescriptor d) {
