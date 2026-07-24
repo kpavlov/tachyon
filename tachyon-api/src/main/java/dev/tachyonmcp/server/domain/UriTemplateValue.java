@@ -64,6 +64,8 @@ public sealed interface UriTemplateValue permits UriTemplateValue.Scalar, UriTem
 
     /**
      * A scalar template variable.
+     *
+     * @param value the scalar value
      */
     record Scalar(String value) implements UriTemplateValue {
         public Scalar {
@@ -73,6 +75,8 @@ public sealed interface UriTemplateValue permits UriTemplateValue.Scalar, UriTem
 
     /**
      * An exploded list template variable.
+     *
+     * @param values the sequence values
      */
     record Sequence(List<String> values) implements UriTemplateValue {
         public Sequence {

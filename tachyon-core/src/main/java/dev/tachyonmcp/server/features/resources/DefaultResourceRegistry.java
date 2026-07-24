@@ -509,7 +509,10 @@ public class DefaultResourceRegistry implements Resources {
                 if (extId != null && !context.isExtensionEnabled(extId)) {
                     return CompletableFuture.completedFuture(ServerErrors.resourceNotFound("Resource not found"));
                 }
-                var request = new ResourceRequest(uri, Map.of(), null, JsonUtils.toObjectMap(parsed.meta()));
+                var request = ResourceRequest.builder()
+                        .uri(uri)
+                        .meta(JsonUtils.toObjectMap(parsed.meta()))
+                        .build();
                 return readResult(context, uri, () -> entry.handler().handleAsync(context, request));
             }
             var match = registry.matchTemplate(uri);
@@ -517,11 +520,12 @@ public class DefaultResourceRegistry implements Resources {
                 return CompletableFuture.completedFuture(
                         ServerErrors.resourceNotFound("Resource not found", Map.of("uri", uri)));
             }
-            var request = new ResourceRequest(
-                    uri,
-                    match.params(),
-                    match.entry().descriptor().uriTemplate(),
-                    JsonUtils.toObjectMap(parsed.meta()));
+            var request = ResourceRequest.builder()
+                    .uri(uri)
+                    .params(match.params())
+                    .uriTemplate(match.entry().descriptor().uriTemplate())
+                    .meta(JsonUtils.toObjectMap(parsed.meta()))
+                    .build();
             return readResult(context, uri, () -> match.entry().handler().handleAsync(context, request));
         }
 

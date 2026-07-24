@@ -102,7 +102,11 @@ public final class Args implements JsonObject {
         return values.json();
     }
 
-    /** Returns the full arguments as a JSON string. */
+    /**
+     * Returns the full arguments as a JSON string.
+     *
+     * @return the JSON string
+     */
     public String rawJson() {
         return json();
     }
@@ -110,6 +114,9 @@ public final class Args implements JsonObject {
     /**
      * Decodes the full arguments into the given type using the configured serde.
      *
+     * @param <T>        the target type
+     * @param targetType the target type
+     * @return the decoded value
      * @throws IllegalStateException if no serde is configured
      * @throws InvalidArgumentException if the arguments cannot be decoded into {@code targetType};
      *     the dispatcher maps this to an invalid-params error rather than an internal failure
@@ -137,6 +144,9 @@ public final class Args implements JsonObject {
     /**
      * Decodes the full arguments into the given class using the configured serde.
      *
+     * @param <T>         the target type
+     * @param targetClass the target class
+     * @return the decoded value
      * @throws IllegalStateException if no serde is configured
      */
     public <T> T decode(Class<T> targetClass) {

@@ -11,7 +11,11 @@ package dev.tachyonmcp.server.domain;
  */
 public sealed interface ProgressToken permits ProgressToken.StringValue, ProgressToken.NumericValue {
 
-    /** A progress token carrying a string value. */
+    /**
+     * A progress token carrying a string value.
+     *
+     * @param value the string token
+     */
     record StringValue(java.lang.String value) implements ProgressToken {
         @Override
         public String toString() {
@@ -19,7 +23,11 @@ public sealed interface ProgressToken permits ProgressToken.StringValue, Progres
         }
     }
 
-    /** A progress token carrying a numeric value. */
+    /**
+     * A progress token carrying a numeric value.
+     *
+     * @param value the numeric token
+     */
     record NumericValue(Number value) implements ProgressToken {
         @Override
         public String toString() {

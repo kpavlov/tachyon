@@ -12,7 +12,11 @@ import org.jspecify.annotations.Nullable;
  */
 public sealed interface RequestId permits RequestId.StringValue, RequestId.NumericValue {
 
-    /** An id carrying a string value. */
+    /**
+     * An id carrying a string value.
+     *
+     * @param value the string id
+     */
     record StringValue(java.lang.String value) implements RequestId {
         @Override
         public String toString() {
@@ -20,7 +24,11 @@ public sealed interface RequestId permits RequestId.StringValue, RequestId.Numer
         }
     }
 
-    /** An id carrying a numeric value. */
+    /**
+     * An id carrying a numeric value.
+     *
+     * @param value the numeric id
+     */
     record NumericValue(Number value) implements RequestId {
         @Override
         public String toString() {

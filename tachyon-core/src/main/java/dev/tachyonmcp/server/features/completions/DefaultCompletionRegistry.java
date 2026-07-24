@@ -167,7 +167,7 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
             }
 
             var request =
-                    new CompletionRequest(argumentName, argumentValue, resolvedArguments(paramsMap.get("context")));
+                    CompletionRequest.of(argumentName, argumentValue, resolvedArguments(paramsMap.get("context")));
             // invokeAndMap: guards the synchronous-throw/null-stage cases, then re-anchors onto a
             // tachyon- virtual thread only when the handler's stage is still pending, so a
             // foreign completer thread never leaks into response mapping, without adding an

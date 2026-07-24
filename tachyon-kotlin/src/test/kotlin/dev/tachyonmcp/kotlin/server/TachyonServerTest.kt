@@ -127,14 +127,14 @@ internal class TachyonServerTest {
 
             // identity
             with(config.identity) {
-                name shouldBe appName
-                title shouldBe "My Test MCP Server"
-                version shouldBe "2.0.0"
-                description shouldBe "e2e test server"
-                instructions shouldBe "ignore me"
-                websiteUrl shouldBe "https://example.com/mcp"
-                icons shouldBe listOf(expectedIcon)
-                websiteUrl shouldBe "https://example.com/mcp"
+                name() shouldBe appName
+                title() shouldBe "My Test MCP Server"
+                version() shouldBe "2.0.0"
+                description() shouldBe "e2e test server"
+                instructions() shouldBe "ignore me"
+                websiteUrl() shouldBe "https://example.com/mcp"
+                icons() shouldBe listOf(expectedIcon)
+                websiteUrl() shouldBe "https://example.com/mcp"
             }
 
             // capabilities
@@ -175,8 +175,8 @@ internal class TachyonServerTest {
             }
 
             with(config.monitoring) {
-                slowRequestLogging shouldBe true
-                slowRequestThreshold shouldBe 15.seconds.toJavaDuration()
+                slowRequestLogging() shouldBe true
+                slowRequestThreshold() shouldBe 15.seconds.toJavaDuration()
             }
 
             // registered features

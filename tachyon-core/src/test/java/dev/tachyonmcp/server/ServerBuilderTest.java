@@ -18,6 +18,7 @@ import dev.tachyonmcp.server.features.tools.ToolFn;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.junit.jupiter.api.Test;
 
@@ -31,11 +32,11 @@ class ServerBuilderTest {
 
     @Test
     void rejectsBoundedPool() {
-        assertThatIllegalArgumentException()
-                .isThrownBy(() -> TachyonServer.builder()
-                        .executor(Executors.newFixedThreadPool(1))
-                        .build())
-                .withMessageContaining("thread per task");
+        try (ExecutorService executor = Executors.newFixedThreadPool(1)) {
+            assertThatIllegalArgumentException()
+                    .isThrownBy(() -> TachyonServer.builder().executor(executor).build())
+                    .withMessageContaining("thread per task");
+        }
     }
 
     @Test

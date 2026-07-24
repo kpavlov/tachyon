@@ -7,5 +7,9 @@ package dev.tachyonmcp.server.domain;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
-/** An empty response carrying only optional metadata. */
+/**
+ * An empty response carrying only optional metadata.
+ *
+ * @param meta optional metadata
+ */
 public record EmptyResult(@Nullable Map<String, Object> meta) implements HasMeta {}

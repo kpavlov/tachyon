@@ -20,12 +20,27 @@ import org.jspecify.annotations.Nullable;
 @Value.Style(visibility = Value.Style.ImplementationVisibility.PACKAGE, typeImmutable = "Default*")
 public interface Annotations {
 
+    /**
+     * Intended audience roles, or {@code null} when unrestricted.
+     *
+     * @return the audience list, or {@code null}
+     */
     @Nullable
     List<Role> audience();
 
+    /**
+     * Ordering hint in {@code [0.0, 1.0]}, or {@code null} for default.
+     *
+     * @return the priority, or {@code null}
+     */
     @Nullable
     Double priority();
 
+    /**
+     * RFC-3339 timestamp of the last modification, or {@code null} when unknown.
+     *
+     * @return the last-modified timestamp, or {@code null}
+     */
     @Nullable
     String lastModified();
 
@@ -42,10 +57,23 @@ public interface Annotations {
         }
     }
 
+    /**
+     * Creates a new builder.
+     *
+     * @return a new builder
+     */
     static Builder builder() {
         return DefaultAnnotations.builder();
     }
 
+    /**
+     * Creates annotations with the given values.
+     *
+     * @param audience     intended audience roles, or {@code null}
+     * @param priority     ordering hint, or {@code null}
+     * @param lastModified RFC-3339 timestamp, or {@code null}
+     * @return the new annotations
+     */
     static Annotations of(@Nullable List<Role> audience, @Nullable Double priority, @Nullable String lastModified) {
         return DefaultAnnotations.builder()
                 .audience(audience)
@@ -54,14 +82,38 @@ public interface Annotations {
                 .build();
     }
 
+    /** Builder for {@link Annotations}. */
     interface Builder {
 
+        /**
+         * Sets the intended audience.
+         *
+         * @param elements the audience roles, or {@code null}
+         * @return this builder
+         */
         Builder audience(@Nullable Iterable<? extends Role> elements);
 
+        /**
+         * Sets the ordering hint.
+         *
+         * @param priority the priority, or {@code null}
+         * @return this builder
+         */
         Builder priority(@Nullable Double priority);
 
+        /**
+         * Sets the last-modified timestamp.
+         *
+         * @param lastModified the timestamp, or {@code null}
+         * @return this builder
+         */
         Builder lastModified(@Nullable String lastModified);
 
+        /**
+         * Builds the annotations.
+         *
+         * @return the new annotations
+         */
         Annotations build();
     }
 }

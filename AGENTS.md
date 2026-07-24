@@ -37,7 +37,7 @@ mvn spotless:apply  # auto-fix
 - **Nullability**: JSpecify `@Nullable`/`@NonNull`. `@NullMarked` at package level.
 - **Copyright**: `Copyright (c) 2026 Konstantin Pavlov and contributors.` in file headers everywhere; don't overwrite existing attributions.
 - **No comments in code** unless spec needs explain.
-- **Javadocs for public API** - this OSS library for users
+- **Javadocs for public API required** - this OSS library for users
 - `git mv` for files.
 - Use MCP tools.
 - **Format**: Check on `make lint`, fix with `make format`.

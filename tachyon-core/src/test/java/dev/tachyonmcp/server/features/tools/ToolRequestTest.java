@@ -62,12 +62,6 @@ class ToolRequestTest {
     }
 
     @Test
-    void cancellationIsNullable() {
-        var req = ToolRequest.builder().name("t").build();
-        assertThat(req.cancellation()).isNull();
-    }
-
-    @Test
     void inputResponsesIsNullable() {
         var req = ToolRequest.builder().name("t").build();
         assertThat(req.inputResponses()).isNull();

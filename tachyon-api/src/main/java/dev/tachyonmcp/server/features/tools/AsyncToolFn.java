@@ -1,0 +1,25 @@
+/*
+ * Copyright (c) 2026 Konstantin Pavlov.
+ */
+
+package dev.tachyonmcp.server.features.tools;
+
+import dev.tachyonmcp.runtime.InteractionContext;
+import java.util.concurrent.CompletionStage;
+
+/**
+ * Asynchronous tool function. Unlike {@link ToolFn}, {@link #apply} does not throw checked
+ * exceptions — failures propagate through the returned {@link CompletionStage}, matching
+ * {@code AsyncResourceHandler} and {@code AsyncPromptHandler}.
+ *
+ * <p>Receives the full {@link ToolRequest} — call {@link ToolRequest#arguments()} for parsed
+ * {@link dev.tachyonmcp.server.domain.Args}, or read {@link ToolRequest#progressToken()}
+ * or {@link ToolRequest#task()} directly when needed.
+ *
+ * @author Konstantin Pavlov
+ */
+@FunctionalInterface
+public interface AsyncToolFn {
+
+    CompletionStage<? extends ToolResult> apply(InteractionContext ctx, ToolRequest request);
+}

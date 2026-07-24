@@ -40,7 +40,7 @@ final class McpToolMapper {
         var schema = d.inputSchema();
         ToolExecution execution = null;
         if (d.taskSupport() != null) {
-            execution = new ToolExecution(d.taskSupport().getValue());
+            execution = new ToolExecution(d.taskSupport().name().toLowerCase());
         }
         return new Tool(
                 d.description(),

@@ -14,7 +14,7 @@
 
     <artifactId>tachyon-core</artifactId>
 
-    <name>Tachyon MCP Server</name>
+    <name>Tachyon MCP Core</name>
     <description>MCP server runtime</description>
 
     <dependencies>

@@ -17,19 +17,32 @@ import java.util.Optional;
  */
 public interface JsonDocument {
 
-    /** Returns the encoded JSON value. */
+    /**
+     * Returns the encoded JSON value.
+     *
+     * @return the JSON string
+     */
     String json();
 
     /**
      * Returns the retained provider-specific representation when it matches {@code type}.
      *
      * <p>The default implementation is provider-neutral and returns an empty optional.
+     *
+     * @param <T>  the requested representation type
+     * @param type the class of the requested representation
+     * @return the provider-specific representation, or empty if not available
      */
     default <T> Optional<T> unwrap(Class<T> type) {
         return Optional.empty();
     }
 
-    /** Creates a document from encoded JSON. */
+    /**
+     * Creates a document from encoded JSON.
+     *
+     * @param json the JSON string
+     * @return a new document
+     */
     static JsonDocument of(String json) {
         return new DefaultJsonDocument(JsonDocuments.requireContent(json));
     }
