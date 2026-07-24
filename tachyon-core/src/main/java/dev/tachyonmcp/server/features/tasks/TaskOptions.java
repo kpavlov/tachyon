@@ -8,7 +8,6 @@ import java.time.Duration;
 import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
 @Value.Immutable
 @Value.Style(
@@ -33,7 +32,7 @@ public interface TaskOptions {
     Duration pollInterval();
 
     @Nullable
-    Map<String, JsonNode> meta();
+    Map<String, Object> meta();
 
     @Value.Check
     default void check() {
@@ -55,7 +54,7 @@ public interface TaskOptions {
 
         Builder pollInterval(@Nullable Duration pollInterval);
 
-        Builder meta(@Nullable Map<String, ? extends JsonNode> meta);
+        Builder meta(@Nullable Map<String, ?> meta);
 
         TaskOptions build();
     }

@@ -163,7 +163,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
         startServer(builder -> builder.resource(
                 resource -> resource.name("meta-doc").uri("resource://meta-doc"),
                 (ctx, request) -> TextResourceContents.of(
-                        request.uri(), request.meta().get("tenant").asString(), "text/plain")));
+                        request.uri(), request.meta().get("tenant").toString(), "text/plain")));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();

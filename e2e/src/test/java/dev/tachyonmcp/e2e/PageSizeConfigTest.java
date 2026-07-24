@@ -8,10 +8,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.json.JsonSchema;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 class PageSizeConfigTest extends AbstractStatelessMcpE2eTest {
 
@@ -55,11 +54,5 @@ class PageSizeConfigTest extends AbstractStatelessMcpE2eTest {
                 (ctx, request) -> ToolResult.text("ok"));
     }
 
-    private static final JsonNode INPUT_SCHEMA = buildInputSchema();
-
-    private static JsonNode buildInputSchema() {
-        var schema = JsonNodeFactory.instance.objectNode();
-        schema.put("type", "object");
-        return schema;
-    }
+    private static final JsonSchema INPUT_SCHEMA = JsonSchema.objectSchema();
 }

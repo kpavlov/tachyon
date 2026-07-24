@@ -16,8 +16,7 @@ package dev.tachyonmcp.server.json;
  * {@link #deserialize(String, java.lang.reflect.Type)} is undefined and may throw.
  *
  * <p>Values reaching {@link #serialize(Object)} must be typed the implementation understands.
- * Jackson {@link tools.jackson.databind.JsonNode} and {@link RawJson} structured values bypass
- * the serde; maps carrying {@code JsonNode} values are serialized with Jackson.
+ * {@link JsonDocument} values bypass the serde.
  *
  * @author Konstantin Pavlov
  */

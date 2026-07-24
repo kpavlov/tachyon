@@ -41,8 +41,8 @@ import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.features.tools.ToolResult.InputRequired;
 import dev.tachyonmcp.server.features.tools.ToolResult.Success;
 import dev.tachyonmcp.server.features.tools.ToolResult.WithMeta;
+import dev.tachyonmcp.server.json.JsonDocument;
 import dev.tachyonmcp.server.json.JsonUtils;
-import dev.tachyonmcp.server.json.RawJson;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import java.io.IOException;
@@ -128,8 +128,8 @@ public class McpResponseMapper implements ProtocolResponseMapper {
     public Object callToolResult(ToolResult result) {
         Map<String, JsonNode> meta = null;
         ToolResult unwrapped = result;
-        if (result instanceof WithMeta(ToolResult inner, Map<String, JsonNode> meta1)) {
-            meta = meta1.isEmpty() ? null : meta1;
+        if (result instanceof WithMeta(ToolResult inner, Map<String, Object> meta1)) {
+            meta = meta1.isEmpty() ? null : JsonUtils.toJsonNodeMap(meta1);
             unwrapped = inner;
         }
         final var resolvedMeta = meta;
@@ -169,7 +169,7 @@ public class McpResponseMapper implements ProtocolResponseMapper {
         if (structuredValue != null) {
             JsonNode node =
                     switch (structuredValue) {
-                        case RawJson rj -> JsonUtils.parse(rj.json());
+                        case JsonDocument document -> JsonUtils.parse(document);
                         case JsonNode n -> n;
                         default -> JsonUtils.parse(JsonUtils.writeString(structuredValue));
                     };
@@ -257,22 +257,29 @@ public class McpResponseMapper implements ProtocolResponseMapper {
     @Override
     public Object getTaskPayloadResult(@Nullable TaskResult result, String taskId) {
         return switch (result) {
-            case null -> new CallToolResult(List.of(), null, null, relatedTaskMeta(null, taskId), null);
+            case null ->
+                new CallToolResult(List.of(), null, null, JsonUtils.toJsonNodeMap(relatedTaskMeta(null, taskId)), null);
             case TaskResult.Completed c ->
-                buildCallToolResult(c.content(), c.structuredContent(), null, relatedTaskMeta(c.meta(), taskId));
+                buildCallToolResult(
+                        c.content(),
+                        c.structuredContent(),
+                        null,
+                        JsonUtils.toJsonNodeMap(relatedTaskMeta(c.meta(), taskId)));
             case TaskResult.Failed f when f.protocolError() != null -> f.protocolError();
             case TaskResult.Failed f ->
-                buildCallToolResult(f.content(), f.structuredContent(), true, relatedTaskMeta(f.meta(), taskId));
+                buildCallToolResult(
+                        f.content(),
+                        f.structuredContent(),
+                        true,
+                        JsonUtils.toJsonNodeMap(relatedTaskMeta(f.meta(), taskId)));
         };
     }
 
     // Spec: every tasks/result response MUST carry io.modelcontextprotocol/related-task in _meta,
     // since the CallToolResult shape itself does not contain the task ID.
-    private static Map<String, JsonNode> relatedTaskMeta(@Nullable Map<String, JsonNode> meta, String taskId) {
-        var merged = meta != null ? new LinkedHashMap<>(meta) : new LinkedHashMap<String, JsonNode>();
-        merged.put(
-                "io.modelcontextprotocol/related-task",
-                JsonUtils.parse(JsonUtils.writeString(Map.of("taskId", taskId))));
+    private static Map<String, Object> relatedTaskMeta(@Nullable Map<String, Object> meta, String taskId) {
+        var merged = meta != null ? new LinkedHashMap<>(meta) : new LinkedHashMap<String, Object>();
+        merged.put("io.modelcontextprotocol/related-task", Map.of("taskId", taskId));
         return merged;
     }
 
@@ -327,7 +334,7 @@ public class McpResponseMapper implements ProtocolResponseMapper {
                     gen.writeStringProperty("method", r.method());
                     if (r.params() != null) {
                         gen.writeName("params");
-                        gen.writeRawValue(r.params().toString());
+                        gen.writeRawValue(JsonUtils.writeString(r.params()));
                     } else {
                         gen.writeObjectPropertyStart("params");
                         gen.writeEndObject();

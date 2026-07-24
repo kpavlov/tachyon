@@ -13,8 +13,7 @@ package dev.tachyonmcp.server.json;
  * added conversions without saving any.
  *
  * <p>Values reaching {@link #serialize(Object)} must be types the implementation understands.
- * Jackson {@link tools.jackson.databind.JsonNode} and {@link RawJson} structured values bypass
- * the serde; maps carrying {@code JsonNode} values are serialized with Jackson.
+ * {@link JsonDocument} values bypass the serde.
  *
  * <p>All parameters are non-null. Passing {@code null} to
  * {@link #serialize(Object)} is undefined and may throw.

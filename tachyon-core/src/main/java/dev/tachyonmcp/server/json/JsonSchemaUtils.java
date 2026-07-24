@@ -7,7 +7,6 @@ import dev.tachyonmcp.annotations.InternalApi;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 @InternalApi
 public class JsonSchemaUtils {
@@ -18,10 +17,11 @@ public class JsonSchemaUtils {
     /**
      * Parses a JSON schema string, returning {@code null} for null input.
      */
-    public static @Nullable JsonNode parseSchema(@Nullable String json) {
+    public static @Nullable JsonSchema parseSchema(@Nullable String json) {
         if (json == null) return null;
         try {
-            return JsonUtils.parse(json);
+            JsonUtils.parse(json);
+            return JsonSchema.of(json);
         } catch (Exception e) {
             throw new IllegalArgumentException("Schema is not valid JSON: " + json, e);
         }
@@ -31,11 +31,10 @@ public class JsonSchemaUtils {
      * Validates args against schema; returns a joined error message, or null when valid / no schema.
      */
     public static @Nullable String validateArguments(
-            JsonSchemaValidator validator, @Nullable JsonNode schema, @Nullable Map<String, JsonNode> args) {
+            JsonSchemaValidator validator, @Nullable JsonSchema schema, @Nullable Map<String, JsonNode> args) {
         if (schema == null) return null;
-        var node = JsonNodeFactory.instance.objectNode();
-        if (args != null) node.setAll(args);
-        var errors = validator.validate(schema, node);
+        var document = JsonDocument.of(JsonUtils.writeString(args == null ? Map.of() : args));
+        var errors = validator.validate(schema, document);
         return errors.isEmpty() ? null : SchemaValidationError.join(errors);
     }
 }

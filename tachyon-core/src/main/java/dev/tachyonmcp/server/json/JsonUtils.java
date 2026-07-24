@@ -12,6 +12,7 @@ import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
@@ -51,8 +52,26 @@ public final class JsonUtils {
         return MAPPER.readTree(json);
     }
 
+    public static JsonNode parse(JsonDocument document) {
+        return document.unwrap(JsonNode.class).orElseGet(() -> parse(document.json()));
+    }
+
     public static String writeString(Object value) {
         return MAPPER.writeValueAsString(value);
+    }
+
+    public static @Nullable Map<String, JsonNode> toJsonNodeMap(@Nullable Map<String, ?> values) {
+        if (values == null) return null;
+        var result = new LinkedHashMap<String, JsonNode>(values.size());
+        values.forEach((key, value) -> result.put(key, MAPPER.valueToTree(value)));
+        return result;
+    }
+
+    public static @Nullable Map<String, Object> toObjectMap(@Nullable Map<String, JsonNode> values) {
+        if (values == null) return null;
+        var result = new LinkedHashMap<String, Object>(values.size());
+        values.forEach((key, value) -> result.put(key, MAPPER.treeToValue(value, Object.class)));
+        return result;
     }
 
     public static JsonNode parseJsonNode(String json) {
@@ -67,7 +86,7 @@ public final class JsonUtils {
     /**
      * Converts a given value into a {@link JsonNode} representing an object, if applicable.
      * The method supports the following input types:
-     * - {@link RawJson}, where the contained JSON string is parsed into a {@link JsonNode}.
+     * - {@link JsonDocument}, where the contained JSON string is parsed into a {@link JsonNode}.
      * - {@link JsonNode}, if it is already an object node.
      * - {@link java.util.Map}, where its entries are transformed into an object node.
      * - Other non-null values: serialized via the provided {@link PayloadSerializer}.
@@ -78,8 +97,8 @@ public final class JsonUtils {
      * @return a {@link JsonNode} object node representation of the value, or {@code null} if the value cannot be converted
      */
     public static @Nullable <T> JsonNode valueToObjectNode(@Nullable T value, PayloadSerializer serializer) {
-        if (value instanceof RawJson(String json)) {
-            var node = JsonUtils.parse(json);
+        if (value instanceof JsonDocument document) {
+            var node = JsonUtils.parse(document);
             return node.isObject() ? node : null;
         }
         if (value instanceof JsonNode node) {
@@ -108,20 +127,20 @@ public final class JsonUtils {
     }
 
     /**
-     * Serializes non-tree structured values in a {@link ToolResult} into {@link RawJson}.
-     * {@link JsonNode} and {@link RawJson} pass through. Maps carrying {@link JsonNode} values
+     * Serializes non-tree structured values in a {@link ToolResult} into {@link JsonDocument}.
+     * {@link JsonNode} and {@link JsonDocument} pass through. Maps carrying {@link JsonNode} values
      * are serialized with Jackson regardless of the configured serializer — a non-Jackson serde
      * cannot encode Jackson trees.
      */
     public static ToolResult serializeStructured(ToolResult result, PayloadSerializer serializer) {
-        if (result instanceof ToolResult.WithMeta(ToolResult inner1, Map<String, JsonNode> meta)) {
+        if (result instanceof ToolResult.WithMeta(ToolResult inner1, Map<String, Object> meta)) {
             var inner = serializeStructured(inner1, serializer);
             return inner == inner1 ? result : new ToolResult.WithMeta(inner, meta);
         }
         if (!(result instanceof ToolResult.Success(Object sv, List<ContentBlock> content))) return result;
-        if (sv == null || sv instanceof RawJson || sv instanceof JsonNode) return result;
+        if (sv == null || sv instanceof JsonDocument || sv instanceof JsonNode) return result;
         var json = containsJsonNodes(sv) ? MAPPER.writeValueAsString(sv) : serializer.serialize(sv);
-        return new ToolResult.Success(RawJson.of(json), content);
+        return new ToolResult.Success(JsonDocument.of(json), content);
     }
 
     private static boolean containsJsonNodes(Object structuredValue) {

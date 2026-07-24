@@ -2,6 +2,7 @@
 
 package dev.tachyonmcp.server.features.tools;
 
+import static dev.tachyonmcp.test.TestUtils.parseJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -41,7 +42,7 @@ class ToolDescriptorTest {
                 .inputSchema(schema)
                 .build();
         assertThat(desc.inputSchema()).isNotNull();
-        assertThat(desc.inputSchema().get("type").asString()).isEqualTo("array");
+        assertThat(parseJson(desc.inputSchema().json()).get("type").asString()).isEqualTo("array");
     }
 
     @Test

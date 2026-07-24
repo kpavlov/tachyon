@@ -14,34 +14,39 @@ import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
+import dev.tachyonmcp.server.json.JsonSchema;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 public class TasksExtension implements ServerExtension {
 
     public static final String ID = "io.modelcontextprotocol/tasks";
 
-    private static final JsonNode CREATE_TASK_SCHEMA = buildSchema();
+    // language=json
+    private static final JsonSchema CREATE_TASK_SCHEMA = JsonSchema.of("""
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Task name"
+            },
+            "description": {
+              "type": "string",
+              "description": "Task description"
+            }
+          },
+          "required": ["name"]
+        }
+        """);
 
     private static final TasksExtension INSTANCE = new TasksExtension();
 
     public static TasksExtension instance() {
         return INSTANCE;
-    }
-
-    private static JsonNode buildSchema() {
-        var schema = JsonNodeFactory.instance.objectNode();
-        schema.put("type", "object");
-        var props = schema.putObject("properties");
-        props.putObject("name").put("type", "string").put("description", "Task name");
-        props.putObject("description").put("type", "string").put("description", "Task description");
-        schema.putArray("required").add("name");
-        return schema;
     }
 
     @Override
@@ -91,15 +96,10 @@ public class TasksExtension implements ServerExtension {
                     () -> {
                         try {
                             return OutboundSseStreamMessageRouter.withDispatchContext(sessionId, outboundStream, () -> {
-                                final var meta = new HashMap<String, JsonNode>(2);
-                                final var name = args.nodeOr("name", null);
-                                if (name != null) {
-                                    meta.put("name", name);
-                                }
-                                final var description = args.nodeOr("description", null);
-                                if (description != null) {
-                                    meta.put("description", description);
-                                }
+                                final var meta = new HashMap<String, Object>(2);
+                                args.stringOpt("name").ifPresent(name -> meta.put("name", name));
+                                args.stringOpt("description")
+                                        .ifPresent(description -> meta.put("description", description));
                                 final var task = tasks.create(TaskOptions.builder()
                                         .meta(!meta.isEmpty() ? meta : null)
                                         .build());

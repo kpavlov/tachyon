@@ -8,7 +8,6 @@ import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.domain.ProgressToken;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
 class ToolRequestTest {
@@ -29,7 +28,7 @@ class ToolRequestTest {
 
     @Test
     void builderSetsArguments() {
-        var map = Map.<String, JsonNode>of("k", JSON.stringNode("v"));
+        var map = Map.<String, Object>of("k", "v");
         var req = ToolRequest.builder().name("t").arguments(Args.of(map)).build();
         assertThat(req.arguments().asMap()).isEqualTo(map);
     }
@@ -82,9 +81,9 @@ class ToolRequestTest {
 
     @Test
     void metaIsAccessibleWhenPresent() {
-        Map<String, JsonNode> meta = Map.of("k", JSON.stringNode("v"));
+        Map<String, Object> meta = Map.of("k", "v");
         var req = ToolRequest.builder().name("t").meta(meta).build();
         assertThat(req.meta()).isNotNull();
-        assertThat(req.meta().get("k").asString()).isEqualTo("v");
+        assertThat(req.meta()).containsEntry("k", "v");
     }
 }

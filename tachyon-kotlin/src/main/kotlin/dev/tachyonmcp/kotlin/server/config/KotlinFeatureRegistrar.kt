@@ -16,7 +16,7 @@ import dev.tachyonmcp.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
-import tools.jackson.databind.JsonNode
+import dev.tachyonmcp.server.json.JsonSchema
 
 internal class KotlinFeatureRegistrar(
     private val delegate: ServerBuilder,
@@ -90,8 +90,8 @@ internal class KotlinFeatureRegistrar(
     fun tool(
         name: String,
         description: String?,
-        inputSchema: JsonNode?,
-        outputSchema: JsonNode?,
+        inputSchema: JsonSchema?,
+        outputSchema: JsonSchema?,
         handler: suspend ToolScope.() -> ToolResult,
     ) {
         delegate.tool(

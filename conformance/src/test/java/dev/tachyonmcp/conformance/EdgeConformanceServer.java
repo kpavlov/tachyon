@@ -32,8 +32,7 @@ class EdgeConformanceServer extends AbstractConformanceServer {
                             var meta = request.meta();
                             var capabilities =
                                     meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
-                            var hasSampling = capabilities != null
-                                    && !capabilities.path("sampling").isMissingNode();
+                            var hasSampling = field(capabilities, "sampling") != null;
                             if (!hasSampling) {
                                 throw new MissingRequiredClientCapabilityException(
                                         "Requires the 'sampling' capability", Map.of("sampling", Map.of()));

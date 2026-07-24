@@ -43,7 +43,7 @@ class ForeignThreadContinuationTest {
         var descriptor = ToolDescriptor.builder()
                 .name("foreign-thread-tool")
                 .description("Returns future completed from a foreign thread")
-                .outputSchema(outputSchema)
+                .outputSchema(outputSchema.toString())
                 .build();
 
         var handler = ToolHandler.ofAsync(descriptor, (ctx, request) -> {

@@ -40,8 +40,7 @@ class MissingCapabilityTest extends AbstractStatelessMcpE2eTest {
                     public ToolResult handle(InteractionContext ctx, ToolRequest request) {
                         var meta = request.meta();
                         var capabilities = meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
-                        var hasSampling = capabilities != null
-                                && !capabilities.path("sampling").isMissingNode();
+                        var hasSampling = capabilities instanceof Map<?, ?> map && map.containsKey("sampling");
                         if (!hasSampling) {
                             throw new MissingRequiredClientCapabilityException(
                                     "Requires the 'sampling' capability", Map.of("sampling", Map.of()));

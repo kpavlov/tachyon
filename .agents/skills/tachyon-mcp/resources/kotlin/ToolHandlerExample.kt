@@ -7,6 +7,7 @@ import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.domain.Args
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler
 import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.server.json.JsonSchema
 import dev.tachyonmcp.kotlin.server.buildServer
 import dev.tachyonmcp.kotlin.server.config.TachyonServerBuilder
 import dev.tachyonmcp.kotlin.server.config.success
@@ -15,15 +16,12 @@ import dev.tachyonmcp.kotlin.server.features.tools.registerTool
 import dev.tachyonmcp.kotlin.server.features.tools.toolDescriptor
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
-import tools.jackson.databind.JsonNode
-import tools.jackson.databind.ObjectMapper
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import kotlin.time.Duration.Companion.seconds
 
-private val MAPPER = ObjectMapper()
-private val GREET_SCHEMA: JsonNode =
-    MAPPER.readTree(
+private val GREET_SCHEMA =
+    JsonSchema.of(
         """
     {"type":"object","properties":{"name":{"type":"string","description":"Name to greet"}},"required":["name"]}
 """,

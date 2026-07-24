@@ -17,10 +17,10 @@ import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 /**
  * MCP 2026-07-28 Multi Round-Trip Requests (SEP-2322): a server can respond to {@code tools/call}
@@ -36,26 +36,20 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
     private static final String NO_ARGS_SCHEMA = "{\"type\": \"object\", \"properties\": {}}";
 
     private static FormInputRequest elicitation(String message, String prop) {
-        var schema = new LinkedHashMap<String, tools.jackson.databind.JsonNode>();
-        schema.put("type", JsonNodeFactory.instance.stringNode("object"));
-        var props = JsonNodeFactory.instance.objectNode();
-        props.putObject(prop).put("type", "string");
-        schema.put("properties", props);
+        var schema = new LinkedHashMap<String, Object>();
+        schema.put("type", "object");
+        schema.put("properties", Map.of(prop, Map.of("type", "string")));
         return FormInputRequest.of(message, schema);
     }
 
     private static RpcMethodRequest samplingRequest() {
-        var params = JsonNodeFactory.instance.objectNode();
-        var messages = params.putArray("messages");
-        var msg = messages.addObject();
-        msg.put("role", "user");
-        msg.putObject("content").put("type", "text").put("text", "What is the capital of France?");
-        params.put("maxTokens", 100);
-        return RpcMethodRequest.of("sampling/createMessage", params);
+        var message =
+                Map.of("role", "user", "content", Map.of("type", "text", "text", "What is the capital of France?"));
+        return RpcMethodRequest.of("sampling/createMessage", Map.of("messages", List.of(message), "maxTokens", 100));
     }
 
     private static RpcMethodRequest rootsListRequest() {
-        return RpcMethodRequest.of("roots/list", JsonNodeFactory.instance.objectNode());
+        return RpcMethodRequest.of("roots/list", Map.of());
     }
 
     @BeforeEach
@@ -70,11 +64,8 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                             public ToolResult handle(InteractionContext ctx, ToolRequest request) {
                                 var responses = request.inputResponses();
                                 if (responses != null && responses.containsKey("user_name")) {
-                                    var name = responses
-                                            .get("user_name")
-                                            .path("content")
-                                            .path("name")
-                                            .asString("World");
+                                    var name =
+                                            stringField(field(responses.get("user_name"), "content"), "name", "World");
                                     return ToolResult.text("Hello, " + name + "!");
                                 }
                                 return ToolResult.inputRequired(
@@ -122,8 +113,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                                 var meta = request.meta();
                                 var capabilities =
                                         meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
-                                var hasSampling = capabilities != null
-                                        && !capabilities.path("sampling").isMissingNode();
+                                var hasSampling = field(capabilities, "sampling") != null;
                                 if (!hasSampling) {
                                     return ToolResult.text("No sampling capability declared");
                                 }
@@ -150,6 +140,15 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                                 return ToolResult.inputRequired(inputRequests, "multi-input-state");
                             }
                         }));
+    }
+
+    private static Object field(Object value, String name) {
+        return value instanceof Map<?, ?> map ? map.get(name) : null;
+    }
+
+    private static String stringField(Object value, String name, String defaultValue) {
+        var field = field(value, name);
+        return field instanceof String text ? text : defaultValue;
     }
 
     private String toolCallBody(int id, String toolName, String inputResponsesJson) {

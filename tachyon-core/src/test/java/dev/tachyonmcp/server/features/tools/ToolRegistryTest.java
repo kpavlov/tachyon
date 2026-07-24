@@ -24,6 +24,7 @@ import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
+import dev.tachyonmcp.server.json.JsonSchema;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
 import dev.tachyonmcp.server.json.PayloadSerde;
@@ -91,8 +92,8 @@ class ToolRegistryTest {
                         .name("full-tool")
                         .title("Full Tool")
                         .description("Does everything")
-                        .inputSchema(TEST_SCHEMA)
-                        .outputSchema(outputSchema)
+                        .inputSchema(TEST_SCHEMA.toString())
+                        .outputSchema(outputSchema.toString())
                         .taskSupport(TaskSupport.OPTIONAL)
                         .annotations(annotations)
                         .build(),
@@ -108,9 +109,7 @@ class ToolRegistryTest {
         assertThat(minimal.title()).isNull();
         assertThat(minimal.description()).isNull();
         assertThat(parseJson(minimal.inputSchema()))
-                .isEqualTo(parseJson("""
-                {"type":"object"}
-                """)); // defaulted by McpToolMapper when handler returns null
+                .isEqualTo(parseJson(JsonSchema.objectSchema().json()));
         assertThat(minimal.outputSchema()).isNull();
         assertThat(minimal.execution()).isNull();
 
@@ -568,7 +567,7 @@ class ToolRegistryTest {
         var handlers = new HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
         registry.register(ToolHandler.of(
-                configurer -> configurer.name("sync-handle").description("sync").inputSchema(TEST_SCHEMA),
+                configurer -> configurer.name("sync-handle").description("sync").inputSchema(TEST_SCHEMA.toString()),
                 (ctx, request) -> {
                     var msg = request.arguments().stringValue("message");
                     return ToolResult.text(msg);
@@ -692,7 +691,7 @@ class ToolRegistryTest {
         assertThatThrownBy(() -> registry.register(ToolHandler.of(
                         ToolDescriptor.builder()
                                 .name("bad-output")
-                                .outputSchema(outputSchema)
+                                .outputSchema(outputSchema.toString())
                                 .build(),
                         (context, request) -> ToolResult.text("x"))))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -708,7 +707,7 @@ class ToolRegistryTest {
         registry.register(ToolHandler.of(
                 ToolDescriptor.builder()
                         .name("valid-output")
-                        .outputSchema(outputSchema)
+                        .outputSchema(outputSchema.toString())
                         .build(),
                 (context, request) -> ToolResult.text("ok")));
         assertThat(registry.find("valid-output")).isPresent();
@@ -736,7 +735,7 @@ class ToolRegistryTest {
                 ToolDescriptor.builder()
                         .name("structured-out")
                         .description("test")
-                        .outputSchema(outputSchema)
+                        .outputSchema(outputSchema.toString())
                         .build(),
                 (context, request) -> {
                     // Map with plain Java values, not JsonNode
@@ -798,7 +797,7 @@ class ToolRegistryTest {
                 ToolDescriptor.builder()
                         .name(name)
                         .description(description)
-                        .inputSchema(schema)
+                        .inputSchema(schema != null ? schema.toString() : null)
                         .build(),
                 (context, request) -> ToolResult.text("ok"));
     }

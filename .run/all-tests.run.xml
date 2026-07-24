@@ -2,9 +2,10 @@
   <configuration default="false" name="all-tests" type="CompoundRunConfigurationType">
     <toRun name="conformance-tests" type="JUnit" />
     <toRun name="e2e-tests" type="JUnit" />
+    <toRun name="tachyon-api-tests" type="JUnit" />
+    <toRun name="tachyon-core-tests" type="JUnit" />
     <toRun name="tachyon-extensions-tests" type="JUnit" />
     <toRun name="tachyon-kotlin-tests" type="JUnit" />
-    <toRun name="tachyon-core-tests" type="JUnit" />
     <toRun name="weather-example-tests" type="JUnit" />
     <toRun name="weather-mcp-kotlin-example" type="JUnit" />
     <method v="2" />

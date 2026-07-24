@@ -10,6 +10,7 @@ import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.ServerErrors;
 import dev.tachyonmcp.server.internal.ServerEngine;
+import dev.tachyonmcp.server.json.JsonUtils;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
 import dev.tachyonmcp.transport.netty.ChannelHandlerUtils;
@@ -162,7 +163,7 @@ public final class RequestValidationHandler extends ChannelInboundHandlerAdapter
         var descriptor = server.tools().find(toolName).orElse(null);
         var inputSchema = descriptor != null ? descriptor.inputSchema() : null;
         if (inputSchema == null) return null;
-        var properties = inputSchema.path("properties");
+        var properties = JsonUtils.parse(inputSchema).path("properties");
         if (!properties.isObject()) return null;
 
         var arguments = paramsMap.get("arguments") instanceof Map<?, ?> a ? a : Map.of();

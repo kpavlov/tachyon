@@ -8,8 +8,8 @@ import dev.tachyonmcp.kotlin.server.features.completions.promptCompletionHandler
 import dev.tachyonmcp.kotlin.server.features.completions.resourceCompletionHandler
 import dev.tachyonmcp.kotlin.server.features.prompts.promptHandler
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
-import dev.tachyonmcp.kotlin.server.json.toJacksonNode
-import dev.tachyonmcp.kotlin.server.json.toJacksonNodeOrNull
+import dev.tachyonmcp.kotlin.server.json.toJsonSchema
+import dev.tachyonmcp.kotlin.server.json.toJsonSchemaOrNull
 import dev.tachyonmcp.server.ServerBuilder
 import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.config.NetworkConfig
@@ -23,9 +23,9 @@ import dev.tachyonmcp.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.server.json.JsonSchema
 import io.netty.channel.ChannelPipeline
 import kotlinx.serialization.json.JsonObject
-import tools.jackson.databind.JsonNode
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -118,8 +118,8 @@ public class TachyonServerBuilder
         public fun tool(
             name: String,
             description: String? = null,
-            inputSchema: JsonNode? = null,
-            outputSchema: JsonNode? = null,
+            inputSchema: JsonSchema? = null,
+            outputSchema: JsonSchema? = null,
             handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
             this.also {
@@ -348,8 +348,8 @@ public class TachyonServerBuilder
             this.tool(
                 name = name,
                 description = description,
-                inputSchema = inputSchema.toJacksonNode(),
-                outputSchema = outputSchema.toJacksonNodeOrNull(),
+                inputSchema = inputSchema.toJsonSchema(),
+                outputSchema = outputSchema.toJsonSchemaOrNull(),
                 handler = handler,
             )
 

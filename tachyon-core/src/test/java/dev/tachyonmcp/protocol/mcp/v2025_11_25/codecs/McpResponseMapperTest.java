@@ -77,7 +77,7 @@ class McpResponseMapperTest {
 
     @Test
     void userMetaIsPreservedAlongsideRelatedTask() {
-        var userMeta = Map.<String, JsonNode>of("trace", JSON.stringNode("abc"));
+        var userMeta = Map.<String, Object>of("trace", "abc");
         var result = new TaskResult.Completed(List.<ContentBlock>of(TextContent.of("ok")), null, userMeta);
 
         var payload = (CallToolResult) mapper.getTaskPayloadResult(result, "task-5");

@@ -13,6 +13,7 @@ import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.json.JsonSchema;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
 import java.util.List;
@@ -24,8 +25,10 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
 
     private static final JsonSchemaValidator VALIDATOR = new NetworkntJsonSchemaValidator();
 
-    private static final JsonNode TOOL_SCHEMA = buildToolSchema();
-    private static final JsonNode PROMPT_SCHEMA = buildPromptSchema();
+    private static final JsonSchema TOOL_SCHEMA =
+            JsonSchema.of(buildToolSchema().toString());
+    private static final JsonSchema PROMPT_SCHEMA =
+            JsonSchema.of(buildPromptSchema().toString());
 
     // region: Tool input schema validation
 
@@ -209,7 +212,7 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
         return ToolHandler.of(
                 b -> b.name("validated2")
                         .description("Another tool with a distinct input schema")
-                        .inputSchema(buildToolSchema2()),
+                        .inputSchema(JsonSchema.of(buildToolSchema2().toString())),
                 (context, request) -> ToolResult.text("ok"));
     }
 

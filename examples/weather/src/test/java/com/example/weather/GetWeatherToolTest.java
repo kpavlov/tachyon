@@ -20,7 +20,6 @@ import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.NoopInteractionContext;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -121,7 +120,7 @@ class GetWeatherToolTest {
                         context,
                         ToolRequest.builder()
                                 .name("get-weather")
-                                .arguments(Args.of(Map.of("city", JsonNodeFactory.instance.stringNode("Unknown"))))
+                                .arguments(Args.of(Map.of("city", "Unknown")))
                                 .build())));
             } catch (Exception e) {
                 failure.set(e);

@@ -31,6 +31,8 @@ import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
+import dev.tachyonmcp.server.json.JsonDocument;
+import dev.tachyonmcp.server.json.JsonSchema;
 import dev.tachyonmcp.server.json.JsonSchemaUtils;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.JsonUtils;
@@ -40,7 +42,6 @@ import dev.tachyonmcp.server.json.SchemaValidationError;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -172,8 +173,9 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
      * @param schema     the schema to validate, or {@code null}
      * @throws IllegalArgumentException if the schema root is invalid
      */
-    private static void validateSchemaRoot(String schemaKind, String toolName, @Nullable JsonNode schema) {
-        if (schema == null) return;
+    private static void validateSchemaRoot(String schemaKind, String toolName, @Nullable JsonSchema schemaDocument) {
+        if (schemaDocument == null) return;
+        var schema = JsonUtils.parse(schemaDocument);
         final String detail;
         if (!schema.isObject()) {
             detail = "got: " + schema.getNodeType();
@@ -298,12 +300,11 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
 
             var request = ToolRequest.builder()
                     .name(parsed.name())
-                    .arguments(Args.of(
-                            parsed.args() != null ? parsed.args() : Collections.emptyMap(), payloadDeserializer))
-                    .meta(parsed.meta())
+                    .arguments(Args.of(JsonUtils.toObjectMap(parsed.args()), payloadDeserializer))
+                    .meta(JsonUtils.toObjectMap(parsed.meta()))
                     .progressToken(parseProgressToken(parsed.meta()))
                     .payloadDeserializer(payloadDeserializer)
-                    .inputResponses(parsed.inputResponses())
+                    .inputResponses(JsonUtils.toObjectMap(parsed.inputResponses()))
                     .requestState(parsed.requestState())
                     .build();
 
@@ -424,12 +425,13 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
             return context.responseMapper().createTaskResult(task);
         }
 
-        private static @Nullable ProgressToken parseProgressToken(@Nullable Map<String, JsonNode> meta) {
+        private static @Nullable ProgressToken parseProgressToken(@Nullable Map<String, ?> meta) {
             if (meta == null) return null;
-            var ptNode = meta.get("progressToken");
-            if (ptNode == null) return null;
-            if (ptNode.isString()) return ProgressToken.of(ptNode.asString());
-            if (ptNode.isNumber()) return ProgressToken.of(ptNode.numberValue());
+            var value = meta.get("progressToken");
+            if (value instanceof String text) return ProgressToken.of(text);
+            if (value instanceof Number number) return ProgressToken.of(number);
+            if (value instanceof JsonNode node && node.isString()) return ProgressToken.of(node.asString());
+            if (value instanceof JsonNode node && node.isNumber()) return ProgressToken.of(node.numberValue());
             return null;
         }
 
@@ -467,17 +469,17 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
             return null;
         }
 
-        private @Nullable String validateInput(@Nullable JsonNode schema, @Nullable Map<String, JsonNode> args) {
+        private @Nullable String validateInput(@Nullable JsonSchema schema, @Nullable Map<String, JsonNode> args) {
             return JsonSchemaUtils.validateArguments(inputValidator, schema, args);
         }
 
-        private void validateOutput(@Nullable JsonNode schema, ToolResult result) {
+        private void validateOutput(@Nullable JsonSchema schema, ToolResult result) {
             if (schema == null || outputValidator == JsonSchemaValidator.NOOP) return;
             var inner = result instanceof ToolResult.WithMeta wm ? wm.inner() : result;
             if (!(inner instanceof ToolResult.Success s)) return;
             var contentNode = JsonUtils.valueToObjectNode(s.structuredValue(), payloadSerializer);
             if (contentNode == null) return;
-            var errors = outputValidator.validate(schema, contentNode);
+            var errors = outputValidator.validate(schema, JsonDocument.of(contentNode.toString()));
             if (!errors.isEmpty()) {
                 logger.debug(
                         "Tool output failed schema validation (advisory only): {}", SchemaValidationError.join(errors));

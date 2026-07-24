@@ -5,7 +5,6 @@
 package dev.tachyonmcp.server.json;
 
 import java.util.List;
-import tools.jackson.databind.JsonNode;
 
 /**
  * Validates JSON data against a JSON Schema.
@@ -21,8 +20,8 @@ public interface JsonSchemaValidator {
      */
     JsonSchemaValidator NOOP = (schema, arguments) -> List.of();
 
-    /** Validates the given arguments against the schema and returns any errors. */
-    List<SchemaValidationError> validate(JsonNode schema, JsonNode arguments);
+    /** Validates the given JSON document against the schema and returns any errors. */
+    List<SchemaValidationError> validate(JsonSchema schema, JsonDocument document);
 
     /** Returns {@link #NOOP}, the no-op validator that accepts all input. */
     static JsonSchemaValidator noop() {

@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Objects;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
 /**
  * A plain-text content block provided to or from an LLM.
@@ -26,7 +25,7 @@ public non-sealed interface TextContent extends ContentBlock {
     String text();
 
     @Nullable
-    Map<String, JsonNode> meta();
+    Map<String, Object> meta();
 
     @Nullable
     Annotations annotations();
@@ -55,14 +54,14 @@ public non-sealed interface TextContent extends ContentBlock {
     }
 
     /** Creates a text content block with metadata and optional annotations. */
-    static TextContent of(String text, @Nullable Map<String, JsonNode> meta, @Nullable Annotations annotations) {
+    static TextContent of(String text, @Nullable Map<String, Object> meta, @Nullable Annotations annotations) {
         return DefaultTextContent.of(text, meta, annotations);
     }
 
     interface Builder {
         Builder text(String text);
 
-        Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
+        Builder meta(@Nullable Map<String, ?> entries);
 
         Builder annotations(@Nullable Annotations annotations);
 

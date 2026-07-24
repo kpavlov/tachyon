@@ -7,7 +7,6 @@ package dev.tachyonmcp.server.domain;
 import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
 /**
  * Text-based resource contents returned by a resource handler.
@@ -35,7 +34,7 @@ public non-sealed interface TextResourceContents extends ResourceContents {
     @Override
     @Nullable
     @Value.Parameter(order = 4)
-    Map<String, JsonNode> meta();
+    Map<String, Object> meta();
 
     @Value.Check
     default void check() {
@@ -67,7 +66,7 @@ public non-sealed interface TextResourceContents extends ResourceContents {
      * @param meta     the {@code _meta} entries, or {@code null} if none
      */
     static TextResourceContents of(
-            String uri, String text, @Nullable String mimeType, @Nullable Map<String, JsonNode> meta) {
+            String uri, String text, @Nullable String mimeType, @Nullable Map<String, Object> meta) {
         return DefaultTextResourceContents.of(uri, mimeType, text, meta);
     }
 
@@ -78,7 +77,7 @@ public non-sealed interface TextResourceContents extends ResourceContents {
 
         Builder mimeType(@Nullable String mimeType);
 
-        Builder meta(@Nullable Map<String, ? extends JsonNode> entries);
+        Builder meta(@Nullable Map<String, ?> entries);
 
         TextResourceContents build();
     }

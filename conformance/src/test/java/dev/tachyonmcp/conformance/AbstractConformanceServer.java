@@ -25,6 +25,7 @@ import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
+import dev.tachyonmcp.server.json.JsonSchema;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,19 +35,16 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.awaitility.Awaitility;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 abstract class AbstractConformanceServer {
 
     // language=json
-    protected static final JsonNode INPUT_SCHEMA_NO_ARGS = parseJson("""
+    protected static final JsonSchema INPUT_SCHEMA_NO_ARGS = parseJson("""
         {"type": "object", "properties": {}, "additionalProperties": false}
         """);
 
     // language=json
-    protected static final JsonNode INPUT_SCHEMA_WITH_PROMPT = parseJson("""
+    protected static final JsonSchema INPUT_SCHEMA_WITH_PROMPT = parseJson("""
         {
             "type": "object",
             "properties": {"prompt": {"type": "string"}},
@@ -56,7 +54,7 @@ abstract class AbstractConformanceServer {
         """);
 
     // language=json
-    protected static final JsonNode INPUT_SCHEMA_WITH_MESSAGE = parseJson("""
+    protected static final JsonSchema INPUT_SCHEMA_WITH_MESSAGE = parseJson("""
         {
             "type": "object",
             "properties": {"message": {"type": "string"}},
@@ -72,40 +70,25 @@ abstract class AbstractConformanceServer {
 
     private static final String HMAC_SECRET = "conformance-test-hmac-secret";
 
-    protected static JsonNode parseJson(String json) {
-        try {
-            return new ObjectMapper().readTree(json);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+    protected static JsonSchema parseJson(String json) {
+        return JsonSchema.of(json);
     }
 
     protected static FormInputRequest buildFormElicitation(String message, String propName, String propType) {
-        var schema = new LinkedHashMap<String, JsonNode>();
-        schema.put("type", JsonNodeFactory.instance.stringNode("object"));
-        var props = JsonNodeFactory.instance.objectNode();
-        props.putObject(propName).put("type", propType);
-        schema.put("properties", props);
-        schema.put("required", JsonNodeFactory.instance.arrayNode().add(propName));
+        var schema = new LinkedHashMap<String, Object>();
+        schema.put("type", "object");
+        schema.put("properties", Map.of(propName, Map.of("type", propType)));
+        schema.put("required", List.of(propName));
         return FormInputRequest.of(message, schema);
     }
 
     protected static RpcMethodRequest buildSamplingRequest(String questionText) {
-        var messages = JsonNodeFactory.instance.arrayNode();
-        var msg = JsonNodeFactory.instance.objectNode();
-        msg.put("role", "user");
-        var content = msg.putObject("content");
-        content.put("type", "text");
-        content.put("text", questionText);
-        messages.add(msg);
-        var params = JsonNodeFactory.instance.objectNode();
-        params.set("messages", messages);
-        params.put("maxTokens", 100);
-        return RpcMethodRequest.of("sampling/createMessage", params);
+        var message = Map.of("role", "user", "content", Map.of("type", "text", "text", questionText));
+        return RpcMethodRequest.of("sampling/createMessage", Map.of("messages", List.of(message), "maxTokens", 100));
     }
 
     protected static RpcMethodRequest buildRootsListRequest() {
-        return RpcMethodRequest.of("roots/list", JsonNodeFactory.instance.objectNode());
+        return RpcMethodRequest.of("roots/list", Map.of());
     }
 
     protected static String signState(String payload) {
@@ -127,7 +110,7 @@ abstract class AbstractConformanceServer {
         return signState(payload).equals(signedState);
     }
 
-    private static JsonNode buildJsonSchema() {
+    private static JsonSchema buildJsonSchema() {
         // language=json
         return parseJson("""
             {
@@ -317,11 +300,9 @@ abstract class AbstractConformanceServer {
                                 var inputResponses = request.inputResponses();
                                 if (inputResponses != null && inputResponses.containsKey("user_name")) {
                                     var resp = inputResponses.get("user_name");
-                                    if (resp != null && resp.isObject()) {
-                                        var content = resp.path("content");
-                                        var name = content.has("name")
-                                                ? content.get("name").asString()
-                                                : "World";
+                                    if (resp instanceof Map<?, ?>) {
+                                        var content = field(resp, "content");
+                                        var name = stringField(content, "name", "World");
                                         return ToolResult.text("Hello, " + name + "!");
                                     }
                                 }
@@ -345,10 +326,7 @@ abstract class AbstractConformanceServer {
                                 var inputResponses = request.inputResponses();
                                 if (inputResponses != null && inputResponses.containsKey("capital_question")) {
                                     var resp = inputResponses.get("capital_question");
-                                    var text = resp != null
-                                                    && resp.path("content").has("text")
-                                            ? resp.path("content").get("text").asString()
-                                            : "done";
+                                    var text = stringField(field(resp, "content"), "text", "done");
                                     return ToolResult.text(text);
                                 }
                                 return ToolResult.inputRequired(
@@ -435,11 +413,8 @@ abstract class AbstractConformanceServer {
                                 var inputResponses = request.inputResponses();
                                 var requestState = request.requestState();
                                 if (inputResponses != null && inputResponses.containsKey("step2")) {
-                                    var color = inputResponses
-                                            .get("step2")
-                                            .path("content")
-                                            .path("color")
-                                            .asString("unknown");
+                                    var color = stringField(
+                                            field(inputResponses.get("step2"), "content"), "color", "unknown");
                                     return ToolResult.text("Done with color: " + color);
                                 }
                                 if (inputResponses != null
@@ -495,10 +470,8 @@ abstract class AbstractConformanceServer {
                                 var meta = request.meta();
                                 var capabilities =
                                         meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
-                                var hasSampling = capabilities != null
-                                        && !capabilities.path("sampling").isMissingNode();
-                                var hasElicitation = capabilities != null
-                                        && !capabilities.path("elicitation").isMissingNode();
+                                var hasSampling = field(capabilities, "sampling") != null;
+                                var hasElicitation = field(capabilities, "elicitation") != null;
                                 var inputRequests = new LinkedHashMap<String, InputRequest>();
                                 if (hasSampling) {
                                     inputRequests.put(
@@ -594,5 +567,14 @@ abstract class AbstractConformanceServer {
         return ToolHandler.of(
                 b -> b.name("echo").description("Echo back the input message").inputSchema(schema),
                 (ctx, request) -> ToolResult.text(request.arguments().stringOr("message", "")));
+    }
+
+    protected static @Nullable Object field(@Nullable Object value, String name) {
+        return value instanceof Map<?, ?> map ? map.get(name) : null;
+    }
+
+    private static String stringField(@Nullable Object value, String name, String defaultValue) {
+        var field = field(value, name);
+        return field instanceof String text ? text : defaultValue;
     }
 }

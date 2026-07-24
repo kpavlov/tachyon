@@ -3,7 +3,8 @@
   ~ Copyright (c) 2026 Konstantin Pavlov and contributors.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -27,13 +28,19 @@
     <dependencies>
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
             <artifactId>tachyon-core</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
             <artifactId>tachyon-kotlin</artifactId>
-            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-extensions</artifactId>
         </dependency>
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
@@ -98,7 +105,10 @@
                         <configuration>
                             <dataFile>${project.build.directory}/jacoco-merged.exec</dataFile>
                             <classDirs>
+                                <dir>${project.basedir}/../tachyon-api/target/classes</dir>
                                 <dir>${project.basedir}/../tachyon-core/target/classes</dir>
+                                <dir>${project.basedir}/../tachyon-kotlin/target/classes</dir>
+                                <dir>${project.basedir}/../tachyon-extensions/target/classes</dir>
                             </classDirs>
                             <rules>
                                 <rule>

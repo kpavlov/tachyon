@@ -130,11 +130,7 @@ class SseReplayPerStreamTest extends AbstractStatefulMcpE2eTest {
                 .build();
         return ToolHandler.of(descriptor, (context, request) -> {
             var args = request.arguments();
-            String text = "";
-            var msg = args.raw("message");
-            if (msg instanceof tools.jackson.databind.JsonNode node) {
-                text = node.asString();
-            }
+            var text = args.stringOr("message", "");
             context.notifications().progress(request.progressToken(), 1, 1, text);
             return ToolResult.text(text);
         });

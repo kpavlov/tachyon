@@ -12,12 +12,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.JsonNodeFactory;
 
 class ToolResultTest {
-
-    private static final JsonNodeFactory JSON = JsonNodeFactory.instance;
 
     @Test
     void blocksWithNoArgsIsEmptySuccess() {
@@ -52,8 +48,8 @@ class ToolResultTest {
 
     @Test
     void withMetaMergesNotNests() {
-        var base = ToolResult.text("x").withMeta("a", JSON.numberNode(1));
-        var merged = base.withMeta("b", JSON.numberNode(2));
+        var base = ToolResult.text("x").withMeta("a", 1);
+        var merged = base.withMeta("b", 2);
 
         assertThat(merged).isInstanceOf(ToolResult.WithMeta.class);
         var wm = (ToolResult.WithMeta) merged;
@@ -63,11 +59,11 @@ class ToolResultTest {
 
     @Test
     void withMetaKeyOverridesMerges() {
-        var base = ToolResult.text("x").withMeta("k", JSON.numberNode(1));
-        var updated = base.withMeta("k", JSON.numberNode(99));
+        var base = ToolResult.text("x").withMeta("k", 1);
+        var updated = base.withMeta("k", 99);
 
         var wm = (ToolResult.WithMeta) updated;
-        assertThat(wm.meta().get("k").asLong()).isEqualTo(99);
+        assertThat(wm.meta().get("k")).isEqualTo(99);
     }
 
     @Test
@@ -78,10 +74,10 @@ class ToolResultTest {
 
     @Test
     void withMetaImmutability() {
-        var source = new HashMap<String, JsonNode>();
-        source.put("k", JSON.numberNode(1));
+        var source = new HashMap<String, Object>();
+        source.put("k", 1);
         var r = ToolResult.text("x").withMeta(source);
-        source.put("injected", JSON.numberNode(99));
+        source.put("injected", 99);
         var wm = (ToolResult.WithMeta) r;
         assertThat(wm.meta()).doesNotContainKey("injected");
     }
@@ -114,11 +110,11 @@ class ToolResultTest {
 
     @Test
     void failureCanCarryMeta() {
-        ToolResult err = ToolResult.error("oops").withMeta("trace", JSON.stringNode("id-1"));
+        ToolResult err = ToolResult.error("oops").withMeta("trace", "id-1");
         assertThat(err).isInstanceOf(ToolResult.WithMeta.class);
         var wm = (ToolResult.WithMeta) err;
         assertThat(wm.inner()).isInstanceOf(ToolResult.Error.class);
-        assertThat(wm.meta().get("trace").asString()).isEqualTo("id-1");
+        assertThat(wm.meta().get("trace")).isEqualTo("id-1");
     }
 
     @Test

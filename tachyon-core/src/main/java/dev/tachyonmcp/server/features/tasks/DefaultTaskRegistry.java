@@ -29,7 +29,6 @@ import java.util.concurrent.Future;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tools.jackson.databind.JsonNode;
 
 @InternalApi
 public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEntry> implements TaskRegistry {
@@ -97,7 +96,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
     @Override
     public TaskEntry createSessionTask(
             @Nullable Duration ttl,
-            @Nullable Map<String, JsonNode> meta,
+            @Nullable Map<String, Object> meta,
             @Nullable String sessionId,
             @Nullable ProgressToken progressToken) {
         return createTask(null, ttl, meta, sessionId, progressToken, defaultKeepAlive, defaultPollInterval);
@@ -106,7 +105,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
     private TaskEntry createTask(
             @Nullable String requestedId,
             @Nullable Duration ttl,
-            @Nullable Map<String, JsonNode> meta,
+            @Nullable Map<String, Object> meta,
             @Nullable String sessionId,
             @Nullable ProgressToken progressToken,
             Duration keepAlive,
