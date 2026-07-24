@@ -12,7 +12,7 @@
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>tachyon-server</artifactId>
+    <artifactId>tachyon-core</artifactId>
 
     <name>Tachyon MCP Server</name>
     <description>MCP server runtime</description>

@@ -30,7 +30,7 @@ import org.jspecify.annotations.Nullable;
  *
  * <p><strong>Not a stability contract.</strong> This interface lives in an {@code internal}
  * package for a reason: it may change without notice across minor versions. Only code that ships
- * inside the {@code tachyon-server} jar — transport handlers, dispatch plumbing, registry
+ * inside the {@code tachyon-core} jar — transport handlers, dispatch plumbing, registry
  * implementations — should depend on it. External code that reaches for {@code ServerEngine} is
  * opting into a breakage-prone dependency.
  */

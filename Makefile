@@ -29,9 +29,9 @@ test: ## Run unit + e2e tests
 	@./mvnw test $(MAVEN_TEST_ARGS) --no-transfer-progress
 
 package: ## Install artifacts to local Maven repo (skip tests)
-	@echo "📦 Packaging and installing tachyon-server to local repository..."
+	@echo "📦 Packaging and installing to local repository..."
 	@rm -rf ~/.m2/repository/dev/tachyonmcp/
-	@./mvnw install -pl tachyon-kotlin -am -DskipTests -Dspotbugs.skip -Dspotless.skip
+	@./mvnw install -pl tachyon-core,tachyon-kotlin -am -DskipTests -Dspotbugs.skip -Dspotless.skip
 
 examples: ## Build live examples against published artifacts
 	@echo "🌤️ 📡  Building LIVE examples..."
@@ -42,9 +42,9 @@ examples: ## Build live examples against published artifacts
 
 examples-snapshot: package ## Build examples against local SNAPSHOT artifacts
 	@echo "🌤️ 🎬 Building SNAPSHOT examples..."
-	@./mvnw verify -f examples/weather/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
-	@./mvnw verify -f examples/weather-mcp-kotlin/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
-	@./mvnw verify -f examples/echo-kotlin/pom.xml -Dtachyon-server.version=1.0.0-SNAPSHOT --no-transfer-progress
+	@./mvnw verify -f examples/weather/pom.xml -Dtachyon.version=1.0.0-SNAPSHOT --no-transfer-progress
+	@./mvnw verify -f examples/weather-mcp-kotlin/pom.xml -Dtachyon.version=1.0.0-SNAPSHOT --no-transfer-progress
+	@./mvnw verify -f examples/echo-kotlin/pom.xml -Dtachyon.version=1.0.0-SNAPSHOT --no-transfer-progress
 	@echo " ✅  Done!"
 
 conformance: ## Run MCP conformance suite
@@ -64,7 +64,7 @@ clean: ## Remove all build artifacts
 format: ## Auto-format code (Spotless + Detekt)
 	@echo " 🎨  Formatting code..."
 	@./mvnw spotless:apply -q
-	@./mvnw install -pl tachyon-server -DskipTests -Dspotbugs.skip -Dspotless.skip -q
+	@./mvnw install -pl tachyon-core -DskipTests -Dspotbugs.skip -Dspotless.skip -q
 	@./mvnw exec:java@detekt-format -pl tachyon-kotlin -am -q
 	@echo " ✅  Done..."
 

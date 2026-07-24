@@ -12,12 +12,12 @@ Build and run an MCP server in under 5 minutes.
 ```xml
 <dependency>
     <groupId>dev.tachyonmcp</groupId>
-    <artifactId>tachyon-server</artifactId>
-    <version>1.0.0-beta.13</version>
+    <artifactId>tachyon-core</artifactId>
+    <version>1.0.0-beta.14</version>
 </dependency>
 ```
 
-For the Kotlin DSL, add `tachyon-kotlin` instead (it includes `tachyon-server` transitively).
+For the Kotlin DSL, add `tachyon-kotlin` instead (it includes `tachyon-core` transitively).
 
 ## 2. Create a server
 

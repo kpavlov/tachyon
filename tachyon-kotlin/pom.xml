@@ -33,7 +33,7 @@
     <dependencies>
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
-            <artifactId>tachyon-server</artifactId>
+            <artifactId>tachyon-core</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>

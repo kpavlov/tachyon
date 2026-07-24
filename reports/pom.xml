@@ -27,7 +27,7 @@
     <dependencies>
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
-            <artifactId>tachyon-server</artifactId>
+            <artifactId>tachyon-core</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -98,7 +98,7 @@
                         <configuration>
                             <dataFile>${project.build.directory}/jacoco-merged.exec</dataFile>
                             <classDirs>
-                                <dir>${project.basedir}/../tachyon-server/target/classes</dir>
+                                <dir>${project.basedir}/../tachyon-core/target/classes</dir>
                             </classDirs>
                             <rules>
                                 <rule>

@@ -48,7 +48,7 @@
     </issueManagement>
 
     <modules>
-        <module>tachyon-server</module>
+        <module>tachyon-core</module>
         <module>tachyon-kotlin</module>
         <module>e2e</module>
         <module>conformance</module>
@@ -111,7 +111,7 @@
         <dependencies>
             <dependency>
                 <groupId>dev.tachyonmcp</groupId>
-                <artifactId>tachyon-server</artifactId>
+                <artifactId>tachyon-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -444,7 +444,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
-                    <doclint>all,-missing</doclint>
+                    <doclint>all</doclint>
                 </configuration>
                 <executions>
                     <execution>

@@ -1,4 +1,4 @@
-[![Maven Central](https://img.shields.io/maven-central/v/dev.tachyonmcp/tachyon-server)](https://repo1.maven.org/maven2/dev/tachyonmcp/tachyon-server/)
+[![Maven Central](https://img.shields.io/maven-central/v/dev.tachyonmcp/tachyon-core)](https://repo1.maven.org/maven2/dev/tachyonmcp/tachyon-core/)
 [![Java 21+](https://img.shields.io/badge/Java-21+-orange.svg?logo=jvm)](http://java.com)
 [![Build](https://github.com/kpavlov/tachyon/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/kpavlov/tachyon/actions/workflows/build.yml)
 [![MCPConformance: 2025-11-25+2026-07-28](https://img.shields.io/badge/MCP%20Conformance-2025.11.25%20+%202026.07.28-grass?logo=modelcontextprotocol)](https://github.com/modelcontextprotocol/conformance)
@@ -34,7 +34,7 @@
     ```xml
     <dependency>
         <groupId>dev.tachyonmcp</groupId>
-        <artifactId>tachyon-server</artifactId>
+        <artifactId>tachyon-core</artifactId>
         <version>1.0.0-beta.13</version>
     </dependency>
     ```
