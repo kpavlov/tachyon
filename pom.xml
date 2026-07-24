@@ -48,6 +48,7 @@
     </issueManagement>
 
     <modules>
+        <module>tachyon-api</module>
         <module>tachyon-core</module>
         <module>tachyon-kotlin</module>
         <module>e2e</module>
@@ -109,6 +110,11 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>dev.tachyonmcp</groupId>
+                <artifactId>tachyon-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <dependency>
                 <groupId>dev.tachyonmcp</groupId>
                 <artifactId>tachyon-core</artifactId>

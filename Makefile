@@ -31,7 +31,7 @@ test: ## Run unit + e2e tests
 package: ## Install artifacts to local Maven repo (skip tests)
 	@echo "📦 Packaging and installing to local repository..."
 	@rm -rf ~/.m2/repository/dev/tachyonmcp/
-	@./mvnw install -pl tachyon-core,tachyon-kotlin -am -DskipTests -Dspotbugs.skip -Dspotless.skip
+	@./mvnw install -pl tachyon-kotlin -am -DskipTests -Dspotbugs.skip -Dspotless.skip
 
 examples: ## Build live examples against published artifacts
 	@echo "🌤️ 📡  Building LIVE examples..."
@@ -58,13 +58,14 @@ e2e: package ## Run end-to-end tests
 
 clean: ## Remove all build artifacts
 	@echo " 🧹  Cleaning..."
+	@rm -rf ~/.m2/repository/dev/tachyonmcp
 	@find . -type d -name target -exec rm -rf {} +
 	@echo " ✅  All clean!"
 
 format: ## Auto-format code (Spotless + Detekt)
 	@echo " 🎨  Formatting code..."
 	@./mvnw spotless:apply -q
-	@./mvnw install -pl tachyon-core -DskipTests -Dspotbugs.skip -Dspotless.skip -q
+	@./mvnw install -pl tachyon-api,tachyon-core -DskipTests -Dspotbugs.skip -Dspotless.skip -q
 	@./mvnw exec:java@detekt-format -pl tachyon-kotlin -am -q
 	@echo " ✅  Done..."
 

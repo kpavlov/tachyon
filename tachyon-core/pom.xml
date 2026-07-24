@@ -18,10 +18,12 @@
     <description>MCP server runtime</description>
 
     <dependencies>
+
         <dependency>
-            <groupId>org.jspecify</groupId>
-            <artifactId>jspecify</artifactId>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-api</artifactId>
         </dependency>
+
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -128,9 +130,10 @@
                         <goals>
                             <goal>java</goal>
                         </goals>
+                        <phase>none</phase>
                         <configuration>
                             <skip>true</skip>
-                            <mainClass>skip</mainClass>
+                            <mainClass>ignored</mainClass>
                         </configuration>
                     </execution>
                     <execution>
@@ -138,9 +141,10 @@
                         <goals>
                             <goal>java</goal>
                         </goals>
+                        <phase>none</phase>
                         <configuration>
                             <skip>true</skip>
-                            <mainClass>skip</mainClass>
+                            <mainClass>ignored</mainClass>
                         </configuration>
                     </execution>
                     <execution>
