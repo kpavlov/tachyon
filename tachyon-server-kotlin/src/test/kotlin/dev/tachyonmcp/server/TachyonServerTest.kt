@@ -3,18 +3,21 @@
 package dev.tachyonmcp.server
 
 import dev.tachyonmcp.server.config.Mode
-import dev.tachyonmcp.server.domain.Annotations
-import dev.tachyonmcp.server.domain.Icon
-import dev.tachyonmcp.server.domain.PromptArgument
-import dev.tachyonmcp.server.domain.PromptMessage
-import dev.tachyonmcp.server.domain.TextContent
-import dev.tachyonmcp.server.domain.TextResourceContents
-import dev.tachyonmcp.server.features.prompts.PromptDescriptor
-import dev.tachyonmcp.server.features.resources.ResourceDescriptor
-import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
-import dev.tachyonmcp.server.features.tools.ToolDescriptor
+import dev.tachyonmcp.server.domain.Role
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.internal.ServerEngine
+import dev.tachyonmcp.server.kotlin.TachyonServer
+import dev.tachyonmcp.server.kotlin.buildServer
+import dev.tachyonmcp.server.kotlin.domain.Annotations
+import dev.tachyonmcp.server.kotlin.domain.Icon
+import dev.tachyonmcp.server.kotlin.domain.PromptArgument
+import dev.tachyonmcp.server.kotlin.domain.PromptMessage
+import dev.tachyonmcp.server.kotlin.domain.TextContent
+import dev.tachyonmcp.server.kotlin.domain.TextResourceContents
+import dev.tachyonmcp.server.kotlin.features.prompts.PromptDescriptor
+import dev.tachyonmcp.server.kotlin.features.resources.ResourceDescriptor
+import dev.tachyonmcp.server.kotlin.features.resources.ResourceTemplateDescriptor
+import dev.tachyonmcp.server.kotlin.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.session.InMemorySessionEventStore
 import dev.tachyonmcp.server.session.InMemorySessionStore
 import dev.tachyonmcp.server.session.SessionIdGenerator
@@ -111,7 +114,12 @@ internal class TachyonServerTest {
                     TextResourceContents(uri = uri, mimeType = "text/yaml", text = "key: value")
                 }
                 prompt("greet", "Say hello") {
-                    listOf(PromptMessage.user(TextContent("Hello, ${arguments ?: "world"}!")))
+                    listOf(
+                        PromptMessage(
+                            role = Role.USER,
+                            TextContent("Hello, ${arguments ?: "world"}!"),
+                        ),
+                    )
                 }
             },
         ).use { handle ->
@@ -392,7 +400,16 @@ internal class TachyonServerTest {
             PromptDescriptor {
                 name = "descriptor-prompt"
                 description = "Prompt built from a prebuilt descriptor"
-                arguments = listOf(PromptArgument.of("style", "Style", "Narration style", true))
+
+                arguments =
+                    listOf(
+                        PromptArgument {
+                            name = "style"
+                            title = "Style"
+                            description = "Narration style"
+                            required = true
+                        },
+                    )
             }
 
         TachyonServer(
@@ -401,7 +418,12 @@ internal class TachyonServerTest {
                 name("descriptor-prompt-test")
                 session { enabled = true }
                 prompt(descriptor) {
-                    listOf(PromptMessage.user(TextContent("styled: ${arguments ?: "none"}")))
+                    listOf(
+                        PromptMessage(
+                            role = Role.USER,
+                            TextContent("styled: ${arguments ?: "none"}"),
+                        ),
+                    )
                 }
             },
         ).use { handle ->

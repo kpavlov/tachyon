@@ -2,10 +2,10 @@
 
 package com.example.echo
 
-import dev.tachyonmcp.server.TachyonServer
+import dev.tachyonmcp.server.kotlin.TachyonServer
 import dev.tachyonmcp.server.config.Mode
 import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.features.tools.registerTool
+import dev.tachyonmcp.server.kotlin.features.tools.registerTool
 import tools.jackson.databind.node.JsonNodeFactory
 
 fun createServer(port: Int = 0): TachyonServer {

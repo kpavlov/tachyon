@@ -4,10 +4,10 @@
 
 package dev.tachyonmcp.server
 
-import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.features.tools.ToolRequest
 import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.features.tools.toolHandler
+import dev.tachyonmcp.server.kotlin.features.tools.ToolDescriptor
+import dev.tachyonmcp.server.kotlin.features.tools.toolHandler
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
@@ -26,7 +26,9 @@ internal class ToolHandlerFactoryTest {
         val cancelled = AtomicBoolean(false)
         val handler =
             toolHandler(
-                ToolDescriptor.builder().name("interrupt-test").build(),
+                ToolDescriptor {
+                    name = "interrupt-test"
+                },
             ) {
                 started.countDown()
                 try {
@@ -63,7 +65,9 @@ internal class ToolHandlerFactoryTest {
         val calls = AtomicInteger(0)
         val handler =
             toolHandler(
-                ToolDescriptor.builder().name("supervisor-test").build(),
+                ToolDescriptor {
+                    name = "supervisor-test"
+                },
             ) {
                 if (calls.incrementAndGet() == 1) {
                     error("boom")

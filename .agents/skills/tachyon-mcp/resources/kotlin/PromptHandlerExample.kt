@@ -5,7 +5,9 @@ package dev.tachyonmcp.skill
 import dev.tachyonmcp.server.domain.PromptArgument
 import dev.tachyonmcp.server.domain.PromptMessage
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
-import dev.tachyonmcp.server.features.prompts.promptMessagesOf
+import dev.tachyonmcp.server.kotlin.domain.PromptArgument
+import dev.tachyonmcp.server.kotlin.features.prompts.PromptDescriptor
+import dev.tachyonmcp.server.kotlin.features.prompts.promptMessagesOf
 
 /** Simplest — name + description. */
 fun simpleDescriptor(): PromptDescriptor =

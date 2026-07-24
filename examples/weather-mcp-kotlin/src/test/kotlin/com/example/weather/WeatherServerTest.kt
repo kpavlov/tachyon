@@ -3,7 +3,7 @@
 package com.example.weather
 
 import com.example.weather.service.WeatherService
-import dev.tachyonmcp.server.TachyonServer
+import dev.tachyonmcp.server.kotlin.TachyonServer
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
