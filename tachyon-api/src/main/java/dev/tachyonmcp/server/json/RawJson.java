@@ -6,7 +6,7 @@ package dev.tachyonmcp.server.json;
 
 /**
  * A pre-serialized JSON payload marker. When used as a
- * {@link dev.tachyonmcp.server.features.tools.ToolResult.Success#structuredValue()},
+ * {@code ToolResult.Success.structuredValue()},
  * the string is parsed once at envelope encoding, skipping the Jackson value-to-tree
  * conversion of ordinary structured values.
  *
