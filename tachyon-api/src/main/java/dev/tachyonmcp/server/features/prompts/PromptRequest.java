@@ -3,7 +3,6 @@ package dev.tachyonmcp.server.features.prompts;
 
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.JsonNode;
 
 /**
  * Request parameters for a prompt invocation.
@@ -14,5 +13,5 @@ import tools.jackson.databind.JsonNode;
  */
 public record PromptRequest(
         @Nullable String arguments,
-        @Nullable Map<String, JsonNode> inputResponses,
+        @Nullable Map<String, Object> inputResponses,
         @Nullable String requestState) {}

@@ -15,6 +15,7 @@ import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.json.JsonSchemaUtils;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
+import dev.tachyonmcp.server.json.JsonUtils;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.Comparator;
@@ -243,10 +244,9 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
             return null;
         }
 
-        private static @Nullable Map<String, JsonNode> extractInputResponsesFromParams(Object params) {
-            return params instanceof Map<?, ?> map
-                    ? ListRequests.extractInputResponses(map.get("inputResponses"))
-                    : null;
+        private static @Nullable Map<String, Object> extractInputResponsesFromParams(Object params) {
+            if (!(params instanceof Map<?, ?> map)) return null;
+            return JsonUtils.toObjectMap(ListRequests.extractInputResponses(map.get("inputResponses")));
         }
 
         private static @Nullable String extractRequestStateFromParams(Object params) {
