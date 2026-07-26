@@ -29,6 +29,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -312,13 +313,17 @@ public class McpDispatcher {
             return DispatchResult.Accepted.INSTANCE;
         }
 
+        final Optional<Session> sessionOpt;
         if (sessionId != null) {
-            server.getSession(sessionId).ifPresent(Session::touch);
+            sessionOpt = server.getSession(sessionId);
+            sessionOpt.ifPresent(Session::touch);
+        } else {
+            sessionOpt = Optional.empty();
         }
         switch (method) {
             case NOTIFICATIONS_INITIALIZED -> {
                 logger.info("Client initialized notification received");
-                server.getSession(sessionId).ifPresent(session -> {
+                sessionOpt.ifPresent(session -> {
                     if (session.activate()) {
                         logger.info("Session activated: {}", sessionId);
                     }
