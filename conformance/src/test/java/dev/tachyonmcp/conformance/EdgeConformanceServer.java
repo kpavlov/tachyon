@@ -19,8 +19,7 @@ class EdgeConformanceServer extends AbstractConformanceServer {
     protected ServerEngine createServer(boolean isStateful) {
         return (ServerEngine) TachyonServer.builder()
                 .session(s -> s.enabled(isStateful))
-                .withTools(tools -> tools
-                    .register(
+                .withTools(tools -> tools.register(
                                 ToolDescriptor.builder()
                                         .name("test_missing_capability")
                                         .description("SEP-2575 requires an explicitly declared capability")
