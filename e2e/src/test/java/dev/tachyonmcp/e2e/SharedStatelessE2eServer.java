@@ -10,21 +10,18 @@ final class SharedStatelessE2eServer {
 
     private static final Logger logger = LoggerFactory.getLogger(SharedStatelessE2eServer.class);
     private static final AtomicBoolean started = new AtomicBoolean();
-    private static volatile TachyonServer handle;
+    private static volatile TachyonServer server;
 
     static synchronized TachyonServer ensureStarted() {
         if (started.get()) {
-            return handle;
+            return server;
         }
-        handle = TachyonServer.builder()
-                .capabilities(c -> c.tools().logging())
-                .network(n -> n.port(0))
-                .build();
-        handle.tools().register(EchoToolHandler.create());
-        handle.start();
+        server = TestServers.startSafely(
+                TachyonServer.builder().capabilities(c -> c.tools().logging()).network(n -> n.port(0)),
+                s -> s.tools().register(EchoToolHandler.create()));
+        Runtime.getRuntime().addShutdownHook(new Thread(server::close));
         started.set(true);
-        Runtime.getRuntime().addShutdownHook(new Thread(handle::close));
-        logger.info("Shared stateless E2E server started on port {}", handle.port());
-        return handle;
+        logger.info("Shared stateless E2E server started on port {}", server.port());
+        return server;
     }
 }

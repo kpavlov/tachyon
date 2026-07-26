@@ -26,6 +26,7 @@ import dev.tachyonmcp.server.domain.TextContent
 import dev.tachyonmcp.server.features.tools.ToolRequest
 import dev.tachyonmcp.server.features.tools.ToolResult
 import io.kotest.assertions.assertSoftly
+import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -36,7 +37,12 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import tools.jackson.databind.ObjectMapper
 import java.math.BigDecimal
+import java.util.stream.Stream
 import dev.tachyonmcp.server.json.JsonSchema as JavaJsonSchema
 
 internal class KotlinApiTest {
@@ -50,7 +56,9 @@ internal class KotlinApiTest {
             port = 0,
             {
                 name("test")
-                tool("t1", inputSchema = schema, outputSchema = schema) { ToolResult.text("ok") }
+                tool("t1", inputSchema = schema, outputSchema = schema) {
+                    ToolResult.text("ok")
+                }
             },
         ).use { handle ->
             handle.tools().find("t1").orElse(null) shouldNotBe null
@@ -64,7 +72,9 @@ internal class KotlinApiTest {
             port = 0,
             {
                 name("test")
-                tool("t2", inputSchema = json, outputSchema = json) { ToolResult.text("ok") }
+                tool("t2", inputSchema = json, outputSchema = json) {
+                    ToolResult.text("ok")
+                }
             },
         ).use { handle ->
             handle.tools().find("t2").orElse(null) shouldNotBe null
@@ -78,7 +88,9 @@ internal class KotlinApiTest {
             port = 0,
             {
                 name("test")
-                tool("t3", inputSchema = schema, outputSchema = schema) { ToolResult.text("ok") }
+                tool("t3", inputSchema = schema, outputSchema = schema) {
+                    ToolResult.text("ok")
+                }
             },
         ).use { handle ->
             handle.tools().find("t3").orElse(null) shouldNotBe null
@@ -138,45 +150,90 @@ internal class KotlinApiTest {
         }
     }
 
-    @Test
-    fun `orNull accessors return null when the key is missing or JSON null`() {
-        val args = Args.of(null, null)
-        val nullArgs =
-            Args.of(
-                mapOf<String, Any?>(
-                    "str" to null,
-                    "int" to null,
-                    "long" to null,
-                    "bool" to null,
-                    "double" to null,
-                    "decimal" to null,
-                    "obj" to null,
-                    "arr" to null,
-                ),
-                null,
-            )
-
-        assertSoftly {
-            args.stringOrNull("k") shouldBe null
-            args.intOrNull("k") shouldBe null
-            args.longOrNull("k") shouldBe null
-            args.booleanOrNull("k") shouldBe null
-            args.doubleOrNull("k") shouldBe null
-            args.decimalOrNull("k") shouldBe null
-            args.objectOrNull("k") shouldBe null
-            args.arrayOrNull("k") shouldBe null
-            nullArgs.stringOrNull("str") shouldBe null
-            nullArgs.intOrNull("int") shouldBe null
-            nullArgs.longOrNull("long") shouldBe null
-            nullArgs.booleanOrNull("bool") shouldBe null
-            nullArgs.doubleOrNull("double") shouldBe null
-            nullArgs.decimalOrNull("decimal") shouldBe null
-            nullArgs.objectOrNull("obj") shouldBe null
-            nullArgs.arrayOrNull("arr") shouldBe null
+    @ParameterizedTest(name = "[{index}] {0}")
+    @MethodSource("missingOrJsonNullArguments")
+    fun `orNull and default accessors and decode fold missing and JSON-null arguments the same way`(
+        @Suppress("UnusedParameter") scenario: String,
+        argumentsJson: String,
+    ) {
+        TachyonServer(port = 0) {
+            name("null-accessors-test")
+            session { enabled = true }
+            tool("null-accessors") {
+                val args = request.arguments()
+                val fields =
+                    listOf(
+                        "stringOrNull" to args.stringOrNull("str"),
+                        "intOrNull" to args.intOrNull("int"),
+                        "longOrNull" to args.longOrNull("long"),
+                        "booleanOrNull" to args.booleanOrNull("bool"),
+                        "doubleOrNull" to args.doubleOrNull("double"),
+                        "decimalOrNull" to args.decimalOrNull("decimal"),
+                        "objectOrNull" to args.objectOrNull("obj"),
+                        "arrayOrNull" to args.arrayOrNull("arr"),
+                        "stringDefault" to args.string("str", "default"),
+                        "booleanDefault" to args.boolean("bool", true),
+                        "intDefault" to args.int("int", 7),
+                        "longDefault" to args.long("long", 42L),
+                        "doubleDefault" to args.double("double", 1.5),
+                        "decodeStr" to args.decode<NullableArgs>().str,
+                    )
+                ToolResult.raw(
+                    ObjectMapper().writeValueAsString(fields.toMap()),
+                    "accessors resolved",
+                )
+            }
+        }.use { server ->
+            McpProbe(server.port()).use { probe ->
+                probe.initialize()
+                val response = probe.callTool("null-accessors", argumentsJson)
+                response.statusCode() shouldBe 200
+                response.body() shouldEqualJson """
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 2,
+                      "result": {
+                        "content": [{"type": "text", "text": "accessors resolved"}],
+                        "structuredContent": {
+                          "stringOrNull": null,
+                          "intOrNull": null,
+                          "longOrNull": null,
+                          "booleanOrNull": null,
+                          "doubleOrNull": null,
+                          "decimalOrNull": null,
+                          "objectOrNull": null,
+                          "arrayOrNull": null,
+                          "stringDefault": "default",
+                          "booleanDefault": true,
+                          "intDefault": 7,
+                          "longDefault": 42,
+                          "doubleDefault": 1.5,
+                          "decodeStr": null
+                        }
+                      }
+                    }
+                    """.trimIndent()
+            }
         }
     }
 
     // endregion
+
+    companion object {
+        @JvmStatic
+        fun missingOrJsonNullArguments(): Stream<Arguments> =
+            Stream.of(
+                Arguments.of("missing arguments", "{}"),
+                Arguments.of(
+                    "JSON-null arguments",
+                    // language=json
+                    """
+                    {"str":null,"int":null,"long":null,"bool":null,"double":null,
+                     "decimal":null,"obj":null,"arr":null}
+                    """.trimIndent(),
+                ),
+            )
+    }
 
     @Test
     fun `accessors with default return the value when the key is present`() {
@@ -201,21 +258,10 @@ internal class KotlinApiTest {
         }
     }
 
-    @Test
-    fun `accessors with default return the default when the key is missing or JSON null`() {
-        val args = Args.of(null, null)
-        val nullArgs = Args.of(mapOf<String, Any?>("str" to null, "long" to null), null)
-
-        assertSoftly {
-            args.string("k", "def") shouldBe "def"
-            args.boolean("k", true) shouldBe true
-            args.int("k", 7) shouldBe 7
-            args.long("k", 42L) shouldBe 42L
-            args.double("k", 1.5) shouldBe 1.5
-            nullArgs.string("str", "def") shouldBe "def"
-            nullArgs.long("long", 42L) shouldBe 42L
-        }
-    }
+    @Serializable
+    data class NullableArgs(
+        val str: String? = null,
+    )
 
     @Serializable
     data class GreetingArgs(

@@ -56,22 +56,28 @@ public interface ServerBuilder {
     /** Sets the bind host. */
     ServerBuilder host(String host);
 
-    /** Registers tools through the server's tool façade during bootstrap. */
+    /**
+     * Registers tools through the server's tool façade at the end of {@link #build()}.
+     */
     ServerBuilder withTools(Consumer<Tools> registrar);
 
-    /** Registers resources through the server's resource façade during bootstrap. */
+    /** Registers resources through the server's resource façade at the end of {@link #build()}. */
     ServerBuilder withResources(Consumer<Resources> registrar);
 
-    /** Registers prompts through the server's prompt façade during bootstrap. */
+    /** Registers prompts through the server's prompt façade at the end of {@link #build()}. */
     ServerBuilder withPrompts(Consumer<Prompts> registrar);
 
-    /** Registers completions through the server's completion façade during bootstrap. */
+    /** Registers completions through the server's completion façade at the end of {@link #build()}. */
     ServerBuilder withCompletions(Consumer<Completions> registrar);
 
     /** Registers a server extension. */
     ServerBuilder extension(ServerExtension extension);
 
-    /** Sets a caller-owned thread-per-task executor. */
+    /**
+     * Sets a caller-owned thread-per-task executor. The caller must close the executor after the
+     * server is closed. {@link #build()} rejects bounded executors with an
+     * {@link IllegalArgumentException}.
+     */
     ServerBuilder executor(ExecutorService executor);
 
     /** Sets the thread factory used by the server-owned thread-per-task executor. */
@@ -80,10 +86,15 @@ public interface ServerBuilder {
     /** Customizes each Netty channel pipeline. */
     ServerBuilder pipelineCustomizer(@Nullable Consumer<ChannelPipeline> customizer);
 
-    /** Builds the configured server without starting its transport. */
+    /**
+     * Constructs the configured server without starting its transport, then executes the configured
+     * feature-registration callbacks.
+     *
+     * @throws IllegalArgumentException if the configured executor is bounded
+     */
     TachyonServer build();
 
-    /** Builds the configured server and starts its transport. */
+    /** Builds the configured server, executes feature-registration callbacks, and starts its transport. */
     TachyonServer start();
 
     /** Builds the immutable server configuration. */

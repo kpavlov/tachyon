@@ -16,15 +16,14 @@ final class SharedE2eServer {
         if (started.get()) {
             return handle;
         }
-        handle = TachyonServer.builder()
-                .capabilities(c -> c.tools().logging())
-                .session(s -> s.enabled(true))
-                .network(n -> n.port(0))
-                .build();
-        handle.tools().register(EchoToolHandler.create());
-        handle.start();
-        started.set(true);
+        handle = TestServers.startSafely(
+                TachyonServer.builder()
+                        .capabilities(c -> c.tools().logging())
+                        .session(s -> s.enabled(true))
+                        .network(n -> n.port(0)),
+                s -> s.tools().register(EchoToolHandler.create()));
         Runtime.getRuntime().addShutdownHook(new Thread(handle::close));
+        started.set(true);
         logger.info("Shared E2E server started on port {}", handle.port());
         return handle;
     }

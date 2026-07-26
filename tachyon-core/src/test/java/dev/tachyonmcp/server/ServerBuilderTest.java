@@ -75,8 +75,8 @@ class ServerBuilderTest {
 
             assertThat(server.tools().find("sync-tool")).isPresent();
             assertThat(server.resources().find("sync-resource")).isPresent();
-            assertThat(((DefaultTachyonServer) server).resolveCapabilities().prompts())
-                    .isNotNull();
+            assertThat(server.resources().findTemplate("sync-template")).isPresent();
+            assertThat(server.prompts().find("sync-prompt")).isPresent();
         }
     }
 
@@ -106,8 +106,8 @@ class ServerBuilderTest {
 
             assertThat(server.tools().find("async-tool")).isPresent();
             assertThat(server.resources().find("async-resource")).isPresent();
-            assertThat(((DefaultTachyonServer) server).resolveCapabilities().prompts())
-                    .isNotNull();
+            assertThat(server.resources().findTemplate("async-template")).isPresent();
+            assertThat(server.prompts().find("async-prompt")).isPresent();
         }
     }
 

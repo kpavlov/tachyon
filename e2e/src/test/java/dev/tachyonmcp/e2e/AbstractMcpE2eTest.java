@@ -81,10 +81,9 @@ public abstract class AbstractMcpE2eTest {
         var builder = TachyonServer.builder().port(0);
         configurer.accept(builder);
         builder.session(s -> s.enabled(sessionMode() == SessionMode.STATEFUL));
-        this.server = builder.build();
-        registrar.accept(server);
-        server.start();
-        this.port = server.port();
+        var started = TestServers.startSafely(builder, registrar);
+        this.server = started;
+        this.port = started.port();
         this.usingCustomServer = true;
     }
 

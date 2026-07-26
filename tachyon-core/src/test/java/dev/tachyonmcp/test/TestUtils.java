@@ -23,7 +23,16 @@ public class TestUtils {
         var builder = TachyonServer.builder();
         configurer.accept(builder);
         var server = builder.build();
-        registrar.accept(server);
+        try {
+            registrar.accept(server);
+        } catch (RuntimeException | Error failure) {
+            try {
+                server.close();
+            } catch (RuntimeException | Error closeFailure) {
+                failure.addSuppressed(closeFailure);
+            }
+            throw failure;
+        }
         return (ServerEngine) server;
     }
 
