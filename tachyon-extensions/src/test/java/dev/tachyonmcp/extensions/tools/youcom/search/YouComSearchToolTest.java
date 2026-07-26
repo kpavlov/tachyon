@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.domain.Args;
+import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.NoopInteractionContext;
 import java.net.URI;
@@ -97,14 +98,20 @@ public class YouComSearchToolTest {
     void handleReturnsErrorForEmptyQuery() {
         var tool = new YouComSearchTool(YouComSearchConfig.builder().build());
         var args = Args.of(Map.of("query", ""));
-        assertThat(tool.handle(NOOP_CTX, args)).isInstanceOf(ToolResult.Error.class);
+        assertThat(tool.handle(
+                        NOOP_CTX,
+                        ToolRequest.builder().name("you-search").arguments(args).build()))
+                .isInstanceOf(ToolResult.Error.class);
     }
 
     @Test
     void handleReturnsErrorWhenMissingQuery() {
         var tool = new YouComSearchTool(YouComSearchConfig.builder().build());
         var args = Args.of(Map.of());
-        assertThat(tool.handle(NOOP_CTX, args)).isInstanceOf(ToolResult.Error.class);
+        assertThat(tool.handle(
+                        NOOP_CTX,
+                        ToolRequest.builder().name("you-search").arguments(args).build()))
+                .isInstanceOf(ToolResult.Error.class);
     }
 
     @Test

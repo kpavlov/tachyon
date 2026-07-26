@@ -2,9 +2,9 @@
 package dev.tachyonmcp.extensions.tools.echo;
 
 import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.json.JsonSchema;
 
@@ -32,7 +32,7 @@ public class EchoToolHandler extends AbstractToolHandler {
     }
 
     @Override
-    public ToolResult handle(InteractionContext context, Args args) {
-        return ToolResult.text(args.stringOr("message", ""));
+    public ToolResult handle(InteractionContext context, ToolRequest request) {
+        return ToolResult.text(request.arguments().stringOr("message", ""));
     }
 }

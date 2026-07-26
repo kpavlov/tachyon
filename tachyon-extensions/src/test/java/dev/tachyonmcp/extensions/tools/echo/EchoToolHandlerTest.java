@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.domain.TextContent;
+import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.NoopInteractionContext;
 import java.util.Map;
@@ -20,7 +21,8 @@ class EchoToolHandlerTest {
         var handler = new EchoToolHandler();
         var args = Args.of(Map.of("message", "hello"));
 
-        var result = (ToolResult.Success) handler.handle(NOOP_CTX, args);
+        var result = (ToolResult.Success) handler.handle(
+                NOOP_CTX, ToolRequest.builder().name("echo").arguments(args).build());
 
         var text = ((TextContent) result.content().getFirst()).text();
         assertThat(text).isEqualTo("hello");
@@ -31,7 +33,8 @@ class EchoToolHandlerTest {
         var handler = new EchoToolHandler();
         var args = Args.empty();
 
-        var result = (ToolResult.Success) handler.handle(NOOP_CTX, args);
+        var result = (ToolResult.Success) handler.handle(
+                NOOP_CTX, ToolRequest.builder().name("echo").arguments(args).build());
 
         var text = ((TextContent) result.content().getFirst()).text();
         assertThat(text).isEmpty();

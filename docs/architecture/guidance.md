@@ -57,9 +57,9 @@ Blocking for I/O in `handle`/`read` is intended — handlers run on a server-exe
 
 ## 🏹 When to reach for a heavier dispatch structure
 
-`ToolHandler`/`AbstractToolHandler` deliberately isn't the two-interface pattern — tools have two **independent** override axes (sync vs async, canonical `Args` vs raw `ToolRequest`) funneled into one `handleAsync(ctx, ToolRequest)`. `AbstractToolHandler` detects which of the 4 overrides a handler supplied via a package-private `NotImplemented` sentinel (thrown as control flow, `fillInStackTrace` no-op'd — near-zero cost), so one class covers sync/async × Args/Request without extra supertypes.
-
-Only use this for >1 independent override axis. A single axis always gets the two-interface pattern — don't default to a sentinel/dual-dispatch base for what one interface pair expresses.
+`ToolHandler` carries its descriptor, so it is not a handler SAM. `AbstractToolHandler` keeps one
+request shape with sync and async overrides, both receiving `ToolRequest`. Read parsed arguments via
+`request.arguments()`.
 
 ## 🪶 Descriptor bundling: pair vs self-carrying
 
@@ -80,7 +80,7 @@ those same façade APIs; do not add feature-specific registration overloads to `
 - `XHandler` — the handler type. Also the lambda-entry SAM when the shape is simple: `ResourceHandler`/`PromptHandler` are plain `@FunctionalInterface`s, so the type doubles as both.
 - `AsyncXHandler extends XHandler` — async variant, for single-axis handlers only (`AsyncResourceHandler`, `AsyncPromptHandler`). Abstract `handleAsync`, default `handle` blocks via `HandlerFutures.joinInterruptibly`.
 - `XFn` — companion throwing SAM, only when `XHandler` itself isn't lambda-friendly (carries a descriptor, exposes more than one method). Tools need this because `ToolHandler` isn't a `@FunctionalInterface`; `ToolFn` receives the full `ToolRequest`.
-- Static factory composition on `XHandler.of…`: base verb `of`, then optional `Async` — `ToolHandler.of(...)` / `ToolHandler.ofAsync(...)`. Both tool factories receive `ToolRequest`; class-based handlers may override the `Args` or `ToolRequest` form.
+- Static factory composition on `XHandler.of…`: base verb `of`, then optional `Async` — `ToolHandler.of(...)` / `ToolHandler.ofAsync(...)`. Both tool factories and class-based handlers receive `ToolRequest`.
 
 ## 🪶 Registry/facade API naming
 

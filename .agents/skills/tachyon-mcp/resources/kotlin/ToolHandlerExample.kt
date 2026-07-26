@@ -4,7 +4,7 @@ package dev.tachyonmcp.skill
 
 import dev.tachyonmcp.runtime.InteractionContext
 import dev.tachyonmcp.server.TachyonServer
-import dev.tachyonmcp.server.domain.Args
+import dev.tachyonmcp.server.features.tools.ToolRequest
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.json.JsonSchema
@@ -109,9 +109,9 @@ class GreetingTool :
     ) {
     override fun handle(
         ctx: InteractionContext,
-        args: Args,
+        request: ToolRequest,
     ): ToolResult {
-        val name = args.stringValue("name")
+        val name = request.arguments().stringValue("name")
         return ToolResult.text("Hello, $name!")
     }
 }
@@ -129,7 +129,7 @@ class AsyncGreetingTool :
     ) {
     override fun handleAsync(
         ctx: InteractionContext,
-        args: Args,
+        request: ToolRequest,
     ): CompletionStage<out ToolResult> =
         CompletableFuture.completedFuture(ToolResult.text("Hello, Async!"))
 }

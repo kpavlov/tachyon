@@ -188,7 +188,8 @@ internal class KotlinApiTest {
                 probe.initialize()
                 val response = probe.callTool("null-accessors", argumentsJson)
                 response.statusCode() shouldBe 200
-                response.body() shouldEqualJson """
+                response.body() shouldEqualJson
+                    """
                     {
                       "jsonrpc": "2.0",
                       "id": 2,
@@ -351,7 +352,7 @@ internal class KotlinApiTest {
                     .name("greet")
                     .arguments(args)
                     .build()
-            val scope = ToolScope(ctx, args = args, request = request)
+            val scope = ToolScope(ctx, request = request)
             val result = scope.success(value)
             result.shouldBeInstanceOf<ToolResult.Success>()
             result.structured().get() shouldBe value
@@ -369,7 +370,7 @@ internal class KotlinApiTest {
                     .name("greet")
                     .arguments(args)
                     .build()
-            val scope = ToolScope(ctx, args = args, request = request)
+            val scope = ToolScope(ctx, request = request)
             val result = scope.success(value, "custom text")
             result.shouldBeInstanceOf<ToolResult.Success>()
             result.structured().get() shouldBe value

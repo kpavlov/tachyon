@@ -5,6 +5,7 @@ import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -76,14 +77,15 @@ public class YouComSearchTool extends AbstractToolHandler {
     }
 
     @Override
-    public ToolResult handle(InteractionContext context, Args args) {
-        var request = buildRequest(args);
-        if (request == null) {
+    public ToolResult handle(InteractionContext context, ToolRequest request) {
+        var args = request.arguments();
+        var httpRequest = buildRequest(args);
+        if (httpRequest == null) {
             return ToolResult.error("Query must not be empty");
         }
 
         try {
-            var response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
+            var response = HTTP.send(httpRequest, HttpResponse.BodyHandlers.ofString());
             var body = response.body();
 
             if (response.statusCode() != 200) {

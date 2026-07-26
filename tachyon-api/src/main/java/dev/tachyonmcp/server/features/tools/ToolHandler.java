@@ -5,7 +5,6 @@ import static dev.tachyonmcp.server.features.HandlerFutures.assumeVirtualThread;
 
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.ServerFeature;
-import dev.tachyonmcp.server.domain.Args;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
@@ -15,13 +14,10 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>Override exactly one method in {@link AbstractToolHandler}:
  * <ul>
- *   <li>{@link AbstractToolHandler#handle(InteractionContext, Args)} — canonical for sync
+ *   <li>{@link AbstractToolHandler#handle(InteractionContext, ToolRequest)} for synchronous
  *       handlers.
- *   <li>{@link AbstractToolHandler#handleAsync(InteractionContext, Args)} — when the tool is
- *       already async; stays async with no virtual-thread detour.
- *   <li>The {@code ToolRequest} variants ({@link AbstractToolHandler#handle(InteractionContext,
- *       ToolRequest)} / {@link AbstractToolHandler#handleAsync(InteractionContext, ToolRequest)})
- *       — only when the raw request is needed (progress token, cancellation, task handle).
+ *   <li>{@link AbstractToolHandler#handleAsync(InteractionContext, ToolRequest)} for asynchronous
+ *       handlers.
  * </ul>
  *
  * @author Konstantin Pavlov

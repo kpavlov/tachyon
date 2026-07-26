@@ -32,14 +32,14 @@ Need an input schema? Configure the descriptor with the builder overload. `.inpu
 
 Prefer the `ToolHandler.of…` factories above — they cover most tools in one call. Reach for a
 class only when the handler needs instance state or shared setup. Then extend
-`AbstractToolHandler`: pass the descriptor to the constructor and override `handle(ctx, Args)`.
+`AbstractToolHandler`: pass the descriptor to the constructor and override `handle(ctx, request)`.
 (`ToolHandler` itself declares only `descriptor()` and `handleAsync(ctx, ToolRequest)`;
-`AbstractToolHandler` supplies the sync/args convenience overrides.)
+`AbstractToolHandler` supplies the synchronous request override.)
 
 ```java
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.runtime.InteractionContext;
 
@@ -57,8 +57,8 @@ class WeatherTool extends AbstractToolHandler {
     }
 
     @Override
-    public ToolResult handle(InteractionContext ctx, Args args) {
-        String city = args.stringValue("city");
+    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+        String city = request.arguments().stringValue("city");
         return ToolResult.text("☀️ 22°C in " + city);
     }
 }
@@ -70,7 +70,7 @@ Register: `server.tools().register(new WeatherTool())`
 
 Blocking handlers run on a virtual thread, so most tools need no async plumbing. When you already
 hold a `CompletionStage` (a non-blocking client, another async service), return it directly:
-lambda via `ToolHandler.ofAsync`, or override `handleAsync(ctx, Args)` on
+lambda via `ToolHandler.ofAsync`, or override `handleAsync(ctx, request)` on
 `AbstractToolHandler`. Async handlers stay async — they are not funneled through the blocking path.
 
 ```java
@@ -84,9 +84,8 @@ import dev.tachyonmcp.server.features.tools.ToolHandler;
 ### Progress token / full request
 
 `ToolHandler.of(...)` and `ToolHandler.ofAsync(...)` lambdas receive `ToolRequest`; call
-`request.arguments()` for parsed arguments. In a class, override `handle(ctx, Args)` for the
-ergonomic path, or `handle(ctx, ToolRequest)` / `handleAsync(ctx, ToolRequest)` when you need
-request `_meta`, progress, cancellation, input responses, or task state.
+`request.arguments()` for parsed arguments. Class-based handlers receive the same request in
+`handle(ctx, ToolRequest)` or `handleAsync(ctx, ToolRequest)`.
 
 ## Read arguments
 

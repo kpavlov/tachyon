@@ -31,7 +31,6 @@ internal fun toolFn(
         runtime.future(coroutineName) {
             ToolScope(
                 ctx = context,
-                args = request.arguments(),
                 request = request,
             ).block()
         }

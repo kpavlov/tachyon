@@ -5,7 +5,6 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.domain.FormInputRequest;
 import dev.tachyonmcp.server.domain.InputRequest;
 import dev.tachyonmcp.server.domain.UrlInputRequest;
@@ -276,12 +275,6 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                     .name("test_url_elicitation")
                     .description("Tests URL-mode elicitation flow")
                     .build());
-        }
-
-        @Override
-        public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, Args args) {
-            return handleAsync(
-                    context, ToolRequest.builder().name(descriptor().name()).build());
         }
 
         @Override
