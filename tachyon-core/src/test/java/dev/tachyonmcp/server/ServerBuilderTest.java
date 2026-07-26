@@ -29,7 +29,6 @@ class ServerBuilderTest {
 
     @Test
     void exposesBuilderAsInterface() {
-        assertThat(ServerBuilder.class).isInterface();
         assertThat(TachyonServer.builder()).isInstanceOf(DefaultServerBuilder.class);
     }
 

@@ -1,7 +1,7 @@
 # Publishes aggregated Javadoc for tachyon-api, tachyon-core, tachyon-extensions
 # to GitHub Pages.
 #
-# Copyright (c) 2026 Konstantin Pavlov and contributors.
+# Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 
 name: API Docs
 

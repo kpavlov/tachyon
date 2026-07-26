@@ -27,7 +27,7 @@ mvn spotless:apply  # auto-fix
 ## Parts
 
 - **`tachyon-runtime`** — Core: Netty HTTP/SSE, JSON-RPC, event log, MCP registries
-- **`e2e`** — E2E tests via `io.modelcontextprotocol.sdk:mcp-core:2.0.0`
+- **`e2e`** — E2E tests via `io.modelcontextprotocol.sdk:mcp-core` v2.0+
 - **`conformance`** — Conformance via `@modelcontextprotocol/conformance`
 
 ## Rules
