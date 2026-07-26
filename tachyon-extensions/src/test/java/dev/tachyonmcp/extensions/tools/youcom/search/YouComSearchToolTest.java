@@ -20,14 +20,16 @@ public class YouComSearchToolTest {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public static void main(String[] args) {
-        try (var server = TachyonServer.builder()
+        var server = TachyonServer.builder()
                 .info(it -> it.name("you-search-server").version("1.0"))
                 .session(s -> s.enabled(false))
                 .withTools(tools -> tools.register(new YouComSearchTool(YouComSearchConfig.builder()
                         .apiKey(System.getenv("YDC_API_KEY"))
                         .build())))
                 .port(8080)
-                .start()) {
+                .build();
+        server.start();
+        try (server) {
             System.out.println("Connect your MCP client to http://" + server.host() + ":" + server.port() + "/mcp\n"
                     + "Press Ctrl+C to stop.");
 

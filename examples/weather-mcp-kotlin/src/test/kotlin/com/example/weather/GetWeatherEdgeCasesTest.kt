@@ -18,7 +18,8 @@ class GetWeatherEdgeCasesTest {
         weatherService: WeatherService,
         elicitationResponse: (McpSchema.ElicitRequest) -> McpSchema.ElicitResult,
     ): McpSchema.CallToolResult {
-        val server = createServer(0, weatherService)
+        val server = assembleServer(0, weatherService)
+        server.start()
         val transport =
             HttpClientStreamableHttpTransport.builder("http://localhost:${server.port()}").build()
         val client = McpClient.sync(transport).elicitation(elicitationResponse).build()

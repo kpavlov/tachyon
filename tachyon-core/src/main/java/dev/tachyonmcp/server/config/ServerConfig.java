@@ -22,14 +22,6 @@ public record ServerConfig(
         RuntimeConfig runtime,
         MonitoringConfig monitoring) {
 
-    static final ServerConfig DEFAULT = new ServerConfig(
-            ServerIdentity.DEFAULT,
-            CapabilitiesConfig.DEFAULT,
-            SessionConfig.STATELESS,
-            NetworkConfig.DEFAULT,
-            RuntimeConfig.DEFAULT,
-            MonitoringConfig.DEFAULT);
-
     public ServerConfig {
         Objects.requireNonNull(identity, "identity cannot be null");
         Objects.requireNonNull(capabilities, "capabilities cannot be null");

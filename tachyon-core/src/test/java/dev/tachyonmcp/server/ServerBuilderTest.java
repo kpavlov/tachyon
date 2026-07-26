@@ -3,6 +3,7 @@ package dev.tachyonmcp.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.TextResourceContents;
@@ -187,5 +188,19 @@ class ServerBuilderTest {
                         "asyncPromptCompletion",
                         "resourceCompletion",
                         "asyncResourceCompletion");
+    }
+
+    @Test
+    void builderHasNoStartMethod() {
+        assertThat(ServerBuilder.class.getDeclaredMethods())
+                .extracting(method -> method.getName())
+                .doesNotContain("start");
+    }
+
+    @Test
+    void portThrowsBeforeStart() {
+        try (var server = TachyonServer.builder().build()) {
+            assertThatIllegalStateException().isThrownBy(server::port);
+        }
     }
 }

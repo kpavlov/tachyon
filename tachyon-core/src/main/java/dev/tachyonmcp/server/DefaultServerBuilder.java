@@ -306,7 +306,7 @@ final class DefaultServerBuilder implements ServerBuilder {
      *
      * <p>The returned server includes the configured sessions, features, extensions, payload
      * processing, and execution strategy. Transport-dependent host and port values become meaningful
-     * only after {@link #start()}.
+     * only after {@link TachyonServer#start()}.
      *
      * @return the configured server
      */
@@ -345,16 +345,6 @@ final class DefaultServerBuilder implements ServerBuilder {
                 allExtensions,
                 pipelineCustomizer);
         bootstrapRegistrations.forEach(registrar -> registrar.accept(server));
-        return server;
-    }
-
-    /**
-     * Builds the server and starts the Netty transport (blocking). Requires a port to be set.
-     */
-    @Override
-    public TachyonServer start() {
-        var server = build();
-        server.start();
         return server;
     }
 

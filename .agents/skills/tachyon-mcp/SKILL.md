@@ -13,9 +13,9 @@ Make **Java 21+** MCP server. Tachyon lib. Transport = Streamable HTTP (Netty).
 ## Core
 
 - `TachyonServer.builder()` → `ServerBuilder`. Start here.
-- `.start()` (blocking) → builds `TachyonServer` (`AutoCloseable`) with Netty transport bound.
-- `.build()` → `TachyonServer` only, no transport.
-- `TachyonServer`: `.tools()`, `.resources()`, `.prompts()`, `.tasks()` first; then `.port()`, `.close()`, `.config()`.
+- `.build()` (only terminal method) → `TachyonServer` (`AutoCloseable`), no transport bound yet.
+- `TachyonServer.start()` (blocking) → binds the Netty transport.
+- `TachyonServer`: `.tools()`, `.resources()`, `.prompts()`, `.tasks()` first; then `.start()`, `.port()` (throws before `.start()`), `.close()`, `.config()`.
 - Dynamic registration: `.tools().register(handler)`, `.resources().register(...)`, `.prompts().register(...)`.
 - Every handler gets `dev.tachyonmcp.runtime.InteractionContext` → protocol + optional session + notifications.
 - ⚡ **Virtual threads**: All synchronous handlers (`ToolHandler`, `ResourceHandler`, `PromptHandler`) run on a virtual thread per request. Blocking for I/O is fine — never use `synchronized` (pins carrier thread). Use `ReentrantLock` instead. Configure a custom handler executor with `ServerBuilder.executor(...)` when needed.
@@ -26,8 +26,9 @@ Make **Java 21+** MCP server. Tachyon lib. Transport = Streamable HTTP (Netty).
 var server = TachyonServer.builder()
     .info(b -> b.name("my-server").version("1.0"))
     .port(8080)
-    .start();
-// server.port() → real bound port (matters when port=0)
+    .build();
+server.start();
+// server.port() → real bound port (matters when port=0); throws before start()
 ```
 
 ## `ServerBuilder` methods

@@ -54,8 +54,9 @@ public interface TachyonServer extends AutoCloseable {
     void start();
 
     /**
-     * Returns the port the server is bound to, or 0 if not yet started.
-     * Only meaningful after {@link #start()} or equivalent.
+     * Returns the port the server is bound to.
+     *
+     * @throws IllegalStateException if the server has not been started
      */
     int port();
 

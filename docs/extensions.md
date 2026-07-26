@@ -65,10 +65,11 @@ public class AuditExtension implements ServerExtension {
 ## Register an extension
 
 ```java
-TachyonServer.builder()
+var server = TachyonServer.builder()
     .extension(new AuditExtension())
     .port(8080)
-    .start();
+    .build();
+server.start();
 ```
 
 ## How negotiation works

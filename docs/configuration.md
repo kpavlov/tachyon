@@ -3,11 +3,12 @@
 All configuration flows through `TachyonServer.builder()` (Java) or the `TachyonServer { }` DSL (Kotlin). Scopes: `info`, `capabilities`, `network`, `session`, `runtime`, `monitoring`.
 
 ```java
-TachyonServer.builder()
+var server = TachyonServer.builder()
     .info(i -> i.name("my-server").version("1.0"))
     .network(n -> n.port(8080).ioEngine(NettyIoEngine.AUTO))
     .session(s -> s.sessionTtl(Duration.ofMinutes(5)))
-    .start();
+    .build();
+server.start();
 ```
 
 ```kotlin
@@ -240,10 +241,11 @@ Turning `slowRequestLogging` on activates two diagnostics:
 Both share the same threshold and are silenced at default (flag off, zero overhead).
 
 ```java
-TachyonServer.builder()
+var server = TachyonServer.builder()
     .monitoring(m -> m.slowRequestLogging().slowRequestThreshold(Duration.ofSeconds(5)))
     .port(8080)
-    .start();
+    .build();
+server.start();
 ```
 
 ```kotlin
@@ -284,7 +286,7 @@ capability is *also* advertised — regardless of `enabled` — whenever a regis
 task augmentation support (`ToolDescriptor.taskSupport()`).
 
 ```java
-TachyonServer.builder()
+var server = TachyonServer.builder()
     .capabilities(c -> c
         .tools(FeatureConfig.builder().mode(Mode.ON).listChanged(true).build())
         .resources(ResourcesConfig.builder().mode(Mode.ON).subscribe(true).build())
@@ -292,7 +294,8 @@ TachyonServer.builder()
         .completions()
         .logging())
     .port(8080)
-    .start();
+    .build();
+server.start();
 ```
 
 ```kotlin

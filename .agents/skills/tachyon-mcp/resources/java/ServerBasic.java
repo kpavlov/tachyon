@@ -24,11 +24,12 @@ import static java.time.Duration.ofSeconds;
 public final class ServerBasic {
 
     public static void main(String... args) {
-        var server = createServer(8080);
+        var server = buildServer(8080);
+        server.start();
         System.out.println("MCP server on http://localhost:" + server.port() + "/mcp");
     }
 
-    static TachyonServer createServer(int port) {
+    static TachyonServer buildServer(int port) {
         var server = TachyonServer.builder()
             .info(it -> it.name("demo-server").version("1.0").description("Demo MCP server"))
             .capabilities(c -> c.tools(true).resources(true, true).prompts(true))
@@ -69,7 +70,6 @@ public final class ServerBasic {
             .register(
                 PromptDescriptor.of("greet", "Generates a greeting"),
                 List.of(PromptMessage.user("Say hello")));
-        server.start();
 
         return server;
     }

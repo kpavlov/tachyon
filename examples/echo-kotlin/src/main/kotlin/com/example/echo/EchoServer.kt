@@ -2,18 +2,19 @@
 
 package com.example.echo
 
-import dev.tachyonmcp.kotlin.server.TachyonServer
+import dev.tachyonmcp.kotlin.server.buildServer
 import dev.tachyonmcp.kotlin.server.features.tools.registerTool
 import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.config.Mode
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.json.JsonSchema
 
-fun createServer(port: Int = 0): TachyonServer {
+fun assembleServer(port: Int = 0): TachyonServer {
+    val boundPort = port
     val inputSchema = buildEchoSchema()
     val server =
-        TachyonServer(port = port)
-        {
+        buildServer {
+            network { this.port = boundPort }
             info {
                 name = "echo-server"
                 title = "Echo Server"
@@ -64,7 +65,8 @@ private fun buildEchoSchema() =
     )
 
 fun main() {
-    val server = createServer(8080)
+    val server = assembleServer(8080)
+    server.start()
     println("Echo server running. Connect your MCP client to http://localhost:${server.port()}/mcp")
     Thread.sleep(Long.MAX_VALUE)
 }

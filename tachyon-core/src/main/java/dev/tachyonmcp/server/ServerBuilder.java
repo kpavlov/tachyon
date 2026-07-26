@@ -20,7 +20,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 
-/** Configures, builds, and optionally starts a {@link TachyonServer}. */
+/** Configures and builds a {@link TachyonServer}; call {@link TachyonServer#start()} to bind its transport. */
 public interface ServerBuilder {
 
     /** Configures server identity. */
@@ -93,9 +93,6 @@ public interface ServerBuilder {
      * @throws IllegalArgumentException if the configured executor is bounded
      */
     TachyonServer build();
-
-    /** Builds the configured server, executes feature-registration callbacks, and starts its transport. */
-    TachyonServer start();
 
     /** Builds the immutable server configuration. */
     ServerConfig buildConfig();

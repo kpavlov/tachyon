@@ -7,11 +7,12 @@ Tasks track long-running operations across multiple MCP exchanges. Tachyon imple
 Tasks are enabled automatically when you configure task capabilities:
 
 ```java
-TachyonServer.builder()
+var server = TachyonServer.builder()
     .capabilities(cfg -> cfg
         .tasks(true, true, true))  // list=true, cancel=true, inputRequests=true
     .port(8080)
-    .start();
+    .build();
+server.start();
 ```
 
 ## Task state machine
@@ -36,7 +37,8 @@ import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.features.tasks.TaskOptions;
 import java.util.List;
 
-TachyonServer server = TachyonServer.builder().port(8080).start();
+TachyonServer server = TachyonServer.builder().port(8080).build();
+server.start();
 
 // Create — server generates the ID
 Task task = server.tasks().create();
@@ -97,10 +99,11 @@ background — sync, async, and Kotlin suspend handlers all work. The client the
 ```java
 import dev.tachyonmcp.server.features.tasks.TasksExtension;
 
-TachyonServer.builder()
+var server = TachyonServer.builder()
     .extension(TasksExtension.instance())
     .port(8080)
-    .start();
+    .build();
+server.start();
 ```
 
 MCP 2025-11-25 clients that include `"extensions": {"io.modelcontextprotocol/tasks": {}}` in their `initialize` capabilities receive the extension tool and resource. Clients that don't negotiate see standard `tasks/*` methods only.

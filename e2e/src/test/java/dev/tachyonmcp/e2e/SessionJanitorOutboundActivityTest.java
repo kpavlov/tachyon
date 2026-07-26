@@ -41,7 +41,8 @@ class SessionJanitorOutboundActivityTest {
         serverHandle = TachyonServer.builder()
                 .session(s -> s.enabled(true).sessionTtl(TTL).janitorInterval(JANITOR_INTERVAL))
                 .network(n -> n.host("localhost").port(0).heartbeatInterval(HEARTBEAT_INTERVAL))
-                .start();
+                .build();
+        serverHandle.start();
         port = serverHandle.port();
     }
 
@@ -76,10 +77,12 @@ class SessionJanitorOutboundActivityTest {
     /** Same setup with heartbeats disabled: the silent stream produces no writes, so it is reaped. */
     @Test
     void silentStreamReapedWhenHeartbeatsDisabled() throws Exception {
-        try (var noHbServer = TachyonServer.builder()
+        var noHbServer = TachyonServer.builder()
                 .session(s -> s.enabled(true).sessionTtl(TTL).janitorInterval(JANITOR_INTERVAL))
                 .network(n -> n.host("localhost").port(0).heartbeatInterval(Duration.ZERO))
-                .start()) {
+                .build();
+        noHbServer.start();
+        try (noHbServer) {
             var noHbPort = noHbServer.port();
             var sessionId = initializeAndActivate(noHbPort);
             try (var sseSocket = openRawSse(noHbPort, sessionId);

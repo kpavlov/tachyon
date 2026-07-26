@@ -300,6 +300,9 @@ final class DefaultTachyonServer implements ServerEngine {
 
     @Override
     public int port() {
+        if (transport == null) {
+            throw new IllegalStateException("Server not started; call start() first");
+        }
         return port;
     }
 

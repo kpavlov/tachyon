@@ -37,7 +37,8 @@ class WeatherServerTest {
 
     @BeforeAll
     static void beforeAll() {
-        handle = WeatherServer.createServer(0, weatherService);
+        handle = WeatherServer.buildServer(0, weatherService);
+        handle.start();
         int port = handle.port();
 
         clientTransport = HttpClientStreamableHttpTransport

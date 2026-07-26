@@ -52,7 +52,8 @@ class WeatherServerTest {
         @JvmStatic
         @BeforeAll
         fun beforeAll() {
-            server = createServer(0, weatherService)
+            server = assembleServer(0, weatherService)
+            server.start()
             val port = server.port()
 
             clientTransport =

@@ -27,13 +27,14 @@ import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 
 void main() {
-    TachyonServer.builder()
+    var server = TachyonServer.builder()
         .name("my-server")
         .version("1.0")
         .withTools(tools -> tools.register(ToolHandler.of("greet", "Say hello",
             (ctx, request) -> ToolResult.text("Hello!"))))
         .port(8080)
-        .start();
+        .build();
+    server.start();
 }
 ```
 

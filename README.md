@@ -48,7 +48,7 @@
 
     public class WeatherMcpServer {
         public static void main(String... args) {
-            TachyonServer.builder()
+            var server = TachyonServer.builder()
                 .name("weather-mcp")
                 .withTools(tools -> tools.register(ToolHandler.of(
                         b -> b.name("get_forecast")
@@ -58,7 +58,8 @@
                             """),
                         (ctx, request) -> ToolResult.text("☀️ 22°C"))))
                 .port(8080)
-                .start();
+                .build();
+            server.start();
         }
     }
     ```
@@ -138,7 +139,8 @@ See [docs/quickstart.md](docs/quickstart.md) for a full walkthrough with Java an
 var server = TachyonServer.builder()
     .extension(TasksExtension.instance())  // exposes create_task tool + task://{id} resource
     .port(8080)
-    .start();
+    .build();
+server.start();
 ```
 
 MCP 2025-11-25 clients that include `"extensions": {"io.modelcontextprotocol/tasks": {}}` in their `initialize` capabilities receive the extension's tool and resource template. Clients that don't negotiate it see standard `tasks/*` methods. See [docs/tasks.md](docs/tasks.md).

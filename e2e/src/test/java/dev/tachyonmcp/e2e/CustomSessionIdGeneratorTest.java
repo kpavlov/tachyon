@@ -84,12 +84,14 @@ class CustomSessionIdGeneratorTest {
         // SessionIdGenerator has no fallback by design (see its javadoc): a thrown exception
         // aborts session creation with an internal-error response, it does not fall back to
         // the default generator.
-        try (var failingHandle = TachyonServer.builder()
-                        .session(s -> s.enabled(true).sessionIdGenerator(request -> {
-                            throw new IllegalStateException("boom");
-                        }))
-                        .network(n -> n.host("localhost").port(0))
-                        .start();
+        var failingHandle = TachyonServer.builder()
+                .session(s -> s.enabled(true).sessionIdGenerator(request -> {
+                    throw new IllegalStateException("boom");
+                }))
+                .network(n -> n.host("localhost").port(0))
+                .build();
+        failingHandle.start();
+        try (failingHandle;
                 var client = HttpClient.newHttpClient()) {
             var init = post(
                     client,

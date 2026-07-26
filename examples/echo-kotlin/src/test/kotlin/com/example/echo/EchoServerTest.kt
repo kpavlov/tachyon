@@ -15,7 +15,8 @@ class EchoServerTest {
         @JvmStatic
         @BeforeAll
         fun beforeAll() {
-            handle = createServer(0)
+            handle = assembleServer(0)
+            handle.start()
         }
 
         @JvmStatic

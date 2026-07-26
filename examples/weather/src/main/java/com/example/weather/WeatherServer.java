@@ -53,16 +53,17 @@ public final class WeatherServer {
     }
 
     public static void main(String... args) {
-        final var server = createServer(8080);
+        final var server = buildServer(8080);
+        server.start();
         final var port = server.port();
         log.info("Connect your MCP client to http://localhost:{}/mcp", port);
     }
 
-    static TachyonServer createServer(int port) {
-        return createServer(port, weatherService);
+    static TachyonServer buildServer(int port) {
+        return buildServer(port, weatherService);
     }
 
-    static TachyonServer createServer(int port, WeatherService weatherService) {
+    static TachyonServer buildServer(int port, WeatherService weatherService) {
         var predictionArticle = weatherService.predictionArticle();
         var resourceAnnotations =
             Annotations.of(List.of(Role.USER, Role.ASSISTANT), 0.8, "2026-07-23T00:00:00Z");
@@ -129,7 +130,7 @@ public final class WeatherServer {
                                 }))
                 .session(session -> session.enabled(true))
                 .network(network -> network.port(port))
-                .start();
+                .build();
     }
 
     private WeatherServer() {

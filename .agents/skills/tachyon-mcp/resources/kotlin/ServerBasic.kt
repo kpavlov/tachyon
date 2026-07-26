@@ -8,7 +8,7 @@ import dev.tachyonmcp.server.config.NetworkConfig
 import dev.tachyonmcp.server.domain.Role
 import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator
-import dev.tachyonmcp.kotlin.server.TachyonServer
+import dev.tachyonmcp.kotlin.server.buildServer
 import dev.tachyonmcp.kotlin.server.domain.Icon
 import dev.tachyonmcp.kotlin.server.domain.PromptMessage
 import dev.tachyonmcp.kotlin.server.domain.TextContent
@@ -20,8 +20,9 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toKotlinDuration
 
-fun createServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer =
-    TachyonServer(port = port) {
+fun assembleServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer {
+    val boundPort = port
+    return buildServer {
         // ── identity ──────────────────────────────────────────────
         info {
             name = "demo-server"
@@ -85,7 +86,7 @@ fun createServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer =
         // ── network — everything you can set ──────────────────────
         network {
             host = NetworkConfig.DEFAULT_HOST
-            // port = 0 // inherited from createServer(port)
+            this.port = boundPort
             endpointPath = NetworkConfig.DEFAULT_ENDPOINT_PATH
             allowedOrigins.add("*")
             allowedHeaders.add("Authorization")
@@ -138,8 +139,10 @@ fun createServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer =
         // ── netty pipeline customiser (escape hatch) ──────────────
         pipelineCustomizer { }
     }
+}
 
 fun main() {
-    val server = createServer(8080)
+    val server = assembleServer(8080)
+    server.start()
     println("MCP server on http://localhost:${server.port()}/mcp")
 }

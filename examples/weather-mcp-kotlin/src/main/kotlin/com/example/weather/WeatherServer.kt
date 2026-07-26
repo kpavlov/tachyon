@@ -7,7 +7,7 @@ import com.example.weather.service.NarrationStyle
 import com.example.weather.service.WeatherService
 import com.example.weather.spi.CityNotFoundException
 import com.example.weather.spi.WeatherObservation
-import dev.tachyonmcp.kotlin.server.TachyonServer
+import dev.tachyonmcp.kotlin.server.buildServer
 import dev.tachyonmcp.kotlin.server.domain.Annotations
 import dev.tachyonmcp.kotlin.server.domain.Icon
 import dev.tachyonmcp.server.domain.InvalidArgumentException
@@ -31,7 +31,8 @@ private val MAPPER = ObjectMapper()
 private val LOGO by lazy { classpathDataUri("/images/logo.png", "image/png") }
 
 fun main() {
-    val server = createServer(8080)
+    val server = assembleServer(8080)
+    server.start()
     log.info("Connect your MCP client to http://localhost:{}/mcp", server.port())
 }
 
@@ -46,10 +47,11 @@ fun createWeatherService(): WeatherService {
     return WeatherService(openMeteoProvider, openMeteoProvider)
 }
 
-fun createServer(
+fun assembleServer(
     port: Int,
     weatherService: WeatherService = createWeatherService(),
 ): TachyonServer {
+    val boundPort = port
     val predictionArticle = weatherService.predictionArticle
     val resourceAnnotations =
         Annotations {
@@ -64,7 +66,8 @@ fun createServer(
             sizes = listOf("256x256")
             theme = "light"
         }
-    return TachyonServer(port = port) {
+    return buildServer {
+        network { this.port = boundPort }
         info {
             name = "weather-server-kotlin"
             title = "Weather Server (Kotlin)"
