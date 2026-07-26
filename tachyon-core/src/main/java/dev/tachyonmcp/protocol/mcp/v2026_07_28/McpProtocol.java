@@ -1,4 +1,4 @@
-/* Copyright (c) 2026 Konstantin Pavlov and contributors. */
+/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.protocol.mcp.v2026_07_28;
 
 import dev.tachyonmcp.protocol.Protocol;

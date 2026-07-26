@@ -1,4 +1,4 @@
-/* Copyright (c) 2026 Konstantin Pavlov and contributors. */
+/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.kotlin.server.domain
 
 public fun dev.tachyonmcp.server.domain.Args.stringOrNull(key: String): String? =

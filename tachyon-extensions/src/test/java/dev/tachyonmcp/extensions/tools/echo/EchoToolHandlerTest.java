@@ -1,4 +1,4 @@
-/* Copyright (c) 2026 Konstantin Pavlov and contributors. */
+/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.extensions.tools.echo;
 
 import static org.assertj.core.api.Assertions.assertThat;

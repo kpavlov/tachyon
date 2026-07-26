@@ -1,4 +1,4 @@
-/* Copyright (c) 2026 Konstantin Pavlov and contributors. */
+/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.transport.netty;
 
 import dev.tachyonmcp.runtime.InteractionEvent;

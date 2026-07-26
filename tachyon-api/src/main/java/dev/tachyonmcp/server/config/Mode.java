@@ -1,4 +1,4 @@
-/* Copyright (c) 2026 Konstantin Pavlov and contributors. */
+/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.config;
 
 /** Controls whether a capability is enabled, disabled, or auto-detected from registered features. */
