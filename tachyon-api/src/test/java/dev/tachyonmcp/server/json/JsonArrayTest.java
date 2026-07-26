@@ -72,6 +72,15 @@ class JsonArrayTest {
     }
 
     @Test
+    void readsArrayOrFallsBackOnJsonNull() {
+        var fallback = JsonArray.of(List.of("fallback"));
+        var array = JsonArray.of(Arrays.asList(List.of("nested"), null));
+
+        assertThat(array.arrayOr(0, fallback).valuesAs(String.class)).containsExactly("nested");
+        assertThat(array.arrayOr(1, fallback)).isSameAs(fallback);
+    }
+
+    @Test
     void rejectsWrongTypesAndOutOfBounds() {
         var array = JsonArray.of(List.of("not-a-number"));
 

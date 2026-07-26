@@ -222,6 +222,18 @@ public interface JsonArray extends JsonDocument {
     }
 
     /**
+     * Returns the array element at {@code index} or {@code fallback} when it is JSON null.
+     *
+     * @param index    the element index
+     * @param fallback the fallback value
+     * @return the array value, or fallback
+     * @throws IndexOutOfBoundsException if the index is out of range
+     */
+    default JsonArray arrayOr(int index, JsonArray fallback) {
+        return arrayOpt(index).orElse(fallback);
+    }
+
+    /**
      * Returns the string element at {@code index} or {@code fallback} when it is JSON null.
      *
      * @param index    the element index

@@ -5,46 +5,65 @@ package dev.tachyonmcp.kotlin.server.domain
 
 import dev.tachyonmcp.server.domain.Args
 import dev.tachyonmcp.server.json.JsonArray
+import dev.tachyonmcp.server.json.JsonObject
+import java.math.BigDecimal
 
+/** Returns the [key] argument as a [String], or `null` when it is missing or JSON null. */
 public fun Args.stringOrNull(key: String): String? = stringOpt(key).orElse(null)
 
+/** Returns the [key] argument as an [Int], or `null` when it is missing, JSON null, or non-integral. */
 public fun Args.intOrNull(key: String): Int? =
     intOpt(key).let { if (it.isPresent) it.asInt else null }
 
+/** Returns the [key] argument as a [Boolean], or `null` when it is missing or JSON null. */
 public fun Args.booleanOrNull(key: String): Boolean? = boolOpt(key).orElse(null)
 
+/** Returns the [key] argument as a [Double], or `null` when it is missing or JSON null. */
 public fun Args.doubleOrNull(key: String): Double? =
     doubleOpt(key).let { if (it.isPresent) it.asDouble else null }
 
+/** Returns the [key] argument as a [Long], or `null` when it is missing, JSON null, or non-integral. */
 public fun Args.longOrNull(key: String): Long? =
     longOpt(key).let { if (it.isPresent) it.asLong else null }
 
+/** Returns the [key] argument as a [JsonObject], or `null` when it is missing or JSON null. */
+public fun Args.objectOrNull(key: String): JsonObject? = objectOpt(key).orElse(null)
+
+/** Returns the [key] argument as an exact [BigDecimal], or `null` when it is missing or JSON null. */
+public fun Args.decimalOrNull(key: String): BigDecimal? = decimalOpt(key).orElse(null)
+
+/** Returns the [key] argument as a [JsonArray], or `null` when it is missing or JSON null. */
+public fun Args.arrayOrNull(key: String): JsonArray? = arrayOpt(key).orElse(null)
+
+/** Returns the [key] argument as a [String], or [default] when it is missing or JSON null. */
 public fun Args.string(
     key: String,
     default: String,
 ): String = stringOr(key, default)
 
+/** Returns the [key] argument as a [Boolean], or [default] when it is missing or JSON null. */
 public fun Args.boolean(
     key: String,
     default: Boolean,
 ): Boolean = boolOr(key, default)
 
+/** Returns the [key] argument as an [Int], or [default] when it is missing or JSON null. */
 public fun Args.int(
     key: String,
     default: Int,
 ): Int = intOr(key, default)
 
+/** Returns the [key] argument as a [Long], or [default] when it is missing or JSON null. */
 public fun Args.long(
     key: String,
     default: Long,
 ): Long = longOr(key, default)
 
+/** Returns the [key] argument as a [Double], or [default] when it is missing or JSON null. */
 public fun Args.double(
     key: String,
     default: Double,
 ): Double = doubleOr(key, default)
-
-public fun Args.arrayOrNull(key: String): JsonArray? = arrayOpt(key).orElse(null)
 
 /**
  * Returns every element of this array coerced to [T]. Supported element types match

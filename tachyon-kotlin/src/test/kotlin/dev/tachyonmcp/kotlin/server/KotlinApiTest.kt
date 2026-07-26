@@ -3,16 +3,20 @@ package dev.tachyonmcp.kotlin.server
 
 import dev.tachyonmcp.kotlin.server.config.ToolScope
 import dev.tachyonmcp.kotlin.server.config.success
+import dev.tachyonmcp.kotlin.server.domain.arrayOrNull
 import dev.tachyonmcp.kotlin.server.domain.boolean
 import dev.tachyonmcp.kotlin.server.domain.booleanOrNull
+import dev.tachyonmcp.kotlin.server.domain.decimalOrNull
 import dev.tachyonmcp.kotlin.server.domain.double
 import dev.tachyonmcp.kotlin.server.domain.doubleOrNull
 import dev.tachyonmcp.kotlin.server.domain.int
 import dev.tachyonmcp.kotlin.server.domain.intOrNull
 import dev.tachyonmcp.kotlin.server.domain.long
 import dev.tachyonmcp.kotlin.server.domain.longOrNull
+import dev.tachyonmcp.kotlin.server.domain.objectOrNull
 import dev.tachyonmcp.kotlin.server.domain.string
 import dev.tachyonmcp.kotlin.server.domain.stringOrNull
+import dev.tachyonmcp.kotlin.server.domain.valuesAs
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
 import dev.tachyonmcp.kotlin.server.json.toJsonNode
 import dev.tachyonmcp.server.domain.Args
@@ -31,6 +35,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.jupiter.api.Test
+import java.math.BigDecimal
 import dev.tachyonmcp.server.json.JsonSchema as JavaJsonSchema
 
 internal class KotlinApiTest {
@@ -113,6 +118,9 @@ internal class KotlinApiTest {
                     "long" to Long.MAX_VALUE,
                     "bool" to true,
                     "double" to 3.14,
+                    "decimal" to BigDecimal("1.25"),
+                    "obj" to mapOf("k" to "v"),
+                    "arr" to listOf("x", "y"),
                 ),
                 null,
             )
@@ -123,6 +131,9 @@ internal class KotlinApiTest {
             args.longOrNull("long") shouldBe Long.MAX_VALUE
             args.booleanOrNull("bool") shouldBe true
             args.doubleOrNull("double") shouldBe 3.14
+            args.decimalOrNull("decimal") shouldBe BigDecimal("1.25")
+            args.objectOrNull("obj")?.stringValue("k") shouldBe "v"
+            args.arrayOrNull("arr")?.valuesAs<String>() shouldBe listOf("x", "y")
         }
     }
 
@@ -136,6 +147,9 @@ internal class KotlinApiTest {
             args.longOrNull("k") shouldBe null
             args.booleanOrNull("k") shouldBe null
             args.doubleOrNull("k") shouldBe null
+            args.decimalOrNull("k") shouldBe null
+            args.objectOrNull("k") shouldBe null
+            args.arrayOrNull("k") shouldBe null
         }
     }
 
