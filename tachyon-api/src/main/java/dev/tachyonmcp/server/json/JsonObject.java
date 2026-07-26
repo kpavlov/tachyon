@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.json;
 
+import dev.tachyonmcp.annotations.ExperimentalApi;
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Optional;
@@ -23,12 +24,12 @@ import java.util.OptionalLong;
 public interface JsonObject extends JsonDocument {
 
     /**
-     * Returns whether the object contains {@code name}, including when its value is JSON null.
+     * Returns whether the object has property {@code name}, including when its value is JSON null.
      *
      * @param name the property name
      * @return true if the property exists
      */
-    boolean contains(String name);
+    boolean has(String name);
 
     /**
      * Returns the named object, or an empty optional when it is missing or JSON null.
@@ -37,6 +38,14 @@ public interface JsonObject extends JsonDocument {
      * @return the object value, or empty if missing or null
      */
     Optional<JsonObject> objectOpt(String name);
+
+    /**
+     * Returns the named array, or an empty optional when it is missing or JSON null.
+     *
+     * @param name the property name
+     * @return the array value, or empty if missing or null
+     */
+    Optional<JsonArray> arrayOpt(String name);
 
     /**
      * Returns the named string, or an empty optional when it is missing or JSON null.
@@ -98,6 +107,17 @@ public interface JsonObject extends JsonDocument {
      */
     default JsonObject objectValue(String name) {
         return objectOpt(name).orElseThrow(() -> missing(name));
+    }
+
+    /**
+     * Returns the named required array.
+     *
+     * @param name the property name
+     * @return the array value
+     * @throws IllegalArgumentException if the property is missing or null
+     */
+    default JsonArray arrayValue(String name) {
+        return arrayOpt(name).orElseThrow(() -> missing(name));
     }
 
     /**
@@ -178,6 +198,17 @@ public interface JsonObject extends JsonDocument {
     }
 
     /**
+     * Returns the named array or {@code fallback} when it is missing or JSON null.
+     *
+     * @param name     the property name
+     * @param fallback the fallback value
+     * @return the array value, or fallback
+     */
+    default JsonArray arrayOr(String name, JsonArray fallback) {
+        return arrayOpt(name).orElse(fallback);
+    }
+
+    /**
      * Returns the named string or {@code fallback} when it is missing or JSON null.
      *
      * @param name     the property name
@@ -248,6 +279,7 @@ public interface JsonObject extends JsonDocument {
      *
      * @return the map view
      */
+    @ExperimentalApi
     Map<String, Object> asMap();
 
     /**

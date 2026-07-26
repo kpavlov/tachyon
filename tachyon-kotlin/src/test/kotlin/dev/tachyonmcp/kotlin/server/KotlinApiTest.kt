@@ -9,6 +9,9 @@ import dev.tachyonmcp.kotlin.server.domain.double
 import dev.tachyonmcp.kotlin.server.domain.doubleOrNull
 import dev.tachyonmcp.kotlin.server.domain.int
 import dev.tachyonmcp.kotlin.server.domain.intOrNull
+import dev.tachyonmcp.kotlin.server.domain.long
+import dev.tachyonmcp.kotlin.server.domain.longOrNull
+import dev.tachyonmcp.kotlin.server.domain.string
 import dev.tachyonmcp.kotlin.server.domain.stringOrNull
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
 import dev.tachyonmcp.kotlin.server.json.toJsonNode
@@ -107,6 +110,7 @@ internal class KotlinApiTest {
                 mapOf(
                     "str" to "v",
                     "int" to 42,
+                    "long" to Long.MAX_VALUE,
                     "bool" to true,
                     "double" to 3.14,
                 ),
@@ -116,6 +120,7 @@ internal class KotlinApiTest {
         assertSoftly {
             args.stringOrNull("str") shouldBe "v"
             args.intOrNull("int") shouldBe 42
+            args.longOrNull("long") shouldBe Long.MAX_VALUE
             args.booleanOrNull("bool") shouldBe true
             args.doubleOrNull("double") shouldBe 3.14
         }
@@ -128,6 +133,7 @@ internal class KotlinApiTest {
         assertSoftly {
             args.stringOrNull("k") shouldBe null
             args.intOrNull("k") shouldBe null
+            args.longOrNull("k") shouldBe null
             args.booleanOrNull("k") shouldBe null
             args.doubleOrNull("k") shouldBe null
         }
@@ -135,23 +141,27 @@ internal class KotlinApiTest {
 
     // endregion
 
-    // region: Args boolean/int/double with defaults
+    // region: Args string/boolean/int/long/double with defaults
 
     @Test
     fun `accessors with default return the value when the key is present`() {
         val args =
             Args.of(
                 mapOf(
+                    "str" to "v",
                     "bool" to true,
                     "int" to 42,
+                    "long" to Long.MAX_VALUE,
                     "double" to 3.14,
                 ),
                 null,
             )
 
         assertSoftly {
+            args.string("str", "def") shouldBe "v"
             args.boolean("bool", false) shouldBe true
             args.int("int", 0) shouldBe 42
+            args.long("long", 0L) shouldBe Long.MAX_VALUE
             args.double("double", 0.0) shouldBe 3.14
         }
     }
@@ -161,8 +171,10 @@ internal class KotlinApiTest {
         val args = Args.of(null, null)
 
         assertSoftly {
+            args.string("k", "def") shouldBe "def"
             args.boolean("k", true) shouldBe true
             args.int("k", 7) shouldBe 7
+            args.long("k", 42L) shouldBe 42L
             args.double("k", 1.5) shouldBe 1.5
         }
     }

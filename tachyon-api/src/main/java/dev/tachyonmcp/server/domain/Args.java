@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.domain;
 
+import dev.tachyonmcp.server.json.JsonArray;
 import dev.tachyonmcp.server.json.JsonObject;
 import dev.tachyonmcp.server.json.PayloadDeserializer;
 import java.lang.reflect.Type;
@@ -45,13 +46,18 @@ public final class Args implements JsonObject {
     }
 
     @Override
-    public boolean contains(String name) {
-        return values.contains(name);
+    public boolean has(String name) {
+        return values.has(name);
     }
 
     @Override
     public Optional<JsonObject> objectOpt(String name) {
         return values.objectOpt(name);
+    }
+
+    @Override
+    public Optional<JsonArray> arrayOpt(String name) {
+        return values.arrayOpt(name);
     }
 
     @Override

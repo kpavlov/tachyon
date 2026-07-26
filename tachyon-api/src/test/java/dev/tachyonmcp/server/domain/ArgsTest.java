@@ -4,6 +4,7 @@ package dev.tachyonmcp.server.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.tachyonmcp.server.json.JsonArray;
 import dev.tachyonmcp.server.json.JsonObject;
 import dev.tachyonmcp.server.json.PayloadDeserializer;
 import java.lang.reflect.Type;
@@ -31,15 +32,15 @@ class ArgsTest {
     }
 
     @Test
-    void containsReturnsTrueForExistingKey() {
+    void hasReturnsTrueForExistingKey() {
         var args = Args.of(Map.of("k", "v"));
-        assertThat(args.contains("k")).isTrue();
+        assertThat(args.has("k")).isTrue();
     }
 
     @Test
-    void containsReturnsFalseForMissingKey() {
+    void hasReturnsFalseForMissingKey() {
         var args = Args.of(Map.of());
-        assertThat(args.contains("k")).isFalse();
+        assertThat(args.has("k")).isFalse();
     }
 
     @Test
@@ -173,13 +174,18 @@ class ArgsTest {
     private record RetainedJsonObject(String json, JsonObject delegate, Object provider) implements JsonObject {
 
         @Override
-        public boolean contains(String name) {
-            return delegate.contains(name);
+        public boolean has(String name) {
+            return delegate.has(name);
         }
 
         @Override
         public Optional<JsonObject> objectOpt(String name) {
             return delegate.objectOpt(name);
+        }
+
+        @Override
+        public Optional<JsonArray> arrayOpt(String name) {
+            return delegate.arrayOpt(name);
         }
 
         @Override

@@ -45,8 +45,8 @@ class JsonObjectTest {
         values.put("null", null);
         var object = JsonObject.of(values);
 
-        assertThat(object.contains("missing")).isFalse();
-        assertThat(object.contains("null")).isTrue();
+        assertThat(object.has("missing")).isFalse();
+        assertThat(object.has("null")).isTrue();
         assertThat(object.decimalOpt("missing")).isEmpty();
         assertThat(object.intOpt("null")).isEmpty();
         assertThat(object.longOpt("missing")).isEmpty();
@@ -87,7 +87,7 @@ class JsonObjectTest {
 
         assertThat(object.objectOpt("nested").flatMap(value -> value.stringOpt("name")))
                 .contains("before");
-        assertThat(object.contains("added")).isFalse();
+        assertThat(object.has("added")).isFalse();
         assertThatThrownBy(() -> object.asMap().put("added", true)).isInstanceOf(UnsupportedOperationException.class);
     }
 

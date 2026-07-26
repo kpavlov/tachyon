@@ -32,12 +32,11 @@ public sealed interface SessionEvent {
 
     /** An inbound request from the client. */
     record RequestEvent(
-        String sessionId,
-        RequestId requestId,
-        String method,
-        @Nullable String paramsJson,
-        long timestamp
-    ) implements SessionEvent {}
+            String sessionId,
+            RequestId requestId,
+            String method,
+            @Nullable String paramsJson,
+            long timestamp) implements SessionEvent {}
 
     /** An outbound (server-to-client) request. */
     record OutboundRequestEvent(
