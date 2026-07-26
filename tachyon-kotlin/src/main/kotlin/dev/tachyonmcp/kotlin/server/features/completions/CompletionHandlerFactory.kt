@@ -2,30 +2,26 @@
 package dev.tachyonmcp.kotlin.server.features.completions
 
 import dev.tachyonmcp.kotlin.server.config.CompletionScope
-import dev.tachyonmcp.kotlin.server.features.runSuspendHandler
+import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
 import dev.tachyonmcp.runtime.InteractionContext
-import dev.tachyonmcp.server.features.completions.CompletionHandler
+import dev.tachyonmcp.server.features.completions.AsyncCompletionHandler
 import dev.tachyonmcp.server.features.completions.CompletionRequest
 import dev.tachyonmcp.server.features.completions.CompletionResult
 import kotlinx.coroutines.CoroutineName
 
-/**
- * Wraps a suspend completion lambda into a [CompletionHandler].
- * Cancellation is delivered via [Thread.interrupt] of the executing virtual thread,
- * which propagates through [kotlinx.coroutines.runBlocking] to cancel the coroutine.
- */
 @JvmSynthetic
 internal fun promptCompletionHandler(
     promptName: String,
+    runtime: CoroutineRuntime,
     block:
         suspend CompletionScope.() -> CompletionResult,
-): CompletionHandler {
+): AsyncCompletionHandler {
     val coroutineName = CoroutineName("completion:$promptName")
-    return CompletionHandler {
+    return AsyncCompletionHandler {
         ctx: InteractionContext,
         request: CompletionRequest,
         ->
-        runSuspendHandler(coroutineName) {
+        runtime.future(coroutineName) {
             CompletionScope(ctx, request).block()
         }
     }
@@ -34,15 +30,16 @@ internal fun promptCompletionHandler(
 @JvmSynthetic
 internal fun resourceCompletionHandler(
     uriOrTemplate: String,
+    runtime: CoroutineRuntime,
     block:
         suspend CompletionScope.() -> CompletionResult,
-): CompletionHandler {
+): AsyncCompletionHandler {
     val coroutineName = CoroutineName("completion:$uriOrTemplate")
-    return CompletionHandler {
+    return AsyncCompletionHandler {
         ctx: InteractionContext,
         request: CompletionRequest,
         ->
-        runSuspendHandler(coroutineName) {
+        runtime.future(coroutineName) {
             CompletionScope(ctx, request).block()
         }
     }

@@ -2,39 +2,33 @@
 package dev.tachyonmcp.kotlin.server.features.tools
 
 import dev.tachyonmcp.kotlin.server.config.ToolScope
-import dev.tachyonmcp.kotlin.server.features.runSuspendHandler
-import dev.tachyonmcp.runtime.InteractionContext
-import dev.tachyonmcp.server.features.tools.ToolFn
+import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
+import dev.tachyonmcp.server.features.tools.AsyncToolFn
+import dev.tachyonmcp.server.features.tools.ToolDescriptor
+import dev.tachyonmcp.server.features.tools.ToolHandler
 import dev.tachyonmcp.server.features.tools.ToolResult
 import kotlinx.coroutines.CoroutineName
 
-/**
- * Wraps a suspend tool lambda into a blocking [dev.tachyonmcp.server.features.tools.AbstractToolHandler].
- * Cancellation is delivered via [Thread.interrupt] of the executing virtual thread,
- * which propagates through [kotlinx.coroutines.runBlocking] to cancel the coroutine.
- */
 @JvmSynthetic
 internal fun toolHandler(
-    descriptor: dev.tachyonmcp.server.features.tools.ToolDescriptor,
-    block: suspend ToolScope.() -> dev.tachyonmcp.server.features.tools.ToolResult,
-): dev.tachyonmcp.server.features.tools.AbstractToolHandler {
-    val fn = toolFn(descriptor.name(), block)
-    return object : dev.tachyonmcp.server.features.tools.AbstractToolHandler(descriptor) {
-        override fun handle(
-            context: InteractionContext,
-            request: dev.tachyonmcp.server.features.tools.ToolRequest,
-        ): dev.tachyonmcp.server.features.tools.ToolResult = fn.apply(context, request)
-    }
-}
+    descriptor: ToolDescriptor,
+    runtime: CoroutineRuntime,
+    block: suspend ToolScope.() -> ToolResult,
+): ToolHandler =
+    ToolHandler.ofAsync(
+        descriptor,
+        toolFn(descriptor.name(), runtime, block),
+    )
 
 @JvmSynthetic
 internal fun toolFn(
     name: String,
+    runtime: CoroutineRuntime,
     block: suspend ToolScope.() -> ToolResult,
-): ToolFn {
+): AsyncToolFn {
     val coroutineName = CoroutineName("tool:$name")
-    return ToolFn { context, request ->
-        runSuspendHandler(coroutineName) {
+    return AsyncToolFn { context, request ->
+        runtime.future(coroutineName) {
             ToolScope(
                 ctx = context,
                 args = request.arguments(),

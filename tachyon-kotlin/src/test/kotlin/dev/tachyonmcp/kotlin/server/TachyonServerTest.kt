@@ -14,7 +14,6 @@ import dev.tachyonmcp.kotlin.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.config.Mode
 import dev.tachyonmcp.server.domain.Role
 import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.internal.ServerEngine
 import dev.tachyonmcp.server.session.InMemorySessionEventStore
 import dev.tachyonmcp.server.session.InMemorySessionStore
 import dev.tachyonmcp.server.session.SessionIdGenerator
@@ -180,9 +179,8 @@ internal class TachyonServerTest {
 
             // registered features
             handle.tools().find("ping").orElse(null) shouldNotBe null
-            val engine = handle as ServerEngine
-            engine.prompts().find("greet").orElse(null) shouldNotBe null
-            engine.resources().find("config").orElse(null) shouldNotBe null
+            handle.prompts().find("greet").orElse(null) shouldNotBe null
+            handle.resources().find("config").orElse(null) shouldNotBe null
 
             // MCP initialize
             McpProbe(handle.port()).use { probe ->

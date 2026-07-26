@@ -2,6 +2,7 @@
 package dev.tachyonmcp.kotlin.server.features.tools
 
 import dev.tachyonmcp.kotlin.server.config.ToolScope
+import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
 import dev.tachyonmcp.kotlin.server.json.schemas
 import dev.tachyonmcp.kotlin.server.json.toJsonSchema
 import dev.tachyonmcp.kotlin.server.json.toJsonSchemaOrNull
@@ -73,7 +74,10 @@ public fun TachyonServer.registerTool(
     descriptor: dev.tachyonmcp.server.features.tools.ToolDescriptor,
     block: suspend ToolScope.() -> dev.tachyonmcp.server.features.tools.ToolResult,
 ): TachyonServer {
-    this.tools().register(toolHandler(descriptor, block))
+    val runtime =
+        extensions().filterIsInstance<CoroutineRuntime>().singleOrNull()
+            ?: error("registerTool requires a server built with the Tachyon Kotlin DSL")
+    this.tools().register(toolHandler(descriptor, runtime, block))
     return this
 }
 

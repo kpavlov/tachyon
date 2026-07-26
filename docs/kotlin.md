@@ -162,8 +162,9 @@ resource(descriptor) {
 }
 ```
 
-Handlers run via `runBlocking` on a virtual thread; cancellation is delivered by thread
-interruption (e.g. from `tasks/cancel`), which cancels the coroutine.
+Handlers run in a server-lifecycle coroutine scope on the server executor. They bridge to the Java
+registries through asynchronous handlers, without blocking a virtual thread. Closing the server
+cancels active Kotlin handlers before shutting down the executor.
 
 ### Resource templates
 

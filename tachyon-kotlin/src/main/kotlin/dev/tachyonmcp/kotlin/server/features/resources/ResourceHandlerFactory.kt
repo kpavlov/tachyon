@@ -2,9 +2,9 @@
 package dev.tachyonmcp.kotlin.server.features.resources
 
 import dev.tachyonmcp.kotlin.server.config.ResourceScope
-import dev.tachyonmcp.kotlin.server.features.runSuspendHandler
+import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
 import dev.tachyonmcp.server.domain.ResourceContents
-import dev.tachyonmcp.server.features.resources.ResourceHandler
+import dev.tachyonmcp.server.features.resources.AsyncResourceHandler
 import kotlinx.coroutines.CoroutineName
 
 /**
@@ -13,22 +13,23 @@ import kotlinx.coroutines.CoroutineName
 @JvmSynthetic
 internal fun resourceHandler(
     descriptor: dev.tachyonmcp.server.features.resources.ResourceDescriptor,
+    runtime: CoroutineRuntime,
     block: suspend ResourceScope.() -> ResourceContents,
-): dev.tachyonmcp.server.features.resources.ResourceHandler =
-    resourceHandler(descriptor.name(), descriptor.mimeType(), block)
+): AsyncResourceHandler = resourceHandler(descriptor.name(), descriptor.mimeType(), runtime, block)
 
 @JvmSynthetic
 internal fun resourceHandler(
     name: String,
     mimeType: String?,
+    runtime: CoroutineRuntime,
     block: suspend ResourceScope.() -> ResourceContents,
-): ResourceHandler {
+): AsyncResourceHandler {
     val coroutineName = CoroutineName("resource:$name")
-    return ResourceHandler {
+    return AsyncResourceHandler {
         ctx,
         request,
         ->
-        runSuspendHandler(coroutineName) {
+        runtime.future(coroutineName) {
             ResourceScope(ctx, request, mimeType).block()
         }
     }

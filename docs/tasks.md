@@ -86,8 +86,9 @@ background — sync, async, and Kotlin suspend handlers all work. The client the
 
 - `taskSupport = REQUIRED` rejects plain calls; `FORBIDDEN` (default) rejects task-augmented calls.
 - `task.ttl` (milliseconds) bounds retention; expired tasks transition to `FAILED`.
-- `tasks/cancel` interrupts the executing virtual thread — blocking handlers see
-  `InterruptedException`, Kotlin suspend handlers get coroutine cancellation.
+- `tasks/cancel` interrupts synchronous handlers running on virtual threads and cancels the
+  `CompletionStage` returned by asynchronous handlers. Kotlin suspend handlers receive coroutine
+  cancellation.
 
 ## TasksExtension (SEP-1686)
 

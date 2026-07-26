@@ -2,30 +2,31 @@
 package dev.tachyonmcp.kotlin.server.features.resources
 
 import dev.tachyonmcp.kotlin.server.config.TemplateScope
-import dev.tachyonmcp.kotlin.server.features.runSuspendHandler
+import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
 import dev.tachyonmcp.server.domain.ResourceContents
-import dev.tachyonmcp.server.features.resources.ResourceHandler
+import dev.tachyonmcp.server.features.resources.AsyncResourceHandler
 import kotlinx.coroutines.CoroutineName
 
 @JvmSynthetic
 internal fun templateHandler(
     descriptor: dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor,
+    runtime: CoroutineRuntime,
     block: suspend TemplateScope.() -> ResourceContents,
-): dev.tachyonmcp.server.features.resources.ResourceHandler =
-    templateHandler(descriptor.name(), descriptor.mimeType(), block)
+): AsyncResourceHandler = templateHandler(descriptor.name(), descriptor.mimeType(), runtime, block)
 
 @JvmSynthetic
 internal fun templateHandler(
     name: String,
     mimeType: String?,
+    runtime: CoroutineRuntime,
     block: suspend TemplateScope.() -> ResourceContents,
-): ResourceHandler {
+): AsyncResourceHandler {
     val coroutineName = CoroutineName("resource-template:$name")
-    return ResourceHandler {
+    return AsyncResourceHandler {
         ctx,
         request,
         ->
-        runSuspendHandler(coroutineName) {
+        runtime.future(coroutineName) {
             TemplateScope(ctx, request, mimeType).block()
         }
     }

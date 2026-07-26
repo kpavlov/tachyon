@@ -48,7 +48,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
-import java.util.function.Function;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -379,11 +379,39 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                     .task(task)
                     .build();
 
-            // Hop onto engine.executor() so a blocking sync handler doesn't delay returning
-            // CreateTaskResult; thenCompose flattens the stage without blocking either thread.
-            var future = CompletableFuture.supplyAsync(
-                            () -> handler.handleAsync(context, taskRequest), engine.executor())
-                    .thenCompose(Function.identity());
+            var future = new CompletableFuture<ToolResult>();
+            var handlerFuture = new AtomicReference<CompletableFuture<? extends ToolResult>>();
+            var dispatchFuture = engine.executor().submit(() -> {
+                if (future.isCancelled()) return;
+                try {
+                    var stage = Objects.requireNonNull(
+                            handler.handleAsync(context, taskRequest),
+                            "Tool '" + id + "' returned a null CompletionStage");
+                    var actualFuture = stage.toCompletableFuture();
+                    handlerFuture.set(actualFuture);
+                    if (future.isCancelled()) {
+                        actualFuture.cancel(true);
+                    } else {
+                        actualFuture.whenComplete((result, failure) -> {
+                            if (failure == null) {
+                                future.complete(result);
+                            } else {
+                                future.completeExceptionally(failure);
+                            }
+                        });
+                    }
+                } catch (Throwable failure) {
+                    future.completeExceptionally(failure);
+                }
+            });
+            future.whenComplete((result, failure) -> {
+                if (!future.isCancelled()) return;
+                dispatchFuture.cancel(true);
+                var actualFuture = handlerFuture.get();
+                if (actualFuture != null) {
+                    actualFuture.cancel(true);
+                }
+            });
 
             taskRegistry.registerRunning(task.id(), future);
 
@@ -410,7 +438,9 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                 var e = throwable instanceof CompletionException ce && ce.getCause() != null
                         ? ce.getCause()
                         : throwable;
-                if (e instanceof Exception ex) {
+                if (e instanceof CancellationException) {
+                    logger.debug("Task handler cancelled for taskId={}", task.id());
+                } else if (e instanceof Exception ex) {
                     handleTaskError(task, ex);
                 } else {
                     logger.error("Non-exception throwable in task handler for  taskId={}", task.id(), e);

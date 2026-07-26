@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.kotlin.server.config
 
+import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
 import dev.tachyonmcp.kotlin.server.features.completions.promptCompletionHandler
 import dev.tachyonmcp.kotlin.server.features.completions.resourceCompletionHandler
 import dev.tachyonmcp.kotlin.server.features.prompts.promptHandler
@@ -22,6 +23,7 @@ import dev.tachyonmcp.server.json.JsonSchema
 
 internal class KotlinFeatureRegistrar(
     private val delegate: ServerBuilder,
+    private val runtime: CoroutineRuntime,
 ) {
     fun resource(
         name: String,
@@ -35,7 +37,7 @@ internal class KotlinFeatureRegistrar(
         block: suspend ResourceScope.() -> ResourceContents,
     ) {
         delegate.withResources { resources ->
-            resources.register(
+            resources.registerAsync(
                 { descriptor ->
                     descriptor
                         .name(name)
@@ -47,7 +49,7 @@ internal class KotlinFeatureRegistrar(
                         .size(size)
                         .icons(icons)
                 },
-                resourceHandler(name, mimeType, block),
+                resourceHandler(name, mimeType, runtime, block),
             )
         }
     }
@@ -56,7 +58,9 @@ internal class KotlinFeatureRegistrar(
         descriptor: ResourceDescriptor,
         block: suspend ResourceScope.() -> ResourceContents,
     ) {
-        delegate.withResources { it.register(descriptor, resourceHandler(descriptor, block)) }
+        delegate.withResources {
+            it.registerAsync(descriptor, resourceHandler(descriptor, runtime, block))
+        }
     }
 
     fun resourceTemplate(
@@ -70,7 +74,7 @@ internal class KotlinFeatureRegistrar(
         block: suspend TemplateScope.() -> ResourceContents,
     ) {
         delegate.withResources { resources ->
-            resources.registerTemplate(
+            resources.registerTemplateAsync(
                 { descriptor ->
                     descriptor
                         .name(name)
@@ -81,7 +85,7 @@ internal class KotlinFeatureRegistrar(
                         .annotations(annotations)
                         .icons(icons)
                 },
-                templateHandler(name, mimeType, block),
+                templateHandler(name, mimeType, runtime, block),
             )
         }
     }
@@ -91,9 +95,9 @@ internal class KotlinFeatureRegistrar(
         block: suspend TemplateScope.() -> ResourceContents,
     ) {
         delegate.withResources {
-            it.registerTemplate(
+            it.registerTemplateAsync(
                 descriptor,
-                templateHandler(descriptor, block),
+                templateHandler(descriptor, runtime, block),
             )
         }
     }
@@ -106,7 +110,7 @@ internal class KotlinFeatureRegistrar(
         handler: suspend ToolScope.() -> ToolResult,
     ) {
         delegate.withTools { tools ->
-            tools.register(
+            tools.registerAsync(
                 { descriptor ->
                     descriptor
                         .name(name)
@@ -114,7 +118,7 @@ internal class KotlinFeatureRegistrar(
                         .inputSchema(inputSchema)
                         .outputSchema(outputSchema)
                 },
-                toolFn(name, handler),
+                toolFn(name, runtime, handler),
             )
         }
     }
@@ -127,7 +131,7 @@ internal class KotlinFeatureRegistrar(
         handler: suspend ToolScope.() -> ToolResult,
     ) {
         delegate.withTools { tools ->
-            tools.register(
+            tools.registerAsync(
                 { descriptor ->
                     descriptor
                         .name(name)
@@ -135,7 +139,7 @@ internal class KotlinFeatureRegistrar(
                         .inputSchema(inputSchema)
                         .outputSchema(outputSchema)
                 },
-                toolFn(name, handler),
+                toolFn(name, runtime, handler),
             )
         }
     }
@@ -144,14 +148,18 @@ internal class KotlinFeatureRegistrar(
         descriptor: ToolDescriptor,
         handler: suspend ToolScope.() -> ToolResult,
     ) {
-        delegate.withTools { it.register(descriptor, toolFn(descriptor.name(), handler)) }
+        delegate.withTools {
+            it.registerAsync(descriptor, toolFn(descriptor.name(), runtime, handler))
+        }
     }
 
     fun prompt(
         descriptor: PromptDescriptor,
         handler: suspend PromptScope.() -> List<PromptMessage>,
     ) {
-        delegate.withPrompts { it.register(descriptor, promptHandler(descriptor, handler)) }
+        delegate.withPrompts {
+            it.registerAsync(descriptor, promptHandler(descriptor, runtime, handler))
+        }
     }
 
     fun promptCompletion(
@@ -159,7 +167,10 @@ internal class KotlinFeatureRegistrar(
         handler: suspend CompletionScope.() -> CompletionResult,
     ) {
         delegate.withCompletions {
-            it.registerForPrompt(promptName, promptCompletionHandler(promptName, handler))
+            it.registerForPromptAsync(
+                promptName,
+                promptCompletionHandler(promptName, runtime, handler),
+            )
         }
     }
 
@@ -168,9 +179,9 @@ internal class KotlinFeatureRegistrar(
         handler: suspend CompletionScope.() -> CompletionResult,
     ) {
         delegate.withCompletions {
-            it.registerForResource(
+            it.registerForResourceAsync(
                 uriOrTemplate,
-                resourceCompletionHandler(uriOrTemplate, handler),
+                resourceCompletionHandler(uriOrTemplate, runtime, handler),
             )
         }
     }

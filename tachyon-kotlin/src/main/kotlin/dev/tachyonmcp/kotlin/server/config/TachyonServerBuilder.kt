@@ -3,6 +3,7 @@ package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.annotations.ExperimentalApi
 import dev.tachyonmcp.kotlin.server.TachyonDsl
+import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
 import dev.tachyonmcp.kotlin.server.json.toJsonSchema
 import dev.tachyonmcp.kotlin.server.json.toJsonSchemaOrNull
@@ -39,7 +40,11 @@ public class TachyonServerBuilder
         @PublishedApi
         internal var networkPortExplicitlySet: Boolean = false
 
-        private val featureRegistrar: KotlinFeatureRegistrar = KotlinFeatureRegistrar(delegate)
+        private val coroutineRuntime: CoroutineRuntime =
+            CoroutineRuntime().also(delegate::extension)
+
+        private val featureRegistrar: KotlinFeatureRegistrar =
+            KotlinFeatureRegistrar(delegate, coroutineRuntime)
 
         @OptIn(ExperimentalContracts::class)
         public inline fun info(
@@ -374,7 +379,7 @@ public class TachyonServerBuilder
             }
 
         @PublishedApi
-        internal fun start(): TachyonServer = delegate.start()
+        internal fun start(): TachyonServer = build().also { it.start() }
 
         @PublishedApi
         internal fun build(): TachyonServer = delegate.build()
