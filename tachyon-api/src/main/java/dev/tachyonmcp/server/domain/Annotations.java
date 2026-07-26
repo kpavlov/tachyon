@@ -94,6 +94,16 @@ public interface Annotations {
         Builder audience(@Nullable Iterable<? extends Role> elements);
 
         /**
+         * Sets the intended audience.
+         *
+         * @param roles the audience roles
+         * @return this builder
+         */
+        default Builder audience(Role... roles) {
+            return audience(List.of(roles));
+        }
+
+        /**
          * Sets the ordering hint.
          *
          * @param priority the priority, or {@code null}

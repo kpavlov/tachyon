@@ -93,6 +93,10 @@ public non-sealed interface ResourceLink extends ContentBlock {
 
         Builder icons(@Nullable Iterable<? extends Icon> elements);
 
+        default Builder icons(Icon... elements) {
+            return icons(List.of(elements));
+        }
+
         Builder uri(String uri);
 
         Builder description(@Nullable String description);

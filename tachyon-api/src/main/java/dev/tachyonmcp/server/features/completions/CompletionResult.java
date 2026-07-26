@@ -72,6 +72,10 @@ public interface CompletionResult {
     interface Builder {
         Builder values(Iterable<String> elements);
 
+        default Builder values(String... values) {
+            return values(List.of(values));
+        }
+
         Builder total(@Nullable Double total);
 
         Builder hasMore(@Nullable Boolean hasMore);

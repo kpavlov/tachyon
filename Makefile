@@ -1,4 +1,4 @@
-.PHONY: all ci build test lint package conformance e2e clean format help mcp-inspector examples examples-snapshot
+.PHONY: all ci build test lint package conformance apidocs e2e clean format help mcp-inspector examples examples-snapshot
 
 .DEFAULT_GOAL := help
 
@@ -32,6 +32,11 @@ package: ## Install artifacts to local Maven repo (skip tests)
 	@echo "📦 Packaging and installing to local repository..."
 	@rm -rf ~/.m2/repository/dev/tachyonmcp/
 	@./mvnw install -pl tachyon-kotlin -am -DskipTests -Dspotbugs.skip -Dspotless.skip
+
+apidocs:
+	@./mvnw javadoc:aggregate \
+		-pl tachyon-api,tachyon-core,tachyon-extensions -am \
+		--no-transfer-progress
 
 examples: ## Build live examples against published artifacts
 	@echo "🌤️ 📡  Building LIVE examples..."

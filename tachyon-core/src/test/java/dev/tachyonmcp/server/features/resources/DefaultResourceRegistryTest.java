@@ -757,14 +757,15 @@ class DefaultResourceRegistryTest {
         var annotations = Annotations.of(null, 0.5, null);
         var icon = Icon.of("https://example.com/tmpl.png", null, null, null);
         registry.registerTemplate(
-                ResourceTemplateDescriptor.of(
-                        "tmpl",
-                        "test://tmpl/{id}",
-                        "Template desc",
-                        "text/plain",
-                        "Template Title",
-                        annotations,
-                        List.of(icon)),
+                ResourceTemplateDescriptor.builder()
+                        .name("tmpl")
+                        .uriTemplate("test://tmpl/{id}")
+                        .description("Template desc")
+                        .mimeType("text/plain")
+                        .title("Template Title")
+                        .annotations(annotations)
+                        .icons(icon)
+                        .build(),
                 (ctx, request) -> TextResourceContents.of(
                         request.uri(), "content-" + scalar(request.params(), "id"), "text/plain"));
 

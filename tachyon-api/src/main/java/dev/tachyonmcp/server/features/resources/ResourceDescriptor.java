@@ -126,6 +126,10 @@ public interface ResourceDescriptor extends ServerFeature.Descriptor {
 
         Builder icons(@Nullable Iterable<? extends Icon> elements);
 
+        default Builder icons(Icon... elements) {
+            return icons(List.of(elements));
+        }
+
         Builder extensionId(@Nullable String extensionId);
 
         ResourceDescriptor build();

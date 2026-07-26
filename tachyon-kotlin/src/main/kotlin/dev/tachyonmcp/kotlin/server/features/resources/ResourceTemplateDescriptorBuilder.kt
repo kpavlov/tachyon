@@ -30,6 +30,9 @@ public class ResourceTemplateDescriptorBuilder
         /** Human-readable title. */
         public var title: String? = null
 
+        /** Extension ID. */
+        public var extensionId: String? = null
+
         /** Optional presentation hints. */
         public var annotations: dev.tachyonmcp.server.domain.Annotations? = null
 
@@ -39,17 +42,22 @@ public class ResourceTemplateDescriptorBuilder
         @PublishedApi
         internal fun build(): ResourceTemplateDescriptor =
             ResourceTemplateDescriptor
-                .of(
-                    requireNotNull(name) { "ResourceTemplateDescriptor.name is required" },
-                    requireNotNull(
-                        uriTemplate,
-                    ) { "ResourceTemplateDescriptor.uriTemplate is required" },
-                    description,
-                    mimeType,
-                    title,
-                    annotations,
-                    icons,
-                )
+                .builder()
+                .name(
+                    requireNotNull(name) {
+                        "ResourceTemplateDescriptor.name is required"
+                    },
+                ).uriTemplate(
+                    requireNotNull(uriTemplate) {
+                        "ResourceTemplateDescriptor.uriTemplate is required"
+                    },
+                ).description(description)
+                .mimeType(mimeType)
+                .title(title)
+                .annotations(annotations)
+                .icons(icons)
+                .extensionId(extensionId)
+                .build()
     }
 
 /** Builds a [ResourceTemplateDescriptor] with a receiver DSL. */

@@ -53,7 +53,7 @@ public interface InteractionContext {
      */
     CompletableFuture<String> sendRequest(String method, Object params);
 
-    /** Returns the mutable attribute map for this interaction context. */
+    /** Returns an unmodifiable view of the attribute map for this interaction context. */
     Map<String, Object> attributes();
 
     /** Sets a named attribute on this context. */

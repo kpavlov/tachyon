@@ -61,8 +61,10 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor {
     @Value.Check
     default void check() {
         if (name().isBlank()) throw new IllegalArgumentException("name must not be blank");
-        if (uriTemplate().isBlank()) throw new IllegalArgumentException("uriTemplate must not be blank");
-        UriTemplate.create(uriTemplate());
+        final var uriTemplate = uriTemplate();
+        if (uriTemplate == null || uriTemplate.isBlank())
+            throw new IllegalArgumentException("uriTemplate must not be null or blank");
+        UriTemplate.create(uriTemplate);
     }
 
     /**
@@ -74,7 +76,12 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor {
         return DefaultResourceTemplateDescriptor.builder();
     }
 
-    /** Creates a template descriptor from a name and URI template pattern. */
+    /**
+     * Creates a template descriptor from a name and URI template pattern.
+     *
+     * @deprecated Use {@link #builder()}
+     */
+    @Deprecated
     static ResourceTemplateDescriptor of(String name, String uriTemplate) {
         return ResourceTemplateDescriptor.builder()
                 .name(name)
@@ -82,7 +89,12 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor {
                 .build();
     }
 
-    /** Creates a fully specified resource template descriptor. */
+    /**
+     * Creates a fully specified resource template descriptor.
+     *
+     * @deprecated Use {@link #builder()}
+     */
+    @Deprecated
     static ResourceTemplateDescriptor of(
             String name,
             String uriTemplate,
@@ -90,7 +102,8 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor {
             @Nullable String mimeType,
             @Nullable String title,
             @Nullable Annotations annotations,
-            @Nullable List<Icon> icons) {
+            @Nullable List<Icon> icons,
+            @Nullable String extensionId) {
         return ResourceTemplateDescriptor.builder()
                 .name(name)
                 .uriTemplate(uriTemplate)
@@ -99,6 +112,7 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor {
                 .title(title)
                 .annotations(annotations)
                 .icons(icons)
+                .extensionId(extensionId)
                 .build();
     }
 
@@ -117,6 +131,12 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor {
         Builder annotations(@Nullable Annotations annotations);
 
         Builder icons(@Nullable Iterable<? extends Icon> elements);
+
+        default Builder icons(Icon... elements) {
+            return icons(List.of(elements));
+        }
+
+        Builder extensionId(@Nullable String extensionId);
 
         ResourceTemplateDescriptor build();
     }

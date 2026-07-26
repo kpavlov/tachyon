@@ -88,6 +88,10 @@ public interface ToolDescriptor extends ServerFeature.Descriptor {
 
         Builder icons(@Nullable Iterable<? extends Icon> icons);
 
+        default Builder icons(Icon... icons) {
+            return icons(List.of(icons));
+        }
+
         Builder extensionId(@Nullable String extensionId);
 
         ToolDescriptor build();
