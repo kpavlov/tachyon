@@ -5,6 +5,7 @@ import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.Protocols;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatus;
+import dev.tachyonmcp.runtime.AttributeKey;
 import dev.tachyonmcp.runtime.ChannelContext;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
@@ -61,7 +62,7 @@ public class McpDispatcher {
      * detached copy of the {@code initialize} HTTP request, so a custom
      * {@link dev.tachyonmcp.server.session.SessionIdGenerator} can read its headers/URI.
      */
-    public static final String ATTR_INIT_REQUEST = "init.request";
+    public static final AttributeKey<HttpRequest> ATTR_INIT_REQUEST = AttributeKey.of("init.request");
 
     /**
      * Placeholder request for programmatic dispatch with no channel (the default generator ignores it).
@@ -457,7 +458,8 @@ public class McpDispatcher {
                         logger.warn("Initialize handler exception", ex);
                         return errorResult(id, ServerErrors.internalError("Internal error"), ic);
                     }
-                    var sessionId = ic.session() != null ? ic.session().id() : null;
+                    final var session = ic.session();
+                    var sessionId = session != null ? session.id() : null;
                     return handleSuccessOrError(id, "initialize", result, sessionId, ic);
                 });
     }
@@ -488,7 +490,8 @@ public class McpDispatcher {
     }
 
     private String generateSessionId(@Nullable ChannelContext channelContext) {
-        var request = channelContext != null ? channelContext.<HttpRequest>getAttribute(ATTR_INIT_REQUEST) : null;
+        var request =
+                channelContext != null ? channelContext.get(ATTR_INIT_REQUEST).orElse(null) : null;
         var generator = server.sessionIdGenerator();
         return generator.generate(request != null ? request : EMPTY_INIT_REQUEST);
     }

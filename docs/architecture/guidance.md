@@ -154,4 +154,18 @@ fun resourceTemplate(
 
 A handler needing raw request metadata (progress token, cancellation, task handle) uses `ToolRequest` through a `ToolFn` or an `AbstractToolHandler` request override, not a `_meta` field on the ergonomic `Args` path.
 
+## ⚠️ `Optional<T>` vs `@Nullable` — pick by contract, not habit
+
+JSpecify `@Nullable` is the baseline (`@NullMarked` at package level). Reach for `Optional<T>` only when absence is a first-class, must-handle part of the contract — not as a blanket null-replacement. Oracle's own `Optional` docs: primarily a method return type for a clear "no result" case where `null` would likely cause bugs, not a general substitute for every nullable value.
+
+- `@Nullable T` — ordinary nullable state, cache/map-style `get`, DTO fields: `@Nullable String description()`, `@Nullable Value get(Key key)`, `session()`, `sessionId()`.
+- `Optional<T>` — a lookup/search where "no result" is the point: `Optional<User> findUserById(id)`, `Optional<Path> resolveConfigFile()`.
+- Collections: return empty, never wrap a `List`/`Map` in `@Nullable` or `Optional`.
+- Avoid `Optional` for plain field-style getters (`Optional<String> getName()`), setters (`void setName(Optional<String>)`), or class fields — usually just awkward, rarely earns its ceremony.
+- Applied here: `InteractionContext.get(AttributeKey<T>)` is `Optional<T>` (map-style lookup, absence is a real branch); `sessionId()` stays `@Nullable String` (ordinary status field, same shape as `lifecycle()`/`session()`).
+
+## 🐛 Context extension state is `AttributeKey<T>`, never `Map<String, Object>`
+
+A stringly-typed attribute bag has two failure modes that compile clean and break at runtime — an unchecked cast on every read (`getAttribute(String)` lets the caller pick any `T`, wrong guess throws `ClassCastException` far from the write site), and silent collision (two unrelated features reusing the same string key overwrite each other). `AttributeKey<T>` fixes both: the key carries `T` so there's no cast at the call site, and keys are identity-based (`AttributeKey.of(name)` returns a distinct object per call, no name-interning registry) so two keys can never collide — retrieval requires holding the actual key instance, not guessing a string. Use this for any future context-carried extension/scratch state; don't reintroduce a generic `Map<String,Object>` surface on a handler-facing type.
+
 Testing handler dispatch/error mapping: see [`tachyon-development` skill](../../.agents/skills/tachyon-development/SKILL.md).

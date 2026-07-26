@@ -5,6 +5,7 @@ import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.Protocols;
+import dev.tachyonmcp.runtime.AttributeKey;
 import dev.tachyonmcp.runtime.ChannelContext;
 import dev.tachyonmcp.runtime.ContextNotifications;
 import dev.tachyonmcp.runtime.Session;
@@ -16,6 +17,7 @@ import dev.tachyonmcp.server.internal.NotificationLogSupport;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -77,18 +79,13 @@ public class DefaultDispatchContext implements DispatchContext {
     }
 
     @Override
-    public Map<String, Object> attributes() {
-        return channel.attributes();
+    public <T> Optional<T> get(AttributeKey<T> key) {
+        return channel.get(key);
     }
 
     @Override
-    public <T> void setAttribute(String name, T value) {
-        channel.setAttribute(name, value);
-    }
-
-    @Override
-    public <T> @Nullable T getAttribute(String name) {
-        return channel.getAttribute(name);
+    public <T> void set(AttributeKey<T> key, T value) {
+        channel.set(key, value);
     }
 
     @Override

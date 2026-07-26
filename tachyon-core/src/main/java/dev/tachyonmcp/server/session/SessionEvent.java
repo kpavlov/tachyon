@@ -31,15 +31,20 @@ public sealed interface SessionEvent {
     }
 
     /** An inbound request from the client. */
-    record RequestEvent(String sessionId, RequestId requestId, String method, String paramsJson, long timestamp)
-            implements SessionEvent {}
+    record RequestEvent(
+        String sessionId,
+        RequestId requestId,
+        String method,
+        @Nullable String paramsJson,
+        long timestamp
+    ) implements SessionEvent {}
 
     /** An outbound (server-to-client) request. */
     record OutboundRequestEvent(
             String sessionId,
             RequestId requestId,
             String method,
-            String paramsJson,
+            @Nullable String paramsJson,
             long timestamp,
             long sseEventId,
             @Nullable String streamKey)
@@ -62,7 +67,7 @@ public sealed interface SessionEvent {
     record NotificationEvent(
             String sessionId,
             String method,
-            String paramsJson,
+            @Nullable String paramsJson,
             long timestamp,
             long sseEventId,
             @Nullable String streamKey)

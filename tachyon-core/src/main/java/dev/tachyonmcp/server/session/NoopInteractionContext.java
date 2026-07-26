@@ -6,13 +6,14 @@ import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.ProtocolMappers;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
+import dev.tachyonmcp.runtime.AttributeKey;
 import dev.tachyonmcp.runtime.ContextNotifications;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.server.OutboundSseStream;
 import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.internal.ServerEngine;
-import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import org.jspecify.annotations.Nullable;
 
@@ -43,17 +44,12 @@ public class NoopInteractionContext implements DispatchContext {
     public void setSession(@Nullable Session session) {}
 
     @Override
-    public Map<String, Object> attributes() {
-        return Map.of();
+    public <T> Optional<T> get(AttributeKey<T> key) {
+        return Optional.empty();
     }
 
     @Override
-    public <T> void setAttribute(String name, T value) {}
-
-    @Override
-    public <T> @Nullable T getAttribute(String name) {
-        return null;
-    }
+    public <T> void set(AttributeKey<T> key, T value) {}
 
     @Override
     public void enableExtension(String extensionId) {}

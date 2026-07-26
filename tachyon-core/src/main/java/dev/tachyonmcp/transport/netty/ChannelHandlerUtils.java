@@ -74,7 +74,7 @@ public final class ChannelHandlerUtils {
         // dropped (a session-id generator reads headers/URI, and the pooled body is already gone).
         var headers = new DefaultHttpHeaders().set(req.headers());
         var snapshot = new DefaultHttpRequest(req.protocolVersion(), req.method(), req.uri(), headers);
-        requireInteractionContext(ctx).setAttribute(McpDispatcher.ATTR_INIT_REQUEST, snapshot);
+        requireInteractionContext(ctx).set(McpDispatcher.ATTR_INIT_REQUEST, snapshot);
     }
 
     public static void sendAccepted(ChannelHandlerContext ctx, @Nullable String origin) {

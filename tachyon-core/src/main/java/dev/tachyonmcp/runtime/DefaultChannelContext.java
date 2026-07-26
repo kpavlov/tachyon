@@ -3,8 +3,8 @@ package dev.tachyonmcp.runtime;
 
 import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.Protocol;
-import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,7 +16,7 @@ public class DefaultChannelContext implements ChannelContext {
 
     private final Protocol protocol;
 
-    private final Map<String, Object> attributes = new ConcurrentHashMap<>(3);
+    private final Map<AttributeKey<?>, Object> attributes = new ConcurrentHashMap<>(3);
     private final Set<String> enabledExtensions = ConcurrentHashMap.newKeySet();
 
     private volatile Lifecycle lifecycle = Lifecycle.INITIALIZATION;
@@ -75,18 +75,13 @@ public class DefaultChannelContext implements ChannelContext {
     }
 
     @Override
-    public Map<String, Object> attributes() {
-        return Collections.unmodifiableMap(attributes);
-    }
-
-    @Override
-    public <T> void setAttribute(String name, T value) {
-        attributes.put(name, value);
-    }
-
-    @Override
     @SuppressWarnings("unchecked")
-    public <T> @Nullable T getAttribute(String name) {
-        return (T) attributes.get(name);
+    public <T> Optional<T> get(AttributeKey<T> key) {
+        return Optional.ofNullable((T) attributes.get(key));
+    }
+
+    @Override
+    public <T> void set(AttributeKey<T> key, T value) {
+        attributes.put(key, value);
     }
 }

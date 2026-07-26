@@ -39,6 +39,31 @@ class DefaultChannelContextTest {
         assertThat(handlerContext.sessionId()).isEqualTo("sess-1");
     }
 
+    @Test
+    void shouldStoreAndRetrieveAttributesByTypedKey() {
+        InteractionContext ctx = new DefaultChannelContext(new FakeProtocol());
+        var key = AttributeKey.<String>of("greeting");
+
+        assertThat(ctx.get(key)).isEmpty();
+
+        ctx.set(key, "hello");
+
+        assertThat(ctx.get(key)).contains("hello");
+    }
+
+    @Test
+    void shouldNotCollideBetweenDistinctKeysWithTheSameDebugName() {
+        InteractionContext ctx = new DefaultChannelContext(new FakeProtocol());
+        var keyA = AttributeKey.<String>of("shared-name");
+        var keyB = AttributeKey.<String>of("shared-name");
+
+        ctx.set(keyA, "from-a");
+        ctx.set(keyB, "from-b");
+
+        assertThat(ctx.get(keyA)).contains("from-a");
+        assertThat(ctx.get(keyB)).contains("from-b");
+    }
+
     private static final class FakeProtocol implements Protocol {
 
         @Override
