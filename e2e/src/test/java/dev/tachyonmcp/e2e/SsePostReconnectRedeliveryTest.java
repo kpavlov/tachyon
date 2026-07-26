@@ -29,7 +29,7 @@ class SsePostReconnectRedeliveryTest extends AbstractStatefulMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServer(it -> it.tool(selfClosingTool()));
+        startServerWith(s -> s.tools().register(selfClosingTool()));
     }
 
     @Test

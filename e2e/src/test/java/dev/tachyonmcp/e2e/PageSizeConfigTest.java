@@ -15,10 +15,12 @@ class PageSizeConfigTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void toolsListReturnsConfiguredPageSize() throws Exception {
-        startServer(it -> it.capabilities(c -> c.tools().toolsPageSize(2))
-                .tool(handler("tool-a"))
-                .tool(handler("tool-b"))
-                .tool(handler("tool-c")));
+        startServer(
+                b -> b.capabilities(c -> c.tools().toolsPageSize(2)),
+                s -> s.tools()
+                        .register(handler("tool-a"))
+                        .register(handler("tool-b"))
+                        .register(handler("tool-c")));
 
         try (var client = createTestClient()) {
             client.initialize();

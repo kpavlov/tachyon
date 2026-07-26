@@ -33,12 +33,13 @@ class CustomSessionIdGeneratorTest {
     @BeforeAll
     void beforeAll() {
         serverHandle = TachyonServer.builder()
-                .tool(EchoToolHandler.create())
                 .session(s -> s.enabled(true)
                         .sessionIdGenerator(
                                 request -> "tenant-" + request.headers().get(TENANT_HEADER)))
                 .network(n -> n.host("localhost").port(0))
-                .start();
+                .build();
+        serverHandle.tools().register(EchoToolHandler.create());
+        serverHandle.start();
         port = serverHandle.port();
     }
 

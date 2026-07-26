@@ -12,7 +12,7 @@ import dev.tachyonmcp.server.features.tools.Tools;
 import java.util.List;
 
 /**
- * The one public type users hold — a running MCP server that is {@link AutoCloseable}.
+ * The one public type users hold — an MCP server that is {@link AutoCloseable}.
  *
  * <p>Created via {@link #builder()} (Java) or {@code TachyonServer(port) { }} (Kotlin).
  * Call {@link #close()} to shut down the transport and release all resources.
@@ -49,14 +49,19 @@ public interface TachyonServer extends AutoCloseable {
     Notifications notifications();
 
     /**
+     * Starts the configured transport. Feature registries may be populated before this call.
+     */
+    void start();
+
+    /**
      * Returns the port the server is bound to, or 0 if not yet started.
-     * Only meaningful after {@link ServerBuilder#start()} or equivalent.
+     * Only meaningful after {@link #start()} or equivalent.
      */
     int port();
 
     /**
      * Returns the host the server is bound to, or the configured host if not yet started.
-     * Only meaningful after {@link ServerBuilder#start()} or equivalent.
+     * Only meaningful after {@link #start()} or equivalent.
      */
     String host();
 
@@ -77,6 +82,6 @@ public interface TachyonServer extends AutoCloseable {
     void close();
 
     static ServerBuilder builder() {
-        return new ServerBuilder();
+        return new DefaultServerBuilder();
     }
 }

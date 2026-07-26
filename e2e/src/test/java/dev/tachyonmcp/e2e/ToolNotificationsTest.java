@@ -14,9 +14,9 @@ class ToolNotificationsTest extends AbstractStatelessMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServer(it -> it.capabilities(CapabilitiesConfig.Builder::logging)
-                .tool(EchoToolHandler.create())
-                .tool(notifyingTool()));
+        startServer(
+                b -> b.capabilities(CapabilitiesConfig.Builder::logging),
+                s -> s.tools().register(EchoToolHandler.create()).register(notifyingTool()));
     }
 
     @Test

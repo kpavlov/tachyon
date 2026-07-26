@@ -44,6 +44,8 @@ import dev.tachyonmcp.server.session.SessionManager;
 import dev.tachyonmcp.server.session.SessionStore;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.netty.NettyServer;
+import dev.tachyonmcp.transport.netty.NettyServerConfig;
+import io.netty.channel.ChannelPipeline;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -60,6 +62,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,6 +87,7 @@ final class DefaultTachyonServer implements ServerEngine {
     private final ExecutorService executor;
     private final boolean ownsExecutor;
     private final List<ServerExtension> extensions;
+    private final @Nullable Consumer<ChannelPipeline> pipelineCustomizer;
     private final Map<String, String> extensionMethodOwners = new ConcurrentHashMap<>();
     private final Map<String, ServerExtension> extensionsById = new ConcurrentHashMap<>();
 
@@ -220,13 +224,15 @@ final class DefaultTachyonServer implements ServerEngine {
             @Nullable JsonSchemaValidator outputValidator,
             @Nullable PayloadSerializer payloadSerializer,
             @Nullable PayloadDeserializer payloadDeserializer,
-            @Nullable List<ServerExtension> extensions) {
+            @Nullable List<ServerExtension> extensions,
+            @Nullable Consumer<ChannelPipeline> pipelineCustomizer) {
         this.executor = executor;
         this.ownsExecutor = ownsExecutor;
         this.config = Objects.requireNonNull(config, "config cannot be null");
         this.sessionEventStore = Objects.requireNonNull(sessionEventStore, "sessionEventStore cannot be null");
         this.port = config.network().port();
         this.extensions = extensions != null ? extensions : List.of();
+        this.pipelineCustomizer = pipelineCustomizer;
         this.sessionManager = new SessionManager(sessionStore);
         final JsonSchemaValidator inputValidator1 =
                 inputValidator != null ? inputValidator : new NetworkntJsonSchemaValidator();
@@ -262,13 +268,34 @@ final class DefaultTachyonServer implements ServerEngine {
                 Thread.ofVirtual().name("tachyon-", 0).factory());
     }
 
-    /**
-     * Called by ServerBuilder after transport bind to set the actual bound host, port, and transport.
-     */
-    void bind(Closeable transport, String host, int port) {
-        this.transport = transport;
-        this.host = host;
-        this.port = port;
+    @Override
+    public synchronized void start() {
+        if (transport != null) {
+            throw new IllegalStateException("Server is already started");
+        }
+        var network = config.network();
+        if (network.port() < 0) {
+            throw new IllegalStateException("Port must be set before start()");
+        }
+        var netty = new NettyServer(
+                this,
+                new NettyServerConfig(
+                        network.host(),
+                        network.port(),
+                        network.endpointPath(),
+                        network.readerIdleTimeout(),
+                        network.writerIdleTimeout(),
+                        network.maxContentLength(),
+                        NettyServerConfig.buildCorsConfig(
+                                network.allowedOrigins(),
+                                network.allowNullOrigin(),
+                                network.allowPrivateNetworks(),
+                                network.allowedHeaders()),
+                        network.ioEngine(),
+                        pipelineCustomizer));
+        transport = netty;
+        host = netty.host();
+        port = netty.port();
     }
 
     @Override

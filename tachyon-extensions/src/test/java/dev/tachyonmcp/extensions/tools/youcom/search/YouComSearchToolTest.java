@@ -22,9 +22,9 @@ public class YouComSearchToolTest {
         try (var server = TachyonServer.builder()
                 .info(it -> it.name("you-search-server").version("1.0"))
                 .session(s -> s.enabled(false))
-                .tool(new YouComSearchTool(YouComSearchConfig.builder()
+                .withTools(tools -> tools.register(new YouComSearchTool(YouComSearchConfig.builder()
                         .apiKey(System.getenv("YDC_API_KEY"))
-                        .build()))
+                        .build())))
                 .port(8080)
                 .start()) {
             System.out.println("Connect your MCP client to http://" + server.host() + ":" + server.port() + "/mcp\n"

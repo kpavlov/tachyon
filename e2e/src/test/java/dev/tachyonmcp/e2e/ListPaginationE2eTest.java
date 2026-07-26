@@ -19,10 +19,12 @@ class ListPaginationE2eTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void resourcesListReturnsConfiguredPageSize() throws Exception {
-        startServer(it -> it.capabilities(c -> c.resources().resourcesPageSize(2))
-                .resource(resource("res-a"), EMPTY_RESOURCE)
-                .resource(resource("res-b"), EMPTY_RESOURCE)
-                .resource(resource("res-c"), EMPTY_RESOURCE));
+        startServer(
+                b -> b.capabilities(c -> c.resources().resourcesPageSize(2)),
+                s -> s.resources()
+                        .register(resource("res-a"), EMPTY_RESOURCE)
+                        .register(resource("res-b"), EMPTY_RESOURCE)
+                        .register(resource("res-c"), EMPTY_RESOURCE));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -46,8 +48,9 @@ class ListPaginationE2eTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void resourcesListRejectsInvalidCursor() throws Exception {
-        startServer(it ->
-                it.capabilities(c -> c.resources().resourcesPageSize(2)).resource(resource("res-a"), EMPTY_RESOURCE));
+        startServer(
+                b -> b.capabilities(c -> c.resources().resourcesPageSize(2)),
+                s -> s.resources().register(resource("res-a"), EMPTY_RESOURCE));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -64,10 +67,12 @@ class ListPaginationE2eTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void promptsListReturnsConfiguredPageSize() throws Exception {
-        startServer(it -> it.capabilities(c -> c.prompts().promptsPageSize(2))
-                .prompt(PromptDescriptor.of("p-a", null), List.of())
-                .prompt(PromptDescriptor.of("p-b", null), List.of())
-                .prompt(PromptDescriptor.of("p-c", null), List.of()));
+        startServer(
+                b -> b.capabilities(c -> c.prompts().promptsPageSize(2)),
+                s -> s.prompts()
+                        .register(PromptDescriptor.of("p-a", null), List.of())
+                        .register(PromptDescriptor.of("p-b", null), List.of())
+                        .register(PromptDescriptor.of("p-c", null), List.of()));
 
         try (var client = createTestClient()) {
             client.initialize();

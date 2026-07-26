@@ -49,8 +49,9 @@ class ServerShutdownGraceTest {
         var started = new CountDownLatch(1);
         var interrupted = new CountDownLatch(1);
 
-        ServerEngine server = newEngine(b -> b.runtime(r -> r.shutdownGracePeriod(Duration.ofMillis(400)))
-                .tool(ToolHandler.of("slow_probe", (context, request) -> {
+        ServerEngine server = newEngine(
+                b -> b.runtime(r -> r.shutdownGracePeriod(Duration.ofMillis(400))),
+                s -> s.tools().register(ToolHandler.of("slow_probe", (context, request) -> {
                     started.countDown();
                     try {
                         new CountDownLatch(1).await(30, TimeUnit.SECONDS);

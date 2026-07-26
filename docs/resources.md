@@ -10,10 +10,10 @@ Server-computed content for a fixed URI:
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
 
-.resource(
+.withResources(resources -> resources.register(
     ResourceDescriptor.of("config", "app://config", "Server config", "application/json"),
     (ctx, request) ->
-        TextResourceContents.of(request.uri(), """{"env":"prod"}""", "application/json"))
+        TextResourceContents.of(request.uri(), """{"env":"prod"}""", "application/json")))
 ```
 
 ## URI template
@@ -62,7 +62,7 @@ AsyncResourceHandler handler = (ctx, request) ->
             BodyHandlers.ofString())
         .thenApply(rsp -> TextResourceContents.of(request.uri(), rsp.body(), "application/json"));
 
-.asyncResource(descriptor, handler)
+server.resources().registerAsync(descriptor, handler);
 ```
 
 Prompts follow the same pattern with `AsyncPromptHandler`. In Kotlin, resource and prompt

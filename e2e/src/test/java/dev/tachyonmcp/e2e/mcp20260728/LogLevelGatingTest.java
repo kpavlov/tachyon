@@ -26,19 +26,21 @@ class LogLevelGatingTest extends AbstractStatelessMcpE2eTest {
 
     @BeforeEach
     void registerFixtures() {
-        startServer(b -> b.capabilities(c -> c.logging())
-                .tool(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("test_logging_tool")
-                                .description("Emits an INFO log message then completes")
-                                .inputSchema(NO_ARGS_SCHEMA)
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                ctx.notifications().log(LoggingLevel.INFO, "test", "hello");
-                                return ToolResult.text("done");
-                            }
-                        }));
+        startServer(
+                b -> b.capabilities(c -> c.logging()),
+                s -> s.tools()
+                        .register(
+                                new AbstractToolHandler(ToolDescriptor.builder()
+                                        .name("test_logging_tool")
+                                        .description("Emits an INFO log message then completes")
+                                        .inputSchema(NO_ARGS_SCHEMA)
+                                        .build()) {
+                                    @Override
+                                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                                        ctx.notifications().log(LoggingLevel.INFO, "test", "hello");
+                                        return ToolResult.text("done");
+                                    }
+                                }));
     }
 
     @Test

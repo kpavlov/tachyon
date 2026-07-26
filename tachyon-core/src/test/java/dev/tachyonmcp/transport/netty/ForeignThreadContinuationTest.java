@@ -59,7 +59,8 @@ class ForeignThreadContinuationTest {
         };
 
         try (ServerEngine server = newEngine(
-                b -> b.json(j -> j.outputSchemaValidator(recordingValidator)).tool(handler))) {
+                b -> b.json(j -> j.outputSchemaValidator(recordingValidator)),
+                s -> s.tools().register(handler))) {
             var session = server.createSession("sess-foreign");
             session.activate();
             var dispatcher = new McpDispatcher(server, server.executor());

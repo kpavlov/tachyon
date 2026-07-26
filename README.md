@@ -50,13 +50,13 @@
         public static void main(String... args) {
             TachyonServer.builder()
                 .name("weather-mcp")
-                .tool(ToolHandler.of(
-                    b -> b.name("get_forecast")
-                        .description("Get weather forecast")
-                        .inputSchema("""
-                        {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
-                        """),
-                    (ctx, request) -> ToolResult.text("☀️ 22°C")))
+                .withTools(tools -> tools.register(ToolHandler.of(
+                        b -> b.name("get_forecast")
+                            .description("Get weather forecast")
+                            .inputSchema("""
+                            {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
+                            """),
+                        (ctx, request) -> ToolResult.text("☀️ 22°C"))))
                 .port(8080)
                 .start();
         }

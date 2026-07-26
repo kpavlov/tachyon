@@ -20,7 +20,7 @@ class PromptCapabilitiesTest extends AbstractStatelessMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServer(it -> it.tool(EchoToolHandler.create()));
+        startServerWith(s -> s.tools().register(EchoToolHandler.create()));
     }
 
     @ParameterizedTest(name = "[{index}] {0}")

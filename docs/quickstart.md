@@ -30,8 +30,8 @@ void main() {
     TachyonServer.builder()
         .name("my-server")
         .version("1.0")
-        .tool(ToolHandler.of("greet", "Say hello",
-            (ctx, request) -> ToolResult.text("Hello!")))
+        .withTools(tools -> tools.register(ToolHandler.of("greet", "Say hello",
+            (ctx, request) -> ToolResult.text("Hello!"))))
         .port(8080)
         .start();
 }

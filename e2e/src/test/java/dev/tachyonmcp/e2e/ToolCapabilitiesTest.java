@@ -36,7 +36,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
         } else {
             handler = simpleToolHandler(toolName, "A " + toolName + " tool");
         }
-        startServer(it -> it.tool(handler));
+        startServerWith(s -> s.tools().register(handler));
 
         try (var client = createTestClient()) {
             var response = listTools(client);
@@ -101,9 +101,10 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void shouldIncludeMultipleToolsWithMixedOutputSchemas() throws Exception {
-        startServer(it -> it.tool(simpleToolHandler("tool-a", "Tool A"))
-                .tool(outputSchemaToolHandler(OUTPUT_SCHEMA))
-                .tool(simpleToolHandler("tool-b", "Tool B")));
+        startServerWith(s -> s.tools()
+                .register(simpleToolHandler("tool-a", "Tool A"))
+                .register(outputSchemaToolHandler(OUTPUT_SCHEMA))
+                .register(simpleToolHandler("tool-b", "Tool B")));
 
         try (var client = createTestClient()) {
             var response = listTools(client);
@@ -135,7 +136,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
     @MethodSource
     void shouldIncludeExecutionTaskSupport(String toolName, boolean hasExecution, ToolHandler handler)
             throws Exception {
-        startServer(it -> it.tool(handler));
+        startServerWith(s -> s.tools().register(handler));
 
         try (var client = createTestClient()) {
             var response = listTools(client);
@@ -184,7 +185,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void shouldReturnStructuredContentAndTextFallback() throws Exception {
-        startServer(it -> it.tool(structuredToolHandler()));
+        startServerWith(s -> s.tools().register(structuredToolHandler()));
 
         try (var client = createTestClient()) {
             client.initialize();

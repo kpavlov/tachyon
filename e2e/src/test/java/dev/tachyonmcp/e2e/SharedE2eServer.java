@@ -18,10 +18,11 @@ final class SharedE2eServer {
         }
         handle = TachyonServer.builder()
                 .capabilities(c -> c.tools().logging())
-                .tool(EchoToolHandler.create())
                 .session(s -> s.enabled(true))
                 .network(n -> n.port(0))
-                .start();
+                .build();
+        handle.tools().register(EchoToolHandler.create());
+        handle.start();
         started.set(true);
         Runtime.getRuntime().addShutdownHook(new Thread(handle::close));
         logger.info("Shared E2E server started on port {}", handle.port());

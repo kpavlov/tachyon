@@ -27,7 +27,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void basicElicitationFlow() throws Exception {
-        startServer(it -> it.tool(new InputRequiredTestHandler()));
+        startServerWith(s -> s.tools().register(new InputRequiredTestHandler()));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -56,7 +56,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void multiRoundFlow() throws Exception {
-        startServer(it -> it.tool(new MultiRoundTestHandler()));
+        startServerWith(s -> s.tools().register(new MultiRoundTestHandler()));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -98,7 +98,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void inputRequiredPreservesMeta() throws Exception {
-        startServer(it -> it.tool(new MetaInputRequiredTestHandler()));
+        startServerWith(s -> s.tools().register(new MetaInputRequiredTestHandler()));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -114,7 +114,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void missingInputResponsesReRequests() throws Exception {
-        startServer(it -> it.tool(new InputRequiredTestHandler()));
+        startServerWith(s -> s.tools().register(new InputRequiredTestHandler()));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -136,7 +136,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void urlModeElicitationFlow() throws Exception {
-        startServer(it -> it.tool(new UrlElicitationTestHandler()));
+        startServerWith(s -> s.tools().register(new UrlElicitationTestHandler()));
 
         try (var client = createTestClient()) {
             client.initialize();

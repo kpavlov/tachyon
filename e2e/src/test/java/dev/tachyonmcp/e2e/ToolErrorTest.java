@@ -11,7 +11,7 @@ class ToolErrorTest extends AbstractStatelessMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServer(it -> it.tool(throwingTool()));
+        startServerWith(s -> s.tools().register(throwingTool()));
     }
 
     @Test
@@ -34,7 +34,7 @@ class ToolErrorTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void shouldRedactIllegalArgumentExceptionFromInvalidParamsError() throws Exception {
-        startServer(it -> it.tool(ToolHandler.of("bad-arg", "Rejects input", (context, request) -> {
+        startServerWith(s -> s.tools().register(ToolHandler.of("bad-arg", "Rejects input", (context, request) -> {
             throw new IllegalArgumentException("sensitive internal detail");
         })));
 

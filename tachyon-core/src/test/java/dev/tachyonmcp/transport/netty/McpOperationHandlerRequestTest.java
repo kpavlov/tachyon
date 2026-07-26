@@ -80,7 +80,7 @@ class McpOperationHandlerRequestTest {
 
     @BeforeEach
     void setUp() {
-        server = newEngine(b -> b.session(s -> s.enabled(true)).tool(PROGRESS_TOOL));
+        server = newEngine(b -> b.session(s -> s.enabled(true)), s -> s.tools().register(PROGRESS_TOOL));
         var dispatcher = new McpDispatcher(server, Runnable::run);
         channel = new EmbeddedChannel(
                 new InteractionHandler(), new McpOperationHandler(server, dispatcher, Runnable::run));
@@ -190,7 +190,7 @@ class McpOperationHandlerRequestTest {
                 return neverComplete;
             }
         };
-        var srv = newEngine(b -> b.tool(stalledTool));
+        var srv = newEngine(b -> {}, s -> s.tools().register(stalledTool));
         ExecutorService pool = Executors.newSingleThreadExecutor();
         var ch = new EmbeddedChannel(
                 new InteractionHandler(),
@@ -376,7 +376,7 @@ class McpOperationHandlerRequestTest {
         var origErr = System.err;
         System.setErr(new PrintStream(baos));
         try {
-            var srv = newEngine(b -> b.tool(SLOW_TOOL));
+            var srv = newEngine(b -> {}, s -> s.tools().register(SLOW_TOOL));
             var ch = new EmbeddedChannel(
                     new InteractionHandler(),
                     new McpOperationHandler(srv, new McpDispatcher(srv, Runnable::run), Runnable::run));
@@ -416,8 +416,9 @@ class McpOperationHandlerRequestTest {
         var origErr = System.err;
         System.setErr(new PrintStream(baos));
         try {
-            var srv = newEngine(b -> b.tool(SLOW_TOOL)
-                    .monitoring(m -> m.slowRequestLogging().slowRequestThreshold(Duration.ofMillis(1))));
+            var srv = newEngine(
+                    b -> b.monitoring(m -> m.slowRequestLogging().slowRequestThreshold(Duration.ofMillis(1))),
+                    s -> s.tools().register(SLOW_TOOL));
             var ch = new EmbeddedChannel(
                     new InteractionHandler(),
                     new McpOperationHandler(srv, new McpDispatcher(srv, Runnable::run), Runnable::run));

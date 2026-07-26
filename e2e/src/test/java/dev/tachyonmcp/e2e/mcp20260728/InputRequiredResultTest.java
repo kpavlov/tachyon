@@ -51,7 +51,8 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
 
     @BeforeEach
     void registerFixtures() {
-        startServer(b -> b.tool(
+        startServerWith(s -> s.tools()
+                .register(
                         new AbstractToolHandler(ToolDescriptor.builder()
                                 .name("elicit_name")
                                 .description("Elicits a name")
@@ -69,7 +70,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                                         Map.of("user_name", elicitation("What is your name?", "name")), null);
                             }
                         })
-                .tool(
+                .register(
                         new AbstractToolHandler(ToolDescriptor.builder()
                                 .name("ask_sampling")
                                 .description("Requests sampling")
@@ -84,7 +85,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                                 return ToolResult.inputRequired(Map.of("capital_question", samplingRequest()), null);
                             }
                         })
-                .tool(
+                .register(
                         new AbstractToolHandler(ToolDescriptor.builder()
                                 .name("ask_roots")
                                 .description("Requests roots/list")
@@ -99,7 +100,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                                 return ToolResult.inputRequired(Map.of("client_roots", rootsListRequest()), null);
                             }
                         })
-                .tool(
+                .register(
                         new AbstractToolHandler(ToolDescriptor.builder()
                                 .name("respect_capabilities")
                                 .description("Only asks for declared capabilities")
@@ -117,7 +118,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                                 return ToolResult.inputRequired(Map.of("capital_question", samplingRequest()), null);
                             }
                         })
-                .tool(
+                .register(
                         new AbstractToolHandler(ToolDescriptor.builder()
                                 .name("ask_multiple")
                                 .description("Requests multiple inputs at once")

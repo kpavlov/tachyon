@@ -28,7 +28,7 @@ class SseReplayPerStreamTest extends AbstractStatefulMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServer(it -> it.tool(notifyingEchoTool()));
+        startServerWith(s -> s.tools().register(notifyingEchoTool()));
     }
 
     @Test

@@ -3,9 +3,6 @@ package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.annotations.ExperimentalApi
 import dev.tachyonmcp.kotlin.server.TachyonDsl
-import dev.tachyonmcp.kotlin.server.features.completions.promptCompletionHandler
-import dev.tachyonmcp.kotlin.server.features.completions.resourceCompletionHandler
-import dev.tachyonmcp.kotlin.server.features.prompts.promptHandler
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
 import dev.tachyonmcp.kotlin.server.json.toJsonSchema
 import dev.tachyonmcp.kotlin.server.json.toJsonSchemaOrNull
@@ -231,7 +228,7 @@ public class TachyonServerBuilder
         ): TachyonServerBuilder =
             this.also {
                 val descriptor = PromptDescriptor.of(name, description, null, null, null)
-                delegate.prompt(descriptor, promptHandler(descriptor, handler))
+                featureRegistrar.prompt(descriptor, handler)
             }
 
         /**
@@ -310,7 +307,7 @@ public class TachyonServerBuilder
             handler: suspend CompletionScope.() -> CompletionResult,
         ): TachyonServerBuilder =
             this.also {
-                delegate.promptCompletion(promptName, promptCompletionHandler(promptName, handler))
+                featureRegistrar.promptCompletion(promptName, handler)
             }
 
         /**
@@ -326,10 +323,7 @@ public class TachyonServerBuilder
             handler: suspend CompletionScope.() -> CompletionResult,
         ): TachyonServerBuilder =
             this.also {
-                delegate.resourceCompletion(
-                    uriOrTemplate,
-                    resourceCompletionHandler(uriOrTemplate, handler),
-                )
+                featureRegistrar.resourceCompletion(uriOrTemplate, handler)
             }
 
         /**

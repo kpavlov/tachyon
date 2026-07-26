@@ -157,10 +157,11 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
 
     @Test
     void shouldPassMetaToResourceHandler() throws Exception {
-        startServer(builder -> builder.resource(
-                resource -> resource.name("meta-doc").uri("resource://meta-doc"),
-                (ctx, request) -> TextResourceContents.of(
-                        request.uri(), request.meta().get("tenant").toString(), "text/plain")));
+        startServerWith(s -> s.resources()
+                .register(
+                        resource -> resource.name("meta-doc").uri("resource://meta-doc"),
+                        (ctx, request) -> TextResourceContents.of(
+                                request.uri(), request.meta().get("tenant").toString(), "text/plain")));
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -290,12 +291,13 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
         remove-resource | remove
         """)
     void shouldNotifyListChanged(String toolName, String action) throws Exception {
-        startServer(builder -> {
-            builder.capabilities(c -> c.resourcesListChanged(true)).tool(notifyListChangedTool(action));
+        startServer(b -> b.capabilities(c -> c.resourcesListChanged(true)), s -> {
+            s.tools().register(notifyListChangedTool(action));
             if ("remove".equals(action)) {
-                builder.resource(
-                        ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
-                        (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain"));
+                s.resources()
+                        .register(
+                                ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
+                                (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain"));
             }
         });
 
@@ -311,10 +313,13 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
 
     @Test
     void shouldNotifyResourceUpdated() throws Exception {
-        startServer(it -> it.resource(
-                        ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
-                        (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain"))
-                .tool(notifyUpdatedTool()));
+        startServerWith(s -> {
+            s.resources()
+                    .register(
+                            ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
+                            (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain"));
+            s.tools().register(notifyUpdatedTool());
+        });
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -335,10 +340,13 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
 
     @Test
     void shouldNotNotifyAfterUnsubscribe() throws Exception {
-        startServer(it -> it.resource(
-                        ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
-                        (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain"))
-                .tool(notifyUpdatedTool()));
+        startServerWith(s -> {
+            s.resources()
+                    .register(
+                            ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
+                            (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain"));
+            s.tools().register(notifyUpdatedTool());
+        });
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -363,11 +371,12 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
 
     @Test
     void shouldNotifyListChangedOnUnregisterByUri() throws Exception {
-        startServer(builder -> {
-            builder.capabilities(c -> c.resourcesListChanged(true)).tool(unregisterByUriTool());
-            builder.resource(
-                    ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
-                    (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain"));
+        startServer(b -> b.capabilities(c -> c.resourcesListChanged(true)), s -> {
+            s.tools().register(unregisterByUriTool());
+            s.resources()
+                    .register(
+                            ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
+                            (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain"));
         });
 
         try (var client = createTestClient()) {

@@ -70,13 +70,11 @@ Default new types to the pair shape. Bundle the descriptor only if the registry 
 
 ## ⚠️ Naming: split sync/async by name, not overload
 
-`tool`/`asyncTool`, `register`/`registerAsync`, `of`/`ofAsync` — never overload one method name for both sync and async lambda shapes: different shapes under one name throw Java's overload resolution into ambiguity for every lambda caller, and separate names sidestep it. Keep doing that for any new handler's registration API.
+`register`/`registerAsync`, `of`/`ofAsync` — never overload one method name for both sync and async lambda shapes: different shapes under one name throw Java's overload resolution into ambiguity for every lambda caller, and separate names sidestep it. Keep doing that for any new handler's registration API.
 
-**Two async markers, each consistent within its own layer — don't mix them:**
-- `ServerBuilder` build-time methods: `async` **prefix** on the noun — `tool`/`asyncTool`, `resource`/`asyncResource`, `prompt`/`asyncPrompt`, `resourceTemplate`/`asyncResourceTemplate`.
-- Runtime registries and `XHandler.of…` factories: `Async` **suffix** on the verb — `register`/`registerAsync`, `of`/`ofAsync`.
-
-A new handler type's `ServerBuilder` method follows the prefix style (matching its siblings); its registry and factory methods follow the suffix style. Same feature, two deliberately different layers — not one rule bleeding into the other.
+Feature registration belongs to the runtime façades. `ServerBuilder.withTools`,
+`withResources`, `withPrompts`, and `withCompletions` are bootstrap conveniences that delegate to
+those same façade APIs; do not add feature-specific registration overloads to `ServerBuilder`.
 
 **Interface/SAM naming:**
 - `XHandler` — the handler type. Also the lambda-entry SAM when the shape is simple: `ResourceHandler`/`PromptHandler` are plain `@FunctionalInterface`s, so the type doubles as both.
@@ -87,7 +85,6 @@ A new handler type's `ServerBuilder` method follows the prefix style (matching i
 ## 🪶 Registry/facade API naming
 
 - Registry facade interface named as plural: `interface Completions`, `CompletionRegistry extends Completions`, `DefaultCompletionRegistry implements CompletionRegistry`. User-facing API uses facade.
-- Build-time `ServerBuilder` methods are declarative nouns: `tool`, `resource`, `prompt`, `resourceTemplate`.
 - Runtime feature registries use `register` / `registerAsync` and `unregister`.
 - Optional lookup uses `Optional<Descriptor> find(String name)`. Never nullable `get`.
 - Descriptor enumeration uses immutable, name-sorted `descriptors()` snapshots.
@@ -100,7 +97,7 @@ A new handler type's `ServerBuilder` method follows the prefix style (matching i
 - Structured object factories with more than three fields use one canonical type-named receiver builder: `Icon { src = "..."; mimeType = "image/svg+xml" }` (`Annotations` follows this shape despite having three fields — it's nested metadata commonly composed inside other builders). Don't duplicate it with lowercase receiver factories or flat overloads; an owned enclosing DSL may add a singular member such as `argument { }` that delegates to the canonical factory. Required builder fields start nullable and fail with `requireNotNull` in `build()`.
 - Type-named receiver factories are `inline`, declare an `EXACTLY_ONCE` contract, and suppress `FunctionName`. Their public builder has an `@PublishedApi internal` constructor and `build()`.
 - Keep DSL operations as receiver-class members when the receiver is owned by this module. Use a top-level extension only for types that cannot own the operation. Type-named factories remain top-level when the Java model has no Kotlin companion.
-- Java `ServerBuilder` is the implementation source of truth for server construction, descriptor building, validation, and feature registration. Kotlin delegates to it and adds only thin adaptation for suspend lambdas and Kotlin-specific types.
+- Java `ServerBuilder` is the implementation source of truth for server construction and validation. Server feature façades own registration; Kotlin delegates through the builder's `with*` bootstrap conveniences and adds only thin adaptation for suspend lambdas and Kotlin-specific types.
 - Do not reimplement Java builder validation, defaulting, or registration collections in Kotlin. Add missing reusable behavior to Java first, then expose it through the Kotlin DSL.
 - Expose one Kotlin server-construction surface: `TachyonServerBuilder`. Do not publish Kotlin extensions on the Java `ServerBuilder`; they bypass Kotlin defaults and duplicate autocomplete. Use an internal owned collaborator when thin adaptation would make the public builder too large.
 - Keep Kotlin files focused. Once a file exceeds 300 lines, consider splitting it by owned responsibility. Do not split member DSLs into global extensions merely to reduce line count; prefer composition with an internal class.

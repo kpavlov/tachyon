@@ -31,9 +31,9 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void shouldValidateMultipleToolsWithDistinctSchemas() throws Exception {
-        startServer(it -> it.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR))
-                .tool(validatedTool())
-                .tool(validatedTool2()));
+        startServer(
+                b -> b.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR)),
+                s -> s.tools().register(validatedTool()).register(validatedTool2()));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -66,8 +66,9 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void shouldAcceptValidToolArguments() throws Exception {
-        startServer(it -> it.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR))
-                .tool(validatedTool()));
+        startServer(
+                b -> b.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR)),
+                s -> s.tools().register(validatedTool()));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -86,8 +87,9 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void shouldRejectToolCallWithMissingRequiredField() throws Exception {
-        startServer(it -> it.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR))
-                .tool(validatedTool()));
+        startServer(
+                b -> b.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR)),
+                s -> s.tools().register(validatedTool()));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -106,7 +108,8 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void shouldRejectToolCallWithWrongType() throws Exception {
-        startServer(it -> it.json(j -> j.schemaValidator(VALIDATOR)).tool(validatedTool()));
+        startServer(
+                b -> b.json(j -> j.schemaValidator(VALIDATOR)), s -> s.tools().register(validatedTool()));
 
         try (var client = createTestClient()) {
             client.initialize();

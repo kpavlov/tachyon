@@ -76,8 +76,8 @@ public final class WeatherServer {
                         .instructions("Test instructions")
                         .icons(Icon.of(LOGO, "image/png", List.of("256x256"), null))
                         .version("1.0"))
-                .tool(GetWeatherTool.create(weatherService))
-                .resource(
+                .withTools(tools -> tools.register(GetWeatherTool.create(weatherService)))
+                .withResources(resources -> resources.register(
                         resource -> resource.name("prediction-article")
                                 .uri("weather://prediction/article")
                                 .description("Weather prediction article")
@@ -86,9 +86,9 @@ public final class WeatherServer {
                                 .size(predictionArticle.getBytes(StandardCharsets.UTF_8).length)
                                 .icons(List.of(resourceIcon))
                                 .mimeType("text/markdown"),
-                    ResourceHandler.of((ctx, uri) ->
-                        TextResourceContents.of(uri, predictionArticle, "text/markdown")))
-                .asyncResource(
+                        ResourceHandler.of((ctx, uri) ->
+                                TextResourceContents.of(uri, predictionArticle, "text/markdown")))
+                .registerAsync(
                         resource -> resource.name("featured-current-weather")
                                 .uri("weather://featured/current")
                                 .description("Current weather in Tallinn")
@@ -96,35 +96,37 @@ public final class WeatherServer {
                                 .annotations(resourceAnnotations)
                                 .icons(List.of(resourceIcon))
                                 .mimeType("application/json"),
-                    ResourceHandler.ofAsync((ctx, uri) -> weatherService.currentWeatherAsync("Tallinn")
-                        .thenApply(weather -> TextResourceContents.of(uri, asJson(weather), "application/json"))))
-                .prompt(
+                        ResourceHandler.ofAsync((ctx, uri) -> weatherService.currentWeatherAsync("Tallinn")
+                                .thenApply(weather ->
+                                        TextResourceContents.of(uri, asJson(weather), "application/json")))))
+                .withPrompts(prompts -> prompts.register(
                         prompt -> prompt.name("rewrite-forecast")
                                 .description("Rewrites a weather forecast in a chosen style")
                                 .addArguments(
                                         PromptArgument.of("forecast", "Forecast", "Weather forecast to rewrite", true),
                                         PromptArgument.of("style", "Style", "plain, concise, or pirate", true))
                                 .inputSchema(NarrationStyle.inputSchema()),
-                        (ctx, request) -> rewriteForecast(weatherService, request))
-            .promptCompletion("rewrite-forecast", (ctx, request) -> completeStyle(request))
-                .resourceTemplate(
+                        (ctx, request) -> rewriteForecast(weatherService, request)))
+                .withResources(resources -> resources.registerTemplate(
                         template -> template.name("current-weather")
                                 .uriTemplate("weather://current/{city}")
                                 .title("Weather in the city")
                                 .description("Weather forecast for a city")
                                 .mimeType("application/json"),
                         (ctx, request) ->
-                                handleWeatherTemplate(weatherService, request.uri(), request.params()))
-            .asyncResourceCompletion(
-                "weather://current/{city}",
-                (ctx, request) -> {
-                    if (!"city".equals(request.argumentName())) {
-                        return CompletableFuture.completedFuture(CompletionResult.of(List.of()));
-                    }
-                    return weatherService.searchCities(request.argumentValue())
-                        .thenApply(CompletionResult::of)
-                        .exceptionally(e -> CompletionResult.of(List.of()));
-                })
+                                handleWeatherTemplate(weatherService, request.uri(), request.params())))
+                .withCompletions(completions -> completions
+                        .registerForPrompt("rewrite-forecast", (ctx, request) -> completeStyle(request))
+                        .registerForResourceAsync(
+                                "weather://current/{city}",
+                                (ctx, request) -> {
+                                    if (!"city".equals(request.argumentName())) {
+                                        return CompletableFuture.completedFuture(CompletionResult.of(List.of()));
+                                    }
+                                    return weatherService.searchCities(request.argumentValue())
+                                            .thenApply(CompletionResult::of)
+                                            .exceptionally(e -> CompletionResult.of(List.of()));
+                                }))
                 .session(session -> session.enabled(true))
                 .network(network -> network.port(port))
                 .start();

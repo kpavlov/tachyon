@@ -607,8 +607,9 @@ class DefaultToolRegistryTest {
 
     @Test
     void syncToolHandlerCheckedExceptionMapsToInternalError() throws Exception {
-        try (ServerEngine server =
-                newEngine(b -> b.tool(desc -> desc.name("sync-checked-fail").description("sync"), (ctx, request) -> {
+        try (ServerEngine server = newEngine(
+                b -> {},
+                s -> s.tools().register(desc -> desc.name("sync-checked-fail").description("sync"), (ctx, request) -> {
                     throw new IOException("boom"); // no try/catch needed — ToolFn declares throws Exception
                 }))) {
             var session = server.createSession("s-sync-checked-fail");

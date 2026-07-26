@@ -164,17 +164,19 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
         // The extension's create_task tool is async, so notifications don't route
         // through POST-SSE (ThreadLocal not inherited by ForkJoin threads).
         // This test uses a synchronous tool to verify notification delivery.
-        startServer(it -> it.tool(
-                        new AbstractToolHandler(
-                                ToolDescriptor.builder().name("create-sync").build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest req) {
-                                ((DispatchContext) ctx).engine().tasks().create();
-                                return ToolResult.text("ok");
-                            }
-                        })
-                .extension(TasksExtension.instance())
-                .build());
+        startServer(
+                b -> b.extension(TasksExtension.instance()),
+                s -> s.tools()
+                        .register(
+                                new AbstractToolHandler(ToolDescriptor.builder()
+                                        .name("create-sync")
+                                        .build()) {
+                                    @Override
+                                    public ToolResult handle(InteractionContext ctx, ToolRequest req) {
+                                        ((DispatchContext) ctx).engine().tasks().create();
+                                        return ToolResult.text("ok");
+                                    }
+                                }));
 
         try (var client = createTestClient()) {
             var sessionId = initializeWithExtension(client);
@@ -195,22 +197,26 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
 
     @Test
     void shouldNotifyTaskStatusWithCallerSuppliedMessage() throws Exception {
-        startServer(it -> it.tool(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("update-status-sync")
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest req) {
-                                var task =
-                                        ((DispatchContext) ctx).engine().tasks().create();
-                                ((DefaultTaskRegistry)
-                                                ((DispatchContext) ctx).engine().tasks())
-                                        .updateStatus(task.id(), TaskState.WORKING, "step 1 of 3");
-                                return ToolResult.text("ok");
-                            }
-                        })
-                .extension(TasksExtension.instance())
-                .build());
+        startServer(
+                b -> b.extension(TasksExtension.instance()),
+                s -> s.tools()
+                        .register(
+                                new AbstractToolHandler(ToolDescriptor.builder()
+                                        .name("update-status-sync")
+                                        .build()) {
+                                    @Override
+                                    public ToolResult handle(InteractionContext ctx, ToolRequest req) {
+                                        var task = ((DispatchContext) ctx)
+                                                .engine()
+                                                .tasks()
+                                                .create();
+                                        ((DefaultTaskRegistry) ((DispatchContext) ctx)
+                                                        .engine()
+                                                        .tasks())
+                                                .updateStatus(task.id(), TaskState.WORKING, "step 1 of 3");
+                                        return ToolResult.text("ok");
+                                    }
+                                }));
 
         try (var client = createTestClient()) {
             var sessionId = initializeWithExtension(client);
@@ -228,21 +234,25 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
         // Regression test: a caller holding only the public `Task` reference (never
         // touching DefaultTaskRegistry's taskId-keyed methods) must still get a
         // notification for every mutation, not just the initial creation push.
-        startServer(it -> it.tool(
-                        new AbstractToolHandler(
-                                ToolDescriptor.builder().name("drive-task-sync").build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest req) {
-                                var task =
-                                        ((DispatchContext) ctx).engine().tasks().create();
-                                task.resume("step 1");
-                                task.updateMessage("step 2");
-                                task.complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"done\"}")));
-                                return ToolResult.text("ok");
-                            }
-                        })
-                .extension(TasksExtension.instance())
-                .build());
+        startServer(
+                b -> b.extension(TasksExtension.instance()),
+                s -> s.tools()
+                        .register(
+                                new AbstractToolHandler(ToolDescriptor.builder()
+                                        .name("drive-task-sync")
+                                        .build()) {
+                                    @Override
+                                    public ToolResult handle(InteractionContext ctx, ToolRequest req) {
+                                        var task = ((DispatchContext) ctx)
+                                                .engine()
+                                                .tasks()
+                                                .create();
+                                        task.resume("step 1");
+                                        task.updateMessage("step 2");
+                                        task.complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"done\"}")));
+                                        return ToolResult.text("ok");
+                                    }
+                                }));
 
         try (var client = createTestClient()) {
             var sessionId = initializeWithExtension(client);
@@ -263,21 +273,24 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
 
     @Test
     void shouldCancelAndNotifyBeforeRemovingActiveTask() throws Exception {
-        startServer(it -> it.tool(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("remove-active-sync")
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest req) {
-                                var task =
-                                        ((DispatchContext) ctx).engine().tasks().create();
-                                task.resume(null);
-                                ((DispatchContext) ctx).engine().tasks().remove(task.id());
-                                return ToolResult.text(task.id());
-                            }
-                        })
-                .extension(TasksExtension.instance())
-                .build());
+        startServer(
+                b -> b.extension(TasksExtension.instance()),
+                s -> s.tools()
+                        .register(
+                                new AbstractToolHandler(ToolDescriptor.builder()
+                                        .name("remove-active-sync")
+                                        .build()) {
+                                    @Override
+                                    public ToolResult handle(InteractionContext ctx, ToolRequest req) {
+                                        var task = ((DispatchContext) ctx)
+                                                .engine()
+                                                .tasks()
+                                                .create();
+                                        task.resume(null);
+                                        ((DispatchContext) ctx).engine().tasks().remove(task.id());
+                                        return ToolResult.text(task.id());
+                                    }
+                                }));
 
         try (var client = createTestClient()) {
             var sessionId = initializeWithExtension(client);
@@ -297,21 +310,24 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
 
     @Test
     void shouldRemoveTerminalTaskSilently() throws Exception {
-        startServer(it -> it.tool(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("remove-terminal-sync")
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest req) {
-                                var task =
-                                        ((DispatchContext) ctx).engine().tasks().create();
-                                task.complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"done\"}")));
-                                ((DispatchContext) ctx).engine().tasks().remove(task.id());
-                                return ToolResult.text(task.id());
-                            }
-                        })
-                .extension(TasksExtension.instance())
-                .build());
+        startServer(
+                b -> b.extension(TasksExtension.instance()),
+                s -> s.tools()
+                        .register(
+                                new AbstractToolHandler(ToolDescriptor.builder()
+                                        .name("remove-terminal-sync")
+                                        .build()) {
+                                    @Override
+                                    public ToolResult handle(InteractionContext ctx, ToolRequest req) {
+                                        var task = ((DispatchContext) ctx)
+                                                .engine()
+                                                .tasks()
+                                                .create();
+                                        task.complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"done\"}")));
+                                        ((DispatchContext) ctx).engine().tasks().remove(task.id());
+                                        return ToolResult.text(task.id());
+                                    }
+                                }));
 
         try (var client = createTestClient()) {
             var sessionId = initializeWithExtension(client);

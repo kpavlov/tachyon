@@ -35,11 +35,12 @@ class CustomHeaderValidationTest extends AbstractStatelessMcpE2eTest {
 
     @BeforeEach
     void registerFixtures() {
-        startServer(b -> b.tool(ToolHandler.of(
-                d -> d.name("execute_sql").description("Executes SQL").inputSchema(EXECUTE_SQL_SCHEMA),
-                (ctx, request) ->
-                        ToolResult.text("region=" + request.arguments().stringOr("region", "") + " query="
-                                + request.arguments().stringOr("query", "")))));
+        startServerWith(s -> s.tools()
+                .register(ToolHandler.of(
+                        d -> d.name("execute_sql").description("Executes SQL").inputSchema(EXECUTE_SQL_SCHEMA),
+                        (ctx, request) ->
+                                ToolResult.text("region=" + request.arguments().stringOr("region", "") + " query="
+                                        + request.arguments().stringOr("query", "")))));
     }
 
     private HttpResponse<String> post(String body, String regionHeader) throws Exception {

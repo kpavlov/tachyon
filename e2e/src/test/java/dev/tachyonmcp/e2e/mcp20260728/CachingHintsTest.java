@@ -23,16 +23,18 @@ class CachingHintsTest extends AbstractStatelessMcpE2eTest {
 
     @BeforeEach
     void registerFixtures() {
-        startServer(b -> b.capabilities(c -> c.tools().resources().prompts())
-                .resource(
-                        ResourceDescriptor.of("hello", "hello://world", "Hello resource", "text/plain"),
-                        (ctx, request) -> TextResourceContents.of(request.uri(), "Hello, World!", "text/plain"))
-                .resourceTemplate(
-                        builder -> builder.name("tmpl")
-                                .uriTemplate("test://tmpl/{id}")
-                                .description("d"),
-                        (ctx, request) -> TextResourceContents.of(request.uri(), "x", "text/plain"))
-                .prompt(PromptDescriptor.of("greeting", "A greeting"), java.util.List.of()));
+        startServer(b -> b.capabilities(c -> c.tools().resources().prompts()), s -> {
+            s.resources()
+                    .register(
+                            ResourceDescriptor.of("hello", "hello://world", "Hello resource", "text/plain"),
+                            (ctx, request) -> TextResourceContents.of(request.uri(), "Hello, World!", "text/plain"))
+                    .registerTemplate(
+                            builder -> builder.name("tmpl")
+                                    .uriTemplate("test://tmpl/{id}")
+                                    .description("d"),
+                            (ctx, request) -> TextResourceContents.of(request.uri(), "x", "text/plain"));
+            s.prompts().register(PromptDescriptor.of("greeting", "A greeting"), java.util.List.of());
+        });
     }
 
     private void assertCachingHints(String jsonBody) {

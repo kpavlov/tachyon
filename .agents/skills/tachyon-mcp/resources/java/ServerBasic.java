@@ -44,17 +44,18 @@ public final class ServerBasic {
             )
             .runtime(r -> r.shutdownGracePeriod(ofSeconds(5)))
             .network(n -> n.allowedOrigins("*").allowNullOrigin(true))
-            .tool(ToolHandler.of(b -> b.name("ping"), (ctx, request) -> ToolResult.text("pong")))
-            .resource(
+            .port(port)
+            .build();
+
+        server.tools().register(ToolHandler.of(b -> b.name("ping"), (ctx, request) -> ToolResult.text("pong")));
+        server.resources()
+            .register(
                 ResourceDescriptor.of(
                     "config", "demo://config",
                     "Server configuration", "application/json"),
                 (ctx, request) ->
                     TextResourceContents.of(request.uri(), "{\"mode\":\"production\"}", "application/json"))
-            .prompt(
-                PromptDescriptor.of("greet", "Generates a greeting"),
-                List.of(PromptMessage.user("Say hello")))
-            .resourceTemplate(builder -> builder
+            .registerTemplate(builder -> builder
                     .name("user-profile")
                     .uriTemplate("demo://users/{userId}/profile")
                     .description("User profile data")
@@ -63,9 +64,12 @@ public final class ServerBasic {
                     var userId = request.params().get("userId").scalarValue();
                     return TextResourceContents.of(
                         request.uri(), "{\"userId\":\"" + userId + "\",\"name\":\"User\"}", "application/json");
-                })
-            .port(port)
-            .start();
+                });
+        server.prompts()
+            .register(
+                PromptDescriptor.of("greet", "Generates a greeting"),
+                List.of(PromptMessage.user("Say hello")));
+        server.start();
 
         return server;
     }

@@ -10,22 +10,22 @@ Tools are the primary way clients invoke server-side logic. Tachyon validates in
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 
-.tool(ToolHandler.of("hello", "Say hello",
-    (ctx, request) -> ToolResult.text("Hello!")))
+.withTools(tools -> tools.register(ToolHandler.of("hello", "Say hello",
+    (ctx, request) -> ToolResult.text("Hello!"))))
 ```
 
 Need an input schema? Configure the descriptor with the builder overload. `.inputSchema(...)` /
 `.outputSchema(...)` take a raw JSON `String` **or** a Jackson `JsonNode`:
 
 ```java
-.tool(ToolHandler.of(
-    b -> b.name("hello")
-        .description("Say hello")
-        .inputSchema("""
-        {"type":"object","properties":{"name":{"type":"string"}}}
-        """),
-    (ctx, request) -> ToolResult.text(
-        "Hello, " + request.arguments().stringOr("name", "world") + "!")))
+.withTools(tools -> tools.register(ToolHandler.of(
+        b -> b.name("hello")
+            .description("Say hello")
+            .inputSchema("""
+            {"type":"object","properties":{"name":{"type":"string"}}}
+            """),
+        (ctx, request) -> ToolResult.text(
+            "Hello, " + request.arguments().stringOr("name", "world") + "!"))))
 ```
 
 ### Class (only when a factory won't do)
@@ -64,7 +64,7 @@ class WeatherTool extends AbstractToolHandler {
 }
 ```
 
-Register: `.tool(new WeatherTool())`
+Register: `server.tools().register(new WeatherTool())`
 
 ### Async tool
 
@@ -76,9 +76,9 @@ lambda via `ToolHandler.ofAsync`, or override `handleAsync(ctx, Args)` on
 ```java
 import dev.tachyonmcp.server.features.tools.ToolHandler;
 
-.tool(ToolHandler.ofAsync("get_weather_async",
+.withTools(tools -> tools.register(ToolHandler.ofAsync("get_weather_async",
     (ctx, request) -> fetchWeather(request.arguments().stringValue("city"))
-        .thenApply(w -> ToolResult.text(w.summary()))))
+        .thenApply(w -> ToolResult.text(w.summary())))))
 ```
 
 ### Progress token / full request

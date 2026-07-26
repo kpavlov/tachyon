@@ -21,11 +21,17 @@ import org.junit.jupiter.params.provider.ValueSource;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class StatelessServerTest {
 
-    private final TachyonServer tachyonServer = TachyonServer.builder()
-            .tool(EchoToolHandler.create())
-            .network(n -> n.host("localhost").port(0))
-            .start();
+    private final TachyonServer tachyonServer = createServer();
     private int port;
+
+    private static TachyonServer createServer() {
+        var server = TachyonServer.builder()
+                .network(n -> n.host("localhost").port(0))
+                .build();
+        server.tools().register(EchoToolHandler.create());
+        server.start();
+        return server;
+    }
 
     @BeforeAll
     void beforeAll() {

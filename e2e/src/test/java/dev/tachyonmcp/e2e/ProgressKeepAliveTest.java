@@ -86,17 +86,23 @@ class ProgressKeepAliveTest {
              "params":{"name":"silent-comment","arguments":{}}}
             """;
 
-    private final ServerEngine server = (ServerEngine) TachyonServer.builder()
-            .session(s -> s.enabled(true))
-            .network(n -> n.heartbeatInterval(HEARTBEAT))
-            .tool(new ProgressHandler("warmup", 0))
-            .tool(new ProgressHandler("slow-progress", SLOW_SLEEP_MS))
-            .tool(new CommentHandler("warmup-comment", 0))
-            .tool(new CommentHandler("silent-comment", SLOW_SLEEP_MS))
-            .build();
+    private final ServerEngine server = createServer();
 
     private NettyServer nettyServer;
     private int port;
+
+    private static ServerEngine createServer() {
+        var server = TachyonServer.builder()
+                .session(s -> s.enabled(true))
+                .network(n -> n.heartbeatInterval(HEARTBEAT))
+                .build();
+        server.tools()
+                .register(new ProgressHandler("warmup", 0))
+                .register(new ProgressHandler("slow-progress", SLOW_SLEEP_MS))
+                .register(new CommentHandler("warmup-comment", 0))
+                .register(new CommentHandler("silent-comment", SLOW_SLEEP_MS));
+        return (ServerEngine) server;
+    }
 
     @BeforeAll
     void startServer() throws Exception {

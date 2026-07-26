@@ -7,7 +7,6 @@ import dev.tachyonmcp.e2e.mcp20260728.Mcp20260728TestClient;
 import dev.tachyonmcp.server.ServerBuilder;
 import dev.tachyonmcp.server.TachyonServer;
 import dev.tachyonmcp.server.internal.ServerEngine;
-import dev.tachyonmcp.transport.netty.NettyServer;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -17,7 +16,6 @@ import org.junit.jupiter.api.TestInstance;
 public abstract class AbstractMcpE2eTest {
 
     protected TachyonServer server;
-    protected NettyServer nettyServer;
     protected int port;
     protected boolean usingCustomServer;
 
@@ -71,21 +69,28 @@ public abstract class AbstractMcpE2eTest {
      * {@link #sessionMode()} is enforced — tests cannot accidentally override session policy.
      */
     protected final void startServer(Consumer<ServerBuilder> configurer) {
+        startServer(configurer, server -> {});
+    }
+
+    protected final void startServerWith(Consumer<TachyonServer> registrar) {
+        startServer(builder -> {}, registrar);
+    }
+
+    protected final void startServer(Consumer<ServerBuilder> configurer, Consumer<TachyonServer> registrar) {
         closeCustomServerIfRunning();
-        var builder = TachyonServer.builder();
+        var builder = TachyonServer.builder().port(0);
         configurer.accept(builder);
         builder.session(s -> s.enabled(sessionMode() == SessionMode.STATEFUL));
         this.server = builder.build();
-        this.nettyServer = new NettyServer(0, (ServerEngine) server);
-        this.port = nettyServer.port();
+        registrar.accept(server);
+        server.start();
+        this.port = server.port();
         this.usingCustomServer = true;
     }
 
     private void closeCustomServerIfRunning() {
         if (usingCustomServer) {
-            nettyServer.close();
             server.close();
-            nettyServer = null;
             server = null;
             usingCustomServer = false;
         }
@@ -93,9 +98,7 @@ public abstract class AbstractMcpE2eTest {
 
     protected void stopServer() {
         if (usingCustomServer) {
-            nettyServer.close();
             server.close();
-            nettyServer = null;
             server = null;
             usingCustomServer = false;
         }

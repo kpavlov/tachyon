@@ -27,24 +27,26 @@ class MissingCapabilityTest extends AbstractStatelessMcpE2eTest {
 
     @BeforeEach
     void registerFixtures() {
-        startServer(b -> b.tool(
-                new AbstractToolHandler(ToolDescriptor.builder()
-                        .name("test_missing_capability")
-                        .description("Requires the sampling capability")
-                        .inputSchema("{\"type\": \"object\", \"properties\": {}}")
-                        .build()) {
-                    @Override
-                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                        var meta = request.meta();
-                        var capabilities = meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
-                        var hasSampling = capabilities instanceof Map<?, ?> map && map.containsKey("sampling");
-                        if (!hasSampling) {
-                            throw new MissingRequiredClientCapabilityException(
-                                    "Requires the 'sampling' capability", Map.of("sampling", Map.of()));
-                        }
-                        return ToolResult.text("sampling capability present");
-                    }
-                }));
+        startServerWith(s -> s.tools()
+                .register(
+                        new AbstractToolHandler(ToolDescriptor.builder()
+                                .name("test_missing_capability")
+                                .description("Requires the sampling capability")
+                                .inputSchema("{\"type\": \"object\", \"properties\": {}}")
+                                .build()) {
+                            @Override
+                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                                var meta = request.meta();
+                                var capabilities =
+                                        meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
+                                var hasSampling = capabilities instanceof Map<?, ?> map && map.containsKey("sampling");
+                                if (!hasSampling) {
+                                    throw new MissingRequiredClientCapabilityException(
+                                            "Requires the 'sampling' capability", Map.of("sampling", Map.of()));
+                                }
+                                return ToolResult.text("sampling capability present");
+                            }
+                        }));
     }
 
     @Test

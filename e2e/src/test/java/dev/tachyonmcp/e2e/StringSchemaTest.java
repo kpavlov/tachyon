@@ -21,12 +21,13 @@ class StringSchemaTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void shouldListToolWithStringSchemas() throws Exception {
-        startServer(it -> it.tool(ToolHandler.of(
-                b -> b.name("string-schema-tool")
-                        .description("Tool with string schemas")
-                        .inputSchema(INPUT_SCHEMA_JSON)
-                        .outputSchema(OUTPUT_SCHEMA_JSON),
-                (ctx, request) -> ToolResult.text("ok"))));
+        startServerWith(s -> s.tools()
+                .register(ToolHandler.of(
+                        b -> b.name("string-schema-tool")
+                                .description("Tool with string schemas")
+                                .inputSchema(INPUT_SCHEMA_JSON)
+                                .outputSchema(OUTPUT_SCHEMA_JSON),
+                        (ctx, request) -> ToolResult.text("ok"))));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -48,10 +49,13 @@ class StringSchemaTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void shouldHaveIdenticalResultToProviderBackedSchemas() throws Exception {
-        startServer(it -> {
-            it.tool(ToolHandler.of(
-                    b -> b.name("from-string").description("Tool from string").inputSchema(INPUT_SCHEMA_JSON),
-                    (ctx, request) -> ToolResult.text("string")));
+        startServerWith(s -> {
+            s.tools()
+                    .register(ToolHandler.of(
+                            b -> b.name("from-string")
+                                    .description("Tool from string")
+                                    .inputSchema(INPUT_SCHEMA_JSON),
+                            (ctx, request) -> ToolResult.text("string")));
             var mapper = new ObjectMapper();
             var jsonNodeSchema = mapper.readTree(INPUT_SCHEMA_JSON);
             var providerBackedSchema = new JsonSchema() {
@@ -67,9 +71,12 @@ class StringSchemaTest extends AbstractStatelessMcpE2eTest {
                             : java.util.Optional.empty();
                 }
             };
-            it.tool(ToolHandler.of(
-                    b -> b.name("from-node").description("Tool from node").inputSchema(providerBackedSchema),
-                    (ctx, request) -> ToolResult.text("node")));
+            s.tools()
+                    .register(ToolHandler.of(
+                            b -> b.name("from-node")
+                                    .description("Tool from node")
+                                    .inputSchema(providerBackedSchema),
+                            (ctx, request) -> ToolResult.text("node")));
         });
 
         try (var client = createTestClient()) {
@@ -94,8 +101,13 @@ class StringSchemaTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void shouldCallToolWithStringSchema() throws Exception {
-        startServer(it -> it.tool(
-                "call-test", "Call test", INPUT_SCHEMA_JSON, null, (ctx, request) -> ToolResult.text("called")));
+        startServerWith(s -> s.tools()
+                .register(
+                        "call-test",
+                        "Call test",
+                        INPUT_SCHEMA_JSON,
+                        null,
+                        (ctx, request) -> ToolResult.text("called")));
 
         try (var client = createTestClient()) {
             client.initialize();

@@ -25,11 +25,13 @@ class NettyServerThreadingTest {
     void eventLoopsAreOnPlatformThreadsAndToolHandlerOnVirtualThread() throws Exception {
         var handlerThread = new CompletableFuture<String>();
 
-        try (var server = newEngine(b -> b.tool(ToolHandler.of("thread_probe", (ctx, request) -> {
-                    Thread thread = Thread.currentThread();
-                    handlerThread.complete(thread.getName() + " virtual:" + thread.isVirtual());
-                    return ToolResult.empty();
-                })));
+        try (var server = newEngine(
+                        b -> {},
+                        s -> s.tools().register(ToolHandler.of("thread_probe", (ctx, request) -> {
+                            Thread thread = Thread.currentThread();
+                            handlerThread.complete(thread.getName() + " virtual:" + thread.isVirtual());
+                            return ToolResult.empty();
+                        })));
                 var netty = new NettyServer(0, server)) {
             Callable<Thread> probe = Thread::currentThread;
 
@@ -60,9 +62,9 @@ class NettyServerThreadingTest {
     void customThreadFactoryAddsNamePrefix() throws Exception {
         var handlerThreadName = new CompletableFuture<String>();
 
-        try (ServerEngine server = newEngine(b -> b.threadFactory(
-                        Thread.ofVirtual().name("tenant-", 0).factory())
-                .tool(ToolHandler.of("name_probe", (ctx, request) -> {
+        try (ServerEngine server = newEngine(
+                b -> b.threadFactory(Thread.ofVirtual().name("tenant-", 0).factory()),
+                s -> s.tools().register(ToolHandler.of("name_probe", (ctx, request) -> {
                     handlerThreadName.complete(Thread.currentThread().getName());
                     return ToolResult.empty();
                 })))) {
@@ -87,7 +89,8 @@ class NettyServerThreadingTest {
         var closed = new AtomicBoolean(false);
 
         var server = newEngine(
-                b -> b.executor(executor).tool(ToolHandler.of("exec_probe", (ctx, request) -> ToolResult.empty())));
+                b -> b.executor(executor),
+                s -> s.tools().register(ToolHandler.of("exec_probe", (ctx, request) -> ToolResult.empty())));
         server.close();
 
         // The executor should still be usable (not shut down)

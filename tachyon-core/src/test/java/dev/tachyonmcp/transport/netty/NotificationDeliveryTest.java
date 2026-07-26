@@ -56,10 +56,9 @@ class NotificationDeliveryTest {
 
     @BeforeEach
     void setUp() {
-        server = newEngine(b -> b.capabilities(c -> c.logging())
-                .session(s -> s.enabled(true))
-                .tool(PROGRESS_AND_LOG_TOOL)
-                .tool(FILTERED_LOG_TOOL));
+        server = newEngine(
+                b -> b.capabilities(c -> c.logging()).session(s -> s.enabled(true)),
+                s -> s.tools().register(PROGRESS_AND_LOG_TOOL).register(FILTERED_LOG_TOOL));
         dispatcher = new McpDispatcher(server, server.executor());
         testConn = new CollectingConnection();
         Session session = server.createSession("sess_test");
@@ -189,7 +188,8 @@ class NotificationDeliveryTest {
 
     @Test
     void shouldRejectSetLevelWhenLoggingCapabilityIsDisabled() {
-        try (var disabledServer = newEngine(b -> b.session(s -> s.enabled(true)).tool(FILTERED_LOG_TOOL))) {
+        try (var disabledServer =
+                newEngine(b -> b.session(s -> s.enabled(true)), s -> s.tools().register(FILTERED_LOG_TOOL))) {
             var disabledConnection = new CollectingConnection();
             var disabledSession = disabledServer.createSession("sess_disabled");
             disabledSession.connection(disabledConnection);

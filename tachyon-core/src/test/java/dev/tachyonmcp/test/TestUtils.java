@@ -16,9 +16,15 @@ public class TestUtils {
     private TestUtils() {}
 
     public static ServerEngine newEngine(Consumer<ServerBuilder> configurer) {
+        return newEngine(configurer, server -> {});
+    }
+
+    public static ServerEngine newEngine(Consumer<ServerBuilder> configurer, Consumer<TachyonServer> registrar) {
         var builder = TachyonServer.builder();
         configurer.accept(builder);
-        return (ServerEngine) builder.build();
+        var server = builder.build();
+        registrar.accept(server);
+        return (ServerEngine) server;
     }
 
     public static JsonNode parseJson(String json) {
