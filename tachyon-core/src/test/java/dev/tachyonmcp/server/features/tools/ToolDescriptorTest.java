@@ -1,5 +1,4 @@
 /* Copyright (c) 2026 Konstantin Pavlov and contributors. */
-
 package dev.tachyonmcp.server.features.tools;
 
 import static dev.tachyonmcp.test.TestUtils.parseJson;

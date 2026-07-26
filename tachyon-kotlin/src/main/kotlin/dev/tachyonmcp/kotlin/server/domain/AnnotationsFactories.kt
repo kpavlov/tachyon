@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Konstantin Pavlov and contributors. */
 @file:Suppress("FunctionName")
 @file:JvmName("AnnotationsFactory")
 

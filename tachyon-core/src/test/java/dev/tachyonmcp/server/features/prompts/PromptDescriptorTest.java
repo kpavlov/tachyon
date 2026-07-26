@@ -1,5 +1,4 @@
 /* Copyright (c) 2026 Konstantin Pavlov and contributors. */
-
 package dev.tachyonmcp.server.features.prompts;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

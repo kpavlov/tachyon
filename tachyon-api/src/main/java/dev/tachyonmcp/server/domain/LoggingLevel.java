@@ -1,7 +1,4 @@
-/*
- * Copyright (c) 2026 Konstantin Pavlov and contributors.
- */
-
+/* Copyright (c) 2026 Konstantin Pavlov and contributors. */
 package dev.tachyonmcp.server.domain;
 
 /** Logging levels matching the MCP protocol specification. Ordered by severity ascending. */

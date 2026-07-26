@@ -1,7 +1,4 @@
-/*
- * Copyright (c) 2026 Konstantin Pavlov and contributors.
- */
-
+/* Copyright (c) 2026 Konstantin Pavlov and contributors. */
 package dev.tachyonmcp.test;
 
 import static dev.tachyonmcp.server.json.JsonUtils.TREE_READ_CONTEXT;

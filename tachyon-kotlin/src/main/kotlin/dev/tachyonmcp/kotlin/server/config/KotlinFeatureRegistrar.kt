@@ -1,5 +1,4 @@
-// Copyright (c) 2026 Konstantin Pavlov and contributors.
-
+/* Copyright (c) 2026 Konstantin Pavlov and contributors. */
 package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.kotlin.server.features.prompts.promptHandler

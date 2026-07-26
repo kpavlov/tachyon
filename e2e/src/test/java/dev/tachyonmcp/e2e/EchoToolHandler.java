@@ -1,5 +1,4 @@
 /* Copyright (c) 2026 Konstantin Pavlov and contributors. */
-
 package dev.tachyonmcp.e2e;
 
 import dev.tachyonmcp.server.features.tools.ToolHandler;

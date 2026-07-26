@@ -1,7 +1,4 @@
-/*
- * Copyright (c) 2026 Konstantin Pavlov and contributors.
- */
-
+/* Copyright (c) 2026 Konstantin Pavlov and contributors. */
 package dev.tachyonmcp.transport.netty.http;
 
 import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendPlainTextAndClose;

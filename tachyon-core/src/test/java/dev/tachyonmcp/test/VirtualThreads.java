@@ -1,5 +1,4 @@
 /* Copyright (c) 2026 Konstantin Pavlov and contributors. */
-
 package dev.tachyonmcp.test;
 
 import java.util.concurrent.Callable;

@@ -1,7 +1,4 @@
-/*
- * Copyright (c) 2026 Konstantin Pavlov and contributors.
- */
-
+/* Copyright (c) 2026 Konstantin Pavlov and contributors. */
 package dev.tachyonmcp.protocol.mcp.v2026_07_28.codecs;
 
 import static org.assertj.core.api.Assertions.assertThat;
