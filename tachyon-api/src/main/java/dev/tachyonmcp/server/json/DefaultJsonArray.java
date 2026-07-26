@@ -5,11 +5,13 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import java.util.concurrent.ConcurrentHashMap;
 import org.jspecify.annotations.Nullable;
 
 final class DefaultJsonArray implements JsonArray {
@@ -18,6 +20,8 @@ final class DefaultJsonArray implements JsonArray {
 
     private final List<Object> values;
     private final String json;
+    private final Map<Integer, JsonObject> objects = new ConcurrentHashMap<>();
+    private final Map<Integer, JsonArray> arrays = new ConcurrentHashMap<>();
 
     DefaultJsonArray(List<?> values) {
         Objects.requireNonNull(values, "values");
@@ -41,12 +45,18 @@ final class DefaultJsonArray implements JsonArray {
 
     @Override
     public Optional<JsonObject> objectOpt(int index) {
-        return JsonValues.objectOpt(element(index), location(index));
+        var value = element(index);
+        return value == null
+                ? Optional.empty()
+                : Optional.of(objects.computeIfAbsent(index, ignored -> JsonValues.object(value, location(index))));
     }
 
     @Override
     public Optional<JsonArray> arrayOpt(int index) {
-        return JsonValues.arrayOpt(element(index), location(index));
+        var value = element(index);
+        return value == null
+                ? Optional.empty()
+                : Optional.of(arrays.computeIfAbsent(index, ignored -> JsonValues.array(value, location(index))));
     }
 
     @Override
@@ -132,10 +142,10 @@ final class DefaultJsonArray implements JsonArray {
             return (T) Double.valueOf(JsonValues.doubleOpt(value, location).orElseThrow());
         }
         if (element == JsonObject.class) {
-            return (T) JsonValues.objectOpt(value, location).orElseThrow();
+            return (T) objectOpt(index).orElseThrow();
         }
         if (element == JsonArray.class) {
-            return (T) JsonValues.arrayOpt(value, location).orElseThrow();
+            return (T) arrayOpt(index).orElseThrow();
         }
         throw new IllegalArgumentException("Unsupported JSON element type %s; decode the payload with a serde instead"
                 .formatted(element.getName()));

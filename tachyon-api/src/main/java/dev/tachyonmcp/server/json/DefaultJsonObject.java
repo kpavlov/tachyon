@@ -10,13 +10,17 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import java.util.concurrent.ConcurrentHashMap;
+import org.jspecify.annotations.Nullable;
 
 final class DefaultJsonObject implements JsonObject {
 
     static final JsonObject EMPTY = new DefaultJsonObject(Map.of());
 
     private final Map<String, Object> values;
-    private final String json;
+    private volatile @Nullable String json;
+    private final Map<String, JsonObject> objects = new ConcurrentHashMap<>();
+    private final Map<String, JsonArray> arrays = new ConcurrentHashMap<>();
 
     DefaultJsonObject(Map<String, ?> values) {
         Objects.requireNonNull(values, "values");
@@ -28,12 +32,30 @@ final class DefaultJsonObject implements JsonObject {
             copy.put(name, JsonValues.copyValue(value, name));
         });
         this.values = Collections.unmodifiableMap(copy);
-        this.json = JsonValues.writeJson(this.values);
+    }
+
+    private DefaultJsonObject(Map<String, Object> values, @Nullable String json) {
+        this.values = values;
+        this.json = json;
+    }
+
+    static DefaultJsonObject fromImmutableValues(Map<String, Object> values, @Nullable String json) {
+        return new DefaultJsonObject(values, json);
     }
 
     @Override
     public String json() {
-        return json;
+        var current = json;
+        if (current == null) {
+            synchronized (this) {
+                current = json;
+                if (current == null) {
+                    current = JsonValues.writeJson(values);
+                    json = current;
+                }
+            }
+        }
+        return current;
     }
 
     @Override
@@ -43,12 +65,18 @@ final class DefaultJsonObject implements JsonObject {
 
     @Override
     public Optional<JsonObject> objectOpt(String name) {
-        return JsonValues.objectOpt(values.get(name), location(name));
+        var value = values.get(name);
+        return value == null
+                ? Optional.empty()
+                : Optional.of(objects.computeIfAbsent(name, ignored -> JsonValues.object(value, location(name))));
     }
 
     @Override
     public Optional<JsonArray> arrayOpt(String name) {
-        return JsonValues.arrayOpt(values.get(name), location(name));
+        var value = values.get(name);
+        return value == null
+                ? Optional.empty()
+                : Optional.of(arrays.computeIfAbsent(name, ignored -> JsonValues.array(value, location(name))));
     }
 
     @Override

@@ -11,7 +11,10 @@ import java.math.BigDecimal
 /** Returns the [key] argument as a [String], or `null` when it is missing or JSON null. */
 public fun Args.stringOrNull(key: String): String? = stringOpt(key).orElse(null)
 
-/** Returns the [key] argument as an [Int], or `null` when it is missing, JSON null, or non-integral. */
+/**
+ * Returns the [key] argument as an [Int], or `null` when it is missing or JSON null.
+ * Fractional or overflowing values throw.
+ */
 public fun Args.intOrNull(key: String): Int? =
     intOpt(key).let { if (it.isPresent) it.asInt else null }
 
@@ -22,7 +25,10 @@ public fun Args.booleanOrNull(key: String): Boolean? = boolOpt(key).orElse(null)
 public fun Args.doubleOrNull(key: String): Double? =
     doubleOpt(key).let { if (it.isPresent) it.asDouble else null }
 
-/** Returns the [key] argument as a [Long], or `null` when it is missing, JSON null, or non-integral. */
+/**
+ * Returns the [key] argument as a [Long], or `null` when it is missing or JSON null.
+ * Fractional or overflowing values throw.
+ */
 public fun Args.longOrNull(key: String): Long? =
     longOpt(key).let { if (it.isPresent) it.asLong else null }
 

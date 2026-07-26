@@ -5,6 +5,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.runtime.InteractionContext.Lifecycle;
+import dev.tachyonmcp.server.McpDispatcher;
+import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.TachyonServer;
+import dev.tachyonmcp.server.domain.RequestId;
+import dev.tachyonmcp.server.internal.ServerEngine;
+import dev.tachyonmcp.server.session.DispatchContext;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 class DefaultChannelContextTest {
@@ -40,28 +50,67 @@ class DefaultChannelContextTest {
     }
 
     @Test
-    void shouldStoreAndRetrieveAttributesByTypedKey() {
-        InteractionContext ctx = new DefaultChannelContext(new FakeProtocol());
+    void shouldStoreAndRetrieveAttributesByTypedKey() throws Exception {
         var key = AttributeKey.<String>of("greeting");
+        var before = new AtomicReference<Optional<String>>();
+        var after = new AtomicReference<Optional<String>>();
 
-        assertThat(ctx.get(key)).isEmpty();
+        try (TachyonServer server = TachyonServer.builder().build()) {
+            var engine = (ServerEngine) server;
+            engine.registerHandler("test/attributes", new RpcMethodHandler() {
+                @Override
+                public String method() {
+                    return "test/attributes";
+                }
 
-        ctx.set(key, "hello");
+                @Override
+                public Object handle(DispatchContext context, Object params) {
+                    before.set(context.get(key));
+                    context.set(key, "hello");
+                    after.set(context.get(key));
+                    return Map.of();
+                }
+            });
 
-        assertThat(ctx.get(key)).contains("hello");
+            new McpDispatcher(engine, Runnable::run)
+                    .dispatchRequestAsync(RequestId.of(1), "test/attributes", Map.of(), null)
+                    .get(5, TimeUnit.SECONDS);
+        }
+
+        assertThat(before.get()).isEmpty();
+        assertThat(after.get()).contains("hello");
     }
 
     @Test
-    void shouldNotCollideBetweenDistinctKeysWithTheSameDebugName() {
-        InteractionContext ctx = new DefaultChannelContext(new FakeProtocol());
+    void shouldNotCollideBetweenDistinctKeysWithTheSameDebugName() throws Exception {
         var keyA = AttributeKey.<String>of("shared-name");
         var keyB = AttributeKey.<String>of("shared-name");
+        var values = new AtomicReference<Map<AttributeKey<String>, Optional<String>>>();
 
-        ctx.set(keyA, "from-a");
-        ctx.set(keyB, "from-b");
+        try (TachyonServer server = TachyonServer.builder().build()) {
+            var engine = (ServerEngine) server;
+            engine.registerHandler("test/attributes", new RpcMethodHandler() {
+                @Override
+                public String method() {
+                    return "test/attributes";
+                }
 
-        assertThat(ctx.get(keyA)).contains("from-a");
-        assertThat(ctx.get(keyB)).contains("from-b");
+                @Override
+                public Object handle(DispatchContext context, Object params) {
+                    context.set(keyA, "from-a");
+                    context.set(keyB, "from-b");
+                    values.set(Map.of(keyA, context.get(keyA), keyB, context.get(keyB)));
+                    return Map.of();
+                }
+            });
+
+            new McpDispatcher(engine, Runnable::run)
+                    .dispatchRequestAsync(RequestId.of(1), "test/attributes", Map.of(), null)
+                    .get(5, TimeUnit.SECONDS);
+        }
+
+        assertThat(values.get()).containsEntry(keyA, Optional.of("from-a"));
+        assertThat(values.get()).containsEntry(keyB, Optional.of("from-b"));
     }
 
     private static final class FakeProtocol implements Protocol {

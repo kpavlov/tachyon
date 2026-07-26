@@ -92,6 +92,13 @@ class JsonObjectTest {
     }
 
     @Test
+    void reportsListElementPathWhenCopyingValues() {
+        assertThatThrownBy(() -> JsonObject.of(Map.of("items", java.util.List.of(Map.of("value", Double.NaN)))))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Invalid JSON value at 'items[0].value': non-finite number");
+    }
+
+    @Test
     void providesFallbacks() {
         var object = JsonObject.of(Map.of(
                 "string",
@@ -172,5 +179,12 @@ class JsonObjectTest {
 
         assertThat(JsonObject.of(values).json())
                 .isEqualTo("{\"text\":\"quote: \\\"\\n\",\"nested\":{\"number\":1.25},\"items\":[true,null]}");
+    }
+
+    @Test
+    void usesPreRenderedJsonForImmutableValues() {
+        var object = DefaultJsonObject.fromImmutableValues(Map.of("name", "tachyon"), "{ \"name\" : \"tachyon\" }");
+
+        assertThat(object.json()).isEqualTo("{ \"name\" : \"tachyon\" }");
     }
 }

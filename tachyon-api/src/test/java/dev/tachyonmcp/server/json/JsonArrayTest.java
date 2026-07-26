@@ -46,6 +46,21 @@ class JsonArrayTest {
     }
 
     @Test
+    void reusesNestedJsonDocuments() {
+        var object = JsonObject.of(Map.of("child", Map.of("name", "child"), "items", List.of("item")));
+        var objects = JsonArray.of(List.of(Map.of("name", "child")));
+        var arrays = JsonArray.of(List.of(List.of("item")));
+
+        assertThat(object.objectValue("child")).isSameAs(object.objectValue("child"));
+        assertThat(object.objectValue("child").asMap()).isSameAs(object.asMap().get("child"));
+        assertThat(object.arrayValue("items")).isSameAs(object.arrayValue("items"));
+        assertThat(objects.valuesAs(JsonObject.class).getFirst())
+                .isSameAs(objects.valuesAs(JsonObject.class).getFirst());
+        assertThat(arrays.valuesAs(JsonArray.class).getFirst())
+                .isSameAs(arrays.valuesAs(JsonArray.class).getFirst());
+    }
+
+    @Test
     void readsArrayFromEnclosingObjectPreservingEmptyVsMissing() {
         var object = JsonObject.of(Map.of("tags", List.of("x", "y"), "empty", List.of()));
 

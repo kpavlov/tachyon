@@ -79,24 +79,18 @@ final class JsonValues {
         return OptionalDouble.of(result);
     }
 
-    static Optional<JsonObject> objectOpt(@Nullable Object value, String location) {
-        if (value == null) {
-            return Optional.empty();
-        }
+    static JsonObject object(Object value, String location) {
         if (value instanceof Map<?, ?> map) {
             @SuppressWarnings("unchecked")
-            var object = (Map<String, ?>) map;
-            return Optional.of(new DefaultJsonObject(object));
+            var object = (Map<String, Object>) map;
+            return DefaultJsonObject.fromImmutableValues(object, null);
         }
         throw wrongType(location, "object", value);
     }
 
-    static Optional<JsonArray> arrayOpt(@Nullable Object value, String location) {
-        if (value == null) {
-            return Optional.empty();
-        }
+    static JsonArray array(Object value, String location) {
         if (value instanceof List<?> list) {
-            return Optional.of(new DefaultJsonArray(list));
+            return new DefaultJsonArray(list);
         }
         throw wrongType(location, "array", value);
     }
@@ -154,8 +148,8 @@ final class JsonValues {
             }
             case List<?> list -> {
                 var copy = new ArrayList<>(list.size());
-                for (var item : list) {
-                    copy.add(copyValue(item, path));
+                for (var index = 0; index < list.size(); index++) {
+                    copy.add(copyValue(list.get(index), path + "[" + index + "]"));
                 }
                 return Collections.unmodifiableList(copy);
             }

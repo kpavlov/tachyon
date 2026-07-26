@@ -7,6 +7,7 @@ import dev.tachyonmcp.kotlin.server.domain.arrayOrNull
 import dev.tachyonmcp.kotlin.server.domain.boolean
 import dev.tachyonmcp.kotlin.server.domain.booleanOrNull
 import dev.tachyonmcp.kotlin.server.domain.decimalOrNull
+import dev.tachyonmcp.kotlin.server.domain.decode
 import dev.tachyonmcp.kotlin.server.domain.double
 import dev.tachyonmcp.kotlin.server.domain.doubleOrNull
 import dev.tachyonmcp.kotlin.server.domain.int
@@ -138,8 +139,22 @@ internal class KotlinApiTest {
     }
 
     @Test
-    fun `orNull accessors return null when the key is missing`() {
+    fun `orNull accessors return null when the key is missing or JSON null`() {
         val args = Args.of(null, null)
+        val nullArgs =
+            Args.of(
+                mapOf<String, Any?>(
+                    "str" to null,
+                    "int" to null,
+                    "long" to null,
+                    "bool" to null,
+                    "double" to null,
+                    "decimal" to null,
+                    "obj" to null,
+                    "arr" to null,
+                ),
+                null,
+            )
 
         assertSoftly {
             args.stringOrNull("k") shouldBe null
@@ -150,12 +165,18 @@ internal class KotlinApiTest {
             args.decimalOrNull("k") shouldBe null
             args.objectOrNull("k") shouldBe null
             args.arrayOrNull("k") shouldBe null
+            nullArgs.stringOrNull("str") shouldBe null
+            nullArgs.intOrNull("int") shouldBe null
+            nullArgs.longOrNull("long") shouldBe null
+            nullArgs.booleanOrNull("bool") shouldBe null
+            nullArgs.doubleOrNull("double") shouldBe null
+            nullArgs.decimalOrNull("decimal") shouldBe null
+            nullArgs.objectOrNull("obj") shouldBe null
+            nullArgs.arrayOrNull("arr") shouldBe null
         }
     }
 
     // endregion
-
-    // region: Args string/boolean/int/long/double with defaults
 
     @Test
     fun `accessors with default return the value when the key is present`() {
@@ -181,8 +202,9 @@ internal class KotlinApiTest {
     }
 
     @Test
-    fun `accessors with default return the default when the key is missing`() {
+    fun `accessors with default return the default when the key is missing or JSON null`() {
         val args = Args.of(null, null)
+        val nullArgs = Args.of(mapOf<String, Any?>("str" to null, "long" to null), null)
 
         assertSoftly {
             args.string("k", "def") shouldBe "def"
@@ -190,10 +212,10 @@ internal class KotlinApiTest {
             args.int("k", 7) shouldBe 7
             args.long("k", 42L) shouldBe 42L
             args.double("k", 1.5) shouldBe 1.5
+            nullArgs.string("str", "def") shouldBe "def"
+            nullArgs.long("long", 42L) shouldBe 42L
         }
     }
-
-    // endregion
 
     @Serializable
     data class GreetingArgs(
@@ -213,6 +235,13 @@ internal class KotlinApiTest {
         val args = Args.of(raw, KxSerializationSerde.Default)
         val decoded = args.decode(GreetingArgs::class.java)
         decoded shouldBe GreetingArgs("Alice", 30)
+    }
+
+    @Test
+    fun `reified decode round-trip via configured serde`() {
+        val args = Args.of(mapOf("name" to "Alice", "age" to 30), KxSerializationSerde.Default)
+
+        args.decode<GreetingArgs>() shouldBe GreetingArgs("Alice", 30)
     }
 
     @Test

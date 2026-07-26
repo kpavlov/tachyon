@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.json;
 
+import dev.tachyonmcp.annotations.ExperimentalApi;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -309,7 +310,7 @@ public interface JsonArray extends JsonDocument {
      * Returns every element coerced to {@code element}.
      *
      * <p>Supported element types: {@link String}, {@link Boolean}, {@link BigDecimal}, {@link
-     * Integer}, {@link Long}, {@link Double}, and {@link JsonObject}. A JSON null, wrong-typed, or
+     * Integer}, {@link Long}, {@link Double}, {@link JsonObject}, and {@link JsonArray}. A JSON null, wrong-typed, or
      * overflowing element throws {@link IllegalArgumentException} naming its index. Bean and nested
      * generic element types are not supported — decode the enclosing payload with a serde instead.
      *
@@ -326,6 +327,7 @@ public interface JsonArray extends JsonDocument {
      *
      * @return the list view
      */
+    @ExperimentalApi
     List<Object> asList();
 
     /**
