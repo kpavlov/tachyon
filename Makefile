@@ -34,16 +34,19 @@ package: ## Install artifacts to local Maven repo (skip tests)
 	@./mvnw install -pl tachyon-kotlin -am -DskipTests -Dspotbugs.skip -Dspotless.skip
 
 apidocs:
+	@echo "📚  Building API Docs..."
+	@rm -rf target/reports/apidocs
 	@./mvnw javadoc:aggregate \
 		-pl tachyon-api,tachyon-core,tachyon-extensions -am \
 		--no-transfer-progress
+	@echo " ✅  Done!"
 
 examples: ## Build live examples against published artifacts
 	@echo "🌤️ 📡  Building LIVE examples..."
 	@./mvnw verify -f examples/weather/pom.xml --no-transfer-progress
 	@./mvnw verify -f examples/weather-mcp-kotlin/pom.xml --no-transfer-progress
 	@./mvnw verify -f examples/echo-kotlin/pom.xml --no-transfer-progress
-	@echo " ✅ Done!"
+	@echo " ✅  Done!"
 
 examples-snapshot: package ## Build examples against local SNAPSHOT artifacts
 	@echo "🌤️ 🎬 Building SNAPSHOT examples..."
