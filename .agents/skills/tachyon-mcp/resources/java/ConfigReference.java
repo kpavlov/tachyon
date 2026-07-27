@@ -4,10 +4,10 @@
 
 import dev.tachyonmcp.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.server.config.FeatureConfig;
-import dev.tachyonmcp.server.config.Mode;
+import dev.tachyonmcp.protocol.api.server.config.Mode;
 import dev.tachyonmcp.server.config.NetworkConfig;
 import dev.tachyonmcp.server.config.ResourcesConfig;
-import dev.tachyonmcp.server.config.RuntimeConfig;
+import dev.tachyonmcp.protocol.api.server.config.RuntimeConfig;
 import dev.tachyonmcp.server.config.SessionConfig;
 import dev.tachyonmcp.server.config.TasksConfig;
 import dev.tachyonmcp.server.session.InMemorySessionEventStore;

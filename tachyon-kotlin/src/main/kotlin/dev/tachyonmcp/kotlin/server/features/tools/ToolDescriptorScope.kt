@@ -3,10 +3,12 @@ package dev.tachyonmcp.kotlin.server.features.tools
 
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.json.toJsonSchema
-import dev.tachyonmcp.server.features.tasks.TaskSupport
-import dev.tachyonmcp.server.features.tools.ToolDescriptor
+import dev.tachyonmcp.protocol.api.json.JsonSchema
+import dev.tachyonmcp.protocol.api.server.domain.Icon
+import dev.tachyonmcp.protocol.api.server.domain.ToolAnnotations
+import dev.tachyonmcp.protocol.api.server.features.tasks.TaskSupport
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.json.Jackson3JsonFactory
-import dev.tachyonmcp.server.json.JsonSchema
 import kotlinx.serialization.json.JsonObject
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
@@ -22,8 +24,8 @@ public class ToolDescriptorScope
         public var inputSchema: JsonSchema? = null
         public var outputSchema: JsonSchema? = null
         public var taskSupport: TaskSupport? = null
-        public var annotations: dev.tachyonmcp.server.domain.ToolAnnotations? = null
-        public var icons: List<dev.tachyonmcp.server.domain.Icon>? = null
+        public var annotations: ToolAnnotations? = null
+        public var icons: List<Icon>? = null
         public var extensionId: String? = null
 
         public fun inputSchema(json: String) {
@@ -69,7 +71,7 @@ public class ToolDescriptorScope
 public inline fun toolDescriptor(
     name: String,
     configure: ToolDescriptorScope.() -> Unit = {},
-): dev.tachyonmcp.server.features.tools.ToolDescriptor {
+): ToolDescriptor {
     contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
     return ToolDescriptorScope()
         .apply {
@@ -80,9 +82,7 @@ public inline fun toolDescriptor(
 
 /** Builds a [ToolDescriptor] with a receiver DSL. */
 @OptIn(ExperimentalContracts::class)
-public inline fun ToolDescriptor(
-    block: ToolDescriptorScope.() -> Unit,
-): dev.tachyonmcp.server.features.tools.ToolDescriptor {
+public inline fun ToolDescriptor(block: ToolDescriptorScope.() -> Unit): ToolDescriptor {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
     return ToolDescriptorScope().apply(block).build()
 }

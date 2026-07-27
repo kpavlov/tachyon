@@ -4,6 +4,8 @@ package dev.tachyonmcp.server.json;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.protocol.api.json.JsonDocument;
+import dev.tachyonmcp.protocol.api.json.JsonSchema;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;

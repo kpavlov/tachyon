@@ -35,13 +35,26 @@ public record ServerCapabilities(
         experimental = experimental == null ? null : Map.copyOf(experimental);
     }
 
-    /** Prompt capabilities. */
+    /**
+     * Prompt capabilities.
+     *
+     * @param listChanged whether the server emits prompt list change notifications
+     */
     public record Prompts(boolean listChanged) {}
 
-    /** Tool capabilities. */
+    /**
+     * Tool capabilities.
+     *
+     * @param listChanged whether the server emits tool list change notifications
+     */
     public record Tools(boolean listChanged) {}
 
-    /** Resource capabilities. */
+    /**
+     * Resource capabilities.
+     *
+     * @param subscribe   whether the server supports resource subscriptions
+     * @param listChanged whether the server emits resource list change notifications
+     */
     public record Resources(boolean subscribe, boolean listChanged) {}
 
     /**

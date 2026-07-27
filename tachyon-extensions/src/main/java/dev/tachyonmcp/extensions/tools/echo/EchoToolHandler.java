@@ -1,12 +1,12 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.extensions.tools.echo;
 
-import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolRequest;
-import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.json.JsonSchema;
+import dev.tachyonmcp.protocol.api.json.JsonSchema;
+import dev.tachyonmcp.protocol.api.runtime.InteractionContext;
+import dev.tachyonmcp.protocol.api.server.features.tools.AbstractToolHandler;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolRequest;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
 
 public class EchoToolHandler extends AbstractToolHandler {
 

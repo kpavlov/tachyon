@@ -3,10 +3,10 @@ package dev.tachyonmcp.kotlin.server.features.tools
 
 import dev.tachyonmcp.kotlin.server.config.ToolScope
 import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
-import dev.tachyonmcp.server.features.tools.AsyncToolFn
-import dev.tachyonmcp.server.features.tools.ToolDescriptor
-import dev.tachyonmcp.server.features.tools.ToolHandler
-import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.protocol.api.server.features.tools.AsyncToolFn
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolHandler
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult
 import kotlinx.coroutines.CoroutineName
 
 @JvmSynthetic

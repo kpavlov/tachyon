@@ -4,7 +4,7 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.features.completions.CompletionResult;
+import dev.tachyonmcp.protocol.api.server.features.completions.CompletionResult;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

@@ -4,9 +4,11 @@ package dev.tachyonmcp.server.features.completions;
 import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.protocol.api.server.domain.ServerError;
+import dev.tachyonmcp.protocol.api.server.features.completions.CompletionResult;
+import dev.tachyonmcp.protocol.api.server.features.completions.Completions;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CompleteResult;
 import dev.tachyonmcp.server.RpcMethodHandler;
-import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import java.util.HashMap;

@@ -2,6 +2,9 @@
 package dev.tachyonmcp.kotlin.server.features.resources
 
 import dev.tachyonmcp.kotlin.server.TachyonDsl
+import dev.tachyonmcp.protocol.api.server.domain.Annotations
+import dev.tachyonmcp.protocol.api.server.domain.Icon
+import dev.tachyonmcp.protocol.api.server.features.resources.ResourceDescriptor
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -15,12 +18,12 @@ public class ResourceDescriptorScope
         public var description: String? = null
         public var mimeType: String? = null
         public var title: String? = null
-        public var annotations: dev.tachyonmcp.server.domain.Annotations? = null
+        public var annotations: Annotations? = null
         public var size: Long? = null
-        public var icons: List<dev.tachyonmcp.server.domain.Icon>? = null
+        public var icons: List<Icon>? = null
 
         @PublishedApi
-        internal fun build(): dev.tachyonmcp.server.features.resources.ResourceDescriptor {
+        internal fun build(): ResourceDescriptor {
             val n = requireNotNull(name) { "ResourceDescriptor.name is required" }
             val u = requireNotNull(uri) { "ResourceDescriptor.uri is required" }
             return ResourceDescriptor(
@@ -41,7 +44,7 @@ public inline fun resourceDescriptor(
     name: String,
     uri: String,
     configure: ResourceDescriptorScope.() -> Unit = {},
-): dev.tachyonmcp.server.features.resources.ResourceDescriptor {
+): ResourceDescriptor {
     contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
     return ResourceDescriptorScope()
         .apply {
@@ -55,7 +58,7 @@ public inline fun resourceDescriptor(
 @OptIn(ExperimentalContracts::class)
 public inline fun ResourceDescriptor(
     block: ResourceDescriptorScope.() -> Unit,
-): dev.tachyonmcp.server.features.resources.ResourceDescriptor {
+): ResourceDescriptor {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
     return ResourceDescriptorScope().apply(block).build()
 }

@@ -8,10 +8,20 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import tools.jackson.core.JsonToken;
 
+/** Decoding helpers built on {@link CodecRegistry}. */
 public final class ProtocolCodecUtil {
 
     private ProtocolCodecUtil() {}
 
+    /**
+     * Decodes a JSON object string using the registered codec for the given type.
+     *
+     * @param json       the JSON object to decode
+     * @param targetType the model type to decode into
+     * @param <T>        the model type
+     * @return the decoded instance
+     * @throws UncheckedIOException if decoding fails
+     */
     public static <T> T decodeWithCodec(String json, Class<T> targetType) {
         try {
             var codec = CodecRegistry.codecFor(targetType);

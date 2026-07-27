@@ -8,11 +8,11 @@ import static dev.tachyonmcp.transport.netty.ChannelHandlerUtils.sendResponseAnd
 import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendJsonResponse;
 import static dev.tachyonmcp.transport.netty.McpResponseWriter.sendOptions;
 
+import dev.tachyonmcp.protocol.api.runtime.InteractionContext;
+import dev.tachyonmcp.protocol.api.server.domain.RequestId;
 import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.runtime.InteractionEvent;
 import dev.tachyonmcp.server.McpDispatcher;
-import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
 import dev.tachyonmcp.transport.netty.sse.PostSseStream;

@@ -3,9 +3,9 @@ package dev.tachyonmcp.transport.jsonrpc;
 
 import static dev.tachyonmcp.server.json.JsonUtils.FACTORY;
 
+import dev.tachyonmcp.protocol.api.server.domain.RequestId;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.Codec;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.CodecRegistry;
-import dev.tachyonmcp.server.domain.RequestId;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import java.io.ByteArrayOutputStream;

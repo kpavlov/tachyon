@@ -5,7 +5,7 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import dev.tachyonmcp.server.json.spi.JsonSchemaFactory;
+import dev.tachyonmcp.protocol.api.json.spi.JsonSchemaFactory;
 import java.util.ServiceLoader;
 import org.junit.jupiter.api.Test;
 

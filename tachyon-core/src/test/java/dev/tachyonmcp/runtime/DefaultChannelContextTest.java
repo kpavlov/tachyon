@@ -4,11 +4,13 @@ package dev.tachyonmcp.runtime;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.protocol.Protocol;
-import dev.tachyonmcp.runtime.InteractionContext.Lifecycle;
+import dev.tachyonmcp.protocol.api.runtime.AttributeKey;
+import dev.tachyonmcp.protocol.api.runtime.InteractionContext;
+import dev.tachyonmcp.protocol.api.runtime.InteractionContext.Lifecycle;
+import dev.tachyonmcp.protocol.api.server.domain.RequestId;
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DispatchContext;
 import java.util.Map;

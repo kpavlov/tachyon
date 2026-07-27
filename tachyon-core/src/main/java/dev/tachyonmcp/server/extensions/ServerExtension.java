@@ -1,8 +1,8 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.extensions;
 
+import dev.tachyonmcp.protocol.api.runtime.Extension;
 import dev.tachyonmcp.runtime.ChannelContext;
-import dev.tachyonmcp.runtime.Extension;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import java.util.Map;
 import java.util.Set;

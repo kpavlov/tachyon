@@ -1,14 +1,14 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server;
 
-import dev.tachyonmcp.runtime.Notifications;
+import dev.tachyonmcp.protocol.api.runtime.Notifications;
+import dev.tachyonmcp.protocol.api.server.features.completions.Completions;
+import dev.tachyonmcp.protocol.api.server.features.prompts.Prompts;
+import dev.tachyonmcp.protocol.api.server.features.resources.Resources;
+import dev.tachyonmcp.protocol.api.server.features.tasks.Tasks;
+import dev.tachyonmcp.protocol.api.server.features.tools.Tools;
 import dev.tachyonmcp.server.config.ServerConfig;
 import dev.tachyonmcp.server.extensions.ServerExtension;
-import dev.tachyonmcp.server.features.completions.Completions;
-import dev.tachyonmcp.server.features.prompts.Prompts;
-import dev.tachyonmcp.server.features.resources.Resources;
-import dev.tachyonmcp.server.features.tasks.Tasks;
-import dev.tachyonmcp.server.features.tools.Tools;
 import java.util.List;
 
 /**

@@ -5,9 +5,9 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
-import dev.tachyonmcp.server.domain.TextResourceContents;
-import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
-import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
+import dev.tachyonmcp.protocol.api.server.domain.TextResourceContents;
+import dev.tachyonmcp.protocol.api.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.protocol.api.server.features.resources.ResourceDescriptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

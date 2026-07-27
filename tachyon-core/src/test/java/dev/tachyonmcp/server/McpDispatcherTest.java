@@ -3,7 +3,7 @@ package dev.tachyonmcp.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.domain.RequestId;
+import dev.tachyonmcp.protocol.api.server.domain.RequestId;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import java.util.Map;
 import java.util.function.Consumer;

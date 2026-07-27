@@ -6,10 +6,10 @@ import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
 import dev.tachyonmcp.kotlin.server.json.schemas
 import dev.tachyonmcp.kotlin.server.json.toJsonSchema
 import dev.tachyonmcp.kotlin.server.json.toJsonSchemaOrNull
+import dev.tachyonmcp.protocol.api.json.JsonSchema
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult
 import dev.tachyonmcp.server.TachyonServer
-import dev.tachyonmcp.server.features.tools.ToolDescriptor
-import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.json.JsonSchema
 import kotlinx.serialization.json.JsonObject
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
@@ -21,7 +21,7 @@ public fun TachyonServer.registerTool(
     description: String? = null,
     inputSchema: JsonSchema? = null,
     outputSchema: JsonSchema? = null,
-    block: suspend ToolScope.() -> dev.tachyonmcp.server.features.tools.ToolResult,
+    block: suspend ToolScope.() -> ToolResult,
 ): TachyonServer =
     registerTool(configure = {
         name(name)
@@ -36,7 +36,7 @@ public fun TachyonServer.registerTool(
     description: String? = null,
     inputSchema: String,
     outputSchema: String? = null,
-    block: suspend ToolScope.() -> dev.tachyonmcp.server.features.tools.ToolResult,
+    block: suspend ToolScope.() -> ToolResult,
 ): TachyonServer =
     registerTool(configure = {
         name(name)
@@ -71,8 +71,8 @@ public inline fun TachyonServer.registerTool(
  */
 @JvmSynthetic
 public fun TachyonServer.registerTool(
-    descriptor: dev.tachyonmcp.server.features.tools.ToolDescriptor,
-    block: suspend ToolScope.() -> dev.tachyonmcp.server.features.tools.ToolResult,
+    descriptor: ToolDescriptor,
+    block: suspend ToolScope.() -> ToolResult,
 ): TachyonServer {
     val runtime =
         extensions().filterIsInstance<CoroutineRuntime>().singleOrNull()
@@ -91,7 +91,7 @@ public fun TachyonServer.registerTool(
     description: String? = null,
     inputSchema: JsonObject,
     outputSchema: JsonObject? = null,
-    block: suspend ToolScope.() -> dev.tachyonmcp.server.features.tools.ToolResult,
+    block: suspend ToolScope.() -> ToolResult,
 ): TachyonServer =
     registerTool(
         name = name,

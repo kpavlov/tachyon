@@ -6,8 +6,8 @@ import static dev.tachyonmcp.transport.netty.ProtocolVersionHandler.LATEST_PROTO
 import static dev.tachyonmcp.transport.netty.ProtocolVersionHandler.SUPPORTED_VERSIONS;
 import static dev.tachyonmcp.transport.netty.ProtocolVersionHandler.UNSUPPORTED_VERSION_KEY;
 
-import dev.tachyonmcp.server.domain.RequestId;
-import dev.tachyonmcp.server.domain.ServerError;
+import dev.tachyonmcp.protocol.api.server.domain.RequestId;
+import dev.tachyonmcp.protocol.api.server.domain.ServerError;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcMessage;
 import io.netty.channel.ChannelHandler.Sharable;

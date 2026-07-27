@@ -1,20 +1,21 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.features.prompts;
 
-import dev.tachyonmcp.annotations.InternalApi;
+import dev.tachyonmcp.protocol.api.annotations.InternalApi;
+import dev.tachyonmcp.protocol.api.json.JsonSchemaValidator;
+import dev.tachyonmcp.protocol.api.server.config.Mode;
+import dev.tachyonmcp.protocol.api.server.domain.PromptMessage;
+import dev.tachyonmcp.protocol.api.server.domain.ServerError;
+import dev.tachyonmcp.protocol.api.server.features.HandlerFutures;
+import dev.tachyonmcp.protocol.api.server.features.prompts.*;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetPromptRequestParams;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.FeatureConfig;
-import dev.tachyonmcp.server.config.Mode;
-import dev.tachyonmcp.server.domain.PromptMessage;
-import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.ServerErrors;
 import dev.tachyonmcp.server.features.AbstractRegistry;
-import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.json.JsonSchemaUtils;
-import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.JsonUtils;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;

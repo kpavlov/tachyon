@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server;
 
-import dev.tachyonmcp.annotations.InternalApi;
+import dev.tachyonmcp.protocol.api.annotations.InternalApi;
 import dev.tachyonmcp.server.session.DispatchContext;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -26,15 +26,31 @@ import org.jspecify.annotations.Nullable;
 @InternalApi
 public interface RpcMethodHandler {
 
-    /** The JSON-RPC method name this handler dispatches to. */
+    /**
+     * The JSON-RPC method name this handler dispatches to.
+     *
+     * @return the method name
+     */
     String method();
 
-    /** Handles the method and returns the result to serialize as JSON-RPC response. */
+    /**
+     * Handles the method and returns the result to serialize as JSON-RPC response.
+     *
+     * @param context the dispatch context with server and outbound stream access
+     * @param params  the method parameters, or {@code null}
+     * @return the result to serialize
+     * @throws Exception on handler failure
+     */
     Object handle(DispatchContext context, @Nullable Object params) throws Exception;
 
     /**
      * Handles the method asynchronously. Default delegates to {@link #handle}.
      * Override for async handlers that return a future directly.
+     *
+     * @param context the dispatch context
+     * @param params  the method parameters, or {@code null}
+     * @return a completion stage yielding the result
+     * @throws Exception on handler failure
      */
     default CompletionStage<Object> handleAsync(DispatchContext context, @Nullable Object params) throws Exception {
         return CompletableFuture.completedFuture(handle(context, params));

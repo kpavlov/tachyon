@@ -3,11 +3,11 @@ package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.protocol.api.server.domain.ContentBlock;
+import dev.tachyonmcp.protocol.api.server.domain.ServerError;
+import dev.tachyonmcp.protocol.api.server.domain.TaskResult;
+import dev.tachyonmcp.protocol.api.server.domain.TextContent;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
-import dev.tachyonmcp.server.domain.ContentBlock;
-import dev.tachyonmcp.server.domain.ServerError;
-import dev.tachyonmcp.server.domain.TaskResult;
-import dev.tachyonmcp.server.domain.TextContent;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;

@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.runtime;
 
-import dev.tachyonmcp.annotations.InternalApi;
+import dev.tachyonmcp.protocol.api.annotations.InternalApi;
 
 /** A writable SSE connection to a client. */
 @InternalApi

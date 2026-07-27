@@ -356,18 +356,23 @@ class JavadocFormatter:
         return text
 
     @staticmethod
+    def _param_desc(pname, pdoc):
+        if pdoc:
+            return pdoc
+        return " ".join(w for w in pname.replace("_", " ").split() if w)
+
+    @staticmethod
     def make_javadoc(desc, param_docs=None, indent=""):
-        if not desc and not any(d for _, d in (param_docs or [])):
+        if not desc and not param_docs:
             return ""
         lines = [f"{indent}/**\n"]
         if desc:
             lines.append(f"{indent} * {desc}\n")
-        if any(d for _, d in (param_docs or [])):
+        if param_docs:
             if desc:
                 lines.append(f"{indent} *\n")
-            for pname, pdoc in (param_docs or []):
-                if pdoc:
-                    lines.append(f"{indent} * @param {pname} {pdoc}\n")
+            for pname, pdoc in param_docs:
+                lines.append(f"{indent} * @param {pname} {JavadocFormatter._param_desc(pname, pdoc)}\n")
         lines.append(f"{indent} */\n")
         return "".join(lines)
 
@@ -1118,7 +1123,9 @@ class Generator:
             )
 
         class_desc = JavadocFormatter.format_jsdoc(jsdoc) if jsdoc else ""
-        param_docs = [(fname, jd) for _, fname, _, jd, _ in components if jd]
+        if not class_desc:
+            class_desc = "A " + " ".join(w for w in re.sub(r"([A-Z])", r" \1", name).split()).lower() + "."
+        param_docs = [(fname, jd or "") for _, fname, _, jd, _ in components]
 
         out = []
         out.append(self.pkg(self.pkg_models))
@@ -1169,6 +1176,8 @@ class Generator:
                 params.append(
                     f'{indent}    @JsonProperty("{json_name}") {nullable}{simple_typ} {fname}'
                 )
+            class_desc = " ".join(w for w in anon_name.replace("_", " ").split() if w)
+            out.append(f'{indent}/** Parameters for {{@link {parent_name}}}. */\n')
             out.append(f"{indent}public record {anon_name}(\n")
             out.append(",\n".join(params))
             out.append(f"\n{indent}) {{\n")
@@ -1279,6 +1288,12 @@ class Generator:
         for typ, fname, optional, _, _ in comps:
             simple_typ = self.simplify_type(typ)
             nul = "@Nullable " if optional else ""
+            desc = " ".join(w for w in fname.replace("_", " ").split() if w)
+            out.append(f"    /**\n")
+            out.append(f"     * Returns {desc}.\n")
+            out.append(f"     *\n")
+            out.append(f"     * @return {desc}\n")
+            out.append(f"     */\n")
             out.append(f"    {nul}{simple_typ} {fname}();\n")
         out.append("}\n")
         self.model_files[name] = "".join(out)
@@ -1412,6 +1427,13 @@ class Generator:
             while len(args) < num:
                 args.append("null")
             body = f"return new {name}(" + ", ".join(args) + ");"
+            param_names = [p.split()[-1] for p in params]
+            out.append(f"{indent}    /**\n")
+            out.append(f"{indent}     * Creates a {name}.\n")
+            for pn in param_names:
+                out.append(f"{indent}     * @param {pn} the value\n")
+            out.append(f"{indent}     * @return the new instance\n")
+            out.append(f"{indent}     */\n")
             out.append(f"{indent}    public static {name} {method_name}({', '.join(params)}) {{\n")
             out.append(f"{indent}        {body}\n")
             out.append(f"{indent}    }}\n\n")
@@ -1419,11 +1441,18 @@ class Generator:
     def append_builder(self, name, out, components, depth=0):
         indent = "    " * depth
 
+        out.append(f"{indent}    /**\n")
+        out.append(f"{indent}     * Creates a new builder.\n")
+        out.append(f"{indent}     *\n")
+        out.append(f"{indent}     * @return a new builder\n")
+        out.append(f"{indent}     */\n")
         out.append(f"{indent}    public static Builder builder() {{\n")
         out.append(f"{indent}        return new Builder();\n")
         out.append(f"{indent}    }}\n\n")
 
+        out.append(indent + "    /** Builder for {@link " + name + "}. */\n")
         out.append(f"{indent}    public static final class Builder {{\n")
+        out.append(f"{indent}        private Builder() {{}}\n\n")
 
         for typ, fname, optional, _, _ in components:
             simple_typ = self.simplify_type(typ)
@@ -1432,23 +1461,35 @@ class Generator:
 
         for typ, fname, optional, _, _ in components:
             simple_typ = self.simplify_type(typ)
+            desc = " ".join(w for w in fname.replace("_", " ").split() if w)
+            out.append(f"{indent}    /**\n")
+            out.append(f"{indent}     * Sets {desc}.\n")
+            out.append(f"{indent}     *\n")
+            out.append(f"{indent}     * @param {fname} the {desc}\n")
+            out.append(f"{indent}     * @return this builder\n")
+            out.append(f"{indent}     */\n")
             out.append(
-                f"{indent}        public Builder {fname}({simple_typ} {fname}) {{\n"
+                f"{indent}    public Builder {fname}({simple_typ} {fname}) {{\n"
             )
-            out.append(f"{indent}            this.{fname} = {fname};\n")
-            out.append(f"{indent}            return this;\n")
-            out.append(f"{indent}        }}\n")
+            out.append(f"{indent}        this.{fname} = {fname};\n")
+            out.append(f"{indent}        return this;\n")
+            out.append(f"{indent}    }}\n")
         out.append("\n")
 
         args = [c[1] for c in components]
-        out.append(f"{indent}        public {name} build() {{\n")
-        out.append(f"{indent}            return new {name}(\n")
+        out.append(f"{indent}    /**\n")
+        out.append(indent + "     * Builds the {@link " + name + "}.\n")
+        out.append(f"{indent}     *\n")
+        out.append(f"{indent}     * @return the built instance\n")
+        out.append(f"{indent}     */\n")
+        out.append(f"{indent}    public {name} build() {{\n")
+        out.append(f"{indent}        return new {name}(\n")
         for i, a in enumerate(args):
             out.append(
-                f"{indent}                {a}{',' if i < len(args) - 1 else ''}\n"
+                f"{indent}            {a}{',' if i < len(args) - 1 else ''}\n"
             )
-        out.append(f"{indent}            );\n")
-        out.append(f"{indent}        }}\n")
+        out.append(f"{indent}        );\n")
+        out.append(f"{indent}    }}\n")
 
         out.append(f"{indent}    }}\n")
 
@@ -1562,8 +1603,11 @@ class Generator:
                 out.append(f"import {self.pkg_models}.{r};\n")
 
         out.append("\n")
+        out.append("/** Codec for {@link " + qname + "}. */\n")
         out.append('@Generated("ts2java")\n')
-        out.append(f"public class {codec_name} implements Codec<{qname}> {{\n\n")
+        out.append(f"public class {codec_name} implements Codec<{qname}> {{\n")
+        out.append(f"    /** Default constructor. */\n")
+        out.append(f"    public {codec_name}() {{}}\n\n")
 
         # --- DECODE ---
         out.append(
@@ -1874,7 +1918,32 @@ class Generator:
             out.append("        }\n")
         out.append("        return (T) parser.readValueAsTree();\n")
         out.append("    }\n")
-        out.append('\n    @SuppressWarnings("unchecked")\n')
+        out.append('\n')
+        out.append(
+            "    /**\n"
+        )
+        out.append(
+            "     * Writes a value to the generator, handling primitives, enums, and null.\n"
+        )
+        out.append(
+            "     *\n"
+        )
+        out.append(
+            "     * @param <T> the type of the value to write\n"
+        )
+        out.append(
+            "     * @param gen the JSON generator\n"
+        )
+        out.append(
+            "     * @param value the value to write\n"
+        )
+        out.append(
+            "     * @throws IOException if writing fails\n"
+        )
+        out.append(
+            "     */\n"
+        )
+        out.append('    @SuppressWarnings("unchecked")\n')
         out.append(
             "    protected static <T> void encodeValue(JsonGenerator gen, T value) throws IOException {\n"
         )
@@ -2021,8 +2090,11 @@ class Generator:
                 out.append(f"import {self.pkg_models}.{vn};\n")
                 seen.add(vn)
         out.append("\n")
+        out.append("/** Codec for {@link " + union_name + "}. */\n")
         out.append('@Generated("ts2java")\n')
         out.append(f"public class {codec_name} implements Codec<{union_name}> {{\n\n")
+        out.append(f"    /** Default constructor. */\n")
+        out.append(f"    public {codec_name}() {{}}\n\n")
 
         # --- DECODE ---
         out.append(f"    public {union_name} decode(JsonParser parser) throws IOException {{\n")
@@ -2083,8 +2155,11 @@ class Generator:
             if vn not in seen:
                 out.append(f"import {self.pkg_models}.{vn};\n")
                 seen.add(vn)
+        out.append("/** Codec for {@link " + union_name + "}. */\n")
         out.append('@Generated("ts2java")\n')
         out.append(f"public class {codec_name} implements Codec<{union_name}> {{\n\n")
+        out.append(f"    /** Default constructor. */\n")
+        out.append(f"    public {codec_name}() {{}}\n\n")
 
         out.append(f"    public {union_name} decode(JsonParser parser) throws IOException {{\n")
         out.append("        var tb = TokenBuffer.forBuffering(parser, parser.objectReadContext());\n")
@@ -2143,9 +2218,24 @@ class Generator:
         out.append("import java.io.UncheckedIOException;\n")
         out.append("import javax.annotation.processing.Generated;\n\n")
         out.append('@Generated("ts2java")\n')
+        out.append("/** Codec for serializing and deserializing model types. */\n")
         out.append("public interface Codec<T> {\n")
         out.append("    JsonFactory FACTORY = new JsonFactory();\n\n")
+        out.append("    /**\n")
+        out.append("     * Deserializes a value from JSON.\n")
+        out.append("     *\n")
+        out.append("     * @param parser the JSON parser positioned at a value\n")
+        out.append("     * @return the decoded value\n")
+        out.append("     * @throws IOException on parse failure\n")
+        out.append("     */\n")
         out.append("    T decode(JsonParser parser) throws IOException;\n")
+        out.append("    /**\n")
+        out.append("     * Serializes a value to JSON.\n")
+        out.append("     *\n")
+        out.append("     * @param gen   the JSON generator to write to\n")
+        out.append("     * @param value the value to serialize\n")
+        out.append("     * @throws IOException on write failure\n")
+        out.append("     */\n")
         out.append("    void encode(JsonGenerator gen, T value) throws IOException;\n\n")
         out.append("    default byte[] encodeToBytes(T value) {\n")
         out.append("        try (var baos = new ByteArrayOutputStream(256);\n")
@@ -2240,12 +2330,26 @@ class Generator:
         out.append(
             '    public <T> T resultCodec(Class<?> c) { return (T) codecs.get("result:" + c.getSimpleName()); }\n\n'
         )
+        out.append("    /**\n")
+        out.append("     * Creates a new builder.\n")
+        out.append("     *\n")
+        out.append("     * @return a new builder\n")
+        out.append("     */\n")
         out.append("    public static Builder builder() { return new Builder(); }\n\n")
+        out.append("    /** Builder for {@link CodecRegistry}. */\n")
         out.append("    public static class Builder {\n")
         out.append(
             "        private final Map<String, Object> codecs = new LinkedHashMap<>();\n\n"
         )
+        out.append("        /** Default constructor. */\n")
+        out.append("        public Builder() {}\n\n")
         for method, (req, res) in self.method_map.items():
+            desc = method.replace("_", " ").title()
+            out.append("        /**\n")
+            out.append(f"         * Registers codecs for {desc}.\n")
+            out.append("         *\n")
+            out.append("         * @return this builder\n")
+            out.append("         */\n")
             out.append(f"        public Builder register{req}() {{\n")
             out.append(
                 f'            codecs.put("request:{method}", new {req}Codec());\n'
@@ -2254,12 +2358,23 @@ class Generator:
             out.append("            return this;\n")
             out.append("        }\n")
         for method, notif, _ in self.notifications:
+            desc = method.replace("_", " ").title()
+            out.append("        /**\n")
+            out.append(f"         * Registers codec for {desc}.\n")
+            out.append("         *\n")
+            out.append("         * @return this builder\n")
+            out.append("         */\n")
             out.append(f"        public Builder register{notif}() {{\n")
             out.append(
                 f'            codecs.put("notification:{method}", new {notif}Codec());\n'
             )
             out.append("            return this;\n")
             out.append("        }\n")
+        out.append("        /**\n")
+        out.append(f"         * Builds the {{@link CodecRegistry}}.\n")
+        out.append("         *\n")
+        out.append("         * @return the built registry\n")
+        out.append("         */\n")
         out.append(
             f"        public CodecRegistry build() {{ return new CodecRegistry(this); }}\n"
         )

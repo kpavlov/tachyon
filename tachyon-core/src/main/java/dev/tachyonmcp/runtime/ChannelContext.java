@@ -1,13 +1,22 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.runtime;
 
-import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.Protocol;
+import dev.tachyonmcp.protocol.api.annotations.InternalApi;
+import dev.tachyonmcp.protocol.api.runtime.InteractionContext;
 import org.jspecify.annotations.Nullable;
 
+/**
+ * Context for an MCP channel, providing access to the protocol, session, and lifecycle.
+ */
 @InternalApi
 public interface ChannelContext extends InteractionContext {
 
+    /**
+     * Returns the MCP protocol version negotiated for this channel.
+     *
+     * @return the protocol
+     */
     Protocol protocol();
 
     @Override
@@ -15,6 +24,11 @@ public interface ChannelContext extends InteractionContext {
         return protocol().versionString();
     }
 
+    /**
+     * Returns the current session, or {@code null} if not yet established.
+     *
+     * @return the session, or {@code null}
+     */
     @Nullable
     Session session();
 
@@ -24,9 +38,24 @@ public interface ChannelContext extends InteractionContext {
         return session == null ? null : session.id();
     }
 
+    /**
+     * Sets the lifecycle state for this channel.
+     *
+     * @param lifecycle the new lifecycle state
+     */
     void setLifecycle(Lifecycle lifecycle);
 
+    /**
+     * Sets the session for this channel.
+     *
+     * @param session the session, or {@code null} to clear
+     */
     void setSession(@Nullable Session session);
 
+    /**
+     * Enables an extension for this channel.
+     *
+     * @param extensionId the extension identifier
+     */
     void enableExtension(String extensionId);
 }

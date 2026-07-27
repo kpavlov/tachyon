@@ -4,14 +4,15 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.domain.PromptArgument;
-import dev.tachyonmcp.server.domain.Role;
-import dev.tachyonmcp.server.domain.TextContent;
-import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.json.JsonSchema;
-import dev.tachyonmcp.server.json.JsonSchemaValidator;
+import dev.tachyonmcp.protocol.api.json.JsonSchema;
+import dev.tachyonmcp.protocol.api.json.JsonSchemaValidator;
+import dev.tachyonmcp.protocol.api.server.domain.PromptArgument;
+import dev.tachyonmcp.protocol.api.server.domain.PromptMessage;
+import dev.tachyonmcp.protocol.api.server.domain.Role;
+import dev.tachyonmcp.protocol.api.server.domain.TextContent;
+import dev.tachyonmcp.protocol.api.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolHandler;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -143,8 +144,7 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
                                 null,
                                 List.of(PromptArgument.of("name", null, "Your name", true)),
                                 PROMPT_SCHEMA),
-                        List.of(dev.tachyonmcp.server.domain.PromptMessage.of(
-                                Role.USER, TextContent.of("Hello {name}"))));
+                        List.of(PromptMessage.of(Role.USER, TextContent.of("Hello {name}"))));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -178,8 +178,7 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
                                 null,
                                 List.of(PromptArgument.of("name", null, "Your name", true)),
                                 PROMPT_SCHEMA),
-                        List.of(dev.tachyonmcp.server.domain.PromptMessage.of(
-                                Role.USER, TextContent.of("Hello {name}"))));
+                        List.of(PromptMessage.of(Role.USER, TextContent.of("Hello {name}"))));
 
         try (var client = createTestClient()) {
             client.initialize();

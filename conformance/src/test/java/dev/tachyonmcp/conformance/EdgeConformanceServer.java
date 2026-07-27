@@ -1,14 +1,14 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.conformance;
 
+import dev.tachyonmcp.protocol.api.server.domain.LoggingLevel;
+import dev.tachyonmcp.protocol.api.server.domain.PromptMessage;
+import dev.tachyonmcp.protocol.api.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.protocol.api.server.features.prompts.PromptResult;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.domain.MissingRequiredClientCapabilityException;
-import dev.tachyonmcp.server.domain.PromptMessage;
-import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
-import dev.tachyonmcp.server.features.prompts.PromptResult;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import java.util.List;
 import java.util.Map;

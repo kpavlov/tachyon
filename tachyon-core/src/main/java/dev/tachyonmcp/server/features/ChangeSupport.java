@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.features;
 
-import dev.tachyonmcp.annotations.InternalApi;
+import dev.tachyonmcp.protocol.api.annotations.InternalApi;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.slf4j.Logger;
@@ -20,8 +20,13 @@ public final class ChangeSupport {
 
     private final List<Runnable> listeners = new CopyOnWriteArrayList<>();
 
+    /** Creates a new change support with an empty listener list. */
+    public ChangeSupport() {}
+
     /**
      * Registers a callback invoked when the registry contents change.
+     *
+     * @param callback the callback to invoke on change
      */
     public void onChange(Runnable callback) {
         listeners.add(callback);

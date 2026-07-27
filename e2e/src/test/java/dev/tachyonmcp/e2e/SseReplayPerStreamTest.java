@@ -3,9 +3,9 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolHandler;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;

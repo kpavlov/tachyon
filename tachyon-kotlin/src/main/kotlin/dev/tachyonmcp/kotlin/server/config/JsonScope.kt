@@ -2,17 +2,17 @@
 package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.kotlin.server.TachyonDsl
+import dev.tachyonmcp.protocol.api.json.JsonSchemaValidator
+import dev.tachyonmcp.protocol.api.json.PayloadDeserializer
+import dev.tachyonmcp.protocol.api.json.PayloadSerde
+import dev.tachyonmcp.protocol.api.json.PayloadSerializer
 import dev.tachyonmcp.server.ServerBuilder
-import dev.tachyonmcp.server.json.JsonSchemaValidator
-import dev.tachyonmcp.server.json.PayloadDeserializer
-import dev.tachyonmcp.server.json.PayloadSerde
-import dev.tachyonmcp.server.json.PayloadSerializer
 
 /**
  * Configures the JSON payload boundary: payload serde and input/output schema validators.
  * Mirrors the `dev.tachyonmcp.server.json` package.
  *
- * Assign [JsonSchemaValidator.noop] to skip validation for a direction.
+ * Assign [dev.tachyonmcp.protocol.api.json.JsonSchemaValidator.noop] to skip validation for a direction.
  *
  * @author Konstantin Pavlov
  */

@@ -8,6 +8,9 @@ package dev.tachyonmcp.kotlin.server.domain
 
 import dev.tachyonmcp.kotlin.server.json.toJacksonNode
 import dev.tachyonmcp.kotlin.server.json.toJacksonNodeMap
+import dev.tachyonmcp.protocol.api.server.domain.FormInputRequest
+import dev.tachyonmcp.protocol.api.server.domain.RpcMethodRequest
+import dev.tachyonmcp.protocol.api.server.domain.UrlInputRequest
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
 
@@ -20,8 +23,8 @@ import tools.jackson.databind.JsonNode
 public fun RpcMethodRequest(
     method: String,
     params: JsonNode? = null,
-): dev.tachyonmcp.server.domain.RpcMethodRequest =
-    dev.tachyonmcp.server.domain.RpcMethodRequest
+): RpcMethodRequest =
+    RpcMethodRequest
         .of(method, params)
 
 /**
@@ -31,8 +34,8 @@ public fun RpcMethodRequest(
 public fun RpcMethodRequest(
     method: String,
     params: JsonObject,
-): dev.tachyonmcp.server.domain.RpcMethodRequest =
-    dev.tachyonmcp.server.domain.RpcMethodRequest.of(
+): RpcMethodRequest =
+    RpcMethodRequest.of(
         method,
         params.toJacksonNode(),
     )
@@ -46,8 +49,8 @@ public fun RpcMethodRequest(
 public fun FormInputRequest(
     message: String,
     requestedSchema: Map<String, JsonNode>,
-): dev.tachyonmcp.server.domain.FormInputRequest =
-    dev.tachyonmcp.server.domain.FormInputRequest
+): FormInputRequest =
+    FormInputRequest
         .of(message, requestedSchema)
 
 /**
@@ -58,8 +61,8 @@ public fun FormInputRequest(
 public fun FormInputRequest(
     message: String,
     requestedSchema: Map<String, JsonObject>,
-): dev.tachyonmcp.server.domain.FormInputRequest =
-    dev.tachyonmcp.server.domain.FormInputRequest.of(
+): FormInputRequest =
+    FormInputRequest.of(
         message,
         requestedSchema.toJacksonNodeMap(),
     )
@@ -75,6 +78,6 @@ public fun UrlInputRequest(
     message: String,
     elicitationId: String,
     url: String,
-): dev.tachyonmcp.server.domain.UrlInputRequest =
-    dev.tachyonmcp.server.domain.UrlInputRequest
+): UrlInputRequest =
+    UrlInputRequest
         .of(message, elicitationId, url)

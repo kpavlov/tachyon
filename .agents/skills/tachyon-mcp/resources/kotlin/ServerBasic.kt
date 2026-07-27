@@ -2,11 +2,11 @@
 
 package dev.tachyonmcp.skill
 
+import dev.tachyonmcp.protocol.api.server.config.Mode
 import dev.tachyonmcp.server.TachyonServer
-import dev.tachyonmcp.server.config.Mode
 import dev.tachyonmcp.server.config.NetworkConfig
-import dev.tachyonmcp.server.domain.Role
-import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.protocol.api.server.domain.Role
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator
 import dev.tachyonmcp.kotlin.server.buildServer
 import dev.tachyonmcp.kotlin.server.domain.Icon

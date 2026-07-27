@@ -5,8 +5,8 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolHandler;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
 import java.net.http.HttpResponse;
 import java.util.LinkedHashMap;
 import org.junit.jupiter.api.BeforeEach;

@@ -6,13 +6,14 @@
 
 package dev.tachyonmcp.kotlin.server.domain
 
+import dev.tachyonmcp.protocol.api.server.domain.Icon
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
 /** Builds an [Icon] with a receiver DSL. */
 @OptIn(ExperimentalContracts::class)
-public inline fun Icon(block: IconBuilder.() -> Unit): dev.tachyonmcp.server.domain.Icon {
+public inline fun Icon(block: IconBuilder.() -> Unit): Icon {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
     return IconBuilder().apply(block).build()
 }
@@ -30,6 +31,6 @@ public fun Icon(
     mimeType: String? = null,
     sizes: List<String>? = null,
     theme: String? = null,
-): dev.tachyonmcp.server.domain.Icon =
-    dev.tachyonmcp.server.domain.Icon
+): Icon =
+    Icon
         .of(src, mimeType, sizes, theme)

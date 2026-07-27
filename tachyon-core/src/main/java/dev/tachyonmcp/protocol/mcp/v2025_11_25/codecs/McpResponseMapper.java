@@ -2,6 +2,26 @@
 package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
+import dev.tachyonmcp.protocol.api.json.JsonDocument;
+import dev.tachyonmcp.protocol.api.server.domain.ContentBlock;
+import dev.tachyonmcp.protocol.api.server.domain.FormInputRequest;
+import dev.tachyonmcp.protocol.api.server.domain.InputRequest;
+import dev.tachyonmcp.protocol.api.server.domain.PromptMessage;
+import dev.tachyonmcp.protocol.api.server.domain.ResourceContents;
+import dev.tachyonmcp.protocol.api.server.domain.RpcMethodRequest;
+import dev.tachyonmcp.protocol.api.server.domain.ServerError;
+import dev.tachyonmcp.protocol.api.server.domain.Task;
+import dev.tachyonmcp.protocol.api.server.domain.TaskResult;
+import dev.tachyonmcp.protocol.api.server.domain.TextContent;
+import dev.tachyonmcp.protocol.api.server.domain.UrlInputRequest;
+import dev.tachyonmcp.protocol.api.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.protocol.api.server.features.resources.ResourceDescriptor;
+import dev.tachyonmcp.protocol.api.server.features.resources.ResourceTemplateDescriptor;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult.InputRequired;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult.Success;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult.WithMeta;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CompleteResult;
@@ -17,28 +37,8 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListResourcesResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListTasksResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListToolsResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ReadResourceResult;
-import dev.tachyonmcp.server.domain.ContentBlock;
-import dev.tachyonmcp.server.domain.FormInputRequest;
 import dev.tachyonmcp.server.domain.InitializeResponse;
-import dev.tachyonmcp.server.domain.InputRequest;
-import dev.tachyonmcp.server.domain.PromptMessage;
-import dev.tachyonmcp.server.domain.ResourceContents;
-import dev.tachyonmcp.server.domain.RpcMethodRequest;
-import dev.tachyonmcp.server.domain.ServerError;
-import dev.tachyonmcp.server.domain.Task;
-import dev.tachyonmcp.server.domain.TaskResult;
-import dev.tachyonmcp.server.domain.TextContent;
-import dev.tachyonmcp.server.domain.UrlInputRequest;
-import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
-import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.server.features.tasks.TaskEntry;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.features.tools.ToolResult.InputRequired;
-import dev.tachyonmcp.server.features.tools.ToolResult.Success;
-import dev.tachyonmcp.server.features.tools.ToolResult.WithMeta;
-import dev.tachyonmcp.server.json.JsonDocument;
 import dev.tachyonmcp.server.json.JsonUtils;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
@@ -53,6 +53,7 @@ import tools.jackson.core.JsonParser;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
+/** {@link ProtocolResponseMapper} for MCP 2025-11-25. */
 public class McpResponseMapper implements ProtocolResponseMapper {
 
     private static final Object EMPTY = new EmptyResult(null, null);
@@ -61,6 +62,7 @@ public class McpResponseMapper implements ProtocolResponseMapper {
         CodecRegistry.registerOverride(InputRequiredPayload.class, new InputRequiredPayloadCodec());
     }
 
+    /** Default constructor, discovered via {@link java.util.ServiceLoader}. */
     public McpResponseMapper() {}
 
     @Override

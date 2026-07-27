@@ -10,7 +10,19 @@ import java.util.List;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 
-/** Configuration for the Netty transport. */
+/**
+ * Configuration for the Netty transport.
+ *
+ * @param host               the host address to bind to
+ * @param port               the port to bind to
+ * @param endpointPath       the HTTP endpoint path for MCP messages
+ * @param readerIdleTimeout  idle timeout for reading
+ * @param writerIdleTimeout  idle timeout for writing
+ * @param maxContentLength   maximum HTTP content length in bytes
+ * @param corsConfig         CORS configuration, or {@code null} for defaults
+ * @param ioEngine           the Netty I/O engine to use
+ * @param pipelineCustomizer optional customizer for the Netty channel pipeline
+ */
 public record NettyServerConfig(
         String host,
         int port,

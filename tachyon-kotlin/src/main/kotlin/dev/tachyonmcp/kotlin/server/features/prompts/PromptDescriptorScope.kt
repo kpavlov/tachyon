@@ -5,10 +5,10 @@ import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.domain.PromptArgument
 import dev.tachyonmcp.kotlin.server.domain.PromptArgumentBuilder
 import dev.tachyonmcp.kotlin.server.json.toJsonSchema
-import dev.tachyonmcp.server.domain.Icon
-import dev.tachyonmcp.server.domain.PromptArgument
-import dev.tachyonmcp.server.features.prompts.PromptDescriptor
-import dev.tachyonmcp.server.json.JsonSchema
+import dev.tachyonmcp.protocol.api.json.JsonSchema
+import dev.tachyonmcp.protocol.api.server.domain.Icon
+import dev.tachyonmcp.protocol.api.server.domain.PromptArgument
+import dev.tachyonmcp.protocol.api.server.features.prompts.PromptDescriptor
 import kotlinx.serialization.json.JsonObject
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind

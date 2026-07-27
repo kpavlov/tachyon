@@ -31,14 +31,17 @@ Tachyon enforces valid transitions. Invalid moves throw `IllegalStateException`.
 ## Create and update tasks
 
 ```java
-import dev.tachyonmcp.server.domain.Task;
-import dev.tachyonmcp.server.domain.TaskResult;
-import dev.tachyonmcp.server.domain.TextContent;
-import dev.tachyonmcp.server.features.tasks.TaskOptions;
+import dev.tachyonmcp.protocol.api.domain.server.Task;
+import dev.tachyonmcp.protocol.api.domain.server.TaskResult;
+import dev.tachyonmcp.protocol.api.domain.server.TextContent;
+import dev.tachyonmcp.protocol.api.tasks.features.server.TaskOptions;
+
 import java.util.List;
 
 TachyonServer server = TachyonServer.builder().port(8080).build();
-server.start();
+server.
+
+start();
 
 // Create — server generates the ID
 Task task = server.tasks().create();
@@ -48,8 +51,12 @@ Task ownedTask = server.tasks().create(
         TaskOptions.builder().id("my-runner-task-42").build());
 
 // Update state via the returned Task handle
-ownedTask.updateMessage("Running step 1...");
-ownedTask.complete(TaskResult.completed(List.of(TextContent.of("done")), null, null));
+ownedTask.
+
+updateMessage("Running step 1...");
+ownedTask.
+
+complete(TaskResult.completed(List.of(TextContent.of("done")),null,null));
 ```
 
 Supply `TaskOptions.builder().id(...)` to map a task onto an ID from your own external task
@@ -69,13 +76,13 @@ Declare `taskSupport` on a tool descriptor and clients can run the tool as a bac
 by adding a `task` field to `tools/call`:
 
 ```java
-import dev.tachyonmcp.server.features.tasks.TaskSupport;
+import dev.tachyonmcp.protocol.api.tasks.features.server.TaskSupport;
 
 var descriptor = ToolDescriptor.builder()
-    .name("import-data")
-    .description("Long-running import")
-    .taskSupport(TaskSupport.OPTIONAL)  // or REQUIRED; default FORBIDDEN
-    .build();
+        .name("import-data")
+        .description("Long-running import")
+        .taskSupport(TaskSupport.OPTIONAL)  // or REQUIRED; default FORBIDDEN
+        .build();
 ```
 
 ```json

@@ -7,36 +7,38 @@ import static dev.tachyonmcp.server.domain.ServerErrors.invalidParams;
 import static dev.tachyonmcp.server.domain.ServerErrors.invalidRequest;
 import static dev.tachyonmcp.server.domain.ServerErrors.missingRequiredClientCapability;
 
-import dev.tachyonmcp.annotations.InternalApi;
+import dev.tachyonmcp.protocol.api.annotations.InternalApi;
+import dev.tachyonmcp.protocol.api.json.JsonDocument;
+import dev.tachyonmcp.protocol.api.json.JsonSchema;
+import dev.tachyonmcp.protocol.api.json.JsonSchemaValidator;
+import dev.tachyonmcp.protocol.api.json.PayloadDeserializer;
+import dev.tachyonmcp.protocol.api.json.PayloadSerializer;
+import dev.tachyonmcp.protocol.api.json.SchemaValidationError;
+import dev.tachyonmcp.protocol.api.json.spi.JsonSchemaFactory;
+import dev.tachyonmcp.protocol.api.server.config.Mode;
+import dev.tachyonmcp.protocol.api.server.domain.Args;
+import dev.tachyonmcp.protocol.api.server.domain.ContentBlock;
+import dev.tachyonmcp.protocol.api.server.domain.InvalidArgumentException;
+import dev.tachyonmcp.protocol.api.server.domain.LoggingLevel;
+import dev.tachyonmcp.protocol.api.server.domain.ProgressToken;
+import dev.tachyonmcp.protocol.api.server.domain.ServerError;
+import dev.tachyonmcp.protocol.api.server.domain.TaskResult;
+import dev.tachyonmcp.protocol.api.server.domain.TextContent;
+import dev.tachyonmcp.protocol.api.server.features.HandlerFutures;
+import dev.tachyonmcp.protocol.api.server.features.tasks.TaskSupport;
+import dev.tachyonmcp.protocol.api.server.features.tools.*;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskMetadata;
 import dev.tachyonmcp.server.OutboundSseStreamMessageRouter;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.FeatureConfig;
-import dev.tachyonmcp.server.config.Mode;
-import dev.tachyonmcp.server.domain.Args;
-import dev.tachyonmcp.server.domain.InvalidArgumentException;
-import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.domain.MissingRequiredClientCapabilityException;
-import dev.tachyonmcp.server.domain.ProgressToken;
-import dev.tachyonmcp.server.domain.ServerError;
-import dev.tachyonmcp.server.domain.TaskResult;
-import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.features.AbstractRegistry;
-import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.features.tasks.TaskEntry;
-import dev.tachyonmcp.server.features.tasks.TaskSupport;
-import dev.tachyonmcp.server.json.JsonDocument;
-import dev.tachyonmcp.server.json.JsonSchema;
 import dev.tachyonmcp.server.json.JsonSchemaUtils;
-import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.JsonUtils;
-import dev.tachyonmcp.server.json.PayloadDeserializer;
-import dev.tachyonmcp.server.json.PayloadSerializer;
-import dev.tachyonmcp.server.json.SchemaValidationError;
-import dev.tachyonmcp.server.json.spi.JsonSchemaFactory;
 import dev.tachyonmcp.server.session.DispatchContext;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.time.Duration;
@@ -404,10 +406,7 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                 if (toolResult instanceof ToolResult.Error(String message)) {
                     task.fail(new TaskResult.Failed(List.of(TextContent.of(message)), null, null));
                 } else if (toolResult
-                        instanceof
-                        ToolResult.Success(
-                                Object structuredValue,
-                                List<dev.tachyonmcp.server.domain.ContentBlock> content)) {
+                        instanceof ToolResult.Success(Object structuredValue, List<ContentBlock> content)) {
                     var structured = JsonUtils.valueToObjectNode(structuredValue, payloadSerializer);
                     task.complete(new TaskResult.Completed(content, structured, null));
                 }

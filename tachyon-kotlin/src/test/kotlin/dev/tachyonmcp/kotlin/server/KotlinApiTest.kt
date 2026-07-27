@@ -20,11 +20,11 @@ import dev.tachyonmcp.kotlin.server.domain.stringOrNull
 import dev.tachyonmcp.kotlin.server.domain.valuesAs
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
 import dev.tachyonmcp.kotlin.server.json.toJsonNode
-import dev.tachyonmcp.server.domain.Args
-import dev.tachyonmcp.server.domain.InvalidArgumentException
-import dev.tachyonmcp.server.domain.TextContent
-import dev.tachyonmcp.server.features.tools.ToolRequest
-import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.protocol.api.server.domain.Args
+import dev.tachyonmcp.protocol.api.server.domain.InvalidArgumentException
+import dev.tachyonmcp.protocol.api.server.domain.TextContent
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolRequest
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.throwables.shouldThrow
@@ -43,7 +43,7 @@ import org.junit.jupiter.params.provider.MethodSource
 import tools.jackson.databind.ObjectMapper
 import java.math.BigDecimal
 import java.util.stream.Stream
-import dev.tachyonmcp.server.json.JsonSchema as JavaJsonSchema
+import dev.tachyonmcp.protocol.api.json.JsonSchema as JavaJsonSchema
 
 internal class KotlinApiTest {
     // region: Overload resolution — all shapes compile

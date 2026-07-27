@@ -7,7 +7,8 @@
 package dev.tachyonmcp.kotlin.server.domain
 
 import dev.tachyonmcp.kotlin.server.json.toJacksonNodeMap
-import dev.tachyonmcp.server.domain.TextResourceContents
+import dev.tachyonmcp.protocol.api.server.domain.BlobResourceContents
+import dev.tachyonmcp.protocol.api.server.domain.TextResourceContents
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
 import kotlin.contracts.ExperimentalContracts
@@ -27,7 +28,7 @@ public inline fun TextResourceContents(
 @OptIn(ExperimentalContracts::class)
 public inline fun BlobResourceContents(
     block: BlobResourceContentsBuilder.() -> Unit,
-): dev.tachyonmcp.server.domain.BlobResourceContents {
+): BlobResourceContents {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
     return BlobResourceContentsBuilder().apply(block).build()
 }
@@ -88,8 +89,8 @@ public fun BlobResourceContents(
     blob: String,
     mimeType: String? = null,
     meta: Map<String, JsonNode> = emptyMap(),
-): dev.tachyonmcp.server.domain.BlobResourceContents =
-    dev.tachyonmcp.server.domain.BlobResourceContents.of(
+): BlobResourceContents =
+    BlobResourceContents.of(
         uri,
         blob,
         mimeType,
@@ -108,8 +109,8 @@ public fun BlobResourceContents(
     blob: String,
     mimeType: String? = null,
     meta: Map<String, JsonObject>,
-): dev.tachyonmcp.server.domain.BlobResourceContents =
-    dev.tachyonmcp.server.domain.BlobResourceContents.of(
+): BlobResourceContents =
+    BlobResourceContents.of(
         uri,
         blob,
         mimeType,

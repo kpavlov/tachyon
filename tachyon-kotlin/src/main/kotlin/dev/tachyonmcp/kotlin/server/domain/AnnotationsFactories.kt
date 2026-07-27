@@ -6,17 +6,15 @@
 
 package dev.tachyonmcp.kotlin.server.domain
 
-import dev.tachyonmcp.server.domain.Annotations
-import dev.tachyonmcp.server.domain.Role
+import dev.tachyonmcp.protocol.api.server.domain.Annotations
+import dev.tachyonmcp.protocol.api.server.domain.Role
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
 /** Builds [Annotations] with a receiver DSL. */
 @OptIn(ExperimentalContracts::class)
-public inline fun Annotations(
-    block: AnnotationsBuilder.() -> Unit,
-): dev.tachyonmcp.server.domain.Annotations {
+public inline fun Annotations(block: AnnotationsBuilder.() -> Unit): Annotations {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
     return AnnotationsBuilder().apply(block).build()
 }

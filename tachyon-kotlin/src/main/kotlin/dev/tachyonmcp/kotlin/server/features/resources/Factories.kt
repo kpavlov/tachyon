@@ -6,7 +6,9 @@
 
 package dev.tachyonmcp.kotlin.server.features.resources
 
-import dev.tachyonmcp.server.features.resources.ResourceDescriptor
+import dev.tachyonmcp.protocol.api.server.domain.Annotations
+import dev.tachyonmcp.protocol.api.server.domain.Icon
+import dev.tachyonmcp.protocol.api.server.features.resources.ResourceDescriptor
 
 /**
  * Creates a [ResourceDescriptor] describing a static resource.
@@ -26,9 +28,9 @@ public fun ResourceDescriptor(
     description: String? = null,
     mimeType: String? = null,
     title: String? = null,
-    annotations: dev.tachyonmcp.server.domain.Annotations? = null,
+    annotations: Annotations? = null,
     size: Long? = null,
-    icons: List<dev.tachyonmcp.server.domain.Icon>? = null,
+    icons: List<Icon>? = null,
 ): ResourceDescriptor =
     ResourceDescriptor.of(
         name,

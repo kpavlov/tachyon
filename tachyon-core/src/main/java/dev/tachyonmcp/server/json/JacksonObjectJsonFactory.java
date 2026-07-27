@@ -1,8 +1,11 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.json;
 
-import dev.tachyonmcp.server.json.spi.JsonDocumentFactory;
-import dev.tachyonmcp.server.json.spi.JsonSchemaFactory;
+import dev.tachyonmcp.protocol.api.json.JsonDocument;
+import dev.tachyonmcp.protocol.api.json.JsonObject;
+import dev.tachyonmcp.protocol.api.json.JsonSchema;
+import dev.tachyonmcp.protocol.api.json.spi.JsonDocumentFactory;
+import dev.tachyonmcp.protocol.api.json.spi.JsonSchemaFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 /**

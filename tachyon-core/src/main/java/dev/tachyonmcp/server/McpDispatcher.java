@@ -1,19 +1,19 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server;
 
-import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.Protocols;
+import dev.tachyonmcp.protocol.api.annotations.InternalApi;
+import dev.tachyonmcp.protocol.api.runtime.AttributeKey;
+import dev.tachyonmcp.protocol.api.server.domain.LoggingLevel;
+import dev.tachyonmcp.protocol.api.server.domain.RequestId;
+import dev.tachyonmcp.protocol.api.server.domain.ServerError;
+import dev.tachyonmcp.protocol.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatus;
-import dev.tachyonmcp.runtime.AttributeKey;
 import dev.tachyonmcp.runtime.ChannelContext;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SessionState;
-import dev.tachyonmcp.server.domain.LoggingLevel;
-import dev.tachyonmcp.server.domain.RequestId;
-import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.ServerErrors;
-import dev.tachyonmcp.server.features.tasks.TaskState;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.server.session.DispatchContext;
@@ -123,6 +123,9 @@ public class McpDispatcher {
          * not a JSON-RPC error envelope. Used for conditions the MCP Streamable HTTP spec ties to a
          * specific HTTP status rather than a JSON-RPC error code — e.g. a missing {@code MCP-Session-Id}
          * header (400) or an unknown/expired session (404).
+         *
+         * @param code    the HTTP status code
+         * @param message the HTTP status message
          */
         record Status(int code, String message) implements DispatchResult {}
     }

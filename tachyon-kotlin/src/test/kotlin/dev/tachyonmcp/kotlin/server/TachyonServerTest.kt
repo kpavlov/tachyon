@@ -11,9 +11,9 @@ import dev.tachyonmcp.kotlin.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.kotlin.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.kotlin.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.kotlin.server.features.tools.ToolDescriptor
-import dev.tachyonmcp.server.config.Mode
-import dev.tachyonmcp.server.domain.Role
-import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.protocol.api.server.config.Mode
+import dev.tachyonmcp.protocol.api.server.domain.Role
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult
 import dev.tachyonmcp.server.session.InMemorySessionEventStore
 import dev.tachyonmcp.server.session.InMemorySessionStore
 import dev.tachyonmcp.server.session.SessionIdGenerator

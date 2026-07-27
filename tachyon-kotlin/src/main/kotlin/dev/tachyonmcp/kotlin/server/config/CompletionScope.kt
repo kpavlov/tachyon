@@ -2,8 +2,8 @@
 package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.kotlin.server.TachyonDsl
-import dev.tachyonmcp.runtime.InteractionContext
-import dev.tachyonmcp.server.features.completions.CompletionRequest
+import dev.tachyonmcp.protocol.api.runtime.InteractionContext
+import dev.tachyonmcp.protocol.api.server.features.completions.CompletionRequest
 
 @TachyonDsl
 public class CompletionScope

@@ -1,11 +1,11 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.session;
 
-import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
+import dev.tachyonmcp.protocol.api.annotations.InternalApi;
+import dev.tachyonmcp.protocol.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.runtime.ChannelContext;
 import dev.tachyonmcp.server.OutboundSseStream;
-import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import org.jspecify.annotations.Nullable;
 

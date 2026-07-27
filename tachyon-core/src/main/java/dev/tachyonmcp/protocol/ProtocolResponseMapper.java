@@ -1,21 +1,21 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.protocol;
 
+import dev.tachyonmcp.protocol.api.server.config.ServerIdentity;
+import dev.tachyonmcp.protocol.api.server.domain.InputRequest;
+import dev.tachyonmcp.protocol.api.server.domain.PromptMessage;
+import dev.tachyonmcp.protocol.api.server.domain.ResourceContents;
+import dev.tachyonmcp.protocol.api.server.domain.ServerError;
+import dev.tachyonmcp.protocol.api.server.domain.Task;
+import dev.tachyonmcp.protocol.api.server.domain.TaskResult;
+import dev.tachyonmcp.protocol.api.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.protocol.api.server.features.resources.ResourceDescriptor;
+import dev.tachyonmcp.protocol.api.server.features.resources.ResourceTemplateDescriptor;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.ServerCapabilities;
-import dev.tachyonmcp.server.config.ServerIdentity;
 import dev.tachyonmcp.server.domain.InitializeResponse;
-import dev.tachyonmcp.server.domain.InputRequest;
-import dev.tachyonmcp.server.domain.PromptMessage;
-import dev.tachyonmcp.server.domain.ResourceContents;
-import dev.tachyonmcp.server.domain.ServerError;
-import dev.tachyonmcp.server.domain.Task;
-import dev.tachyonmcp.server.domain.TaskResult;
-import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
-import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.server.features.tasks.TaskEntry;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import java.util.List;
 import java.util.Map;

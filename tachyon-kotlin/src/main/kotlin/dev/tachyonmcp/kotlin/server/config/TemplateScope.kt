@@ -2,9 +2,9 @@
 package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.kotlin.server.TachyonDsl
-import dev.tachyonmcp.runtime.InteractionContext
-import dev.tachyonmcp.server.domain.UriTemplateValue
-import dev.tachyonmcp.server.features.resources.ResourceRequest
+import dev.tachyonmcp.protocol.api.runtime.InteractionContext
+import dev.tachyonmcp.protocol.api.server.domain.UriTemplateValue
+import dev.tachyonmcp.protocol.api.server.features.resources.ResourceRequest
 
 /**
  * Receiver for a matched resource-template handler.

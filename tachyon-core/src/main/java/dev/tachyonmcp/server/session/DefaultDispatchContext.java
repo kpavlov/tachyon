@@ -1,18 +1,18 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.session;
 
-import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.Protocol;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.protocol.Protocols;
-import dev.tachyonmcp.runtime.AttributeKey;
+import dev.tachyonmcp.protocol.api.annotations.InternalApi;
+import dev.tachyonmcp.protocol.api.runtime.AttributeKey;
+import dev.tachyonmcp.protocol.api.runtime.ContextNotifications;
+import dev.tachyonmcp.protocol.api.server.domain.LoggingLevel;
+import dev.tachyonmcp.protocol.api.server.domain.ProgressToken;
 import dev.tachyonmcp.runtime.ChannelContext;
-import dev.tachyonmcp.runtime.ContextNotifications;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.OutboundSseStream;
-import dev.tachyonmcp.server.domain.LoggingLevel;
-import dev.tachyonmcp.server.domain.ProgressToken;
 import dev.tachyonmcp.server.internal.NotificationLogSupport;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;

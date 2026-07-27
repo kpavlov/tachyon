@@ -1,15 +1,17 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.features.tasks;
 
-import dev.tachyonmcp.annotations.InternalApi;
-import dev.tachyonmcp.server.ServerFeature;
+import dev.tachyonmcp.protocol.api.annotations.InternalApi;
+import dev.tachyonmcp.protocol.api.server.ServerFeature;
+import dev.tachyonmcp.protocol.api.server.domain.ContentBlock;
+import dev.tachyonmcp.protocol.api.server.domain.InputRequest;
+import dev.tachyonmcp.protocol.api.server.domain.ProgressToken;
+import dev.tachyonmcp.protocol.api.server.domain.Task;
+import dev.tachyonmcp.protocol.api.server.domain.TaskResult;
+import dev.tachyonmcp.protocol.api.server.domain.TextContent;
+import dev.tachyonmcp.protocol.api.server.features.tasks.TaskDescriptor;
+import dev.tachyonmcp.protocol.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.server.config.TasksConfig;
-import dev.tachyonmcp.server.domain.ContentBlock;
-import dev.tachyonmcp.server.domain.InputRequest;
-import dev.tachyonmcp.server.domain.ProgressToken;
-import dev.tachyonmcp.server.domain.Task;
-import dev.tachyonmcp.server.domain.TaskResult;
-import dev.tachyonmcp.server.domain.TextContent;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;

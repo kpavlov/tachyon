@@ -1,16 +1,16 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.internal;
 
-import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
+import dev.tachyonmcp.protocol.api.annotations.InternalApi;
+import dev.tachyonmcp.protocol.api.server.domain.LoggingLevel;
+import dev.tachyonmcp.protocol.api.server.domain.RequestId;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseEvent;
 import dev.tachyonmcp.server.OutboundSseStream;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.ServerCapabilities;
 import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.domain.LoggingLevel;
-import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.features.tasks.TaskRegistry;
 import dev.tachyonmcp.server.session.SessionEvent;
 import dev.tachyonmcp.server.session.SessionIdGenerator;

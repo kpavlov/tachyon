@@ -35,18 +35,31 @@ public final class ChannelHandlerUtils {
     /**
      * Binds a session to the channel and installs the {@link SessionTouchHandler} if not already
      * present. Every outbound byte written to this channel will refresh the session's liveness.
+     *
+     * @param ctx     the channel handler context
+     * @param session the session to bind
      */
     public static void setSession(ChannelHandlerContext ctx, Session session) {
         SessionTouchHandler.install(ctx);
         ctx.channel().attr(SESSION_KEY).set(session);
     }
 
-    /** Returns the session bound to this channel, or {@code null}. */
+    /**
+     * Returns the session bound to this channel, or {@code null}.
+     *
+     * @param channel the channel
+     * @return the session, or {@code null}
+     */
     public static @Nullable Session getSession(Channel channel) {
         return channel.attr(SESSION_KEY).get();
     }
 
-    /** Returns the protocol interaction context bound to this channel, or {@code null}. */
+    /**
+     * Returns the protocol interaction context bound to this channel, or {@code null}.
+     *
+     * @param ctx the channel handler context
+     * @return the interaction context, or {@code null}
+     */
     public static @Nullable ChannelContext getInteractionContext(ChannelHandlerContext ctx) {
         return ctx.channel().attr(INTERACTION_CONTEXT_KEY).get();
     }
@@ -62,6 +75,10 @@ public final class ChannelHandlerUtils {
      * detached copy of the request (method/URI/headers) on the channel's interaction context so
      * the generator can read it at session-creation time. A copy is required because the pooled
      * request is released before the async dispatch runs.
+     *
+     * @param ctx    the channel handler context
+     * @param req    the HTTP request to capture
+     * @param server the server engine
      */
     public static void captureInitRequest(ChannelHandlerContext ctx, HttpRequest req, ServerEngine server) {
         if (server.isStateless() || !server.sessionIdGenerator().readsRequest()) {

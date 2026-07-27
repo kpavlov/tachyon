@@ -116,8 +116,8 @@ To support another JSON representation, implement either interface—or both—a
 implementation class, one name per line, in the matching service file:
 
 ```text
-META-INF/services/dev.tachyonmcp.server.json.spi.JsonDocumentFactory
-META-INF/services/dev.tachyonmcp.server.json.spi.JsonSchemaFactory
+META-INF/services/dev.tachyonmcp.protocol.api.spi.json.JsonDocumentFactory
+META-INF/services/dev.tachyonmcp.protocol.api.spi.json.JsonSchemaFactory
 ```
 
 ## Configure payload serialization

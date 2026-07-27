@@ -2,7 +2,7 @@
 package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.kotlin.server.TachyonDsl
-import dev.tachyonmcp.server.config.Mode
+import dev.tachyonmcp.protocol.api.server.config.Mode
 import dev.tachyonmcp.server.config.ResourcesConfig
 import dev.tachyonmcp.server.features.Pagination
 

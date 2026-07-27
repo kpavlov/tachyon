@@ -1,8 +1,12 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.json;
 
-import dev.tachyonmcp.annotations.InternalApi;
-import dev.tachyonmcp.server.json.spi.JsonSchemaFactory;
+import dev.tachyonmcp.protocol.api.annotations.InternalApi;
+import dev.tachyonmcp.protocol.api.json.JsonDocument;
+import dev.tachyonmcp.protocol.api.json.JsonSchema;
+import dev.tachyonmcp.protocol.api.json.JsonSchemaValidator;
+import dev.tachyonmcp.protocol.api.json.SchemaValidationError;
+import dev.tachyonmcp.protocol.api.json.spi.JsonSchemaFactory;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;

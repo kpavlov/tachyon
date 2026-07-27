@@ -1,8 +1,8 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.session;
 
-import dev.tachyonmcp.annotations.InternalApi;
-import dev.tachyonmcp.server.domain.RequestId;
+import dev.tachyonmcp.protocol.api.annotations.InternalApi;
+import dev.tachyonmcp.protocol.api.server.domain.RequestId;
 import org.jspecify.annotations.Nullable;
 
 /** A recorded session event — request, response, notification, or cancellation. */
@@ -30,7 +30,15 @@ public sealed interface SessionEvent {
         return null;
     }
 
-    /** An inbound request from the client. */
+    /**
+     * An inbound request from the client.
+     *
+     * @param sessionId  the session this event belongs to
+     * @param requestId  the request identifier
+     * @param method     the method name
+     * @param paramsJson the JSON-encoded parameters, or {@code null}
+     * @param timestamp  the event timestamp (epoch millis)
+     */
     record RequestEvent(
             String sessionId,
             RequestId requestId,
@@ -38,7 +46,17 @@ public sealed interface SessionEvent {
             @Nullable String paramsJson,
             long timestamp) implements SessionEvent {}
 
-    /** An outbound (server-to-client) request. */
+    /**
+     * An outbound (server-to-client) request.
+     *
+     * @param sessionId  the session this event belongs to
+     * @param requestId  the request identifier
+     * @param method     the method name
+     * @param paramsJson the JSON-encoded parameters, or {@code null}
+     * @param timestamp  the event timestamp (epoch millis)
+     * @param sseEventId the SSE event id for replay
+     * @param streamKey  the SSE stream key, or {@code null} for the general-purpose stream
+     */
     record OutboundRequestEvent(
             String sessionId,
             RequestId requestId,
@@ -49,7 +67,16 @@ public sealed interface SessionEvent {
             @Nullable String streamKey)
             implements SessionEvent {}
 
-    /** A response sent to the client. */
+    /**
+     * A response sent to the client.
+     *
+     * @param sessionId  the session this event belongs to
+     * @param requestId  the request identifier
+     * @param resultJson the JSON-encoded result payload
+     * @param timestamp  the event timestamp (epoch millis)
+     * @param sseEventId the SSE event id for replay
+     * @param streamKey  the SSE stream key, or {@code null} for the general-purpose stream
+     */
     record ResponseEvent(
             String sessionId,
             RequestId requestId,
@@ -59,10 +86,25 @@ public sealed interface SessionEvent {
             @Nullable String streamKey)
             implements SessionEvent {}
 
-    /** A cancellation request. */
+    /**
+     * A cancellation request.
+     *
+     * @param sessionId the session this event belongs to
+     * @param requestId the request identifier being cancelled
+     * @param timestamp the event timestamp (epoch millis)
+     */
     record CancelEvent(String sessionId, RequestId requestId, long timestamp) implements SessionEvent {}
 
-    /** A notification sent to or received from the client. */
+    /**
+     * A notification sent to or received from the client.
+     *
+     * @param sessionId  the session this event belongs to
+     * @param method     the notification method name
+     * @param paramsJson the JSON-encoded notification parameters, or {@code null}
+     * @param timestamp  the event timestamp (epoch millis)
+     * @param sseEventId the SSE event id for replay
+     * @param streamKey  the SSE stream key, or {@code null} for the general-purpose stream
+     */
     record NotificationEvent(
             String sessionId,
             String method,

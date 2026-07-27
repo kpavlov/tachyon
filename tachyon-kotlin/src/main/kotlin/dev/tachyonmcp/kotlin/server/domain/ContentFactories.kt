@@ -7,9 +7,12 @@
 package dev.tachyonmcp.kotlin.server.domain
 
 import dev.tachyonmcp.kotlin.server.json.toJacksonNodeMap
-import dev.tachyonmcp.server.domain.AudioContent
-import dev.tachyonmcp.server.domain.ImageContent
-import dev.tachyonmcp.server.domain.TextContent
+import dev.tachyonmcp.protocol.api.server.domain.Annotations
+import dev.tachyonmcp.protocol.api.server.domain.AudioContent
+import dev.tachyonmcp.protocol.api.server.domain.EmbeddedResource
+import dev.tachyonmcp.protocol.api.server.domain.ImageContent
+import dev.tachyonmcp.protocol.api.server.domain.ResourceContents
+import dev.tachyonmcp.protocol.api.server.domain.TextContent
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
 import kotlin.contracts.ExperimentalContracts
@@ -26,7 +29,7 @@ import kotlin.contracts.contract
 public fun TextContent(
     text: String,
     meta: Map<String, JsonNode>? = null,
-    annotations: dev.tachyonmcp.server.domain.Annotations? = null,
+    annotations: Annotations? = null,
 ): TextContent =
     TextContent
         .of(text, meta, annotations)
@@ -53,7 +56,7 @@ public inline fun AudioContent(block: AudioContentBuilder.() -> Unit): AudioCont
 public fun TextContent(
     text: String,
     meta: Map<String, JsonObject>?,
-    annotations: dev.tachyonmcp.server.domain.Annotations? = null,
+    annotations: Annotations? = null,
 ): TextContent =
     TextContent.of(
         text,
@@ -72,7 +75,7 @@ public fun TextContent(
 public fun ImageContent(
     data: String,
     mimeType: String,
-    annotations: dev.tachyonmcp.server.domain.Annotations? = null,
+    annotations: Annotations? = null,
     meta: Map<String, JsonNode>? = null,
 ): ImageContent =
     ImageContent.of(
@@ -90,7 +93,7 @@ public fun ImageContent(
 public fun ImageContent(
     data: String,
     mimeType: String,
-    annotations: dev.tachyonmcp.server.domain.Annotations? = null,
+    annotations: Annotations? = null,
     meta: Map<String, JsonObject>?,
 ): ImageContent =
     ImageContent.of(
@@ -111,7 +114,7 @@ public fun ImageContent(
 public fun AudioContent(
     data: String,
     mimeType: String,
-    annotations: dev.tachyonmcp.server.domain.Annotations? = null,
+    annotations: Annotations? = null,
     meta: Map<String, JsonNode>? = null,
 ): AudioContent =
     AudioContent.of(
@@ -129,7 +132,7 @@ public fun AudioContent(
 public fun AudioContent(
     data: String,
     mimeType: String,
-    annotations: dev.tachyonmcp.server.domain.Annotations? = null,
+    annotations: Annotations? = null,
     meta: Map<String, JsonObject>?,
 ): AudioContent =
     AudioContent.of(
@@ -147,11 +150,11 @@ public fun AudioContent(
  * @param meta        optional request-level metadata; null to omit
  */
 public fun EmbeddedResource(
-    resource: dev.tachyonmcp.server.domain.ResourceContents,
-    annotations: dev.tachyonmcp.server.domain.Annotations? = null,
+    resource: ResourceContents,
+    annotations: Annotations? = null,
     meta: Map<String, JsonNode>? = null,
-): dev.tachyonmcp.server.domain.EmbeddedResource =
-    dev.tachyonmcp.server.domain.EmbeddedResource
+): EmbeddedResource =
+    EmbeddedResource
         .of(resource, annotations, meta)
 
 /**
@@ -160,11 +163,11 @@ public fun EmbeddedResource(
  */
 @JvmName("embeddedResourceWithKxMeta")
 public fun EmbeddedResource(
-    resource: dev.tachyonmcp.server.domain.ResourceContents,
-    annotations: dev.tachyonmcp.server.domain.Annotations? = null,
+    resource: ResourceContents,
+    annotations: Annotations? = null,
     meta: Map<String, JsonObject>?,
-): dev.tachyonmcp.server.domain.EmbeddedResource =
-    dev.tachyonmcp.server.domain.EmbeddedResource.of(
+): EmbeddedResource =
+    EmbeddedResource.of(
         resource,
         annotations,
         meta?.toJacksonNodeMap(),

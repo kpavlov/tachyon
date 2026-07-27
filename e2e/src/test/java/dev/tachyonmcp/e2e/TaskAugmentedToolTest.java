@@ -4,14 +4,14 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.domain.TaskResult;
-import dev.tachyonmcp.server.features.tasks.TaskSupport;
-import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolRequest;
-import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.protocol.api.runtime.InteractionContext;
+import dev.tachyonmcp.protocol.api.server.domain.TaskResult;
+import dev.tachyonmcp.protocol.api.server.features.tasks.TaskSupport;
+import dev.tachyonmcp.protocol.api.server.features.tools.AbstractToolHandler;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolHandler;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolRequest;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
 import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.Test;
 

@@ -3,7 +3,7 @@ package dev.tachyonmcp.server.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.domain.RequestId;
+import dev.tachyonmcp.protocol.api.server.domain.RequestId;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;

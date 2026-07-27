@@ -2,8 +2,8 @@
 package dev.tachyonmcp.transport.netty;
 
 import dev.tachyonmcp.protocol.Protocols;
+import dev.tachyonmcp.protocol.api.runtime.InteractionContext.Lifecycle;
 import dev.tachyonmcp.runtime.ChannelContext;
-import dev.tachyonmcp.runtime.InteractionContext.Lifecycle;
 import dev.tachyonmcp.runtime.InteractionEvent;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;

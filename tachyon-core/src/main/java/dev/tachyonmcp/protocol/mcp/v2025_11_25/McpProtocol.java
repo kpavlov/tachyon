@@ -11,7 +11,7 @@ import java.util.Set;
 
 /**
  * {@link Protocol} implementation for the MCP protocol version 2025-11-25.
- * Registered via {@code META-INF/services/dev.tachyonmcp.protocol.Protocol}.
+ * Registered via {@code META-INF/services/dev.tachyonmcp.protocol.api.protocol.Protocol}.
  *
  * <p>Accepts client requests for versions 2024-11-05 through 2025-11-25 and negotiates
  * up to this implementation's version (2025-11-25).

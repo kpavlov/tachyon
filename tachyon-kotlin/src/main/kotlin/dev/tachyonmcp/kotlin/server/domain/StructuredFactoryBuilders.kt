@@ -3,22 +3,23 @@ package dev.tachyonmcp.kotlin.server.domain
 
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.config.ResourceScope
-import dev.tachyonmcp.server.domain.Annotations
-import dev.tachyonmcp.server.domain.AudioContent
-import dev.tachyonmcp.server.domain.BlobResourceContents
-import dev.tachyonmcp.server.domain.Icon
-import dev.tachyonmcp.server.domain.ImageContent
-import dev.tachyonmcp.server.domain.PromptArgument
-import dev.tachyonmcp.server.domain.ToolAnnotations
+import dev.tachyonmcp.protocol.api.server.domain.Annotations
+import dev.tachyonmcp.protocol.api.server.domain.AudioContent
+import dev.tachyonmcp.protocol.api.server.domain.BlobResourceContents
+import dev.tachyonmcp.protocol.api.server.domain.Icon
+import dev.tachyonmcp.protocol.api.server.domain.ImageContent
+import dev.tachyonmcp.protocol.api.server.domain.PromptArgument
+import dev.tachyonmcp.protocol.api.server.domain.Role
+import dev.tachyonmcp.protocol.api.server.domain.ToolAnnotations
 import tools.jackson.databind.JsonNode
 
-/** Builds [dev.tachyonmcp.server.domain.Annotations]. */
+/** Builds [dev.tachyonmcp.protocol.api.server.domain.Annotations]. */
 @TachyonDsl
 public class AnnotationsBuilder
     @PublishedApi
     internal constructor() {
         /** Intended roles, or `null` when unrestricted. */
-        public var audience: List<dev.tachyonmcp.server.domain.Role>? = null
+        public var audience: List<Role>? = null
 
         /** Ordering hint, or `null` for the default. */
         public var priority: Double? = null
@@ -35,7 +36,7 @@ public class AnnotationsBuilder
             )
     }
 
-/** Builds an [dev.tachyonmcp.server.domain.Icon]. */
+/** Builds an [dev.tachyonmcp.protocol.api.server.domain.Icon]. */
 @TachyonDsl
 public class IconBuilder
     @PublishedApi
@@ -62,7 +63,7 @@ public class IconBuilder
             )
     }
 
-/** Builds a [dev.tachyonmcp.server.domain.PromptArgument]. */
+/** Builds a [dev.tachyonmcp.protocol.api.server.domain.PromptArgument]. */
 @TachyonDsl
 public class PromptArgumentBuilder
     @PublishedApi
@@ -89,7 +90,7 @@ public class PromptArgumentBuilder
             )
     }
 
-/** Builds [dev.tachyonmcp.server.domain.ToolAnnotations]. */
+/** Builds [dev.tachyonmcp.protocol.api.server.domain.ToolAnnotations]. */
 @TachyonDsl
 public class ToolAnnotationsBuilder
     @PublishedApi
@@ -120,7 +121,7 @@ public class ToolAnnotationsBuilder
             )
     }
 
-/** Builds [dev.tachyonmcp.server.domain.ImageContent]. */
+/** Builds [dev.tachyonmcp.protocol.api.server.domain.ImageContent]. */
 @TachyonDsl
 public class ImageContentBuilder
     @PublishedApi
@@ -132,7 +133,7 @@ public class ImageContentBuilder
         public var mimeType: String? = null
 
         /** Optional presentation hints. */
-        public var annotations: dev.tachyonmcp.server.domain.Annotations? = null
+        public var annotations: Annotations? = null
 
         /** Optional content metadata. */
         public var meta: Map<String, JsonNode>? = null
@@ -147,7 +148,7 @@ public class ImageContentBuilder
             )
     }
 
-/** Builds [dev.tachyonmcp.server.domain.AudioContent]. */
+/** Builds [dev.tachyonmcp.protocol.api.server.domain.AudioContent]. */
 @TachyonDsl
 public class AudioContentBuilder
     @PublishedApi
@@ -159,7 +160,7 @@ public class AudioContentBuilder
         public var mimeType: String? = null
 
         /** Optional presentation hints. */
-        public var annotations: dev.tachyonmcp.server.domain.Annotations? = null
+        public var annotations: Annotations? = null
 
         /** Optional content metadata. */
         public var meta: Map<String, JsonNode>? = null
@@ -174,7 +175,7 @@ public class AudioContentBuilder
             )
     }
 
-/** Builds [dev.tachyonmcp.server.domain.BlobResourceContents]. */
+/** Builds [dev.tachyonmcp.protocol.api.server.domain.BlobResourceContents]. */
 @TachyonDsl
 public class BlobResourceContentsBuilder
     @PublishedApi

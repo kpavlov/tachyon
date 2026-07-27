@@ -6,6 +6,8 @@
 
 package dev.tachyonmcp.kotlin.server.domain
 
+import dev.tachyonmcp.protocol.api.server.domain.ResourceLink
+
 /**
  * Creates a [ResourceLink] — a lightweight pointer to another resource.
  *
@@ -17,6 +19,6 @@ public fun ResourceLink(
     uri: String,
     name: String,
     mimeType: String? = null,
-): dev.tachyonmcp.server.domain.ResourceLink =
-    dev.tachyonmcp.server.domain.ResourceLink
+): ResourceLink =
+    ResourceLink
         .of(uri, name, mimeType)

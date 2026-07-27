@@ -4,12 +4,12 @@ package dev.tachyonmcp.transport.jsonrpc;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.protocol.api.server.domain.RequestId;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Annotations;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ListResourcesResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Resource;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Role;
-import dev.tachyonmcp.server.domain.RequestId;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;

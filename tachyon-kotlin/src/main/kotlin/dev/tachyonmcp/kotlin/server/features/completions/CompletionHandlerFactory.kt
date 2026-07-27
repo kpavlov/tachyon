@@ -3,10 +3,10 @@ package dev.tachyonmcp.kotlin.server.features.completions
 
 import dev.tachyonmcp.kotlin.server.config.CompletionScope
 import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
-import dev.tachyonmcp.runtime.InteractionContext
-import dev.tachyonmcp.server.features.completions.AsyncCompletionHandler
-import dev.tachyonmcp.server.features.completions.CompletionRequest
-import dev.tachyonmcp.server.features.completions.CompletionResult
+import dev.tachyonmcp.protocol.api.runtime.InteractionContext
+import dev.tachyonmcp.protocol.api.server.features.completions.AsyncCompletionHandler
+import dev.tachyonmcp.protocol.api.server.features.completions.CompletionRequest
+import dev.tachyonmcp.protocol.api.server.features.completions.CompletionResult
 import kotlinx.coroutines.CoroutineName
 
 @JvmSynthetic

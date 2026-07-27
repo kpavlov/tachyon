@@ -1,19 +1,19 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server;
 
+import dev.tachyonmcp.protocol.api.server.config.JsonConfig;
+import dev.tachyonmcp.protocol.api.server.config.MonitoringConfig;
+import dev.tachyonmcp.protocol.api.server.config.RuntimeConfig;
+import dev.tachyonmcp.protocol.api.server.config.ServerIdentity;
+import dev.tachyonmcp.protocol.api.server.features.completions.Completions;
+import dev.tachyonmcp.protocol.api.server.features.prompts.Prompts;
+import dev.tachyonmcp.protocol.api.server.features.resources.Resources;
+import dev.tachyonmcp.protocol.api.server.features.tools.Tools;
 import dev.tachyonmcp.server.config.CapabilitiesConfig;
-import dev.tachyonmcp.server.config.JsonConfig;
-import dev.tachyonmcp.server.config.MonitoringConfig;
 import dev.tachyonmcp.server.config.NetworkConfig;
-import dev.tachyonmcp.server.config.RuntimeConfig;
 import dev.tachyonmcp.server.config.ServerConfig;
-import dev.tachyonmcp.server.config.ServerIdentity;
 import dev.tachyonmcp.server.config.SessionConfig;
 import dev.tachyonmcp.server.extensions.ServerExtension;
-import dev.tachyonmcp.server.features.completions.Completions;
-import dev.tachyonmcp.server.features.prompts.Prompts;
-import dev.tachyonmcp.server.features.resources.Resources;
-import dev.tachyonmcp.server.features.tools.Tools;
 import io.netty.channel.ChannelPipeline;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;

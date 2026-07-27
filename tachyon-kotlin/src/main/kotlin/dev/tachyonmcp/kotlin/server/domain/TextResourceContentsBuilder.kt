@@ -4,10 +4,11 @@ package dev.tachyonmcp.kotlin.server.domain
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.config.ResourceScope
 import dev.tachyonmcp.kotlin.server.config.TemplateScope
+import dev.tachyonmcp.protocol.api.server.domain.TextResourceContents
 import tools.jackson.databind.JsonNode
 
 /**
- * Builds [dev.tachyonmcp.server.domain.TextResourceContents] for a matched resource template.
+ * Builds [dev.tachyonmcp.protocol.api.server.domain.TextResourceContents] for a matched resource template.
  *
  * The requested URI and registered template MIME type are used as defaults.
  */
@@ -50,8 +51,8 @@ public class TextResourceContentsBuilder
             ) { "URI-template parameters require a TemplateScope" }.sequence(name)
 
         @PublishedApi
-        internal fun build(): dev.tachyonmcp.server.domain.TextResourceContents =
-            dev.tachyonmcp.server.domain.TextResourceContents.of(
+        internal fun build(): TextResourceContents =
+            TextResourceContents.of(
                 requireNotNull(uri) {
                     "TextResourceContents.uri is required: set it explicitly, or build inside a " +
                         "resource/template handler where TextResourceContents { } defaults it from the request"

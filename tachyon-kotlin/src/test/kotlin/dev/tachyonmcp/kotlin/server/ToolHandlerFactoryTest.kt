@@ -5,10 +5,12 @@ import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
 import dev.tachyonmcp.kotlin.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.kotlin.server.features.tools.registerTool
 import dev.tachyonmcp.kotlin.server.features.tools.toolHandler
+import dev.tachyonmcp.protocol.api.runtime.InteractionContext
+import dev.tachyonmcp.protocol.api.server.features.tasks.TaskSupport
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolRequest
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult
 import dev.tachyonmcp.server.TachyonServer
-import dev.tachyonmcp.server.features.tasks.TaskSupport
-import dev.tachyonmcp.server.features.tools.ToolRequest
-import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.server.internal.ServerEngine
 import dev.tachyonmcp.server.session.DefaultDispatchContext
 import io.kotest.assertions.throwables.shouldThrow
@@ -184,7 +186,7 @@ internal class ToolHandlerFactoryTest {
         val started = CountDownLatch(1)
         val cancelled = CountDownLatch(1)
         val descriptor =
-            dev.tachyonmcp.server.features.tools.ToolDescriptor
+            ToolDescriptor
                 .builder()
                 .name("cancellable")
                 .taskSupport(TaskSupport.OPTIONAL)
@@ -254,9 +256,7 @@ internal class ToolHandlerFactoryTest {
         }
     }
 
-    private fun withCoroutineRuntime(
-        block: (CoroutineRuntime, dev.tachyonmcp.runtime.InteractionContext) -> Unit,
-    ) {
+    private fun withCoroutineRuntime(block: (CoroutineRuntime, InteractionContext) -> Unit) {
         val runtime = CoroutineRuntime()
         Executors
             .newThreadPerTaskExecutor(

@@ -1,3 +1,6 @@
+/**
+ * Generated JSON-RPC codecs for the MCP 2026-07-28 protocol version.
+ */
 /*
  * Copyright (c) 2026 Konstantin Pavlov and contributors.
  */

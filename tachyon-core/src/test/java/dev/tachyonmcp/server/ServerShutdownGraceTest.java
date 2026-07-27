@@ -4,10 +4,10 @@ package dev.tachyonmcp.server;
 import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.config.RuntimeConfig;
-import dev.tachyonmcp.server.domain.RequestId;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.protocol.api.server.config.RuntimeConfig;
+import dev.tachyonmcp.protocol.api.server.domain.RequestId;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolHandler;
+import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import java.time.Duration;
 import java.util.Map;

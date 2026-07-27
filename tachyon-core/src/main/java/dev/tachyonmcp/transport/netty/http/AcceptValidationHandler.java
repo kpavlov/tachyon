@@ -27,6 +27,11 @@ public final class AcceptValidationHandler extends ChannelInboundHandlerAdapter 
 
     private final String mcpEndpoint;
 
+    /**
+     * Creates a handler for the given MCP endpoint path.
+     *
+     * @param mcpEndpoint the MCP endpoint path to validate requests against
+     */
     public AcceptValidationHandler(String mcpEndpoint) {
         this.mcpEndpoint = mcpEndpoint;
     }

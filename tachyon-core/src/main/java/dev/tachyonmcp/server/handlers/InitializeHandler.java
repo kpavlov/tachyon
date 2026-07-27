@@ -1,9 +1,9 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.handlers;
 
+import dev.tachyonmcp.protocol.api.runtime.Extension;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
-import dev.tachyonmcp.runtime.Extension;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.domain.InitializeResponse;
 import dev.tachyonmcp.server.extensions.ServerExtension;

@@ -1,3 +1,6 @@
+/**
+ * Generated MCP protocol models, codecs, and version-specific bindings.
+ */
 /*
  * Copyright (c) 2026 Konstantin Pavlov and contributors.
  */
