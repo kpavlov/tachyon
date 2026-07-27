@@ -18,7 +18,7 @@ final class SharedStatelessE2eServer {
         }
         server = TestServers.startSafely(
                 TachyonServer.builder().capabilities(c -> c.tools().logging()).network(n -> n.port(0)),
-                s -> s.tools().register(EchoToolHandler.create()));
+                s -> s.tools().registerAsync(EchoToolHandler.DESCRIPTOR, EchoToolHandler.FN));
         Runtime.getRuntime().addShutdownHook(new Thread(server::close));
         started.set(true);
         logger.info("Shared stateless E2E server started on port {}", server.port());

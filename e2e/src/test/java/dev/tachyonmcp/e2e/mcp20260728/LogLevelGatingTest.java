@@ -4,11 +4,7 @@ package dev.tachyonmcp.e2e.mcp20260728;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.LoggingLevel;
-import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,16 +26,12 @@ class LogLevelGatingTest extends AbstractStatelessMcpE2eTest {
                 b -> b.capabilities(c -> c.logging()),
                 s -> s.tools()
                         .register(
-                                new AbstractToolHandler(ToolDescriptor.builder()
-                                        .name("test_logging_tool")
+                                tool -> tool.name("test_logging_tool")
                                         .description("Emits an INFO log message then completes")
-                                        .inputSchema(NO_ARGS_SCHEMA)
-                                        .build()) {
-                                    @Override
-                                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                        ctx.notifications().log(LoggingLevel.INFO, "test", "hello");
-                                        return ToolResult.text("done");
-                                    }
+                                        .inputSchema(NO_ARGS_SCHEMA),
+                                (ctx, request) -> {
+                                    ctx.notifications().log(LoggingLevel.INFO, "test", "hello");
+                                    return ToolResult.text("done");
                                 }));
     }
 

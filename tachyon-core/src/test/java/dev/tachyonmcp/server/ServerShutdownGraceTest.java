@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.config.RuntimeConfig;
 import dev.tachyonmcp.server.domain.RequestId;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import java.time.Duration;
@@ -51,7 +50,7 @@ class ServerShutdownGraceTest {
 
         ServerEngine server = newEngine(
                 b -> b.runtime(r -> r.shutdownGracePeriod(Duration.ofMillis(400))),
-                s -> s.tools().register(ToolHandler.of("slow_probe", (context, request) -> {
+                s -> s.tools().register(builder -> builder.name("slow_probe"), (context, request) -> {
                     started.countDown();
                     try {
                         new CountDownLatch(1).await(30, TimeUnit.SECONDS);
@@ -60,7 +59,7 @@ class ServerShutdownGraceTest {
                         Thread.currentThread().interrupt();
                     }
                     return ToolResult.empty();
-                })));
+                }));
 
         server.createSession("sess-slow").activate();
         var dispatcher = new McpDispatcher(server, server.executor());

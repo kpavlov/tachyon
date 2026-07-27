@@ -12,7 +12,6 @@ import dev.tachyonmcp.server.features.completions.AsyncCompletionHandler;
 import dev.tachyonmcp.server.features.completions.CompletionHandler;
 import dev.tachyonmcp.server.features.completions.CompletionResult;
 import dev.tachyonmcp.server.features.prompts.PromptResult;
-import dev.tachyonmcp.server.features.tools.ToolFn;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -61,7 +60,7 @@ class ServerBuilderTest {
     @Test
     void registersFeaturesThroughFacades() {
         try (var server = TachyonServer.builder().build()) {
-            server.tools().register(tool -> tool.name("sync-tool"), (ToolFn) (ctx, request) -> ToolResult.empty());
+            server.tools().register(tool -> tool.name("sync-tool"), (ctx, request) -> ToolResult.empty());
             server.resources()
                     .register(
                             resource -> resource.name("sync-resource").uri("test://sync"),

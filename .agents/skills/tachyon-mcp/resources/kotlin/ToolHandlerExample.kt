@@ -146,8 +146,10 @@ fun buildWithPostRegistration(): TachyonServer {
                 ToolResult.text("inline result")
             }
         }
-    server.tools().register(GreetingTool())
-    server.tools().register(AsyncGreetingTool())
+    val greeting = GreetingTool()
+    server.tools().register(greeting.descriptor(), greeting::handle)
+    val asyncGreeting = AsyncGreetingTool()
+    server.tools().registerAsync(asyncGreeting.descriptor(), asyncGreeting::handleAsync)
     server.registerTool(
         name = "post-register",
         description = "Added after build",

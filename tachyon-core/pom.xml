@@ -224,6 +224,7 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
                     <doclint>all,-missing</doclint>
+                    <sourcepath>${project.build.sourceDirectory}${path.separator}${project.build.directory}/generated-sources/annotations${path.separator}${project.build.directory}/generated-sources/ts2java/java</sourcepath>
                 </configuration>
                 <executions>
                     <execution>

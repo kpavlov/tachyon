@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -16,7 +15,21 @@ class ToolNotificationsTest extends AbstractStatelessMcpE2eTest {
     protected void startDefaultServer() {
         startServer(
                 b -> b.capabilities(CapabilitiesConfig.Builder::logging),
-                s -> s.tools().register(EchoToolHandler.create()).register(notifyingTool()));
+                s -> s.tools()
+                        .registerAsync(EchoToolHandler.DESCRIPTOR, EchoToolHandler.FN)
+                        .register(
+                                ToolDescriptor.builder()
+                                        .name("notifier")
+                                        .title("Notifier Tool")
+                                        .description("Sends notifications and logs during execution")
+                                        .build(),
+                                (context, request) -> {
+                                    var args = request.arguments();
+                                    var text = args.stringOr("message", "");
+                                    context.notifications().progress(request.progressToken(), 1, 1, text);
+                                    context.notifications().info("tool.notifier", Map.of("message", text));
+                                    return ToolResult.text(text);
+                                }));
     }
 
     @Test
@@ -45,20 +58,5 @@ class ToolNotificationsTest extends AbstractStatelessMcpE2eTest {
             assertThat(body).contains("\"result\"");
             assertThat(body).contains("hello from tool");
         }
-    }
-
-    private static ToolHandler notifyingTool() {
-        var descriptor = ToolDescriptor.builder()
-                .name("notifier")
-                .title("Notifier Tool")
-                .description("Sends notifications and logs during execution")
-                .build();
-        return ToolHandler.of(descriptor, (context, request) -> {
-            var args = request.arguments();
-            var text = args.stringOr("message", "");
-            context.notifications().progress(request.progressToken(), 1, 1, text);
-            context.notifications().info("tool.notifier", Map.of("message", text));
-            return ToolResult.text(text);
-        });
     }
 }

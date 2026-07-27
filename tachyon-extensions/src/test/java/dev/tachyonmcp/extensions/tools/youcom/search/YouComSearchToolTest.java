@@ -20,12 +20,13 @@ public class YouComSearchToolTest {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public static void main(String[] args) {
+        var tool = new YouComSearchTool(YouComSearchConfig.builder()
+                .apiKey(System.getenv("YDC_API_KEY"))
+                .build());
         var server = TachyonServer.builder()
                 .info(it -> it.name("you-search-server").version("1.0"))
                 .session(s -> s.enabled(false))
-                .withTools(tools -> tools.register(new YouComSearchTool(YouComSearchConfig.builder()
-                        .apiKey(System.getenv("YDC_API_KEY"))
-                        .build())))
+                .withTools(tools -> tools.register(tool.descriptor(), tool::handle))
                 .port(8080)
                 .build();
         server.start();

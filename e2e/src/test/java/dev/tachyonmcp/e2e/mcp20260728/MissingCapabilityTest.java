@@ -5,11 +5,7 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.MissingRequiredClientCapabilityException;
-import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,23 +25,19 @@ class MissingCapabilityTest extends AbstractStatelessMcpE2eTest {
     void registerFixtures() {
         startServerWith(s -> s.tools()
                 .register(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("test_missing_capability")
+                        tool -> tool.name("test_missing_capability")
                                 .description("Requires the sampling capability")
-                                .inputSchema("{\"type\": \"object\", \"properties\": {}}")
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                var meta = request.meta();
-                                var capabilities =
-                                        meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
-                                var hasSampling = capabilities instanceof Map<?, ?> map && map.containsKey("sampling");
-                                if (!hasSampling) {
-                                    throw new MissingRequiredClientCapabilityException(
-                                            "Requires the 'sampling' capability", Map.of("sampling", Map.of()));
-                                }
-                                return ToolResult.text("sampling capability present");
+                                .inputSchema("{\"type\": \"object\", \"properties\": {}}"),
+                        (ctx, request) -> {
+                            var meta = request.meta();
+                            var capabilities =
+                                    meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
+                            var hasSampling = capabilities instanceof Map<?, ?> map && map.containsKey("sampling");
+                            if (!hasSampling) {
+                                throw new MissingRequiredClientCapabilityException(
+                                        "Requires the 'sampling' capability", Map.of("sampling", Map.of()));
                             }
+                            return ToolResult.text("sampling capability present");
                         }));
     }
 

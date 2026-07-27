@@ -22,7 +22,7 @@
 
 🧵 **Synchronous code, asynchronous runtime** — write blocking handlers; Java virtual threads run them off the Netty event loop. No thread pools, reactive pipelines, or `CompletableFuture` boilerplate. Coroutine-first Kotlin DSL included.
 
-🛡️ **Stable APIs across spec changes** — domain types (`ToolHandler`, `ResourceHandler`, `PromptHandler`, tasks) sit behind an internal protocol mapper. Spec upgrades change the mapper, not your handlers.
+🛡️ **Stable APIs across spec changes** — domain types (`ToolFn`, `ResourceHandler`, `PromptHandler`, tasks) sit behind an internal protocol mapper. Spec upgrades change the mapper, not your handlers.
 
 ☁️ **Stateless by default** — scale without session affinity on containers and serverless runtimes.
 AWS Lambda needs an adapter that supports a listening HTTP server and long-lived SSE responses.
@@ -46,20 +46,19 @@ Opt into sessions for SSE resumability, `Last-Event-ID` replay, and TTL cleanup.
 
     ```java
     import dev.tachyonmcp.server.TachyonServer;
-    import dev.tachyonmcp.server.features.tools.ToolHandler;
     import dev.tachyonmcp.server.features.tools.ToolResult;
 
     public class WeatherMcpServer {
         public static void main(String... args) {
             var server = TachyonServer.builder()
                 .name("weather-mcp")
-                .withTools(tools -> tools.register(ToolHandler.of(
+                .withTools(tools -> tools.register(
                         b -> b.name("get_forecast")
                             .description("Get weather forecast")
                             .inputSchema("""
                             {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
                             """),
-                        (ctx, request) -> ToolResult.text("☀️ 22°C"))))
+                        (ctx, request) -> ToolResult.text("☀️ 22°C")))
                 .port(8080)
                 .build();
             server.start();
@@ -151,7 +150,7 @@ MCP 2025-11-25 clients that include `"extensions": {"io.modelcontextprotocol/tas
 
 ### Protocol isolation
 
-Handler interfaces (`ToolHandler`, `ResourceHandler`, `PromptHandler`) and descriptor types use stable domain types. When Tachyon upgrades to a new protocol version, only the internal mapper layer changes; handler implementations are unaffected. Domain types track the 2026-07-28 spec shape where it improves on 2025-11-25 (e.g. `Annotations.lastModified`, `ResourceLink` in `ContentBlock`).
+Function and handler interfaces (`ToolFn`, `AsyncToolFn`, `ResourceHandler`, `PromptHandler`) and descriptor types use stable domain types. When Tachyon upgrades to a new protocol version, only the internal mapper layer changes; implementations are unaffected. Domain types track the 2026-07-28 spec shape where it improves on 2025-11-25 (e.g. `Annotations.lastModified`, `ResourceLink` in `ContentBlock`).
 
 ## Performance
 

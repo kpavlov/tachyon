@@ -4,7 +4,7 @@ package dev.tachyonmcp.kotlin.server
 import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
 import dev.tachyonmcp.kotlin.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.kotlin.server.features.tools.registerTool
-import dev.tachyonmcp.kotlin.server.features.tools.toolHandler
+import dev.tachyonmcp.kotlin.server.features.tools.toolFn
 import dev.tachyonmcp.runtime.InteractionContext
 import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.features.tasks.TaskSupport
@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
-internal class ToolHandlerFactoryTest {
+internal class ToolFnFactoryTest {
     @Test
     fun `async handler returns while coroutine is suspended`() {
         val started = CountDownLatch(1)
@@ -42,11 +42,8 @@ internal class ToolHandlerFactoryTest {
         val handlerThread = AtomicReference<String>()
 
         withCoroutineRuntime { runtime, ctx ->
-            val handler =
-                toolHandler(
-                    ToolDescriptor { name = "suspend-test" },
-                    runtime,
-                ) {
+            val fn =
+                toolFn("suspend-test", runtime) {
                     handlerThread.set(Thread.currentThread().name)
                     started.countDown()
                     release.await()
@@ -54,7 +51,7 @@ internal class ToolHandlerFactoryTest {
                 }
             val request = ToolRequest.builder().name("suspend-test").build()
 
-            val result = handler.handleAsync(ctx, request).toCompletableFuture()
+            val result = fn.apply(ctx, request).toCompletableFuture()
 
             started.await(5, TimeUnit.SECONDS) shouldBe true
             result.isDone shouldBe false
@@ -69,11 +66,8 @@ internal class ToolHandlerFactoryTest {
         val calls = AtomicInteger()
 
         withCoroutineRuntime { runtime, ctx ->
-            val handler =
-                toolHandler(
-                    ToolDescriptor { name = "supervisor-test" },
-                    runtime,
-                ) {
+            val fn =
+                toolFn("supervisor-test", runtime) {
                     if (calls.incrementAndGet() == 1) {
                         error("boom")
                     }
@@ -83,10 +77,10 @@ internal class ToolHandlerFactoryTest {
 
             val failure =
                 shouldThrow<ExecutionException> {
-                    handler.handleAsync(ctx, request).toCompletableFuture().get(5, TimeUnit.SECONDS)
+                    fn.apply(ctx, request).toCompletableFuture().get(5, TimeUnit.SECONDS)
                 }
             val second =
-                handler.handleAsync(ctx, request).toCompletableFuture().get(5, TimeUnit.SECONDS)
+                fn.apply(ctx, request).toCompletableFuture().get(5, TimeUnit.SECONDS)
 
             failure.cause?.message shouldBe "boom"
             second shouldBe ToolResult.text("ok")
@@ -105,11 +99,8 @@ internal class ToolHandlerFactoryTest {
         val started = CountDownLatch(1)
         val cancelled = AtomicBoolean()
         try {
-            val handler =
-                toolHandler(
-                    ToolDescriptor { name = "shutdown-test" },
-                    runtime,
-                ) {
+            val fn =
+                toolFn("shutdown-test", runtime) {
                     started.countDown()
                     try {
                         delay(100500.seconds)
@@ -121,7 +112,7 @@ internal class ToolHandlerFactoryTest {
                 }
             val ctx = DefaultDispatchContext.stateless(delegate)
 
-            handler.handleAsync(
+            fn.apply(
                 ctx,
                 ToolRequest.builder().name("shutdown-test").build(),
             )
@@ -150,11 +141,8 @@ internal class ToolHandlerFactoryTest {
                         .runtime { it.shutdownGracePeriod(Duration.ofMillis(50)) }
                         .extension(runtime)
                         .build() as ServerEngine
-                val handler =
-                    toolHandler(
-                        ToolDescriptor { name = "bounded-shutdown" },
-                        runtime,
-                    ) {
+                val fn =
+                    toolFn("bounded-shutdown", runtime) {
                         started.countDown()
                         withContext(NonCancellable) {
                             release.await()
@@ -162,7 +150,7 @@ internal class ToolHandlerFactoryTest {
                         ToolResult.text("done")
                     }
 
-                handler.handleAsync(
+                fn.apply(
                     DefaultDispatchContext.stateless(server),
                     ToolRequest.builder().name("bounded-shutdown").build(),
                 )

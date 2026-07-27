@@ -23,15 +23,15 @@ For the Kotlin DSL, add `tachyon-kotlin` instead (it includes `tachyon-core` tra
 
 ```java
 import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 
 void main() {
     var server = TachyonServer.builder()
             .name("my-server")
             .version("1.0")
-            .withTools(tools -> tools.register(ToolHandler.of("greet", "Say hello",
-                    (ctx, request) -> ToolResult.text("Hello!"))))
+            .withTools(tools -> tools.register(
+                    tool -> tool.name("greet").description("Say hello"),
+                    (ctx, request) -> ToolResult.text("Hello!")))
             .port(8080)
             .build();
     server.start();

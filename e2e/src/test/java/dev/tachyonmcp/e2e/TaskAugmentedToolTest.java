@@ -9,7 +9,6 @@ import dev.tachyonmcp.server.domain.TaskResult;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import net.javacrumbs.jsonunit.core.Option;
@@ -25,7 +24,8 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
     @Test
     void taskAugmentedCallReturnsCreateTaskResultBeforeToolCompletes() throws Exception {
         var sleepMs = 2000;
-        startServerWith(s -> s.tools().register(new SleepingSyncTool(sleepMs)));
+        var tool = new SleepingSyncTool(sleepMs);
+        startServerWith(s -> s.tools().register(tool.descriptor(), tool::handle));
         try (var client = createTestClient()) {
             client.initialize();
 
@@ -43,7 +43,8 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void taskAugmentedSyncToolTaskCompletesAfterToolFinishes() throws Exception {
-        startServerWith(s -> s.tools().register(new SleepingSyncTool(500)));
+        var tool = new SleepingSyncTool(500);
+        startServerWith(s -> s.tools().register(tool.descriptor(), tool::handle));
         try (var client = createTestClient()) {
             client.initialize();
 
@@ -92,18 +93,17 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
     void shouldCancelTask() throws Exception {
         var started = new java.util.concurrent.CountDownLatch(1);
         var interrupted = new java.util.concurrent.CountDownLatch(1);
-        var handler = ToolHandler.of(b -> b.name("task_tool").taskSupport(TaskSupport.OPTIONAL), (context, request) -> {
-            started.countDown();
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                interrupted.countDown();
-                Thread.currentThread().interrupt();
-            }
-            return ToolResult.text("done");
-        });
-
-        startServerWith(s -> s.tools().register(handler));
+        startServerWith(s -> s.tools()
+                .register(b -> b.name("task_tool").taskSupport(TaskSupport.OPTIONAL), (context, request) -> {
+                    started.countDown();
+                    try {
+                        Thread.sleep(5000);
+                    } catch (InterruptedException e) {
+                        interrupted.countDown();
+                        Thread.currentThread().interrupt();
+                    }
+                    return ToolResult.text("done");
+                }));
         try (var client = createTestClient()) {
             client.initialize();
 
@@ -138,11 +138,11 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
         // Blocks the tool indefinitely so the manual fail() below — not the tool itself —
         // deterministically decides the outcome; released only after that outcome is asserted.
         var release = new java.util.concurrent.CountDownLatch(1);
-        var handler = ToolHandler.of(b -> b.name("sleep").taskSupport(TaskSupport.OPTIONAL), (context, request) -> {
-            release.await();
-            return ToolResult.text("done");
-        });
-        startServerWith(s -> s.tools().register(handler));
+        startServerWith(s -> s.tools()
+                .register(b -> b.name("sleep").taskSupport(TaskSupport.OPTIONAL), (context, request) -> {
+                    release.await();
+                    return ToolResult.text("done");
+                }));
         try (var client = createTestClient()) {
             client.initialize();
 
@@ -195,11 +195,10 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
     @Test
     void taskResultReplaysInvalidParamsWithoutLeakingHandlerMessage() throws Exception {
         // MCP 2025-11-25 Tasks: tasks/result MUST return the underlying JSON-RPC error.
-        var handler =
-                ToolHandler.of(b -> b.name("invalid-params").taskSupport(TaskSupport.OPTIONAL), (context, request) -> {
+        startServerWith(s -> s.tools()
+                .register(b -> b.name("invalid-params").taskSupport(TaskSupport.OPTIONAL), (context, request) -> {
                     throw new IllegalArgumentException("sensitive internal detail");
-                });
-        startServerWith(s -> s.tools().register(handler));
+                }));
         try (var client = createTestClient()) {
             client.initialize();
 

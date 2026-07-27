@@ -167,31 +167,43 @@ abstract class AbstractConformanceServer {
      * logging, sampling, elicitation, JSON Schema validation, reconnection, and input-required results.
      */
     private void registerTools(ServerEngine server) {
-        server.tools().register(echoTool());
+        // language=json
+        var echoSchema = parseJson("""
+            {
+                "type": "object",
+                "properties": {"message": {"type": "string", "description": "Message to echo"}}
+            }
+            """);
+        server.tools()
+                .register(
+                        b -> b.name("echo")
+                                .description("Echo back the input message")
+                                .inputSchema(echoSchema),
+                        (ctx, request) -> ToolResult.text(request.arguments().stringOr("message", "")));
 
         server.tools()
-                .register(ToolHandler.of(
+                .register(
                         b -> b.name("test_simple_text")
                                 .description("Returns simple text")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, request) -> ToolResult.text("This is a simple text response for testing.")));
+                        (ctx, request) -> ToolResult.text("This is a simple text response for testing."));
 
         server.tools()
-                .register(ToolHandler.of(
+                .register(
                         b -> b.name("test_image_content")
                                 .description("Returns image content")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, request) -> ToolResult.blocks(ImageContent.of(MINI_PNG_BASE64, "image/png"))));
+                        (ctx, request) -> ToolResult.blocks(ImageContent.of(MINI_PNG_BASE64, "image/png")));
 
         server.tools()
-                .register(ToolHandler.of(
+                .register(
                         b -> b.name("test_audio_content")
                                 .description("Returns audio content")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, request) -> ToolResult.blocks(AudioContent.of(MINI_WAV_BASE64, "audio/wav"))));
+                        (ctx, request) -> ToolResult.blocks(AudioContent.of(MINI_WAV_BASE64, "audio/wav")));
 
         server.tools()
-                .register(ToolHandler.of(
+                .register(
                         b -> b.name("test_embedded_resource")
                                 .description("Returns embedded resource")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
@@ -199,10 +211,10 @@ abstract class AbstractConformanceServer {
                             var res = TextResourceContents.of(
                                     "test://embedded-resource", "This is an embedded resource content.", "text/plain");
                             return ToolResult.blocks(EmbeddedResource.of(res));
-                        }));
+                        });
 
         server.tools()
-                .register(ToolHandler.of(
+                .register(
                         b -> b.name("test_multiple_content_types")
                                 .description("Returns multiple content types")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
@@ -215,48 +227,44 @@ abstract class AbstractConformanceServer {
                                     TextContent.of("Multiple content types test:"),
                                     ImageContent.of(MINI_PNG_BASE64, "image/png"),
                                     EmbeddedResource.of(mixed));
-                        }));
-
-        server.tools()
-                .register(ToolHandler.of(
-                        b -> b.name("test_error_handling")
-                                .description("Always returns error")
-                                .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, request) -> ToolResult.error("This tool intentionally returns an error for testing")));
+                        });
 
         server.tools()
                 .register(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("test_tool_with_progress")
+                        b -> b.name("test_error_handling")
+                                .description("Always returns error")
+                                .inputSchema(INPUT_SCHEMA_NO_ARGS),
+                        (ctx, request) -> ToolResult.error("This tool intentionally returns an error for testing"));
+
+        server.tools()
+                .register(
+                        tool -> tool.name("test_tool_with_progress")
                                 .description("Tool with progress notifications")
-                                .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                var pt = request.progressToken();
-                                if (pt != null) {
-                                    ctx.notifications().progress(pt, 0, 100, "Starting");
-                                    delay(50);
-                                    ctx.notifications().progress(pt, 50, 100, "Halfway");
-                                    delay(50);
-                                    ctx.notifications().progress(pt, 100, 100, "Complete");
-                                }
-                                return ToolResult.text("Tool execution completed");
+                                .inputSchema(INPUT_SCHEMA_NO_ARGS),
+                        (ctx, request) -> {
+                            var pt = request.progressToken();
+                            if (pt != null) {
+                                ctx.notifications().progress(pt, 0, 100, "Starting");
+                                delay(50);
+                                ctx.notifications().progress(pt, 50, 100, "Halfway");
+                                delay(50);
+                                ctx.notifications().progress(pt, 100, 100, "Complete");
                             }
+                            return ToolResult.text("Tool execution completed");
                         });
 
         var inputSchema = buildJsonSchema();
         server.tools()
-                .register(ToolHandler.of(
+                .register(
                         ToolDescriptor.builder()
                                 .name("json_schema_2020_12_tool")
                                 .description("Tool with JSON Schema 2020-12 features")
                                 .inputSchema(inputSchema)
                                 .build(),
-                        (context, request) -> ToolResult.text("JSON Schema 2020-12 tool called")));
+                        (context, request) -> ToolResult.text("JSON Schema 2020-12 tool called"));
 
         server.tools()
-                .register(ToolHandler.of(
+                .register(
                         b -> b.name("test_reconnection")
                                 .description(
                                         "A tool that triggers SSE stream closure to test client reconnection behavior")
@@ -268,7 +276,7 @@ abstract class AbstractConformanceServer {
                                 stream.close();
                             }
                             return ToolResult.text("reconnection triggered");
-                        }));
+                        });
 
         registerVersionSpecificTools(server);
     }
@@ -285,205 +293,193 @@ abstract class AbstractConformanceServer {
      * Draft-only (SEP-2322, protocol version 2026-07-28): called by {@code EdgeConformanceServer}.
      */
     protected void registerInputRequiredTools(ServerEngine server) {
-        server.tools()
-                .register(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("test_input_required_result_elicitation")
-                                .description("SEP-2322 elicitation InputRequiredResult")
-                                .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                var inputResponses = request.inputResponses();
-                                if (inputResponses != null && inputResponses.containsKey("user_name")) {
-                                    var resp = inputResponses.get("user_name");
-                                    if (resp instanceof Map<?, ?>) {
-                                        var content = field(resp, "content");
-                                        var name = stringField(content, "name", "World");
-                                        return ToolResult.text("Hello, " + name + "!");
-                                    }
-                                }
-                                return ToolResult.inputRequired(
-                                        Map.of(
-                                                "user_name",
-                                                buildFormElicitation("What is your name?", "name", "string")),
-                                        null);
+        registerHandler(
+                server,
+                new AbstractToolHandler(ToolDescriptor.builder()
+                        .name("test_input_required_result_elicitation")
+                        .description("SEP-2322 elicitation InputRequiredResult")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS)
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                        var inputResponses = request.inputResponses();
+                        if (inputResponses != null && inputResponses.containsKey("user_name")) {
+                            var resp = inputResponses.get("user_name");
+                            if (resp instanceof Map<?, ?>) {
+                                var content = field(resp, "content");
+                                var name = stringField(content, "name", "World");
+                                return ToolResult.text("Hello, " + name + "!");
                             }
-                        });
+                        }
+                        return ToolResult.inputRequired(
+                                Map.of("user_name", buildFormElicitation("What is your name?", "name", "string")),
+                                null);
+                    }
+                });
 
-        server.tools()
-                .register(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("test_input_required_result_sampling")
-                                .description("SEP-2322 sampling InputRequiredResult")
-                                .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                var inputResponses = request.inputResponses();
-                                if (inputResponses != null && inputResponses.containsKey("capital_question")) {
-                                    var resp = inputResponses.get("capital_question");
-                                    var text = stringField(field(resp, "content"), "text", "done");
-                                    return ToolResult.text(text);
-                                }
-                                return ToolResult.inputRequired(
-                                        Map.of(
-                                                "capital_question",
-                                                buildSamplingRequest("What is the capital of France?")),
-                                        null);
-                            }
-                        });
+        registerHandler(
+                server,
+                new AbstractToolHandler(ToolDescriptor.builder()
+                        .name("test_input_required_result_sampling")
+                        .description("SEP-2322 sampling InputRequiredResult")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS)
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                        var inputResponses = request.inputResponses();
+                        if (inputResponses != null && inputResponses.containsKey("capital_question")) {
+                            var resp = inputResponses.get("capital_question");
+                            var text = stringField(field(resp, "content"), "text", "done");
+                            return ToolResult.text(text);
+                        }
+                        return ToolResult.inputRequired(
+                                Map.of("capital_question", buildSamplingRequest("What is the capital of France?")),
+                                null);
+                    }
+                });
 
-        server.tools()
-                .register(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("test_input_required_result_list_roots")
-                                .description("SEP-2322 roots/list InputRequiredResult")
-                                .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                var inputResponses = request.inputResponses();
-                                if (inputResponses != null && inputResponses.containsKey("client_roots")) {
-                                    return ToolResult.text("Roots received");
-                                }
-                                return ToolResult.inputRequired(Map.of("client_roots", buildRootsListRequest()), null);
-                            }
-                        });
+        registerHandler(
+                server,
+                new AbstractToolHandler(ToolDescriptor.builder()
+                        .name("test_input_required_result_list_roots")
+                        .description("SEP-2322 roots/list InputRequiredResult")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS)
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                        var inputResponses = request.inputResponses();
+                        if (inputResponses != null && inputResponses.containsKey("client_roots")) {
+                            return ToolResult.text("Roots received");
+                        }
+                        return ToolResult.inputRequired(Map.of("client_roots", buildRootsListRequest()), null);
+                    }
+                });
 
-        server.tools()
-                .register(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("test_input_required_result_request_state")
-                                .description("SEP-2322 requestState round-trip")
-                                .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                var inputResponses = request.inputResponses();
-                                var requestState = request.requestState();
-                                if (inputResponses != null
-                                        && inputResponses.containsKey("confirm")
-                                        && requestState != null) {
-                                    return ToolResult.text("state-ok");
-                                }
-                                return ToolResult.inputRequired(
-                                        Map.of("confirm", buildFormElicitation("Please confirm", "ok", "boolean")),
-                                        "opaque-server-state");
-                            }
-                        });
+        registerHandler(
+                server,
+                new AbstractToolHandler(ToolDescriptor.builder()
+                        .name("test_input_required_result_request_state")
+                        .description("SEP-2322 requestState round-trip")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS)
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                        var inputResponses = request.inputResponses();
+                        var requestState = request.requestState();
+                        if (inputResponses != null && inputResponses.containsKey("confirm") && requestState != null) {
+                            return ToolResult.text("state-ok");
+                        }
+                        return ToolResult.inputRequired(
+                                Map.of("confirm", buildFormElicitation("Please confirm", "ok", "boolean")),
+                                "opaque-server-state");
+                    }
+                });
 
-        server.tools()
-                .register(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("test_input_required_result_multiple_inputs")
-                                .description("SEP-2322 multiple inputRequests")
-                                .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                var inputResponses = request.inputResponses();
-                                if (inputResponses != null
-                                        && inputResponses.containsKey("user_name")
-                                        && inputResponses.containsKey("greeting")
-                                        && inputResponses.containsKey("client_roots")) {
-                                    return ToolResult.text("All inputs received");
-                                }
-                                var inputRequests = new LinkedHashMap<String, InputRequest>();
-                                inputRequests.put(
-                                        "user_name", buildFormElicitation("What is your name?", "name", "string"));
-                                inputRequests.put("greeting", buildSamplingRequest("Generate a greeting"));
-                                inputRequests.put("client_roots", buildRootsListRequest());
-                                return ToolResult.inputRequired(inputRequests, "multi-input-state");
-                            }
-                        });
+        registerHandler(
+                server,
+                new AbstractToolHandler(ToolDescriptor.builder()
+                        .name("test_input_required_result_multiple_inputs")
+                        .description("SEP-2322 multiple inputRequests")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS)
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                        var inputResponses = request.inputResponses();
+                        if (inputResponses != null
+                                && inputResponses.containsKey("user_name")
+                                && inputResponses.containsKey("greeting")
+                                && inputResponses.containsKey("client_roots")) {
+                            return ToolResult.text("All inputs received");
+                        }
+                        var inputRequests = new LinkedHashMap<String, InputRequest>();
+                        inputRequests.put("user_name", buildFormElicitation("What is your name?", "name", "string"));
+                        inputRequests.put("greeting", buildSamplingRequest("Generate a greeting"));
+                        inputRequests.put("client_roots", buildRootsListRequest());
+                        return ToolResult.inputRequired(inputRequests, "multi-input-state");
+                    }
+                });
 
-        server.tools()
-                .register(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("test_input_required_result_multi_round")
-                                .description("SEP-2322 multi-round InputRequiredResult")
-                                .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                var inputResponses = request.inputResponses();
-                                var requestState = request.requestState();
-                                if (inputResponses != null && inputResponses.containsKey("step2")) {
-                                    var color = stringField(
-                                            field(inputResponses.get("step2"), "content"), "color", "unknown");
-                                    return ToolResult.text("Done with color: " + color);
-                                }
-                                if (inputResponses != null
-                                        && inputResponses.containsKey("step1")
-                                        && "state-round-1".equals(requestState)) {
-                                    return ToolResult.inputRequired(
-                                            Map.of(
-                                                    "step2",
-                                                    buildFormElicitation(
-                                                            "Step 2: What is your favorite color?", "color", "string")),
-                                            "state-round-2");
-                                }
-                                return ToolResult.inputRequired(
-                                        Map.of(
-                                                "step1",
-                                                buildFormElicitation("Step 1: What is your name?", "name", "string")),
-                                        "state-round-1");
-                            }
-                        });
+        registerHandler(
+                server,
+                new AbstractToolHandler(ToolDescriptor.builder()
+                        .name("test_input_required_result_multi_round")
+                        .description("SEP-2322 multi-round InputRequiredResult")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS)
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                        var inputResponses = request.inputResponses();
+                        var requestState = request.requestState();
+                        if (inputResponses != null && inputResponses.containsKey("step2")) {
+                            var color = stringField(field(inputResponses.get("step2"), "content"), "color", "unknown");
+                            return ToolResult.text("Done with color: " + color);
+                        }
+                        if (inputResponses != null
+                                && inputResponses.containsKey("step1")
+                                && "state-round-1".equals(requestState)) {
+                            return ToolResult.inputRequired(
+                                    Map.of(
+                                            "step2",
+                                            buildFormElicitation(
+                                                    "Step 2: What is your favorite color?", "color", "string")),
+                                    "state-round-2");
+                        }
+                        return ToolResult.inputRequired(
+                                Map.of("step1", buildFormElicitation("Step 1: What is your name?", "name", "string")),
+                                "state-round-1");
+                    }
+                });
 
-        server.tools()
-                .register(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("test_input_required_result_tampered_state")
-                                .description("SEP-2322 tampered requestState rejection")
-                                .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                var inputResponses = request.inputResponses();
-                                var requestState = request.requestState();
-                                if (inputResponses != null && inputResponses.containsKey("confirm")) {
-                                    if (!verifyState(requestState)) {
-                                        throw new IllegalArgumentException("Invalid or tampered requestState");
-                                    }
-                                    return ToolResult.text("State verified");
-                                }
-                                return ToolResult.inputRequired(
-                                        Map.of("confirm", buildFormElicitation("Please confirm", "ok", "boolean")),
-                                        signState("tamper-check"));
+        registerHandler(
+                server,
+                new AbstractToolHandler(ToolDescriptor.builder()
+                        .name("test_input_required_result_tampered_state")
+                        .description("SEP-2322 tampered requestState rejection")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS)
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                        var inputResponses = request.inputResponses();
+                        var requestState = request.requestState();
+                        if (inputResponses != null && inputResponses.containsKey("confirm")) {
+                            if (!verifyState(requestState)) {
+                                throw new IllegalArgumentException("Invalid or tampered requestState");
                             }
-                        });
+                            return ToolResult.text("State verified");
+                        }
+                        return ToolResult.inputRequired(
+                                Map.of("confirm", buildFormElicitation("Please confirm", "ok", "boolean")),
+                                signState("tamper-check"));
+                    }
+                });
 
-        server.tools()
-                .register(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("test_input_required_result_capabilities")
-                                .description("SEP-2322 respect client capabilities")
-                                .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                var meta = request.meta();
-                                var capabilities =
-                                        meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
-                                var hasSampling = field(capabilities, "sampling") != null;
-                                var hasElicitation = field(capabilities, "elicitation") != null;
-                                var inputRequests = new LinkedHashMap<String, InputRequest>();
-                                if (hasSampling) {
-                                    inputRequests.put(
-                                            "ai_response", buildSamplingRequest("Generate a helpful response"));
-                                }
-                                if (hasElicitation) {
-                                    inputRequests.put(
-                                            "user_name", buildFormElicitation("What is your name?", "name", "string"));
-                                }
-                                if (inputRequests.isEmpty()) {
-                                    return ToolResult.text("No capabilities declared");
-                                }
-                                return ToolResult.inputRequired(inputRequests, null);
-                            }
-                        });
+        registerHandler(
+                server,
+                new AbstractToolHandler(ToolDescriptor.builder()
+                        .name("test_input_required_result_capabilities")
+                        .description("SEP-2322 respect client capabilities")
+                        .inputSchema(INPUT_SCHEMA_NO_ARGS)
+                        .build()) {
+                    @Override
+                    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
+                        var meta = request.meta();
+                        var capabilities = meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
+                        var hasSampling = field(capabilities, "sampling") != null;
+                        var hasElicitation = field(capabilities, "elicitation") != null;
+                        var inputRequests = new LinkedHashMap<String, InputRequest>();
+                        if (hasSampling) {
+                            inputRequests.put("ai_response", buildSamplingRequest("Generate a helpful response"));
+                        }
+                        if (hasElicitation) {
+                            inputRequests.put(
+                                    "user_name", buildFormElicitation("What is your name?", "name", "string"));
+                        }
+                        if (inputRequests.isEmpty()) {
+                            return ToolResult.text("No capabilities declared");
+                        }
+                        return ToolResult.inputRequired(inputRequests, null);
+                    }
+                });
     }
 
     /**
@@ -553,17 +549,8 @@ abstract class AbstractConformanceServer {
      */
     protected void registerVersionSpecificPrompts(ServerEngine server) {}
 
-    private static ToolHandler echoTool() {
-        // language=json
-        var schema = parseJson("""
-            {
-                "type": "object",
-                "properties": {"message": {"type": "string", "description": "Message to echo"}}
-            }
-            """);
-        return ToolHandler.of(
-                b -> b.name("echo").description("Echo back the input message").inputSchema(schema),
-                (ctx, request) -> ToolResult.text(request.arguments().stringOr("message", "")));
+    private static void registerHandler(ServerEngine server, ToolHandler handler) {
+        server.tools().registerAsync(handler.descriptor(), handler::handleAsync);
     }
 
     protected static @Nullable Object field(@Nullable Object value, String name) {

@@ -4,7 +4,7 @@ package dev.tachyonmcp.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.json.JsonSchema;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
@@ -18,9 +18,9 @@ class PageSizeConfigTest extends AbstractStatelessMcpE2eTest {
         startServer(
                 b -> b.capabilities(c -> c.tools().toolsPageSize(2)),
                 s -> s.tools()
-                        .register(handler("tool-a"))
-                        .register(handler("tool-b"))
-                        .register(handler("tool-c")));
+                        .register(descriptor("tool-a"), (ctx, request) -> ToolResult.text("ok"))
+                        .register(descriptor("tool-b"), (ctx, request) -> ToolResult.text("ok"))
+                        .register(descriptor("tool-c"), (ctx, request) -> ToolResult.text("ok")));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -47,10 +47,12 @@ class PageSizeConfigTest extends AbstractStatelessMcpE2eTest {
         }
     }
 
-    private static ToolHandler handler(String name) {
-        return ToolHandler.of(
-                b -> b.name(name).description("Tool " + name).inputSchema(INPUT_SCHEMA),
-                (ctx, request) -> ToolResult.text("ok"));
+    private static ToolDescriptor descriptor(String name) {
+        return ToolDescriptor.builder()
+                .name(name)
+                .description("Tool " + name)
+                .inputSchema(INPUT_SCHEMA)
+                .build();
     }
 
     private static final JsonSchema INPUT_SCHEMA = JsonSchema.objectSchema();

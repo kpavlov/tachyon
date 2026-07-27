@@ -9,7 +9,7 @@ import com.example.weather.spi.WeatherObservation;
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.ProgressToken;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolFn;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,14 +41,15 @@ class GetWeatherTool {
         }
         """;
 
-    static ToolHandler create(WeatherService weatherService) {
-        var descriptor = ToolDescriptor.builder()
-            .name("get-weather")
-            .title("Current Weather")
-            .description("Get current weather for a city")
-            .inputSchema(INPUT_SCHEMA)
-            .build();
-        return ToolHandler.of(descriptor, (ctx, request) -> {
+    static final ToolDescriptor DESCRIPTOR = ToolDescriptor.builder()
+        .name("get-weather")
+        .title("Current Weather")
+        .description("Get current weather for a city")
+        .inputSchema(INPUT_SCHEMA)
+        .build();
+
+    static ToolFn fn(WeatherService weatherService) {
+        return (ctx, request) -> {
             var args = request.arguments();
             var city = args.stringValue("city");
             var units = args.stringOr("units", "celsius");
@@ -69,7 +70,7 @@ class GetWeatherTool {
             } catch (Exception e) {
                 return internalError(e);
             }
-        });
+        };
     }
 
     private static WeatherObservation fetchWithProgress(

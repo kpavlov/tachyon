@@ -18,6 +18,7 @@ import dev.tachyonmcp.json.spi.JsonSchemaFactory;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CallToolRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskMetadata;
+import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.OutboundSseStreamMessageRouter;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.FeatureConfig;
@@ -97,19 +98,29 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
         this.config = config;
     }
 
-    /**
-     * Registers a tool handler when the tools capability is enabled.
-     *
-     * @param handler the tool handler to register
-     * @return this registry
-     * @throws NullPointerException     if the handler or its descriptor is null
-     * @throws IllegalArgumentException if the tool name or schema root is invalid
-     */
     @Override
-    public Tools register(ToolHandler handler) {
-        Objects.requireNonNull(handler, "ToolHandler must not be null");
+    public Tools register(ToolDescriptor descriptor, ToolFn fn) {
+        return register(new AbstractToolHandler(descriptor) {
+            @Override
+            public ToolResult handle(InteractionContext context, ToolRequest request) throws Exception {
+                HandlerFutures.assumeVirtualThread();
+                return fn.apply(context, request);
+            }
+        });
+    }
+
+    @Override
+    public Tools registerAsync(ToolDescriptor descriptor, AsyncToolFn fn) {
+        return register(new AbstractToolHandler(descriptor) {
+            @Override
+            public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolRequest request) {
+                return fn.apply(context, request);
+            }
+        });
+    }
+
+    Tools register(ToolHandler handler) {
         var descriptor = handler.descriptor();
-        Objects.requireNonNull(descriptor, "ToolDescriptor must not be null");
         if (config.mode() == Mode.OFF) {
             logger.debug("Tool '{}' not registered: tools capability is OFF", descriptor.name());
             return this;

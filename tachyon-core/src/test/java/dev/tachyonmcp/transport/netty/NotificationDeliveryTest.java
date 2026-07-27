@@ -12,7 +12,7 @@ import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolFn;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import java.util.ArrayList;
@@ -32,7 +32,7 @@ class NotificationDeliveryTest {
     /**
      * Emits 3 progress events and 3 log events per invocation (plus 2 automatic lifecycle logs from ToolsCallHandler).
      */
-    private static final ToolHandler PROGRESS_AND_LOG_TOOL = ToolHandler.of(TOOL_DESCRIPTOR, (ctx, request) -> {
+    private static final ToolFn PROGRESS_AND_LOG_TOOL = (ctx, request) -> {
         var pt = request.progressToken();
         ctx.notifications().progress(pt, 0, 100, "Starting");
         ctx.notifications().progress(pt, 50, 100, "Halfway");
@@ -42,13 +42,13 @@ class NotificationDeliveryTest {
         ctx.notifications().info("tachyon.tools", logData);
         ctx.notifications().info("tachyon.tools", logData);
         return ToolResult.text("ok");
-    });
+    };
 
-    private static final ToolHandler FILTERED_LOG_TOOL = ToolHandler.of("filtered_log", (ctx, request) -> {
+    private static final ToolFn FILTERED_LOG_TOOL = (ctx, request) -> {
         ctx.notifications().log(LoggingLevel.INFO, "filtered.logger", Map.of("message", "skip"));
         ctx.notifications().log(LoggingLevel.ERROR, null);
         return ToolResult.text("ok");
-    });
+    };
 
     private ServerEngine server;
     private McpDispatcher dispatcher;
@@ -58,7 +58,9 @@ class NotificationDeliveryTest {
     void setUp() {
         server = newEngine(
                 b -> b.capabilities(c -> c.logging()).session(s -> s.enabled(true)),
-                s -> s.tools().register(PROGRESS_AND_LOG_TOOL).register(FILTERED_LOG_TOOL));
+                s -> s.tools()
+                        .register(TOOL_DESCRIPTOR, PROGRESS_AND_LOG_TOOL)
+                        .register(builder -> builder.name("filtered_log"), FILTERED_LOG_TOOL));
         dispatcher = new McpDispatcher(server, server.executor());
         testConn = new CollectingConnection();
         Session session = server.createSession("sess_test");
@@ -188,8 +190,9 @@ class NotificationDeliveryTest {
 
     @Test
     void shouldRejectSetLevelWhenLoggingCapabilityIsDisabled() {
-        try (var disabledServer =
-                newEngine(b -> b.session(s -> s.enabled(true)), s -> s.tools().register(FILTERED_LOG_TOOL))) {
+        try (var disabledServer = newEngine(
+                b -> b.session(s -> s.enabled(true)),
+                s -> s.tools().register(builder -> builder.name("filtered_log"), FILTERED_LOG_TOOL))) {
             var disabledConnection = new CollectingConnection();
             var disabledSession = disabledServer.createSession("sess_disabled");
             disabledSession.connection(disabledConnection);

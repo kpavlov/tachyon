@@ -4,88 +4,52 @@ package dev.tachyonmcp.server.features.tools;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
-import org.jspecify.annotations.Nullable;
 
+/** Registry for server tools. */
 public interface Tools {
 
     /**
-     * Registers a tool handler with the registry.
+     * Registers a tool descriptor with a synchronous function.
      *
-     * @param handler the tool handler to register
+     * @param descriptor the tool descriptor
+     * @param fn the tool function
      * @return this registry
      */
-    Tools register(ToolHandler handler);
+    Tools register(ToolDescriptor descriptor, ToolFn fn);
 
     /**
-     * Registers a tool descriptor with a synchronous handler.
+     * Builds and registers a tool descriptor with a synchronous function.
      *
-     * @param descriptor the descriptor for the tool to register
-     * @param handler    the function that handles tool interactions, given the raw {@link ToolRequest}
-     * @return this tool registry
+     * @param configurer the descriptor builder configurer
+     * @param fn the tool function
+     * @return this registry
      */
-    default Tools register(ToolDescriptor descriptor, ToolFn handler) {
-        return register(ToolHandler.of(descriptor, handler));
+    default Tools register(Consumer<ToolDescriptor.Builder> configurer, ToolFn fn) {
+        var builder = ToolDescriptor.builder();
+        configurer.accept(builder);
+        return register(builder.build(), fn);
     }
 
     /**
-     * Registers a tool using a consumer to configure its descriptor and a synchronous handler.
+     * Registers a tool descriptor with an asynchronous function.
      *
-     * @param descriptor the consumer that configures the tool descriptor
-     * @param handler the function that handles tool interactions
-     * @return this tool registry
+     * @param descriptor the tool descriptor
+     * @param fn the asynchronous tool function
+     * @return this registry
      */
-    default Tools register(Consumer<ToolDescriptor.Builder> descriptor, ToolFn handler) {
-        final var builder = ToolDescriptor.builder();
-        descriptor.accept(builder);
-        return register(builder.build(), handler);
-    }
+    Tools registerAsync(ToolDescriptor descriptor, AsyncToolFn fn);
 
     /**
-     * Registers a tool with an asynchronous handler.
+     * Builds and registers a tool descriptor with an asynchronous function.
      *
-     * @param descriptor the descriptor for the tool
-     * @param handler the function that handles interactions and produces a result asynchronously
-     * @return this tool registry
+     * @param configurer the descriptor builder configurer
+     * @param fn the asynchronous tool function
+     * @return this registry
      */
-    default Tools registerAsync(ToolDescriptor descriptor, AsyncToolFn handler) {
-        return register(ToolHandler.ofAsync(descriptor, handler));
-    }
-
-    /**
-     * Registers a tool configured by a descriptor builder and handled asynchronously.
-     *
-     * @param descriptor configures the tool descriptor
-     * @param handler    processes interactions and produces the tool result
-     * @return this tool registry
-     */
-    default Tools registerAsync(Consumer<ToolDescriptor.Builder> descriptor, AsyncToolFn handler) {
-        final var builder = ToolDescriptor.builder();
-        descriptor.accept(builder);
-        return registerAsync(builder.build(), handler);
-    }
-
-    /**
-     * Registers a tool with the specified metadata and synchronous handler.
-     *
-     * @param name              the tool name
-     * @param description       the tool description
-     * @param inputSchemaJson   the JSON schema for tool inputs
-     * @param outputSchemaJson  the JSON schema for tool outputs
-     * @param fn                the function that handles tool interactions
-     * @return the registry
-     */
-    default Tools register(
-            String name,
-            @Nullable String description,
-            @Nullable String inputSchemaJson,
-            @Nullable String outputSchemaJson,
-            ToolFn fn) {
-        return register(ToolHandler.of(
-                builder -> builder.name(name)
-                        .description(description)
-                        .inputSchema(inputSchemaJson)
-                        .outputSchema(outputSchemaJson),
-                fn));
+    default Tools registerAsync(Consumer<ToolDescriptor.Builder> configurer, AsyncToolFn fn) {
+        var builder = ToolDescriptor.builder();
+        configurer.accept(builder);
+        return registerAsync(builder.build(), fn);
     }
 
     /**

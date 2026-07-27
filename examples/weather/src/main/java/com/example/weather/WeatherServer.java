@@ -77,7 +77,7 @@ public final class WeatherServer {
                         .instructions("Test instructions")
                         .icons(Icon.of(LOGO, "image/png", List.of("256x256"), null))
                         .version("1.0"))
-                .withTools(tools -> tools.register(GetWeatherTool.create(weatherService)))
+                .withTools(tools -> tools.register(GetWeatherTool.DESCRIPTOR, GetWeatherTool.fn(weatherService)))
                 .withResources(resources -> resources.register(
                         resource -> resource.name("prediction-article")
                                 .uri("weather://prediction/article")

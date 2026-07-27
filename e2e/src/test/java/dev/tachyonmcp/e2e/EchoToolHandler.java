@@ -2,7 +2,8 @@
 package dev.tachyonmcp.e2e;
 
 import dev.tachyonmcp.json.JsonSchema;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.AsyncToolFn;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.concurrent.CompletableFuture;
 
@@ -21,10 +22,12 @@ class EchoToolHandler {
         }
         """);
 
-    static ToolHandler create() {
-        return ToolHandler.ofAsync(
-                b -> b.name("echo").description("Echo back the input message").inputSchema(ECHO_INPUT_SCHEMA),
-                (ctx, request) -> CompletableFuture.supplyAsync(
-                        () -> ToolResult.text(request.arguments().stringOr("message", ""))));
-    }
+    static final ToolDescriptor DESCRIPTOR = ToolDescriptor.builder()
+            .name("echo")
+            .description("Echo back the input message")
+            .inputSchema(ECHO_INPUT_SCHEMA)
+            .build();
+
+    static final AsyncToolFn FN = (ctx, request) -> CompletableFuture.supplyAsync(
+            () -> ToolResult.text(request.arguments().stringOr("message", "")));
 }

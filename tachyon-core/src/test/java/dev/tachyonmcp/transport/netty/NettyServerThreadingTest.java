@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.domain.RequestId;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import java.util.concurrent.Callable;
@@ -27,11 +26,11 @@ class NettyServerThreadingTest {
 
         try (var server = newEngine(
                         b -> {},
-                        s -> s.tools().register(ToolHandler.of("thread_probe", (ctx, request) -> {
+                        s -> s.tools().register(builder -> builder.name("thread_probe"), (ctx, request) -> {
                             Thread thread = Thread.currentThread();
                             handlerThread.complete(thread.getName() + " virtual:" + thread.isVirtual());
                             return ToolResult.empty();
-                        })));
+                        }));
                 var netty = new NettyServer(0, server)) {
             Callable<Thread> probe = Thread::currentThread;
 
@@ -64,10 +63,10 @@ class NettyServerThreadingTest {
 
         try (ServerEngine server = newEngine(
                 b -> b.threadFactory(Thread.ofVirtual().name("tenant-", 0).factory()),
-                s -> s.tools().register(ToolHandler.of("name_probe", (ctx, request) -> {
+                s -> s.tools().register(builder -> builder.name("name_probe"), (ctx, request) -> {
                     handlerThreadName.complete(Thread.currentThread().getName());
                     return ToolResult.empty();
-                })))) {
+                }))) {
             server.createSession("sess-name").activate();
             var dispatcher = new McpDispatcher(server, server.executor());
             dispatcher
@@ -90,7 +89,7 @@ class NettyServerThreadingTest {
 
         var server = newEngine(
                 b -> b.executor(executor),
-                s -> s.tools().register(ToolHandler.of("exec_probe", (ctx, request) -> ToolResult.empty())));
+                s -> s.tools().register(builder -> builder.name("exec_probe"), (ctx, request) -> ToolResult.empty()));
         server.close();
 
         // The executor should still be usable (not shut down)

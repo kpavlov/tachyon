@@ -26,7 +26,8 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void basicElicitationFlow() throws Exception {
-        startServerWith(s -> s.tools().register(new InputRequiredTestHandler()));
+        var tool = new InputRequiredTestHandler();
+        startServerWith(s -> s.tools().registerAsync(tool.descriptor(), tool::handleAsync));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -55,7 +56,8 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void multiRoundFlow() throws Exception {
-        startServerWith(s -> s.tools().register(new MultiRoundTestHandler()));
+        var tool = new MultiRoundTestHandler();
+        startServerWith(s -> s.tools().registerAsync(tool.descriptor(), tool::handleAsync));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -97,7 +99,8 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void inputRequiredPreservesMeta() throws Exception {
-        startServerWith(s -> s.tools().register(new MetaInputRequiredTestHandler()));
+        var tool = new MetaInputRequiredTestHandler();
+        startServerWith(s -> s.tools().registerAsync(tool.descriptor(), tool::handleAsync));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -113,7 +116,8 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void missingInputResponsesReRequests() throws Exception {
-        startServerWith(s -> s.tools().register(new InputRequiredTestHandler()));
+        var tool = new InputRequiredTestHandler();
+        startServerWith(s -> s.tools().registerAsync(tool.descriptor(), tool::handleAsync));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -135,7 +139,8 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void urlModeElicitationFlow() throws Exception {
-        startServerWith(s -> s.tools().register(new UrlElicitationTestHandler()));
+        var tool = new UrlElicitationTestHandler();
+        startServerWith(s -> s.tools().registerAsync(tool.descriptor(), tool::handleAsync));
 
         try (var client = createTestClient()) {
             client.initialize();

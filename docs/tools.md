@@ -7,35 +7,31 @@ Tools are the primary way clients invoke server-side logic. Tachyon validates in
 ### Lambda (simple)
 
 ```java
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 
-.withTools(tools ->tools.
-
-register(ToolHandler.of("hello", "Say hello",
-        (ctx, request) ->ToolResult.
-
-text("Hello!"))))
+.withTools(tools -> tools.register(
+        tool -> tool.name("hello").description("Say hello"),
+        (ctx, request) -> ToolResult.text("Hello!")))
 ```
 
 Need an input schema? Configure the descriptor with the builder overload. `.inputSchema(...)` /
 `.outputSchema(...)` take a raw JSON `String` **or** a Jackson `JsonNode`:
 
 ```java
-.withTools(tools -> tools.register(ToolHandler.of(
+.withTools(tools -> tools.register(
         b -> b.name("hello")
             .description("Say hello")
             .inputSchema("""
             {"type":"object","properties":{"name":{"type":"string"}}}
             """),
         (ctx, request) -> ToolResult.text(
-            "Hello, " + request.arguments().stringOr("name", "world") + "!"))))
+            "Hello, " + request.arguments().stringOr("name", "world") + "!")))
 ```
 
-### Class (only when a factory won't do)
+### Class (experimental escape hatch)
 
-Prefer the `ToolHandler.of…` factories above — they cover most tools in one call. Reach for a
-class only when the handler needs instance state or shared setup. Then extend
+Prefer descriptor/function registration above. Reach for the experimental class-based escape hatch
+only when a lambda cannot express the handler. Then extend
 `AbstractToolHandler`: pass the descriptor to the constructor and override `handle(ctx, request)`.
 (`ToolHandler` itself declares only `descriptor()` and `handleAsync(ctx, ToolRequest)`;
 `AbstractToolHandler` supplies the synchronous request override.)
@@ -68,36 +64,30 @@ class WeatherTool extends AbstractToolHandler {
 }
 ```
 
-Register: `server.tools().register(new WeatherTool())`
+Register its descriptor and function explicitly:
+
+```java
+var weather = new WeatherTool();
+server.tools().register(weather.descriptor(), weather::handle);
+```
 
 ### Async tool
 
 Blocking handlers run on a virtual thread, so most tools need no async plumbing. When you already
-hold a `CompletionStage` (a non-blocking client, another async service), return it directly:
-lambda via `ToolHandler.ofAsync`, or override `handleAsync(ctx, request)` on
+hold a `CompletionStage` (a non-blocking client, another async service), return it directly with
+`registerAsync`, or override `handleAsync(ctx, request)` on
 `AbstractToolHandler`. Async handlers stay async — they are not funneled through the blocking path.
 
 ```java
-import dev.tachyonmcp.server.features.tools.ToolHandler;
-
-.withTools(tools ->tools.
-
-register(ToolHandler.ofAsync("get_weather_async",
-    (ctx, request) ->
-
-fetchWeather(request.arguments().
-
-stringValue("city"))
-        .
-
-thenApply(w ->ToolResult.
-
-text(w.summary())))))
+.withTools(tools -> tools.registerAsync(
+        tool -> tool.name("get_weather_async"),
+        (ctx, request) -> fetchWeather(request.arguments().stringValue("city"))
+                .thenApply(w -> ToolResult.text(w.summary()))))
 ```
 
 ### Progress token / full request
 
-`ToolHandler.of(...)` and `ToolHandler.ofAsync(...)` lambdas receive `ToolRequest`; call
+`register(...)` and `registerAsync(...)` functions receive `ToolRequest`; call
 `request.arguments()` for parsed arguments. Class-based handlers receive the same request in
 `handle(ctx, ToolRequest)` or `handleAsync(ctx, ToolRequest)`.
 

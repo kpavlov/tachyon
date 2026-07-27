@@ -1,12 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.conformance;
 
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
@@ -35,25 +30,20 @@ class DefaultConformanceServer extends AbstractConformanceServer {
     protected void registerVersionSpecificTools(ServerEngine server) {
         server.tools()
                 .register(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("test_tool_with_logging")
+                        tool -> tool.name("test_tool_with_logging")
                                 .description("Tool with logging")
-                                .inputSchema(INPUT_SCHEMA_NO_ARGS)
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                ctx.notifications().info("tachyon.tools", Map.of("message", "Tool execution started"));
-                                delay(50);
-                                ctx.notifications().info("tachyon.tools", Map.of("message", "Tool processing data"));
-                                delay(50);
-                                ctx.notifications()
-                                        .info("tachyon.tools", Map.of("message", "Tool execution completed"));
-                                return ToolResult.text("Tool execution completed");
-                            }
+                                .inputSchema(INPUT_SCHEMA_NO_ARGS),
+                        (ctx, request) -> {
+                            ctx.notifications().info("tachyon.tools", Map.of("message", "Tool execution started"));
+                            delay(50);
+                            ctx.notifications().info("tachyon.tools", Map.of("message", "Tool processing data"));
+                            delay(50);
+                            ctx.notifications().info("tachyon.tools", Map.of("message", "Tool execution completed"));
+                            return ToolResult.text("Tool execution completed");
                         });
 
         server.tools()
-                .register(ToolHandler.of(
+                .register(
                         b -> b.name("test_sampling")
                                 .description("Tool that requests sampling")
                                 .inputSchema(INPUT_SCHEMA_WITH_PROMPT),
@@ -83,10 +73,10 @@ class DefaultConformanceServer extends AbstractConformanceServer {
                                 }
                             }
                             return ToolResult.text("sampling not fully implemented");
-                        }));
+                        });
 
         server.tools()
-                .register(ToolHandler.of(
+                .register(
                         b -> b.name("test_elicitation")
                                 .description("Tool that requests elicitation")
                                 .inputSchema(INPUT_SCHEMA_WITH_MESSAGE),
@@ -124,10 +114,10 @@ class DefaultConformanceServer extends AbstractConformanceServer {
                                 }
                             }
                             return ToolResult.text("elicitation not fully implemented");
-                        }));
+                        });
 
         server.tools()
-                .register(ToolHandler.of(
+                .register(
                         b -> b.name("test_elicitation_sep1034_defaults")
                                 .description("Elicitation with defaults")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
@@ -172,10 +162,10 @@ class DefaultConformanceServer extends AbstractConformanceServer {
                             } catch (Exception e) {
                                 return ToolResult.error("Error: " + e.getMessage());
                             }
-                        }));
+                        });
 
         server.tools()
-                .register(ToolHandler.of(
+                .register(
                         b -> b.name("test_elicitation_sep1330_enums")
                                 .description("Elicitation with enums")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
@@ -239,6 +229,6 @@ class DefaultConformanceServer extends AbstractConformanceServer {
                             } catch (Exception e) {
                                 return ToolResult.error("Error: " + e.getMessage());
                             }
-                        }));
+                        });
     }
 }

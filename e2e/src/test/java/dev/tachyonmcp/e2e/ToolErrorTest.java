@@ -4,14 +4,18 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import org.junit.jupiter.api.Test;
 
 class ToolErrorTest extends AbstractStatelessMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServerWith(s -> s.tools().register(throwingTool()));
+        startServerWith(s -> s.tools()
+                .register(
+                        b -> b.name("boom").description("Throws after sending a notification"), (context, request) -> {
+                            context.notifications().comment("before-boom");
+                            throw new RuntimeException("Simulated handler failure. Ignore it");
+                        }));
     }
 
     @Test
@@ -34,9 +38,10 @@ class ToolErrorTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void shouldRedactIllegalArgumentExceptionFromInvalidParamsError() throws Exception {
-        startServerWith(s -> s.tools().register(ToolHandler.of("bad-arg", "Rejects input", (context, request) -> {
-            throw new IllegalArgumentException("sensitive internal detail");
-        })));
+        startServerWith(s -> s.tools()
+                .register(builder -> builder.name("bad-arg").description("Rejects input"), (context, request) -> {
+                    throw new IllegalArgumentException("sensitive internal detail");
+                }));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -54,13 +59,5 @@ class ToolErrorTest extends AbstractStatelessMcpE2eTest {
             assertThatJson(response).isEqualTo(expected);
             assertThat(response).doesNotContain("sensitive internal detail");
         }
-    }
-
-    private static ToolHandler throwingTool() {
-        return ToolHandler.of(
-                b -> b.name("boom").description("Throws after sending a notification"), (context, request) -> {
-                    context.notifications().comment("before-boom");
-                    throw new RuntimeException("Simulated handler failure. Ignore it");
-                });
     }
 }

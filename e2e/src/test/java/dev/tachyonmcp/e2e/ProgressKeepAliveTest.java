@@ -96,11 +96,15 @@ class ProgressKeepAliveTest {
                 .session(s -> s.enabled(true))
                 .network(n -> n.heartbeatInterval(HEARTBEAT))
                 .build();
+        var warmup = new ProgressHandler("warmup", 0);
+        var slowProgress = new ProgressHandler("slow-progress", SLOW_SLEEP_MS);
+        var warmupComment = new CommentHandler("warmup-comment", 0);
+        var silentComment = new CommentHandler("silent-comment", SLOW_SLEEP_MS);
         server.tools()
-                .register(new ProgressHandler("warmup", 0))
-                .register(new ProgressHandler("slow-progress", SLOW_SLEEP_MS))
-                .register(new CommentHandler("warmup-comment", 0))
-                .register(new CommentHandler("silent-comment", SLOW_SLEEP_MS));
+                .register(warmup.descriptor(), warmup::handle)
+                .register(slowProgress.descriptor(), slowProgress::handle)
+                .register(warmupComment.descriptor(), warmupComment::handle)
+                .register(silentComment.descriptor(), silentComment::handle);
         return (ServerEngine) server;
     }
 

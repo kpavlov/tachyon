@@ -5,7 +5,7 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.json.JsonSchema;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -22,12 +22,12 @@ class StringSchemaTest extends AbstractStatelessMcpE2eTest {
     @Test
     void shouldListToolWithStringSchemas() throws Exception {
         startServerWith(s -> s.tools()
-                .register(ToolHandler.of(
+                .register(
                         b -> b.name("string-schema-tool")
                                 .description("Tool with string schemas")
                                 .inputSchema(INPUT_SCHEMA_JSON)
                                 .outputSchema(OUTPUT_SCHEMA_JSON),
-                        (ctx, request) -> ToolResult.text("ok"))));
+                        (ctx, request) -> ToolResult.text("ok")));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -51,11 +51,11 @@ class StringSchemaTest extends AbstractStatelessMcpE2eTest {
     void shouldHaveIdenticalResultToProviderBackedSchemas() throws Exception {
         startServerWith(s -> {
             s.tools()
-                    .register(ToolHandler.of(
+                    .register(
                             b -> b.name("from-string")
                                     .description("Tool from string")
                                     .inputSchema(INPUT_SCHEMA_JSON),
-                            (ctx, request) -> ToolResult.text("string")));
+                            (ctx, request) -> ToolResult.text("string"));
             var mapper = new ObjectMapper();
             var jsonNodeSchema = mapper.readTree(INPUT_SCHEMA_JSON);
             var providerBackedSchema = new JsonSchema() {
@@ -72,11 +72,11 @@ class StringSchemaTest extends AbstractStatelessMcpE2eTest {
                 }
             };
             s.tools()
-                    .register(ToolHandler.of(
+                    .register(
                             b -> b.name("from-node")
                                     .description("Tool from node")
                                     .inputSchema(providerBackedSchema),
-                            (ctx, request) -> ToolResult.text("node")));
+                            (ctx, request) -> ToolResult.text("node"));
         });
 
         try (var client = createTestClient()) {
@@ -103,10 +103,11 @@ class StringSchemaTest extends AbstractStatelessMcpE2eTest {
     void shouldCallToolWithStringSchema() throws Exception {
         startServerWith(s -> s.tools()
                 .register(
-                        "call-test",
-                        "Call test",
-                        INPUT_SCHEMA_JSON,
-                        null,
+                        ToolDescriptor.builder()
+                                .name("call-test")
+                                .description("Call test")
+                                .inputSchema(INPUT_SCHEMA_JSON)
+                                .build(),
                         (ctx, request) -> ToolResult.text("called")));
 
         try (var client = createTestClient()) {

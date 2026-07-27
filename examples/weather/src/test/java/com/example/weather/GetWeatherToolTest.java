@@ -13,8 +13,7 @@ import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.Args;
 import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.domain.ProgressToken;
-import dev.tachyonmcp.server.features.HandlerFutures;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolFn;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.session.NoopInteractionContext;
@@ -40,7 +39,7 @@ class GetWeatherToolTest {
         var method = new AtomicReference<@Nullable String>();
         var context = context("{\"action\":\"cancel\"}", method);
 
-        var result = invoke(GetWeatherTool.create(new WeatherService(weatherProvider, cityProvider)), context);
+        var result = invoke(GetWeatherTool.fn(new WeatherService(weatherProvider, cityProvider)), context);
 
         assertThat(method).hasValue("elicitation/create");
         assertThat(result).isEqualTo(ToolResult.error("City not found"));
@@ -51,7 +50,7 @@ class GetWeatherToolTest {
         var method = new AtomicReference<@Nullable String>();
         var context = context("{\"action\":\"accept\",\"content\":{\"city\":\"Unknown\"}}", method);
 
-        var result = invoke(GetWeatherTool.create(new WeatherService(weatherProvider, cityProvider)), context);
+        var result = invoke(GetWeatherTool.fn(new WeatherService(weatherProvider, cityProvider)), context);
 
         assertThat(method).hasValue("elicitation/create");
         assertThat(result).isEqualTo(ToolResult.error("City not found"));
@@ -71,7 +70,7 @@ class GetWeatherToolTest {
             }
         };
 
-        var result = invoke(GetWeatherTool.create(
+        var result = invoke(GetWeatherTool.fn(
             new WeatherService(failing, cityProvider)), context("unused", new AtomicReference<>()
         ));
 
@@ -111,17 +110,17 @@ class GetWeatherToolTest {
         };
     }
 
-    private static ToolResult invoke(ToolHandler handler, InteractionContext context) throws Exception {
+    private static ToolResult invoke(ToolFn fn, InteractionContext context) throws Exception {
         var result = new AtomicReference<@Nullable ToolResult>();
         var failure = new AtomicReference<@Nullable Exception>();
         Thread.ofVirtual().start(() -> {
             try {
-                result.set(HandlerFutures.joinInterruptibly(handler.handleAsync(
+                result.set(fn.apply(
                         context,
                         ToolRequest.builder()
                                 .name("get-weather")
                                 .arguments(Args.of(Map.of("city", "Unknown")))
-                                .build())));
+                                .build()));
             } catch (Exception e) {
                 failure.set(e);
             }

@@ -11,7 +11,7 @@ import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.Role;
 import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
 import java.util.List;
@@ -34,7 +34,9 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
     void shouldValidateMultipleToolsWithDistinctSchemas() throws Exception {
         startServer(
                 b -> b.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR)),
-                s -> s.tools().register(validatedTool()).register(validatedTool2()));
+                s -> s.tools()
+                        .register(validatedTool(), (context, request) -> ToolResult.text("ok"))
+                        .register(validatedTool2(), (context, request) -> ToolResult.text("ok")));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -69,7 +71,7 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
     void shouldAcceptValidToolArguments() throws Exception {
         startServer(
                 b -> b.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR)),
-                s -> s.tools().register(validatedTool()));
+                s -> s.tools().register(validatedTool(), (context, request) -> ToolResult.text("ok")));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -90,7 +92,7 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
     void shouldRejectToolCallWithMissingRequiredField() throws Exception {
         startServer(
                 b -> b.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR)),
-                s -> s.tools().register(validatedTool()));
+                s -> s.tools().register(validatedTool(), (context, request) -> ToolResult.text("ok")));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -110,7 +112,8 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
     @Test
     void shouldRejectToolCallWithWrongType() throws Exception {
         startServer(
-                b -> b.json(j -> j.schemaValidator(VALIDATOR)), s -> s.tools().register(validatedTool()));
+                b -> b.json(j -> j.schemaValidator(VALIDATOR)),
+                s -> s.tools().register(validatedTool(), (context, request) -> ToolResult.text("ok")));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -199,20 +202,20 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
 
     // region: Tool handler
 
-    private static ToolHandler validatedTool() {
-        return ToolHandler.of(
-                b -> b.name("validated")
-                        .description("A tool with input schema validation")
-                        .inputSchema(TOOL_SCHEMA),
-                (context, request) -> ToolResult.text("ok"));
+    private static ToolDescriptor validatedTool() {
+        return ToolDescriptor.builder()
+                .name("validated")
+                .description("A tool with input schema validation")
+                .inputSchema(TOOL_SCHEMA)
+                .build();
     }
 
-    private static ToolHandler validatedTool2() {
-        return ToolHandler.of(
-                b -> b.name("validated2")
-                        .description("Another tool with a distinct input schema")
-                        .inputSchema(JsonSchema.of(buildToolSchema2().toString())),
-                (context, request) -> ToolResult.text("ok"));
+    private static ToolDescriptor validatedTool2() {
+        return ToolDescriptor.builder()
+                .name("validated2")
+                .description("Another tool with a distinct input schema")
+                .inputSchema(JsonSchema.of(buildToolSchema2().toString()))
+                .build();
     }
 
     private static JsonNode buildToolSchema() {

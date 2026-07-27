@@ -4,21 +4,8 @@ package dev.tachyonmcp.kotlin.server.features.tools
 import dev.tachyonmcp.kotlin.server.config.ToolScope
 import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
 import dev.tachyonmcp.server.features.tools.AsyncToolFn
-import dev.tachyonmcp.server.features.tools.ToolDescriptor
-import dev.tachyonmcp.server.features.tools.ToolHandler
 import dev.tachyonmcp.server.features.tools.ToolResult
 import kotlinx.coroutines.CoroutineName
-
-@JvmSynthetic
-internal fun toolHandler(
-    descriptor: ToolDescriptor,
-    runtime: CoroutineRuntime,
-    block: suspend ToolScope.() -> ToolResult,
-): ToolHandler =
-    ToolHandler.ofAsync(
-        descriptor,
-        toolFn(descriptor.name(), runtime, block),
-    )
 
 @JvmSynthetic
 internal fun toolFn(

@@ -4,7 +4,6 @@ package dev.tachyonmcp.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.io.IOException;
 import java.net.Socket;
@@ -28,7 +27,16 @@ class SseReplayPerStreamTest extends AbstractStatefulMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServerWith(s -> s.tools().register(notifyingEchoTool()));
+        var descriptor = ToolDescriptor.builder()
+                .name("notifying-echo")
+                .description("Echoes the message, emitting a notification so the POST upgrades to SSE")
+                .build();
+        startServerWith(s -> s.tools().register(descriptor, (context, request) -> {
+            var args = request.arguments();
+            var text = args.stringOr("message", "");
+            context.notifications().progress(request.progressToken(), 1, 1, text);
+            return ToolResult.text(text);
+        }));
     }
 
     @Test
@@ -118,18 +126,5 @@ class SseReplayPerStreamTest extends AbstractStatefulMcpE2eTest {
             }
         }
         return sb.toString();
-    }
-
-    private static ToolHandler notifyingEchoTool() {
-        var descriptor = ToolDescriptor.builder()
-                .name("notifying-echo")
-                .description("Echoes the message, emitting a notification so the POST upgrades to SSE")
-                .build();
-        return ToolHandler.of(descriptor, (context, request) -> {
-            var args = request.arguments();
-            var text = args.stringOr("message", "");
-            context.notifications().progress(request.progressToken(), 1, 1, text);
-            return ToolResult.text(text);
-        });
     }
 }

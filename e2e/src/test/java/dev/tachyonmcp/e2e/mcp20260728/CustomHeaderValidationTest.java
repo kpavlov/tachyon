@@ -5,7 +5,6 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.net.http.HttpResponse;
 import java.util.LinkedHashMap;
@@ -36,11 +35,11 @@ class CustomHeaderValidationTest extends AbstractStatelessMcpE2eTest {
     @BeforeEach
     void registerFixtures() {
         startServerWith(s -> s.tools()
-                .register(ToolHandler.of(
+                .register(
                         d -> d.name("execute_sql").description("Executes SQL").inputSchema(EXECUTE_SQL_SCHEMA),
                         (ctx, request) ->
                                 ToolResult.text("region=" + request.arguments().stringOr("region", "") + " query="
-                                        + request.arguments().stringOr("query", "")))));
+                                        + request.arguments().stringOr("query", ""))));
     }
 
     private HttpResponse<String> post(String body, String regionHeader) throws Exception {

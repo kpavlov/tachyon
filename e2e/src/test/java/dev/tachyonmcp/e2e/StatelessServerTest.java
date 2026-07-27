@@ -28,7 +28,7 @@ class StatelessServerTest {
         var server = TachyonServer.builder()
                 .network(n -> n.host("localhost").port(0))
                 .build();
-        server.tools().register(EchoToolHandler.create());
+        server.tools().registerAsync(EchoToolHandler.DESCRIPTOR, EchoToolHandler.FN);
         server.start();
         return server;
     }

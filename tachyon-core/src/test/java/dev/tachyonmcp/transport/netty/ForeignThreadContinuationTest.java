@@ -8,7 +8,6 @@ import dev.tachyonmcp.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import java.util.Map;
@@ -43,14 +42,14 @@ class ForeignThreadContinuationTest {
                 .outputSchema(outputSchema.toString())
                 .build();
 
-        var handler = ToolHandler.ofAsync(descriptor, (ctx, request) -> {
+        var fn = (dev.tachyonmcp.server.features.tools.AsyncToolFn) (ctx, request) -> {
             var future = new CompletableFuture<ToolResult>();
             var completer = new Thread(
                     () -> future.complete(ToolResult.of(Map.of("result", "from-foreign"), "from-foreign")),
                     "foreign-completer");
             completer.start();
             return future;
-        });
+        };
 
         var recordingValidator = (JsonSchemaValidator) (schema, arguments) -> {
             capturedThread.complete(Thread.currentThread().getName() + " virtual:"
@@ -60,7 +59,7 @@ class ForeignThreadContinuationTest {
 
         try (ServerEngine server = newEngine(
                 b -> b.json(j -> j.outputSchemaValidator(recordingValidator)),
-                s -> s.tools().register(handler))) {
+                s -> s.tools().registerAsync(descriptor, fn))) {
             var session = server.createSession("sess-foreign");
             session.activate();
             var dispatcher = new McpDispatcher(server, server.executor());

@@ -38,7 +38,7 @@ class CustomSessionIdGeneratorTest {
                                 request -> "tenant-" + request.headers().get(TENANT_HEADER)))
                 .network(n -> n.host("localhost").port(0))
                 .build();
-        serverHandle.tools().register(EchoToolHandler.create());
+        serverHandle.tools().registerAsync(EchoToolHandler.DESCRIPTOR, EchoToolHandler.FN);
         serverHandle.start();
         port = serverHandle.port();
     }

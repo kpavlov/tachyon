@@ -86,7 +86,7 @@ class DefaultToolRegistryTest {
             {"type":"object","properties":{"result":{"type":"string"}}}
             """);
         var annotations = ToolAnnotations.of(null, true, false, true, false);
-        registry.register(ToolHandler.of(
+        registry.register(
                 ToolDescriptor.builder()
                         .name("full-tool")
                         .title("Full Tool")
@@ -96,7 +96,7 @@ class DefaultToolRegistryTest {
                         .taskSupport(TaskSupport.OPTIONAL)
                         .annotations(annotations)
                         .build(),
-                (context, request) -> ToolResult.text("ok")));
+                (context, request) -> ToolResult.text("ok"));
 
         var listResult = (ListToolsResult) handlers.get("tools/list").handle(DefaultDispatchContext.noop(), null);
         assertThat(listResult.tools()).hasSize(2);
@@ -196,12 +196,12 @@ class DefaultToolRegistryTest {
     @ParameterizedTest
     @MethodSource("validToolNames")
     void shouldAcceptValidNameOnRegister(String name) {
-        registry.register(ToolHandler.of(name, (ctx, request) -> ToolResult.text("ok")));
+        registry.register(tool -> tool.name(name), (ctx, request) -> ToolResult.text("ok"));
         assertThat(registry.find(name)).isPresent();
     }
 
     @Test
-    void interfaceDefaultBuilderOverloadsRegisterSyncAndAsyncTools() {
+    void interfaceRegistersComposedSyncAndAsyncTools() {
         Tools api = registry;
 
         api.register(tool -> tool.name("builder-sync"), (ctx, request) -> ToolResult.text("sync"))
@@ -221,7 +221,7 @@ class DefaultToolRegistryTest {
     @ParameterizedTest
     @MethodSource("invalidToolNames")
     void shouldRejectInvalidNameOnRegister(String name) {
-        assertThatThrownBy(() -> registry.register(ToolHandler.of(name, (ctx, request) -> ToolResult.text("ok"))))
+        assertThatThrownBy(() -> registry.register(tool -> tool.name(name), (ctx, request) -> ToolResult.text("ok")))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -278,9 +278,9 @@ class DefaultToolRegistryTest {
     void taskSupportSerializesToWireValue(TaskSupport enumValue, String wireValue) throws Exception {
         var handlers = new HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
-        registry.register(ToolHandler.of(
+        registry.register(
                 ToolDescriptor.builder().name("ts-tool").taskSupport(enumValue).build(),
-                (context, request) -> ToolResult.text("ok")));
+                (context, request) -> ToolResult.text("ok"));
 
         var result = (ListToolsResult) handlers.get("tools/list").handle(DefaultDispatchContext.noop(), null);
         var tool = result.tools().stream()
@@ -328,13 +328,13 @@ class DefaultToolRegistryTest {
         var handlers = new HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
         var icon = Icon.of("https://example.com/tool-icon.png", "image/png", null, null);
-        registry.register(ToolHandler.of(
+        registry.register(
                 ToolDescriptor.builder()
                         .name("icon-tool")
                         .description("Tool with icon")
                         .icons(List.of(icon))
                         .build(),
-                (context, request) -> ToolResult.text("ok")));
+                (context, request) -> ToolResult.text("ok"));
 
         var listResult = (ListToolsResult) handlers.get("tools/list").handle(DefaultDispatchContext.noop(), null);
         var tool = listResult.tools().stream()
@@ -457,14 +457,14 @@ class DefaultToolRegistryTest {
     }
 
     @Test
-    void registerThrowsOnNullHandler() {
-        assertThatThrownBy(() -> registry.register(null))
+    void registerThrowsOnNullDescriptor() {
+        assertThatThrownBy(() -> registry.register((ToolDescriptor) null, (ctx, request) -> ToolResult.text("x")))
                 .isInstanceOf(NullPointerException.class)
-                .hasMessageContaining("ToolHandler");
+                .hasMessageContaining("ToolDescriptor");
     }
 
     @Test
-    void registerThrowsOnNullDescriptor() {
+    void internalRegisterThrowsOnNullDescriptor() {
         var handler = new ToolHandler() {
             @Override
             public ToolDescriptor descriptor() {
@@ -523,9 +523,9 @@ class DefaultToolRegistryTest {
         var handlers = new HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
         var executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "async-tool-pool"));
-        registry.register(ToolHandler.ofAsync(
-                "async-thread",
-                (ctx, request) -> CompletableFuture.supplyAsync(() -> ToolResult.text("from-thread"), executor)));
+        registry.registerAsync(
+                builder -> builder.name("async-thread"),
+                (ctx, request) -> CompletableFuture.supplyAsync(() -> ToolResult.text("from-thread"), executor));
 
         try (ServerEngine server = newEngine(b -> {})) {
             var session = server.createSession("s-async-thread");
@@ -546,9 +546,9 @@ class DefaultToolRegistryTest {
     void asyncToolHandlerInvalidArgumentExceptionMapsToInvalidRequest() throws Exception {
         var handlers = new HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
-        registry.register(ToolHandler.ofAsync(
-                "invalid-arg-async",
-                (ctx, request) -> CompletableFuture.failedFuture(new InvalidArgumentException("arg", "bad input"))));
+        registry.registerAsync(
+                builder -> builder.name("invalid-arg-async"),
+                (ctx, request) -> CompletableFuture.failedFuture(new InvalidArgumentException("arg", "bad input")));
 
         try (ServerEngine server = newEngine(b -> {})) {
             var session = server.createSession("s-inv-arg");
@@ -567,12 +567,12 @@ class DefaultToolRegistryTest {
     void syncToolHandlerReturnsResultThroughHandle() throws Exception {
         var handlers = new HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
-        registry.register(ToolHandler.of(
+        registry.register(
                 configurer -> configurer.name("sync-handle").description("sync").inputSchema(TEST_SCHEMA.toString()),
                 (ctx, request) -> {
                     var msg = request.arguments().stringValue("message");
                     return ToolResult.text(msg);
-                }));
+                });
 
         try (ServerEngine server = newEngine(b -> {})) {
             var session = server.createSession("s-sync-handle");
@@ -592,9 +592,9 @@ class DefaultToolRegistryTest {
     void syncToolHandlerExceptionMapsToInternalError() throws Exception {
         var handlers = new HashMap<String, RpcMethodHandler>();
         registry.registerHandlers(handlers);
-        registry.register(ToolHandler.of(desc -> desc.name("sync-fail").description("sync"), (ctx, request) -> {
+        registry.register(desc -> desc.name("sync-fail").description("sync"), (ctx, request) -> {
             throw new IllegalStateException("boom");
-        }));
+        });
 
         try (ServerEngine server = newEngine(b -> {})) {
             var session = server.createSession("s-sync-fail");
@@ -614,7 +614,7 @@ class DefaultToolRegistryTest {
         try (ServerEngine server = newEngine(
                 b -> {},
                 s -> s.tools().register(desc -> desc.name("sync-checked-fail").description("sync"), (ctx, request) -> {
-                    throw new IOException("boom"); // no try/catch needed — ToolFn declares throws Exception
+                    throw new IOException("boom");
                 }))) {
             var session = server.createSession("s-sync-checked-fail");
             session.activate();
@@ -690,12 +690,12 @@ class DefaultToolRegistryTest {
         var outputSchema = parseJson("""
             {"type":"string"}
             """);
-        assertThatThrownBy(() -> registry.register(ToolHandler.of(
+        assertThatThrownBy(() -> registry.register(
                         ToolDescriptor.builder()
                                 .name("bad-output")
                                 .outputSchema(outputSchema.toString())
                                 .build(),
-                        (context, request) -> ToolResult.text("x"))))
+                        (context, request) -> ToolResult.text("x")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("outputSchema")
                 .hasMessageContaining("\"type\": \"object\"");
@@ -706,12 +706,12 @@ class DefaultToolRegistryTest {
         var outputSchema = parseJson("""
             {"type":"object","properties":{"result":{"type":"string"}}}
             """);
-        registry.register(ToolHandler.of(
+        registry.register(
                 ToolDescriptor.builder()
                         .name("valid-output")
                         .outputSchema(outputSchema.toString())
                         .build(),
-                (context, request) -> ToolResult.text("ok")));
+                (context, request) -> ToolResult.text("ok"));
         assertThat(registry.find("valid-output")).isPresent();
     }
 
@@ -734,7 +734,7 @@ class DefaultToolRegistryTest {
                 FeatureConfig.builder().build());
         var handlers = new HashMap<String, RpcMethodHandler>();
         registryVal.registerHandlers(handlers);
-        var handler = ToolHandler.of(
+        registryVal.register(
                 ToolDescriptor.builder()
                         .name("structured-out")
                         .description("test")
@@ -744,7 +744,6 @@ class DefaultToolRegistryTest {
                     // Map with plain Java values, not JsonNode
                     return ToolResult.of(Map.of("message", "hello", "count", 42), "text fallback");
                 });
-        registryVal.register(handler);
 
         try (ServerEngine server = newEngine(b -> {})) {
             var session = server.createSession("s-struct-out");
@@ -772,13 +771,12 @@ class DefaultToolRegistryTest {
                 FeatureConfig.builder().build());
         var handlers = new HashMap<String, RpcMethodHandler>();
         registryVal.registerHandlers(handlers);
-        var handler = ToolHandler.of(
+        registryVal.register(
                 ToolDescriptor.builder().name("mixed-out").description("test").build(), (context, request) -> {
                     var jsonNodeVal = tools.jackson.databind.node.JsonNodeFactory.instance.stringNode("json-val");
                     // Mixed map: one JsonNode value, one plain String value
                     return ToolResult.of(Map.of("jsonField", jsonNodeVal, "plainField", "plain-val"), "fallback");
                 });
-        registryVal.register(handler);
 
         try (ServerEngine server = newEngine(b -> {})) {
             var session = server.createSession("s-mixed");
@@ -797,32 +795,35 @@ class DefaultToolRegistryTest {
     // endregion
 
     private static ToolHandler testTool(String name, @Nullable String description, @Nullable JsonNode schema) {
-        return ToolHandler.of(
-                ToolDescriptor.builder()
-                        .name(name)
-                        .description(description)
-                        .inputSchema(schema != null ? schema.toString() : null)
-                        .build(),
-                (context, request) -> ToolResult.text("ok"));
+        return new AbstractToolHandler(ToolDescriptor.builder()
+                .name(name)
+                .description(description)
+                .inputSchema(schema != null ? schema.toString() : null)
+                .build()) {
+            @Override
+            public ToolResult handle(InteractionContext context, ToolRequest request) {
+                return ToolResult.text("ok");
+            }
+        };
     }
 
     @Test
     void shouldRejectRegistrationWithMalformedJsonSchema() {
-        assertThatThrownBy(() -> registry.register(ToolHandler.of(
+        assertThatThrownBy(() -> registry.register(
                         builder -> builder.name("bad-tool").description("desc").inputSchema("not-json"),
-                        (ctx, request) -> ToolResult.text("x"))))
+                        (ctx, request) -> ToolResult.text("x")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("not-json");
     }
 
     @Test
     void shouldRejectRegistrationWithNonObjectStringSchema() {
-        assertThatThrownBy(() -> registry.register(ToolHandler.of(
+        assertThatThrownBy(() -> registry.register(
                         builder -> builder.name("bad-string")
                                 .description("desc")
                                 .inputSchema("{\"type\":\"array\"}")
                                 .outputSchema("{\"type\":\"string\"}"),
-                        (ctx, request) -> ToolResult.text("x"))))
+                        (ctx, request) -> ToolResult.text("x")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("inputSchema")
                 .hasMessageContaining("\"type\": \"object\"");
@@ -830,12 +831,12 @@ class DefaultToolRegistryTest {
 
     @Test
     void shouldAcceptRegistrationWithValidStringSchemas() {
-        registry.register(ToolHandler.of(
+        registry.register(
                 builder -> builder.name("good-string")
                         .description("desc")
                         .inputSchema("{\"type\":\"object\",\"properties\":{\"x\":{\"type\":\"string\"}}}")
                         .outputSchema("{\"type\":\"object\",\"properties\":{\"y\":{\"type\":\"integer\"}}}"),
-                (ctx, request) -> ToolResult.text("ok")));
+                (ctx, request) -> ToolResult.text("ok"));
         assertThat(registry.find("good-string")).isPresent();
     }
 }

@@ -330,7 +330,7 @@ Full, runnable servers and configuration references live in the Tachyon skill re
 
 - Java: `.agents/skills/tachyon-mcp/resources/java/`
   - [`ServerBasic.java`](../.agents/skills/tachyon-mcp/resources/java/ServerBasic.java) — complete server with tool, resource, template, and prompt
-  - [`ToolHandlerExample.java`](../.agents/skills/tachyon-mcp/resources/java/ToolHandlerExample.java) — `ToolHandler.of()`, `extends AbstractToolHandler`, long-running keep-alive
+  - [`ToolHandlerExample.java`](../.agents/skills/tachyon-mcp/resources/java/ToolHandlerExample.java) — descriptor/function registration, experimental `AbstractToolHandler`, long-running keep-alive
   - [`ResourceHandlerExample.java`](../.agents/skills/tachyon-mcp/resources/java/ResourceHandlerExample.java) — static resources and URI templates
   - [`PromptHandlerExample.java`](../.agents/skills/tachyon-mcp/resources/java/PromptHandlerExample.java) — simple and handler-based prompts
   - [`ConfigReference.java`](../.agents/skills/tachyon-mcp/resources/java/ConfigReference.java) — all config builder patterns in one file

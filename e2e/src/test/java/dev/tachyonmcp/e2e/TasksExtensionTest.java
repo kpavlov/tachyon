@@ -7,15 +7,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Implementation;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.server.domain.TaskResult;
 import dev.tachyonmcp.server.features.tasks.DefaultTaskRegistry;
 import dev.tachyonmcp.server.features.tasks.TaskState;
 import dev.tachyonmcp.server.features.tasks.TasksExtension;
-import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.json.JsonUtils;
 import dev.tachyonmcp.server.session.DispatchContext;
@@ -166,17 +162,10 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
         // This test uses a synchronous tool to verify notification delivery.
         startServer(
                 b -> b.extension(TasksExtension.instance()),
-                s -> s.tools()
-                        .register(
-                                new AbstractToolHandler(ToolDescriptor.builder()
-                                        .name("create-sync")
-                                        .build()) {
-                                    @Override
-                                    public ToolResult handle(InteractionContext ctx, ToolRequest req) {
-                                        ((DispatchContext) ctx).engine().tasks().create();
-                                        return ToolResult.text("ok");
-                                    }
-                                }));
+                s -> s.tools().register(tool -> tool.name("create-sync"), (ctx, req) -> {
+                    ((DispatchContext) ctx).engine().tasks().create();
+                    return ToolResult.text("ok");
+                }));
 
         try (var client = createTestClient()) {
             var sessionId = initializeWithExtension(client);
@@ -199,24 +188,12 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
     void shouldNotifyTaskStatusWithCallerSuppliedMessage() throws Exception {
         startServer(
                 b -> b.extension(TasksExtension.instance()),
-                s -> s.tools()
-                        .register(
-                                new AbstractToolHandler(ToolDescriptor.builder()
-                                        .name("update-status-sync")
-                                        .build()) {
-                                    @Override
-                                    public ToolResult handle(InteractionContext ctx, ToolRequest req) {
-                                        var task = ((DispatchContext) ctx)
-                                                .engine()
-                                                .tasks()
-                                                .create();
-                                        ((DefaultTaskRegistry) ((DispatchContext) ctx)
-                                                        .engine()
-                                                        .tasks())
-                                                .updateStatus(task.id(), TaskState.WORKING, "step 1 of 3");
-                                        return ToolResult.text("ok");
-                                    }
-                                }));
+                s -> s.tools().register(tool -> tool.name("update-status-sync"), (ctx, req) -> {
+                    var task = ((DispatchContext) ctx).engine().tasks().create();
+                    ((DefaultTaskRegistry) ((DispatchContext) ctx).engine().tasks())
+                            .updateStatus(task.id(), TaskState.WORKING, "step 1 of 3");
+                    return ToolResult.text("ok");
+                }));
 
         try (var client = createTestClient()) {
             var sessionId = initializeWithExtension(client);
@@ -236,23 +213,13 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
         // notification for every mutation, not just the initial creation push.
         startServer(
                 b -> b.extension(TasksExtension.instance()),
-                s -> s.tools()
-                        .register(
-                                new AbstractToolHandler(ToolDescriptor.builder()
-                                        .name("drive-task-sync")
-                                        .build()) {
-                                    @Override
-                                    public ToolResult handle(InteractionContext ctx, ToolRequest req) {
-                                        var task = ((DispatchContext) ctx)
-                                                .engine()
-                                                .tasks()
-                                                .create();
-                                        task.resume("step 1");
-                                        task.updateMessage("step 2");
-                                        task.complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"done\"}")));
-                                        return ToolResult.text("ok");
-                                    }
-                                }));
+                s -> s.tools().register(tool -> tool.name("drive-task-sync"), (ctx, req) -> {
+                    var task = ((DispatchContext) ctx).engine().tasks().create();
+                    task.resume("step 1");
+                    task.updateMessage("step 2");
+                    task.complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"done\"}")));
+                    return ToolResult.text("ok");
+                }));
 
         try (var client = createTestClient()) {
             var sessionId = initializeWithExtension(client);
@@ -275,22 +242,12 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
     void shouldCancelAndNotifyBeforeRemovingActiveTask() throws Exception {
         startServer(
                 b -> b.extension(TasksExtension.instance()),
-                s -> s.tools()
-                        .register(
-                                new AbstractToolHandler(ToolDescriptor.builder()
-                                        .name("remove-active-sync")
-                                        .build()) {
-                                    @Override
-                                    public ToolResult handle(InteractionContext ctx, ToolRequest req) {
-                                        var task = ((DispatchContext) ctx)
-                                                .engine()
-                                                .tasks()
-                                                .create();
-                                        task.resume(null);
-                                        ((DispatchContext) ctx).engine().tasks().remove(task.id());
-                                        return ToolResult.text(task.id());
-                                    }
-                                }));
+                s -> s.tools().register(tool -> tool.name("remove-active-sync"), (ctx, req) -> {
+                    var task = ((DispatchContext) ctx).engine().tasks().create();
+                    task.resume(null);
+                    ((DispatchContext) ctx).engine().tasks().remove(task.id());
+                    return ToolResult.text(task.id());
+                }));
 
         try (var client = createTestClient()) {
             var sessionId = initializeWithExtension(client);
@@ -312,22 +269,12 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
     void shouldRemoveTerminalTaskSilently() throws Exception {
         startServer(
                 b -> b.extension(TasksExtension.instance()),
-                s -> s.tools()
-                        .register(
-                                new AbstractToolHandler(ToolDescriptor.builder()
-                                        .name("remove-terminal-sync")
-                                        .build()) {
-                                    @Override
-                                    public ToolResult handle(InteractionContext ctx, ToolRequest req) {
-                                        var task = ((DispatchContext) ctx)
-                                                .engine()
-                                                .tasks()
-                                                .create();
-                                        task.complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"done\"}")));
-                                        ((DispatchContext) ctx).engine().tasks().remove(task.id());
-                                        return ToolResult.text(task.id());
-                                    }
-                                }));
+                s -> s.tools().register(tool -> tool.name("remove-terminal-sync"), (ctx, req) -> {
+                    var task = ((DispatchContext) ctx).engine().tasks().create();
+                    task.complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"done\"}")));
+                    ((DispatchContext) ctx).engine().tasks().remove(task.id());
+                    return ToolResult.text(task.id());
+                }));
 
         try (var client = createTestClient()) {
             var sessionId = initializeWithExtension(client);

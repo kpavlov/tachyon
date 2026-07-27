@@ -7,7 +7,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.json.JsonSchema;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolFn;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.net.http.HttpResponse;
 import java.util.stream.Stream;
@@ -30,13 +31,13 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
             simple             | false |
             """)
     void shouldIncludeOutputSchema(String toolName, boolean hasSchema, String schemaType) throws Exception {
-        ToolHandler handler;
+        ToolDescriptor descriptor;
         if (hasSchema) {
-            handler = outputSchemaToolHandler(OUTPUT_SCHEMA);
+            descriptor = outputSchemaToolDescriptor(OUTPUT_SCHEMA);
         } else {
-            handler = simpleToolHandler(toolName, "A " + toolName + " tool");
+            descriptor = simpleToolDescriptor(toolName, "A " + toolName + " tool");
         }
-        startServerWith(s -> s.tools().register(handler));
+        startServerWith(s -> s.tools().register(descriptor, OK));
 
         try (var client = createTestClient()) {
             var response = listTools(client);
@@ -102,9 +103,9 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
     @Test
     void shouldIncludeMultipleToolsWithMixedOutputSchemas() throws Exception {
         startServerWith(s -> s.tools()
-                .register(simpleToolHandler("tool-a", "Tool A"))
-                .register(outputSchemaToolHandler(OUTPUT_SCHEMA))
-                .register(simpleToolHandler("tool-b", "Tool B")));
+                .register(simpleToolDescriptor("tool-a", "Tool A"), OK)
+                .register(outputSchemaToolDescriptor(OUTPUT_SCHEMA), OK)
+                .register(simpleToolDescriptor("tool-b", "Tool B"), OK));
 
         try (var client = createTestClient()) {
             var response = listTools(client);
@@ -134,9 +135,9 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
 
     @ParameterizedTest(name = "[{index}] {0}")
     @MethodSource
-    void shouldIncludeExecutionTaskSupport(String toolName, boolean hasExecution, ToolHandler handler)
+    void shouldIncludeExecutionTaskSupport(String toolName, boolean hasExecution, ToolDescriptor descriptor)
             throws Exception {
-        startServerWith(s -> s.tools().register(handler));
+        startServerWith(s -> s.tools().register(descriptor, OK));
 
         try (var client = createTestClient()) {
             var response = listTools(client);
@@ -157,8 +158,8 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
 
     static Stream<Arguments> shouldIncludeExecutionTaskSupport() {
         return Stream.of(
-                Arguments.of("task-aware-tool", true, taskAwareToolHandler(TaskSupport.OPTIONAL)),
-                Arguments.of("simple", false, simpleToolHandler("simple", "A simple tool")));
+                Arguments.of("task-aware-tool", true, taskAwareToolDescriptor(TaskSupport.OPTIONAL)),
+                Arguments.of("simple", false, simpleToolDescriptor("simple", "A simple tool")));
     }
 
     // endregion
@@ -168,7 +169,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
     @Test
     void shouldRegisterWithMinimalDescriptor() throws Exception {
         startEmptyServer();
-        server.tools().register(ToolHandler.of("minimal-tool", (ctx, request) -> ToolResult.text("ok")));
+        server.tools().register(builder -> builder.name("minimal-tool"), OK);
 
         try (var client = createTestClient()) {
             var response = listTools(client);
@@ -185,7 +186,16 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void shouldReturnStructuredContentAndTextFallback() throws Exception {
-        startServerWith(s -> s.tools().register(structuredToolHandler()));
+        startServerWith(s -> s.tools()
+                .register(
+                        b -> b.name("structured")
+                                .description("Returns structured content")
+                                .inputSchema(INPUT_SCHEMA),
+                        (ctx, request) -> {
+                            var msg = request.arguments().stringValue("message");
+                            var echo = JsonNodeFactory.instance.objectNode().put("echo", msg);
+                            return ToolResult.of(echo, "Echo: " + msg);
+                        }));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -209,7 +219,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
         var annotations = ToolAnnotations.of(null, true, false, null, null);
         startEmptyServer();
         server.tools()
-                .register(ToolHandler.of(
+                .register(
                         b -> b.name("full-tool")
                                 .title("Full Tool")
                                 .description("A tool with all metadata")
@@ -217,7 +227,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
                                 .outputSchema(OUTPUT_SCHEMA)
                                 .taskSupport(TaskSupport.OPTIONAL)
                                 .annotations(annotations),
-                        (ctx, request) -> ToolResult.text("ok")));
+                        OK);
 
         try (var client = createTestClient()) {
             var response = listTools(client);
@@ -240,40 +250,30 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
                 """);
     }
 
-    private static ToolHandler outputSchemaToolHandler(JsonSchema outputSchema) {
-        return ToolHandler.of(
-                b -> b.name("output-schema-tool")
-                        .description("A tool with output schema")
-                        .inputSchema(INPUT_SCHEMA)
-                        .outputSchema(outputSchema),
-                (ctx, request) -> ToolResult.text("ok"));
+    private static ToolDescriptor outputSchemaToolDescriptor(JsonSchema outputSchema) {
+        return ToolDescriptor.builder()
+                .name("output-schema-tool")
+                .description("A tool with output schema")
+                .inputSchema(INPUT_SCHEMA)
+                .outputSchema(outputSchema)
+                .build();
     }
 
-    private static ToolHandler simpleToolHandler(String name, String description) {
-        return ToolHandler.of(
-                b -> b.name(name).description(description).inputSchema(INPUT_SCHEMA),
-                (ctx, request) -> ToolResult.text("ok"));
+    private static ToolDescriptor simpleToolDescriptor(String name, String description) {
+        return ToolDescriptor.builder()
+                .name(name)
+                .description(description)
+                .inputSchema(INPUT_SCHEMA)
+                .build();
     }
 
-    private static ToolHandler taskAwareToolHandler(TaskSupport taskSupport) {
-        return ToolHandler.of(
-                b -> b.name("task-aware-tool")
-                        .description("A task-aware tool")
-                        .inputSchema(INPUT_SCHEMA)
-                        .taskSupport(taskSupport),
-                (ctx, request) -> ToolResult.text("ok"));
-    }
-
-    private static ToolHandler structuredToolHandler() {
-        return ToolHandler.of(
-                b -> b.name("structured")
-                        .description("Returns structured content")
-                        .inputSchema(INPUT_SCHEMA),
-                (ctx, request) -> {
-                    var msg = request.arguments().stringValue("message");
-                    var echo = JsonNodeFactory.instance.objectNode().put("echo", msg);
-                    return ToolResult.of(echo, "Echo: " + msg);
-                });
+    private static ToolDescriptor taskAwareToolDescriptor(TaskSupport taskSupport) {
+        return ToolDescriptor.builder()
+                .name("task-aware-tool")
+                .description("A task-aware tool")
+                .inputSchema(INPUT_SCHEMA)
+                .taskSupport(taskSupport)
+                .build();
     }
 
     // ---- JSON schemas ----
@@ -293,6 +293,8 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
 
     private static final JsonSchema INPUT_SCHEMA =
             JsonSchema.of(buildInputSchema().toString());
+
+    private static final ToolFn OK = (ctx, request) -> ToolResult.text("ok");
 
     private static JsonNode buildInputSchema() {
         var schema = JsonNodeFactory.instance.objectNode();

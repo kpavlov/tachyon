@@ -9,7 +9,6 @@ import dev.tachyonmcp.json.JsonSchema;
 import dev.tachyonmcp.json.JsonSchemaValidator;
 import dev.tachyonmcp.json.PayloadSerde;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
 import java.lang.reflect.Type;
@@ -41,11 +40,10 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
         startServer(
                 b -> b.json(j -> j.serde(gsonSerde)),
                 s -> s.tools()
-                        .register(ToolHandler.of(
-                                "gson-tool",
-                                "Gson tool",
+                        .register(
+                                builder -> builder.name("gson-tool").description("Gson tool"),
                                 (ctx, request) ->
-                                        ToolResult.of(Map.of("message", "hello from Gson"), "text fallback"))));
+                                        ToolResult.of(Map.of("message", "hello from Gson"), "text fallback")));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -69,10 +67,9 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
     @Test
     void shouldPassthroughJsonDocument() throws Exception {
         startServerWith(s -> s.tools()
-                .register(ToolHandler.of(
-                        "raw-tool",
-                        "Raw JSON tool",
-                        (ctx, request) -> ToolResult.raw("{\"echo\":\"exact\"}", "raw fallback"))));
+                .register(
+                        builder -> builder.name("raw-tool").description("Raw JSON tool"),
+                        (ctx, request) -> ToolResult.raw("{\"echo\":\"exact\"}", "raw fallback")));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -106,13 +103,13 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
                 b -> b.json(j -> j.inputSchemaValidator(JsonSchemaValidator.noop())
                         .outputSchemaValidator(new NetworkntJsonSchemaValidator())),
                 s -> s.tools()
-                        .register(ToolHandler.of(
+                        .register(
                                 ToolDescriptor.builder()
                                         .name("validated-output")
                                         .description("Validated output")
                                         .outputSchema(JsonSchema.of(outputSchema.toString()))
                                         .build(),
-                                (ctx, request) -> ToolResult.of(Map.of("message", "valid", "extra", 42), "ok"))));
+                                (ctx, request) -> ToolResult.of(Map.of("message", "valid", "extra", 42), "ok")));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -148,10 +145,11 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
 
         startServer(
                 b -> b.json(j -> j.serde(gsonSerde)),
-                s -> s.tools().register(ToolHandler.of("decode-tool", "Decode tool", (ctx, request) -> {
-                    var decoded = request.arguments().decode(Map.class);
-                    return ToolResult.text("decoded: " + decoded);
-                })));
+                s -> s.tools()
+                        .register(builder -> builder.name("decode-tool").description("Decode tool"), (ctx, request) -> {
+                            var decoded = request.arguments().decode(Map.class);
+                            return ToolResult.text("decoded: " + decoded);
+                        }));
 
         try (var client = createTestClient()) {
             client.initialize();

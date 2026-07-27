@@ -28,7 +28,7 @@ Yes. Synchronous handlers run on virtual threads, away from the Netty event loop
 
 ### When should I use an asynchronous handler?
 
-Use `registerAsync` or an `ofAsync` factory when your dependency already returns a
+Use `registerAsync` when your dependency already returns a
 `CompletionStage`. For ordinary blocking Java code, use the synchronous API and let Tachyon run it on a virtual thread. See [Tools](tools.md#async-tool).
 
 ### Does my application have to use Jackson?

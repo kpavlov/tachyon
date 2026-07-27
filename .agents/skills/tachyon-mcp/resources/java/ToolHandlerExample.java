@@ -5,17 +5,14 @@
 import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.features.tools.Tools;
 import dev.tachyonmcp.json.JsonSchema;
 import org.jspecify.annotations.NonNull;
 
 /**
- * Demonstrates tool-handler patterns:
- * 1. ToolHandler.of() — inline lambda
- * 2. ToolHandler.of() with Consumer&lt;Builder&gt; — reusable config
- * 3. LongRunningTool — keep-alive for tools slower than readerIdleTimeout
+ * Demonstrates tool registration and the experimental class-based escape hatch.
  */
 final class ToolHandlerExample {
 
@@ -33,37 +30,24 @@ final class ToolHandlerExample {
         """);
 
     /**
-     * Lambda-style: use ToolHandler.of() inside a builder chain.
+     * Registers a simple inline tool.
      */
-    static ToolHandler lambdaHello() {
-        return ToolHandler.of("hello", "Say hello", (ctx, request) -> ToolResult.text("Hello, world!"));
+    static void registerHello(Tools tools) {
+        tools.register(
+            builder -> builder.name("hello").description("Say hello"),
+            (ctx, request) -> ToolResult.text("Hello, world!"));
     }
 
     /**
-     * Lambda with input schema and arguments.
+     * Registers a tool with an input schema.
      */
-    static ToolHandler lambdaGreet() {
-        return ToolHandler.of(
+    static void registerGreeting(Tools tools) {
+        tools.register(
             b -> b.name("greeting")
                 .description("Generates a personalized greeting")
                 .inputSchema(GREET_SCHEMA),
             (@NonNull InteractionContext ctx, ToolRequest request) -> {
                 String name = request.arguments().stringValue("name");
-                return ToolResult.text("Hello, " + name + "!");
-            });
-    }
-
-    /**
-     * Reusable ToolHandler via Consumer&lt;Builder&gt;.
-     */
-    static ToolHandler greetingTool() {
-        return ToolHandler.of(b -> b
-                .name("greeting")
-                .title("Greeting")
-                .description("Generates a personalized greeting")
-                .inputSchema(GREET_SCHEMA),
-            (ctx, request) -> {
-                var name = request.arguments().stringValue("name");
                 return ToolResult.text("Hello, " + name + "!");
             });
     }

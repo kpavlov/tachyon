@@ -11,7 +11,6 @@ import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.SessionEvent;
@@ -232,12 +231,12 @@ class ServerTest {
             session.activate();
 
             server.tools()
-                    .register(ToolHandler.of(
+                    .register(
                             builder -> builder.name("dynamic-tool")
                                     .description("Dynamically registered")
                                     // language=json
                                     .inputSchema("{\"type\": \"object\"}"),
-                            (context, request) -> ToolResult.empty()));
+                            (context, request) -> ToolResult.empty());
 
             var listChanged = conn.sent.stream()
                     .filter(e -> e.data().contains("notifications/tools/list_changed"))
@@ -297,8 +296,7 @@ class ServerTest {
             session.connection(conn);
 
             server.tools()
-                    .register(ToolHandler.of(
-                            builder -> builder.name("tool-during-init"), (context, request) -> ToolResult.empty()));
+                    .register(builder -> builder.name("tool-during-init"), (context, request) -> ToolResult.empty());
 
             var listChanged = conn.sent.stream()
                     .filter(e -> e.data().contains("list_changed"))

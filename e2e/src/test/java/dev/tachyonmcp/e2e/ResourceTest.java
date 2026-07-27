@@ -8,7 +8,6 @@ import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
@@ -292,7 +291,25 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
         """)
     void shouldNotifyListChanged(String toolName, String action) throws Exception {
         startServer(b -> b.capabilities(c -> c.resourcesListChanged(true)), s -> {
-            s.tools().register(notifyListChangedTool(action));
+            s.tools()
+                    .register(
+                            b -> b.name("notify-list-changed").description("Notifies resources/list_changed"),
+                            (context, request) -> {
+                                var resources = server.resources();
+                                if ("add".equals(action)) {
+                                    resources.register(
+                                            ResourceDescriptor.of(
+                                                    "added-resource",
+                                                    "resource://added",
+                                                    "Added by handler",
+                                                    "text/plain"),
+                                            (ctx, resourceRequest) -> TextResourceContents.of(
+                                                    resourceRequest.uri(), "content", "text/plain"));
+                                } else {
+                                    resources.unregister("doc");
+                                }
+                                return ToolResult.blocks(TextContent.of("done"));
+                            });
             if ("remove".equals(action)) {
                 s.resources()
                         .register(
@@ -318,7 +335,13 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
                     .register(
                             ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
                             (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain"));
-            s.tools().register(notifyUpdatedTool());
+            s.tools()
+                    .register(
+                            b -> b.name("notify-update").description("Triggers resource updated notification"),
+                            (context, request) -> {
+                                server.resources().notifyResourceUpdated("resource://doc");
+                                return ToolResult.blocks(TextContent.of("resource update 'resource://doc' notified "));
+                            });
         });
 
         try (var client = createTestClient()) {
@@ -345,7 +368,13 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
                     .register(
                             ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
                             (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain"));
-            s.tools().register(notifyUpdatedTool());
+            s.tools()
+                    .register(
+                            b -> b.name("notify-update").description("Triggers resource updated notification"),
+                            (context, request) -> {
+                                server.resources().notifyResourceUpdated("resource://doc");
+                                return ToolResult.blocks(TextContent.of("resource update 'resource://doc' notified "));
+                            });
         });
 
         try (var client = createTestClient()) {
@@ -372,7 +401,13 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
     @Test
     void shouldNotifyListChangedOnUnregisterByUri() throws Exception {
         startServer(b -> b.capabilities(c -> c.resourcesListChanged(true)), s -> {
-            s.tools().register(unregisterByUriTool());
+            s.tools()
+                    .register(
+                            b -> b.name("unregister-by-uri").description("Unregisters resource by URI"),
+                            (context, request) -> {
+                                server.resources().unregisterByUri("resource://doc");
+                                return ToolResult.blocks(TextContent.of("done"));
+                            });
             s.resources()
                     .register(
                             ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
@@ -387,42 +422,5 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
 
             assertThat(response.body()).contains("notifications/resources/list_changed");
         }
-    }
-
-    // ---- Tool handler implementations ----
-
-    private ToolHandler notifyListChangedTool(String action) {
-        return ToolHandler.of(
-                b -> b.name("notify-list-changed").description("Notifies resources/list_changed"),
-                (context, request) -> {
-                    var resources = server.resources();
-                    if ("add".equals(action)) {
-                        resources.register(
-                                ResourceDescriptor.of(
-                                        "added-resource", "resource://added", "Added by handler", "text/plain"),
-                                (ctx, resourceRequest) ->
-                                        TextResourceContents.of(resourceRequest.uri(), "content", "text/plain"));
-                    } else {
-                        resources.unregister("doc");
-                    }
-                    return ToolResult.blocks(TextContent.of("done"));
-                });
-    }
-
-    private ToolHandler notifyUpdatedTool() {
-        return ToolHandler.of(
-                b -> b.name("notify-update").description("Triggers resource updated notification"),
-                (context, request) -> {
-                    server.resources().notifyResourceUpdated("resource://doc");
-                    return ToolResult.blocks(TextContent.of("resource update 'resource://doc' notified "));
-                });
-    }
-
-    private ToolHandler unregisterByUriTool() {
-        return ToolHandler.of(
-                b -> b.name("unregister-by-uri").description("Unregisters resource by URI"), (context, request) -> {
-                    server.resources().unregisterByUri("resource://doc");
-                    return ToolResult.blocks(TextContent.of("done"));
-                });
     }
 }

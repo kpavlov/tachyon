@@ -57,20 +57,19 @@ Blocking for I/O in `handle`/`read` is intended — handlers run on a server-exe
 
 ## 🏹 When to reach for a heavier dispatch structure
 
-`ToolHandler` carries its descriptor, so it is not a handler SAM. `AbstractToolHandler` keeps one
-request shape with sync and async overrides, both receiving `ToolRequest`. Read parsed arguments via
-`request.arguments()`.
+Tool registration uses a descriptor/function pair. `ToolFn` and `AsyncToolFn` both receive the full
+`ToolRequest`; read parsed arguments via `request.arguments()`. `ToolHandler` and
+`AbstractToolHandler` are experimental class-based escape hatches, not registration types.
 
-## 🪶 Descriptor bundling: pair vs self-carrying
+## 🪶 Descriptor bundling
 
-- **Resources/prompts**: registry takes `(descriptor, handler)` as a pair — handler is a pure function, no descriptor coupling.
-- **Tools**: `ToolHandler extends ServerFeature<ToolDescriptor>`, carries its own `descriptor()` — `ToolRegistry.register(ToolHandler)` keys off the handler instance directly.
-
-Default new types to the pair shape. Bundle the descriptor only if the registry needs a single-arg `register(Handler)` overload like tools.
+Registries take `(descriptor, function)` pairs. Keep descriptor metadata separate from executable
+behavior. Do not add a single-argument `register(Handler)` overload.
 
 ## ⚠️ Naming: split sync/async by name, not overload
 
-`register`/`registerAsync`, `of`/`ofAsync` — never overload one method name for both sync and async lambda shapes: different shapes under one name throw Java's overload resolution into ambiguity for every lambda caller, and separate names sidestep it. Keep doing that for any new handler's registration API.
+Use `register`/`registerAsync`; never overload one method name for both sync and async lambda
+shapes. Separate names avoid ambiguous Java lambdas.
 
 Feature registration belongs to the runtime façades. `ServerBuilder.withTools`,
 `withResources`, `withPrompts`, and `withCompletions` are bootstrap conveniences that delegate to
@@ -79,8 +78,8 @@ those same façade APIs; do not add feature-specific registration overloads to `
 **Interface/SAM naming:**
 - `XHandler` — the handler type. Also the lambda-entry SAM when the shape is simple: `ResourceHandler`/`PromptHandler` are plain `@FunctionalInterface`s, so the type doubles as both.
 - `AsyncXHandler extends XHandler` — async variant, for single-axis handlers only (`AsyncResourceHandler`, `AsyncPromptHandler`). Abstract `handleAsync`, default `handle` blocks via `HandlerFutures.joinInterruptibly`.
-- `XFn` — companion throwing SAM, only when `XHandler` itself isn't lambda-friendly (carries a descriptor, exposes more than one method). Tools need this because `ToolHandler` isn't a `@FunctionalInterface`; `ToolFn` receives the full `ToolRequest`.
-- Static factory composition on `XHandler.of…`: base verb `of`, then optional `Async` — `ToolHandler.of(...)` / `ToolHandler.ofAsync(...)`. Both tool factories and class-based handlers receive `ToolRequest`.
+- `XFn` — throwing SAM used by descriptor/function registration. `ToolFn` receives the full
+  `ToolRequest`; `AsyncToolFn` returns a `CompletionStage`.
 
 ## 🪶 Registry/facade API naming
 
@@ -89,7 +88,8 @@ those same façade APIs; do not add feature-specific registration overloads to `
 - Optional lookup uses `Optional<Descriptor> find(String name)`. Never nullable `get`.
 - Descriptor enumeration uses immutable, name-sorted `descriptors()` snapshots.
 - Resource templates follow `registerTemplate`, `registerTemplateAsync`, `unregisterTemplate`, `findTemplate`, `templateDescriptors`.
-- Keep typed registration methods on each registry. No public generic base registry.
+- Tool registration accepts `(ToolDescriptor, ToolFn)` or `(ToolDescriptor, AsyncToolFn)` through
+  `register` and `registerAsync`. Builder-configurer overloads delegate to these methods.
 - `TaskRegistry` is excluded. Tasks use runtime lifecycle methods such as `create` and `get`.
 
 ## Kotlin adapter shape
@@ -149,7 +149,8 @@ fun resourceTemplate(
 
 `_meta` is the MCP runtime's protocol envelope — `progressToken`, reserved `io.modelcontextprotocol/*` keys, OpenTelemetry trace context — growing every protocol revision; implementations **must not** assume meaning for reserved keys (MCP spec, `_meta` section). Don't add `meta()` to an ergonomic type (`Args` and friends) — invites Hyrum's-law coupling to runtime internals, same failure mode as an `Internal*`-named type users are forced to hold.
 
-A handler needing raw request metadata (progress token, cancellation, task handle) uses `ToolRequest` through a `ToolFn` or an `AbstractToolHandler` request override, not a `_meta` field on the ergonomic `Args` path.
+A function reads arguments and request metadata through `ToolRequest`; subclass the experimental
+`AbstractToolHandler` only when a function cannot express the implementation.
 
 ## ⚠️ `Optional<T>` vs `@Nullable` — pick by contract, not habit
 

@@ -77,7 +77,7 @@ public fun TachyonServer.registerTool(
     val runtime =
         extensions().filterIsInstance<CoroutineRuntime>().singleOrNull()
             ?: error("registerTool requires a server built with the Tachyon Kotlin DSL")
-    this.tools().register(toolHandler(descriptor, runtime, block))
+    this.tools().registerAsync(descriptor, toolFn(descriptor.name(), runtime, block))
     return this
 }
 

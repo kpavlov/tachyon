@@ -5,13 +5,9 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
-import dev.tachyonmcp.runtime.InteractionContext;
 import dev.tachyonmcp.server.domain.FormInputRequest;
 import dev.tachyonmcp.server.domain.InputRequest;
 import dev.tachyonmcp.server.domain.RpcMethodRequest;
-import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -53,90 +49,69 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
     void registerFixtures() {
         startServerWith(s -> s.tools()
                 .register(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("elicit_name")
+                        tool -> tool.name("elicit_name")
                                 .description("Elicits a name")
-                                .inputSchema(NO_ARGS_SCHEMA)
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                var responses = request.inputResponses();
-                                if (responses != null && responses.containsKey("user_name")) {
-                                    var name =
-                                            stringField(field(responses.get("user_name"), "content"), "name", "World");
-                                    return ToolResult.text("Hello, " + name + "!");
-                                }
-                                return ToolResult.inputRequired(
-                                        Map.of("user_name", elicitation("What is your name?", "name")), null);
+                                .inputSchema(NO_ARGS_SCHEMA),
+                        (ctx, request) -> {
+                            var responses = request.inputResponses();
+                            if (responses != null && responses.containsKey("user_name")) {
+                                var name = stringField(field(responses.get("user_name"), "content"), "name", "World");
+                                return ToolResult.text("Hello, " + name + "!");
                             }
+                            return ToolResult.inputRequired(
+                                    Map.of("user_name", elicitation("What is your name?", "name")), null);
                         })
                 .register(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("ask_sampling")
+                        tool -> tool.name("ask_sampling")
                                 .description("Requests sampling")
-                                .inputSchema(NO_ARGS_SCHEMA)
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                var responses = request.inputResponses();
-                                if (responses != null && responses.containsKey("capital_question")) {
-                                    return ToolResult.text("done");
-                                }
-                                return ToolResult.inputRequired(Map.of("capital_question", samplingRequest()), null);
+                                .inputSchema(NO_ARGS_SCHEMA),
+                        (ctx, request) -> {
+                            var responses = request.inputResponses();
+                            if (responses != null && responses.containsKey("capital_question")) {
+                                return ToolResult.text("done");
                             }
+                            return ToolResult.inputRequired(Map.of("capital_question", samplingRequest()), null);
                         })
                 .register(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("ask_roots")
+                        tool -> tool.name("ask_roots")
                                 .description("Requests roots/list")
-                                .inputSchema(NO_ARGS_SCHEMA)
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                var responses = request.inputResponses();
-                                if (responses != null && responses.containsKey("client_roots")) {
-                                    return ToolResult.text("roots received");
-                                }
-                                return ToolResult.inputRequired(Map.of("client_roots", rootsListRequest()), null);
+                                .inputSchema(NO_ARGS_SCHEMA),
+                        (ctx, request) -> {
+                            var responses = request.inputResponses();
+                            if (responses != null && responses.containsKey("client_roots")) {
+                                return ToolResult.text("roots received");
                             }
+                            return ToolResult.inputRequired(Map.of("client_roots", rootsListRequest()), null);
                         })
                 .register(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("respect_capabilities")
+                        tool -> tool.name("respect_capabilities")
                                 .description("Only asks for declared capabilities")
-                                .inputSchema(NO_ARGS_SCHEMA)
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                var meta = request.meta();
-                                var capabilities =
-                                        meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
-                                var hasSampling = field(capabilities, "sampling") != null;
-                                if (!hasSampling) {
-                                    return ToolResult.text("No sampling capability declared");
-                                }
-                                return ToolResult.inputRequired(Map.of("capital_question", samplingRequest()), null);
+                                .inputSchema(NO_ARGS_SCHEMA),
+                        (ctx, request) -> {
+                            var meta = request.meta();
+                            var capabilities =
+                                    meta != null ? meta.get("io.modelcontextprotocol/clientCapabilities") : null;
+                            var hasSampling = field(capabilities, "sampling") != null;
+                            if (!hasSampling) {
+                                return ToolResult.text("No sampling capability declared");
                             }
+                            return ToolResult.inputRequired(Map.of("capital_question", samplingRequest()), null);
                         })
                 .register(
-                        new AbstractToolHandler(ToolDescriptor.builder()
-                                .name("ask_multiple")
+                        tool -> tool.name("ask_multiple")
                                 .description("Requests multiple inputs at once")
-                                .inputSchema(NO_ARGS_SCHEMA)
-                                .build()) {
-                            @Override
-                            public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-                                var responses = request.inputResponses();
-                                if (responses != null
-                                        && responses.containsKey("user_name")
-                                        && responses.containsKey("client_roots")) {
-                                    return ToolResult.text("all inputs received");
-                                }
-                                var inputRequests = new LinkedHashMap<String, InputRequest>();
-                                inputRequests.put("user_name", elicitation("What is your name?", "name"));
-                                inputRequests.put("client_roots", rootsListRequest());
-                                return ToolResult.inputRequired(inputRequests, "multi-input-state");
+                                .inputSchema(NO_ARGS_SCHEMA),
+                        (ctx, request) -> {
+                            var responses = request.inputResponses();
+                            if (responses != null
+                                    && responses.containsKey("user_name")
+                                    && responses.containsKey("client_roots")) {
+                                return ToolResult.text("all inputs received");
                             }
+                            var inputRequests = new LinkedHashMap<String, InputRequest>();
+                            inputRequests.put("user_name", elicitation("What is your name?", "name"));
+                            inputRequests.put("client_roots", rootsListRequest());
+                            return ToolResult.inputRequired(inputRequests, "multi-input-state");
                         }));
     }
 

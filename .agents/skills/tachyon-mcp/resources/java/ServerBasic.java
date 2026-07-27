@@ -7,7 +7,6 @@ import dev.tachyonmcp.server.domain.PromptMessage;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
@@ -48,7 +47,7 @@ public final class ServerBasic {
             .port(port)
             .build();
 
-        server.tools().register(ToolHandler.of(b -> b.name("ping"), (ctx, request) -> ToolResult.text("pong")));
+        server.tools().register(b -> b.name("ping"), (ctx, request) -> ToolResult.text("pong"));
         server.resources()
             .register(
                 ResourceDescriptor.of(

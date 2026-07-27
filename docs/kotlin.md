@@ -114,7 +114,7 @@ tool(name = "reverse", description = "Reverse a string") {
 }
 ```
 
-For class-based handlers, extend `AbstractToolHandler` and override `handle(ctx, args)` (sync) or `handleAsync(ctx, args)` (async); they work unchanged from Kotlin.
+For the experimental class-based escape hatch, extend `AbstractToolHandler` and override `handle(ctx, request)` (sync) or `handleAsync(ctx, request)` (async).
 
 ## Resource & prompt handlers
 

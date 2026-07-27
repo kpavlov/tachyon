@@ -4,7 +4,6 @@ package dev.tachyonmcp.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.server.OutboundSseStreamMessageRouter;
-import dev.tachyonmcp.server.features.tools.ToolHandler;
 import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.io.IOException;
 import java.net.Socket;
@@ -29,7 +28,23 @@ class SsePostReconnectRedeliveryTest extends AbstractStatefulMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServerWith(s -> s.tools().register(selfClosingTool()));
+        startServerWith(s -> s.tools()
+                .register(
+                        b -> b.name("self-closing")
+                                .description("Closes its SSE stream mid-call, then returns after a delay"),
+                        (ctx, request) -> {
+                            var stream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
+                            if (stream != null) {
+                                stream.start();
+                                stream.close();
+                            }
+                            try {
+                                Thread.sleep(300);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                            return ToolResult.text("resumed-payload");
+                        }));
     }
 
     @Test
@@ -93,25 +108,5 @@ class SsePostReconnectRedeliveryTest extends AbstractStatefulMcpE2eTest {
             }
         }
         return sb.toString();
-    }
-
-    private static ToolHandler selfClosingTool() {
-        return ToolHandler.of(
-                b -> b.name("self-closing").description("Closes its SSE stream mid-call, then returns after a delay"),
-                (ctx, request) -> {
-                    var stream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
-                    if (stream != null) {
-                        stream.start();
-                        stream.close();
-                    }
-                    // Return only after the client has had time to observe the close and reconnect,
-                    // so the response is appended after the resume's one-shot replay has run.
-                    try {
-                        Thread.sleep(300);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                    return ToolResult.text("resumed-payload");
-                });
     }
 }

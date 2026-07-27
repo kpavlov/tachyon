@@ -7,7 +7,7 @@ import dev.tachyonmcp.server.OutboundSseStreamMessageRouter;
 import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
-import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
+import dev.tachyonmcp.server.features.tools.AsyncToolFn;
 import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.features.tools.ToolRequest;
 import dev.tachyonmcp.server.features.tools.ToolResult;
@@ -63,7 +63,7 @@ public class TasksExtension implements ServerExtension {
                 .extensionId(ID)
                 .build();
 
-        server.tools().register(new CreateTaskHandler(descriptor, server));
+        server.tools().registerAsync(descriptor, new CreateTaskFn(server));
 
         server.resources()
                 .registerTemplate(ResourceTemplateDescriptor.of("task-status", "task://{id}"), (ctx, request) -> {
@@ -74,19 +74,18 @@ public class TasksExtension implements ServerExtension {
                 });
     }
 
-    private static final class CreateTaskHandler extends AbstractToolHandler {
+    private static final class CreateTaskFn implements AsyncToolFn {
 
         private final Tasks tasks;
         private final Executor executor;
 
-        CreateTaskHandler(ToolDescriptor descriptor, ServerEngine server) {
-            super(descriptor);
+        CreateTaskFn(ServerEngine server) {
             this.tasks = server.tasks();
             this.executor = server.executor();
         }
 
         @Override
-        public CompletionStage<? extends ToolResult> handleAsync(InteractionContext context, ToolRequest request) {
+        public CompletionStage<? extends ToolResult> apply(InteractionContext context, ToolRequest request) {
             var args = request.arguments();
             var sessionId = OutboundSseStreamMessageRouter.currentSessionId();
             var outboundStream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
