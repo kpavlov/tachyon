@@ -18,6 +18,9 @@ final class JsonDocuments {
     }
 
     static <T> JsonDocument from(T source, Class<T> type) {
+        if (source instanceof JsonDocument doc) {
+            return doc;
+        }
         return factoryFor(type).toJsonDocument(source);
     }
 

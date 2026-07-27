@@ -69,9 +69,13 @@ what the provider registered.
 |---|---|---|
 | `String` | `tachyon-core` | `Jackson3JsonFactory` |
 | Jackson `JsonNode` | `tachyon-core` | `JacksonNodeJsonFactory` |
-| tachyon `JsonObject` | `tachyon-core` | `JacksonObjectJsonFactory` |
+| Jackson `ObjectNode` | `tachyon-core` | `JacksonObjectJsonFactory` |
 | kotlinx `JsonElement` | `tachyon-kotlin` | `KotlinxJsonElementFactory` |
 | kotlinx `JsonObject` | `tachyon-kotlin` | `KotlinxJsonObjectFactory` |
+
+`JacksonObjectJsonFactory`'s result also implements `JsonObject` itself, reading property values
+directly from the wrapped `ObjectNode` — so `JsonDocument.from(node, ObjectNode.class)` gives you
+typed navigation (`has`, `stringValue`, `objectOpt`, ...) without a `JsonObject.of(Map)` conversion.
 
 All of them retain the source tree for `unwrap(Class)` rather than re-serializing it.
 

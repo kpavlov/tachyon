@@ -22,7 +22,7 @@ internal class KotlinxJsonElementFactory :
 
         /** Provider factory used by [java.util.ServiceLoader] to obtain the singleton. */
         @JvmStatic
-        public fun provider(): KotlinxJsonElementFactory = INSTANCE
+        fun provider(): KotlinxJsonElementFactory = INSTANCE
     }
 
     override fun sourceType(): Class<JsonElement> = JsonElement::class.java

@@ -14,25 +14,38 @@ import org.junit.jupiter.api.Test;
 class JsonSpiDiscoveryTest {
 
     @Test
-    void shouldParseValidJsonStringViaDiscoveredFactory() {
+    void shouldParseValidJsonStringIntoSchemaViaDiscoveredFactory() {
         assertThatJson(JsonSchema.parse("{\"type\":\"object\"}").json()).isEqualTo("{\"type\":\"object\"}");
+    }
+
+    @Test
+    void shouldParseValidJsonStringIntoDocumentViaDiscoveredFactory() {
         assertThatJson(JsonDocument.parse("{\"a\":1}").json()).isEqualTo("{\"a\":1}");
     }
 
     @Test
-    void shouldRejectMalformedJsonStringViaDiscoveredFactory() {
+    void shouldRejectMalformedJsonStringForSchema() {
         assertThatThrownBy(() -> JsonSchema.parse("not-json")).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void shouldRejectMalformedJsonStringForDocument() {
         assertThatThrownBy(() -> JsonDocument.parse("not-json")).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    void shouldFailWithActionableMessageWhenNoFactoryRegisteredForType() {
+    void shouldFailWithActionableMessageWhenNoSchemaFactoryRegisteredForType() {
         record Unregistered(String value) {}
 
         assertThatThrownBy(() -> JsonSchema.from(new Unregistered("x"), Unregistered.class))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Unregistered")
                 .hasMessageContaining("META-INF/services");
+    }
+
+    @Test
+    void shouldFailWithActionableMessageWhenNoDocumentFactoryRegisteredForType() {
+        record Unregistered(String value) {}
 
         assertThatThrownBy(() -> JsonDocument.from(new Unregistered("x"), Unregistered.class))
                 .isInstanceOf(IllegalStateException.class)

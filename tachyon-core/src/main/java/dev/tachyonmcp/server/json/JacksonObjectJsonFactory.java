@@ -3,16 +3,18 @@ package dev.tachyonmcp.server.json;
 
 import dev.tachyonmcp.server.json.spi.JsonDocumentFactory;
 import dev.tachyonmcp.server.json.spi.JsonSchemaFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
- * Tachyon's provider-neutral {@link JsonObject}-backed {@link JsonDocumentFactory} and {@link
- * JsonSchemaFactory}: wraps an already-built {@link JsonObject} without re-serializing it,
- * retaining it for {@link JsonDocument#unwrap(Class)} instead of round-tripping through a JSON
- * string.
+ * Jackson {@link ObjectNode}-backed {@link JsonDocumentFactory} and {@link JsonSchemaFactory}:
+ * wraps an already-parsed object node without re-serializing it, retaining it for {@link
+ * JsonDocument#unwrap(Class)} instead of round-tripping through a JSON string. The returned {@link
+ * JsonDocument} also implements {@link JsonObject}, exposing typed property navigation directly
+ * over the wrapped node.
  *
  * @author Konstantin Pavlov
  */
-public final class JacksonObjectJsonFactory implements JsonDocumentFactory<JsonObject>, JsonSchemaFactory<JsonObject> {
+public final class JacksonObjectJsonFactory implements JsonDocumentFactory<ObjectNode>, JsonSchemaFactory<ObjectNode> {
 
     public static final JacksonObjectJsonFactory INSTANCE = new JacksonObjectJsonFactory();
 
@@ -26,17 +28,17 @@ public final class JacksonObjectJsonFactory implements JsonDocumentFactory<JsonO
     }
 
     @Override
-    public Class<JsonObject> sourceType() {
-        return JsonObject.class;
+    public Class<ObjectNode> sourceType() {
+        return ObjectNode.class;
     }
 
     @Override
-    public JsonDocument toJsonDocument(JsonObject object) {
-        return new JacksonObjectJsonDocument(object);
+    public JsonDocument toJsonDocument(ObjectNode node) {
+        return new JacksonObjectJsonDocument(node);
     }
 
     @Override
-    public JsonSchema toJsonSchema(JsonObject object) {
-        return new JacksonObjectJsonSchema(object);
+    public JsonSchema toJsonSchema(ObjectNode node) {
+        return new JacksonObjectJsonSchema(node);
     }
 }
