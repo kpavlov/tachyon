@@ -1,8 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.features;
 
-import dev.tachyonmcp.protocol.api.annotations.InternalApi;
-import dev.tachyonmcp.protocol.api.server.features.PaginatedResult;
+import dev.tachyonmcp.annotations.InternalApi;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;

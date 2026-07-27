@@ -1,13 +1,13 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e;
 
-import static dev.tachyonmcp.protocol.api.server.domain.PromptMessage.of;
+import static dev.tachyonmcp.server.domain.PromptMessage.of;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.api.server.domain.PromptArgument;
-import dev.tachyonmcp.protocol.api.server.domain.Role;
-import dev.tachyonmcp.protocol.api.server.domain.TextContent;
-import dev.tachyonmcp.protocol.api.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.server.domain.PromptArgument;
+import dev.tachyonmcp.server.domain.Role;
+import dev.tachyonmcp.server.domain.TextContent;
+import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;

@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
-import dev.tachyonmcp.protocol.api.server.domain.LoggingLevel;
+import dev.tachyonmcp.server.domain.LoggingLevel;
 
 /** Maps {@link LoggingLevel} to and from the MCP 2025-11-25 wire model. */
 public final class LoggingLevelMapper {

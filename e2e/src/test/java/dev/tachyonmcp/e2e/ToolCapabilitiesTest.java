@@ -4,11 +4,11 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.api.json.JsonSchema;
-import dev.tachyonmcp.protocol.api.server.domain.ToolAnnotations;
-import dev.tachyonmcp.protocol.api.server.features.tasks.TaskSupport;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolHandler;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.json.JsonSchema;
+import dev.tachyonmcp.server.domain.ToolAnnotations;
+import dev.tachyonmcp.server.features.tasks.TaskSupport;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.net.http.HttpResponse;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;

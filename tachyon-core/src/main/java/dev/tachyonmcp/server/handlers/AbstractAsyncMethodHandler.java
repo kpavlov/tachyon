@@ -1,8 +1,8 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.handlers;
 
-import dev.tachyonmcp.protocol.api.server.features.HandlerFutures;
 import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.session.DispatchContext;
 import java.util.concurrent.CompletionStage;
 

@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server;
 
-import dev.tachyonmcp.protocol.api.annotations.InternalApi;
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.server.session.DispatchContext;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;

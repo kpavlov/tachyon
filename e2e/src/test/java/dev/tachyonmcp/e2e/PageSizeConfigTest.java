@@ -3,9 +3,9 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.api.json.JsonSchema;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolHandler;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.json.JsonSchema;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 

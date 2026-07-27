@@ -1,0 +1,17 @@
+/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
+package dev.tachyonmcp.server.features.prompts;
+
+import java.util.Map;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * Request parameters for a prompt invocation.
+ *
+ * @param arguments JSON-serialized argument string, or null
+ * @param inputResponses client's input responses for input-required prompts, or null
+ * @param requestState opaque state token for input-required prompts, or null
+ */
+public record PromptRequest(
+        @Nullable String arguments,
+        @Nullable Map<String, Object> inputResponses,
+        @Nullable String requestState) {}

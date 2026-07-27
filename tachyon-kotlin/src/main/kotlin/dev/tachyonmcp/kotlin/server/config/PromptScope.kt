@@ -2,8 +2,8 @@
 package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.kotlin.server.TachyonDsl
-import dev.tachyonmcp.protocol.api.runtime.InteractionContext
-import dev.tachyonmcp.protocol.api.server.features.prompts.PromptRequest
+import dev.tachyonmcp.runtime.InteractionContext
+import dev.tachyonmcp.server.features.prompts.PromptRequest
 
 @TachyonDsl
 public class PromptScope

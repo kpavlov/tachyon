@@ -5,9 +5,9 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import dev.tachyonmcp.protocol.api.json.JsonDocument;
-import dev.tachyonmcp.protocol.api.json.JsonObject;
-import dev.tachyonmcp.protocol.api.json.JsonSchema;
+import dev.tachyonmcp.json.JsonDocument;
+import dev.tachyonmcp.json.JsonObject;
+import dev.tachyonmcp.json.JsonSchema;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.JsonNodeFactory;

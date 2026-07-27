@@ -4,9 +4,9 @@ package dev.tachyonmcp.transport.netty.sse;
 import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.api.server.domain.RequestId;
 import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.runtime.SseEvent;
+import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.SessionEvent;
 import java.util.ArrayList;

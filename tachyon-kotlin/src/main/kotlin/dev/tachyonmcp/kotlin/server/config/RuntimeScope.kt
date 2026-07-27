@@ -2,7 +2,7 @@
 package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.kotlin.server.TachyonDsl
-import dev.tachyonmcp.protocol.api.server.config.RuntimeConfig
+import dev.tachyonmcp.server.config.RuntimeConfig
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
 

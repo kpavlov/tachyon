@@ -5,7 +5,6 @@ import static dev.tachyonmcp.test.TestUtils.parseJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor;
 import org.junit.jupiter.api.Test;
 
 class ToolDescriptorTest {

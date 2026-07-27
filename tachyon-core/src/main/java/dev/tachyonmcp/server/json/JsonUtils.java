@@ -3,11 +3,11 @@ package dev.tachyonmcp.server.json;
 
 import static dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec.readTreeValue;
 
-import dev.tachyonmcp.protocol.api.annotations.InternalApi;
-import dev.tachyonmcp.protocol.api.json.JsonDocument;
-import dev.tachyonmcp.protocol.api.json.PayloadSerializer;
-import dev.tachyonmcp.protocol.api.server.domain.ContentBlock;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.annotations.InternalApi;
+import dev.tachyonmcp.json.JsonDocument;
+import dev.tachyonmcp.json.PayloadSerializer;
+import dev.tachyonmcp.server.domain.ContentBlock;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.io.IOException;
 import java.io.UncheckedIOException;

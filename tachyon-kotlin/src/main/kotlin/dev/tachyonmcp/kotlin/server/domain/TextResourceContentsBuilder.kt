@@ -4,11 +4,11 @@ package dev.tachyonmcp.kotlin.server.domain
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.config.ResourceScope
 import dev.tachyonmcp.kotlin.server.config.TemplateScope
-import dev.tachyonmcp.protocol.api.server.domain.TextResourceContents
+import dev.tachyonmcp.server.domain.TextResourceContents
 import tools.jackson.databind.JsonNode
 
 /**
- * Builds [dev.tachyonmcp.protocol.api.server.domain.TextResourceContents] for a matched resource template.
+ * Builds [dev.tachyonmcp.server.domain.TextResourceContents] for a matched resource template.
  *
  * The requested URI and registered template MIME type are used as defaults.
  */

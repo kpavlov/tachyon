@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.features;
 
-import dev.tachyonmcp.protocol.api.annotations.InternalApi;
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.server.json.JsonUtils;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import java.util.LinkedHashMap;

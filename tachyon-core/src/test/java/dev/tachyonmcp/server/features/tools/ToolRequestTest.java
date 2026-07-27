@@ -3,9 +3,8 @@ package dev.tachyonmcp.server.features.tools;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.api.server.domain.Args;
-import dev.tachyonmcp.protocol.api.server.domain.ProgressToken;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolRequest;
+import dev.tachyonmcp.server.domain.Args;
+import dev.tachyonmcp.server.domain.ProgressToken;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.JsonNodeFactory;

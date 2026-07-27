@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.features;
 
-import dev.tachyonmcp.protocol.api.annotations.InternalApi;
+import dev.tachyonmcp.annotations.InternalApi;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.slf4j.Logger;

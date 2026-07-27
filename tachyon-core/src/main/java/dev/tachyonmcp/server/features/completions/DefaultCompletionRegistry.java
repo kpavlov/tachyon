@@ -1,16 +1,13 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.features.completions;
 
-import dev.tachyonmcp.protocol.api.annotations.InternalApi;
-import dev.tachyonmcp.protocol.api.server.config.Mode;
-import dev.tachyonmcp.protocol.api.server.domain.InvalidArgumentException;
-import dev.tachyonmcp.protocol.api.server.domain.ServerError;
-import dev.tachyonmcp.protocol.api.server.features.HandlerFutures;
-import dev.tachyonmcp.protocol.api.server.features.completions.CompletionHandler;
-import dev.tachyonmcp.protocol.api.server.features.completions.CompletionRequest;
-import dev.tachyonmcp.protocol.api.server.features.completions.Completions;
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.config.Mode;
+import dev.tachyonmcp.server.domain.InvalidArgumentException;
+import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.ServerErrors;
+import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.session.DispatchContext;
 import java.util.LinkedHashMap;
 import java.util.List;

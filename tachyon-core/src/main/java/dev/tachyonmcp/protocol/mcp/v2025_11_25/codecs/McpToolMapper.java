@@ -1,24 +1,24 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
-import dev.tachyonmcp.protocol.api.json.JsonSchema;
-import dev.tachyonmcp.protocol.api.server.domain.Annotations;
-import dev.tachyonmcp.protocol.api.server.domain.AudioContent;
-import dev.tachyonmcp.protocol.api.server.domain.BlobResourceContents;
-import dev.tachyonmcp.protocol.api.server.domain.ContentBlock;
-import dev.tachyonmcp.protocol.api.server.domain.EmbeddedResource;
-import dev.tachyonmcp.protocol.api.server.domain.ImageContent;
-import dev.tachyonmcp.protocol.api.server.domain.ResourceContents;
-import dev.tachyonmcp.protocol.api.server.domain.ResourceLink;
-import dev.tachyonmcp.protocol.api.server.domain.Role;
-import dev.tachyonmcp.protocol.api.server.domain.TextContent;
-import dev.tachyonmcp.protocol.api.server.domain.TextResourceContents;
-import dev.tachyonmcp.protocol.api.server.domain.ToolAnnotations;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.json.JsonSchema;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Icon;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Tool;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ToolExecution;
+import dev.tachyonmcp.server.domain.Annotations;
+import dev.tachyonmcp.server.domain.AudioContent;
+import dev.tachyonmcp.server.domain.BlobResourceContents;
+import dev.tachyonmcp.server.domain.ContentBlock;
+import dev.tachyonmcp.server.domain.EmbeddedResource;
+import dev.tachyonmcp.server.domain.ImageContent;
+import dev.tachyonmcp.server.domain.ResourceContents;
+import dev.tachyonmcp.server.domain.ResourceLink;
+import dev.tachyonmcp.server.domain.Role;
+import dev.tachyonmcp.server.domain.TextContent;
+import dev.tachyonmcp.server.domain.TextResourceContents;
+import dev.tachyonmcp.server.domain.ToolAnnotations;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.json.JsonUtils;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -64,16 +64,15 @@ final class McpToolMapper {
 
     @Nullable
     public static List<dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Icon> toProtocolIcons(
-            @Nullable List<? extends dev.tachyonmcp.protocol.api.server.domain.Icon> domain) {
+            @Nullable List<? extends dev.tachyonmcp.server.domain.Icon> domain) {
         return ContentBlockMappers.toProtocolIcons(domain);
     }
 
     @Nullable
-    public static List<dev.tachyonmcp.protocol.api.server.domain.Icon> toDomainIcons(@Nullable List<Icon> protocol) {
+    public static List<dev.tachyonmcp.server.domain.Icon> toDomainIcons(@Nullable List<Icon> protocol) {
         if (protocol == null) return null;
         return protocol.stream()
-                .map(i ->
-                        dev.tachyonmcp.protocol.api.server.domain.Icon.of(i.src(), i.mimeType(), i.sizes(), i.theme()))
+                .map(i -> dev.tachyonmcp.server.domain.Icon.of(i.src(), i.mimeType(), i.sizes(), i.theme()))
                 .toList();
     }
 

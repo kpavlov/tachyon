@@ -1,8 +1,8 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.domain;
 
-import dev.tachyonmcp.protocol.api.server.config.ServerIdentity;
 import dev.tachyonmcp.server.ServerCapabilities;
+import dev.tachyonmcp.server.config.ServerIdentity;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;

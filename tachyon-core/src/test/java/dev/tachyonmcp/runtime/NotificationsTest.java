@@ -3,8 +3,7 @@ package dev.tachyonmcp.runtime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.api.runtime.Notifications;
-import dev.tachyonmcp.protocol.api.server.domain.LoggingLevel;
+import dev.tachyonmcp.server.domain.LoggingLevel;
 import dev.tachyonmcp.server.internal.NotificationLogSupport;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;

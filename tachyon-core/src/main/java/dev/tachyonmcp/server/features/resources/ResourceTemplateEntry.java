@@ -1,11 +1,9 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.features.resources;
 
-import dev.tachyonmcp.protocol.api.annotations.InternalApi;
-import dev.tachyonmcp.protocol.api.server.ServerFeature;
-import dev.tachyonmcp.protocol.api.server.domain.UriTemplate;
-import dev.tachyonmcp.protocol.api.server.features.resources.ResourceHandler;
-import dev.tachyonmcp.protocol.api.server.features.resources.ResourceTemplateDescriptor;
+import dev.tachyonmcp.annotations.InternalApi;
+import dev.tachyonmcp.server.ServerFeature;
+import dev.tachyonmcp.server.domain.UriTemplate;
 
 @InternalApi
 public record ResourceTemplateEntry(

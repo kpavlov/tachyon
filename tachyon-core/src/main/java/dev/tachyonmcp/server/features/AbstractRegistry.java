@@ -1,10 +1,9 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.features;
 
-import dev.tachyonmcp.protocol.api.annotations.InternalApi;
-import dev.tachyonmcp.protocol.api.server.ServerFeature;
-import dev.tachyonmcp.protocol.api.server.features.PaginatedResult;
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.ServerFeature;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Map;

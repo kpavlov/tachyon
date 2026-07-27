@@ -1,13 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.protocol.mcp.v2026_07_28.codecs;
 
-import dev.tachyonmcp.protocol.api.json.JsonSchema;
-import dev.tachyonmcp.protocol.api.server.config.ServerIdentity;
-import dev.tachyonmcp.protocol.api.server.domain.ServerError;
-import dev.tachyonmcp.protocol.api.server.features.prompts.PromptDescriptor;
-import dev.tachyonmcp.protocol.api.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.protocol.api.server.features.resources.ResourceTemplateDescriptor;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.json.JsonSchema;
 import dev.tachyonmcp.protocol.mcp.v2026_07_28.McpProtocol;
 import dev.tachyonmcp.protocol.mcp.v2026_07_28.models.BlobResourceContents;
 import dev.tachyonmcp.protocol.mcp.v2026_07_28.models.DiscoverResult;
@@ -25,6 +19,12 @@ import dev.tachyonmcp.protocol.mcp.v2026_07_28.models.ResourceTemplate;
 import dev.tachyonmcp.protocol.mcp.v2026_07_28.models.ResultMetaObject;
 import dev.tachyonmcp.protocol.mcp.v2026_07_28.models.TextResourceContents;
 import dev.tachyonmcp.protocol.mcp.v2026_07_28.models.Tool;
+import dev.tachyonmcp.server.config.ServerIdentity;
+import dev.tachyonmcp.server.domain.ServerError;
+import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
+import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.server.json.JsonUtils;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcError;
 import java.io.ByteArrayOutputStream;
@@ -139,7 +139,7 @@ public final class McpResponseMapper extends dev.tachyonmcp.protocol.mcp.v2025_1
     }
 
     @Override
-    public Object readResourceResult(List<dev.tachyonmcp.protocol.api.server.domain.ResourceContents> contents) {
+    public Object readResourceResult(List<dev.tachyonmcp.server.domain.ResourceContents> contents) {
         var protocolContents =
                 contents.stream().map(McpResponseMapper::toResourceContents).toList();
         return new ReadResourceResult(protocolContents, null, COMPLETE, 0, PUBLIC, null);
@@ -172,12 +172,11 @@ public final class McpResponseMapper extends dev.tachyonmcp.protocol.mcp.v2025_1
                 d.uriTemplate(), d.description(), d.mimeType(), null, null, d.name(), d.title(), null);
     }
 
-    private static ResourceContents toResourceContents(
-            dev.tachyonmcp.protocol.api.server.domain.ResourceContents domain) {
+    private static ResourceContents toResourceContents(dev.tachyonmcp.server.domain.ResourceContents domain) {
         return switch (domain) {
-            case dev.tachyonmcp.protocol.api.server.domain.TextResourceContents t ->
+            case dev.tachyonmcp.server.domain.TextResourceContents t ->
                 new TextResourceContents(t.text(), t.uri(), t.mimeType(), null);
-            case dev.tachyonmcp.protocol.api.server.domain.BlobResourceContents b ->
+            case dev.tachyonmcp.server.domain.BlobResourceContents b ->
                 new BlobResourceContents(b.blob(), b.uri(), b.mimeType(), null);
         };
     }

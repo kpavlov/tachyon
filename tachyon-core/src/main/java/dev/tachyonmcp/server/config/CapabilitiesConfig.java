@@ -1,7 +1,6 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.config;
 
-import dev.tachyonmcp.protocol.api.server.config.Mode;
 import java.time.Duration;
 
 /**

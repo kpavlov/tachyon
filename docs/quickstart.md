@@ -23,8 +23,8 @@ For the Kotlin DSL, add `tachyon-kotlin` instead (it includes `tachyon-core` tra
 
 ```java
 import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolHandler;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 
 void main() {
     var server = TachyonServer.builder()
@@ -52,7 +52,7 @@ curl -X POST http://localhost:8080/mcp \
 
 ```kotlin
 import dev.tachyonmcp.server.TachyonServer
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult
+import dev.tachyonmcp.server.features.tools.ToolResult
 
 TachyonServer(port = 8080) {
     info { name = "my-server"; version = "1.0" }

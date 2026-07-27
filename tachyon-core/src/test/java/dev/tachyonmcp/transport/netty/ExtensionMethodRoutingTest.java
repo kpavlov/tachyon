@@ -4,13 +4,13 @@ package dev.tachyonmcp.transport.netty;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.protocol.Protocols;
-import dev.tachyonmcp.protocol.api.server.domain.RequestId;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.server.McpDispatcher;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.TachyonServer;
+import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.extensions.ServerExtension;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;

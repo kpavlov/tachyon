@@ -31,10 +31,10 @@ Tachyon enforces valid transitions. Invalid moves throw `IllegalStateException`.
 ## Create and update tasks
 
 ```java
-import dev.tachyonmcp.protocol.api.server.domain.Task;
-import dev.tachyonmcp.protocol.api.server.domain.TaskResult;
-import dev.tachyonmcp.protocol.api.server.domain.TextContent;
-import dev.tachyonmcp.protocol.api.server.features.tasks.TaskOptions;
+import dev.tachyonmcp.server.domain.Task;
+import dev.tachyonmcp.server.domain.TaskResult;
+import dev.tachyonmcp.server.domain.TextContent;
+import dev.tachyonmcp.server.features.tasks.TaskOptions;
 
 import java.util.List;
 
@@ -76,7 +76,7 @@ Declare `taskSupport` on a tool descriptor and clients can run the tool as a bac
 by adding a `task` field to `tools/call`:
 
 ```java
-import dev.tachyonmcp.protocol.api.server.features.tasks.TaskSupport;
+import dev.tachyonmcp.server.features.tasks.TaskSupport;
 
 var descriptor = ToolDescriptor.builder()
         .name("import-data")

@@ -3,13 +3,13 @@ package dev.tachyonmcp.e2e;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
-import dev.tachyonmcp.protocol.api.server.domain.TaskResult;
-import dev.tachyonmcp.protocol.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Implementation;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.server.config.CapabilitiesConfig;
+import dev.tachyonmcp.server.domain.TaskResult;
 import dev.tachyonmcp.server.features.tasks.DefaultTaskRegistry;
+import dev.tachyonmcp.server.features.tasks.TaskState;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;

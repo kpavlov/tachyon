@@ -1,10 +1,10 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.protocol.mcp.v2026_07_28.transport;
 
-import dev.tachyonmcp.protocol.api.server.domain.RequestId;
-import dev.tachyonmcp.protocol.api.server.domain.ServerError;
 import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.protocol.mcp.v2026_07_28.McpProtocol;
+import dev.tachyonmcp.server.domain.RequestId;
+import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.ServerErrors;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.json.JsonUtils;

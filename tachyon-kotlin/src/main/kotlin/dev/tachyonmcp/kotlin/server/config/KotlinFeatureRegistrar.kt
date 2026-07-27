@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.config
 
+import dev.tachyonmcp.json.JsonSchema
 import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
 import dev.tachyonmcp.kotlin.server.features.completions.promptCompletionHandler
 import dev.tachyonmcp.kotlin.server.features.completions.resourceCompletionHandler
@@ -8,18 +9,17 @@ import dev.tachyonmcp.kotlin.server.features.prompts.promptHandler
 import dev.tachyonmcp.kotlin.server.features.resources.resourceHandler
 import dev.tachyonmcp.kotlin.server.features.resources.templateHandler
 import dev.tachyonmcp.kotlin.server.features.tools.toolFn
-import dev.tachyonmcp.protocol.api.json.JsonSchema
-import dev.tachyonmcp.protocol.api.server.domain.Annotations
-import dev.tachyonmcp.protocol.api.server.domain.Icon
-import dev.tachyonmcp.protocol.api.server.domain.PromptMessage
-import dev.tachyonmcp.protocol.api.server.domain.ResourceContents
-import dev.tachyonmcp.protocol.api.server.features.completions.CompletionResult
-import dev.tachyonmcp.protocol.api.server.features.prompts.PromptDescriptor
-import dev.tachyonmcp.protocol.api.server.features.resources.ResourceDescriptor
-import dev.tachyonmcp.protocol.api.server.features.resources.ResourceTemplateDescriptor
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult
 import dev.tachyonmcp.server.ServerBuilder
+import dev.tachyonmcp.server.domain.Annotations
+import dev.tachyonmcp.server.domain.Icon
+import dev.tachyonmcp.server.domain.PromptMessage
+import dev.tachyonmcp.server.domain.ResourceContents
+import dev.tachyonmcp.server.features.completions.CompletionResult
+import dev.tachyonmcp.server.features.prompts.PromptDescriptor
+import dev.tachyonmcp.server.features.resources.ResourceDescriptor
+import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
+import dev.tachyonmcp.server.features.tools.ToolDescriptor
+import dev.tachyonmcp.server.features.tools.ToolResult
 
 internal class KotlinFeatureRegistrar(
     private val delegate: ServerBuilder,

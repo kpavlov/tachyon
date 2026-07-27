@@ -4,12 +4,12 @@ package dev.tachyonmcp.e2e.mcp20260728;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
-import dev.tachyonmcp.protocol.api.runtime.InteractionContext;
-import dev.tachyonmcp.protocol.api.server.domain.LoggingLevel;
-import dev.tachyonmcp.protocol.api.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolRequest;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.server.domain.LoggingLevel;
+import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolRequest;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

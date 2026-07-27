@@ -1,10 +1,8 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.features.tasks;
 
-import dev.tachyonmcp.protocol.api.annotations.InternalApi;
-import dev.tachyonmcp.protocol.api.server.domain.ProgressToken;
-import dev.tachyonmcp.protocol.api.server.features.tasks.TaskState;
-import dev.tachyonmcp.protocol.api.server.features.tasks.Tasks;
+import dev.tachyonmcp.annotations.InternalApi;
+import dev.tachyonmcp.server.domain.ProgressToken;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.Future;

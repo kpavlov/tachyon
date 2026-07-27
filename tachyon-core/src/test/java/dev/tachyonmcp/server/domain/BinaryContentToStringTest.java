@@ -3,10 +3,6 @@ package dev.tachyonmcp.server.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.api.server.domain.AudioContent;
-import dev.tachyonmcp.protocol.api.server.domain.BlobResourceContents;
-import dev.tachyonmcp.protocol.api.server.domain.Icon;
-import dev.tachyonmcp.protocol.api.server.domain.ImageContent;
 import org.junit.jupiter.api.Test;
 
 class BinaryContentToStringTest {

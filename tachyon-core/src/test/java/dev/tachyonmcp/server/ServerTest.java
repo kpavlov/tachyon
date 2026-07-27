@@ -3,16 +3,16 @@ package dev.tachyonmcp.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.api.server.domain.RequestId;
-import dev.tachyonmcp.protocol.api.server.domain.TextResourceContents;
-import dev.tachyonmcp.protocol.api.server.features.prompts.PromptDescriptor;
-import dev.tachyonmcp.protocol.api.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolHandler;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.runtime.Backpressure;
 import dev.tachyonmcp.runtime.SessionState;
 import dev.tachyonmcp.runtime.SseConnection;
 import dev.tachyonmcp.runtime.SseEvent;
+import dev.tachyonmcp.server.domain.RequestId;
+import dev.tachyonmcp.server.domain.TextResourceContents;
+import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.session.SessionEvent;
 import java.util.ArrayList;

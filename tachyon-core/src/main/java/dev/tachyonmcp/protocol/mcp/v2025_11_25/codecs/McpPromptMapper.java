@@ -1,11 +1,11 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
-import dev.tachyonmcp.protocol.api.server.domain.PromptArgument;
-import dev.tachyonmcp.protocol.api.server.domain.PromptMessage;
-import dev.tachyonmcp.protocol.api.server.domain.Role;
-import dev.tachyonmcp.protocol.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Prompt;
+import dev.tachyonmcp.server.domain.PromptArgument;
+import dev.tachyonmcp.server.domain.PromptMessage;
+import dev.tachyonmcp.server.domain.Role;
+import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
 import java.util.List;
 
 final class McpPromptMapper {

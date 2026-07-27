@@ -3,7 +3,7 @@ package dev.tachyonmcp.e2e;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
-import dev.tachyonmcp.protocol.api.server.domain.Icon;
+import dev.tachyonmcp.server.domain.Icon;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

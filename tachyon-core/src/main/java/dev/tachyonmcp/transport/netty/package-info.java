@@ -9,5 +9,5 @@
 @InternalApi
 package dev.tachyonmcp.transport.netty;
 
-import dev.tachyonmcp.protocol.api.annotations.InternalApi;
+import dev.tachyonmcp.annotations.InternalApi;
 import org.jspecify.annotations.NullMarked;

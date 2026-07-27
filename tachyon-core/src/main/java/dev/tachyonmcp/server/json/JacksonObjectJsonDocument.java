@@ -1,8 +1,8 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.json;
 
-import dev.tachyonmcp.protocol.api.json.JsonArray;
-import dev.tachyonmcp.protocol.api.json.JsonObject;
+import dev.tachyonmcp.json.JsonArray;
+import dev.tachyonmcp.json.JsonObject;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.LinkedHashMap;

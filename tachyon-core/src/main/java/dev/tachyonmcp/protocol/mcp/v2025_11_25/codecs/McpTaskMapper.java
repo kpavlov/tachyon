@@ -1,7 +1,6 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
-import dev.tachyonmcp.protocol.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CancelTaskResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.CreateTaskResult;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.GetTaskResult;
@@ -9,6 +8,7 @@ import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Task;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatus;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams;
 import dev.tachyonmcp.server.features.tasks.TaskEntry;
+import dev.tachyonmcp.server.features.tasks.TaskState;
 import java.time.Duration;
 import org.jspecify.annotations.Nullable;
 

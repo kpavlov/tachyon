@@ -6,8 +6,8 @@ import static dev.tachyonmcp.transport.netty.InteractionHandler.INTERACTION_CONT
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.protocol.Protocols;
-import dev.tachyonmcp.protocol.api.runtime.InteractionContext.Lifecycle;
 import dev.tachyonmcp.runtime.DefaultChannelContext;
+import dev.tachyonmcp.runtime.InteractionContext.Lifecycle;
 import dev.tachyonmcp.runtime.InteractionEvent;
 import dev.tachyonmcp.runtime.Session;
 import dev.tachyonmcp.runtime.SseConnection;

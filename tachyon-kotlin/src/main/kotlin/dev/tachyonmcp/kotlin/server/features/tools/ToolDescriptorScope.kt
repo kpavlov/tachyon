@@ -1,13 +1,13 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.features.tools
 
+import dev.tachyonmcp.json.JsonSchema
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.json.toJsonSchema
-import dev.tachyonmcp.protocol.api.json.JsonSchema
-import dev.tachyonmcp.protocol.api.server.domain.Icon
-import dev.tachyonmcp.protocol.api.server.domain.ToolAnnotations
-import dev.tachyonmcp.protocol.api.server.features.tasks.TaskSupport
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor
+import dev.tachyonmcp.server.domain.Icon
+import dev.tachyonmcp.server.domain.ToolAnnotations
+import dev.tachyonmcp.server.features.tasks.TaskSupport
+import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.server.json.Jackson3JsonFactory
 import kotlinx.serialization.json.JsonObject
 import kotlin.contracts.ExperimentalContracts

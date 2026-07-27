@@ -5,12 +5,12 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.gson.Gson;
-import dev.tachyonmcp.protocol.api.json.JsonSchema;
-import dev.tachyonmcp.protocol.api.json.JsonSchemaValidator;
-import dev.tachyonmcp.protocol.api.json.PayloadSerde;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolHandler;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.json.JsonSchema;
+import dev.tachyonmcp.json.JsonSchemaValidator;
+import dev.tachyonmcp.json.PayloadSerde;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
 import java.lang.reflect.Type;
 import java.util.Map;

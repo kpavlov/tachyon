@@ -4,9 +4,9 @@ package dev.tachyonmcp.server.json;
 import static dev.tachyonmcp.test.TestUtils.parseJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.api.json.JsonDocument;
-import dev.tachyonmcp.protocol.api.json.PayloadSerializer;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.json.JsonDocument;
+import dev.tachyonmcp.json.PayloadSerializer;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;

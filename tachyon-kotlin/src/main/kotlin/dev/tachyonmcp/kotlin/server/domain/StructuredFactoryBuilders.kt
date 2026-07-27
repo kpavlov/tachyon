@@ -3,17 +3,17 @@ package dev.tachyonmcp.kotlin.server.domain
 
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.config.ResourceScope
-import dev.tachyonmcp.protocol.api.server.domain.Annotations
-import dev.tachyonmcp.protocol.api.server.domain.AudioContent
-import dev.tachyonmcp.protocol.api.server.domain.BlobResourceContents
-import dev.tachyonmcp.protocol.api.server.domain.Icon
-import dev.tachyonmcp.protocol.api.server.domain.ImageContent
-import dev.tachyonmcp.protocol.api.server.domain.PromptArgument
-import dev.tachyonmcp.protocol.api.server.domain.Role
-import dev.tachyonmcp.protocol.api.server.domain.ToolAnnotations
+import dev.tachyonmcp.server.domain.Annotations
+import dev.tachyonmcp.server.domain.AudioContent
+import dev.tachyonmcp.server.domain.BlobResourceContents
+import dev.tachyonmcp.server.domain.Icon
+import dev.tachyonmcp.server.domain.ImageContent
+import dev.tachyonmcp.server.domain.PromptArgument
+import dev.tachyonmcp.server.domain.Role
+import dev.tachyonmcp.server.domain.ToolAnnotations
 import tools.jackson.databind.JsonNode
 
-/** Builds [dev.tachyonmcp.protocol.api.server.domain.Annotations]. */
+/** Builds [dev.tachyonmcp.server.domain.Annotations]. */
 @TachyonDsl
 public class AnnotationsBuilder
     @PublishedApi
@@ -36,7 +36,7 @@ public class AnnotationsBuilder
             )
     }
 
-/** Builds an [dev.tachyonmcp.protocol.api.server.domain.Icon]. */
+/** Builds an [dev.tachyonmcp.server.domain.Icon]. */
 @TachyonDsl
 public class IconBuilder
     @PublishedApi
@@ -63,7 +63,7 @@ public class IconBuilder
             )
     }
 
-/** Builds a [dev.tachyonmcp.protocol.api.server.domain.PromptArgument]. */
+/** Builds a [dev.tachyonmcp.server.domain.PromptArgument]. */
 @TachyonDsl
 public class PromptArgumentBuilder
     @PublishedApi
@@ -90,7 +90,7 @@ public class PromptArgumentBuilder
             )
     }
 
-/** Builds [dev.tachyonmcp.protocol.api.server.domain.ToolAnnotations]. */
+/** Builds [dev.tachyonmcp.server.domain.ToolAnnotations]. */
 @TachyonDsl
 public class ToolAnnotationsBuilder
     @PublishedApi
@@ -121,7 +121,7 @@ public class ToolAnnotationsBuilder
             )
     }
 
-/** Builds [dev.tachyonmcp.protocol.api.server.domain.ImageContent]. */
+/** Builds [dev.tachyonmcp.server.domain.ImageContent]. */
 @TachyonDsl
 public class ImageContentBuilder
     @PublishedApi
@@ -148,7 +148,7 @@ public class ImageContentBuilder
             )
     }
 
-/** Builds [dev.tachyonmcp.protocol.api.server.domain.AudioContent]. */
+/** Builds [dev.tachyonmcp.server.domain.AudioContent]. */
 @TachyonDsl
 public class AudioContentBuilder
     @PublishedApi
@@ -175,7 +175,7 @@ public class AudioContentBuilder
             )
     }
 
-/** Builds [dev.tachyonmcp.protocol.api.server.domain.BlobResourceContents]. */
+/** Builds [dev.tachyonmcp.server.domain.BlobResourceContents]. */
 @TachyonDsl
 public class BlobResourceContentsBuilder
     @PublishedApi

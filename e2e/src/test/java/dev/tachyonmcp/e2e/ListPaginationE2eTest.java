@@ -3,10 +3,10 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.api.server.domain.TextResourceContents;
-import dev.tachyonmcp.protocol.api.server.features.prompts.PromptDescriptor;
-import dev.tachyonmcp.protocol.api.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.protocol.api.server.features.resources.ResourceHandler;
+import dev.tachyonmcp.server.domain.TextResourceContents;
+import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
+import dev.tachyonmcp.server.features.resources.ResourceHandler;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;

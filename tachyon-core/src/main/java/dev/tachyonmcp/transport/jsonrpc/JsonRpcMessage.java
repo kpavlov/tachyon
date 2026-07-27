@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.transport.jsonrpc;
 
-import dev.tachyonmcp.protocol.api.server.domain.RequestId;
+import dev.tachyonmcp.server.domain.RequestId;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 

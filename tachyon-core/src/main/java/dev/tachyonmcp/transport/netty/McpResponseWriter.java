@@ -2,8 +2,8 @@
 package dev.tachyonmcp.transport.netty;
 
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
-import dev.tachyonmcp.protocol.api.server.domain.RequestId;
 import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
+import dev.tachyonmcp.server.domain.RequestId;
 import dev.tachyonmcp.server.domain.ServerErrors;
 import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
 import io.netty.buffer.Unpooled;

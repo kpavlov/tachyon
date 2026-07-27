@@ -1,18 +1,17 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.features.tasks;
 
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.ProtocolMappers;
 import dev.tachyonmcp.protocol.ProtocolResponseMapper;
-import dev.tachyonmcp.protocol.api.annotations.InternalApi;
-import dev.tachyonmcp.protocol.api.server.domain.ProgressToken;
-import dev.tachyonmcp.protocol.api.server.domain.Task;
-import dev.tachyonmcp.protocol.api.server.domain.TaskResult;
-import dev.tachyonmcp.protocol.api.server.domain.TextContent;
-import dev.tachyonmcp.protocol.api.server.features.tasks.*;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.TasksConfig;
+import dev.tachyonmcp.server.domain.ProgressToken;
 import dev.tachyonmcp.server.domain.ServerErrors;
+import dev.tachyonmcp.server.domain.Task;
+import dev.tachyonmcp.server.domain.TaskResult;
+import dev.tachyonmcp.server.domain.TextContent;
 import dev.tachyonmcp.server.features.AbstractRegistry;
 import dev.tachyonmcp.server.features.ListRequests;
 import dev.tachyonmcp.server.internal.AbstractJanitor;

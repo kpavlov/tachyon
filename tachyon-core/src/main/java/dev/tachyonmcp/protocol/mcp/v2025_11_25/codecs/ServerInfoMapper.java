@@ -1,10 +1,10 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
-import dev.tachyonmcp.protocol.api.server.config.ServerIdentity;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Icon;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Implementation;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ServerCapabilities;
+import dev.tachyonmcp.server.config.ServerIdentity;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -29,7 +29,7 @@ class ServerInfoMapper {
         return builder.build();
     }
 
-    private static Icon toIcon(dev.tachyonmcp.protocol.api.server.domain.Icon icon) {
+    private static Icon toIcon(dev.tachyonmcp.server.domain.Icon icon) {
         return Icon.builder()
                 .src(icon.src())
                 .mimeType(icon.mimeType())

@@ -3,7 +3,7 @@ package dev.tachyonmcp.e2e;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
-import dev.tachyonmcp.protocol.api.server.domain.TextResourceContents;
+import dev.tachyonmcp.server.domain.TextResourceContents;
 import org.junit.jupiter.api.Test;
 
 class ResourceTemplateTest extends AbstractStatelessMcpE2eTest {

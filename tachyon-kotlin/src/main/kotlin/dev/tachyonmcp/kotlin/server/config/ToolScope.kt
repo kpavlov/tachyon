@@ -2,9 +2,9 @@
 package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.kotlin.server.TachyonDsl
-import dev.tachyonmcp.protocol.api.runtime.InteractionContext
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolRequest
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult
+import dev.tachyonmcp.runtime.InteractionContext
+import dev.tachyonmcp.server.features.tools.ToolRequest
+import dev.tachyonmcp.server.features.tools.ToolResult
 
 @TachyonDsl
 public class ToolScope

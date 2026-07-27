@@ -4,7 +4,6 @@ package dev.tachyonmcp.server.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import dev.tachyonmcp.protocol.api.server.config.Mode;
 import dev.tachyonmcp.server.features.Pagination;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

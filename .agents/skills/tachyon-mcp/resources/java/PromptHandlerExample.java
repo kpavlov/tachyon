@@ -2,12 +2,12 @@
  * Copyright (c) 2026 Konstantin Pavlov and contributors.
  */
 
-import dev.tachyonmcp.protocol.api.server.domain.PromptArgument;
-import dev.tachyonmcp.protocol.api.server.domain.PromptMessage;
-import dev.tachyonmcp.protocol.api.server.features.prompts.AsyncPromptHandler;
-import dev.tachyonmcp.protocol.api.server.features.prompts.PromptDescriptor;
-import dev.tachyonmcp.protocol.api.server.features.prompts.PromptHandler;
-import dev.tachyonmcp.protocol.api.server.features.prompts.PromptResult;
+import dev.tachyonmcp.server.domain.PromptArgument;
+import dev.tachyonmcp.server.domain.PromptMessage;
+import dev.tachyonmcp.server.features.prompts.AsyncPromptHandler;
+import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.server.features.prompts.PromptHandler;
+import dev.tachyonmcp.server.features.prompts.PromptResult;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 

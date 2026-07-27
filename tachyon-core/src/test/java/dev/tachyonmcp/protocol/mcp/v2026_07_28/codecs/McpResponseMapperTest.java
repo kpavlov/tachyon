@@ -3,7 +3,7 @@ package dev.tachyonmcp.protocol.mcp.v2026_07_28.codecs;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.api.server.domain.ServerError;
+import dev.tachyonmcp.server.domain.ServerError;
 import org.junit.jupiter.api.Test;
 
 class McpResponseMapperTest {

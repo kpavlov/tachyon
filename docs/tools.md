@@ -7,8 +7,8 @@ Tools are the primary way clients invoke server-side logic. Tachyon validates in
 ### Lambda (simple)
 
 ```java
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolHandler;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 
 .withTools(tools ->tools.
 
@@ -41,11 +41,11 @@ class only when the handler needs instance state or shared setup. Then extend
 `AbstractToolHandler` supplies the synchronous request override.)
 
 ```java
-import dev.tachyonmcp.protocol.api.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolRequest;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
-import dev.tachyonmcp.protocol.api.runtime.InteractionContext;
+import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolRequest;
+import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.runtime.InteractionContext;
 
 class WeatherTool extends AbstractToolHandler {
     private static final String SCHEMA = """
@@ -78,7 +78,7 @@ lambda via `ToolHandler.ofAsync`, or override `handleAsync(ctx, request)` on
 `AbstractToolHandler`. Async handlers stay async — they are not funneled through the blocking path.
 
 ```java
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
 
 .withTools(tools ->tools.
 

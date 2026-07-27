@@ -1,8 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.features.tasks;
 
-import dev.tachyonmcp.protocol.api.annotations.InternalApi;
-import dev.tachyonmcp.protocol.api.server.features.tasks.TaskIdGenerator;
+import dev.tachyonmcp.annotations.InternalApi;
 import java.util.Map;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;

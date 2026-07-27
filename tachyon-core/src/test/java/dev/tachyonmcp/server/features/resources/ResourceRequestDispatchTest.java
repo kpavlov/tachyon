@@ -5,12 +5,10 @@ import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static dev.tachyonmcp.test.VirtualThreads.runInVirtualThread;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.api.server.domain.TextResourceContents;
-import dev.tachyonmcp.protocol.api.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.protocol.api.server.features.resources.ResourceRequest;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ReadResourceRequestParams;
 import dev.tachyonmcp.server.RpcMethodHandler;
 import dev.tachyonmcp.server.config.ResourcesConfig;
+import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.session.DefaultDispatchContext;
 import java.util.HashMap;
 import java.util.Map;

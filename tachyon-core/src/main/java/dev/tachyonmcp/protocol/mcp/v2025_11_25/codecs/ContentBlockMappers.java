@@ -1,10 +1,10 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
-import dev.tachyonmcp.protocol.api.server.domain.*;
-import dev.tachyonmcp.protocol.api.server.domain.ImageContent;
-import dev.tachyonmcp.protocol.api.server.domain.TextContent;
-import dev.tachyonmcp.protocol.api.server.domain.TextResourceContents;
+import dev.tachyonmcp.server.domain.*;
+import dev.tachyonmcp.server.domain.ImageContent;
+import dev.tachyonmcp.server.domain.TextContent;
+import dev.tachyonmcp.server.domain.TextResourceContents;
 import dev.tachyonmcp.server.json.JsonUtils;
 import java.util.List;
 import org.jspecify.annotations.Nullable;

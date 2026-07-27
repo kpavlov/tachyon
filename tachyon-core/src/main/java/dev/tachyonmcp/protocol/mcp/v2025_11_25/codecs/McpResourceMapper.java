@@ -1,11 +1,11 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs;
 
-import dev.tachyonmcp.protocol.api.server.domain.ResourceContents;
-import dev.tachyonmcp.protocol.api.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.protocol.api.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Resource;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ResourceTemplate;
+import dev.tachyonmcp.server.domain.ResourceContents;
+import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
+import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
 
 final class McpResourceMapper {
 

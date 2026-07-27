@@ -4,12 +4,12 @@ package dev.tachyonmcp.transport.netty;
 import static dev.tachyonmcp.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.api.json.JsonSchemaValidator;
-import dev.tachyonmcp.protocol.api.server.domain.RequestId;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolHandler;
-import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.McpDispatcher;
+import dev.tachyonmcp.server.domain.RequestId;
+import dev.tachyonmcp.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.server.features.tools.ToolHandler;
+import dev.tachyonmcp.server.features.tools.ToolResult;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;

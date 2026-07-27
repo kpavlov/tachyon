@@ -1,24 +1,23 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.features.resources;
 
-import dev.tachyonmcp.protocol.api.annotations.InternalApi;
-import dev.tachyonmcp.protocol.api.server.config.Mode;
-import dev.tachyonmcp.protocol.api.server.domain.InvalidArgumentException;
-import dev.tachyonmcp.protocol.api.server.domain.ResourceContents;
-import dev.tachyonmcp.protocol.api.server.domain.ServerError;
-import dev.tachyonmcp.protocol.api.server.domain.UriTemplateValue;
-import dev.tachyonmcp.protocol.api.server.features.HandlerFutures;
-import dev.tachyonmcp.protocol.api.server.features.PaginatedResult;
-import dev.tachyonmcp.protocol.api.server.features.resources.*;
+import dev.tachyonmcp.annotations.InternalApi;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ReadResourceRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.SubscribeRequestParams;
 import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.UnsubscribeRequestParams;
 import dev.tachyonmcp.server.RpcMethodHandler;
+import dev.tachyonmcp.server.config.Mode;
 import dev.tachyonmcp.server.config.ResourcesConfig;
+import dev.tachyonmcp.server.domain.InvalidArgumentException;
+import dev.tachyonmcp.server.domain.ResourceContents;
+import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.ServerErrors;
+import dev.tachyonmcp.server.domain.UriTemplateValue;
 import dev.tachyonmcp.server.features.ChangeSupport;
+import dev.tachyonmcp.server.features.HandlerFutures;
 import dev.tachyonmcp.server.features.ListRequests;
+import dev.tachyonmcp.server.features.PaginatedResult;
 import dev.tachyonmcp.server.features.Pagination;
 import dev.tachyonmcp.server.internal.ServerEngine;
 import dev.tachyonmcp.server.json.JsonUtils;

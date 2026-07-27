@@ -2,8 +2,8 @@
 package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.kotlin.server.TachyonDsl
-import dev.tachyonmcp.protocol.api.server.config.ServerIdentity
-import dev.tachyonmcp.protocol.api.server.domain.Icon
+import dev.tachyonmcp.server.config.ServerIdentity
+import dev.tachyonmcp.server.domain.Icon
 
 @TachyonDsl
 public class ServerInfoScope

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server
 
-import dev.tachyonmcp.protocol.api.runtime.InteractionContext
+import dev.tachyonmcp.runtime.InteractionContext
 import dev.tachyonmcp.server.TachyonServer
 import dev.tachyonmcp.server.internal.ServerEngine
 import dev.tachyonmcp.server.session.DefaultDispatchContext

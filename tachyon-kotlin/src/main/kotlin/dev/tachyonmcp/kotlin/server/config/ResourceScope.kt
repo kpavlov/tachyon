@@ -4,11 +4,11 @@ package dev.tachyonmcp.kotlin.server.config
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.domain.BlobResourceContentsBuilder
 import dev.tachyonmcp.kotlin.server.domain.TextResourceContentsBuilder
-import dev.tachyonmcp.protocol.api.runtime.InteractionContext
-import dev.tachyonmcp.protocol.api.server.domain.BlobResourceContents
-import dev.tachyonmcp.protocol.api.server.domain.TextResourceContents
-import dev.tachyonmcp.protocol.api.server.domain.UriTemplateValue
-import dev.tachyonmcp.protocol.api.server.features.resources.ResourceRequest
+import dev.tachyonmcp.runtime.InteractionContext
+import dev.tachyonmcp.server.domain.BlobResourceContents
+import dev.tachyonmcp.server.domain.TextResourceContents
+import dev.tachyonmcp.server.domain.UriTemplateValue
+import dev.tachyonmcp.server.features.resources.ResourceRequest
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract

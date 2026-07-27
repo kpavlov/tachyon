@@ -6,7 +6,7 @@
 
 package dev.tachyonmcp.kotlin.server.domain
 
-import dev.tachyonmcp.protocol.api.server.domain.Icon
+import dev.tachyonmcp.server.domain.Icon
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract

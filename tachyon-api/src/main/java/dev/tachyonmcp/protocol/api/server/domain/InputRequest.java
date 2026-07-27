@@ -1,5 +1,0 @@
-/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
-package dev.tachyonmcp.protocol.api.server.domain;
-
-/** A request for additional user input during a tool call or prompt get. */
-public sealed interface InputRequest permits FormInputRequest, UrlInputRequest, RpcMethodRequest {}

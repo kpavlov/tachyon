@@ -1,7 +1,6 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.domain;
 
-import dev.tachyonmcp.protocol.api.server.domain.InvalidArgumentException;
 import java.util.Map;
 
 /**

@@ -1,8 +1,8 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.session;
 
-import dev.tachyonmcp.protocol.api.annotations.InternalApi;
-import dev.tachyonmcp.protocol.api.server.domain.RequestId;
+import dev.tachyonmcp.annotations.InternalApi;
+import dev.tachyonmcp.server.domain.RequestId;
 import org.jspecify.annotations.Nullable;
 
 /** A recorded session event — request, response, notification, or cancellation. */
