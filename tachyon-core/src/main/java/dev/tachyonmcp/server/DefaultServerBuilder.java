@@ -2,6 +2,7 @@
 package dev.tachyonmcp.server;
 
 import dev.tachyonmcp.server.config.CapabilitiesConfig;
+import dev.tachyonmcp.server.config.JsonConfig;
 import dev.tachyonmcp.server.config.MonitoringConfig;
 import dev.tachyonmcp.server.config.NetworkConfig;
 import dev.tachyonmcp.server.config.RuntimeConfig;
@@ -13,15 +14,12 @@ import dev.tachyonmcp.server.features.completions.Completions;
 import dev.tachyonmcp.server.features.prompts.Prompts;
 import dev.tachyonmcp.server.features.resources.Resources;
 import dev.tachyonmcp.server.features.tools.Tools;
-import dev.tachyonmcp.server.json.Jackson3JsonFactory;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
-import dev.tachyonmcp.server.json.JsonConfig;
-import dev.tachyonmcp.server.json.JsonDocumentFactory;
-import dev.tachyonmcp.server.json.JsonSchemaFactory;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
 import dev.tachyonmcp.server.json.PayloadDeserializer;
 import dev.tachyonmcp.server.json.PayloadSerializer;
+import dev.tachyonmcp.server.json.spi.JsonSchemaFactory;
 import dev.tachyonmcp.server.session.InMemorySessionEventStore;
 import dev.tachyonmcp.server.session.InMemorySessionStore;
 import io.netty.channel.ChannelPipeline;
@@ -53,8 +51,7 @@ final class DefaultServerBuilder implements ServerBuilder {
     private JsonSchemaValidator outputSchemaValidator = new NetworkntJsonSchemaValidator();
     private PayloadSerializer payloadSerializer = new JacksonPayloadSerde();
     private PayloadDeserializer payloadDeserializer = new JacksonPayloadSerde();
-    private JsonDocumentFactory<String> documentFactory = Jackson3JsonFactory.INSTANCE;
-    private JsonSchemaFactory<String> schemaFactory = Jackson3JsonFactory.INSTANCE;
+    private @Nullable JsonSchemaFactory<String> schemaFactory;
 
     @Nullable
     private Consumer<ChannelPipeline> pipelineCustomizer;
@@ -139,9 +136,6 @@ final class DefaultServerBuilder implements ServerBuilder {
         }
         if (config.outputValidator() != null) {
             outputSchemaValidator = config.outputValidator();
-        }
-        if (config.documentFactory() != null) {
-            documentFactory = config.documentFactory();
         }
         if (config.schemaFactory() != null) {
             schemaFactory = config.schemaFactory();

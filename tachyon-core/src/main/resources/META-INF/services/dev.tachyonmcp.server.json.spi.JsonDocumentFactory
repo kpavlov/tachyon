@@ -1,0 +1,3 @@
+dev.tachyonmcp.server.json.Jackson3JsonFactory
+dev.tachyonmcp.server.json.JacksonNodeJsonFactory
+dev.tachyonmcp.server.json.JacksonObjectJsonFactory

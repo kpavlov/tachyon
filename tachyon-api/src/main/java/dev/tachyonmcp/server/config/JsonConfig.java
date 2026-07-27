@@ -1,17 +1,21 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
-package dev.tachyonmcp.server.json;
+package dev.tachyonmcp.server.config;
 
+import dev.tachyonmcp.server.json.JsonSchemaValidator;
+import dev.tachyonmcp.server.json.PayloadDeserializer;
+import dev.tachyonmcp.server.json.PayloadSerde;
+import dev.tachyonmcp.server.json.PayloadSerializer;
+import dev.tachyonmcp.server.json.spi.JsonSchemaFactory;
 import org.jspecify.annotations.Nullable;
 
 /**
  * JSON payload configuration for the server: serializer, deserializer, schema validators, and
- * document/schema parsing factories.
+ * schema parsing factory.
  *
  * @param serializer      payload serializer, or {@code null} to keep the server default
  * @param deserializer    payload deserializer, or {@code null} to keep the server default
  * @param inputValidator  input schema validator, or {@code null} to keep the server default
  * @param outputValidator output schema validator, or {@code null} to keep the server default
- * @param documentFactory parses/validates encoded JSON documents, or {@code null} to keep the server default
  * @param schemaFactory   parses/validates encoded JSON schemas, or {@code null} to keep the server default
  * @author Konstantin Pavlov
  */
@@ -20,7 +24,6 @@ public record JsonConfig(
         @Nullable PayloadDeserializer deserializer,
         @Nullable JsonSchemaValidator inputValidator,
         @Nullable JsonSchemaValidator outputValidator,
-        @Nullable JsonDocumentFactory<String> documentFactory,
         @Nullable JsonSchemaFactory<String> schemaFactory) {
 
     public static Builder builder() {
@@ -35,7 +38,6 @@ public record JsonConfig(
         private @Nullable PayloadDeserializer deserializer;
         private @Nullable JsonSchemaValidator inputValidator;
         private @Nullable JsonSchemaValidator outputValidator;
-        private @Nullable JsonDocumentFactory<String> documentFactory;
         private @Nullable JsonSchemaFactory<String> schemaFactory;
 
         private Builder() {}
@@ -71,19 +73,13 @@ public record JsonConfig(
             return this;
         }
 
-        public Builder documentFactory(@Nullable JsonDocumentFactory<String> documentFactory) {
-            this.documentFactory = documentFactory;
-            return this;
-        }
-
         public Builder schemaFactory(@Nullable JsonSchemaFactory<String> schemaFactory) {
             this.schemaFactory = schemaFactory;
             return this;
         }
 
         public JsonConfig build() {
-            return new JsonConfig(
-                    serializer, deserializer, inputValidator, outputValidator, documentFactory, schemaFactory);
+            return new JsonConfig(serializer, deserializer, inputValidator, outputValidator, schemaFactory);
         }
     }
 }

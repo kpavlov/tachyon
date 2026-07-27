@@ -2,6 +2,7 @@
 package dev.tachyonmcp.server;
 
 import dev.tachyonmcp.server.config.CapabilitiesConfig;
+import dev.tachyonmcp.server.config.JsonConfig;
 import dev.tachyonmcp.server.config.MonitoringConfig;
 import dev.tachyonmcp.server.config.NetworkConfig;
 import dev.tachyonmcp.server.config.RuntimeConfig;
@@ -13,7 +14,6 @@ import dev.tachyonmcp.server.features.completions.Completions;
 import dev.tachyonmcp.server.features.prompts.Prompts;
 import dev.tachyonmcp.server.features.resources.Resources;
 import dev.tachyonmcp.server.features.tools.Tools;
-import dev.tachyonmcp.server.json.JsonConfig;
 import io.netty.channel.ChannelPipeline;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;

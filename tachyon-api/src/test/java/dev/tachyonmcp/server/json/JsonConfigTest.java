@@ -3,6 +3,7 @@ package dev.tachyonmcp.server.json;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.server.config.JsonConfig;
 import java.lang.reflect.Type;
 import java.util.List;
 import org.junit.jupiter.api.Test;

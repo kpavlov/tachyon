@@ -2,6 +2,7 @@
 
 * [Quick Start](quickstart.md)
 * [Configuration](configuration.md)
+* [JSON & JSON Schema](json.md)
 * [Tools.md](tools.md)
 * [Resources](resources.md)
 * [Tasks](tasks.md)

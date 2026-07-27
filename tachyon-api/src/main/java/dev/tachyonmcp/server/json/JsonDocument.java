@@ -45,4 +45,32 @@ public interface JsonDocument {
     static JsonDocument of(String json) {
         return new DefaultJsonDocument(JsonDocuments.requireContent(json));
     }
+
+    /**
+     * Creates a document from encoded JSON, validating it via the {@link
+     * dev.tachyonmcp.server.json.spi.JsonDocumentFactory} discovered through {@link
+     * java.util.ServiceLoader} for {@link String}.
+     *
+     * @param json the JSON string
+     * @return the parsed document
+     * @throws IllegalArgumentException if {@code json} is not valid JSON
+     * @throws IllegalStateException if no {@code JsonDocumentFactory<String>} is registered
+     */
+    static JsonDocument parse(String json) {
+        return from(json, String.class);
+    }
+
+    /**
+     * Creates a document from an already-parsed representation, via the {@link
+     * dev.tachyonmcp.server.json.spi.JsonDocumentFactory} discovered through {@link
+     * java.util.ServiceLoader} for {@code type}.
+     *
+     * @param source the source representation, e.g. a Jackson {@code JsonNode}
+     * @param type   the source representation's type
+     * @return the parsed document
+     * @throws IllegalStateException if no {@code JsonDocumentFactory<T>} is registered for {@code type}
+     */
+    static <T> JsonDocument from(T source, Class<T> type) {
+        return JsonDocuments.from(source, type);
+    }
 }

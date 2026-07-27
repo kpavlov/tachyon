@@ -17,7 +17,7 @@ import dev.tachyonmcp.server.features.completions.CompletionResult
 import dev.tachyonmcp.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.kotlin.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.server.TachyonServer
-import dev.tachyonmcp.server.json.JsonSchemaUtils
+import dev.tachyonmcp.server.json.JsonSchema
 import org.slf4j.LoggerFactory
 import tools.jackson.databind.ObjectMapper
 import java.net.http.HttpClient
@@ -155,7 +155,7 @@ private fun rewriteForecastPromptDescriptor(): PromptDescriptor =
             description = "plain, concise, or pirate"
             required = true
         }
-        inputSchema = JsonSchemaUtils.parseSchema(NarrationStyle.inputSchema())
+        inputSchema = JsonSchema.parse(NarrationStyle.inputSchema())
     }
 
 private fun rewriteForecast(

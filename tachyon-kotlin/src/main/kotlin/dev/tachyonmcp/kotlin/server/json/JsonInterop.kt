@@ -1,4 +1,4 @@
-/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
+// Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.json
 
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
@@ -86,6 +86,7 @@ internal fun JsonObject?.toJacksonNodeOrNull(): JsonNode? = this?.toJacksonNode(
 internal fun Map<String, JsonObject>.toJacksonNodeMap(): Map<String, JsonNode> =
     mapValues { (_, v) -> v.toJacksonNode() }
 
-internal fun JsonObject.toJsonSchema(): JsonSchema = JsonSchema.of(toString())
+internal fun JsonObject.toJsonSchema(): JsonSchema =
+    KotlinxJsonObjectFactory.INSTANCE.toJsonSchema(this)
 
 internal fun JsonObject?.toJsonSchemaOrNull(): JsonSchema? = this?.toJsonSchema()
