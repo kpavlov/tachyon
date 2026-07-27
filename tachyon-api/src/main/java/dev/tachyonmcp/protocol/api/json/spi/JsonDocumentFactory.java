@@ -10,7 +10,7 @@ import dev.tachyonmcp.protocol.api.json.JsonDocument;
  * factory implementation parses {@code source} and rejects malformed JSON.
  *
  * <p>Discoverable via {@link java.util.ServiceLoader}: implementations register themselves in
- * {@code META-INF/services/dev.tachyonmcp.protocol.api.spi.json.JsonDocumentFactory}, self-reporting the
+ * {@code META-INF/services/dev.tachyonmcp.protocol.api.json.spi.JsonDocumentFactory}, self-reporting the
  * source type they accept through {@link #sourceType()} so {@link JsonDocument#from(Object, Class)}
  * can resolve the right provider for a given type.
  *

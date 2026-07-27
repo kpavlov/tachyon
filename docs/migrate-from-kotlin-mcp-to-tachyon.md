@@ -80,7 +80,7 @@ The identity block is easy to under-fill. `info { }` supports `title`, `websiteU
 `icons` — port all of them, not just `name`/`version`:
 
 ```kotlin
-import dev.tachyonmcp.protocol.api.domain.server.Icon
+import dev.tachyonmcp.protocol.api.server.domain.Icon
 import java.util.Base64
 
 val logoIcon =

@@ -45,8 +45,8 @@ Opt into sessions for SSE resumability, `Last-Event-ID` replay, and TTL cleanup.
 
     ```java
     import dev.tachyonmcp.server.TachyonServer;
-    import dev.tachyonmcp.protocol.api.tools.features.server.ToolHandler;
-    import dev.tachyonmcp.protocol.api.tools.features.server.ToolResult;
+    import dev.tachyonmcp.protocol.api.server.features.tools.ToolHandler;
+    import dev.tachyonmcp.protocol.api.server.features.tools.ToolResult;
 
     public class WeatherMcpServer {
         public static void main(String... args) {
