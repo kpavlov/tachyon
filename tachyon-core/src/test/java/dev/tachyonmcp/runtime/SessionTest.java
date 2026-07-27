@@ -39,7 +39,7 @@ class SessionTest {
         assertThat(session.close()).isTrue();
         assertThat(session.state()).isEqualTo(SessionState.CLOSED);
         // E12 fix: connection must become NOOP after close to prevent write-after-remove
-        assertThat(session.connection()).isSameAs(SseConnection.NOOP);
+        assertThat(session.connection()).isSameAs(SseConnection.noop());
         assertThat(session.connection().isWritable()).isFalse();
     }
 
@@ -49,7 +49,7 @@ class SessionTest {
         assertThat(session.state()).isEqualTo(SessionState.INITIALIZING);
         assertThat(session.close()).isTrue();
         assertThat(session.state()).isEqualTo(SessionState.CLOSED);
-        assertThat(session.connection()).isSameAs(SseConnection.NOOP);
+        assertThat(session.connection()).isSameAs(SseConnection.noop());
     }
 
     @Test
@@ -57,7 +57,7 @@ class SessionTest {
         session.activate();
         session.close();
         session.close(); // second close must not throw and connection stays NOOP
-        assertThat(session.connection()).isSameAs(SseConnection.NOOP);
+        assertThat(session.connection()).isSameAs(SseConnection.noop());
         assertThat(session.state()).isEqualTo(SessionState.CLOSED);
     }
 
@@ -147,7 +147,7 @@ class SessionTest {
         var newConn = new TestConnection();
         session.connection(newConn);
         assertThat(newConn.closed).isTrue();
-        assertThat(session.connection()).isSameAs(SseConnection.NOOP);
+        assertThat(session.connection()).isSameAs(SseConnection.noop());
     }
 
     private static class TestConnection implements SseConnection {

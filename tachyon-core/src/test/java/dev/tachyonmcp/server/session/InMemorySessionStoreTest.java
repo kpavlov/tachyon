@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 class InMemorySessionStoreTest {
 
     private static Session session(String id) {
-        return new Session(id, SseConnection.NOOP);
+        return new Session(id, SseConnection.noop());
     }
 
     @Test

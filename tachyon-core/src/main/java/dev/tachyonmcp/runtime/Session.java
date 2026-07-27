@@ -97,23 +97,23 @@ public class Session {
         }
         var previous = this.connection.getAndSet(connection);
         this.lastActivityNanos = System.nanoTime();
-        if (previous != connection && previous != SseConnection.NOOP) {
+        if (previous != connection && previous != SseConnection.noop()) {
             previous.close();
         }
         // A concurrent close() may have transitioned to CLOSED after the guard above; if so, detach
         // and close the connection we just attached so a CLOSED session never holds a live channel.
-        if (state.get() == SessionState.CLOSED && this.connection.compareAndSet(connection, SseConnection.NOOP)) {
+        if (state.get() == SessionState.CLOSED && this.connection.compareAndSet(connection, SseConnection.noop())) {
             connection.close();
         }
     }
 
     /**
      * Detaches {@code expected} if it is still the current connection, resetting to
-     * {@link SseConnection#NOOP}. Returns {@code true} if it was detached. Used by a channel's
+     * {@link SseConnection#noop()}. Returns {@code true} if it was detached. Used by a channel's
      * close listener so a superseded connection's close does not wipe a newer one.
      */
     public boolean clearConnection(SseConnection expected) {
-        return connection.compareAndSet(expected, SseConnection.NOOP);
+        return connection.compareAndSet(expected, SseConnection.noop());
     }
 
     /** Returns the current backpressure state. */
@@ -164,7 +164,7 @@ public class Session {
      */
     public boolean send(SseEvent event) {
         var conn = connection.get();
-        if (conn == SseConnection.NOOP) {
+        if (conn == SseConnection.noop()) {
             return false;
         }
         if (shouldThrottle()) {
@@ -180,7 +180,7 @@ public class Session {
                 || state.compareAndSet(SessionState.DRAINING, SessionState.CLOSED)
                 || state.compareAndSet(SessionState.INITIALIZING, SessionState.CLOSED);
         if (closed) {
-            var conn = connection.getAndSet(SseConnection.NOOP);
+            var conn = connection.getAndSet(SseConnection.noop());
             conn.close();
         }
         return closed;

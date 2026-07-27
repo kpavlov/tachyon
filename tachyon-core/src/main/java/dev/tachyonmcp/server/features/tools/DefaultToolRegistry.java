@@ -480,7 +480,7 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
         }
 
         private void validateOutput(@Nullable JsonSchema schema, ToolResult result) {
-            if (schema == null || outputValidator == JsonSchemaValidator.NOOP) return;
+            if (schema == null || outputValidator == JsonSchemaValidator.noop()) return;
             var inner = result instanceof ToolResult.WithMeta wm ? wm.inner() : result;
             if (!(inner instanceof ToolResult.Success s)) return;
             var contentNode = JsonUtils.valueToObjectNode(s.structuredValue(), payloadSerializer);

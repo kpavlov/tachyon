@@ -8,7 +8,9 @@ import dev.tachyonmcp.server.json.spi.JsonSchemaFactory;
  * Jackson 3-backed {@link JsonDocumentFactory} and {@link JsonSchemaFactory} for {@link String}
  * sources: parses the source and rejects malformed JSON before wrapping it.
  *
- * <p>Registered via {@link java.util.ServiceLoader} in {@code META-INF/services}. For
+ * <p>Registered via {@link java.util.ServiceLoader} in {@code META-INF/services} (discovered
+ * through its public no-arg constructor, not {@link #INSTANCE} — the module isn't an explicit
+ * module, so {@code ServiceLoader} never looks for a {@code provider()} factory method). For
  * already-parsed Jackson {@code JsonNode} trees or tachyon's provider-neutral {@link JsonObject},
  * see {@link JacksonNodeJsonFactory} and {@link JacksonObjectJsonFactory} — a single class can't
  * implement {@code JsonSchemaFactory<String>} and {@code JsonSchemaFactory<JsonNode>} at once, since
@@ -21,13 +23,6 @@ public final class Jackson3JsonFactory implements JsonDocumentFactory<String>, J
     public static final Jackson3JsonFactory INSTANCE = new Jackson3JsonFactory();
 
     public Jackson3JsonFactory() {}
-
-    /**
-     * Provider factory used by {@link java.util.ServiceLoader} to obtain the singleton.
-     */
-    public static Jackson3JsonFactory provider() {
-        return INSTANCE;
-    }
 
     @Override
     public Class<String> sourceType() {

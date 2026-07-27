@@ -11,17 +11,26 @@ import java.util.List;
 @FunctionalInterface
 public interface JsonSchemaValidator {
 
-    /**
-     * The no-op validator singleton that accepts all input. Passing this instance disables
-     * validation entirely, including the parsing work needed to prepare data for validation.
-     */
-    JsonSchemaValidator NOOP = (schema, arguments) -> List.of();
-
     /** Validates the given JSON document against the schema and returns any errors. */
     List<SchemaValidationError> validate(JsonSchema schema, JsonDocument document);
 
-    /** Returns {@link #NOOP}, the no-op validator that accepts all input. */
+    /**
+     * Returns the no-op validator singleton that accepts all input. Passing this instance disables
+     * validation entirely, including the parsing work needed to prepare data for validation.
+     */
     static JsonSchemaValidator noop() {
-        return NOOP;
+        return NoopJsonSchemaValidator.INSTANCE;
+    }
+}
+
+final class NoopJsonSchemaValidator implements JsonSchemaValidator {
+
+    static final JsonSchemaValidator INSTANCE = new NoopJsonSchemaValidator();
+
+    private NoopJsonSchemaValidator() {}
+
+    @Override
+    public List<SchemaValidationError> validate(JsonSchema schema, JsonDocument document) {
+        return List.of();
     }
 }

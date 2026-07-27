@@ -29,7 +29,7 @@ public class SessionManager implements AutoCloseable {
 
     /** Creates a session with no initial connection. */
     public Session createSession(String sessionId) {
-        return createSession(sessionId, SseConnection.NOOP);
+        return createSession(sessionId, SseConnection.noop());
     }
 
     /** Creates a session with the given SSE connection. */

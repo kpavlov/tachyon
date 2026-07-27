@@ -41,7 +41,13 @@ final class JsonDocuments {
         private static Map<Class<?>, JsonDocumentFactory<?>> discover() {
             var map = new HashMap<Class<?>, JsonDocumentFactory<?>>();
             for (JsonDocumentFactory<?> factory : ServiceLoader.load(JsonDocumentFactory.class)) {
-                map.put(factory.sourceType(), factory);
+                var existing = map.putIfAbsent(factory.sourceType(), factory);
+                if (existing != null) {
+                    throw new IllegalStateException("Duplicate JsonDocumentFactory<"
+                            + factory.sourceType().getName() + "> implementations found: "
+                            + existing.getClass().getName() + " and "
+                            + factory.getClass().getName());
+                }
             }
             return Map.copyOf(map);
         }

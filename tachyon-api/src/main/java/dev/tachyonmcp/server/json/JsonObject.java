@@ -75,7 +75,9 @@ public interface JsonObject extends JsonDocument {
      * Returns the named exact {@code int}.
      *
      * @param name the property name
-     * @return the int value, or empty if missing, null, or non-integral
+     * @return the int value, or empty if missing or null
+     * @throws IllegalArgumentException if the value is not a number or is not exactly representable
+     *     as an {@code int}
      */
     OptionalInt intOpt(String name);
 
@@ -83,7 +85,9 @@ public interface JsonObject extends JsonDocument {
      * Returns the named exact {@code long}.
      *
      * @param name the property name
-     * @return the long value, or empty if missing, null, or non-integral
+     * @return the long value, or empty if missing or null
+     * @throws IllegalArgumentException if the value is not a number or is not exactly representable
+     *     as a {@code long}
      */
     OptionalLong longOpt(String name);
 

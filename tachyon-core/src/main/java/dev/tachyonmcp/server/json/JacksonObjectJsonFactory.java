@@ -20,13 +20,6 @@ public final class JacksonObjectJsonFactory implements JsonDocumentFactory<Objec
 
     public JacksonObjectJsonFactory() {}
 
-    /**
-     * Provider factory used by {@link java.util.ServiceLoader} to obtain the singleton.
-     */
-    public static JacksonObjectJsonFactory provider() {
-        return INSTANCE;
-    }
-
     @Override
     public Class<ObjectNode> sourceType() {
         return ObjectNode.class;

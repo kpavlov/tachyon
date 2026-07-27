@@ -1,182 +1,156 @@
-# JSON & JSON Schema — Tachyon MCP Server
+# JSON and JSON Schema
 
-Tachyon models JSON with a small, provider-neutral set of types in `dev.tachyonmcp.server.json`
-(`tachyon-api`), so tool schemas, structured content, and payload conversion never force a specific
-JSON library on your code. `JsonSchema extends JsonDocument` — a schema *is* a document, plus the
-schema-specific validation semantics the server applies to it.
+Tachyon lets you define schemas, inspect arguments, and return structured content without binding
+your application to a specific JSON library. Most applications need four types from
+`dev.tachyonmcp.server.json`:
 
-| Type | Purpose |
-|---|---|
-| `JsonDocument` | An encoded JSON value: `json()` returns the string, `unwrap(Class)` recovers a retained provider-specific representation |
-| `JsonSchema` | A `JsonDocument` the server validates as a JSON Schema (2020-12, or the schema's own declared dialect) |
-| `JsonObject` / `JsonArray` | Provider-neutral, typed navigation over a JSON object/array (`stringOpt`, `intValue`, `objectOr`, ...) |
+| Type           | Use it for                             |
+|----------------|----------------------------------------|
+| `JsonSchema`   | Tool input and output schemas          |
+| `JsonDocument` | Encoded JSON values                    |
+| `JsonObject`   | Typed access to JSON object properties |
+| `JsonArray`    | Typed access to JSON array elements    |
 
-## Creating a `JsonDocument` or `JsonSchema`
+## Define a schema
 
-Three ways to get one, in increasing order of safety:
+Use `JsonSchema.of` for schema literals you control:
 
-| Method | Validates? | Use when |
+```java
+var inputSchema = JsonSchema.of("""
+    {
+      "type": "object",
+      "properties": {
+        "city": { "type": "string" },
+        "days": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["city"]
+    }
+    """);
+```
+
+Use `JsonSchema.parse` when the JSON comes from a file, database, or another external source.
+It rejects malformed JSON immediately:
+
+```java
+JsonSchema inputSchema = JsonSchema.parse(userSuppliedSchema);
+```
+
+`JsonDocument` follows the same pattern:
+
+```java
+JsonDocument trusted = JsonDocument.of(jsonLiteral);
+JsonDocument checked = JsonDocument.parse(externalJson);
+```
+
+## Read objects and arrays
+
+Create a provider-neutral object from standard Java collections:
+
+```java
+var user = JsonObject.of(Map.of(
+    "name", "Ada",
+    "age", 32,
+    "roles", List.of("admin", "author")
+));
+
+String name = user.stringValue("name");
+int age = user.intOr("age", 0);
+Optional<JsonObject> address = user.objectOpt("address");
+List<String> roles = user.arrayValue("roles").valuesAs(String.class);
+```
+
+Choose an accessor based on how your application handles missing or JSON `null` values:
+
+| Pattern | Behavior | Example |
 |---|---|---|
-| `JsonSchema.of(String)` / `JsonDocument.of(String)` | No — wraps the string as-is | You already trust the source (e.g. a literal in your own code) |
-| `JsonSchema.parse(String)` / `JsonDocument.parse(String)` | Yes — rejects malformed JSON | The string comes from outside your code and might be invalid |
-| `JsonSchema.from(T, Class<T>)` / `JsonDocument.from(T, Class<T>)` | Depends on the source type | You already have a parsed tree (Jackson `JsonNode`, kotlinx `JsonElement`, ...) and don't want to re-serialize it |
+| `*Value(name)` | Returns a required value; throws if missing or `null` | `stringValue("name")` |
+| `*Opt(name)` | Returns an `Optional` or primitive optional | `objectOpt("address")` |
+| `*Or(name, fallback)` | Returns a fallback when missing or `null` | `intOr("age", 0)` |
+
+Accessors never coerce values. Reading a string as an integer, narrowing a fraction to an integer,
+or overflowing the requested numeric type throws `IllegalArgumentException`.
+
+`JsonArray` provides the same access patterns by index:
 
 ```java
-var raw = JsonSchema.of("""{"type":"object"}""");     // no validation
-var parsed = JsonSchema.parse(userSuppliedSchema);      // throws IllegalArgumentException if malformed
+var coordinates = JsonArray.of(List.of(59.437, 24.7536));
+
+double latitude = coordinates.doubleValue(0);
+double longitude = coordinates.doubleValue(1);
 ```
 
-```kotlin
-val raw = JsonSchema.of("""{"type":"object"}""")
-val parsed = JsonSchema.parse(userSuppliedSchema)
-```
+## Reuse an existing JSON tree
 
-`parse` and `from` are backed by a `JsonSchemaFactory`/`JsonDocumentFactory` discovered via
-`ServiceLoader` (see [SPI](#spi-pluggable-jsondocumentschema-factories) below) — they only work when
-a provider for the requested type is on the classpath. `tachyon-core` registers one for `String`
-automatically, so `parse` works out of the box in any real server; `of` never needs one.
-
-## Building from an already-parsed tree
-
-If you already have a Jackson `JsonNode`, tachyon's own `JsonObject`, or (in Kotlin) a kotlinx
-`JsonElement`/`JsonObject`, `from(T, Class<T>)` wraps it **without re-serializing** — the original
-tree is retained and recoverable via `unwrap(Class<T>)`, instead of round-tripping through
-`toString()` and re-parsing.
+If your application already has a Jackson `JsonNode`, wrap it without converting it to a `Map`:
 
 ```java
-JsonNode node = objectMapper.readTree(someSource);
-JsonSchema schema = JsonSchema.from(node, JsonNode.class);
-
-// later, get the original node back without re-parsing:
-JsonNode same = schema.unwrap(JsonNode.class).orElseThrow();
+JsonNode node = objectMapper.readTree(source);
+JsonDocument document = JsonDocument.from(node, JsonNode.class);
 ```
 
-```kotlin
-val element: JsonElement = Json.parseToJsonElement(someSource)
-val schema = JsonSchema.from(element, JsonElement::class.java)
-
-// later:
-val same = schema.unwrap(JsonElement::class.java).get()
-```
-
-Note the second argument is the **type you're asserting**, not `source.javaClass` / `source::class`
-— pass the declared contract type (`JsonNode.class`, not `ObjectNode.class`) so the lookup matches
-what the provider registered.
-
-## Built-in providers
-
-| Source type | Module | Registered by |
-|---|---|---|
-| `String` | `tachyon-core` | `Jackson3JsonFactory` |
-| Jackson `JsonNode` | `tachyon-core` | `JacksonNodeJsonFactory` |
-| Jackson `ObjectNode` | `tachyon-core` | `JacksonObjectJsonFactory` |
-| kotlinx `JsonElement` | `tachyon-kotlin` | `KotlinxJsonElementFactory` |
-| kotlinx `JsonObject` | `tachyon-kotlin` | `KotlinxJsonObjectFactory` |
-
-`JacksonObjectJsonFactory`'s result also implements `JsonObject` itself, reading property values
-directly from the wrapped `ObjectNode` — so `JsonDocument.from(node, ObjectNode.class)` gives you
-typed navigation (`has`, `stringValue`, `objectOpt`, ...) without a `JsonObject.of(Map)` conversion.
-
-All of them retain the source tree for `unwrap(Class)` rather than re-serializing it.
-
-## `JsonObject` / `JsonArray`
-
-Provider-neutral, typed navigation — no need to know whether the underlying value came from
-Jackson, kotlinx.serialization, or a plain `Map`:
+You can recover a retained provider value when you need library-specific operations:
 
 ```java
-var user = JsonObject.of(Map.of("name", "Ada", "age", 32));
-user.stringValue("name");          // "Ada" — throws if missing/null
-user.intOr("age", 0);              // 32, or 0 if missing/null
-user.objectOpt("address");         // Optional<JsonObject>, empty if missing/null
+JsonNode node = document.unwrap(JsonNode.class).orElseThrow();
 ```
 
-Every accessor comes in three shapes: `xOpt(name)` (`Optional`/`OptionalInt`/...), `xValue(name)`
-(throws `IllegalArgumentException` if missing or null), and `xOr(name, fallback)`. Accessing a
-property as the wrong type also throws `IllegalArgumentException` — values are never coerced.
+Pass the type supported by the provider, such as `JsonNode.class`, rather than the source
+implementation class.
 
-## SPI: pluggable `JsonDocument`/`JsonSchema` factories
+## Providers and registration
 
-`tachyon-api` has no JSON-parsing dependency of its own (by design — see
-[docs/architecture/guidance.md](architecture/guidance.md)), so `parse`/`from` resolve to whatever
-`dev.tachyonmcp.server.json.spi.JsonDocumentFactory<T>` / `JsonSchemaFactory<T>` is registered via
-`java.util.ServiceLoader` for the requested `T`. To add support for another source type:
+Tachyon includes providers for common Java and Kotlin JSON types:
 
-```java
-package your.pkg;
+| Source type                                          | Available with   |
+|------------------------------------------------------|------------------|
+| `String`                                             | `tachyon-core`   |
+| Jackson3 `JsonNode` and `ObjectNode`                 | `tachyon-core`   |
+| kotlinx.serialization `JsonElement` and `JsonObject` | `tachyon-kotlin` |
 
-public final class YourTreeJsonFactory
-        implements JsonDocumentFactory<YourTreeType>, JsonSchemaFactory<YourTreeType> {
+`JsonDocument.parse` and `JsonDocument.from` use a `JsonDocumentFactory<T>`.
+`JsonSchema.parse` and `JsonSchema.from` use a `JsonSchemaFactory<T>`. Tachyon discovers both
+interfaces with Java's `ServiceLoader` and matches the requested `Class<T>` to the factory's
+`sourceType()`.
 
-    @Override
-    public Class<YourTreeType> sourceType() {
-        return YourTreeType.class;
-    }
+To support another JSON representation, implement either interface—or both—and register the
+implementation class, one name per line, in the matching service file:
 
-    @Override
-    public JsonDocument toJsonDocument(YourTreeType source) {
-        return new YourTreeJsonDocument(source); // retain `source` for unwrap()
-    }
-
-    @Override
-    public JsonSchema toJsonSchema(YourTreeType source) {
-        return new YourTreeJsonSchema(source);
-    }
-}
+```text
+META-INF/services/dev.tachyonmcp.server.json.spi.JsonDocumentFactory
+META-INF/services/dev.tachyonmcp.server.json.spi.JsonSchemaFactory
 ```
 
-Register it in `META-INF/services/dev.tachyonmcp.server.json.spi.JsonDocumentFactory` and
-`META-INF/services/dev.tachyonmcp.server.json.spi.JsonSchemaFactory` (one fully-qualified class
-name per line — the same class can implement both). The provider class needs a **public no-arg
-constructor** — `ServiceLoader` instantiates it directly, so a private constructor (e.g. a
-classic singleton) fails with `ServiceConfigurationError: Unable to get public no-arg constructor`.
-If you also want a stable singleton for direct (non-SPI) use, keep a `public static provider()`
-factory method returning it (see `Jackson3JsonFactory.INSTANCE`/`.provider()`) — `ServiceLoader`
-will still construct its own instance via the public constructor, so the two aren't the same
-object, but that's harmless for a stateless factory.
+## Configure payload serialization
 
-A single class can implement `JsonSchemaFactory<String>` **or** `JsonSchemaFactory<JsonNode>`, never
-both — Java forbids implementing the same generic interface twice with different type arguments.
-That's why `Jackson3JsonFactory` (String) and `JacksonNodeJsonFactory` (JsonNode) are separate
-classes even though they're both Jackson-backed.
-
-## Overriding the server's default `String` factory
-
-`json { }` / `JsonConfig.Builder` lets you replace the discovered `String`-typed factory:
+Tachyon uses Jackson by default. Supply a `PayloadSerde` when your application needs different
+serialization behavior:
 
 ```java
 var server = TachyonServer.builder()
-    .json(cfg -> cfg.schemaFactory(mySchemaFactory))
+    .json(json -> json.serde(myPayloadSerde))
     .port(8080)
     .build();
 ```
 
-```kotlin
-TachyonServer(port = 8080) {
-    json { schemaFactory = mySchemaFactory } // see JsonConfig.Builder
-}
-```
+You can also configure `PayloadSerializer` and `PayloadDeserializer` separately. A
+`JsonDocument` bypasses payload serialization because it already contains encoded JSON.
 
-## Payload serialization
+## Configure schema validation
 
-`PayloadSerializer`/`PayloadDeserializer` (combined as `PayloadSerde`) convert structured tool
-arguments/results to and from JSON strings — the default is Jackson-backed (`JacksonPayloadSerde`).
-Configure via the same `json { }` scope:
+Tachyon validates tool input and output against their declared schemas. Replace either validator
+when you need custom validation behavior:
 
 ```java
-.json(cfg -> cfg.serde(myPayloadSerde))
+var server = TachyonServer.builder()
+    .json(json -> json
+        .inputSchemaValidator(myInputValidator)
+        .outputSchemaValidator(JsonSchemaValidator.NOOP))
+    .port(8080)
+    .build();
 ```
 
-## Schema validation
+`JsonSchemaValidator.NOOP` disables validation for that direction.
 
-`JsonSchemaValidator` validates a `JsonDocument` against a `JsonSchema` and returns a list of
-`SchemaValidationError`s. The default (`NetworkntJsonSchemaValidator`) validates JSON Schema
-2020-12; `JsonSchemaValidator.NOOP` disables validation entirely (including the parsing work needed
-to prepare data for it):
-
-```java
-.json(cfg -> cfg.inputSchemaValidator(myValidator).outputSchemaValidator(JsonSchemaValidator.NOOP))
-```
-
-See [tools.md](tools.md) for how input/output schemas attach to a `ToolDescriptor`, and
-[configuration.md](configuration.md) for the full `json { }` / `JsonConfig.Builder` option reference.
+Next, see [Tools](tools.md) to attach schemas to tool descriptors or
+[Configuration](configuration.md) for all JSON settings. Kotlin developers can use the equivalent
+DSL described in [Kotlin API](kotlin.md).

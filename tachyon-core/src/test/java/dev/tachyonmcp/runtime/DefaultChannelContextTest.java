@@ -44,7 +44,7 @@ class DefaultChannelContextTest {
         var ctx = new DefaultChannelContext(new FakeProtocol());
         InteractionContext handlerContext = ctx;
 
-        ctx.setSession(new Session("sess-1", SseConnection.NOOP));
+        ctx.setSession(new Session("sess-1", SseConnection.noop()));
 
         assertThat(handlerContext.sessionId()).isEqualTo("sess-1");
     }

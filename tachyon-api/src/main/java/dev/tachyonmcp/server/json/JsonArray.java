@@ -91,8 +91,10 @@ public interface JsonArray extends JsonDocument {
      * Returns the element at {@code index} as an exact {@code int}.
      *
      * @param index the element index
-     * @return the int value, or empty if null or non-integral
+     * @return the int value, or empty if null
      * @throws IndexOutOfBoundsException if the index is out of range
+     * @throws IllegalArgumentException if the value is not a number or is not exactly representable
+     *     as an {@code int}
      */
     OptionalInt intOpt(int index);
 
@@ -100,8 +102,10 @@ public interface JsonArray extends JsonDocument {
      * Returns the element at {@code index} as an exact {@code long}.
      *
      * @param index the element index
-     * @return the long value, or empty if null or non-integral
+     * @return the long value, or empty if null
      * @throws IndexOutOfBoundsException if the index is out of range
+     * @throws IllegalArgumentException if the value is not a number or is not exactly representable
+     *     as a {@code long}
      */
     OptionalLong longOpt(int index);
 

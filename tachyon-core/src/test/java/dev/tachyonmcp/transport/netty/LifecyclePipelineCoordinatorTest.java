@@ -107,7 +107,7 @@ class LifecyclePipelineCoordinatorTest {
 
         // OperationStarted
         channel.pipeline()
-                .fireUserEventTriggered(new InteractionEvent.OperationStarted(new Session("s1", SseConnection.NOOP)));
+                .fireUserEventTriggered(new InteractionEvent.OperationStarted(new Session("s1", SseConnection.noop())));
         ic = channel.attr(INTERACTION_CONTEXT_KEY).get();
         assertThat(ic).isNotNull();
         assertThat(ic.lifecycle()).isEqualTo(Lifecycle.OPERATION);

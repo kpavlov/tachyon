@@ -18,13 +18,6 @@ public final class JacksonNodeJsonFactory implements JsonDocumentFactory<JsonNod
 
     public JacksonNodeJsonFactory() {}
 
-    /**
-     * Provider factory used by {@link java.util.ServiceLoader} to obtain the singleton.
-     */
-    public static JacksonNodeJsonFactory provider() {
-        return INSTANCE;
-    }
-
     @Override
     public Class<JsonNode> sourceType() {
         return JsonNode.class;

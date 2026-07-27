@@ -280,13 +280,22 @@ final class DefaultTachyonServer implements ServerEngine {
 
     @SuppressWarnings("unchecked")
     private static JsonSchemaFactory<String> discoverSchemaFactory() {
-        return ServiceLoader.load(JsonSchemaFactory.class).stream()
-                .map(ServiceLoader.Provider::get)
-                .filter(f -> f.sourceType() == String.class)
-                .findFirst()
-                .map(f -> (JsonSchemaFactory<String>) f)
-                .orElseThrow(() -> new IllegalStateException(
-                        "No JsonSchemaFactory<String> implementation registered via ServiceLoader."));
+        JsonSchemaFactory<String> found = null;
+        for (var provider : ServiceLoader.load(JsonSchemaFactory.class)) {
+            if (provider.sourceType() == String.class) {
+                if (found != null) {
+                    throw new IllegalStateException("Duplicate JsonSchemaFactory<String> implementations found: "
+                            + found.getClass().getName() + " and "
+                            + provider.getClass().getName());
+                }
+                found = (JsonSchemaFactory<String>) provider;
+            }
+        }
+        if (found == null) {
+            throw new IllegalStateException(
+                    "No JsonSchemaFactory<String> implementation registered via ServiceLoader.");
+        }
+        return found;
     }
 
     @Override

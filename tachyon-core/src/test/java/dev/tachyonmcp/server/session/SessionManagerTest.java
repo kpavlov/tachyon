@@ -48,11 +48,11 @@ class SessionManagerTest {
      */
     @Test
     void sweepNeverEvictsReplacementCreatedUnderSameId() {
-        var stale = new Session("s1", SseConnection.NOOP);
+        var stale = new Session("s1", SseConnection.noop());
         stale.close(); // CLOSED → sweep will try to evict it
 
         var backing = new InMemorySessionStore();
-        var replacement = new Session("s1", SseConnection.NOOP);
+        var replacement = new Session("s1", SseConnection.noop());
         backing.put("s1", replacement);
 
         // Store whose iteration still yields the stale session — the janitor mid-race.

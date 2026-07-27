@@ -16,13 +16,23 @@ public interface SseConnection {
     /** Closes the connection. Idempotent. */
     default void close() {}
 
-    SseConnection NOOP = new SseConnection() {
-        @Override
-        public boolean isWritable() {
-            return false;
-        }
+    /** Returns the no-op connection singleton: not writable, drops every sent event. */
+    static SseConnection noop() {
+        return NoopSseConnection.INSTANCE;
+    }
+}
 
-        @Override
-        public void send(SseEvent event) {}
-    };
+final class NoopSseConnection implements SseConnection {
+
+    static final SseConnection INSTANCE = new NoopSseConnection();
+
+    private NoopSseConnection() {}
+
+    @Override
+    public boolean isWritable() {
+        return false;
+    }
+
+    @Override
+    public void send(SseEvent event) {}
 }

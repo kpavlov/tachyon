@@ -5,6 +5,8 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.tachyonmcp.server.json.spi.JsonSchemaFactory;
+import java.util.ServiceLoader;
 import org.junit.jupiter.api.Test;
 
 class Jackson3JsonFactoryTest {
@@ -44,6 +46,12 @@ class Jackson3JsonFactoryTest {
 
     @Test
     void shouldBeDiscoverableAsServiceLoaderProviderForString() {
-        assertThat(Jackson3JsonFactory.provider()).isSameAs(Jackson3JsonFactory.INSTANCE);
+        JsonSchemaFactory<?> discovered = null;
+        for (JsonSchemaFactory<?> candidate : ServiceLoader.load(JsonSchemaFactory.class)) {
+            if (candidate.sourceType() == String.class) {
+                discovered = candidate;
+            }
+        }
+        assertThat(discovered).isInstanceOf(Jackson3JsonFactory.class);
     }
 }
