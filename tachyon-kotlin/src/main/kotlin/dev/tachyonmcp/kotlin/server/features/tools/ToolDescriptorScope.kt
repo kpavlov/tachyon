@@ -5,8 +5,8 @@ import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.json.toJsonSchema
 import dev.tachyonmcp.server.features.tasks.TaskSupport
 import dev.tachyonmcp.server.features.tools.ToolDescriptor
+import dev.tachyonmcp.server.json.Jackson3JsonFactory
 import dev.tachyonmcp.server.json.JsonSchema
-import dev.tachyonmcp.server.json.JsonSchemaUtils.parseSchema
 import kotlinx.serialization.json.JsonObject
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
@@ -27,11 +27,11 @@ public class ToolDescriptorScope
         public var extensionId: String? = null
 
         public fun inputSchema(json: String) {
-            inputSchema = parseSchema(json)
+            inputSchema = Jackson3JsonFactory.INSTANCE.toJsonSchema(json)
         }
 
         public fun outputSchema(json: String) {
-            outputSchema = parseSchema(json)
+            outputSchema = Jackson3JsonFactory.INSTANCE.toJsonSchema(json)
         }
 
         /** Sets the input schema from a kotlinx-serialization [JsonObject]. */

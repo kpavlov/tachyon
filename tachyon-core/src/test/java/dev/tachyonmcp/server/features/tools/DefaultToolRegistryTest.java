@@ -20,6 +20,7 @@ import dev.tachyonmcp.server.domain.ServerError;
 import dev.tachyonmcp.server.domain.ToolAnnotations;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.internal.ServerEngine;
+import dev.tachyonmcp.server.json.Jackson3JsonFactory;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
 import dev.tachyonmcp.server.json.JsonSchema;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
@@ -58,6 +59,7 @@ class DefaultToolRegistryTest {
             JsonSchemaValidator.noop(),
             TEST_SERDE,
             TEST_SERDE,
+            Jackson3JsonFactory.INSTANCE,
             FeatureConfig.builder().build());
 
     @Test
@@ -410,6 +412,7 @@ class DefaultToolRegistryTest {
                 JsonSchemaValidator.noop(),
                 TEST_SERDE,
                 TEST_SERDE,
+                Jackson3JsonFactory.INSTANCE,
                 FeatureConfig.builder().pageSize(1).build());
         reg.register(testTool("a", null, null));
         reg.register(testTool("b", null, null));
@@ -425,6 +428,7 @@ class DefaultToolRegistryTest {
                 JsonSchemaValidator.noop(),
                 TEST_SERDE,
                 TEST_SERDE,
+                Jackson3JsonFactory.INSTANCE,
                 FeatureConfig.builder().off().build());
         var changeCount = new AtomicInteger();
         reg.onChange(changeCount::incrementAndGet);
@@ -726,6 +730,7 @@ class DefaultToolRegistryTest {
                 new NetworkntJsonSchemaValidator(),
                 TEST_SERDE,
                 TEST_SERDE,
+                Jackson3JsonFactory.INSTANCE,
                 FeatureConfig.builder().build());
         var handlers = new HashMap<String, RpcMethodHandler>();
         registryVal.registerHandlers(handlers);
@@ -763,6 +768,7 @@ class DefaultToolRegistryTest {
                 new NetworkntJsonSchemaValidator(),
                 TEST_SERDE,
                 TEST_SERDE,
+                Jackson3JsonFactory.INSTANCE,
                 FeatureConfig.builder().build());
         var handlers = new HashMap<String, RpcMethodHandler>();
         registryVal.registerHandlers(handlers);
@@ -798,6 +804,15 @@ class DefaultToolRegistryTest {
                         .inputSchema(schema != null ? schema.toString() : null)
                         .build(),
                 (context, request) -> ToolResult.text("ok"));
+    }
+
+    @Test
+    void shouldRejectRegistrationWithMalformedJsonSchema() {
+        assertThatThrownBy(() -> registry.register(ToolHandler.of(
+                        builder -> builder.name("bad-tool").description("desc").inputSchema("not-json"),
+                        (ctx, request) -> ToolResult.text("x"))))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("not-json");
     }
 
     @Test

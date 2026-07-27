@@ -32,7 +32,9 @@ import dev.tachyonmcp.server.handlers.LoggingHandlers;
 import dev.tachyonmcp.server.handlers.PingHandler;
 import dev.tachyonmcp.server.internal.NotificationLogSupport;
 import dev.tachyonmcp.server.internal.ServerEngine;
+import dev.tachyonmcp.server.json.Jackson3JsonFactory;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
+import dev.tachyonmcp.server.json.JsonSchemaFactory;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
 import dev.tachyonmcp.server.json.PayloadDeserializer;
@@ -224,6 +226,7 @@ final class DefaultTachyonServer implements ServerEngine {
             @Nullable JsonSchemaValidator outputValidator,
             @Nullable PayloadSerializer payloadSerializer,
             @Nullable PayloadDeserializer payloadDeserializer,
+            @Nullable JsonSchemaFactory<String> schemaFactory,
             @Nullable List<ServerExtension> extensions,
             @Nullable Consumer<ChannelPipeline> pipelineCustomizer) {
         this.executor = executor;
@@ -241,9 +244,16 @@ final class DefaultTachyonServer implements ServerEngine {
         final PayloadSerializer payloadSerializer1 = payloadSerializer != null ? payloadSerializer : defaultSerde;
         final PayloadDeserializer payloadDeserializer1 =
                 payloadDeserializer != null ? payloadDeserializer : defaultSerde;
+        final JsonSchemaFactory<String> schemaFactory1 =
+                schemaFactory != null ? schemaFactory : Jackson3JsonFactory.INSTANCE;
         var caps = config.capabilities();
         this.toolRegistry = new DefaultToolRegistry(
-                inputValidator1, outputValidator1, payloadSerializer1, payloadDeserializer1, caps.tools());
+                inputValidator1,
+                outputValidator1,
+                payloadSerializer1,
+                payloadDeserializer1,
+                schemaFactory1,
+                caps.tools());
         this.resourceRegistry = new DefaultResourceRegistry(this, caps.resources());
         this.taskRegistry = new DefaultTaskRegistry(this, caps.tasks());
         this.promptRegistry = new DefaultPromptRegistry(inputValidator1, caps.prompts());

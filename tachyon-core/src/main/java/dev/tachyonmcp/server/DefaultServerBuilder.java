@@ -13,8 +13,11 @@ import dev.tachyonmcp.server.features.completions.Completions;
 import dev.tachyonmcp.server.features.prompts.Prompts;
 import dev.tachyonmcp.server.features.resources.Resources;
 import dev.tachyonmcp.server.features.tools.Tools;
+import dev.tachyonmcp.server.json.Jackson3JsonFactory;
 import dev.tachyonmcp.server.json.JacksonPayloadSerde;
 import dev.tachyonmcp.server.json.JsonConfig;
+import dev.tachyonmcp.server.json.JsonDocumentFactory;
+import dev.tachyonmcp.server.json.JsonSchemaFactory;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
 import dev.tachyonmcp.server.json.PayloadDeserializer;
@@ -50,6 +53,8 @@ final class DefaultServerBuilder implements ServerBuilder {
     private JsonSchemaValidator outputSchemaValidator = new NetworkntJsonSchemaValidator();
     private PayloadSerializer payloadSerializer = new JacksonPayloadSerde();
     private PayloadDeserializer payloadDeserializer = new JacksonPayloadSerde();
+    private JsonDocumentFactory<String> documentFactory = Jackson3JsonFactory.INSTANCE;
+    private JsonSchemaFactory<String> schemaFactory = Jackson3JsonFactory.INSTANCE;
 
     @Nullable
     private Consumer<ChannelPipeline> pipelineCustomizer;
@@ -134,6 +139,12 @@ final class DefaultServerBuilder implements ServerBuilder {
         }
         if (config.outputValidator() != null) {
             outputSchemaValidator = config.outputValidator();
+        }
+        if (config.documentFactory() != null) {
+            documentFactory = config.documentFactory();
+        }
+        if (config.schemaFactory() != null) {
+            schemaFactory = config.schemaFactory();
         }
         return this;
     }
@@ -342,6 +353,7 @@ final class DefaultServerBuilder implements ServerBuilder {
                 outputSchemaValidator,
                 payloadSerializer,
                 payloadDeserializer,
+                schemaFactory,
                 allExtensions,
                 pipelineCustomizer);
         bootstrapRegistrations.forEach(registrar -> registrar.accept(server));

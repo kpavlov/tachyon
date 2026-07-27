@@ -13,16 +13,32 @@ public class JsonSchemaUtils {
     }
 
     /**
-     * Parses a JSON schema string, returning {@code null} for null input.
+     * Validates that a tool schema is well-formed JSON with an object root declaring
+     * {@code "type": "object"}.
+     *
+     * @param factory    parses and validates the schema's raw JSON
+     * @param schemaKind the kind of schema being validated
+     * @param toolName   the name of the tool owning the schema
+     * @param schema     the schema to validate, or {@code null}
+     * @throws IllegalArgumentException if the schema is not valid JSON, or its root is invalid
      */
-    public static @Nullable JsonSchema parseSchema(@Nullable String json) {
-        if (json == null) return null;
-        try {
-            JsonUtils.parse(json);
-            return JsonSchema.of(json);
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Schema is not valid JSON: " + json, e);
+    public static void validateSchemaRoot(
+            JsonSchemaFactory<String> factory, String schemaKind, String toolName, @Nullable JsonSchema schema) {
+        if (schema == null) return;
+        var validated = factory.toJsonSchema(schema.json());
+        var node = JsonUtils.parse(validated);
+        final String detail;
+        if (!node.isObject()) {
+            detail = "got: " + node.getNodeType();
+        } else if (!node.has("type")) {
+            detail = "missing \"type\"";
+        } else if (!"object".equals(node.get("type").asString())) {
+            detail = "got: " + node.get("type");
+        } else {
+            return;
         }
+        throw new IllegalArgumentException(
+                "Tool '" + toolName + "' " + schemaKind + " root must declare \"type\": \"object\", " + detail);
     }
 
     /**

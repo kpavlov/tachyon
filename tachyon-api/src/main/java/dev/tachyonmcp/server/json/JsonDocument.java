@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.server.json;
 
+import dev.tachyonmcp.annotations.ExperimentalApi;
 import java.util.Optional;
 
 /**
@@ -30,6 +31,7 @@ public interface JsonDocument {
      * @param type the class of the requested representation
      * @return the provider-specific representation, or empty if not available
      */
+    @ExperimentalApi
     default <T> Optional<T> unwrap(Class<T> type) {
         return Optional.empty();
     }

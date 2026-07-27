@@ -30,6 +30,7 @@ import dev.tachyonmcp.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.server.json.JsonDocument;
 import dev.tachyonmcp.server.json.JsonSchema;
+import dev.tachyonmcp.server.json.JsonSchemaFactory;
 import dev.tachyonmcp.server.json.JsonSchemaUtils;
 import dev.tachyonmcp.server.json.JsonSchemaValidator;
 import dev.tachyonmcp.server.json.JsonUtils;
@@ -67,6 +68,7 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
     private final JsonSchemaValidator outputValidator;
     private final PayloadSerializer payloadSerializer;
     private final PayloadDeserializer payloadDeserializer;
+    private final JsonSchemaFactory<String> schemaFactory;
     private final FeatureConfig config;
 
     /**
@@ -83,12 +85,14 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
             JsonSchemaValidator outputValidator,
             PayloadSerializer payloadSerializer,
             PayloadDeserializer payloadDeserializer,
+            JsonSchemaFactory<String> schemaFactory,
             FeatureConfig config) {
         super(config.pageSize());
         this.inputValidator = inputValidator;
         this.outputValidator = outputValidator;
         this.payloadSerializer = payloadSerializer;
         this.payloadDeserializer = payloadDeserializer;
+        this.schemaFactory = schemaFactory;
         this.config = config;
     }
 
@@ -111,8 +115,8 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
         }
         var name = descriptor.name();
         validateName(name);
-        validateSchemaRoot("inputSchema", name, descriptor.inputSchema());
-        validateSchemaRoot("outputSchema", name, descriptor.outputSchema());
+        JsonSchemaUtils.validateSchemaRoot(schemaFactory, "inputSchema", name, descriptor.inputSchema());
+        JsonSchemaUtils.validateSchemaRoot(schemaFactory, "outputSchema", name, descriptor.outputSchema());
         var desc = descriptor.description();
         if (desc != null && desc.length() > MAX_DESCRIPTION_LENGTH) {
             logger.warn(
@@ -160,31 +164,6 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                 .map(ToolHandler::descriptor)
                 .sorted(Comparator.comparing(ToolDescriptor::name))
                 .toList();
-    }
-
-    /**
-     * Validates that a tool schema has an object root declaring {@code "type": "object"}.
-     *
-     * @param schemaKind the kind of schema being validated
-     * @param toolName   the name of the tool owning the schema
-     * @param schema     the schema to validate, or {@code null}
-     * @throws IllegalArgumentException if the schema root is invalid
-     */
-    private static void validateSchemaRoot(String schemaKind, String toolName, @Nullable JsonSchema schemaDocument) {
-        if (schemaDocument == null) return;
-        var schema = JsonUtils.parse(schemaDocument);
-        final String detail;
-        if (!schema.isObject()) {
-            detail = "got: " + schema.getNodeType();
-        } else if (!schema.has("type")) {
-            detail = "missing \"type\"";
-        } else if (!"object".equals(schema.get("type").asString())) {
-            detail = "got: " + schema.get("type");
-        } else {
-            return;
-        }
-        throw new IllegalArgumentException(
-                "Tool '" + toolName + "' " + schemaKind + " root must declare \"type\": \"object\", " + detail);
     }
 
     static void validateName(String name) {

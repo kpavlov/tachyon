@@ -6,8 +6,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
-import org.junitpioneer.jupiter.ExpectedToFail;
-import org.junitpioneer.jupiter.FailAt;
 
 class ToolDescriptorTest {
 
@@ -23,18 +21,6 @@ class ToolDescriptorTest {
         assertThatThrownBy(() -> ToolDescriptor.builder().name("   ").build())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("name");
-    }
-
-    @Test
-    @ExpectedToFail // fixme: parse schema
-    @FailAt(date = "2026-07-27")
-    void shouldRejectMalformedJsonSchema() {
-        assertThatThrownBy(() -> ToolDescriptor.builder()
-                        .name("bad-tool")
-                        .inputSchema("not-json")
-                        .build())
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("not-json");
     }
 
     @Test
