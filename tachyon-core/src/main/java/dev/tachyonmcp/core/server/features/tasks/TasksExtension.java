@@ -4,6 +4,8 @@ package dev.tachyonmcp.core.server.features.tasks;
 import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.runtime.InteractionContext;
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
+import dev.tachyonmcp.api.server.extensions.ExtensionContext;
+import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.api.server.features.tasks.TaskOptions;
 import dev.tachyonmcp.api.server.features.tasks.Tasks;
@@ -12,8 +14,6 @@ import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolRequest;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.OutboundSseStreamMessageRouter;
-import dev.tachyonmcp.core.server.extensions.ServerExtension;
-import dev.tachyonmcp.core.server.internal.ServerEngine;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -57,7 +57,7 @@ public class TasksExtension implements ServerExtension {
      * Registers the task creation tool and task status resource template with the server.
      */
     @Override
-    public void bootstrap(ServerEngine server) {
+    public void bootstrap(ExtensionContext server) {
         var descriptor = ToolDescriptor.builder()
                 .name("create_task")
                 .description("Create a new task")
@@ -81,7 +81,7 @@ public class TasksExtension implements ServerExtension {
         private final Tasks tasks;
         private final Executor executor;
 
-        CreateTaskFn(ServerEngine server) {
+        CreateTaskFn(ExtensionContext server) {
             this.tasks = server.tasks();
             this.executor = server.executor();
         }

@@ -74,7 +74,7 @@ val server = TachyonServer(port = 8080) {
     session {
         enabled = true
         sessionTtl = 5.minutes
-        sessionIdGenerator = { "sess_" + Uuid.random().toHexString() }
+        sessionIdGenerator = SessionIdGenerator { _, _ -> "sess_" + Uuid.random().toHexString() }
     }
     tool(name = "ping", description = "Ping the server") {
         ToolResult.text("pong")

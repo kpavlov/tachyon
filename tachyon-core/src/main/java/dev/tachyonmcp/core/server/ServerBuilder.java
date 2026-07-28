@@ -1,10 +1,12 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server;
 
+import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import dev.tachyonmcp.api.server.config.JsonConfig;
 import dev.tachyonmcp.api.server.config.MonitoringConfig;
 import dev.tachyonmcp.api.server.config.RuntimeConfig;
 import dev.tachyonmcp.api.server.config.ServerIdentity;
+import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.api.server.features.completions.Completions;
 import dev.tachyonmcp.api.server.features.prompts.Prompts;
 import dev.tachyonmcp.api.server.features.resources.Resources;
@@ -13,7 +15,6 @@ import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.core.server.config.NetworkConfig;
 import dev.tachyonmcp.core.server.config.ServerConfig;
 import dev.tachyonmcp.core.server.config.SessionConfig;
-import dev.tachyonmcp.core.server.extensions.ServerExtension;
 import io.netty.channel.ChannelPipeline;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -84,6 +85,7 @@ public interface ServerBuilder {
     ServerBuilder threadFactory(ThreadFactory threadFactory);
 
     /** Customizes each Netty channel pipeline. */
+    @ExperimentalApi
     ServerBuilder pipelineCustomizer(@Nullable Consumer<ChannelPipeline> customizer);
 
     /**

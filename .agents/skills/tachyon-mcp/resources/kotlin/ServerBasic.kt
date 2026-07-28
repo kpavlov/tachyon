@@ -21,7 +21,6 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toKotlinDuration
 
 fun assembleServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer {
-    val boundPort = port
     return buildServer {
         // ── identity ──────────────────────────────────────────────
         info {
@@ -73,9 +72,9 @@ fun assembleServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer {
             sessionStore = null // default: InMemorySessionStore
             sessionEventStore = null // default: InMemorySessionEventStore
             // lambda DSL
-            sessionIdGenerator { it.headers().get("X-Tenant-Id") ?: "anon" }
-            // or direct assignment:
-            // sessionIdGenerator = { "sid_" + Uuid.random().toHexString() }
+            sessionIdGenerator { _, request -> request.headers().get("X-Tenant-Id") ?: "anon" }
+            // or direct assignment, request-independent:
+            // sessionIdGenerator = SessionIdGenerator { _, _ -> "sid_" + Uuid.random().toHexString() }
         }
 
         // ── runtime ───────────────────────────────────────────────
@@ -86,7 +85,7 @@ fun assembleServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer {
         // ── network — everything you can set ──────────────────────
         network {
             host = NetworkConfig.DEFAULT_HOST
-            this.port = boundPort
+            this.port = port
             endpointPath = NetworkConfig.DEFAULT_ENDPOINT_PATH
             allowedOrigins.add("*")
             allowedHeaders.add("Authorization")

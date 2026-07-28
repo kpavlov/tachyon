@@ -4,16 +4,16 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.api.server.extensions.ExtensionContext;
+import dev.tachyonmcp.api.server.extensions.ExtensionSettings;
+import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
-import dev.tachyonmcp.core.server.RpcMethodHandler;
-import dev.tachyonmcp.core.server.extensions.ServerExtension;
-import dev.tachyonmcp.core.server.internal.ServerEngine;
-import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.util.Map;
 import java.util.Set;
+import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -32,8 +32,10 @@ class ExtensionsTest extends AbstractStatefulMcpE2eTest {
             var response = client.post(null, initBody);
             assertThatJson(response.body())
                     .inPath("$.result.capabilities.extensions")
-                    .isObject()
-                    .containsKey(TEST_EXT_ID);
+                    // language=JSON
+                    .isEqualTo("""
+                            {"com.example/test": {"version": "1.0"}}
+                            """);
         }
     }
 
@@ -45,9 +47,8 @@ class ExtensionsTest extends AbstractStatefulMcpE2eTest {
             var initBody = buildInitializeJson(Map.of());
             var response = client.post(null, initBody);
             assertThatJson(response.body())
-                    .inPath("$.result.capabilities")
-                    .isObject()
-                    .doesNotContainKey("extensions");
+                    .node("result.capabilities.extensions")
+                    .isAbsent();
         }
     }
 
@@ -58,11 +59,12 @@ class ExtensionsTest extends AbstractStatefulMcpE2eTest {
         try (var client = createTestClient()) {
             var initBody = buildInitializeJson(Map.of(TEST_EXT_ID, JsonNodeFactory.instance.objectNode()));
             var response = client.post(null, initBody);
-            String body = response.body();
-            assertThatJson(body)
+            assertThatJson(response.body())
                     .inPath("$.result.capabilities.extensions")
-                    .isObject()
-                    .containsKey(TEST_EXT_ID);
+                    // language=JSON
+                    .isEqualTo("""
+                            {"com.example/test": {"version": "1.0"}}
+                            """);
         }
     }
 
@@ -90,7 +92,14 @@ class ExtensionsTest extends AbstractStatefulMcpE2eTest {
                     {"jsonrpc":"2.0","id":3,"method":"test/ext-call","params":{"_meta":{"com.example/test":{}}}}
                     """;
             var resp2 = client.post(sessionId, callWithMeta);
-            assertThatJson(resp2.body()).inPath("$.result.status").isEqualTo("ok");
+            // language=JSON
+            assertThatJson(resp2.body()).isEqualTo("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 3,
+                      "result": {"status": "ok"}
+                    }
+                    """);
         }
     }
 
@@ -106,7 +115,7 @@ class ExtensionsTest extends AbstractStatefulMcpE2eTest {
             var listResp = client.post(sessionId, """
                     {"jsonrpc":"2.0","id":2,"method":"tools/list"}
                     """);
-            assertThatJson(listResp.body()).inPath("$.result.tools").isArray().isEmpty();
+            assertThatJson(listResp.body()).inPath("$.result.tools").isEqualTo("[]");
 
             var callResp = client.post(sessionId, """
                     {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"ext-tool","arguments":{}}}
@@ -137,12 +146,24 @@ class ExtensionsTest extends AbstractStatefulMcpE2eTest {
             var listResp = client.post(sessionId, """
                     {"jsonrpc":"2.0","id":2,"method":"tools/list"}
                     """);
-            assertThatJson(listResp.body()).inPath("$.result.tools[0].name").isEqualTo("ext-tool");
+            assertThatJson(listResp.body())
+                    .when(Option.IGNORING_EXTRA_FIELDS)
+                    .inPath("$.result.tools[0]")
+                    // language=JSON
+                    .isEqualTo("""
+                            {"name": "ext-tool"}
+                            """);
 
             var callResp = client.post(sessionId, """
                     {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"ext-tool","arguments":{}}}
                     """);
-            assertThatJson(callResp.body()).inPath("$.result.content[0].text").isEqualTo("ext-tool-result");
+            assertThatJson(callResp.body())
+                    .when(Option.IGNORING_EXTRA_FIELDS)
+                    .inPath("$.result.content[0]")
+                    // language=JSON
+                    .isEqualTo("""
+                            {"text": "ext-tool-result"}
+                            """);
         }
     }
 
@@ -182,18 +203,13 @@ class ExtensionsTest extends AbstractStatefulMcpE2eTest {
         }
 
         @Override
-        public void bootstrap(ServerEngine server) {
-            server.registerHandler(new RpcMethodHandler() {
-                @Override
-                public String method() {
-                    return "test/ext-call";
-                }
+        public ExtensionSettings serverSettings() {
+            return ExtensionSettings.of(Map.of("version", "1.0"));
+        }
 
-                @Override
-                public Object handle(DispatchContext context, Object params) {
-                    return Map.of("status", "ok");
-                }
-            });
+        @Override
+        public void bootstrap(ExtensionContext context) {
+            context.registerHandler("test/ext-call", (interaction, params) -> Map.of("status", "ok"));
         }
     }
 
@@ -205,7 +221,7 @@ class ExtensionsTest extends AbstractStatefulMcpE2eTest {
         }
 
         @Override
-        public void bootstrap(ServerEngine server) {
+        public void bootstrap(ExtensionContext server) {
             server.tools()
                     .register(
                             ToolDescriptor.builder()

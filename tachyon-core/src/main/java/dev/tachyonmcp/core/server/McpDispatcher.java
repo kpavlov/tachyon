@@ -7,6 +7,7 @@ import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
+import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.protocol.Protocols;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus;
@@ -18,7 +19,6 @@ import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.core.server.session.DispatchContext;
 import dev.tachyonmcp.core.server.session.SessionEvent;
-import dev.tachyonmcp.core.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcError;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcMessage;
@@ -504,7 +504,7 @@ public class McpDispatcher {
         var request =
                 channelContext != null ? channelContext.get(ATTR_INIT_REQUEST).orElse(null) : null;
         var generator = server.sessionIdGenerator();
-        return generator.generate(request != null ? request : EMPTY_INIT_REQUEST);
+        return generator.generate(channelContext, request != null ? request : EMPTY_INIT_REQUEST);
     }
 
     private static boolean hasMetaKey(Object params, String key) {

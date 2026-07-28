@@ -4,9 +4,9 @@ package dev.tachyonmcp.kotlin.server
 import dev.tachyonmcp.api.server.config.Mode
 import dev.tachyonmcp.api.server.domain.Role
 import dev.tachyonmcp.api.server.features.tools.ToolResult
+import dev.tachyonmcp.api.server.session.SessionIdGenerator
 import dev.tachyonmcp.core.server.session.InMemorySessionEventStore
 import dev.tachyonmcp.core.server.session.InMemorySessionStore
-import dev.tachyonmcp.core.server.session.SessionIdGenerator
 import dev.tachyonmcp.kotlin.server.domain.Annotations
 import dev.tachyonmcp.kotlin.server.domain.Icon
 import dev.tachyonmcp.kotlin.server.domain.PromptArgument
@@ -112,7 +112,7 @@ internal class TachyonServerTest {
                     sessionTtl = 15.seconds
                     sessionStore = InMemorySessionStore()
                     sessionEventStore = InMemorySessionEventStore()
-                    sessionIdGenerator { it.headers().get("X-Tenant-Id") ?: "anon" }
+                    sessionIdGenerator { _, req -> req.headers().get("X-Tenant-Id") ?: "anon" }
                 }
                 monitoring {
                     slowRequestLogging = true
@@ -249,25 +249,24 @@ internal class TachyonServerTest {
         val annotations = Annotations { priority = 0.7 }
         TachyonServer(
             port = 0,
-            {
-                name("template-test")
-                session { enabled = true }
-                tool("check", inputSchema = schema) { ToolResult.text("ok") }
-                resourceTemplate(
-                    name = "user-profile",
-                    uriTemplate = "user://{userId}/profile",
-                    description = "User profile template",
-                    mimeType = "application/json",
-                    title = "User profile",
-                    annotations = annotations,
-                    icons = listOf(icon),
-                ) {
-                    TextResourceContents {
-                        text = "{\"id\":\"${param("userId")}\"}"
-                    }
+        ) {
+            name("template-test")
+            session { enabled = true }
+            tool("check", inputSchema = schema) { ToolResult.text("ok") }
+            resourceTemplate(
+                name = "user-profile",
+                uriTemplate = "user://{userId}/profile",
+                description = "User profile template",
+                mimeType = "application/json",
+                title = "User profile",
+                annotations = annotations,
+                icons = listOf(icon),
+            ) {
+                TextResourceContents {
+                    text = "{\"id\":\"${param("userId")}\"}"
                 }
-            },
-        ).use { handle ->
+            }
+        }.use { handle ->
             McpProbe(handle.port()).use { probe ->
                 probe.initialize()
                 val response = probe.request(2, "resources/templates/list")
@@ -305,26 +304,26 @@ internal class TachyonServerTest {
             }
         TachyonServer(
             port = 0,
-            {
-                name("contextual-resource-contents-test")
-                session { enabled = true }
-                resource(
-                    name = "text",
-                    uri = "test://text",
-                    description = "Text resource",
-                    mimeType = "text/plain",
-                    title = "Text resource title",
-                    annotations = expectedAnnotations,
-                    size = 5,
-                    icons = listOf(icon),
-                ) {
-                    TextResourceContents { text = "hello" }
-                }
-                resource(blobDescriptor) {
-                    BlobResourceContents { blob = "AQI=" }
-                }
-            },
-        ).use { handle ->
+        ) {
+            name("contextual-resource-contents-test")
+            session { enabled = true }
+            resource(
+                name = "text",
+                uri = "test://text",
+                description = "Text resource",
+                mimeType = "text/plain",
+                title = "Text resource title",
+                annotations = expectedAnnotations,
+                size = 5,
+                icons = listOf(icon),
+            ) {
+                TextResourceContents { text = "hello" }
+            }
+
+            resource(blobDescriptor) {
+                BlobResourceContents { blob = "AQI=" }
+            }
+        }.use { handle ->
             with(handle.resources().find("text").orElseThrow()) {
                 description() shouldBe "Text resource"
                 mimeType() shouldBe "text/plain"
@@ -390,14 +389,11 @@ internal class TachyonServerTest {
                 description = "Tool built from a prebuilt descriptor"
             }
 
-        TachyonServer(
-            port = 0,
-            {
-                name("descriptor-tool-test")
-                session { enabled = true }
-                tool(descriptor) { ToolResult.text("descriptor-ok") }
-            },
-        ).use { handle ->
+        TachyonServer(port = 0) {
+            name("descriptor-tool-test")
+            session { enabled = true }
+            tool(descriptor) { ToolResult.text("descriptor-ok") }
+        }.use { handle ->
             handle.tools().find("descriptor-tool").orElseThrow() shouldBe descriptor
             McpProbe(handle.port()).use { probe ->
                 probe.initialize()
@@ -428,19 +424,18 @@ internal class TachyonServerTest {
 
         TachyonServer(
             port = 0,
-            {
-                name("descriptor-prompt-test")
-                session { enabled = true }
-                prompt(descriptor) {
-                    listOf(
-                        PromptMessage(
-                            role = Role.USER,
-                            TextContent("styled: ${arguments ?: "none"}"),
-                        ),
-                    )
-                }
-            },
-        ).use { handle ->
+        ) {
+            name("descriptor-prompt-test")
+            session { enabled = true }
+            prompt(descriptor) {
+                listOf(
+                    PromptMessage(
+                        role = Role.USER,
+                        TextContent("styled: ${arguments ?: "none"}"),
+                    ),
+                )
+            }
+        }.use { handle ->
             handle.prompts().find("descriptor-prompt").orElseThrow() shouldBe descriptor
             McpProbe(handle.port()).use { probe ->
                 probe.initialize()
@@ -458,15 +453,14 @@ internal class TachyonServerTest {
     fun `suspend tool with delay returns correct result`() {
         TachyonServer(
             port = 0,
-            {
-                name("delay-test")
-                session { enabled = true }
-                tool("slow", "Delayed") {
-                    delay(10.milliseconds)
-                    ToolResult.text("delayed-ok")
-                }
-            },
-        ).use { handle ->
+        ) {
+            name("delay-test")
+            session { enabled = true }
+            tool("slow", "Delayed") {
+                delay(10.milliseconds)
+                ToolResult.text("delayed-ok")
+            }
+        }.use { handle ->
             McpProbe(handle.port()).use { probe ->
                 val init = probe.initialize()
                 init.statusCode() shouldBe 200
@@ -484,19 +478,18 @@ internal class TachyonServerTest {
         val outputSchema = """{"type":"object","properties":{"result":{"type":"string"}}}"""
         TachyonServer(
             port = 0,
-            {
-                name("output-test")
-                session { enabled = true }
-                tool(
-                    "with-output",
-                    "Has output schema",
-                    inputSchema = schema,
-                    outputSchema = outputSchema,
-                ) {
-                    ToolResult.text("done")
-                }
-            },
-        ).use { handle ->
+        ) {
+            name("output-test")
+            session { enabled = true }
+            tool(
+                "with-output",
+                "Has output schema",
+                inputSchema = schema,
+                outputSchema = outputSchema,
+            ) {
+                ToolResult.text("done")
+            }
+        }.use { handle ->
             McpProbe(handle.port()).use { probe ->
                 probe.initialize()
                 val response = probe.request(2, "tools/list")
@@ -511,14 +504,13 @@ internal class TachyonServerTest {
         val schema = """{"type":"object"}"""
         TachyonServer(
             port = 0,
-            {
-                name("string-schema-test")
-                session { enabled = true }
-                tool("string-schema", inputSchema = schema) {
-                    ToolResult.text("ok")
-                }
-            },
-        ).use { handle ->
+        ) {
+            name("string-schema-test")
+            session { enabled = true }
+            tool("string-schema", inputSchema = schema) {
+                ToolResult.text("ok")
+            }
+        }.use { handle ->
             handle.tools().find("string-schema").orElse(null) shouldNotBe null
         }
     }
@@ -527,12 +519,11 @@ internal class TachyonServerTest {
     fun `sync tool body compiles and works with suspend signature`() {
         TachyonServer(
             port = 0,
-            {
-                name("sync-test")
-                session { enabled = true }
-                tool("ping", "Health check") { ToolResult.text("pong") }
-            },
-        ).use { handle ->
+        ) {
+            name("sync-test")
+            session { enabled = true }
+            tool("ping", "Health check") { ToolResult.text("pong") }
+        }.use { handle ->
             McpProbe(handle.port()).use { probe ->
                 probe.initialize()
                 val response = probe.callTool("ping")
@@ -546,18 +537,17 @@ internal class TachyonServerTest {
     fun `notification sent during suspend tool arrives on the request stream`() {
         TachyonServer(
             port = 0,
-            {
-                name("notify-test")
-                capabilities { logging = true }
-                session { enabled = true }
-                tool("notify", "Notifies mid-run") {
-                    delay(10.milliseconds)
-                    ctx.notifications().info("notify-test", "mid-run-note")
-                    delay(10.milliseconds)
-                    ToolResult.text("notify-done")
-                }
-            },
-        ).use { handle ->
+        ) {
+            name("notify-test")
+            capabilities { logging = true }
+            session { enabled = true }
+            tool("notify", "Notifies mid-run") {
+                delay(10.milliseconds)
+                ctx.notifications().info("notify-test", "mid-run-note")
+                delay(10.milliseconds)
+                ToolResult.text("notify-done")
+            }
+        }.use { handle ->
             McpProbe(handle.port()).use { probe ->
                 probe.initialize()
                 val response = probe.callTool("notify")

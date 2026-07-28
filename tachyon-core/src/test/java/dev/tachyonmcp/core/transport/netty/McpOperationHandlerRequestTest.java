@@ -310,7 +310,8 @@ class McpOperationHandlerRequestTest {
     @Test
     void initializeOnOperationChannelUsesCustomSessionIdGenerator() {
         var customServer = newEngine(b -> b.session(s -> s.enabled(true)
-                .sessionIdGenerator(req -> "tenant-" + req.headers().get("X-Tenant-Id"))));
+                .sessionIdGenerator(
+                        (channelContext, req) -> "tenant-" + req.headers().get("X-Tenant-Id"))));
         var ch = new EmbeddedChannel(
                 new InteractionHandler(),
                 new McpOperationHandler(customServer, new McpDispatcher(customServer, Runnable::run), Runnable::run));

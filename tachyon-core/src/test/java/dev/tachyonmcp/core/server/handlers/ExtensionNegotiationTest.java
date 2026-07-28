@@ -4,12 +4,13 @@ package dev.tachyonmcp.core.server.handlers;
 import static dev.tachyonmcp.core.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.api.runtime.InteractionContext;
+import dev.tachyonmcp.api.server.extensions.ExtensionSettings;
+import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.core.protocol.Protocols;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
-import dev.tachyonmcp.core.runtime.ChannelContext;
 import dev.tachyonmcp.core.runtime.Session;
-import dev.tachyonmcp.core.server.extensions.ServerExtension;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.core.server.session.DispatchContext;
@@ -56,11 +57,13 @@ class ExtensionNegotiationTest {
     @Test
     void onConnectionInitCalledForNegotiatedExtension() throws Exception {
         var handler = server.getHandler("initialize");
-        var params = buildInitParams(Map.of("com.test/ext1", JsonNodeFactory.instance.objectNode()));
+        var params = buildInitParams(
+                Map.of("com.test/ext1", JsonNodeFactory.instance.objectNode().put("client", "test")));
         var context = context(session, server);
         handler.handle(context, params);
 
         assertThat(testExtension.initCalled.get()).isTrue();
+        assertThat(testExtension.clientSettings.values().stringValue("client")).isEqualTo("test");
     }
 
     @Test
@@ -100,6 +103,7 @@ class ExtensionNegotiationTest {
     private static class TestExtension implements ServerExtension {
 
         final AtomicBoolean initCalled = new AtomicBoolean();
+        ExtensionSettings clientSettings = ExtensionSettings.empty();
 
         @Override
         public String extensionId() {
@@ -107,8 +111,9 @@ class ExtensionNegotiationTest {
         }
 
         @Override
-        public void onConnectionInit(ChannelContext context, Map<String, JsonNode> clientSettings) {
+        public void onConnectionInit(InteractionContext context, ExtensionSettings clientSettings) {
             initCalled.set(true);
+            this.clientSettings = clientSettings;
         }
     }
 }

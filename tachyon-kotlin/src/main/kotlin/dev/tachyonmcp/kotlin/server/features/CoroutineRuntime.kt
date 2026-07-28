@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.features
 
-import dev.tachyonmcp.core.server.extensions.ServerExtension
-import dev.tachyonmcp.core.server.internal.ServerEngine
+import dev.tachyonmcp.api.server.extensions.ExtensionContext
+import dev.tachyonmcp.api.server.extensions.ServerExtension
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
@@ -25,11 +25,10 @@ internal class CoroutineRuntime : ServerExtension {
 
     override fun extensionId(): String = "dev.tachyonmcp/kotlin-coroutines"
 
-    override fun bootstrap(server: ServerEngine) {
+    override fun bootstrap(server: ExtensionContext) {
         check(scope == null) { "Kotlin coroutine runtime already started" }
         shutdownGraceNanos =
             server
-                .config()
                 .runtime()
                 .shutdownGracePeriod()
                 .toNanos()

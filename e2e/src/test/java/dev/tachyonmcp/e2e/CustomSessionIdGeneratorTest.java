@@ -4,8 +4,8 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.server.TachyonServer;
-import dev.tachyonmcp.core.server.session.SessionIdGenerator;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -35,8 +35,8 @@ class CustomSessionIdGeneratorTest {
     void beforeAll() {
         serverHandle = TachyonServer.builder()
                 .session(s -> s.enabled(true)
-                        .sessionIdGenerator(
-                                request -> "tenant-" + request.headers().get(TENANT_HEADER)))
+                        .sessionIdGenerator((channelContext, request) ->
+                                "tenant-" + request.headers().get(TENANT_HEADER)))
                 .network(n -> n.host("localhost").port(0))
                 .build();
         serverHandle.tools().registerAsync(EchoToolHandler.DESCRIPTOR, EchoToolHandler.FN);
@@ -86,7 +86,7 @@ class CustomSessionIdGeneratorTest {
         // aborts session creation with an internal-error response, it does not fall back to
         // the default generator.
         var failingHandle = TachyonServer.builder()
-                .session(s -> s.enabled(true).sessionIdGenerator(request -> {
+                .session(s -> s.enabled(true).sessionIdGenerator((channelContext, request) -> {
                     throw new IllegalStateException("boom");
                 }))
                 .network(n -> n.host("localhost").port(0))

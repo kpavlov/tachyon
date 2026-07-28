@@ -3,11 +3,11 @@ package dev.tachyonmcp.core.transport.netty;
 
 import static dev.tachyonmcp.core.transport.netty.InteractionHandler.INTERACTION_CONTEXT_KEY;
 
+import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.runtime.ChannelContext;
 import dev.tachyonmcp.core.runtime.Session;
 import dev.tachyonmcp.core.server.McpDispatcher;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
-import dev.tachyonmcp.core.server.session.SessionIdGenerator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;

@@ -4,14 +4,14 @@ package dev.tachyonmcp.core.transport.netty;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.domain.RequestId;
+import dev.tachyonmcp.api.server.extensions.ExtensionContext;
+import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.core.protocol.Protocols;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.core.runtime.Session;
 import dev.tachyonmcp.core.server.McpDispatcher;
-import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.TachyonServer;
-import dev.tachyonmcp.core.server.extensions.ServerExtension;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.core.server.session.DispatchContext;
@@ -54,7 +54,7 @@ class ExtensionMethodRoutingTest {
     void dispatchesExtensionMethodWhenNegotiatedAndMetaPresent() throws Exception {
         negotiateExtension();
         session.activate();
-        var params = Map.of("_meta", Map.of("com.test/ext", JsonNodeFactory.instance.objectNode()));
+        var params = Map.of("_meta", Map.of("com.test/ext", Map.of()));
         var result = (McpDispatcher.DispatchResult.Response) dispatcher
                 .dispatchRequestAsync(RequestId.of(1), "test/ext-method", params, "sess_routing", null, context)
                 .join();
@@ -102,18 +102,8 @@ class ExtensionMethodRoutingTest {
         }
 
         @Override
-        public void bootstrap(ServerEngine server) {
-            server.registerHandler("test/ext-method", new RpcMethodHandler() {
-                @Override
-                public String method() {
-                    return "test/ext-method";
-                }
-
-                @Override
-                public Object handle(DispatchContext context, Object params) {
-                    return Map.of("status", "ok");
-                }
-            });
+        public void bootstrap(ExtensionContext context) {
+            context.registerHandler("test/ext-method", (interaction, params) -> Map.of("status", "ok"));
         }
     }
 }

@@ -36,7 +36,7 @@ public final class ServerBasic {
                 .enabled(true)
                 .sessionTtl(ofMinutes(5))
                 .janitorInterval(ofSeconds(5))
-                .sessionIdGenerator((req) -> "sid_" + UUID.randomUUID())
+                .sessionIdGenerator((channelContext, req) -> "sid_" + UUID.randomUUID())
             )
             .json(j ->
                 j.inputSchemaValidator(NetworkntJsonSchemaValidator.INSTANCE)

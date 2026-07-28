@@ -1,11 +1,12 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.config;
 
+import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.server.session.InMemorySessionEventStore;
 import dev.tachyonmcp.core.server.session.InMemorySessionStore;
 import dev.tachyonmcp.core.server.session.SessionEventStore;
-import dev.tachyonmcp.core.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.server.session.SessionStore;
+import io.netty.handler.codec.http.HttpRequest;
 import java.time.Duration;
 import org.jspecify.annotations.Nullable;
 
@@ -26,7 +27,7 @@ public record SessionConfig(
         @Nullable Duration sessionTtl,
         @Nullable SessionEventStore sessionEventStore,
         @Nullable SessionStore sessionStore,
-        @Nullable SessionIdGenerator sessionIdGenerator,
+        @Nullable SessionIdGenerator<? super HttpRequest> sessionIdGenerator,
         @Nullable Duration janitorInterval) {
 
     public static final Duration DEFAULT_SESSION_TTL = Duration.ofSeconds(30);
@@ -63,7 +64,7 @@ public record SessionConfig(
         private @Nullable Duration janitorInterval;
         private @Nullable SessionEventStore sessionEventStore;
         private @Nullable SessionStore sessionStore;
-        private @Nullable SessionIdGenerator sessionIdGenerator;
+        private @Nullable SessionIdGenerator<? super HttpRequest> sessionIdGenerator;
 
         private Builder() {}
 
@@ -112,7 +113,7 @@ public record SessionConfig(
          * Sets a custom session id generator (derives the id from the initialize request).
          * {@code null} restores {@link SessionIdGenerator#DEFAULT}.
          */
-        public Builder sessionIdGenerator(@Nullable SessionIdGenerator generator) {
+        public Builder sessionIdGenerator(@Nullable SessionIdGenerator<? super HttpRequest> generator) {
             this.sessionIdGenerator = generator;
             return this;
         }

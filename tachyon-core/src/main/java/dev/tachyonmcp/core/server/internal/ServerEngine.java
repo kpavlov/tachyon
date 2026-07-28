@@ -4,6 +4,7 @@ package dev.tachyonmcp.core.server.internal;
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.api.server.domain.RequestId;
+import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.runtime.Session;
 import dev.tachyonmcp.core.runtime.SseEvent;
@@ -13,8 +14,8 @@ import dev.tachyonmcp.core.server.ServerCapabilities;
 import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.core.server.features.tasks.TaskRegistry;
 import dev.tachyonmcp.core.server.session.SessionEvent;
-import dev.tachyonmcp.core.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
+import io.netty.handler.codec.http.HttpRequest;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -42,7 +43,7 @@ public interface ServerEngine extends TachyonServer {
     boolean isStateless();
 
     /** Returns the configured session id generator. */
-    SessionIdGenerator sessionIdGenerator();
+    SessionIdGenerator<? super HttpRequest> sessionIdGenerator();
 
     /** Sets the logging level for a session. */
     void setLoggingLevel(String sessionId, LoggingLevel level);

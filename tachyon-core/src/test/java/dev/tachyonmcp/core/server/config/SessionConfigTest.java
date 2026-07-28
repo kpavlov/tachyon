@@ -4,9 +4,10 @@ package dev.tachyonmcp.core.server.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
+import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.server.session.InMemorySessionEventStore;
 import dev.tachyonmcp.core.server.session.InMemorySessionStore;
-import dev.tachyonmcp.core.server.session.SessionIdGenerator;
+import io.netty.handler.codec.http.HttpRequest;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
@@ -54,7 +55,7 @@ class SessionConfigTest {
 
     @Test
     void sessionOptionsWhileDisabledFailFast() {
-        SessionIdGenerator custom = request -> "custom";
+        SessionIdGenerator<HttpRequest> custom = (channelContext, request) -> "custom";
 
         final var expectedMessage = "Session options require sessions to be enabled — call enabled(true)";
 
@@ -89,7 +90,7 @@ class SessionConfigTest {
 
     @Test
     void sessionOptionsWithEnabledAreAccepted() {
-        SessionIdGenerator custom = request -> "custom";
+        SessionIdGenerator<HttpRequest> custom = (channelContext, request) -> "custom";
 
         var config = SessionConfig.builder()
                 .enabled(true)

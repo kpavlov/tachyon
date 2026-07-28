@@ -8,11 +8,11 @@ import dev.tachyonmcp.api.server.config.Mode;
 import dev.tachyonmcp.core.server.config.NetworkConfig;
 import dev.tachyonmcp.core.server.config.ResourcesConfig;
 import dev.tachyonmcp.api.server.config.RuntimeConfig;
+import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.server.config.SessionConfig;
 import dev.tachyonmcp.core.server.config.TasksConfig;
 import dev.tachyonmcp.core.server.session.InMemorySessionEventStore;
 import dev.tachyonmcp.core.server.session.InMemorySessionStore;
-import dev.tachyonmcp.core.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.transport.netty.NettyIoEngine;
 
 import java.time.Duration;

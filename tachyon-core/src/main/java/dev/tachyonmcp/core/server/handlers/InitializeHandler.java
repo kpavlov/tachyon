@@ -2,12 +2,14 @@
 package dev.tachyonmcp.core.server.handlers;
 
 import dev.tachyonmcp.api.runtime.Extension;
+import dev.tachyonmcp.api.server.extensions.ExtensionSettings;
+import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.InitializeResponse;
-import dev.tachyonmcp.core.server.extensions.ServerExtension;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
+import dev.tachyonmcp.core.server.json.JsonUtils;
 import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -59,7 +61,7 @@ public final class InitializeHandler implements RpcMethodHandler {
             if (clientExtensions.containsKey(ext.extensionId())) {
                 context.enableExtension(ext.extensionId());
                 var clientSettings = clientExtensions.get(ext.extensionId());
-                ext.onConnectionInit(context, asMap(clientSettings));
+                ext.onConnectionInit(context, ExtensionSettings.of(JsonUtils.toObjectMap(asMap(clientSettings))));
             }
         }
     }
@@ -67,7 +69,9 @@ public final class InitializeHandler implements RpcMethodHandler {
     private Map<String, JsonNode> buildNegotiatedExtensions(DispatchContext context) {
         return extensions.stream()
                 .filter(e -> context.isExtensionEnabled(e.extensionId()))
-                .collect(Collectors.toMap(Extension::extensionId, ServerExtension::serverSettings));
+                .collect(Collectors.toMap(
+                        Extension::extensionId,
+                        extension -> JsonUtils.parse(extension.serverSettings().values())));
     }
 
     @SuppressWarnings("unchecked")

@@ -4,19 +4,18 @@ Extensions add custom MCP methods. MCP 2025-11-25 clients negotiate them via the
 
 ## The ServerExtension interface
 
-`bootstrap` receives a `ServerEngine` — Tachyon's internal server-side handle (`@InternalApi`:
-not a stability contract, but it's what extensions need to register raw JSON-RPC handlers).
+`bootstrap` receives an `ExtensionContext` (`@ExperimentalApi` — the shape may still change).
+It exposes feature registries and runtime configuration without leaking transport or server
+internals.
 
 ```java
-import dev.tachyonmcp.core.server.extensions.ServerExtension;
-import dev.tachyonmcp.core.server.internal.ServerEngine;
-import dev.tachyonmcp.core.server.RpcMethodHandler;
-import dev.tachyonmcp.core.server.session.DispatchContext;
-import dev.tachyonmcp.core.runtime.ChannelContext;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.JsonNodeFactory;
+import dev.tachyonmcp.api.runtime.InteractionContext;
+import dev.tachyonmcp.api.server.extensions.ExtensionContext;
+import dev.tachyonmcp.api.server.extensions.ExtensionSettings;
+import dev.tachyonmcp.api.server.extensions.ServerExtension;
+import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import java.util.Map;
-import java.util.Set;
 
 public class AuditExtension implements ServerExtension {
 
@@ -26,39 +25,37 @@ public class AuditExtension implements ServerExtension {
     }
 
     @Override
-    public Set<String> methods() {
-        return Set.of("audit/log");  // methods this extension owns
+    public void bootstrap(ExtensionContext context) {
+        context.tools().register(
+            ToolDescriptor.builder().name("audit-log").description("Writes an audit entry").build(),
+            (interaction, request) -> ToolResult.text("ok"));
     }
 
     @Override
-    public void bootstrap(ServerEngine server) {
-        // RpcMethodHandler declares both method() and handle(...), so it isn't a
-        // lambda-friendly SAM — implement it with an anonymous class.
-        server.registerHandler("audit/log", new RpcMethodHandler() {
-            @Override
-            public String method() {
-                return "audit/log";
-            }
-
-            @Override
-            public Object handle(DispatchContext context, Object params) {
-                // handle audit/log method
-                return server.responseMapper().emptyResult();
-            }
-        });
-    }
-
-    @Override
-    public void onConnectionInit(ChannelContext ctx, Map<String, JsonNode> clientSettings) {
+    public void onConnectionInit(InteractionContext ctx, ExtensionSettings clientSettings) {
         // called when a client negotiates this extension
     }
 
     @Override
-    public JsonNode serverSettings() {
-        // settings returned to the client during initialize
-        return JsonNodeFactory.instance.objectNode()
-            .put("version", "1.0");
+    public ExtensionSettings serverSettings() {
+        return ExtensionSettings.of(Map.of("version", "1.0"));
     }
+}
+```
+
+### Raw JSON-RPC methods
+
+For a method that doesn't fit the tool/resource/prompt/completion shape, register a raw handler
+from `bootstrap`. The handler is transport-neutral: it sees the stable `InteractionContext` and a
+provider-neutral `JsonObject`, never the underlying transport or server internals.
+
+```java
+@Override
+public void bootstrap(ExtensionContext context) {
+    context.registerHandler("com.example/audit-query", (interaction, params) -> {
+        // handle the method; return value is serialized as the JSON-RPC result
+        return Map.of("status", "ok");
+    });
 }
 ```
 

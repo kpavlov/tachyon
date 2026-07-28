@@ -2,13 +2,13 @@
 package dev.tachyonmcp.core.server;
 
 import dev.tachyonmcp.api.runtime.Notifications;
+import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.api.server.features.completions.Completions;
 import dev.tachyonmcp.api.server.features.prompts.Prompts;
 import dev.tachyonmcp.api.server.features.resources.Resources;
 import dev.tachyonmcp.api.server.features.tasks.Tasks;
 import dev.tachyonmcp.api.server.features.tools.Tools;
 import dev.tachyonmcp.core.server.config.ServerConfig;
-import dev.tachyonmcp.core.server.extensions.ServerExtension;
 import java.util.List;
 
 /**

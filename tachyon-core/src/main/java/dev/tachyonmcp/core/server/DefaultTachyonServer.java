@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server;
 
+import dev.tachyonmcp.api.json.JsonObject;
 import dev.tachyonmcp.api.json.JsonSchemaValidator;
 import dev.tachyonmcp.api.json.PayloadDeserializer;
 import dev.tachyonmcp.api.json.PayloadSerializer;
@@ -8,12 +9,16 @@ import dev.tachyonmcp.api.json.spi.JsonSchemaFactory;
 import dev.tachyonmcp.api.runtime.Notifications;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.api.server.domain.RequestId;
+import dev.tachyonmcp.api.server.extensions.ExtensionContext;
+import dev.tachyonmcp.api.server.extensions.ExtensionMethodHandler;
+import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.api.server.features.completions.Completions;
 import dev.tachyonmcp.api.server.features.prompts.Prompts;
 import dev.tachyonmcp.api.server.features.resources.Resources;
 import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.api.server.features.tasks.Tasks;
 import dev.tachyonmcp.api.server.features.tools.Tools;
+import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.protocol.Protocol;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.protocol.Protocols;
@@ -23,7 +28,6 @@ import dev.tachyonmcp.core.runtime.Session;
 import dev.tachyonmcp.core.runtime.SessionState;
 import dev.tachyonmcp.core.runtime.SseEvent;
 import dev.tachyonmcp.core.server.config.ServerConfig;
-import dev.tachyonmcp.core.server.extensions.ServerExtension;
 import dev.tachyonmcp.core.server.features.completions.DefaultCompletionRegistry;
 import dev.tachyonmcp.core.server.features.prompts.DefaultPromptRegistry;
 import dev.tachyonmcp.core.server.features.resources.DefaultResourceRegistry;
@@ -38,15 +42,16 @@ import dev.tachyonmcp.core.server.internal.NotificationLogSupport;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.server.json.JacksonPayloadSerde;
 import dev.tachyonmcp.core.server.json.NetworkntJsonSchemaValidator;
+import dev.tachyonmcp.core.server.session.DispatchContext;
 import dev.tachyonmcp.core.server.session.SessionEvent;
 import dev.tachyonmcp.core.server.session.SessionEventStore;
-import dev.tachyonmcp.core.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.server.session.SessionManager;
 import dev.tachyonmcp.core.server.session.SessionStore;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.core.transport.netty.NettyServer;
 import dev.tachyonmcp.core.transport.netty.NettyServerConfig;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.http.HttpRequest;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -69,7 +74,7 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-final class DefaultTachyonServer implements ServerEngine {
+final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultTachyonServer.class);
 
@@ -92,6 +97,7 @@ final class DefaultTachyonServer implements ServerEngine {
     private final @Nullable Consumer<ChannelPipeline> pipelineCustomizer;
     private final Map<String, String> extensionMethodOwners = new ConcurrentHashMap<>();
     private final Map<String, ServerExtension> extensionsById = new ConcurrentHashMap<>();
+    private @Nullable String bootstrappingExtensionId;
 
     private int port;
 
@@ -130,13 +136,18 @@ final class DefaultTachyonServer implements ServerEngine {
     }
 
     @Override
-    public SessionIdGenerator sessionIdGenerator() {
+    public SessionIdGenerator<? super HttpRequest> sessionIdGenerator() {
         return config.session().sessionIdGenerator();
     }
 
     @Override
     public ExecutorService executor() {
         return executor;
+    }
+
+    @Override
+    public dev.tachyonmcp.api.server.config.RuntimeConfig runtime() {
+        return config.runtime();
     }
 
     @Override
@@ -405,13 +416,47 @@ final class DefaultTachyonServer implements ServerEngine {
         return methodHandlers.get(method);
     }
 
+    @Override
+    public void registerHandler(String method, ExtensionMethodHandler handler) {
+        var ownerId = bootstrappingExtensionId;
+        if (ownerId != null) {
+            extensionMethodOwners.putIfAbsent(method, ownerId);
+        }
+        registerHandler(method, new RpcMethodHandler() {
+            @Override
+            public String method() {
+                return method;
+            }
+
+            @Override
+            public Object handle(DispatchContext context, @Nullable Object params) throws Exception {
+                var result = handler.handle(context, toJsonObject(params));
+                return result != null ? result : context.responseMapper().emptyResult();
+            }
+        });
+    }
+
+    private static JsonObject toJsonObject(@Nullable Object params) {
+        if (params instanceof Map<?, ?> map) {
+            @SuppressWarnings("unchecked")
+            var typed = (Map<String, ?>) map;
+            return JsonObject.of(typed);
+        }
+        return JsonObject.empty();
+    }
+
     private void bootstrapExtensions() {
         for (var ext : extensions) {
             for (var method : ext.methods()) {
                 extensionMethodOwners.put(method, ext.extensionId());
             }
             extensionsById.put(ext.extensionId(), ext);
-            ext.bootstrap(this);
+            bootstrappingExtensionId = ext.extensionId();
+            try {
+                ext.bootstrap(this);
+            } finally {
+                bootstrappingExtensionId = null;
+            }
         }
     }
 
