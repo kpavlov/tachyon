@@ -13,7 +13,7 @@ Build and run an MCP server in under 5 minutes.
 <dependency>
     <groupId>dev.tachyonmcp</groupId>
     <artifactId>tachyon-core</artifactId>
-    <version>1.0.0-beta.14</version>
+    <version>1.0.0-beta.15</version>
 </dependency>
 ```
 

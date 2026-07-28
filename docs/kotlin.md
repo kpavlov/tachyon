@@ -8,7 +8,7 @@ The `tachyon-kotlin` module wraps `ServerBuilder` with a coroutine-first DSL, su
 <dependency>
     <groupId>dev.tachyonmcp</groupId>
     <artifactId>tachyon-kotlin</artifactId>
-    <version>1.0.0-beta.14</version>
+    <version>1.0.0-beta.15</version>
 </dependency>
 ```
 

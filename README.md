@@ -38,7 +38,7 @@ Opt into sessions for SSE resumability, `Last-Event-ID` replay, and TTL cleanup.
     <dependency>
         <groupId>dev.tachyonmcp</groupId>
         <artifactId>tachyon-core</artifactId>
-        <version>1.0.0-beta.14</version>
+        <version>1.0.0-beta.15</version>
     </dependency>
     ```
 
