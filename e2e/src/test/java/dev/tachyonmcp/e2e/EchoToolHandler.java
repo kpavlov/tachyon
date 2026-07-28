@@ -1,10 +1,10 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e;
 
-import dev.tachyonmcp.json.JsonSchema;
-import dev.tachyonmcp.server.features.tools.AsyncToolFn;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.api.json.JsonSchema;
+import dev.tachyonmcp.api.server.features.tools.AsyncToolFn;
+import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import java.util.concurrent.CompletableFuture;
 
 class EchoToolHandler {

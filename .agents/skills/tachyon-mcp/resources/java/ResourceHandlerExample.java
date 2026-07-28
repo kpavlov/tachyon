@@ -2,12 +2,12 @@
  * Copyright (c) 2026 Konstantin Pavlov and contributors.
  */
 
-import dev.tachyonmcp.server.domain.BlobResourceContents;
-import dev.tachyonmcp.server.domain.TextResourceContents;
-import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
-import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.server.features.resources.ResourceHandler;
-import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
+import dev.tachyonmcp.api.server.domain.BlobResourceContents;
+import dev.tachyonmcp.api.server.domain.TextResourceContents;
+import dev.tachyonmcp.api.server.features.resources.AsyncResourceHandler;
+import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
+import dev.tachyonmcp.api.server.features.resources.ResourceHandler;
+import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
 
 import java.util.concurrent.CompletableFuture;
 

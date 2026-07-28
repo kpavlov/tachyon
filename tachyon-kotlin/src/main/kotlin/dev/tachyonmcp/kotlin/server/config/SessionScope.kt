@@ -1,10 +1,11 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.config
 
+import dev.tachyonmcp.core.server.config.SessionConfig
+import dev.tachyonmcp.core.server.session.SessionEventStore
+import dev.tachyonmcp.core.server.session.SessionIdGenerator
+import dev.tachyonmcp.core.server.session.SessionStore
 import dev.tachyonmcp.kotlin.server.TachyonDsl
-import dev.tachyonmcp.server.session.SessionEventStore
-import dev.tachyonmcp.server.session.SessionIdGenerator
-import dev.tachyonmcp.server.session.SessionStore
 import io.netty.handler.codec.http.HttpRequest
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
@@ -28,7 +29,10 @@ public class SessionScope
         /** Custom session event store. */
         public var sessionEventStore: SessionEventStore? = null
 
-        /** Session ID generator; defaults to [SessionIdGenerator.DEFAULT] (`sess_<uuid>`). Never null. */
+        /** Session ID generator;
+         * defaults to [dev.tachyonmcp.core.server.session.SessionIdGenerator.DEFAULT]
+         * (`sess_<uuid>`). Never null.
+         */
         public var sessionIdGenerator: SessionIdGenerator = SessionIdGenerator.DEFAULT
 
         /**
@@ -42,7 +46,7 @@ public class SessionScope
         }
 
         @PublishedApi
-        internal fun applyTo(builder: dev.tachyonmcp.server.config.SessionConfig.Builder) {
+        internal fun applyTo(builder: SessionConfig.Builder) {
             builder.enabled(enabled)
             sessionTtl?.let { builder.sessionTtl(it.toJavaDuration()) }
             janitorInterval?.let { builder.janitorInterval(it.toJavaDuration()) }

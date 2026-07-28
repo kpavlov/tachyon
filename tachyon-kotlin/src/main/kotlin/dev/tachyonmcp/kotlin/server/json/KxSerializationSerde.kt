@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.json
 
-import dev.tachyonmcp.json.PayloadSerde
+import dev.tachyonmcp.api.json.PayloadSerde
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
@@ -9,7 +9,7 @@ import java.lang.reflect.Type
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * [dev.tachyonmcp.json.PayloadSerde] backed by kotlinx.serialization.
+ * [dev.tachyonmcp.api.json.PayloadSerde] backed by kotlinx.serialization.
  *
  * Serializers are resolved from the [json] serializers module by runtime type, so payload
  * classes must be `@Serializable` (or built-in). Generic containers lose their type arguments

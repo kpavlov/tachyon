@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server
 
-import dev.tachyonmcp.runtime.InteractionContext
-import dev.tachyonmcp.server.TachyonServer
-import dev.tachyonmcp.server.internal.ServerEngine
-import dev.tachyonmcp.server.session.DefaultDispatchContext
+import dev.tachyonmcp.api.runtime.InteractionContext
+import dev.tachyonmcp.core.server.TachyonServer
+import dev.tachyonmcp.core.server.internal.ServerEngine
+import dev.tachyonmcp.core.server.session.DefaultDispatchContext
 
 internal fun <T> withStatelessContext(block: (InteractionContext) -> T): T =
     TachyonServer.builder().build().use { server ->

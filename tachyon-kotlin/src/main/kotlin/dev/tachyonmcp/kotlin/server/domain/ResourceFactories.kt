@@ -6,9 +6,9 @@
 
 package dev.tachyonmcp.kotlin.server.domain
 
+import dev.tachyonmcp.api.server.domain.BlobResourceContents
+import dev.tachyonmcp.api.server.domain.TextResourceContents
 import dev.tachyonmcp.kotlin.server.json.toJacksonNodeMap
-import dev.tachyonmcp.server.domain.BlobResourceContents
-import dev.tachyonmcp.server.domain.TextResourceContents
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
 import kotlin.contracts.ExperimentalContracts

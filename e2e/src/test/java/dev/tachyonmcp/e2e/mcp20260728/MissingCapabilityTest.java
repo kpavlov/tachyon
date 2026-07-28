@@ -4,9 +4,9 @@ package dev.tachyonmcp.e2e.mcp20260728;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.server.domain.MissingRequiredClientCapabilityException;
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
-import dev.tachyonmcp.server.domain.MissingRequiredClientCapabilityException;
-import dev.tachyonmcp.server.features.tools.ToolResult;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

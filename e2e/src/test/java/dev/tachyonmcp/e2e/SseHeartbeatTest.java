@@ -3,12 +3,12 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.internal.ServerEngine;
-import dev.tachyonmcp.transport.netty.McpChannelInitializer;
-import dev.tachyonmcp.transport.netty.NettyIoEngine;
-import dev.tachyonmcp.transport.netty.NettyServer;
-import dev.tachyonmcp.transport.netty.NettyServerConfig;
+import dev.tachyonmcp.core.server.TachyonServer;
+import dev.tachyonmcp.core.server.internal.ServerEngine;
+import dev.tachyonmcp.core.transport.netty.McpChannelInitializer;
+import dev.tachyonmcp.core.transport.netty.NettyIoEngine;
+import dev.tachyonmcp.core.transport.netty.NettyServer;
+import dev.tachyonmcp.core.transport.netty.NettyServerConfig;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;

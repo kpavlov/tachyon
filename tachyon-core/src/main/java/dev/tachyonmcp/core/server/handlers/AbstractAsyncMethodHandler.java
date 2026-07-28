@@ -1,0 +1,26 @@
+/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
+package dev.tachyonmcp.core.server.handlers;
+
+import dev.tachyonmcp.api.server.features.HandlerFutures;
+import dev.tachyonmcp.core.server.RpcMethodHandler;
+import dev.tachyonmcp.core.server.session.DispatchContext;
+import java.util.concurrent.CompletionStage;
+
+/**
+ * Convenient base for asynchronous RPC method handlers.
+ * Subclasses implement {@link #handleAsync}; the blocking {@link #handle} delegates via
+ * {@link HandlerFutures#joinInterruptibly}.
+ */
+public abstract class AbstractAsyncMethodHandler implements RpcMethodHandler {
+
+    /** Default constructor for subclasses. */
+    protected AbstractAsyncMethodHandler() {}
+
+    @Override
+    public final Object handle(DispatchContext context, Object params) throws Exception {
+        return HandlerFutures.joinInterruptibly(handleAsync(context, params));
+    }
+
+    @Override
+    public abstract CompletionStage<Object> handleAsync(DispatchContext context, Object params);
+}

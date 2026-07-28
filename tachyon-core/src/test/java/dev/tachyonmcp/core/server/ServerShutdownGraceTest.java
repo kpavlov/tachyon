@@ -1,0 +1,84 @@
+/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
+package dev.tachyonmcp.core.server;
+
+import static dev.tachyonmcp.core.test.TestUtils.newEngine;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import dev.tachyonmcp.api.server.config.RuntimeConfig;
+import dev.tachyonmcp.api.server.domain.RequestId;
+import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.server.internal.ServerEngine;
+import java.time.Duration;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
+
+/**
+ * Verifies that {@link TachyonServer#close()} drains in-flight handlers for the configured
+ * {@code shutdownGracePeriod} before force-interrupting them.
+ *
+ * @author Konstantin Pavlov
+ */
+@Execution(ExecutionMode.SAME_THREAD)
+class ServerShutdownGraceTest {
+
+    @Test
+    void defaultGracePeriodIsFiveSeconds() {
+        assertThat(RuntimeConfig.builder().build().shutdownGracePeriod()).isEqualTo(Duration.ofSeconds(5));
+    }
+
+    @Test
+    void closeIsImmediateWhenIdle() {
+        var server = TachyonServer.builder().build();
+
+        long start = System.nanoTime();
+        server.close();
+        long elapsedMs = (System.nanoTime() - start) / 1_000_000L;
+
+        assertThat(elapsedMs)
+                .as("idle close must not wait for the grace period")
+                .isLessThan(1_000L);
+    }
+
+    @Test
+    void closeWaitsConfiguredGraceThenInterruptsInFlightHandler() throws Exception {
+        var started = new CountDownLatch(1);
+        var interrupted = new CountDownLatch(1);
+
+        ServerEngine server = newEngine(
+                b -> b.runtime(r -> r.shutdownGracePeriod(Duration.ofMillis(400))),
+                s -> s.tools().register(builder -> builder.name("slow_probe"), (context, request) -> {
+                    started.countDown();
+                    try {
+                        new CountDownLatch(1).await(30, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
+                        interrupted.countDown();
+                        Thread.currentThread().interrupt();
+                    }
+                    return ToolResult.empty();
+                }));
+
+        server.createSession("sess-slow").activate();
+        var dispatcher = new McpDispatcher(server, server.executor());
+        dispatcher.dispatchRequestAsync(
+                RequestId.of(1), "tools/call", Map.of("name", "slow_probe", "arguments", Map.of()), "sess-slow");
+
+        assertThat(started.await(5, TimeUnit.SECONDS))
+                .as("handler must be running before close")
+                .isTrue();
+
+        long start = System.nanoTime();
+        server.close();
+        long elapsedMs = (System.nanoTime() - start) / 1_000_000L;
+
+        assertThat(elapsedMs)
+                .as("close must wait the configured grace, not the old 10s")
+                .isBetween(300L, 3_000L);
+        assertThat(interrupted.await(5, TimeUnit.SECONDS))
+                .as("in-flight handler must be force-interrupted after the grace period")
+                .isTrue();
+    }
+}

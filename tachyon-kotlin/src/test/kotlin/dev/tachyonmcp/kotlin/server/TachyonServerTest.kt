@@ -1,6 +1,12 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server
 
+import dev.tachyonmcp.api.server.config.Mode
+import dev.tachyonmcp.api.server.domain.Role
+import dev.tachyonmcp.api.server.features.tools.ToolResult
+import dev.tachyonmcp.core.server.session.InMemorySessionEventStore
+import dev.tachyonmcp.core.server.session.InMemorySessionStore
+import dev.tachyonmcp.core.server.session.SessionIdGenerator
 import dev.tachyonmcp.kotlin.server.domain.Annotations
 import dev.tachyonmcp.kotlin.server.domain.Icon
 import dev.tachyonmcp.kotlin.server.domain.PromptArgument
@@ -11,12 +17,6 @@ import dev.tachyonmcp.kotlin.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.kotlin.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.kotlin.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.kotlin.server.features.tools.ToolDescriptor
-import dev.tachyonmcp.server.config.Mode
-import dev.tachyonmcp.server.domain.Role
-import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.session.InMemorySessionEventStore
-import dev.tachyonmcp.server.session.InMemorySessionStore
-import dev.tachyonmcp.server.session.SessionIdGenerator
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain

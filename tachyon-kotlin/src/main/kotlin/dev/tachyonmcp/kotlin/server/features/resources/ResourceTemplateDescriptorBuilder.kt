@@ -5,15 +5,15 @@
 
 package dev.tachyonmcp.kotlin.server.features.resources
 
+import dev.tachyonmcp.api.server.domain.Annotations
+import dev.tachyonmcp.api.server.domain.Icon
+import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.kotlin.server.TachyonDsl
-import dev.tachyonmcp.server.domain.Annotations
-import dev.tachyonmcp.server.domain.Icon
-import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
-/** Builds a [dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor]. */
+/** Builds a [dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor]. */
 @TachyonDsl
 public class ResourceTemplateDescriptorBuilder
     @PublishedApi

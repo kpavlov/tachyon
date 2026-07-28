@@ -3,10 +3,10 @@
 
 package dev.tachyonmcp.kotlin.server.config
 
+import dev.tachyonmcp.api.runtime.InteractionContext
+import dev.tachyonmcp.api.server.domain.PromptMessage
+import dev.tachyonmcp.api.server.features.prompts.PromptRequest
 import dev.tachyonmcp.kotlin.server.TachyonDsl
-import dev.tachyonmcp.runtime.InteractionContext
-import dev.tachyonmcp.server.domain.PromptMessage
-import dev.tachyonmcp.server.features.prompts.PromptRequest
 
 @TachyonDsl
 public class PromptScope
@@ -21,7 +21,8 @@ public class PromptScope
             get() = request.arguments()
 
         /**
-         * Builds a list of user-role [PromptMessage]s from the content blocks collected in
+         * Builds a list of user-role [dev.tachyonmcp.api.server.domain.PromptMessage]s
+         * from the content blocks collected in
          * [block] — one message per block. For explicit roles use
          * [dev.tachyonmcp.kotlin.server.domain.PromptMessage].
          *

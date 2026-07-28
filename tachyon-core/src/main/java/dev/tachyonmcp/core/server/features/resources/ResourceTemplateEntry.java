@@ -1,0 +1,25 @@
+/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
+package dev.tachyonmcp.core.server.features.resources;
+
+import dev.tachyonmcp.api.annotations.InternalApi;
+import dev.tachyonmcp.api.server.ServerFeature;
+import dev.tachyonmcp.api.server.domain.UriTemplate;
+import dev.tachyonmcp.api.server.features.resources.ResourceHandler;
+import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
+
+@InternalApi
+public record ResourceTemplateEntry(
+        ResourceTemplateDescriptor descriptor, ResourceHandler handler, UriTemplate uriTemplate)
+        implements ServerFeature<ResourceTemplateDescriptor> {
+
+    /**
+     * Creates a resource template entry from its descriptor and handler.
+     *
+     * @param descriptor the resource template descriptor
+     * @param handler    the handler for resource template requests
+     * @return the created resource template entry
+     */
+    public static ResourceTemplateEntry of(ResourceTemplateDescriptor descriptor, ResourceHandler handler) {
+        return new ResourceTemplateEntry(descriptor, handler, UriTemplate.create(descriptor.uriTemplate()));
+    }
+}

@@ -2,12 +2,12 @@
 
 package dev.tachyonmcp.skill
 
-import dev.tachyonmcp.runtime.InteractionContext
-import dev.tachyonmcp.server.TachyonServer
-import dev.tachyonmcp.server.features.tools.ToolRequest
-import dev.tachyonmcp.server.features.tools.AbstractToolHandler
-import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.json.JsonSchema
+import dev.tachyonmcp.api.json.JsonSchema
+import dev.tachyonmcp.api.runtime.InteractionContext
+import dev.tachyonmcp.core.server.TachyonServer
+import dev.tachyonmcp.api.server.features.tools.ToolRequest
+import dev.tachyonmcp.api.server.features.tools.AbstractToolHandler
+import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.kotlin.server.buildServer
 import dev.tachyonmcp.kotlin.server.config.TachyonServerBuilder
 import dev.tachyonmcp.kotlin.server.domain.decode

@@ -6,7 +6,7 @@
 
 package dev.tachyonmcp.kotlin.server.domain
 
-import dev.tachyonmcp.server.domain.ResourceLink
+import dev.tachyonmcp.api.server.domain.ResourceLink
 
 /**
  * Creates a [ResourceLink] — a lightweight pointer to another resource.

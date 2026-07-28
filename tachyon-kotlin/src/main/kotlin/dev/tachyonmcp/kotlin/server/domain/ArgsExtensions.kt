@@ -3,9 +3,9 @@
 
 package dev.tachyonmcp.kotlin.server.domain
 
-import dev.tachyonmcp.json.JsonArray
-import dev.tachyonmcp.json.JsonObject
-import dev.tachyonmcp.server.domain.Args
+import dev.tachyonmcp.api.json.JsonArray
+import dev.tachyonmcp.api.json.JsonObject
+import dev.tachyonmcp.api.server.domain.Args
 import java.math.BigDecimal
 
 /** Returns the [key] argument as a [String], or `null` when it is missing or JSON null. */
@@ -38,7 +38,7 @@ public fun Args.objectOrNull(key: String): JsonObject? = objectOpt(key).orElse(n
 /** Returns the [key] argument as an exact [BigDecimal], or `null` when it is missing or JSON null. */
 public fun Args.decimalOrNull(key: String): BigDecimal? = decimalOpt(key).orElse(null)
 
-/** Returns the [key] argument as a [JsonArray], or `null` when it is missing or JSON null. */
+/** Returns the [key] argument as a [dev.tachyonmcp.api.json.JsonArray], or `null` when it is missing or JSON null. */
 public fun Args.arrayOrNull(key: String): JsonArray? = arrayOpt(key).orElse(null)
 
 /** Returns the [key] argument as a [String], or [default] when it is missing or JSON null. */

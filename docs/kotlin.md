@@ -52,10 +52,10 @@ content objects, and resource, prompt, and tool descriptors.
 ## Full example
 
 ```kotlin
-import dev.tachyonmcp.server.TachyonServer
-import dev.tachyonmcp.server.domain.PromptMessage
-import dev.tachyonmcp.server.domain.TextResourceContents
-import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.kotlin.server.TachyonServer
+import dev.tachyonmcp.api.server.domain.PromptMessage
+import dev.tachyonmcp.api.server.domain.TextResourceContents
+import dev.tachyonmcp.api.server.features.tools.ToolResult
 
 val server = TachyonServer(port = 8080) {
     info {

@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.json
 
-import dev.tachyonmcp.json.JsonSchema
-import dev.tachyonmcp.server.features.tools.ToolDescriptor
-import dev.tachyonmcp.server.json.Jackson3JsonFactory
-import dev.tachyonmcp.server.json.JsonUtils
+import dev.tachyonmcp.api.json.JsonSchema
+import dev.tachyonmcp.api.server.features.tools.ToolDescriptor
+import dev.tachyonmcp.core.server.json.Jackson3JsonFactory
+import dev.tachyonmcp.core.server.json.JsonUtils
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull

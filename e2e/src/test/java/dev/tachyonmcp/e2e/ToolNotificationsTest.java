@@ -3,9 +3,9 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.config.CapabilitiesConfig;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 

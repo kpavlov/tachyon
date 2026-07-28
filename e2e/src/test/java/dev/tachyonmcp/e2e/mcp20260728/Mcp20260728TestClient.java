@@ -1,8 +1,8 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp20260728;
 
+import dev.tachyonmcp.core.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.e2e.TestMcpClient;
-import dev.tachyonmcp.protocol.mcp.McpHeaderNames;
 import java.net.http.HttpRequest;
 import tools.jackson.databind.node.ObjectNode;
 

@@ -6,17 +6,17 @@
 
 package dev.tachyonmcp.kotlin.server
 
+import dev.tachyonmcp.core.server.TachyonServer
 import dev.tachyonmcp.kotlin.server.config.TachyonServerBuilder
-import dev.tachyonmcp.server.TachyonServer
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
 /**
  * Creates a [TachyonServer] and starts the Netty transport on [port].
- * The returned server is bound and listening — close it with [dev.tachyonmcp.server.TachyonServer.close].
+ * The returned server is bound and listening — close it with [dev.tachyonmcp.core.server.TachyonServer.close].
  *
- * Use `port = 0` for an ephemeral port (discoverable via [dev.tachyonmcp.server.TachyonServer.port]).
+ * Use `port = 0` for an ephemeral port (discoverable via [dev.tachyonmcp.core.server.TachyonServer.port]).
  *
  * @see buildServer for the non-listening variant
  */

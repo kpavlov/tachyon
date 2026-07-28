@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.config
 
+import dev.tachyonmcp.core.server.config.NetworkConfig
+import dev.tachyonmcp.core.transport.netty.NettyIoEngine
 import dev.tachyonmcp.kotlin.server.TachyonDsl
-import dev.tachyonmcp.server.config.NetworkConfig
-import dev.tachyonmcp.transport.netty.NettyIoEngine
 import java.net.SocketAddress
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration

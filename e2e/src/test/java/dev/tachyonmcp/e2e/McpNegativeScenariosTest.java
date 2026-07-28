@@ -5,8 +5,8 @@ import static io.modelcontextprotocol.spec.McpSchema.CallToolRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import dev.tachyonmcp.server.domain.PromptMessage;
-import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.api.server.domain.PromptMessage;
+import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
 import java.util.List;

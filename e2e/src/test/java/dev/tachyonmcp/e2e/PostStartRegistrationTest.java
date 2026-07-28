@@ -1,15 +1,15 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e;
 
-import static dev.tachyonmcp.server.domain.PromptMessage.of;
+import static dev.tachyonmcp.api.server.domain.PromptMessage.of;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
-import dev.tachyonmcp.server.domain.Role;
-import dev.tachyonmcp.server.domain.TextContent;
-import dev.tachyonmcp.server.domain.TextResourceContents;
-import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
-import dev.tachyonmcp.server.features.prompts.PromptResult;
-import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
+import dev.tachyonmcp.api.server.domain.Role;
+import dev.tachyonmcp.api.server.domain.TextContent;
+import dev.tachyonmcp.api.server.domain.TextResourceContents;
+import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.api.server.features.prompts.PromptResult;
+import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

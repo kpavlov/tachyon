@@ -1,0 +1,44 @@
+/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
+package dev.tachyonmcp.core.server.session;
+
+import dev.tachyonmcp.api.annotations.InternalApi;
+import dev.tachyonmcp.api.server.domain.LoggingLevel;
+import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
+import dev.tachyonmcp.core.runtime.ChannelContext;
+import dev.tachyonmcp.core.server.OutboundSseStream;
+import dev.tachyonmcp.core.server.internal.ServerEngine;
+import org.jspecify.annotations.Nullable;
+
+@InternalApi
+public interface DispatchContext extends ChannelContext {
+
+    /** Returns the owning {@link ServerEngine}. */
+    ServerEngine engine();
+
+    /** Sets the logging level for the current session; no-op when no session is bound. */
+    void setLoggingLevel(LoggingLevel level);
+
+    /** Returns the logging level for the current session, or {@code null} when unset or session-less. */
+    @Nullable
+    LoggingLevel getLoggingLevel();
+
+    /**
+     * Sets the log level this specific request permits (from {@code _meta.../logLevel}, protocols
+     * without sessions). Unlike {@link #setLoggingLevel}, this is request-scoped, not session-scoped.
+     */
+    void setPermittedLogLevel(@Nullable LoggingLevel level);
+
+    /** Returns the log level this specific request permits, or {@code null} if it set none. */
+    @Nullable
+    LoggingLevel getPermittedLogLevel();
+
+    /** Returns the protocol response mapper for the current protocol version. */
+    ProtocolResponseMapper responseMapper();
+
+    /** Returns the outbound SSE stream, or {@code null} if not yet upgraded. */
+    @Nullable
+    OutboundSseStream outboundStream();
+
+    /** Sets the outbound SSE stream for this dispatch. */
+    void setOutboundStream(@Nullable OutboundSseStream stream);
+}

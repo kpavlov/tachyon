@@ -6,9 +6,9 @@
 
 package dev.tachyonmcp.kotlin.server.features.resources
 
-import dev.tachyonmcp.server.domain.Annotations
-import dev.tachyonmcp.server.domain.Icon
-import dev.tachyonmcp.server.features.resources.ResourceDescriptor
+import dev.tachyonmcp.api.server.domain.Annotations
+import dev.tachyonmcp.api.server.domain.Icon
+import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor
 
 /**
  * Creates a [ResourceDescriptor] describing a static resource.

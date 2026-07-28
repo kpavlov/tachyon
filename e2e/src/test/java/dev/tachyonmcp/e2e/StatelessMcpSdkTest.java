@@ -4,10 +4,10 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.domain.PromptMessage;
-import dev.tachyonmcp.server.domain.Role;
-import dev.tachyonmcp.server.domain.TextContent;
-import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.api.server.domain.PromptMessage;
+import dev.tachyonmcp.api.server.domain.Role;
+import dev.tachyonmcp.api.server.domain.TextContent;
+import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

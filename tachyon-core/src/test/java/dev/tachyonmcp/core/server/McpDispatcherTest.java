@@ -1,0 +1,204 @@
+/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
+package dev.tachyonmcp.core.server;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import dev.tachyonmcp.api.server.domain.RequestId;
+import dev.tachyonmcp.core.server.internal.ServerEngine;
+import java.util.Map;
+import java.util.function.Consumer;
+import org.junit.jupiter.api.Test;
+
+class McpDispatcherTest {
+
+    private static McpDispatcher.DispatchResult.Response asResponse(McpDispatcher.DispatchResult result) {
+        assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Response.class);
+        return (McpDispatcher.DispatchResult.Response) result;
+    }
+
+    private static ServerEngine newEngine(Consumer<ServerBuilder> configurer) {
+        var builder = TachyonServer.builder();
+        configurer.accept(builder);
+        return (ServerEngine) builder.build();
+    }
+
+    @Test
+    void shouldAllowDifferentIdsInSameSession() {
+        try (ServerEngine server = newEngine(b -> {})) {
+            server.createSession("sess_diff");
+            var dispatcher = new McpDispatcher(server, server.executor());
+
+            var first = asResponse(dispatcher
+                    .dispatchRequestAsync(RequestId.of(1), "ping", null, "sess_diff")
+                    .join());
+            assertThat(first.responseBodyString()).contains("result");
+
+            var second = asResponse(dispatcher
+                    .dispatchRequestAsync(RequestId.of(2), "ping", null, "sess_diff")
+                    .join());
+            assertThat(second.responseBodyString()).contains("result");
+        }
+    }
+
+    @Test
+    void shouldAllowSameIdInDifferentSessions() {
+        try (ServerEngine server = newEngine(b -> {})) {
+            server.createSession("sess_a");
+            server.createSession("sess_b");
+            var dispatcher = new McpDispatcher(server, server.executor());
+
+            var first = asResponse(dispatcher
+                    .dispatchRequestAsync(RequestId.of(42), "ping", null, "sess_a")
+                    .join());
+            assertThat(first.responseBodyString()).contains("result");
+
+            var second = asResponse(dispatcher
+                    .dispatchRequestAsync(RequestId.of(42), "ping", null, "sess_b")
+                    .join());
+            assertThat(second.responseBodyString()).contains("result");
+        }
+    }
+
+    @Test
+    void shouldRejectNonInitializeRequestBeforeSessionIsActive() {
+        try (ServerEngine server = (ServerEngine)
+                TachyonServer.builder().session(s -> s.enabled(true)).build()) {
+            server.createSession("sess_init");
+            var dispatcher = new McpDispatcher(server, server.executor());
+
+            var result = asResponse(dispatcher
+                    .dispatchRequestAsync(RequestId.of(1), "tools/list", null, "sess_init")
+                    .join());
+            var body = result.responseBodyString();
+            assertThat(body).contains("error");
+            assertThat(body).contains("-32600");
+        }
+    }
+
+    @Test
+    void shouldAcceptPingBeforeSessionIsActive() {
+        try (ServerEngine server = newEngine(b -> {})) {
+            server.createSession("sess_ping");
+            var dispatcher = new McpDispatcher(server, server.executor());
+
+            var result = asResponse(dispatcher
+                    .dispatchRequestAsync(RequestId.of(1), "ping", null, "sess_ping")
+                    .join());
+            var body = result.responseBodyString();
+            assertThat(body).contains("result");
+            assertThat(body).doesNotContain("error");
+        }
+    }
+
+    @Test
+    void shouldAcceptRequestAfterSessionIsActive() {
+        try (ServerEngine server = newEngine(b -> {})) {
+            var session = server.createSession("sess_active");
+            session.activate();
+            var dispatcher = new McpDispatcher(server, server.executor());
+
+            var result = asResponse(dispatcher
+                    .dispatchRequestAsync(RequestId.of(1), "ping", null, "sess_active")
+                    .join());
+            var body = result.responseBodyString();
+            assertThat(body).contains("result");
+        }
+    }
+
+    @Test
+    void cancelsPendingRequestWithMatchingId() {
+        try (ServerEngine server = (ServerEngine)
+                TachyonServer.builder().session(s -> s.enabled(true)).build()) {
+            var session = server.createSession("sess_cancel-pending");
+            session.activate();
+            var dispatcher = new McpDispatcher(server, server.executor());
+
+            var requestId = "test-req-1";
+            var pending = new java.util.concurrent.CompletableFuture<String>();
+            server.registerPendingRequest(RequestId.of(requestId), pending);
+
+            var params = Map.of("requestId", requestId, "reason", "User cancelled");
+            var result = dispatcher.dispatchNotification("notifications/cancelled", params, "sess_cancel-pending");
+            assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Accepted.class);
+            assertThat(pending).isCompletedExceptionally();
+            assertThat(pending.exceptionNow().getMessage()).contains("Cancelled: User cancelled");
+        }
+    }
+
+    @Test
+    void cancelsWithoutSessionLogsAndAccepts() {
+        try (ServerEngine server = newEngine(b -> {})) {
+            var dispatcher = new McpDispatcher(server, server.executor());
+
+            var params = Map.of("requestId", 1, "reason", "no-session");
+            var result = dispatcher.dispatchNotification("notifications/cancelled", params, null);
+            assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Accepted.class);
+        }
+    }
+
+    @Test
+    void cancelsWithUnknownRequestIdIsAccepted() {
+        try (ServerEngine server = newEngine(b -> {})) {
+            var session = server.createSession("sess_cancel-unknown");
+            session.activate();
+            var dispatcher = new McpDispatcher(server, server.executor());
+
+            var result = dispatcher.dispatchNotification(
+                    "notifications/cancelled", Map.of("requestId", "missing"), "sess_cancel-unknown");
+            assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Accepted.class);
+        }
+    }
+
+    @Test
+    void cancelsWithMalformedRequestIdIsAcceptedWithoutThrowing() {
+        try (ServerEngine server = newEngine(b -> {})) {
+            var session = server.createSession("sess_cancel-malformed");
+            session.activate();
+            var dispatcher = new McpDispatcher(server, server.executor());
+
+            var result = dispatcher.dispatchNotification(
+                    "notifications/cancelled", Map.of("requestId", true), "sess_cancel-malformed");
+            assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Accepted.class);
+        }
+    }
+
+    @Test
+    void cancelsWithEmptyParamsIsAccepted() {
+        try (ServerEngine server = newEngine(b -> {})) {
+            server.createSession("sess_cancel-empty");
+            var dispatcher = new McpDispatcher(server, server.executor());
+
+            var result = dispatcher.dispatchNotification("notifications/cancelled", Map.of(), "sess_cancel-empty");
+            assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Accepted.class);
+        }
+    }
+
+    @Test
+    void cancelsWithNullParamsIsAccepted() {
+        try (ServerEngine server = newEngine(b -> {})) {
+            server.createSession("sess_cancel-null");
+            var dispatcher = new McpDispatcher(server, server.executor());
+
+            var result = dispatcher.dispatchNotification("notifications/cancelled", null, "sess_cancel-null");
+            assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Accepted.class);
+        }
+    }
+
+    @Test
+    void shouldRejectRequestAfterSessionIsClosed() {
+        try (ServerEngine server = (ServerEngine)
+                TachyonServer.builder().session(s -> s.enabled(true)).build()) {
+            var session = server.createSession("sess_closed");
+            session.activate();
+            session.close();
+            var dispatcher = new McpDispatcher(server, server.executor());
+
+            var result = asResponse(dispatcher
+                    .dispatchRequestAsync(RequestId.of(1), "ping", null, "sess_closed")
+                    .join());
+            var body = result.responseBodyString();
+            assertThat(body).contains("error");
+            assertThat(body).contains("-32600");
+        }
+    }
+}

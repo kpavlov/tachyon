@@ -3,10 +3,10 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.core.server.ServerBuilder;
+import dev.tachyonmcp.core.server.TachyonServer;
+import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.e2e.mcp20260728.Mcp20260728TestClient;
-import dev.tachyonmcp.server.ServerBuilder;
-import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.internal.ServerEngine;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;

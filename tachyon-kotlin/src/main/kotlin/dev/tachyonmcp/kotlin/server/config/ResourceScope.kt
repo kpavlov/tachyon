@@ -1,14 +1,14 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.config
 
+import dev.tachyonmcp.api.runtime.InteractionContext
+import dev.tachyonmcp.api.server.domain.BlobResourceContents
+import dev.tachyonmcp.api.server.domain.TextResourceContents
+import dev.tachyonmcp.api.server.domain.UriTemplateValue
+import dev.tachyonmcp.api.server.features.resources.ResourceRequest
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.domain.BlobResourceContentsBuilder
 import dev.tachyonmcp.kotlin.server.domain.TextResourceContentsBuilder
-import dev.tachyonmcp.runtime.InteractionContext
-import dev.tachyonmcp.server.domain.BlobResourceContents
-import dev.tachyonmcp.server.domain.TextResourceContents
-import dev.tachyonmcp.server.domain.UriTemplateValue
-import dev.tachyonmcp.server.features.resources.ResourceRequest
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract

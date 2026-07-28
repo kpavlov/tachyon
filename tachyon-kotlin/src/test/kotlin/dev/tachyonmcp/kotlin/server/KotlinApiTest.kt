@@ -1,6 +1,14 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server
 
+import dev.tachyonmcp.api.server.domain.Args
+import dev.tachyonmcp.api.server.domain.ImageContent
+import dev.tachyonmcp.api.server.domain.InvalidArgumentException
+import dev.tachyonmcp.api.server.domain.Role
+import dev.tachyonmcp.api.server.domain.TextContent
+import dev.tachyonmcp.api.server.features.prompts.PromptRequest
+import dev.tachyonmcp.api.server.features.tools.ToolRequest
+import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.kotlin.server.config.PromptScope
 import dev.tachyonmcp.kotlin.server.config.ToolScope
 import dev.tachyonmcp.kotlin.server.domain.arrayOrNull
@@ -20,14 +28,6 @@ import dev.tachyonmcp.kotlin.server.domain.stringOrNull
 import dev.tachyonmcp.kotlin.server.domain.valuesAs
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
 import dev.tachyonmcp.kotlin.server.json.toJsonNode
-import dev.tachyonmcp.server.domain.Args
-import dev.tachyonmcp.server.domain.ImageContent
-import dev.tachyonmcp.server.domain.InvalidArgumentException
-import dev.tachyonmcp.server.domain.Role
-import dev.tachyonmcp.server.domain.TextContent
-import dev.tachyonmcp.server.features.prompts.PromptRequest
-import dev.tachyonmcp.server.features.tools.ToolRequest
-import dev.tachyonmcp.server.features.tools.ToolResult
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.throwables.shouldThrow
@@ -47,7 +47,7 @@ import org.junit.jupiter.params.provider.MethodSource
 import tools.jackson.databind.ObjectMapper
 import java.math.BigDecimal
 import java.util.stream.Stream
-import dev.tachyonmcp.json.JsonSchema as JavaJsonSchema
+import dev.tachyonmcp.api.json.JsonSchema as JavaJsonSchema
 
 internal class KotlinApiTest {
     // region: Overload resolution — all shapes compile

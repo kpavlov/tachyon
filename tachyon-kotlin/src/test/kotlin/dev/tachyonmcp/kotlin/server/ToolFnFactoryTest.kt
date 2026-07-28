@@ -1,18 +1,17 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server
 
+import dev.tachyonmcp.api.runtime.InteractionContext
+import dev.tachyonmcp.api.server.features.tasks.TaskSupport
+import dev.tachyonmcp.api.server.features.tools.ToolDescriptor
+import dev.tachyonmcp.api.server.features.tools.ToolRequest
+import dev.tachyonmcp.api.server.features.tools.ToolResult
+import dev.tachyonmcp.core.server.TachyonServer
+import dev.tachyonmcp.core.server.internal.ServerEngine
+import dev.tachyonmcp.core.server.session.DefaultDispatchContext
 import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
-import dev.tachyonmcp.kotlin.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.kotlin.server.features.tools.registerTool
 import dev.tachyonmcp.kotlin.server.features.tools.toolFn
-import dev.tachyonmcp.runtime.InteractionContext
-import dev.tachyonmcp.server.TachyonServer
-import dev.tachyonmcp.server.features.tasks.TaskSupport
-import dev.tachyonmcp.server.features.tools.ToolDescriptor
-import dev.tachyonmcp.server.features.tools.ToolRequest
-import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.internal.ServerEngine
-import dev.tachyonmcp.server.session.DefaultDispatchContext
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain

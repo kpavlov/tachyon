@@ -1,11 +1,11 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.features.resources
 
+import dev.tachyonmcp.api.server.domain.ResourceContents
+import dev.tachyonmcp.api.server.features.resources.AsyncResourceHandler
+import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.kotlin.server.config.TemplateScope
 import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
-import dev.tachyonmcp.server.domain.ResourceContents
-import dev.tachyonmcp.server.features.resources.AsyncResourceHandler
-import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor
 import kotlinx.coroutines.CoroutineName
 
 @JvmSynthetic

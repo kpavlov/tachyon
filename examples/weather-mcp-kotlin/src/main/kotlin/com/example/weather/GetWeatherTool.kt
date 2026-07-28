@@ -5,11 +5,11 @@ package com.example.weather
 import com.example.weather.service.WeatherService
 import com.example.weather.spi.CityNotFoundException
 import com.example.weather.spi.WeatherObservation
-import dev.tachyonmcp.runtime.InteractionContext
-import dev.tachyonmcp.server.features.tools.ToolResult
+import dev.tachyonmcp.api.runtime.InteractionContext
+import dev.tachyonmcp.api.server.domain.ProgressToken
+import dev.tachyonmcp.api.server.features.tools.ToolDescriptor
+import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.kotlin.server.config.ToolScope
-import dev.tachyonmcp.server.domain.ProgressToken
-import dev.tachyonmcp.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.kotlin.server.features.tools.ToolDescriptor
 import org.slf4j.LoggerFactory
 import tools.jackson.databind.ObjectMapper

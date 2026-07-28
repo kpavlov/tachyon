@@ -7,7 +7,7 @@ Tools are the primary way clients invoke server-side logic. Tachyon validates in
 ### Lambda (simple)
 
 ```java
-import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.api.server.features.tools.ToolResult;
 
 .withTools(tools -> tools.register(
         tool -> tool.name("hello").description("Say hello"),
@@ -37,11 +37,11 @@ only when a lambda cannot express the handler. Then extend
 `AbstractToolHandler` supplies the synchronous request override.)
 
 ```java
-import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolRequest;
-import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.runtime.InteractionContext;
+import dev.tachyonmcp.api.server.features.tools.AbstractToolHandler;
+import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.api.server.features.tools.ToolRequest;
+import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.api.runtime.InteractionContext;
 
 class WeatherTool extends AbstractToolHandler {
     private static final String SCHEMA = """

@@ -7,8 +7,8 @@ Resources expose data that AI clients can read. Tachyon supports static URIs, dy
 Server-computed content for a fixed URI:
 
 ```java
-import dev.tachyonmcp.server.domain.TextResourceContents;
-import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
+import dev.tachyonmcp.api.server.domain.TextResourceContents;
+import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 
 .withResources(resources ->resources.
 
@@ -25,8 +25,8 @@ of(request.uri(), """{"env":"prod"}""","application/json")))
 Templates match parameterized URIs like `app://users/{id}`. Register after the server starts:
 
 ```java
-import dev.tachyonmcp.server.features.resources.ResourceTemplateDescriptor;
-import dev.tachyonmcp.server.domain.UriTemplateValue;
+import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
+import dev.tachyonmcp.api.server.domain.UriTemplateValue;
 
 server.resources()
     .
@@ -69,7 +69,7 @@ Handlers are blocking-first and run on virtual threads — blocking is fine. To 
 non-blocking services, implement `AsyncResourceHandler` and return a `CompletionStage`:
 
 ```java
-import dev.tachyonmcp.server.features.resources.AsyncResourceHandler;
+import dev.tachyonmcp.api.server.features.resources.AsyncResourceHandler;
 
 import java.net.URI;
 import java.net.http.HttpRequest;
@@ -96,7 +96,7 @@ lambdas are `suspend` — see [Kotlin DSL](kotlin.md).
 Return binary content with `BlobResourceContents`:
 
 ```java
-import dev.tachyonmcp.server.domain.BlobResourceContents;
+import dev.tachyonmcp.api.server.domain.BlobResourceContents;
 
 (ctx,request)->BlobResourceContents.
 

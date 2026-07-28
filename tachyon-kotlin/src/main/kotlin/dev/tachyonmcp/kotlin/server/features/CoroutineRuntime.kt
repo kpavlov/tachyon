@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.features
 
-import dev.tachyonmcp.server.extensions.ServerExtension
-import dev.tachyonmcp.server.internal.ServerEngine
+import dev.tachyonmcp.core.server.extensions.ServerExtension
+import dev.tachyonmcp.core.server.internal.ServerEngine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope

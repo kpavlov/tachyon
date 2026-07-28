@@ -1,12 +1,12 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.extensions.tools.youcom.search;
 
-import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.domain.Args;
-import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolRequest;
-import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.api.runtime.InteractionContext;
+import dev.tachyonmcp.api.server.domain.Args;
+import dev.tachyonmcp.api.server.features.tools.AbstractToolHandler;
+import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.api.server.features.tools.ToolRequest;
+import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;

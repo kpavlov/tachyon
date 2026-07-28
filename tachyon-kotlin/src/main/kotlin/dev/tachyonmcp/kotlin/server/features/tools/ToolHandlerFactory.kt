@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.features.tools
 
+import dev.tachyonmcp.api.server.features.tools.AsyncToolFn
+import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.kotlin.server.config.ToolScope
 import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
-import dev.tachyonmcp.server.features.tools.AsyncToolFn
-import dev.tachyonmcp.server.features.tools.ToolResult
 import kotlinx.coroutines.CoroutineName
 
 @JvmSynthetic

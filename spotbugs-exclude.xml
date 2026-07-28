@@ -7,6 +7,6 @@
 
     <!-- Generated sources -->
     <Match>
-        <Package name="~dev\.tachyonmcp\.protocol\.mcp.*"/>
+        <Package name="~dev\.tachyonmcp\.core\.protocol\.mcp.*"/>
     </Match>
 </FindBugsFilter>

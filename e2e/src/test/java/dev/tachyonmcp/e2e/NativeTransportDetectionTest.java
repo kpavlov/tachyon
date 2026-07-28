@@ -4,7 +4,7 @@ package dev.tachyonmcp.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
-import dev.tachyonmcp.transport.netty.NettyIoEngine;
+import dev.tachyonmcp.core.transport.netty.NettyIoEngine;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;

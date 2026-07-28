@@ -7,8 +7,8 @@ import static org.junit.jupiter.api.Assumptions.abort;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
-import dev.tachyonmcp.server.internal.ServerEngine;
-import dev.tachyonmcp.transport.netty.NettyServer;
+import dev.tachyonmcp.core.server.internal.ServerEngine;
+import dev.tachyonmcp.core.transport.netty.NettyServer;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;

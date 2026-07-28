@@ -3,19 +3,19 @@
 
 package dev.tachyonmcp.kotlin.server.config
 
+import dev.tachyonmcp.api.server.domain.AudioContent
+import dev.tachyonmcp.api.server.domain.ContentBlock
+import dev.tachyonmcp.api.server.domain.EmbeddedResource
+import dev.tachyonmcp.api.server.domain.ImageContent
+import dev.tachyonmcp.api.server.domain.ResourceContents
+import dev.tachyonmcp.api.server.domain.TextContent
 import dev.tachyonmcp.kotlin.server.TachyonDsl
-import dev.tachyonmcp.server.domain.AudioContent
-import dev.tachyonmcp.server.domain.ContentBlock
-import dev.tachyonmcp.server.domain.EmbeddedResource
-import dev.tachyonmcp.server.domain.ImageContent
-import dev.tachyonmcp.server.domain.ResourceContents
-import dev.tachyonmcp.server.domain.TextContent
 
 /**
- * Collects [ContentBlock]s inside a `content { }` result builder.
+ * Collects [dev.tachyonmcp.api.server.domain.ContentBlock]s inside a `content { }` result builder.
  *
  * Each call appends one block; the enclosing scope turns the collected blocks into a result — a
- * [dev.tachyonmcp.server.features.tools.ToolResult] for tools, user-role messages for prompts.
+ * [dev.tachyonmcp.api.server.features.tools.ToolResult] for tools, user-role messages for prompts.
  */
 @TachyonDsl
 public class ContentScope

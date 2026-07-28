@@ -4,14 +4,14 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ClientCapabilities;
-import dev.tachyonmcp.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
-import dev.tachyonmcp.server.RpcMethodHandler;
-import dev.tachyonmcp.server.extensions.ServerExtension;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.internal.ServerEngine;
-import dev.tachyonmcp.server.session.DispatchContext;
+import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ClientCapabilities;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
+import dev.tachyonmcp.core.server.RpcMethodHandler;
+import dev.tachyonmcp.core.server.extensions.ServerExtension;
+import dev.tachyonmcp.core.server.internal.ServerEngine;
+import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -155,7 +155,7 @@ class ExtensionsTest extends AbstractStatefulMcpE2eTest {
         var params = InitializeRequestParams.builder()
                 .protocolVersion("2025-11-25")
                 .capabilities(caps)
-                .clientInfo(new dev.tachyonmcp.protocol.mcp.v2025_11_25.models.Implementation(
+                .clientInfo(new dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Implementation(
                         "1.0", null, null, "test-client", null, null))
                 .build();
         var mapper = new tools.jackson.databind.ObjectMapper();

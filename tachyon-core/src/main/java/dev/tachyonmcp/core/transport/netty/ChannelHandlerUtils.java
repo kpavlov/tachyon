@@ -1,0 +1,166 @@
+/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
+package dev.tachyonmcp.core.transport.netty;
+
+import static dev.tachyonmcp.core.transport.netty.InteractionHandler.INTERACTION_CONTEXT_KEY;
+
+import dev.tachyonmcp.core.runtime.ChannelContext;
+import dev.tachyonmcp.core.runtime.Session;
+import dev.tachyonmcp.core.server.McpDispatcher;
+import dev.tachyonmcp.core.server.internal.ServerEngine;
+import dev.tachyonmcp.core.server.session.SessionIdGenerator;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.util.AttributeKey;
+import java.util.Objects;
+import org.jspecify.annotations.Nullable;
+
+public final class ChannelHandlerUtils {
+
+    private static final AttributeKey<Session> SESSION_KEY = AttributeKey.valueOf("tachyonSession");
+
+    private ChannelHandlerUtils() {}
+
+    /**
+     * Binds a session to the channel and installs the {@link SessionTouchHandler} if not already
+     * present. Every outbound byte written to this channel will refresh the session's liveness.
+     *
+     * @param ctx     the channel handler context
+     * @param session the session to bind
+     */
+    public static void setSession(ChannelHandlerContext ctx, Session session) {
+        SessionTouchHandler.install(ctx);
+        ctx.channel().attr(SESSION_KEY).set(session);
+    }
+
+    /**
+     * Returns the session bound to this channel, or {@code null}.
+     *
+     * @param channel the channel
+     * @return the session, or {@code null}
+     */
+    public static @Nullable Session getSession(Channel channel) {
+        return channel.attr(SESSION_KEY).get();
+    }
+
+    /**
+     * Returns the protocol interaction context bound to this channel, or {@code null}.
+     *
+     * @param ctx the channel handler context
+     * @return the interaction context, or {@code null}
+     */
+    public static @Nullable ChannelContext getInteractionContext(ChannelHandlerContext ctx) {
+        return ctx.channel().attr(INTERACTION_CONTEXT_KEY).get();
+    }
+
+    public static ChannelContext requireInteractionContext(ChannelHandlerContext ctx) {
+        return Objects.requireNonNull(
+                getInteractionContext(ctx),
+                "InteractionContext is null. Check if InteractionHandler is configured correctly.");
+    }
+
+    /**
+     * When a custom {@link SessionIdGenerator} is configured on a stateful server, stashes a
+     * detached copy of the request (method/URI/headers) on the channel's interaction context so
+     * the generator can read it at session-creation time. A copy is required because the pooled
+     * request is released before the async dispatch runs.
+     *
+     * @param ctx    the channel handler context
+     * @param req    the HTTP request to capture
+     * @param server the server engine
+     */
+    public static void captureInitRequest(ChannelHandlerContext ctx, HttpRequest req, ServerEngine server) {
+        if (server.isStateless() || !server.sessionIdGenerator().readsRequest()) {
+            return;
+        }
+        // Always build a fresh metadata-only snapshot. The aggregated request is a pooled
+        // DefaultFullHttpRequest (a DefaultHttpRequest subclass): stashing it — or its headers
+        // collection — aliases state that is released and recycled before the async dispatch reads
+        // it. Copy the request line and headers into a detached request; the body is intentionally
+        // dropped (a session-id generator reads headers/URI, and the pooled body is already gone).
+        var headers = new DefaultHttpHeaders().set(req.headers());
+        var snapshot = new DefaultHttpRequest(req.protocolVersion(), req.method(), req.uri(), headers);
+        requireInteractionContext(ctx).set(McpDispatcher.ATTR_INIT_REQUEST, snapshot);
+    }
+
+    public static void sendAccepted(ChannelHandlerContext ctx, @Nullable String origin) {
+        var response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.ACCEPTED);
+        response.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0);
+        if (origin != null) {
+            response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
+        }
+        ctx.writeAndFlush(response);
+    }
+
+    /**
+     * Writes a {@code text/plain} response and closes the connection. The response carries
+     * {@code Connection: close} so the client does not return the socket to its keep-alive pool
+     * (reusing a socket the server is about to close causes intermittent "other side closed"
+     * errors, e.g. with undici on Linux). Prefer this over {@code sendPlainText(...).addListener(CLOSE)}.
+     */
+    public static ChannelFuture sendPlainTextAndClose(
+            ChannelHandlerContext ctx, HttpResponseStatus status, String message) {
+        return sendPlainTextAndClose(ctx, status, message, null);
+    }
+
+    /**
+     * {@link #sendPlainTextAndClose(ChannelHandlerContext, HttpResponseStatus, String)} echoing {@code origin}.
+     */
+    public static ChannelFuture sendPlainTextAndClose(
+            ChannelHandlerContext ctx, HttpResponseStatus status, String message, @Nullable String origin) {
+        return sendResponse(ctx, status, "text/plain", ByteBufUtil.writeUtf8(ctx.alloc(), message), true, origin);
+    }
+
+    /**
+     * Writes a response with the given content type and body, then closes the connection with a
+     * {@code Connection: close} header. See {@link #sendPlainTextAndClose} for why the header matters.
+     */
+    public static ChannelFuture sendResponseAndClose(
+            ChannelHandlerContext ctx,
+            HttpResponseStatus status,
+            String contentType,
+            ByteBuf body,
+            @Nullable String origin) {
+        return sendResponse(ctx, status, contentType, body, true, origin);
+    }
+
+    /** Zero-copy overload for GC-managed bodies: wraps the byte[] at send time on the event loop. */
+    public static ChannelFuture sendResponseAndClose(
+            ChannelHandlerContext ctx,
+            HttpResponseStatus status,
+            String contentType,
+            byte[] body,
+            @Nullable String origin) {
+        return sendResponse(ctx, status, contentType, Unpooled.wrappedBuffer(body), true, origin);
+    }
+
+    private static ChannelFuture sendResponse(
+            ChannelHandlerContext ctx,
+            HttpResponseStatus status,
+            String contentType,
+            ByteBuf body,
+            boolean close,
+            @Nullable String origin) {
+        var response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, body);
+        response.headers().set(HttpHeaderNames.CONTENT_TYPE, contentType);
+        response.headers().set(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
+        if (origin != null) {
+            response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
+        }
+        // Mark the keep-alive intent; HttpServerKeepAliveHandler adds `Connection: close`
+        // and closes the channel after this response when keep-alive is disabled.
+        HttpUtil.setKeepAlive(response, !close);
+        return ctx.writeAndFlush(response);
+    }
+}

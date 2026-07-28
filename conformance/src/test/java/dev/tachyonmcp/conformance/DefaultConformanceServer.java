@@ -1,10 +1,10 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.conformance;
 
-import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.internal.ServerEngine;
-import dev.tachyonmcp.transport.jsonrpc.JsonRpcCodec;
+import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.server.TachyonServer;
+import dev.tachyonmcp.core.server.internal.ServerEngine;
+import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;

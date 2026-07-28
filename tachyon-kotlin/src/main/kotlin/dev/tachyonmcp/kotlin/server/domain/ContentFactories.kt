@@ -7,13 +7,13 @@
 
 package dev.tachyonmcp.kotlin.server.domain
 
+import dev.tachyonmcp.api.server.domain.Annotations
+import dev.tachyonmcp.api.server.domain.AudioContent
+import dev.tachyonmcp.api.server.domain.EmbeddedResource
+import dev.tachyonmcp.api.server.domain.ImageContent
+import dev.tachyonmcp.api.server.domain.ResourceContents
+import dev.tachyonmcp.api.server.domain.TextContent
 import dev.tachyonmcp.kotlin.server.json.toJacksonNodeMap
-import dev.tachyonmcp.server.domain.Annotations
-import dev.tachyonmcp.server.domain.AudioContent
-import dev.tachyonmcp.server.domain.EmbeddedResource
-import dev.tachyonmcp.server.domain.ImageContent
-import dev.tachyonmcp.server.domain.ResourceContents
-import dev.tachyonmcp.server.domain.TextContent
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
 import kotlin.contracts.ExperimentalContracts

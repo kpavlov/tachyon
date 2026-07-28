@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.config
 
+import dev.tachyonmcp.api.server.config.Mode
+import dev.tachyonmcp.core.server.config.FeatureConfig
+import dev.tachyonmcp.core.server.features.Pagination
 import dev.tachyonmcp.kotlin.server.TachyonDsl
-import dev.tachyonmcp.server.config.FeatureConfig
-import dev.tachyonmcp.server.config.Mode
-import dev.tachyonmcp.server.features.Pagination
 
 @TachyonDsl
 public class FeatureScope

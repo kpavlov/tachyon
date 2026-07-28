@@ -3,7 +3,7 @@
 package com.example.weather;
 
 import com.example.weather.service.WeatherService;
-import dev.tachyonmcp.server.TachyonServer;
+import dev.tachyonmcp.core.server.TachyonServer;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;

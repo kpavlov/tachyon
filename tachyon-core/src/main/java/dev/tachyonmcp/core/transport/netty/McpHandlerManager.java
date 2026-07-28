@@ -1,0 +1,50 @@
+/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
+package dev.tachyonmcp.core.transport.netty;
+
+import dev.tachyonmcp.core.server.McpDispatcher;
+import dev.tachyonmcp.core.server.internal.ServerEngine;
+import io.netty.channel.ChannelHandler;
+import java.util.concurrent.Executor;
+import org.jspecify.annotations.Nullable;
+
+public class McpHandlerManager implements ProtocolHandlerManager {
+
+    static final String HANDLER_INIT = "mcp-phase-init";
+    static final String HANDLER_OPS = "mcp-phase-operations";
+
+    private final ServerEngine server;
+    private final McpDispatcher dispatcher;
+    private final Executor executor;
+
+    public McpHandlerManager(ServerEngine server, McpDispatcher dispatcher) {
+        this(server, dispatcher, server.executor());
+    }
+
+    public McpHandlerManager(ServerEngine server, McpDispatcher dispatcher, Executor executor) {
+        this.server = server;
+        this.dispatcher = dispatcher;
+        this.executor = executor;
+    }
+
+    @Override
+    public String initHandlerName() {
+        return HANDLER_INIT;
+    }
+
+    @Override
+    public String operationHandlerName() {
+        return HANDLER_OPS;
+    }
+
+    @Override
+    public ChannelHandler createOperationHandler() {
+        return new McpOperationHandler(server, dispatcher, executor);
+    }
+
+    @Override
+    public void onShutdownStarted(@Nullable String sessionId) {
+        if (sessionId != null) {
+            server.removeSession(sessionId);
+        }
+    }
+}

@@ -2,7 +2,7 @@
 
 Tachyon lets you define schemas, inspect arguments, and return structured content without binding
 your application to a specific JSON library. Most applications need four types from
-`dev.tachyonmcp.server.json`:
+`dev.tachyonmcp.api.json`:
 
 | Type           | Use it for                             |
 |----------------|----------------------------------------|
@@ -116,8 +116,8 @@ To support another JSON representation, implement either interface—or both—a
 implementation class, one name per line, in the matching service file:
 
 ```text
-META-INF/services/dev.tachyonmcp.json.spi.JsonDocumentFactory
-META-INF/services/dev.tachyonmcp.json.spi.JsonSchemaFactory
+META-INF/services/dev.tachyonmcp.api.json.spi.JsonDocumentFactory
+META-INF/services/dev.tachyonmcp.api.json.spi.JsonSchemaFactory
 ```
 
 ## Configure payload serialization

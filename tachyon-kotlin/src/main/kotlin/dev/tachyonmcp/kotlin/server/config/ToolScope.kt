@@ -3,10 +3,10 @@
 
 package dev.tachyonmcp.kotlin.server.config
 
+import dev.tachyonmcp.api.runtime.InteractionContext
+import dev.tachyonmcp.api.server.features.tools.ToolRequest
+import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.kotlin.server.TachyonDsl
-import dev.tachyonmcp.runtime.InteractionContext
-import dev.tachyonmcp.server.features.tools.ToolRequest
-import dev.tachyonmcp.server.features.tools.ToolResult
 
 @TachyonDsl
 public class ToolScope
@@ -24,7 +24,7 @@ public class ToolScope
          * supply a human-readable text block instead.
          *
          * For a pre-serialized JSON payload that skips the configured serde, use
-         * [ToolResult.raw] directly.
+         * [dev.tachyonmcp.api.server.features.tools.ToolResult.raw] directly.
          */
         public fun <T : Any> success(
             value: T,

@@ -1,8 +1,8 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e;
 
-import dev.tachyonmcp.server.ServerBuilder;
-import dev.tachyonmcp.server.TachyonServer;
+import dev.tachyonmcp.core.server.ServerBuilder;
+import dev.tachyonmcp.core.server.TachyonServer;
 import java.util.function.Consumer;
 
 /** Builds, registers, and starts a server, closing it on failure so it doesn't leak. */

@@ -4,7 +4,8 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.TachyonServer;
+import dev.tachyonmcp.core.server.TachyonServer;
+import dev.tachyonmcp.core.server.session.SessionIdGenerator;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -17,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 /**
- * Verifies a custom {@link dev.tachyonmcp.server.session.SessionIdGenerator} derives the session id
+ * Verifies a custom {@link SessionIdGenerator} derives the session id
  * from an incoming request header, and that the derived id is usable for follow-up requests.
  *
  * @author Konstantin Pavlov

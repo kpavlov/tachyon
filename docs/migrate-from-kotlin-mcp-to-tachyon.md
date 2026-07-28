@@ -11,11 +11,11 @@ fail to compile and won't show up until a client hits them.
 
 | Concern | Kotlin MCP SDK | Tachyon (Kotlin) |
 |---|---|---|
-| Package root | `io.modelcontextprotocol.kotlin.sdk.*` | `dev.tachyonmcp.server.*` |
+| Package root | `io.modelcontextprotocol.kotlin.sdk.*` | `dev.tachyonmcp.{api,core,kotlin}.*` |
 | JSON node type | kotlinx `JsonElement` / `McpJson` | **Jackson 3** `tools.jackson.databind.JsonNode` |
 | Server + HTTP | `Server(...)` + you wire Ktor, sessions, reaper | `TachyonServer(port) { ... }` — transport & sessions built in |
 | Identity | `Implementation(name, version, title, websiteUrl, icons)` | `info { name; version; title; websiteUrl; icons.add(...) }` |
-| Icon | `sdk.types.Icon` | `dev.tachyonmcp.server.domain.Icon { src = …; mimeType = … }` |
+| Icon | `sdk.types.Icon` | `dev.tachyonmcp.kotlin.server.domain.Icon { src = …; mimeType = … }` |
 | Register a tool | `server.addTool(name, desc, inputSchema: ToolSchema, outputSchema, handler)` | `server.registerTool(name, desc, inputSchema, outputSchema) { }` |
 | Handler receiver | `suspend ClientConnection.(CallToolRequest) -> CallToolResult` | `suspend ToolScope.() -> ToolResult` |
 | Read arguments | `request.arguments: JsonObject` | `request.arguments(): Args` (typed accessors) |
@@ -80,7 +80,7 @@ The identity block is easy to under-fill. `info { }` supports `title`, `websiteU
 `icons` — port all of them, not just `name`/`version`:
 
 ```kotlin
-import dev.tachyonmcp.server.domain.Icon
+import dev.tachyonmcp.kotlin.server.domain.Icon
 import java.util.Base64
 
 val logoIcon =
@@ -99,12 +99,12 @@ val logoIcon =
 
 ## 3. Tools
 
-`addTool` becomes `registerTool` (import from `dev.tachyonmcp.server.features.tools`). The
+`addTool` becomes `registerTool` (import from `dev.tachyonmcp.kotlin.server.features.tools`). The
 handler receiver changes from `ClientConnection.(CallToolRequest)` to `ToolScope`, and it
 returns a `ToolResult`. `registerTool` returns the `TachyonServer`, so registrations chain.
 
 ```kotlin
-import dev.tachyonmcp.server.features.tools.registerTool
+import dev.tachyonmcp.kotlin.server.features.tools.registerTool
 
 server.registerTool(
     name = "search",

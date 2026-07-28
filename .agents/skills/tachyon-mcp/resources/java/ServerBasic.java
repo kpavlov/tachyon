@@ -2,14 +2,14 @@
  * Copyright (c) 2026 Konstantin Pavlov and contributors.
  */
 
-import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.domain.PromptMessage;
-import dev.tachyonmcp.server.domain.TextResourceContents;
-import dev.tachyonmcp.server.features.prompts.PromptDescriptor;
-import dev.tachyonmcp.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.json.JacksonPayloadSerde;
-import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
+import dev.tachyonmcp.core.server.TachyonServer;
+import dev.tachyonmcp.api.server.domain.PromptMessage;
+import dev.tachyonmcp.api.server.domain.TextResourceContents;
+import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
+import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.server.json.JacksonPayloadSerde;
+import dev.tachyonmcp.core.server.json.NetworkntJsonSchemaValidator;
 
 import java.util.List;
 import java.util.UUID;

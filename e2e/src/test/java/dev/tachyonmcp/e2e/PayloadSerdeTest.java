@@ -5,12 +5,13 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.gson.Gson;
-import dev.tachyonmcp.json.JsonSchema;
-import dev.tachyonmcp.json.JsonSchemaValidator;
-import dev.tachyonmcp.json.PayloadSerde;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator;
+import dev.tachyonmcp.api.json.JsonSchema;
+import dev.tachyonmcp.api.json.JsonSchemaValidator;
+import dev.tachyonmcp.api.json.PayloadSerde;
+import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.server.json.JacksonPayloadSerde;
+import dev.tachyonmcp.core.server.json.NetworkntJsonSchemaValidator;
 import java.lang.reflect.Type;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -195,7 +196,7 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void shouldRoundTripNonAsciiPayload() {
-        var serde = new dev.tachyonmcp.server.json.JacksonPayloadSerde();
+        var serde = new JacksonPayloadSerde();
         var input = Map.of("emoji", "\uD83D\uDE00", "cyrillic", "\u043F\u0440\u0438\u0432\u0435\u0442");
 
         var json = serde.serialize(input);
@@ -210,7 +211,7 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void shouldMatchJacksonStringOutput() {
-        var serde = new dev.tachyonmcp.server.json.JacksonPayloadSerde();
+        var serde = new JacksonPayloadSerde();
         var mapper = new tools.jackson.databind.ObjectMapper();
         var input = Map.of("message", "hello", "count", 42);
 

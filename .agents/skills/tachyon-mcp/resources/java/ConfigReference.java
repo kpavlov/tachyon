@@ -2,18 +2,18 @@
  * Copyright (c) 2026 Konstantin Pavlov and contributors.
  */
 
-import dev.tachyonmcp.server.config.CapabilitiesConfig;
-import dev.tachyonmcp.server.config.FeatureConfig;
-import dev.tachyonmcp.server.config.Mode;
-import dev.tachyonmcp.server.config.NetworkConfig;
-import dev.tachyonmcp.server.config.ResourcesConfig;
-import dev.tachyonmcp.server.config.RuntimeConfig;
-import dev.tachyonmcp.server.config.SessionConfig;
-import dev.tachyonmcp.server.config.TasksConfig;
-import dev.tachyonmcp.server.session.InMemorySessionEventStore;
-import dev.tachyonmcp.server.session.InMemorySessionStore;
-import dev.tachyonmcp.server.session.SessionIdGenerator;
-import dev.tachyonmcp.transport.netty.NettyIoEngine;
+import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
+import dev.tachyonmcp.core.server.config.FeatureConfig;
+import dev.tachyonmcp.api.server.config.Mode;
+import dev.tachyonmcp.core.server.config.NetworkConfig;
+import dev.tachyonmcp.core.server.config.ResourcesConfig;
+import dev.tachyonmcp.api.server.config.RuntimeConfig;
+import dev.tachyonmcp.core.server.config.SessionConfig;
+import dev.tachyonmcp.core.server.config.TasksConfig;
+import dev.tachyonmcp.core.server.session.InMemorySessionEventStore;
+import dev.tachyonmcp.core.server.session.InMemorySessionStore;
+import dev.tachyonmcp.core.server.session.SessionIdGenerator;
+import dev.tachyonmcp.core.transport.netty.NettyIoEngine;
 
 import java.time.Duration;
 

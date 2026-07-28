@@ -3,8 +3,8 @@ package dev.tachyonmcp.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.server.OutboundSseStreamMessageRouter;
-import dev.tachyonmcp.server.features.tools.ToolResult;
+import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.server.OutboundSseStreamMessageRouter;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;

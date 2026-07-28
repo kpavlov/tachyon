@@ -1,0 +1,38 @@
+/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
+package dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs;
+
+import static dev.tachyonmcp.core.server.json.JsonUtils.FACTORY;
+import static dev.tachyonmcp.core.server.json.JsonUtils.TREE_READ_CONTEXT;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import tools.jackson.core.JsonToken;
+
+/** Decoding helpers built on {@link CodecRegistry}. */
+public final class ProtocolCodecUtil {
+
+    private ProtocolCodecUtil() {}
+
+    /**
+     * Decodes a JSON object string using the registered codec for the given type.
+     *
+     * @param json       the JSON object to decode
+     * @param targetType the model type to decode into
+     * @param <T>        the model type
+     * @return the decoded instance
+     * @throws UncheckedIOException if decoding fails
+     */
+    public static <T> T decodeWithCodec(String json, Class<T> targetType) {
+        try {
+            var codec = CodecRegistry.codecFor(targetType);
+            try (var p = FACTORY.createParser(TREE_READ_CONTEXT, json)) {
+                if (p.nextToken() != JsonToken.START_OBJECT) {
+                    throw new IOException("Expected JSON object");
+                }
+                return codec.decode(p);
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to decode " + targetType.getSimpleName(), e);
+        }
+    }
+}

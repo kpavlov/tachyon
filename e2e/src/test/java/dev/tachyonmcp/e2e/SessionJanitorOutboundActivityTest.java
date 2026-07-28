@@ -6,9 +6,9 @@ import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import dev.tachyonmcp.runtime.SessionState;
-import dev.tachyonmcp.server.TachyonServer;
-import dev.tachyonmcp.server.internal.ServerEngine;
+import dev.tachyonmcp.core.runtime.SessionState;
+import dev.tachyonmcp.core.server.TachyonServer;
+import dev.tachyonmcp.core.server.internal.ServerEngine;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;

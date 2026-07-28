@@ -6,11 +6,11 @@
 
 package dev.tachyonmcp.kotlin.server.domain
 
+import dev.tachyonmcp.api.server.domain.FormInputRequest
+import dev.tachyonmcp.api.server.domain.RpcMethodRequest
+import dev.tachyonmcp.api.server.domain.UrlInputRequest
 import dev.tachyonmcp.kotlin.server.json.toJacksonNode
 import dev.tachyonmcp.kotlin.server.json.toJacksonNodeMap
-import dev.tachyonmcp.server.domain.FormInputRequest
-import dev.tachyonmcp.server.domain.RpcMethodRequest
-import dev.tachyonmcp.server.domain.UrlInputRequest
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
 

@@ -2,12 +2,12 @@
 
 package com.example.echo
 
+import dev.tachyonmcp.api.json.JsonSchema
+import dev.tachyonmcp.api.server.config.Mode
+import dev.tachyonmcp.api.server.features.tools.ToolResult
+import dev.tachyonmcp.core.server.TachyonServer
 import dev.tachyonmcp.kotlin.server.buildServer
 import dev.tachyonmcp.kotlin.server.features.tools.registerTool
-import dev.tachyonmcp.server.TachyonServer
-import dev.tachyonmcp.server.config.Mode
-import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.json.JsonSchema
 
 fun assembleServer(port: Int = 0): TachyonServer {
     val boundPort = port

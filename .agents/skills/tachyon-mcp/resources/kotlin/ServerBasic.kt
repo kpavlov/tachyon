@@ -2,12 +2,13 @@
 
 package dev.tachyonmcp.skill
 
-import dev.tachyonmcp.server.config.Mode
-import dev.tachyonmcp.server.TachyonServer
-import dev.tachyonmcp.server.config.NetworkConfig
-import dev.tachyonmcp.server.domain.Role
-import dev.tachyonmcp.server.features.tools.ToolResult
-import dev.tachyonmcp.server.json.NetworkntJsonSchemaValidator
+import dev.tachyonmcp.api.server.config.Mode
+import dev.tachyonmcp.core.server.TachyonServer
+import dev.tachyonmcp.api.server.domain.Role
+import dev.tachyonmcp.core.server.config.NetworkConfig
+import dev.tachyonmcp.core.server.json.NetworkntJsonSchemaValidator
+import dev.tachyonmcp.core.transport.netty.NettyIoEngine
+import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.kotlin.server.buildServer
 import dev.tachyonmcp.kotlin.server.domain.Icon
 import dev.tachyonmcp.kotlin.server.domain.PromptMessage
@@ -15,7 +16,6 @@ import dev.tachyonmcp.kotlin.server.domain.TextContent
 import dev.tachyonmcp.kotlin.server.domain.TextResourceContents
 import dev.tachyonmcp.kotlin.server.features.prompts.promptMessagesOf
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
-import dev.tachyonmcp.transport.netty.NettyIoEngine
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toKotlinDuration

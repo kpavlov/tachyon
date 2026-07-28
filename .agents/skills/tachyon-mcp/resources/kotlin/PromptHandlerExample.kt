@@ -2,9 +2,9 @@
 
 package dev.tachyonmcp.skill
 
-import dev.tachyonmcp.server.domain.PromptArgument
-import dev.tachyonmcp.server.domain.PromptMessage
-import dev.tachyonmcp.server.features.prompts.PromptDescriptor
+import dev.tachyonmcp.api.server.domain.PromptArgument
+import dev.tachyonmcp.api.server.domain.PromptMessage
+import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.kotlin.server.domain.PromptArgument
 import dev.tachyonmcp.kotlin.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.kotlin.server.features.prompts.promptMessagesOf

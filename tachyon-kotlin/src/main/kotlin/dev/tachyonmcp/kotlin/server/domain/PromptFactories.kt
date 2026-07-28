@@ -6,16 +6,16 @@
 
 package dev.tachyonmcp.kotlin.server.domain
 
-import dev.tachyonmcp.server.domain.ContentBlock
-import dev.tachyonmcp.server.domain.PromptArgument
-import dev.tachyonmcp.server.domain.PromptMessage
-import dev.tachyonmcp.server.domain.Role
+import dev.tachyonmcp.api.server.domain.ContentBlock
+import dev.tachyonmcp.api.server.domain.PromptArgument
+import dev.tachyonmcp.api.server.domain.PromptMessage
+import dev.tachyonmcp.api.server.domain.Role
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
 /**
- * Creates a [PromptMessage] associating a [dev.tachyonmcp.server.domain.Role] with its [dev.tachyonmcp.server.domain.ContentBlock].
+ * Creates a [PromptMessage] associating a [dev.tachyonmcp.api.server.domain.Role] with its [dev.tachyonmcp.api.server.domain.ContentBlock].
  *
  * @param role    message role (user / assistant)
  * @param content the message content block

@@ -117,9 +117,9 @@
                                 <argument>--ts</argument>
                                 <argument>${project.basedir}/protocol/mcp-2025-11-25.ts</argument>
                                 <argument>--pkg-default</argument>
-                                <argument>dev.tachyonmcp.protocol.mcp.v2025_11_25</argument>
+                                <argument>dev.tachyonmcp.core.protocol.mcp.v2025_11_25</argument>
                                 <argument>--pkg-protocol</argument>
-                                <argument>dev.tachyonmcp.protocol.mcp.v2025_11_25</argument>
+                                <argument>dev.tachyonmcp.core.protocol.mcp.v2025_11_25</argument>
                                 <argument>--config</argument>
                                 <argument>${project.basedir}/protocol/mcp-2025-11-25_config.json</argument>
                             </arguments>
@@ -160,9 +160,9 @@
                                 <argument>--ts</argument>
                                 <argument>${project.basedir}/protocol/mcp-2026-07-28.ts</argument>
                                 <argument>--pkg-default</argument>
-                                <argument>dev.tachyonmcp.protocol.mcp.v2026_07_28</argument>
+                                <argument>dev.tachyonmcp.core.protocol.mcp.v2026_07_28</argument>
                                 <argument>--pkg-protocol</argument>
-                                <argument>dev.tachyonmcp.protocol.mcp.v2026_07_28</argument>
+                                <argument>dev.tachyonmcp.core.protocol.mcp.v2026_07_28</argument>
                                 <argument>--config</argument>
                                 <argument>${project.basedir}/protocol/mcp-2026-07-28_config.json</argument>
                             </arguments>

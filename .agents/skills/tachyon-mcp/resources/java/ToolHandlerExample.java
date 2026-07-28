@@ -2,13 +2,13 @@
  * Copyright (c) 2026 Konstantin Pavlov and contributors.
  */
 
-import dev.tachyonmcp.runtime.InteractionContext;
-import dev.tachyonmcp.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.server.features.tools.ToolRequest;
-import dev.tachyonmcp.server.features.tools.ToolResult;
-import dev.tachyonmcp.server.features.tools.Tools;
-import dev.tachyonmcp.json.JsonSchema;
+import dev.tachyonmcp.api.runtime.InteractionContext;
+import dev.tachyonmcp.api.server.features.tools.AbstractToolHandler;
+import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
+import dev.tachyonmcp.api.server.features.tools.ToolRequest;
+import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.api.server.features.tools.Tools;
+import dev.tachyonmcp.api.json.JsonSchema;
 import org.jspecify.annotations.NonNull;
 
 /**
