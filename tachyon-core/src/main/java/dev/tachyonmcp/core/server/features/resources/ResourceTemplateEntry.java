@@ -4,22 +4,21 @@ package dev.tachyonmcp.core.server.features.resources;
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.server.ServerFeature;
 import dev.tachyonmcp.api.server.domain.UriTemplate;
-import dev.tachyonmcp.api.server.features.resources.ResourceHandler;
+import dev.tachyonmcp.api.server.features.resources.AsyncResourceFn;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
 
 @InternalApi
-public record ResourceTemplateEntry(
-        ResourceTemplateDescriptor descriptor, ResourceHandler handler, UriTemplate uriTemplate)
+public record ResourceTemplateEntry(ResourceTemplateDescriptor descriptor, AsyncResourceFn fn, UriTemplate uriTemplate)
         implements ServerFeature<ResourceTemplateDescriptor> {
 
     /**
      * Creates a resource template entry from its descriptor and handler.
      *
      * @param descriptor the resource template descriptor
-     * @param handler    the handler for resource template requests
+     * @param fn         the resource function
      * @return the created resource template entry
      */
-    public static ResourceTemplateEntry of(ResourceTemplateDescriptor descriptor, ResourceHandler handler) {
-        return new ResourceTemplateEntry(descriptor, handler, UriTemplate.create(descriptor.uriTemplate()));
+    public static ResourceTemplateEntry of(ResourceTemplateDescriptor descriptor, AsyncResourceFn fn) {
+        return new ResourceTemplateEntry(descriptor, fn, UriTemplate.create(descriptor.uriTemplate()));
     }
 }

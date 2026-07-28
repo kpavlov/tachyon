@@ -56,26 +56,26 @@ of(request.uri(),loadUser(id),"application/json");
         });
 ```
 
-Static resources and templates use the same `ResourceHandler`. Its `ResourceRequest` contains the
+Static resources and templates use the same `ResourceFn`. Its `ResourceRequest` contains the
 URI, request `_meta`, immutable template parameters, and the nullable original template text.
 `uriTemplate()` is null and `params()` is empty for a static resource. `UriTemplate` performs
 matching internally. Values are `UriTemplateValue.Scalar` or `UriTemplateValue.Sequence`.
 Exploded lists such as `app://files{/segments*}` produce a sequence. Associative maps are not
 parsed until MCP defines a variable schema that can disambiguate them.
 
-## Async handler
+## Async function
 
-Handlers are blocking-first and run on virtual threads — blocking is fine. To integrate
-non-blocking services, implement `AsyncResourceHandler` and return a `CompletionStage`:
+Synchronous functions run on virtual threads, so blocking is fine. To integrate
+non-blocking services, implement `AsyncResourceFn` and return a `CompletionStage`:
 
 ```java
-import dev.tachyonmcp.api.server.features.resources.AsyncResourceHandler;
+import dev.tachyonmcp.api.server.features.resources.AsyncResourceFn;
 
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
 
-AsyncResourceHandler handler = (ctx, request) ->
+AsyncResourceFn fn = (ctx, request) ->
         httpClient.sendAsync(
                         HttpRequest.newBuilder(URI.create(request.uri())).GET().build(),
                         BodyHandlers.ofString())
@@ -85,10 +85,10 @@ server.
 
 resources().
 
-registerAsync(descriptor, handler);
+registerAsync(descriptor, fn);
 ```
 
-Prompts follow the same pattern with `AsyncPromptHandler`. In Kotlin, resource and prompt
+Prompts follow the same pattern with `AsyncPromptFn`. In Kotlin, resource and prompt
 lambdas are `suspend` — see [Kotlin DSL](kotlin.md).
 
 ## Blob resources

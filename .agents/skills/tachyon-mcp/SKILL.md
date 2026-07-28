@@ -16,9 +16,9 @@ Make **Java 21+** MCP server. Tachyon lib. Transport = Streamable HTTP (Netty).
 - `.build()` (only terminal method) → `TachyonServer` (`AutoCloseable`), no transport bound yet.
 - `TachyonServer.start()` (blocking) → binds the Netty transport.
 - `TachyonServer`: `.tools()`, `.resources()`, `.prompts()`, `.tasks()` first; then `.start()`, `.port()` (throws before `.start()`), `.close()`, `.config()`.
-- Dynamic registration: `.tools().register(handler)`, `.resources().register(...)`, `.prompts().register(...)`.
-- Every handler gets `dev.tachyonmcp.runtime.InteractionContext` → protocol + optional session + notifications.
-- ⚡ **Virtual threads**: All synchronous handlers (`ToolHandler`, `ResourceHandler`, `PromptHandler`) run on a virtual thread per request. Blocking for I/O is fine — never use `synchronized` (pins carrier thread). Use `ReentrantLock` instead. Configure a custom handler executor with `ServerBuilder.executor(...)` when needed.
+- Dynamic registration: `.tools().register(...)`, `.resources().register(...)`, `.prompts().register(...)`.
+- Every function gets `dev.tachyonmcp.api.runtime.InteractionContext` → protocol + optional session + notifications.
+- ⚡ **Virtual threads**: All synchronous functions (`ToolFn`, `ResourceFn`, `PromptFn`, `CompletionFn`) run on a virtual thread per request. Blocking for I/O is fine — never use `synchronized` (pins carrier thread). Use `ReentrantLock` instead.
 
 ## Quickstart
 
@@ -42,14 +42,10 @@ server.start();
 | `.runtime(cfg)` | shutdownGracePeriod |
 | `.monitoring(cfg)` | slow-request diagnostics (off by default) |
 | `.name(s)` `.port(p)` | shorthands |
-| `.tool(handler)` | Sync/Async/ToolHandler |
-| `.tool(configurer, fn)` / `.asyncTool(configurer, fn)` | descriptor-builder conveniences |
-| `.tool(name, desc, inJson, outJson, fn)` | shorthand — JSON **string** schemas + lambda |
-| `.resource(descriptor/configurer, handler)` | static resource with sync handler |
-| `.asyncResource(descriptor/configurer, handler)` | async static resource without casts |
-| `.resourceTemplate(...)` / `.asyncResourceTemplate(...)` | sync/async URI template |
-| `.prompt(descriptor/configurer, handler\|messages)` | sync prompt |
-| `.asyncPrompt(descriptor/configurer, handler)` | async prompt without casts |
+| `.withTools(registrar)` | bootstrap through `Tools.register/registerAsync` |
+| `.withResources(registrar)` | bootstrap resources/templates through their façade |
+| `.withPrompts(registrar)` | bootstrap through `Prompts.register/registerAsync` |
+| `.withCompletions(registrar)` | bootstrap completion functions |
 | `.extension(ext)` | `ServerExtension` plugin |
 | `.json(cfg)` | serde + input/output schema validators |
 | ~~`.jsonSchemaValidator(v)`~~ | removed — use `.json(cfg -> cfg.inputSchemaValidator(v).outputSchemaValidator(v))` |
@@ -57,55 +53,18 @@ server.start();
 
 ## Tools 🔧
 
-One interface: `ToolHandler`. Use a `ToolHandler.of*` factory or override exactly one `handle`/`handleAsync` × `Args`/`ToolRequest` method on `AbstractToolHandler`. Dispatch calls `handleAsync(ctx, ToolRequest)`; defaults route to your override.
-
-| Need | Factory / class override |
-|---|---|
-| sync lambda, full request | `ToolHandler.of(...)`; lambda receives `ToolRequest` |
-| async lambda, full request | `ToolHandler.ofAsync(...)`; lambda receives `ToolRequest` |
-| sync class, args only | extend `AbstractToolHandler`; override `handle(ctx, Args)` |
-| async class, args only | extend `AbstractToolHandler`; override `handleAsync(ctx, Args)` |
-
-Sync `handle` runs on a virtual thread; async handlers stay async. Factory lambdas receive the full request; call `request.arguments()` for `Args`. Class handlers may override the `Args` form when they do not need `_meta`, progress, cancellation, input responses, or task state.
-
-**Prefer `ToolHandler.of…` factories**: one call, no class. `ToolHandler` declares only `descriptor()` and `handleAsync(ctx, ToolRequest)`; sync/args overrides live on `AbstractToolHandler`. Use a class only for instance state or shared setup. Pass its descriptor to `super`:
+Use independent `ToolFn` and `AsyncToolFn` SAMs. Both receive the full `ToolRequest`; call
+`request.arguments()` for parsed `Args`.
 
 ```java
-class MyTool extends AbstractToolHandler {
-    MyTool() {
-        super(ToolDescriptor.builder().name("my-tool")
-            .description("Does something useful").inputSchema(jsonSchema).build());
-    }
-    @Override
-    public ToolResult handle(InteractionContext ctx, Args args) throws Exception {
-        return ToolResult.text("result");
-    }
-}
-```
-
-Lambda: `ToolHandler.of(name, description, fn)` or `of(configurer, fn)` for a schema:
-
-```java
-.tool(ToolHandler.of("hello", "Say hello",
-    (ctx, request) -> ToolResult.text("Hello, world!")))
-
-.tool(ToolHandler.of(b -> b.name("hello").description("Say hello").inputSchema(schema),
+server.tools().register(
+    ToolDescriptor.builder().name("hello").description("Say hello").build(),
     (ctx, request) -> ToolResult.text(
-        "Hello, " + request.arguments().stringOr("name", "world"))))
+        "Hello, " + request.arguments().stringOr("name", "world")));
 ```
 
-`inputSchema(...)`/`outputSchema(...)` take `JsonSchema` or raw JSON `String`. `.tool(name, desc, inJson, outJson, fn)` builds a sync handler:
-
-```java
-.tool("hello", "Say hello",
-    """
-    {"type":"object","properties":{"name":{"type":"string"}}}
-    """, null, // inputSchemaJson, outputSchemaJson
-    (ctx, request) -> ToolResult.text(
-        "Hello, " + request.arguments().stringOr("name", "world")))
-```
-
-Async: `ToolHandler.ofAsync(name, (ctx, request) -> CompletionStage<ToolResult>)` or override `handleAsync`.
+Use `registerAsync(descriptor, fn)` for a `CompletionStage`. `ToolHandler` and
+`AbstractToolHandler` are experimental class-based escape hatches, not registration types.
 
 `ToolResult` (not generic): `.text(t)` · `.error(msg)` (isError=true) · `.content(ContentBlock...)` · `.of(payload)` (structuredContent; serialized JSON auto-added as text block) · `.of(payload, text)` · `.raw(json, text)` (pre-serialized JSON) · `.inputRequired(reqs, state)` · `.empty()` · `.withMeta(map)` / `.withMeta(key, value)`
 
@@ -122,8 +81,8 @@ Static fixed URI:
         .uri("myapp://data/item")
         .description("Description")
         .mimeType("application/json"),
-    ResourceHandler.of((ctx, uri) ->
-        TextResourceContents.of(uri, jsonData, "application/json")))
+    (ctx, request) ->
+        TextResourceContents.of(request.uri(), jsonData, "application/json"))
 ```
 
 Template via builder:
@@ -141,22 +100,22 @@ Template via builder:
     })
 ```
 
-Static resources and templates share `ResourceHandler`. Its canonical shape is
+Static resources and templates share `ResourceFn`. Its canonical shape is
 `(InteractionContext, ResourceRequest)`. `ResourceRequest` carries `uri`, immutable template
 `params`, nullable `uriTemplate`, and request `_meta`. `UriTemplate` performs matching. Static
-resources get an empty params map and null template. Use `ResourceHandler.of((ctx, uri) -> ...)`
-only when a static handler does not need request metadata.
+resources get an empty params map and null template. Static functions may ignore unused request
+fields, but still receive the full request.
 
-Use explicit async methods. Sync handlers run blocking-first on virtual threads.
+Use explicit async methods. Sync functions run on virtual threads.
 
 ```java
-.asyncResource(
-    resource -> resource.name("config").uri("myapp://config"),
-    ResourceHandler.ofAsync((ctx, uri) -> httpClient.sendAsync(request, BodyHandlers.ofString())
-        .thenApply(rsp -> TextResourceContents.of(uri, rsp.body(), "application/json"))))
+server.resources().registerAsync(
+    ResourceDescriptor.builder().name("config").uri("myapp://config").build(),
+    (ctx, request) -> httpClient.sendAsync(httpRequest, BodyHandlers.ofString())
+        .thenApply(rsp -> TextResourceContents.of(request.uri(), rsp.body(), "application/json")));
 ```
 
-Full: `resources/java/ResourceHandlerExample.java`
+Full: `resources/java/ResourceFnExample.java`
 
 ## Prompts
 
@@ -180,7 +139,7 @@ Async returns `CompletionStage`:
         .thenApply(message -> PromptResult.messages(List.of(PromptMessage.user(message)))))
 ```
 
-Full: `resources/java/PromptHandlerExample.java`
+Full: `resources/java/PromptFnExample.java`
 
 ## Config️
 
@@ -381,11 +340,11 @@ server.registerTool(
 Load on demand (next to this skill):
 
 - [resources/java/ServerBasic.java](resources/java/ServerBasic.java) — full server, all features
-- [resources/java/ToolHandlerExample.java](resources/java/ToolHandlerExample.java) — `ToolDescriptor`, `ToolHandler.of()`, `extends AbstractToolHandler`, long-running keep-alive (`handle(ctx, ToolRequest)` + `progress()`)
-- [resources/java/ResourceHandlerExample.java](resources/java/ResourceHandlerExample.java) — `ResourceDescriptor`, `ResourceTemplateEntry`, `ResourceHandler`
-- [resources/java/PromptHandlerExample.java](resources/java/PromptHandlerExample.java) — `PromptDescriptor`, `PromptArgument`, `PromptHandler`
+- [resources/java/ToolHandlerExample.java](resources/java/ToolHandlerExample.java) — descriptor/function registration and experimental `AbstractToolHandler`
+- [resources/java/ResourceFnExample.java](resources/java/ResourceFnExample.java) — `ResourceDescriptor`, `ResourceTemplateEntry`, `ResourceFn`
+- [resources/java/PromptFnExample.java](resources/java/PromptFnExample.java) — `PromptDescriptor`, `PromptArgument`, `PromptFn`
 - [resources/java/ConfigReference.java](resources/java/ConfigReference.java) — `CapabilitiesConfig.Builder`, `NetworkConfig.Builder`, `SessionConfig.Builder`
 - [resources/kotlin/ServerBasic.kt](resources/kotlin/ServerBasic.kt) — full server, all features (Kotlin DSL)
 - [resources/kotlin/ToolHandlerExample.kt](resources/kotlin/ToolHandlerExample.kt) — suspend handler, `extends AbstractToolHandler` (`handle`/`handleAsync`), `registerTool`
-- [resources/kotlin/ResourceHandlerExample.kt](resources/kotlin/ResourceHandlerExample.kt) — static resources, URI templates (Kotlin DSL)
-- [resources/kotlin/PromptHandlerExample.kt](resources/kotlin/PromptHandlerExample.kt) — prompt descriptors and handlers (Kotlin DSL)
+- [resources/kotlin/ResourceFnExample.kt](resources/kotlin/ResourceFnExample.kt) — static resources, URI templates (Kotlin DSL)
+- [resources/kotlin/PromptFnExample.kt](resources/kotlin/PromptFnExample.kt) — prompt descriptors and handlers (Kotlin DSL)

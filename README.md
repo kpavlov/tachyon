@@ -22,7 +22,7 @@
 
 🧵 **Synchronous code, asynchronous runtime** — write blocking handlers; Java virtual threads run them off the Netty event loop. No thread pools, reactive pipelines, or `CompletableFuture` boilerplate. Coroutine-first Kotlin DSL included.
 
-🛡️ **Stable APIs across spec changes** — domain types (`ToolFn`, `ResourceHandler`, `PromptHandler`, tasks) sit behind an internal protocol mapper. Spec upgrades change the mapper, not your handlers.
+🛡️ **Stable APIs across spec changes** — domain types (`ToolFn`, `ResourceFn`, `PromptFn`, tasks) sit behind an internal protocol mapper. Spec upgrades change the mapper, not your handlers.
 
 ☁️ **Stateless by default** — scale without session affinity on containers and serverless runtimes.
 AWS Lambda needs an adapter that supports a listening HTTP server and long-lived SSE responses.
@@ -118,7 +118,7 @@ The wire lifecycle varies by negotiated version; the detailed method list below 
 
 **Tools** — `tools/list` (paginated), `tools/call` (`isError`), `outputSchema` + `annotations`, sync/async handlers, name validation ([SEP-986](https://modelcontextprotocol.io/seps/986-specify-format-for-tool-names)), inline notifications/logging mid-call, JSON Schema 2020-12 validation ([SEP-1613](https://modelcontextprotocol.io/seps/1613-establish-json-schema-2020-12-as-default-dialect-f)), `notifications/tools/list_changed`.
 
-**Resources** — `resources/list`, `resources/read` (text & blob), `resources/templates/list`, `subscribe`/`unsubscribe`, `list_changed` + `updated` notifications, dynamic `ResourceHandler`.
+**Resources** — `resources/list`, `resources/read` (text & blob), `resources/templates/list`, `subscribe`/`unsubscribe`, `list_changed` + `updated` notifications, dynamic `ResourceFn`.
 
 **Prompts** — `prompts/list` (paginated), `prompts/get`, input-required flow, `list_changed`.
 
@@ -150,7 +150,10 @@ MCP 2025-11-25 clients that include `"extensions": {"io.modelcontextprotocol/tas
 
 ### Protocol isolation
 
-Function and handler interfaces (`ToolFn`, `AsyncToolFn`, `ResourceHandler`, `PromptHandler`) and descriptor types use stable domain types. When Tachyon upgrades to a new protocol version, only the internal mapper layer changes; implementations are unaffected. Domain types track the 2026-07-28 spec shape where it improves on 2025-11-25 (e.g. `Annotations.lastModified`, `ResourceLink` in `ContentBlock`).
+Function interfaces (`ToolFn`/`AsyncToolFn`, `ResourceFn`/`AsyncResourceFn`,
+`PromptFn`/`AsyncPromptFn`, and `CompletionFn`/`AsyncCompletionFn`) and descriptor types use stable
+domain types. Sync and async functions are independent contracts. When Tachyon upgrades to a new
+protocol version, only the internal mapper layer changes.
 
 ## Performance
 

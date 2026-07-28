@@ -2,6 +2,7 @@
 package dev.tachyonmcp.core.server.features.resources;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
+import dev.tachyonmcp.api.runtime.InteractionContext;
 import dev.tachyonmcp.api.server.config.Mode;
 import dev.tachyonmcp.api.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.api.server.domain.ResourceContents;
@@ -9,8 +10,9 @@ import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.UriTemplateValue;
 import dev.tachyonmcp.api.server.features.HandlerFutures;
 import dev.tachyonmcp.api.server.features.PaginatedResult;
+import dev.tachyonmcp.api.server.features.resources.AsyncResourceFn;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.api.server.features.resources.ResourceHandler;
+import dev.tachyonmcp.api.server.features.resources.ResourceFn;
 import dev.tachyonmcp.api.server.features.resources.ResourceRequest;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.api.server.features.resources.Resources;
@@ -74,6 +76,14 @@ public class DefaultResourceRegistry implements Resources {
 
     private final ChangeSupport changes = new ChangeSupport();
 
+    private record SyncResourceFnAdapter(ResourceFn delegate) implements AsyncResourceFn {
+        @Override
+        public CompletionStage<? extends ResourceContents> apply(InteractionContext context, ResourceRequest request) {
+            HandlerFutures.assumeVirtualThread();
+            return HandlerFutures.completedOrFailed(() -> delegate.apply(context, request));
+        }
+    }
+
     /**
      * Creates a resource registry bound to the given server (for broadcasting subscription notifications).
      */
@@ -101,17 +111,23 @@ public class DefaultResourceRegistry implements Resources {
      * URI is unique across resources: registering a URI already owned by a different name is rejected.
      *
      * @param descriptor the resource descriptor to register
-     * @param handler the handler used to read the resource
+     * @param fn the resource function
      * @return this registry
      * @throws IllegalArgumentException if the URI is already registered under a different name
      */
     @Override
-    public DefaultResourceRegistry register(ResourceDescriptor descriptor, ResourceHandler handler) {
+    public DefaultResourceRegistry register(ResourceDescriptor descriptor, ResourceFn fn) {
+        registerAsync(descriptor, new SyncResourceFnAdapter(fn));
+        return this;
+    }
+
+    @Override
+    public DefaultResourceRegistry registerAsync(ResourceDescriptor descriptor, AsyncResourceFn fn) {
         if (config.mode() == Mode.OFF) {
             logger.debug("Resource '{}' not registered: resources capability is OFF", descriptor.name());
             return this;
         }
-        var entry = new ResourceEntry(descriptor, handler);
+        var entry = new ResourceEntry(descriptor, fn);
         writeLock.lock();
         try {
             var current = index;
@@ -271,17 +287,22 @@ public class DefaultResourceRegistry implements Resources {
      * a template with the same name already exists.
      *
      * @param descriptor the resource template descriptor
-     * @param handler the handler used to process requests matching the template
+     * @param fn the resource function
      * @return this registry
      * @throws IllegalArgumentException if a template with the same name is already registered
      */
     @Override
-    public Resources registerTemplate(ResourceTemplateDescriptor descriptor, ResourceHandler handler) {
+    public Resources registerTemplate(ResourceTemplateDescriptor descriptor, ResourceFn fn) {
+        return registerTemplateAsync(descriptor, new SyncResourceFnAdapter(fn));
+    }
+
+    @Override
+    public Resources registerTemplateAsync(ResourceTemplateDescriptor descriptor, AsyncResourceFn fn) {
         if (config.mode() == Mode.OFF) {
             logger.debug("Resource template '{}' not registered: resources capability is OFF", descriptor.name());
             return this;
         }
-        final var prevEntry = templates.putIfAbsent(descriptor.name(), ResourceTemplateEntry.of(descriptor, handler));
+        final var prevEntry = templates.putIfAbsent(descriptor.name(), ResourceTemplateEntry.of(descriptor, fn));
         if (prevEntry != null) {
             throw new IllegalArgumentException("Resource template '" + descriptor.name() + "' already exists");
         }
@@ -515,7 +536,7 @@ public class DefaultResourceRegistry implements Resources {
                         .uri(uri)
                         .meta(JsonUtils.toObjectMap(parsed.meta()))
                         .build();
-                return readResult(context, uri, () -> entry.handler().handleAsync(context, request));
+                return readResult(context, uri, () -> entry.fn().apply(context, request));
             }
             var match = registry.matchTemplate(uri);
             if (match == null) {
@@ -528,7 +549,7 @@ public class DefaultResourceRegistry implements Resources {
                     .uriTemplate(match.entry().descriptor().uriTemplate())
                     .meta(JsonUtils.toObjectMap(parsed.meta()))
                     .build();
-            return readResult(context, uri, () -> match.entry().handler().handleAsync(context, request));
+            return readResult(context, uri, () -> match.entry().fn().apply(context, request));
         }
 
         private CompletionStage<Object> readResult(

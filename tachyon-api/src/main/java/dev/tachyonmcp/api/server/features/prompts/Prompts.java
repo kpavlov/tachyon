@@ -12,49 +12,47 @@ import java.util.function.Consumer;
  */
 public interface Prompts {
     /**
-     * Registers a prompt descriptor with its synchronous handler.
+     * Registers a prompt descriptor with its synchronous function.
      *
      * @param descriptor the prompt descriptor to register
-     * @param handler    the handler invoked for requests matching the prompt
+     * @param fn         the prompt function
      * @return this registry, or the registry instance resulting from registration
      */
-    Prompts register(PromptDescriptor descriptor, PromptHandler handler);
+    Prompts register(PromptDescriptor descriptor, PromptFn fn);
 
     /**
      * Registers a prompt configured through a descriptor builder.
      *
      * @param configurer configures the prompt descriptor
-     * @param handler    handles requests for the registered prompt
+     * @param fn         the prompt function
      * @return the prompt registry
      */
-    default Prompts register(Consumer<PromptDescriptor.Builder> configurer, PromptHandler handler) {
+    default Prompts register(Consumer<PromptDescriptor.Builder> configurer, PromptFn fn) {
         final var builder = PromptDescriptor.builder();
         configurer.accept(builder);
-        return register(builder.build(), handler);
+        return register(builder.build(), fn);
     }
 
     /**
-     * Registers a prompt with an asynchronous handler.
+     * Registers a prompt with an asynchronous function.
      *
      * @param descriptor the prompt descriptor
-     * @param handler    the asynchronous prompt handler
+     * @param fn         the asynchronous prompt function
      * @return the prompt registry
      */
-    default Prompts registerAsync(PromptDescriptor descriptor, AsyncPromptHandler handler) {
-        return register(descriptor, handler);
-    }
+    Prompts registerAsync(PromptDescriptor descriptor, AsyncPromptFn fn);
 
     /**
      * Registers an asynchronous prompt configured through a descriptor builder.
      *
      * @param descriptor the consumer that configures the prompt descriptor
-     * @param handler    the asynchronous handler for the prompt
+     * @param fn         the asynchronous function for the prompt
      * @return the prompt registry
      */
-    default Prompts registerAsync(Consumer<PromptDescriptor.Builder> descriptor, AsyncPromptHandler handler) {
+    default Prompts registerAsync(Consumer<PromptDescriptor.Builder> descriptor, AsyncPromptFn fn) {
         final var builder = PromptDescriptor.builder();
         descriptor.accept(builder);
-        return registerAsync(builder.build(), handler);
+        return registerAsync(builder.build(), fn);
     }
 
     /**

@@ -3,7 +3,7 @@
  */
 
 /**
- * Completion feature types and handler interfaces for argument autocomplete.
+ * Completion feature types and function interfaces for argument autocomplete.
  */
 @NullMarked
 package dev.tachyonmcp.api.server.features.completions;

@@ -8,7 +8,7 @@ import java.util.concurrent.CompletionStage;
 /**
  * Asynchronous tool function. Unlike {@link ToolFn}, {@link #apply} does not throw checked
  * exceptions — failures propagate through the returned {@link CompletionStage}, matching
- * {@code AsyncResourceHandler} and {@code AsyncPromptHandler}.
+ * {@code AsyncResourceFn} and {@code AsyncPromptFn}.
  *
  * <p>Receives the full {@link ToolRequest} — call {@link ToolRequest#arguments()} for parsed
  * {@link Args}, or read {@link ToolRequest#progressToken()}

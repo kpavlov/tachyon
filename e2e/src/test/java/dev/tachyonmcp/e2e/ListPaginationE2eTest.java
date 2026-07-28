@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.api.server.features.resources.ResourceHandler;
+import dev.tachyonmcp.api.server.features.resources.ResourceFn;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
@@ -14,7 +14,7 @@ import tools.jackson.databind.ObjectMapper;
 class ListPaginationE2eTest extends AbstractStatelessMcpE2eTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final ResourceHandler EMPTY_RESOURCE =
+    private static final ResourceFn EMPTY_RESOURCE =
             (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain");
 
     @Test

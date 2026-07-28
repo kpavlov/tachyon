@@ -22,7 +22,7 @@ import tools.jackson.databind.ObjectMapper;
 class ResourceRequestDispatchTest {
 
     @Test
-    void shouldPassRequestMetaToResourceHandler() throws Exception {
+    void shouldPassRequestMetaToResourceFn() throws Exception {
         var server = newEngine(builder -> {});
         var registry =
                 new DefaultResourceRegistry(server, ResourcesConfig.builder().build());

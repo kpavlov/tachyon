@@ -4,9 +4,9 @@
 
 import dev.tachyonmcp.api.server.domain.PromptArgument;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
-import dev.tachyonmcp.api.server.features.prompts.AsyncPromptHandler;
+import dev.tachyonmcp.api.server.features.prompts.AsyncPromptFn;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
-import dev.tachyonmcp.api.server.features.prompts.PromptHandler;
+import dev.tachyonmcp.api.server.features.prompts.PromptFn;
 import dev.tachyonmcp.api.server.features.prompts.PromptResult;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -14,13 +14,13 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Demonstrates prompt descriptor and handler patterns.
  *
- * <p>Two handler flavors: {@link PromptHandler} (sync, returns a {@link PromptResult} — messages
- * or an input-required/MRTR round-trip) and {@link AsyncPromptHandler} (non-blocking).
+ * <p>Two handler flavors: {@link PromptFn} (sync, returns a {@link PromptResult} — messages
+ * or an input-required/MRTR round-trip) and {@link AsyncPromptFn} (non-blocking).
  */
-final class PromptHandlerExample {
+final class PromptFnExample {
 
     /** Simplest — name + description, handler returns fixed messages. */
-    static PromptHandler simpleHandler() {
+    static PromptFn simpleHandler() {
         return (ctx, request) -> PromptResult.messages(List.of(PromptMessage.user("Rewrite this in a pirate style.")));
     }
 
@@ -41,7 +41,7 @@ final class PromptHandlerExample {
     }
 
     /** Handler that reads a typed argument. */
-    static PromptHandler argHandler() {
+    static PromptFn argHandler() {
         return (ctx, request) -> {
             var text = request.arguments().stringOr("text", "default text");
             return PromptResult.messages(List.of(PromptMessage.user("Rewrite this: " + text)));
@@ -59,7 +59,7 @@ final class PromptHandlerExample {
     }
 
     /** Async handler — returns a CompletionStage for non-blocking backends. */
-    static AsyncPromptHandler asyncHandler() {
+    static AsyncPromptFn asyncHandler() {
         return (ctx, request) -> CompletableFuture.supplyAsync(
                 () -> PromptResult.messages(List.of(PromptMessage.user("Rewrite: " + request.arguments().json()))));
     }

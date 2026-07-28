@@ -8,8 +8,8 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
 import dev.tachyonmcp.api.server.domain.UriTemplateValue;
-import dev.tachyonmcp.api.server.features.completions.AsyncCompletionHandler;
-import dev.tachyonmcp.api.server.features.completions.CompletionHandler;
+import dev.tachyonmcp.api.server.features.completions.AsyncCompletionFn;
+import dev.tachyonmcp.api.server.features.completions.CompletionFn;
 import dev.tachyonmcp.api.server.features.completions.CompletionResult;
 import dev.tachyonmcp.api.server.features.prompts.PromptResult;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
@@ -127,13 +127,14 @@ class ServerBuilderTest {
             assertThat(server.tools().find("bootstrap-tool")).isPresent();
             assertThat(server.resources().find("bootstrap-resource")).isPresent();
             assertThat(server.prompts().find("bootstrap-prompt")).isPresent();
-            assertThat(server.completions().findForPrompt("bootstrap-prompt")).isPresent();
+            assertThat(server.completions().unregisterForPrompt("bootstrap-prompt"))
+                    .isTrue();
         }
     }
 
     @Test
     void retainsCompletionRegistrationForPlainResource() {
-        CompletionHandler handler = (ctx, request) -> CompletionResult.of(List.of("sync-completion"));
+        CompletionFn handler = (ctx, request) -> CompletionResult.of(List.of("sync-completion"));
         try (var server = TachyonServer.builder().build()) {
             server.resources()
                     .register(
@@ -141,16 +142,16 @@ class ServerBuilderTest {
                             (ctx, request) -> TextResourceContents.of(request.uri(), "text", "text/plain"));
             server.completions().registerForResource("test://sync-completed", handler);
 
-            assertThat(server.completions().findForResource("test://sync-completed"))
-                    .contains(handler);
+            assertThat(server.completions().unregisterForResource("test://sync-completed"))
+                    .isTrue();
         }
     }
 
     @Test
     void retainsAsyncCompletionRegistrations() {
-        AsyncCompletionHandler promptHandler =
+        AsyncCompletionFn promptHandler =
                 (ctx, request) -> CompletableFuture.completedFuture(CompletionResult.of(List.of("prompt-completion")));
-        AsyncCompletionHandler resourceHandler = (ctx, request) ->
+        AsyncCompletionFn resourceHandler = (ctx, request) ->
                 CompletableFuture.completedFuture(CompletionResult.of(List.of("resource-completion")));
         try (var server = TachyonServer.builder().build()) {
             server.prompts()
@@ -163,10 +164,10 @@ class ServerBuilderTest {
                     .registerForPromptAsync("async-completed-prompt", promptHandler)
                     .registerForResourceAsync("test://async-completed", resourceHandler);
 
-            assertThat(server.completions().findForPrompt("async-completed-prompt"))
-                    .contains(promptHandler);
-            assertThat(server.completions().findForResource("test://async-completed"))
-                    .contains(resourceHandler);
+            assertThat(server.completions().unregisterForPrompt("async-completed-prompt"))
+                    .isTrue();
+            assertThat(server.completions().unregisterForResource("test://async-completed"))
+                    .isTrue();
         }
     }
 

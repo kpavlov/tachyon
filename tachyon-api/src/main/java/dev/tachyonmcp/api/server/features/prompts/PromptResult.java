@@ -10,9 +10,9 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Result of a prompt handler invocation.
+ * Result of a prompt function invocation.
  * <p>
- * A handler returns either a list of messages or a request for additional input.
+ * A function returns either a list of messages or a request for additional input.
  */
 public sealed interface PromptResult permits PromptResult.Messages, PromptResult.InputRequired {
 

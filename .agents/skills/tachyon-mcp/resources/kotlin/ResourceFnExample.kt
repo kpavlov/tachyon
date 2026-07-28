@@ -3,7 +3,7 @@
 package dev.tachyonmcp.skill
 
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor
-import dev.tachyonmcp.api.server.features.resources.ResourceHandler
+import dev.tachyonmcp.api.server.features.resources.ResourceFn
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.kotlin.server.domain.Annotations
 import dev.tachyonmcp.kotlin.server.domain.Icon
@@ -49,8 +49,8 @@ fun userProfileTemplateDescriptor(): ResourceTemplateDescriptor =
         .mimeType("application/json")
         .build()
 
-fun userProfileTemplateHandler(): ResourceHandler =
-    ResourceHandler { _, request ->
+fun userProfileTemplateHandler(): ResourceFn =
+    ResourceFn { _, request ->
         val userId = request.params()["userId"]?.scalarValue()
         TextResourceContents(
             uri = request.uri(),
@@ -69,8 +69,8 @@ fun forecastTemplateDescriptor(): ResourceTemplateDescriptor =
         .mimeType("application/json")
         .build()
 
-fun forecastTemplateHandler(): ResourceHandler =
-    ResourceHandler { _, request ->
+fun forecastTemplateHandler(): ResourceFn =
+    ResourceFn { _, request ->
         val city = request.params()["city"]?.scalarValue()
         TextResourceContents(
             uri = request.uri(),

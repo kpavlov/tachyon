@@ -12,52 +12,51 @@ import java.util.function.Consumer;
 public interface Resources {
 
     /**
-     * Registers a resource descriptor with its handler.
+     * Registers a resource descriptor with its synchronous function.
      *
      * <p>Registering a resource whose name already exists replaces it. A URI is unique across
      * resources: registering a URI already owned by a different name is rejected.
      *
      * @param descriptor the resource descriptor to register
-     * @param handler    the handler for the resource
+     * @param fn         the resource function
      * @return this registry
      * @throws IllegalArgumentException if the URI is already registered under a different name
      */
-    Resources register(ResourceDescriptor descriptor, ResourceHandler handler);
+    Resources register(ResourceDescriptor descriptor, ResourceFn fn);
 
     /**
      * Registers a resource configured through a descriptor builder.
      *
      * @param configurer configures the resource descriptor
-     * @param handler    handles requests for the registered resource
+     * @param fn         the resource function
      * @return this resource registry
      */
-    default Resources register(Consumer<ResourceDescriptor.Builder> configurer, ResourceHandler handler) {
+    default Resources register(Consumer<ResourceDescriptor.Builder> configurer, ResourceFn fn) {
         final var builder = ResourceDescriptor.builder();
         configurer.accept(builder);
-        return register(builder.build(), handler);
+        return register(builder.build(), fn);
     }
 
     /**
-     * Registers a resource descriptor with an asynchronous handler. The handler and the blocking
-     * wait for its result run on a server-executor virtual thread.
+     * Registers a resource descriptor with an asynchronous function.
      *
+     * @param descriptor the resource descriptor
+     * @param fn         the asynchronous resource function
      * @return this resource registry for method chaining
      */
-    default Resources registerAsync(ResourceDescriptor descriptor, AsyncResourceHandler handler) {
-        return register(descriptor, handler);
-    }
+    Resources registerAsync(ResourceDescriptor descriptor, AsyncResourceFn fn);
 
     /**
-     * Registers an asynchronous resource handler using a descriptor configured through a builder.
+     * Registers an asynchronous resource function using a descriptor configured through a builder.
      *
      * @param descriptor a consumer that configures the resource descriptor builder
-     * @param handler    the asynchronous handler for the resource
+     * @param fn         the asynchronous function for the resource
      * @return this resource registry
      */
-    default Resources registerAsync(Consumer<ResourceDescriptor.Builder> descriptor, AsyncResourceHandler handler) {
+    default Resources registerAsync(Consumer<ResourceDescriptor.Builder> descriptor, AsyncResourceFn fn) {
         final var builder = ResourceDescriptor.builder();
         descriptor.accept(builder);
-        return registerAsync(builder.build(), handler);
+        return registerAsync(builder.build(), fn);
     }
 
     /**
@@ -112,51 +111,48 @@ public interface Resources {
     void notifyResourceUpdated(String uri);
 
     /**
-     * Registers a resource template descriptor with its handler.
+     * Registers a resource template descriptor with its synchronous function.
      *
      * @param descriptor the resource template descriptor to register
-     * @param handler the handler for the registered resource template
+     * @param fn the resource function
      * @return this registry
      */
-    Resources registerTemplate(ResourceTemplateDescriptor descriptor, ResourceHandler handler);
+    Resources registerTemplate(ResourceTemplateDescriptor descriptor, ResourceFn fn);
 
     /**
      * Registers a resource template configured through its builder.
      *
      * @param configurer configures the resource template descriptor
-     * @param handler    handles requests for the registered resource template
+     * @param fn         the resource function
      * @return this resource registry
      */
-    default Resources registerTemplate(
-            Consumer<ResourceTemplateDescriptor.Builder> configurer, ResourceHandler handler) {
+    default Resources registerTemplate(Consumer<ResourceTemplateDescriptor.Builder> configurer, ResourceFn fn) {
         final var builder = ResourceTemplateDescriptor.builder();
         configurer.accept(builder);
-        return registerTemplate(builder.build(), handler);
+        return registerTemplate(builder.build(), fn);
     }
 
     /**
-     * Registers a resource template with an asynchronous handler.
+     * Registers a resource template with an asynchronous function.
      *
      * @param descriptor the resource template descriptor to register
-     * @param handler    the asynchronous handler for the resource template
+     * @param fn         the asynchronous function for the resource template
      * @return this resource registry
      */
-    default Resources registerTemplateAsync(ResourceTemplateDescriptor descriptor, AsyncResourceHandler handler) {
-        return registerTemplate(descriptor, handler);
-    }
+    Resources registerTemplateAsync(ResourceTemplateDescriptor descriptor, AsyncResourceFn fn);
 
     /**
      * Registers a resource template configured through its builder.
      *
      * @param descriptor a consumer that configures the resource template builder
-     * @param handler    the asynchronous handler for the registered resource template
+     * @param fn         the asynchronous function for the registered resource template
      * @return this resource registry
      */
     default Resources registerTemplateAsync(
-            Consumer<ResourceTemplateDescriptor.Builder> descriptor, AsyncResourceHandler handler) {
+            Consumer<ResourceTemplateDescriptor.Builder> descriptor, AsyncResourceFn fn) {
         final var builder = ResourceTemplateDescriptor.builder();
         descriptor.accept(builder);
-        return registerTemplateAsync(builder.build(), handler);
+        return registerTemplateAsync(builder.build(), fn);
     }
 
     /**

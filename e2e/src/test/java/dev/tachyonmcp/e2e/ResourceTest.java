@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.domain.TextContent;
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
-import dev.tachyonmcp.api.server.features.resources.AsyncResourceHandler;
+import dev.tachyonmcp.api.server.features.resources.AsyncResourceFn;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import java.util.concurrent.CompletableFuture;
@@ -136,12 +136,12 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
     }
 
     @Test
-    void shouldReadResourceFromAsyncHandler() throws Exception {
+    void shouldReadResourceFromAsyncFunction() throws Exception {
         var descriptor = ResourceDescriptor.of("async-doc", "resource://async-doc", "Async document", "text/plain");
-        AsyncResourceHandler handler = (ctx, request) -> CompletableFuture.supplyAsync(
+        AsyncResourceFn fn = (ctx, request) -> CompletableFuture.supplyAsync(
                 () -> TextResourceContents.of("resource://async-doc", "async content", "text/plain"));
         startEmptyServer();
-        server.resources().register(descriptor, handler);
+        server.resources().registerAsync(descriptor, fn);
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();
@@ -155,7 +155,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
     }
 
     @Test
-    void shouldPassMetaToResourceHandler() throws Exception {
+    void shouldPassMetaToResourceFn() throws Exception {
         startServerWith(s -> s.resources()
                 .register(
                         resource -> resource.name("meta-doc").uri("resource://meta-doc"),
@@ -193,12 +193,12 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
     }
 
     @Test
-    void shouldReturnErrorWhenAsyncHandlerFails() throws Exception {
+    void shouldReturnErrorWhenAsyncFunctionFails() throws Exception {
         var descriptor = ResourceDescriptor.of("failing", "resource://failing", "Failing resource", "text/plain");
-        AsyncResourceHandler handler =
+        AsyncResourceFn fn =
                 (ctx, request) -> CompletableFuture.failedFuture(new IllegalStateException("backend down"));
         startEmptyServer();
-        server.resources().register(descriptor, handler);
+        server.resources().registerAsync(descriptor, fn);
 
         try (var client = createTestClient()) {
             var sessionId = client.initialize();

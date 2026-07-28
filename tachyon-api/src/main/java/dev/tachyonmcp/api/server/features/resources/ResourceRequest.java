@@ -9,7 +9,7 @@ import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Request passed to a resource handler when a client invokes {@code resources/read}.
+ * Request passed to a resource function when a client invokes {@code resources/read}.
  *
  * <p>Carries the concrete resource {@link #uri()} that was read, optionally the
  * {@link #uriTemplate()} that matched, and any URI-template {@link #params()}

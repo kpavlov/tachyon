@@ -2,6 +2,7 @@
 package dev.tachyonmcp.core.server.features.completions;
 
 import static dev.tachyonmcp.core.test.TestUtils.newEngine;
+import static dev.tachyonmcp.core.test.VirtualThreads.runInVirtualThread;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.domain.ServerError;
@@ -43,11 +44,12 @@ class DefaultCompletionRegistryTest {
     }
 
     private Object complete(HashMap<String, RpcMethodHandler> handlers, Object params) throws Exception {
-        return handlers.get("completion/complete").handle(DefaultDispatchContext.stateless(server), params);
+        return runInVirtualThread(
+                () -> handlers.get("completion/complete").handle(DefaultDispatchContext.stateless(server), params));
     }
 
     @Test
-    void interfaceDefaultOverloadsRegisterAndLookUp() {
+    void registersAndUnregistersSyncAndAsyncFunctions() {
         completions
                 .registerForPrompt("greeting", (ctx, request) -> CompletionResult.of(List.of("sync")))
                 .registerForPromptAsync(
@@ -60,20 +62,13 @@ class DefaultCompletionRegistryTest {
                         (ctx, request) ->
                                 CompletableFuture.completedFuture(CompletionResult.of(List.of("resource-async"))));
 
-        assertThat(completions.findForPrompt("greeting")).isPresent();
-        assertThat(completions.findForPrompt("async-prompt")).isPresent();
-        assertThat(completions.findForPrompt("missing")).isEmpty();
-        assertThat(completions.findForResource("file:///{path}")).isPresent();
-        assertThat(completions.findForResource("file:///async/{path}")).isPresent();
-        assertThat(completions.findForResource("missing")).isEmpty();
-
         assertThat(completions.unregisterForPrompt("greeting")).isTrue();
         assertThat(completions.unregisterForPrompt("greeting")).isFalse();
-        assertThat(completions.findForPrompt("greeting")).isEmpty();
+        assertThat(completions.unregisterForPrompt("async-prompt")).isTrue();
 
         assertThat(completions.unregisterForResource("file:///{path}")).isTrue();
         assertThat(completions.unregisterForResource("file:///{path}")).isFalse();
-        assertThat(completions.findForResource("file:///{path}")).isEmpty();
+        assertThat(completions.unregisterForResource("file:///async/{path}")).isTrue();
     }
 
     @Test

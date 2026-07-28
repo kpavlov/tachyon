@@ -7,7 +7,7 @@ import dev.tachyonmcp.api.server.domain.Args;
 /**
  * Synchronous tool function. Unlike {@link java.util.function.BiFunction}, {@link #apply} may
  * throw checked exceptions — the dispatcher already logs them and maps them to a JSON-RPC error,
- * exactly as it does for {@code ResourceHandler} and {@code PromptHandler}.
+ * exactly as it does for {@code ResourceFn} and {@code PromptFn}.
  *
  * <p>Receives the full {@link ToolRequest} — call {@link ToolRequest#arguments()} for parsed
  * {@link Args}, or read {@link ToolRequest#progressToken()}

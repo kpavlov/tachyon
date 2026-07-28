@@ -1,8 +1,6 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.api.server.features.completions;
 
-import java.util.Optional;
-
 /**
  * Façade interface for {@code completion/complete} providers, keyed by the MCP reference they answer for:
  * a prompt name ({@code ref/prompt}) or a resource URI / resource-template URI ({@code
@@ -15,74 +13,54 @@ import java.util.Optional;
 public interface Completions {
 
     /**
-     * Registers a completion handler for a prompt's arguments.
+     * Registers a completion function for a prompt's arguments.
      *
      * @param promptName the prompt name, as declared in its {@code PromptDescriptor}
-     * @param handler the handler invoked for {@code ref/prompt} completion requests
+     * @param fn the completion function
      * @return this registry
      */
-    Completions registerForPrompt(String promptName, CompletionHandler handler);
+    Completions registerForPrompt(String promptName, CompletionFn fn);
 
     /**
-     * Registers an asynchronous completion handler for a prompt's arguments.
+     * Registers an asynchronous completion function for a prompt's arguments.
      *
      * @param promptName the prompt name
-     * @param handler the asynchronous completion handler
+     * @param fn the asynchronous completion function
      * @return this registry
      */
-    default Completions registerForPromptAsync(String promptName, AsyncCompletionHandler handler) {
-        return registerForPrompt(promptName, handler);
-    }
+    Completions registerForPromptAsync(String promptName, AsyncCompletionFn fn);
 
     /**
-     * Registers a completion handler for a resource or resource-template's variables.
+     * Registers a completion function for a resource or resource-template's variables.
      *
      * @param uriOrTemplate the resource URI, or the resource template's {@code uriTemplate}
-     * @param handler the handler invoked for {@code ref/resource} completion requests
+     * @param fn the completion function
      * @return this registry
      */
-    Completions registerForResource(String uriOrTemplate, CompletionHandler handler);
+    Completions registerForResource(String uriOrTemplate, CompletionFn fn);
 
     /**
-     * Registers an asynchronous completion handler for a resource or resource-template's variables.
+     * Registers an asynchronous completion function for a resource or resource-template's variables.
      *
      * @param uriOrTemplate the resource URI, or the resource template's {@code uriTemplate}
-     * @param handler the asynchronous completion handler
+     * @param fn the asynchronous completion function
      * @return this registry
      */
-    default Completions registerForResourceAsync(String uriOrTemplate, AsyncCompletionHandler handler) {
-        return registerForResource(uriOrTemplate, handler);
-    }
+    Completions registerForResourceAsync(String uriOrTemplate, AsyncCompletionFn fn);
 
     /**
-     * Removes the completion handler registered for the specified prompt name.
+     * Removes the completion function registered for the specified prompt name.
      *
      * @param promptName the prompt name
-     * @return {@code true} if a handler was removed, {@code false} otherwise
+     * @return {@code true} if a function was removed, {@code false} otherwise
      */
     boolean unregisterForPrompt(String promptName);
 
     /**
-     * Removes the completion handler registered for the specified resource URI or template.
+     * Removes the completion function registered for the specified resource URI or template.
      *
      * @param uriOrTemplate the resource URI or template
-     * @return {@code true} if a handler was removed, {@code false} otherwise
+     * @return {@code true} if a function was removed, {@code false} otherwise
      */
     boolean unregisterForResource(String uriOrTemplate);
-
-    /**
-     * Finds the completion handler registered for a prompt name.
-     *
-     * @param promptName the prompt name
-     * @return the matching handler, or an empty optional if none is registered
-     */
-    Optional<CompletionHandler> findForPrompt(String promptName);
-
-    /**
-     * Finds the completion handler registered for a resource URI or template.
-     *
-     * @param uriOrTemplate the resource URI or template
-     * @return the matching handler, or an empty optional if none is registered
-     */
-    Optional<CompletionHandler> findForResource(String uriOrTemplate);
 }

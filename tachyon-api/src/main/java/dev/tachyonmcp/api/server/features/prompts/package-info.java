@@ -3,7 +3,7 @@
  */
 
 /**
- * Prompt feature types and handler interfaces.
+ * Prompt feature types and function interfaces.
  */
 @NullMarked
 package dev.tachyonmcp.api.server.features.prompts;

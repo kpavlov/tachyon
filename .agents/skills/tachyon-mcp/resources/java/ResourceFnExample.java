@@ -4,9 +4,9 @@
 
 import dev.tachyonmcp.api.server.domain.BlobResourceContents;
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
-import dev.tachyonmcp.api.server.features.resources.AsyncResourceHandler;
+import dev.tachyonmcp.api.server.features.resources.AsyncResourceFn;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.api.server.features.resources.ResourceHandler;
+import dev.tachyonmcp.api.server.features.resources.ResourceFn;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
 
 import java.util.concurrent.CompletableFuture;
@@ -14,14 +14,14 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Demonstrates static resources and URI-template resource registrations.
  */
-final class ResourceHandlerExample {
+final class ResourceFnExample {
 
     /**
      * Static resource — fixed URI.
      */
-    static ResourceHandler configHandler() {
-        return ResourceHandler.of((ctx, uri) ->
-            TextResourceContents.of(uri, "{\"mode\":\"production\"}", "application/json"));
+    static ResourceFn configHandler() {
+        return (ctx, request) ->
+            TextResourceContents.of(request.uri(), "{\"mode\":\"production\"}", "application/json");
     }
 
     static ResourceDescriptor configDescriptor() {
@@ -31,9 +31,9 @@ final class ResourceHandlerExample {
     /**
      * Static resource — binary (image, PDF, etc).
      */
-    static ResourceHandler imageHandler() {
-        return ResourceHandler.of((ctx, uri) ->
-            BlobResourceContents.of(uri, "iVBORw0KGgoAAAANS...", "image/png"));
+    static ResourceFn imageHandler() {
+        return (ctx, request) ->
+            BlobResourceContents.of(request.uri(), "iVBORw0KGgoAAAANS...", "image/png");
     }
 
     /**
@@ -48,7 +48,7 @@ final class ResourceHandlerExample {
             .build();
     }
 
-    static ResourceHandler userProfileTemplateHandler() {
+    static ResourceFn userProfileTemplateHandler() {
         return (ctx, request) -> {
             var userId = request.params().get("userId").scalarValue();
             return TextResourceContents.of(
@@ -66,7 +66,7 @@ final class ResourceHandlerExample {
         );
     }
 
-    static ResourceHandler forecastTemplateHandler() {
+    static ResourceFn forecastTemplateHandler() {
         return (ctx, request) -> TextResourceContents.of(
             request.uri(),
             "{\"city\":\"" + request.params().get("city").scalarValue() + "\",\"temp\":22}",
@@ -76,11 +76,11 @@ final class ResourceHandlerExample {
 
     /**
      * Async resource — returns a CompletionStage for non-blocking backends.
-     * Blocking handlers run on virtual threads, so prefer plain ResourceHandler unless
+     * Blocking handlers run on virtual threads, so prefer plain ResourceFn unless
      * integrating an already-async client.
      */
-    static AsyncResourceHandler asyncConfigHandler() {
-        return ResourceHandler.ofAsync((ctx, uri) -> CompletableFuture.supplyAsync(
-            () -> TextResourceContents.of(uri, "{\"mode\":\"production\"}", "application/json")));
+    static AsyncResourceFn asyncConfigHandler() {
+        return (ctx, request) -> CompletableFuture.supplyAsync(
+            () -> TextResourceContents.of(request.uri(), "{\"mode\":\"production\"}", "application/json"));
     }
 }

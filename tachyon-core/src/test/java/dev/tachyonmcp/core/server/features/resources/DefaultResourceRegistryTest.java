@@ -14,7 +14,7 @@ import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
 import dev.tachyonmcp.api.server.domain.UriTemplateValue;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
-import dev.tachyonmcp.api.server.features.resources.ResourceHandler;
+import dev.tachyonmcp.api.server.features.resources.ResourceFn;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.api.server.features.resources.Resources;
 import dev.tachyonmcp.core.protocol.Protocols;
@@ -42,7 +42,7 @@ import org.junit.jupiter.api.Test;
 
 class DefaultResourceRegistryTest {
 
-    private static final ResourceHandler EMPTY_HANDLER =
+    private static final ResourceFn EMPTY_HANDLER =
             (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain");
 
     private final ServerEngine server = newEngine(b -> {});
@@ -336,7 +336,7 @@ class DefaultResourceRegistryTest {
     }
 
     @Test
-    void shouldRunSynchronousResourceHandlerOnCallingVirtualThread() throws Exception {
+    void shouldRunSynchronousResourceFnOnCallingVirtualThread() throws Exception {
         var handlerThread = new AtomicReference<@Nullable Thread>();
         registry.register(resource("sync-thread"), (ctx, request) -> {
             handlerThread.set(Thread.currentThread());
@@ -350,7 +350,7 @@ class DefaultResourceRegistryTest {
     }
 
     @Test
-    void shouldInvokeAsynchronousResourceHandlerOnVirtualThreadWithoutBlockingIt() throws Exception {
+    void shouldInvokeAsynchronousResourceFnOnVirtualThreadWithoutBlockingIt() throws Exception {
         var handlerThread = new AtomicReference<@Nullable Thread>();
         var callerThread = new AtomicReference<@Nullable Thread>();
         var contents = TextResourceContents.of("test://async-thread", "async", "text/plain");

@@ -71,8 +71,8 @@ Configure port `0`; the operating system assigns a free port. Exercise the runni
 
 ### Will an MCP protocol upgrade break my handlers?
 
-Tachyon keeps function, handler, and descriptor APIs separate from its internal protocol mappers. A new wire version normally changes the mapper rather than your `ToolFn`, `ResourceHandler`, or
-`PromptHandler`.
+Tachyon keeps function and descriptor APIs separate from its internal protocol mappers. A new wire
+version normally changes the mapper rather than your tool, resource, prompt, or completion function.
 
 ### Is Kotlin supported?
 

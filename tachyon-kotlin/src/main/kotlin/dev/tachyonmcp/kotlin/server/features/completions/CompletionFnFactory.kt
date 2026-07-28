@@ -2,7 +2,7 @@
 package dev.tachyonmcp.kotlin.server.features.completions
 
 import dev.tachyonmcp.api.runtime.InteractionContext
-import dev.tachyonmcp.api.server.features.completions.AsyncCompletionHandler
+import dev.tachyonmcp.api.server.features.completions.AsyncCompletionFn
 import dev.tachyonmcp.api.server.features.completions.CompletionRequest
 import dev.tachyonmcp.api.server.features.completions.CompletionResult
 import dev.tachyonmcp.kotlin.server.config.CompletionScope
@@ -10,14 +10,14 @@ import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
 import kotlinx.coroutines.CoroutineName
 
 @JvmSynthetic
-internal fun promptCompletionHandler(
+internal fun promptCompletionFn(
     promptName: String,
     runtime: CoroutineRuntime,
     block:
         suspend CompletionScope.() -> CompletionResult,
-): AsyncCompletionHandler {
+): AsyncCompletionFn {
     val coroutineName = CoroutineName("completion:$promptName")
-    return AsyncCompletionHandler {
+    return AsyncCompletionFn {
         ctx: InteractionContext,
         request: CompletionRequest,
         ->
@@ -28,14 +28,14 @@ internal fun promptCompletionHandler(
 }
 
 @JvmSynthetic
-internal fun resourceCompletionHandler(
+internal fun resourceCompletionFn(
     uriOrTemplate: String,
     runtime: CoroutineRuntime,
     block:
         suspend CompletionScope.() -> CompletionResult,
-): AsyncCompletionHandler {
+): AsyncCompletionFn {
     val coroutineName = CoroutineName("completion:$uriOrTemplate")
-    return AsyncCompletionHandler {
+    return AsyncCompletionFn {
         ctx: InteractionContext,
         request: CompletionRequest,
         ->

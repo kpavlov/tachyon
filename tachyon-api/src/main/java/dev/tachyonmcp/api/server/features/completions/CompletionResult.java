@@ -8,7 +8,7 @@ import org.jspecify.annotations.Nullable;
 /**
  * Completion candidates for a single argument, per the MCP {@code completion/complete} result
  * shape. The spec caps a response at 100 values; the dispatcher truncates and forces
- * {@code hasMore=true} if a handler returns more.
+ * {@code hasMore=true} if a function returns more.
  */
 @Value.Immutable
 @Value.Style(

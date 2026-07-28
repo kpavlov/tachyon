@@ -331,11 +331,11 @@ Full, runnable servers and configuration references live in the Tachyon skill re
 - Java: `.agents/skills/tachyon-mcp/resources/java/`
   - [`ServerBasic.java`](../.agents/skills/tachyon-mcp/resources/java/ServerBasic.java) — complete server with tool, resource, template, and prompt
   - [`ToolHandlerExample.java`](../.agents/skills/tachyon-mcp/resources/java/ToolHandlerExample.java) — descriptor/function registration, experimental `AbstractToolHandler`, long-running keep-alive
-  - [`ResourceHandlerExample.java`](../.agents/skills/tachyon-mcp/resources/java/ResourceHandlerExample.java) — static resources and URI templates
-  - [`PromptHandlerExample.java`](../.agents/skills/tachyon-mcp/resources/java/PromptHandlerExample.java) — simple and handler-based prompts
+  - [`ResourceFnExample.java`](../.agents/skills/tachyon-mcp/resources/java/ResourceFnExample.java) — static resources and URI templates
+  - [`PromptFnExample.java`](../.agents/skills/tachyon-mcp/resources/java/PromptFnExample.java) — simple and handler-based prompts
   - [`ConfigReference.java`](../.agents/skills/tachyon-mcp/resources/java/ConfigReference.java) — all config builder patterns in one file
 - Kotlin: `.agents/skills/tachyon-mcp/resources/kotlin/`
   - [`ServerBasic.kt`](../.agents/skills/tachyon-mcp/resources/kotlin/ServerBasic.kt) — full server via Kotlin DSL
   - [`ToolHandlerExample.kt`](../.agents/skills/tachyon-mcp/resources/kotlin/ToolHandlerExample.kt) — suspend handler, `registerTool`
-  - [`ResourceHandlerExample.kt`](../.agents/skills/tachyon-mcp/resources/kotlin/ResourceHandlerExample.kt) — resources and templates in DSL
-  - [`PromptHandlerExample.kt`](../.agents/skills/tachyon-mcp/resources/kotlin/PromptHandlerExample.kt) — prompts in DSL
+  - [`ResourceFnExample.kt`](../.agents/skills/tachyon-mcp/resources/kotlin/ResourceFnExample.kt) — resources and templates in DSL
+  - [`PromptFnExample.kt`](../.agents/skills/tachyon-mcp/resources/kotlin/PromptFnExample.kt) — prompts in DSL

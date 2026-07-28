@@ -8,8 +8,9 @@ import dev.tachyonmcp.api.server.domain.Args;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.features.HandlerFutures;
+import dev.tachyonmcp.api.server.features.prompts.AsyncPromptFn;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
-import dev.tachyonmcp.api.server.features.prompts.PromptHandler;
+import dev.tachyonmcp.api.server.features.prompts.PromptFn;
 import dev.tachyonmcp.api.server.features.prompts.PromptRequest;
 import dev.tachyonmcp.api.server.features.prompts.PromptResult;
 import dev.tachyonmcp.api.server.features.prompts.Prompts;
@@ -59,16 +60,24 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
      * Registers a prompt unless prompt support is disabled by the configured mode.
      *
      * @param descriptor the prompt descriptor to register
-     * @param handler the handler invoked for the prompt
+     * @param fn the prompt function
      * @return this registry
      */
     @Override
-    public Prompts register(PromptDescriptor descriptor, PromptHandler handler) {
+    public Prompts register(PromptDescriptor descriptor, PromptFn fn) {
+        return registerAsync(descriptor, (context, request) -> {
+            HandlerFutures.assumeVirtualThread();
+            return HandlerFutures.completedOrFailed(() -> fn.apply(context, request));
+        });
+    }
+
+    @Override
+    public Prompts registerAsync(PromptDescriptor descriptor, AsyncPromptFn fn) {
         if (config.mode() == Mode.OFF) {
             logger.debug("Prompt '{}' not registered: prompts capability is OFF", descriptor.name());
             return this;
         }
-        addItem(PromptEntry.of(descriptor, handler));
+        addItem(PromptEntry.of(descriptor, fn));
         return this;
     }
 
@@ -196,7 +205,7 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
             // executor hop to the common already-resolved case.
             return HandlerFutures.invokeAndMap(
                     "Prompt '" + name + "' returned a null CompletionStage",
-                    () -> entry.handler().handleAsync(context, request),
+                    () -> entry.fn().apply(context, request),
                     context.engine().executor(),
                     (result, cause) -> {
                         if (cause != null) {

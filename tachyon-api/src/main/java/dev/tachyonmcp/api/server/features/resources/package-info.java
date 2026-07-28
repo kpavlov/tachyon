@@ -3,7 +3,7 @@
  */
 
 /**
- * Resource feature types and handler interfaces.
+ * Resource feature types and function interfaces.
  */
 @NullMarked
 package dev.tachyonmcp.api.server.features.resources;

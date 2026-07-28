@@ -84,8 +84,7 @@ public final class HandlerFutures {
     /**
      * Adapts a synchronous handler body into a {@code CompletionStage}: a completed stage on
      * success, a failed one carrying the thrown exception otherwise. Shared by the sync-handler
-     * interfaces' default {@code handleAsync} (e.g. {@code ResourceHandler}, {@code PromptHandler},
-     * {@code CompletionHandler}).
+     * internal adapters from synchronous feature functions.
      *
      * @param <R>     the result type
      * @param handler the synchronous handler body

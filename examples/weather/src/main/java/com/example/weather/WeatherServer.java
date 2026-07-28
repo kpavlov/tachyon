@@ -20,7 +20,6 @@ import dev.tachyonmcp.api.server.features.completions.CompletionRequest;
 import dev.tachyonmcp.api.server.features.completions.CompletionResult;
 import dev.tachyonmcp.api.server.features.prompts.PromptRequest;
 import dev.tachyonmcp.api.server.features.prompts.PromptResult;
-import dev.tachyonmcp.api.server.features.resources.ResourceHandler;
 import dev.tachyonmcp.core.server.TachyonServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,8 +86,8 @@ public final class WeatherServer {
                                 .size(predictionArticle.getBytes(StandardCharsets.UTF_8).length)
                                 .icons(List.of(resourceIcon))
                                 .mimeType("text/markdown"),
-                        ResourceHandler.of((ctx, uri) ->
-                                TextResourceContents.of(uri, predictionArticle, "text/markdown")))
+                        (ctx, request) ->
+                                TextResourceContents.of(request.uri(), predictionArticle, "text/markdown"))
                 .registerAsync(
                         resource -> resource.name("featured-current-weather")
                                 .uri("weather://featured/current")
@@ -97,9 +96,9 @@ public final class WeatherServer {
                                 .annotations(resourceAnnotations)
                                 .icons(List.of(resourceIcon))
                                 .mimeType("application/json"),
-                        ResourceHandler.ofAsync((ctx, uri) -> weatherService.currentWeatherAsync("Tallinn")
+                        (ctx, request) -> weatherService.currentWeatherAsync("Tallinn")
                                 .thenApply(weather ->
-                                        TextResourceContents.of(uri, asJson(weather), "application/json")))))
+                                        TextResourceContents.of(request.uri(), asJson(weather), "application/json"))))
                 .withPrompts(prompts -> prompts.register(
                         prompt -> prompt.name("rewrite-forecast")
                                 .description("Rewrites a weather forecast in a chosen style")

@@ -6,7 +6,8 @@ import dev.tachyonmcp.api.server.config.Mode;
 import dev.tachyonmcp.api.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.features.HandlerFutures;
-import dev.tachyonmcp.api.server.features.completions.CompletionHandler;
+import dev.tachyonmcp.api.server.features.completions.AsyncCompletionFn;
+import dev.tachyonmcp.api.server.features.completions.CompletionFn;
 import dev.tachyonmcp.api.server.features.completions.CompletionRequest;
 import dev.tachyonmcp.api.server.features.completions.Completions;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
@@ -32,8 +33,8 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultCompletionRegistry.class);
 
-    private final ConcurrentHashMap<String, CompletionHandler> promptHandlers = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, CompletionHandler> resourceHandlers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, AsyncCompletionFn> promptFns = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, AsyncCompletionFn> resourceFns = new ConcurrentHashMap<>();
     private final Mode mode;
 
     public DefaultCompletionRegistry() {
@@ -45,44 +46,58 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
     }
 
     @Override
-    public Completions registerForPrompt(String promptName, CompletionHandler handler) {
+    public Completions registerForPrompt(String promptName, CompletionFn fn) {
+        return registerForPromptAsync(promptName, (context, request) -> {
+            HandlerFutures.assumeVirtualThread();
+            return HandlerFutures.completedOrFailed(() -> fn.apply(context, request));
+        });
+    }
+
+    @Override
+    public Completions registerForPromptAsync(String promptName, AsyncCompletionFn fn) {
         if (mode == Mode.OFF) {
             logger.debug("Completion '{}' not registered: completions capability is OFF", promptName);
             return this;
         }
-        promptHandlers.put(promptName, handler);
+        promptFns.put(promptName, fn);
 
         return this;
     }
 
     @Override
-    public Completions registerForResource(String uriOrTemplate, CompletionHandler handler) {
+    public Completions registerForResource(String uriOrTemplate, CompletionFn fn) {
+        return registerForResourceAsync(uriOrTemplate, (context, request) -> {
+            HandlerFutures.assumeVirtualThread();
+            return HandlerFutures.completedOrFailed(() -> fn.apply(context, request));
+        });
+    }
+
+    @Override
+    public Completions registerForResourceAsync(String uriOrTemplate, AsyncCompletionFn fn) {
         if (mode == Mode.OFF) {
             logger.debug("Completion for '{}' not registered: completions capability is OFF", uriOrTemplate);
             return this;
         }
-        resourceHandlers.put(uriOrTemplate, handler);
+        resourceFns.put(uriOrTemplate, fn);
         return this;
     }
 
     @Override
     public boolean unregisterForPrompt(String promptName) {
-        return promptHandlers.remove(promptName) != null;
+        return promptFns.remove(promptName) != null;
     }
 
     @Override
     public boolean unregisterForResource(String uriOrTemplate) {
-        return resourceHandlers.remove(uriOrTemplate) != null;
+        return resourceFns.remove(uriOrTemplate) != null;
     }
 
-    @Override
-    public Optional<CompletionHandler> findForPrompt(String promptName) {
-        return Optional.ofNullable(promptHandlers.get(promptName));
+    private Optional<AsyncCompletionFn> findForPrompt(String promptName) {
+        return Optional.ofNullable(promptFns.get(promptName));
     }
 
-    @Override
-    public Optional<CompletionHandler> findForResource(String uriOrTemplate) {
-        return Optional.ofNullable(resourceHandlers.get(uriOrTemplate));
+    private Optional<AsyncCompletionFn> findForResource(String uriOrTemplate) {
+        return Optional.ofNullable(resourceFns.get(uriOrTemplate));
     }
 
     /**
@@ -90,7 +105,7 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
      */
     @Override
     public boolean isEmpty() {
-        return promptHandlers.isEmpty() && resourceHandlers.isEmpty();
+        return promptFns.isEmpty() && resourceFns.isEmpty();
     }
 
     /**
@@ -140,7 +155,7 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
             }
 
             var refType = ref.get("type");
-            Optional<CompletionHandler> handler;
+            Optional<AsyncCompletionFn> fn;
             String promptName;
             String uri;
             if ("ref/prompt".equals(refType)) {
@@ -149,19 +164,19 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
                             ServerErrors.invalidParams("ref.name is required for ref/prompt"));
                 }
                 promptName = pn;
-                handler = registry.findForPrompt(promptName);
+                fn = registry.findForPrompt(promptName);
             } else if ("ref/resource".equals(refType)) {
                 if (!(ref.get("uri") instanceof String u)) {
                     return CompletableFuture.completedFuture(
                             ServerErrors.invalidParams("ref.uri is required for ref/resource"));
                 }
                 uri = u;
-                handler = registry.findForResource(uri);
+                fn = registry.findForResource(uri);
             } else {
                 return CompletableFuture.completedFuture(ServerErrors.invalidParams("Unknown ref.type: " + refType));
             }
 
-            if (handler.isEmpty()) {
+            if (fn.isEmpty()) {
                 return CompletableFuture.completedFuture(
                         context.responseMapper().completeResult(List.of(), null, false));
             }
@@ -174,7 +189,7 @@ public class DefaultCompletionRegistry implements CompletionRegistry {
             // executor hop to the common already-resolved case.
             return HandlerFutures.invokeAndMap(
                     "Completion handler for ref.type '" + refType + "' returned a null CompletionStage",
-                    () -> handler.get().handleAsync(context, request),
+                    () -> fn.get().apply(context, request),
                     context.engine().executor(),
                     (result, cause) -> {
                         if (cause != null) {

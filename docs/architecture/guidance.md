@@ -2,35 +2,24 @@
 
 Rules for a new server-feature handler type (tools, resources, prompts, future ones). Read before adding or touching a handler SAM.
 
-## 🎯 Default shape: two interfaces, sync-first
+## 🎯 Default shape: two independent SAMs
 
-Resources/prompts are the reference — one call shape, two interfaces:
+Tools, resources, prompts, and completions use one request shape and two unrelated contracts:
 
 ```java
 @FunctionalInterface
-public interface XHandler {
-    XResult handle(InteractionContext ctx, XRequest request) throws Exception;
-    default CompletionStage<? extends XResult> handleAsync(InteractionContext ctx, XRequest request) {
-        try {
-            return CompletableFuture.completedFuture(handle(ctx, request));
-        } catch (Exception e) {
-            return CompletableFuture.failedFuture(e);
-        }
-    }
+public interface XFn {
+    XResult apply(InteractionContext ctx, XRequest request) throws Exception;
 }
 
-public interface AsyncXHandler extends XHandler {
-    @Override
-    CompletionStage<? extends XResult> handleAsync(InteractionContext ctx, XRequest request);
-    @Override
-    default XResult handle(InteractionContext ctx, XRequest request) throws Exception {
-        HandlerFutures.assumeVirtualThread();
-        return HandlerFutures.joinInterruptibly(handleAsync(ctx, request));
-    }
+@FunctionalInterface
+public interface AsyncXFn {
+    CompletionStage<? extends XResult> apply(InteractionContext ctx, XRequest request);
 }
 ```
 
-Implement `XHandler` for sync, `AsyncXHandler` for async — one override each (see `ResourceHandler`/`AsyncResourceHandler`, `PromptHandler`/`AsyncPromptHandler`). Use this unless there's more than one independent optional-override axis (🏹 below).
+Expose them through `register` and `registerAsync`. Adapt sync functions to the registry's internal
+async representation inside the implementation. Never model sync and async as subtypes.
 
 ## 🐛 Own SAM, `throws Exception` — never raw `java.util.function.*`
 
@@ -45,7 +34,7 @@ public interface XFn {
 
 `ToolFn` applies this to tools (it replaced raw `BiFunction`) and receives the full `ToolRequest`. The dispatcher already logs/maps thrown exceptions to a JSON-RPC error — a throwing SAM lets a handler use that path instead of hand-rolling it. `ToolRequest.arguments()` exposes the ergonomic `Args`; the request also carries `_meta` so the shape extends later without an interface change.
 
-**Async entry types don't declare `throws Exception`** — errors propagate via a failed `CompletionStage`, matching `AsyncResourceHandler`/`AsyncPromptHandler`. Don't add `throws` there "for symmetry."
+**Async entry types don't declare `throws Exception`** — errors propagate via a failed `CompletionStage`, matching `AsyncResourceFn`/`AsyncPromptFn`. Don't add `throws` there "for symmetry."
 
 ## 🪶 Sync-first, virtual-thread contract
 
@@ -76,10 +65,8 @@ Feature registration belongs to the runtime façades. `ServerBuilder.withTools`,
 those same façade APIs; do not add feature-specific registration overloads to `ServerBuilder`.
 
 **Interface/SAM naming:**
-- `XHandler` — the handler type. Also the lambda-entry SAM when the shape is simple: `ResourceHandler`/`PromptHandler` are plain `@FunctionalInterface`s, so the type doubles as both.
-- `AsyncXHandler extends XHandler` — async variant, for single-axis handlers only (`AsyncResourceHandler`, `AsyncPromptHandler`). Abstract `handleAsync`, default `handle` blocks via `HandlerFutures.joinInterruptibly`.
-- `XFn` — throwing SAM used by descriptor/function registration. `ToolFn` receives the full
-  `ToolRequest`; `AsyncToolFn` returns a `CompletionStage`.
+- `XFn` — synchronous throwing SAM. It receives the full request.
+- `AsyncXFn` — independent asynchronous SAM returning a `CompletionStage`.
 
 ## 🪶 Registry/facade API naming
 

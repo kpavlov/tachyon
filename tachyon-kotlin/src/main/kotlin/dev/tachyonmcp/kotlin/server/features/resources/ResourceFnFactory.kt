@@ -2,31 +2,31 @@
 package dev.tachyonmcp.kotlin.server.features.resources
 
 import dev.tachyonmcp.api.server.domain.ResourceContents
-import dev.tachyonmcp.api.server.features.resources.AsyncResourceHandler
+import dev.tachyonmcp.api.server.features.resources.AsyncResourceFn
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.kotlin.server.config.ResourceScope
 import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
 import kotlinx.coroutines.CoroutineName
 
 /**
- * Wraps a suspend resource lambda into a [dev.tachyonmcp.api.server.features.resources.ResourceHandler].
+ * Wraps a suspend resource lambda into an [AsyncResourceFn].
  */
 @JvmSynthetic
-internal fun resourceHandler(
+internal fun resourceFn(
     descriptor: ResourceDescriptor,
     runtime: CoroutineRuntime,
     block: suspend ResourceScope.() -> ResourceContents,
-): AsyncResourceHandler = resourceHandler(descriptor.name(), descriptor.mimeType(), runtime, block)
+): AsyncResourceFn = resourceFn(descriptor.name(), descriptor.mimeType(), runtime, block)
 
 @JvmSynthetic
-internal fun resourceHandler(
+internal fun resourceFn(
     name: String,
     mimeType: String?,
     runtime: CoroutineRuntime,
     block: suspend ResourceScope.() -> ResourceContents,
-): AsyncResourceHandler {
+): AsyncResourceFn {
     val coroutineName = CoroutineName("resource:$name")
-    return AsyncResourceHandler {
+    return AsyncResourceFn {
         ctx,
         request,
         ->

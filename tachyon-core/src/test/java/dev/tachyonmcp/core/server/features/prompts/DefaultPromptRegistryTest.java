@@ -2,6 +2,7 @@
 package dev.tachyonmcp.core.server.features.prompts;
 
 import static dev.tachyonmcp.core.test.TestUtils.newEngine;
+import static dev.tachyonmcp.core.test.VirtualThreads.runInVirtualThread;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.json.JsonSchemaValidator;
@@ -40,6 +41,11 @@ class DefaultPromptRegistryTest {
     @BeforeEach
     void setUp() {
         registry.registerHandlers(handlers);
+    }
+
+    private Object getPrompt(Object params) throws Exception {
+        return runInVirtualThread(
+                () -> handlers.get("prompts/get").handle(DefaultDispatchContext.stateless(server), params));
     }
 
     @Test
@@ -131,8 +137,7 @@ class DefaultPromptRegistryTest {
 
     @Test
     void shouldReturnErrorWhenPromptNotFound() throws Exception {
-        var result = handlers.get("prompts/get")
-                .handle(DefaultDispatchContext.stateless(server), Map.of("name", "nonexistent"));
+        var result = getPrompt(Map.of("name", "nonexistent"));
 
         assertThat(result).isInstanceOf(ServerError.class);
         assertThat(((ServerError) result).kind()).isEqualTo(ServerError.Kind.INVALID_REQUEST);
@@ -140,7 +145,7 @@ class DefaultPromptRegistryTest {
 
     @Test
     void shouldReturnErrorWhenPromptNameMissing() throws Exception {
-        var result = handlers.get("prompts/get").handle(DefaultDispatchContext.stateless(server), Map.of());
+        var result = getPrompt(Map.of());
 
         assertThat(result).isInstanceOf(ServerError.class);
     }
@@ -149,8 +154,7 @@ class DefaultPromptRegistryTest {
     void shouldReturnPromptByName() throws Exception {
         registry.register(PromptDescriptor.of("greeting", "A greeting prompt"), List.of(PromptMessage.user("Hello!")));
 
-        var result = handlers.get("prompts/get")
-                .handle(DefaultDispatchContext.stateless(server), Map.of("name", "greeting"));
+        var result = getPrompt(Map.of("name", "greeting"));
 
         assertThat(result).isInstanceOf(GetPromptResult.class);
         assertThat(((GetPromptResult) result).description()).isEqualTo("A greeting prompt");
@@ -242,10 +246,7 @@ class DefaultPromptRegistryTest {
     void shouldReturnInvalidParamsForBadArgumentsWithoutSchema() throws Exception {
         registry.register(PromptDescriptor.of("no-schema", "No schema prompt"), List.of(PromptMessage.user("Hi")));
 
-        var result = handlers.get("prompts/get")
-                .handle(
-                        DefaultDispatchContext.stateless(server),
-                        Map.of("name", "no-schema", "arguments", List.of(1, 2, 3)));
+        var result = getPrompt(Map.of("name", "no-schema", "arguments", List.of(1, 2, 3)));
 
         assertThat(result).isInstanceOf(ServerError.class);
         assertThat(((ServerError) result).kind()).isEqualTo(ServerError.Kind.INVALID_PARAMS);
@@ -258,8 +259,7 @@ class DefaultPromptRegistryTest {
                 (ctx, request) -> PromptResult.messages(
                         List.of(PromptMessage.user("args=" + request.arguments().json()))));
 
-        var result = (GetPromptResult)
-                handlers.get("prompts/get").handle(DefaultDispatchContext.stateless(server), Map.of("name", "dynamic"));
+        var result = (GetPromptResult) getPrompt(Map.of("name", "dynamic"));
 
         assertThat(result.messages()).hasSize(1);
         assertThat(result.messages().getFirst().content().toString()).contains("args=");
