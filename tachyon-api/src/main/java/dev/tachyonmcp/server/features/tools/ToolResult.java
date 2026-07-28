@@ -76,8 +76,20 @@ public sealed interface ToolResult
         return new Success(null, List.of(TextContent.of(t)));
     }
 
-    static ToolResult blocks(ContentBlock... blocks) {
+    static ToolResult content(ContentBlock... blocks) {
         return new Success(null, List.of(blocks));
+    }
+
+    /**
+     * Creates a successful result containing the given content blocks.
+     *
+     * @param blocks the content blocks
+     * @return a successful tool result
+     * @deprecated use {@link #content(ContentBlock...)}
+     */
+    @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
+    static ToolResult blocks(ContentBlock... blocks) {
+        return content(blocks);
     }
 
     static ToolResult of(Object payload, String text) {

@@ -194,7 +194,7 @@ class PromptsTest extends AbstractStatelessMcpE2eTest {
         server.prompts()
                 .register(
                         PromptDescriptor.of("image-prompt", "Prompt with image"),
-                        List.of(PromptMessage.user(ImageContent.of("iVBORw0KGgo=", "image/png"))));
+                        List.of(PromptMessage.user(ImageContent.base64("iVBORw0KGgo=", "image/png"))));
 
         try (var client = createTestClient()) {
             client.initialize();

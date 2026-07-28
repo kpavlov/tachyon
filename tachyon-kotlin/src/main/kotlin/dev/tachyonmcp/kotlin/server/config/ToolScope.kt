@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
+@file:JvmSynthetic
+
 package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.kotlin.server.TachyonDsl
@@ -29,3 +31,21 @@ public fun <T : Any> ToolScope.success(
     value: T,
     text: String? = null,
 ): ToolResult = if (text != null) ToolResult.of(value, text) else ToolResult.of(value)
+
+/** Returns a [ToolResult] carrying a single plain-text content block. */
+public fun ToolScope.text(text: String): ToolResult = ToolResult.text(text)
+
+/**
+ * Returns a [ToolResult] built from the content blocks collected in [block]:
+ *
+ * ```kotlin
+ * content {
+ *     text("Answer")
+ *     image(data, "image/png")
+ * }
+ * ```
+ */
+public fun ToolScope.content(block: ContentScope.() -> Unit): ToolResult {
+    val scope = ContentScope().apply(block)
+    return ToolResult.content(*scope.blocks.toTypedArray())
+}

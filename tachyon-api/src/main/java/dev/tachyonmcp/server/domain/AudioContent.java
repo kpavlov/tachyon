@@ -76,8 +76,21 @@ public non-sealed interface AudioContent extends ContentBlock, HasMeta {
      * @param mimeType the audio MIME type
      * @return a new audio content
      */
-    static AudioContent of(String data, String mimeType) {
+    static AudioContent base64(String data, String mimeType) {
         return DefaultAudioContent.of(data, mimeType, null, null);
+    }
+
+    /**
+     * Creates audio content from base64-encoded data.
+     *
+     * @param data the base64-encoded audio data
+     * @param mimeType the audio MIME type
+     * @return a new audio content
+     * @deprecated use {@link #base64(String, String)}
+     */
+    @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
+    static AudioContent of(String data, String mimeType) {
+        return base64(data, mimeType);
     }
 
     /**
@@ -88,8 +101,22 @@ public non-sealed interface AudioContent extends ContentBlock, HasMeta {
      * @param annotations the annotations, or {@code null}
      * @return a new audio content
      */
-    static AudioContent of(String data, String mimeType, @Nullable Annotations annotations) {
+    static AudioContent base64(String data, String mimeType, @Nullable Annotations annotations) {
         return DefaultAudioContent.of(data, mimeType, annotations, null);
+    }
+
+    /**
+     * Creates audio content from base64-encoded data with annotations.
+     *
+     * @param data the base64-encoded audio data
+     * @param mimeType the audio MIME type
+     * @param annotations the annotations, or {@code null}
+     * @return a new audio content
+     * @deprecated use {@link #base64(String, String, Annotations)}
+     */
+    @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
+    static AudioContent of(String data, String mimeType, @Nullable Annotations annotations) {
+        return base64(data, mimeType, annotations);
     }
 
     /**
@@ -101,9 +128,25 @@ public non-sealed interface AudioContent extends ContentBlock, HasMeta {
      * @param meta        the metadata entries, or {@code null}
      * @return a new audio content
      */
-    static AudioContent of(
+    static AudioContent base64(
             String data, String mimeType, @Nullable Annotations annotations, @Nullable Map<String, Object> meta) {
         return DefaultAudioContent.of(data, mimeType, annotations, meta);
+    }
+
+    /**
+     * Creates audio content from base64-encoded data with annotations and metadata.
+     *
+     * @param data the base64-encoded audio data
+     * @param mimeType the audio MIME type
+     * @param annotations the annotations, or {@code null}
+     * @param meta the metadata entries, or {@code null}
+     * @return a new audio content
+     * @deprecated use {@link #base64(String, String, Annotations, Map)}
+     */
+    @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
+    static AudioContent of(
+            String data, String mimeType, @Nullable Annotations annotations, @Nullable Map<String, Object> meta) {
+        return base64(data, mimeType, annotations, meta);
     }
 
     /**

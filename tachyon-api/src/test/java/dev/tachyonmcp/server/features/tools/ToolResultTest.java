@@ -14,10 +14,22 @@ import org.junit.jupiter.api.Test;
 class ToolResultTest {
 
     @Test
-    void blocksWithNoArgsIsEmptySuccess() {
-        var r = ToolResult.blocks();
+    void contentWithNoArgsIsEmptySuccess() {
+        var r = ToolResult.content();
         assertThat(r).isInstanceOf(ToolResult.Success.class);
         assertThat(((ToolResult.Success) r).content()).isEmpty();
+    }
+
+    @Test
+    @SuppressWarnings("removal")
+    void deprecatedResponseFactoriesDelegateToCanonicalFactories() {
+        var image = ImageContent.of("aGVsbG8=", "image/png");
+        var audio = AudioContent.of("aGVsbG8=", "audio/wav");
+        var result = ToolResult.blocks(image, audio);
+
+        assertThat(image).isEqualTo(ImageContent.base64("aGVsbG8=", "image/png"));
+        assertThat(audio).isEqualTo(AudioContent.base64("aGVsbG8=", "audio/wav"));
+        assertThat(((ToolResult.Success) result).content()).containsExactly(image, audio);
     }
 
     @Test

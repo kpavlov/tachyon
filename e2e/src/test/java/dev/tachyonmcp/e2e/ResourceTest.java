@@ -308,7 +308,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
                                 } else {
                                     resources.unregister("doc");
                                 }
-                                return ToolResult.blocks(TextContent.of("done"));
+                                return ToolResult.content(TextContent.of("done"));
                             });
             if ("remove".equals(action)) {
                 s.resources()
@@ -340,7 +340,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
                             b -> b.name("notify-update").description("Triggers resource updated notification"),
                             (context, request) -> {
                                 server.resources().notifyResourceUpdated("resource://doc");
-                                return ToolResult.blocks(TextContent.of("resource update 'resource://doc' notified "));
+                                return ToolResult.content(TextContent.of("resource update 'resource://doc' notified "));
                             });
         });
 
@@ -373,7 +373,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
                             b -> b.name("notify-update").description("Triggers resource updated notification"),
                             (context, request) -> {
                                 server.resources().notifyResourceUpdated("resource://doc");
-                                return ToolResult.blocks(TextContent.of("resource update 'resource://doc' notified "));
+                                return ToolResult.content(TextContent.of("resource update 'resource://doc' notified "));
                             });
         });
 
@@ -406,7 +406,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
                             b -> b.name("unregister-by-uri").description("Unregisters resource by URI"),
                             (context, request) -> {
                                 server.resources().unregisterByUri("resource://doc");
-                                return ToolResult.blocks(TextContent.of("done"));
+                                return ToolResult.content(TextContent.of("done"));
                             });
             s.resources()
                     .register(

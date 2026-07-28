@@ -1,8 +1,11 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server
 
+import dev.tachyonmcp.kotlin.server.config.PromptScope
 import dev.tachyonmcp.kotlin.server.config.ToolScope
+import dev.tachyonmcp.kotlin.server.config.content
 import dev.tachyonmcp.kotlin.server.config.success
+import dev.tachyonmcp.kotlin.server.config.text
 import dev.tachyonmcp.kotlin.server.domain.arrayOrNull
 import dev.tachyonmcp.kotlin.server.domain.boolean
 import dev.tachyonmcp.kotlin.server.domain.booleanOrNull
@@ -21,13 +24,17 @@ import dev.tachyonmcp.kotlin.server.domain.valuesAs
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
 import dev.tachyonmcp.kotlin.server.json.toJsonNode
 import dev.tachyonmcp.server.domain.Args
+import dev.tachyonmcp.server.domain.ImageContent
 import dev.tachyonmcp.server.domain.InvalidArgumentException
+import dev.tachyonmcp.server.domain.Role
 import dev.tachyonmcp.server.domain.TextContent
+import dev.tachyonmcp.server.features.prompts.PromptRequest
 import dev.tachyonmcp.server.features.tools.ToolRequest
 import dev.tachyonmcp.server.features.tools.ToolResult
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
@@ -375,6 +382,65 @@ internal class KotlinApiTest {
             result.shouldBeInstanceOf<ToolResult.Success>()
             result.structured().get() shouldBe value
             (result.content().first() as TextContent).text() shouldBe "custom text"
+        }
+    }
+
+    @Test
+    fun `content DSL collects text and image blocks into a ToolResult`() {
+        withStatelessContext { ctx ->
+            val request =
+                ToolRequest
+                    .builder()
+                    .name("render")
+                    .arguments(Args.of(null, null))
+                    .build()
+            val scope = ToolScope(ctx, request = request)
+            val result =
+                scope.content {
+                    text("Answer")
+                    image("aGVsbG8=", "image/png")
+                }
+            result.shouldBeInstanceOf<ToolResult.Success>()
+            assertSoftly {
+                result.content() shouldHaveSize 2
+                (result.content()[0] as TextContent).text() shouldBe "Answer"
+                (result.content()[1] as ImageContent).mimeType() shouldBe "image/png"
+            }
+        }
+    }
+
+    @Test
+    fun `text DSL returns a single-block ToolResult`() {
+        withStatelessContext { ctx ->
+            val request =
+                ToolRequest
+                    .builder()
+                    .name("say")
+                    .arguments(Args.of(null, null))
+                    .build()
+            val scope = ToolScope(ctx, request = request)
+            val result = scope.text("hi")
+            result.shouldBeInstanceOf<ToolResult.Success>()
+            (result.content().single() as TextContent).text() shouldBe "hi"
+        }
+    }
+
+    @Test
+    fun `PromptScope content DSL builds one user message per block`() {
+        withStatelessContext { ctx ->
+            val request = PromptRequest(null, null, null)
+            val scope = PromptScope(ctx, request = request)
+            val messages =
+                scope.content {
+                    text("Summarize this")
+                    image("aGVsbG8=", "image/png")
+                }
+            assertSoftly {
+                messages shouldHaveSize 2
+                messages.forEach { it.role() shouldBe Role.USER }
+                (messages[0].content() as TextContent).text() shouldBe "Summarize this"
+                (messages[1].content() as ImageContent).mimeType() shouldBe "image/png"
+            }
         }
     }
 

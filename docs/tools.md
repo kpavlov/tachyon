@@ -114,7 +114,7 @@ hold a `CompletionStage` (a non-blocking client, another async service), return 
 |-----------------------------------------|----------------------------------------|
 | `ToolResult.text(t)`                    | Plain text response                    |
 | `ToolResult.error(msg)`                 | Error (`isError = true`)               |
-| `ToolResult.blocks(blocks...)`          | Multiple content blocks                |
+| `ToolResult.content(blocks...)`         | Multiple content blocks                |
 | `ToolResult.of(payload)`                | POJO → `structuredContent`; serialized JSON auto-added as the text block |
 | `ToolResult.of(payload, text)`          | Structured + explicit human-readable text |
 | `ToolResult.empty()`                    | No content                             |

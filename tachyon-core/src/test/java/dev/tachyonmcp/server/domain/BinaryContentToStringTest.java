@@ -12,8 +12,8 @@ class BinaryContentToStringTest {
     @Test
     void binaryResourceContainersDoNotExposePayloads() {
         var icon = Icon.of("data:image/png;base64," + BINARY_PAYLOAD, "image/png", null, null);
-        var image = ImageContent.of(BINARY_PAYLOAD, "image/png");
-        var audio = AudioContent.of(BINARY_PAYLOAD, "audio/wav");
+        var image = ImageContent.base64(BINARY_PAYLOAD, "image/png");
+        var audio = AudioContent.base64(BINARY_PAYLOAD, "audio/wav");
         var blob = BlobResourceContents.of("test://blob", BINARY_PAYLOAD, "application/octet-stream");
 
         assertThat(icon.toString()).doesNotContain(BINARY_PAYLOAD).contains("image/png");

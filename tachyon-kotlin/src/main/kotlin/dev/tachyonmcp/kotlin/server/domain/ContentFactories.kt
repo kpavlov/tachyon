@@ -72,13 +72,14 @@ public fun TextContent(
  * @param annotations optional presentation hints
  * @param meta        optional request-level metadata; null to omit
  */
+@JvmSynthetic
 public fun ImageContent(
     data: String,
     mimeType: String,
     annotations: Annotations? = null,
     meta: Map<String, JsonNode>? = null,
 ): ImageContent =
-    ImageContent.of(
+    ImageContent.base64(
         data,
         mimeType,
         annotations,
@@ -96,7 +97,7 @@ public fun ImageContent(
     annotations: Annotations? = null,
     meta: Map<String, JsonObject>?,
 ): ImageContent =
-    ImageContent.of(
+    ImageContent.base64(
         data,
         mimeType,
         annotations,
@@ -117,7 +118,7 @@ public fun AudioContent(
     annotations: Annotations? = null,
     meta: Map<String, JsonNode>? = null,
 ): AudioContent =
-    AudioContent.of(
+    AudioContent.base64(
         data,
         mimeType,
         annotations,
@@ -135,7 +136,7 @@ public fun AudioContent(
     annotations: Annotations? = null,
     meta: Map<String, JsonObject>?,
 ): AudioContent =
-    AudioContent.of(
+    AudioContent.base64(
         data,
         mimeType,
         annotations,

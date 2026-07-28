@@ -37,7 +37,7 @@ class McpToolMapperTest {
 
     @Test
     void toProtocolImageContentCarriesCorrectType() {
-        var domain = ImageContent.of("data", "image/png");
+        var domain = ImageContent.base64("data", "image/png");
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ImageContent)
                 McpToolMapper.toProtocolContentBlock(domain);
         assertThat(protocol.type()).isEqualTo("image");
@@ -47,7 +47,7 @@ class McpToolMapperTest {
 
     @Test
     void toProtocolAudioContentCarriesCorrectType() {
-        var domain = AudioContent.of("data", "audio/wav");
+        var domain = AudioContent.base64("data", "audio/wav");
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.AudioContent)
                 McpToolMapper.toProtocolContentBlock(domain);
         assertThat(protocol.type()).isEqualTo("audio");
@@ -89,7 +89,7 @@ class McpToolMapperTest {
     @Test
     void metaSurvivesImageContentRoundTrip() {
         var meta = Map.<String, Object>of("key", META_VALUE);
-        var domain = ImageContent.of("data", "image/png", null, meta);
+        var domain = ImageContent.base64("data", "image/png", null, meta);
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ImageContent)
                 McpToolMapper.toProtocolContentBlock(domain);
         assertThat(protocol._meta()).containsEntry("key", PROTOCOL_META_VALUE);
@@ -101,7 +101,7 @@ class McpToolMapperTest {
     @Test
     void metaSurvivesAudioContentRoundTrip() {
         var meta = Map.<String, Object>of("key", META_VALUE);
-        var domain = AudioContent.of("data", "audio/wav", null, meta);
+        var domain = AudioContent.base64("data", "audio/wav", null, meta);
         var protocol = (dev.tachyonmcp.protocol.mcp.v2025_11_25.models.AudioContent)
                 McpToolMapper.toProtocolContentBlock(domain);
         assertThat(protocol._meta()).containsEntry("key", PROTOCOL_META_VALUE);
@@ -292,7 +292,7 @@ class McpToolMapperTest {
 
     @Test
     void toDomainResultPreservesToolResult() {
-        var original = ToolResult.blocks(TextContent.of("hello"));
+        var original = ToolResult.content(TextContent.of("hello"));
         var result = McpToolMapper.toDomainResult(original);
         assertThat(result).isSameAs(original);
     }
@@ -308,8 +308,8 @@ class McpToolMapperTest {
     @Test
     void typeDerivesCorrectlyForAllVariants() {
         assertThat(TextContent.of("hello").type()).isEqualTo(ContentBlock.Type.TEXT);
-        assertThat(ImageContent.of("data", "image/png").type()).isEqualTo(ContentBlock.Type.IMAGE);
-        assertThat(AudioContent.of("data", "audio/wav").type()).isEqualTo(ContentBlock.Type.AUDIO);
+        assertThat(ImageContent.base64("data", "image/png").type()).isEqualTo(ContentBlock.Type.IMAGE);
+        assertThat(AudioContent.base64("data", "audio/wav").type()).isEqualTo(ContentBlock.Type.AUDIO);
         assertThat(ResourceLink.of("test://uri", "name").type()).isEqualTo(ContentBlock.Type.RESOURCE_LINK);
         assertThat(EmbeddedResource.of(TextResourceContents.of("u", "c", null)).type())
                 .isEqualTo(ContentBlock.Type.RESOURCE);

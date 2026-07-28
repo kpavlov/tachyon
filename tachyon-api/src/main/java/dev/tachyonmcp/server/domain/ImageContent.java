@@ -44,20 +44,68 @@ public non-sealed interface ImageContent extends ContentBlock {
         return DefaultImageContent.builder();
     }
 
-    /** Creates an image content block with no metadata or annotations. */
-    static ImageContent of(String data, String mimeType) {
+    /**
+     * Creates an image content block from base64-encoded data, with no metadata or annotations.
+     *
+     * @param data     the base64-encoded image data
+     * @param mimeType the image MIME type (e.g. {@code image/png})
+     */
+    static ImageContent base64(String data, String mimeType) {
         return DefaultImageContent.of(data, mimeType, null, null);
     }
 
-    /** Creates an image content block with given annotations and no metadata. */
-    static ImageContent of(String data, String mimeType, @Nullable Annotations annotations) {
+    /**
+     * Creates an image content block from base64-encoded data.
+     *
+     * @param data the base64-encoded image data
+     * @param mimeType the image MIME type
+     * @return a new image content block
+     * @deprecated use {@link #base64(String, String)}
+     */
+    @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
+    static ImageContent of(String data, String mimeType) {
+        return base64(data, mimeType);
+    }
+
+    /** Creates an image content block from base64-encoded data with given annotations and no metadata. */
+    static ImageContent base64(String data, String mimeType, @Nullable Annotations annotations) {
         return DefaultImageContent.of(data, mimeType, annotations, null);
     }
 
-    /** Creates an image content block with metadata and optional annotations. */
-    static ImageContent of(
+    /**
+     * Creates an image content block from base64-encoded data with annotations.
+     *
+     * @param data the base64-encoded image data
+     * @param mimeType the image MIME type
+     * @param annotations the annotations, or {@code null}
+     * @return a new image content block
+     * @deprecated use {@link #base64(String, String, Annotations)}
+     */
+    @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
+    static ImageContent of(String data, String mimeType, @Nullable Annotations annotations) {
+        return base64(data, mimeType, annotations);
+    }
+
+    /** Creates an image content block from base64-encoded data with metadata and optional annotations. */
+    static ImageContent base64(
             String data, String mimeType, @Nullable Annotations annotations, @Nullable Map<String, Object> meta) {
         return DefaultImageContent.of(data, mimeType, annotations, meta);
+    }
+
+    /**
+     * Creates an image content block from base64-encoded data with annotations and metadata.
+     *
+     * @param data the base64-encoded image data
+     * @param mimeType the image MIME type
+     * @param annotations the annotations, or {@code null}
+     * @param meta the metadata, or {@code null}
+     * @return a new image content block
+     * @deprecated use {@link #base64(String, String, Annotations, Map)}
+     */
+    @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
+    static ImageContent of(
+            String data, String mimeType, @Nullable Annotations annotations, @Nullable Map<String, Object> meta) {
+        return base64(data, mimeType, annotations, meta);
     }
 
     interface Builder {

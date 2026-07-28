@@ -30,7 +30,7 @@ final class McpToolMapper {
     public static ToolResult toDomainResult(Object result) {
         if (result instanceof ToolResult r) return r;
         var text = TextContent.of(result != null ? result.toString() : "");
-        return ToolResult.blocks(text);
+        return ToolResult.content(text);
     }
 
     public static Tool toTool(ToolDescriptor d) {
@@ -83,10 +83,10 @@ final class McpToolMapper {
             case dev.tachyonmcp.protocol.mcp.v2025_11_25.models.TextContent t ->
                 TextContent.of(t.text(), JsonUtils.toObjectMap(t._meta()), toDomainAnnotations(t.annotations()));
             case dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ImageContent i ->
-                ImageContent.of(
+                ImageContent.base64(
                         i.data(), i.mimeType(), toDomainAnnotations(i.annotations()), JsonUtils.toObjectMap(i._meta()));
             case dev.tachyonmcp.protocol.mcp.v2025_11_25.models.AudioContent a ->
-                AudioContent.of(
+                AudioContent.base64(
                         a.data(), a.mimeType(), toDomainAnnotations(a.annotations()), JsonUtils.toObjectMap(a._meta()));
             case dev.tachyonmcp.protocol.mcp.v2025_11_25.models.ResourceLink r ->
                 ResourceLink.builder(r.uri(), r.name())

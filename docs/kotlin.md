@@ -348,7 +348,7 @@ TachyonServer(port = 8080) {
 |---|---|
 | `ToolResult.text(t)` | Text content block |
 | `ToolResult.error(msg)` | `isError = true` |
-| `ToolResult.blocks(vararg b)` | Multiple content blocks |
+| `ToolResult.content(vararg b)` | Multiple content blocks |
 | `ToolResult.of(payload)` | POJO → `structuredContent` via Jackson |
 | `ToolResult.of(payload, text)` | Structured + human-readable text |
 | `ToolResult.empty()` | No content |

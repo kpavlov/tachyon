@@ -193,14 +193,14 @@ abstract class AbstractConformanceServer {
                         b -> b.name("test_image_content")
                                 .description("Returns image content")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, request) -> ToolResult.blocks(ImageContent.of(MINI_PNG_BASE64, "image/png")));
+                        (ctx, request) -> ToolResult.content(ImageContent.base64(MINI_PNG_BASE64, "image/png")));
 
         server.tools()
                 .register(
                         b -> b.name("test_audio_content")
                                 .description("Returns audio content")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, request) -> ToolResult.blocks(AudioContent.of(MINI_WAV_BASE64, "audio/wav")));
+                        (ctx, request) -> ToolResult.content(AudioContent.base64(MINI_WAV_BASE64, "audio/wav")));
 
         server.tools()
                 .register(
@@ -210,7 +210,7 @@ abstract class AbstractConformanceServer {
                         (ctx, request) -> {
                             var res = TextResourceContents.of(
                                     "test://embedded-resource", "This is an embedded resource content.", "text/plain");
-                            return ToolResult.blocks(EmbeddedResource.of(res));
+                            return ToolResult.content(EmbeddedResource.of(res));
                         });
 
         server.tools()
@@ -223,9 +223,9 @@ abstract class AbstractConformanceServer {
                                     "test://mixed-content-resource",
                                     "{\"test\":\"data\",\"value\":123}",
                                     "application/json");
-                            return ToolResult.blocks(
+                            return ToolResult.content(
                                     TextContent.of("Multiple content types test:"),
-                                    ImageContent.of(MINI_PNG_BASE64, "image/png"),
+                                    ImageContent.base64(MINI_PNG_BASE64, "image/png"),
                                     EmbeddedResource.of(mixed));
                         });
 
@@ -538,7 +538,7 @@ abstract class AbstractConformanceServer {
         server.prompts()
                 .register(
                         PromptDescriptor.of("test_prompt_with_image", "Prompt with image"),
-                        List.of(PromptMessage.user(ImageContent.of(MINI_PNG_BASE64, "image/png"))));
+                        List.of(PromptMessage.user(ImageContent.base64(MINI_PNG_BASE64, "image/png"))));
 
         registerVersionSpecificPrompts(server);
     }

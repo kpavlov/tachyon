@@ -107,7 +107,7 @@ Lambda: `ToolHandler.of(name, description, fn)` or `of(configurer, fn)` for a sc
 
 Async: `ToolHandler.ofAsync(name, (ctx, request) -> CompletionStage<ToolResult>)` or override `handleAsync`.
 
-`ToolResult` (not generic): `.text(t)` · `.error(msg)` (isError=true) · `.blocks(ContentBlock...)` · `.of(payload)` (structuredContent; serialized JSON auto-added as text block) · `.of(payload, text)` · `.raw(json, text)` (pre-serialized JSON) · `.inputRequired(reqs, state)` · `.empty()` · `.withMeta(map)` / `.withMeta(key, value)`
+`ToolResult` (not generic): `.text(t)` · `.error(msg)` (isError=true) · `.content(ContentBlock...)` · `.of(payload)` (structuredContent; serialized JSON auto-added as text block) · `.of(payload, text)` · `.raw(json, text)` (pre-serialized JSON) · `.inputRequired(reqs, state)` · `.empty()` · `.withMeta(map)` / `.withMeta(key, value)`
 
 Full: `resources/java/ToolHandlerExample.java`
 

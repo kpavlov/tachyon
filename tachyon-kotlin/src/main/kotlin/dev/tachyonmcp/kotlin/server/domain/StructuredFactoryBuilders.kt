@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
+@file:JvmSynthetic
+
 package dev.tachyonmcp.kotlin.server.domain
 
 import dev.tachyonmcp.kotlin.server.TachyonDsl
@@ -140,7 +142,7 @@ public class ImageContentBuilder
 
         @PublishedApi
         internal fun build(): ImageContent =
-            ImageContent.of(
+            ImageContent.base64(
                 requireNotNull(data) { "ImageContent.data is required" },
                 requireNotNull(mimeType) { "ImageContent.mimeType is required" },
                 annotations,
@@ -167,7 +169,7 @@ public class AudioContentBuilder
 
         @PublishedApi
         internal fun build(): AudioContent =
-            AudioContent.of(
+            AudioContent.base64(
                 requireNotNull(data) { "AudioContent.data is required" },
                 requireNotNull(mimeType) { "AudioContent.mimeType is required" },
                 annotations,
