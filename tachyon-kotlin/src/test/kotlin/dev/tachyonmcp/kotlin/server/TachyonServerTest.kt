@@ -132,7 +132,7 @@ internal class TachyonServerTest {
                     listOf(
                         PromptMessage(
                             role = Role.USER,
-                            TextContent("Hello, ${arguments ?: "world"}!"),
+                            TextContent("Hello, ${arguments.stringOr("name", "world")}!"),
                         ),
                     )
                 }
@@ -431,7 +431,7 @@ internal class TachyonServerTest {
                 listOf(
                     PromptMessage(
                         role = Role.USER,
-                        TextContent("styled: ${arguments ?: "none"}"),
+                        TextContent("styled: ${arguments.stringOr("style", "none")}"),
                     ),
                 )
             }

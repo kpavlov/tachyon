@@ -425,7 +425,7 @@ internal class KotlinApiTest {
     @Test
     fun `PromptScope content DSL builds one user message per block`() {
         withStatelessContext { ctx ->
-            val request = PromptRequest(null, null, null)
+            val request = PromptRequest(Args.empty(), null, null)
             val scope = PromptScope(ctx, request = request)
             val messages =
                 scope.content {
