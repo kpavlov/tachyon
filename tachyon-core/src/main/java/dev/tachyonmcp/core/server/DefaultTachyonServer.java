@@ -9,6 +9,7 @@ import dev.tachyonmcp.api.json.spi.JsonSchemaFactory;
 import dev.tachyonmcp.api.runtime.Notifications;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.api.server.domain.RequestId;
+import dev.tachyonmcp.api.server.domain.ServerCapabilities;
 import dev.tachyonmcp.api.server.extensions.ExtensionContext;
 import dev.tachyonmcp.api.server.extensions.ExtensionMethodHandler;
 import dev.tachyonmcp.api.server.extensions.ServerExtension;

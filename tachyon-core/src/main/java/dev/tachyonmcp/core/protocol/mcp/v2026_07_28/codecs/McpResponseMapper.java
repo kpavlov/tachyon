@@ -3,6 +3,7 @@ package dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs;
 
 import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.server.config.ServerIdentity;
+import dev.tachyonmcp.api.server.domain.ServerCapabilities;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
@@ -25,7 +26,6 @@ import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ResourceTemplate;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ResultMetaObject;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.TextResourceContents;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.Tool;
-import dev.tachyonmcp.core.server.ServerCapabilities;
 import dev.tachyonmcp.core.server.json.JsonUtils;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcError;
 import java.io.ByteArrayOutputStream;

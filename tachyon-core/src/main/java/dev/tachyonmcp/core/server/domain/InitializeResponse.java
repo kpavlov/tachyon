@@ -2,7 +2,7 @@
 package dev.tachyonmcp.core.server.domain;
 
 import dev.tachyonmcp.api.server.config.ServerIdentity;
-import dev.tachyonmcp.core.server.ServerCapabilities;
+import dev.tachyonmcp.api.server.domain.ServerCapabilities;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;

@@ -45,11 +45,6 @@
             <groupId>com.networknt</groupId>
             <artifactId>json-schema-validator</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.immutables</groupId>
-            <artifactId>value-annotations</artifactId>
-            <scope>provided</scope> <!-- compile only -->
-        </dependency>
 
         <!-- Test -->
         <dependency>
@@ -89,15 +84,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.immutables</groupId>
-                            <artifactId>value</artifactId>
-                            <version>${immutables.version}</version>
-                        </path>
-                    </annotationProcessorPaths>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>

@@ -5,6 +5,7 @@ import dev.tachyonmcp.api.server.config.ServerIdentity;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Icon;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Implementation;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ServerCapabilities;
+import dev.tachyonmcp.core.server.json.JsonUtils;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -38,7 +39,8 @@ class ServerInfoMapper {
                 .build();
     }
 
-    public static ServerCapabilities.Builder toServerCapabilities(dev.tachyonmcp.core.server.ServerCapabilities src) {
+    public static ServerCapabilities.Builder toServerCapabilities(
+            dev.tachyonmcp.api.server.domain.ServerCapabilities src) {
         ServerCapabilities.Builder builder = ServerCapabilities.builder();
         if (src.completions()) {
             builder.completions(EMPTY_NODE);
@@ -47,7 +49,7 @@ class ServerInfoMapper {
             builder.logging(EMPTY_NODE);
         }
         if (src.experimental() != null) {
-            builder.experimental(src.experimental());
+            builder.experimental(JsonUtils.toJsonNodeMap(src.experimental().asMap()));
         }
 
         if (src.prompts() != null) {
