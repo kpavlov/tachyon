@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.session;
 
+import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.runtime.ClientContext;
 import dev.tachyonmcp.api.runtime.ElicitationRequest;
@@ -35,6 +36,7 @@ public final class WireClientContext implements ClientContext, ElicitationServic
     }
 
     @Override
+    @ExperimentalApi
     public SamplingService sampling() {
         return this;
     }
@@ -60,6 +62,10 @@ public final class WireClientContext implements ClientContext, ElicitationServic
         var map = (Map<String, Object>) JsonRpcCodec.readValue(json);
         var action = ElicitationResult.Action.valueOf(((String) map.get("action")).toUpperCase(Locale.ROOT));
         var content = map.get("content");
+        if (action == ElicitationResult.Action.ACCEPT && !(content instanceof Map<?, ?>)) {
+            throw new IllegalArgumentException(
+                    "elicitation/create response with action=ACCEPT must include an object 'content', got: " + content);
+        }
         return new ElicitationResult(action, content instanceof Map<?, ?> cm ? Args.of((Map<String, ?>) cm) : null);
     }
 

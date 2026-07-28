@@ -19,7 +19,10 @@ public interface ClientContext {
     /**
      * Returns the sampling service for requesting an LLM completion from the client.
      *
+     * @deprecated Sampling is deprecated as of protocol version 2026-07-28 (SEP-2577)
+     *
      * @return the sampling service
      */
+    @Deprecated(forRemoval = false)
     SamplingService sampling();
 }

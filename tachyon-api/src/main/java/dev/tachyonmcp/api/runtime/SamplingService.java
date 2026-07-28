@@ -12,10 +12,12 @@ import java.util.concurrent.CompletableFuture;
  * a future protocol revision. Request and response are kept as raw {@link Args} rather than a
  * per-field domain model, since the wire shape isn't a stable long-term contract to model against.
  *
+ * @deprecated SEP-2577 explicitly deprecates sampling.
  * @see ClientContext#sampling()
  */
 @ExperimentalApi
 @FunctionalInterface
+@Deprecated(forRemoval = false)
 public interface SamplingService {
 
     /**
