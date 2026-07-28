@@ -3,8 +3,10 @@ package dev.tachyonmcp.core.runtime;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.runtime.AttributeKey;
+import dev.tachyonmcp.api.runtime.ClientContext;
 import dev.tachyonmcp.api.runtime.ContextNotifications;
 import dev.tachyonmcp.core.protocol.Protocol;
+import dev.tachyonmcp.core.server.session.WireClientContext;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -74,6 +76,11 @@ public class DefaultChannelContext implements ChannelContext {
     public CompletableFuture<String> sendRequest(String method, Object params) {
         return CompletableFuture.failedFuture(
                 new UnsupportedOperationException("sendRequest is not supported in this context"));
+    }
+
+    @Override
+    public ClientContext client() {
+        return new WireClientContext(this);
     }
 
     @Override

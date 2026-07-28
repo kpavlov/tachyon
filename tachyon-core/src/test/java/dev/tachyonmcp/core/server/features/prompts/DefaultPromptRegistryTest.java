@@ -242,7 +242,8 @@ class DefaultPromptRegistryTest {
     void shouldUseDynamicHandlerForMessages() throws Exception {
         registry.register(
                 PromptDescriptor.of("dynamic", "Dynamic prompt"),
-                (ctx, request) -> PromptResult.messages(List.of(PromptMessage.user("args=" + request.arguments()))));
+                (ctx, request) -> PromptResult.messages(
+                        List.of(PromptMessage.user("args=" + request.arguments().json()))));
 
         var result = (GetPromptResult)
                 handlers.get("prompts/get").handle(DefaultDispatchContext.stateless(server), Map.of("name", "dynamic"));

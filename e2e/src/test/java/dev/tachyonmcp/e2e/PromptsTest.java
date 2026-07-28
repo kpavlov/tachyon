@@ -68,8 +68,8 @@ class PromptsTest extends AbstractStatelessMcpE2eTest {
         server.prompts()
                 .register(
                         PromptDescriptor.of("test_prompt_with_arguments", "A parameterized prompt"),
-                        (ctx, request) -> PromptResult.messages(
-                                List.of(PromptMessage.user("Hello, " + request.arguments() + "!"))));
+                        (ctx, request) -> PromptResult.messages(List.of(PromptMessage.user(
+                                "Hello, " + request.arguments().json() + "!"))));
 
         try (var client = createTestClient()) {
             client.initialize();

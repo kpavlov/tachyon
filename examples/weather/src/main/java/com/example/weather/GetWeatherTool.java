@@ -6,6 +6,9 @@ package com.example.weather;
 import com.example.weather.service.WeatherService;
 import com.example.weather.spi.CityNotFoundException;
 import com.example.weather.spi.WeatherObservation;
+import dev.tachyonmcp.api.json.JsonSchema;
+import dev.tachyonmcp.api.runtime.ElicitationRequest;
+import dev.tachyonmcp.api.runtime.ElicitationResult;
 import dev.tachyonmcp.api.runtime.InteractionContext;
 import dev.tachyonmcp.api.server.domain.ProgressToken;
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
@@ -13,15 +16,14 @@ import dev.tachyonmcp.api.server.features.tools.ToolFn;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tools.jackson.databind.ObjectMapper;
 
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 class GetWeatherTool {
     private static final Logger log = LoggerFactory.getLogger(GetWeatherTool.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final JsonSchema CITY_SCHEMA = JsonSchema.of("""
+        {"type":"object","properties":{"city":{"type":"string","title":"City"}},"required":["city"]}
+        """);
     // language=json
     private static final String INPUT_SCHEMA = """
         {
@@ -91,28 +93,19 @@ class GetWeatherTool {
     }
 
     private static Optional<String> elicitCity(InteractionContext ctx, String city) throws Exception {
-        var future = ctx.sendRequest(
-            "elicitation/create",
-            Map.of(
-                "mode", "form",
-                "message", "City '%s' was not found. Enter another city.".formatted(city),
-                "requestedSchema",
-                Map.of(
-                    "type", "object",
-                    "properties", Map.of("city", Map.of("type", "string", "title", "City")),
-                    "required", List.of("city"))));
-        String response;
+        var request = new ElicitationRequest(
+            "City '%s' was not found. Enter another city.".formatted(city), CITY_SCHEMA);
+        ElicitationResult result;
         try {
-            response = future.get();
+            result = ctx.client().elicitation().create(request).get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw e;
         }
-        var result = MAPPER.readTree(response);
-        if (!"accept".equals(result.path("action").asString())) {
+        if (result.action() != ElicitationResult.Action.ACCEPT || result.content() == null) {
             return Optional.empty();
         }
-        var correctedCity = result.path("content").path("city").asString();
+        var correctedCity = result.content().stringOr("city", "");
         return correctedCity.isBlank() ? Optional.empty() : Optional.of(correctedCity);
     }
 

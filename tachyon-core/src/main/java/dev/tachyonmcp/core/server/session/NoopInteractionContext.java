@@ -3,6 +3,7 @@ package dev.tachyonmcp.core.server.session;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.runtime.AttributeKey;
+import dev.tachyonmcp.api.runtime.ClientContext;
 import dev.tachyonmcp.api.runtime.ContextNotifications;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.core.protocol.Protocol;
@@ -67,6 +68,11 @@ public class NoopInteractionContext implements DispatchContext {
     @Override
     public CompletableFuture<String> sendRequest(String method, Object params) {
         return CompletableFuture.failedFuture(new UnsupportedOperationException("sendRequest"));
+    }
+
+    @Override
+    public ClientContext client() {
+        return new WireClientContext(this);
     }
 
     @Override

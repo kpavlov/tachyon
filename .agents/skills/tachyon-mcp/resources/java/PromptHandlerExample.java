@@ -40,10 +40,10 @@ final class PromptHandlerExample {
                 null);
     }
 
-    /** Handler that reads the argument string. */
+    /** Handler that reads a typed argument. */
     static PromptHandler argHandler() {
         return (ctx, request) -> {
-            var text = request.arguments() != null ? request.arguments() : "default text";
+            var text = request.arguments().stringOr("text", "default text");
             return PromptResult.messages(List.of(PromptMessage.user("Rewrite this: " + text)));
         };
     }
@@ -61,6 +61,6 @@ final class PromptHandlerExample {
     /** Async handler — returns a CompletionStage for non-blocking backends. */
     static AsyncPromptHandler asyncHandler() {
         return (ctx, request) -> CompletableFuture.supplyAsync(
-                () -> PromptResult.messages(List.of(PromptMessage.user("Rewrite: " + request.arguments()))));
+                () -> PromptResult.messages(List.of(PromptMessage.user("Rewrite: " + request.arguments().json()))));
     }
 }

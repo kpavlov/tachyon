@@ -3,6 +3,7 @@ package dev.tachyonmcp.core.server.session;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.runtime.AttributeKey;
+import dev.tachyonmcp.api.runtime.ClientContext;
 import dev.tachyonmcp.api.runtime.ContextNotifications;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.api.server.domain.ProgressToken;
@@ -150,6 +151,11 @@ public class DefaultDispatchContext implements DispatchContext {
                     new IllegalStateException("Server-to-client requests require a session (stateless mode)"));
         }
         return server.sendRequest(s, method, params, outboundStream);
+    }
+
+    @Override
+    public ClientContext client() {
+        return new WireClientContext(this);
     }
 
     @Override

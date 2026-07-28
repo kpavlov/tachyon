@@ -4,6 +4,7 @@ package dev.tachyonmcp.core.server.features.prompts;
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.json.JsonSchemaValidator;
 import dev.tachyonmcp.api.server.config.Mode;
+import dev.tachyonmcp.api.server.domain.Args;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.features.HandlerFutures;
@@ -218,14 +219,9 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
                     });
         }
 
-        private static @Nullable String extractArguments(Object params) {
-            if (params instanceof GetPromptRequestParams p && p.arguments() != null) {
-                return JsonRpcCodec.writeValueAsString(p.arguments());
-            }
-            if (params instanceof Map<?, ?> map && map.get("arguments") instanceof Map<?, ?> args) {
-                return JsonRpcCodec.writeValueAsString(args);
-            }
-            return null;
+        private static Args extractArguments(Object params) {
+            var argsMap = extractArgumentsMap(params);
+            return argsMap != null ? Args.of(JsonUtils.toObjectMap(argsMap)) : Args.empty();
         }
 
         private static @Nullable Map<String, JsonNode> extractArgumentsMap(Object params) {

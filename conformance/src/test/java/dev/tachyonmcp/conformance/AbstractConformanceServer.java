@@ -524,8 +524,8 @@ abstract class AbstractConformanceServer {
                         List.of(PromptMessage.user("This is a simple test prompt.")))
                 .register(
                         PromptDescriptor.of("test_prompt_with_arguments", "A parameterized prompt"),
-                        (ctx, request) -> PromptResult.messages(
-                                List.of(PromptMessage.user("Prompt with arguments: " + request.arguments()))));
+                        (ctx, request) -> PromptResult.messages(List.of(PromptMessage.user(
+                                "Prompt with arguments: " + request.arguments().json()))));
 
         server.prompts()
                 .register(

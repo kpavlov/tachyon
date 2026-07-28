@@ -4,6 +4,7 @@
 package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.api.runtime.InteractionContext
+import dev.tachyonmcp.api.server.domain.Args
 import dev.tachyonmcp.api.server.domain.PromptMessage
 import dev.tachyonmcp.api.server.features.prompts.PromptRequest
 import dev.tachyonmcp.kotlin.server.TachyonDsl
@@ -15,9 +16,9 @@ public class PromptScope
         public val request: PromptRequest,
     ) {
         /**
-         * Convenience access to the prompt arguments string or null.
+         * Convenience access to the prompt arguments.
          */
-        public val arguments: String?
+        public val arguments: Args
             get() = request.arguments()
 
         /**

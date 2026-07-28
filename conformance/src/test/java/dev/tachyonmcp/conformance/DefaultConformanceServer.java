@@ -1,12 +1,16 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.conformance;
 
+import dev.tachyonmcp.api.json.JsonSchema;
+import dev.tachyonmcp.api.runtime.ElicitationRequest;
+import dev.tachyonmcp.api.server.domain.Args;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -52,21 +56,19 @@ class DefaultConformanceServer extends AbstractConformanceServer {
                             if (promptOpt.isPresent()) {
                                 var prompt = promptOpt.get();
                                 try {
-                                    Map<String, Object> paramsMap = Map.of(
+                                    var params = Args.of(Map.of(
                                             "messages",
                                             List.of(Map.of(
                                                     "role", "user", "content", Map.of("type", "text", "text", prompt))),
                                             "maxTokens",
-                                            100);
-                                    var responseJson = ctx.sendRequest(
-                                                    "sampling/createMessage",
-                                                    JsonRpcCodec.writeValueAsString(paramsMap))
+                                            100));
+                                    var result = ctx.client()
+                                            .sampling()
+                                            .createMessage(params)
                                             .get(2, TimeUnit.SECONDS);
-                                    var responseObj = (Map<String, Object>) JsonRpcCodec.readValue(responseJson);
-                                    var content = responseObj.get("content");
-                                    var text = content instanceof Map<?, ?> cm && "text".equals(cm.get("type"))
-                                            ? (String) cm.get("text")
-                                            : "";
+                                    var text = result.objectOpt("content")
+                                            .flatMap(c -> c.stringOpt("text"))
+                                            .orElse("");
                                     return ToolResult.text(text);
                                 } catch (Exception e) {
                                     return ToolResult.error("Sampling request failed");
@@ -85,29 +87,23 @@ class DefaultConformanceServer extends AbstractConformanceServer {
                             if (messageOpt.isPresent()) {
                                 var message = messageOpt.get();
                                 try {
-                                    var paramsMap = Map.of(
-                                            "mode",
-                                            "form",
-                                            "message",
-                                            message,
-                                            "requestedSchema",
+                                    var schema = JsonSchema.of(JsonRpcCodec.writeValueAsString(Map.of(
+                                            "type",
+                                            "object",
+                                            "properties",
                                             Map.of(
-                                                    "type",
-                                                    "object",
-                                                    "properties",
-                                                    Map.of(
-                                                            "username", Map.of("type", "string"),
-                                                            "email", Map.of("type", "string")),
-                                                    "required",
-                                                    List.of("username", "email")));
-                                    var responseJson = ctx.sendRequest(
-                                                    "elicitation/create", JsonRpcCodec.writeValueAsString(paramsMap))
+                                                    "username", Map.of("type", "string"),
+                                                    "email", Map.of("type", "string")),
+                                            "required",
+                                            List.of("username", "email"))));
+                                    var result = ctx.client()
+                                            .elicitation()
+                                            .create(new ElicitationRequest(message, schema))
                                             .get(2, TimeUnit.SECONDS);
-                                    var responseObj = (Map<String, Object>) JsonRpcCodec.readValue(responseJson);
-                                    var action = responseObj.get("action");
-                                    var content = responseObj.get("content");
-                                    var text = "User response: " + (action != null ? action : "unknown");
-                                    if (content instanceof Map<?, ?> cm) text += ", " + cm;
+                                    var text = "User response: "
+                                            + result.action().name().toLowerCase(Locale.ROOT);
+                                    if (result.content() != null)
+                                        text += ", " + result.content().asMap();
                                     return ToolResult.text(text);
                                 } catch (Exception e) {
                                     return ToolResult.error("Elicitation request failed");
@@ -123,41 +119,35 @@ class DefaultConformanceServer extends AbstractConformanceServer {
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
                         (ctx, request) -> {
                             try {
-                                var paramsMap = Map.of(
-                                        "mode",
-                                        "form",
-                                        "message",
-                                        "Please provide your details with defaults",
-                                        "requestedSchema",
-                                        Map.of(
-                                                "type",
-                                                "object",
-                                                "properties",
-                                                Map.<String, Object>of(
-                                                        "name",
-                                                        Map.of("type", "string", "default", "John Doe"),
-                                                        "age",
-                                                        Map.of("type", "integer", "default", 30),
-                                                        "score",
-                                                        Map.of("type", "number", "default", 95.5),
-                                                        "status",
-                                                        Map.of(
-                                                                "type",
-                                                                "string",
-                                                                "enum",
-                                                                List.of("active", "inactive"),
-                                                                "default",
-                                                                "active"),
-                                                        "verified",
-                                                        Map.of("type", "boolean", "default", true))));
-                                var responseJson = ctx.sendRequest(
-                                                "elicitation/create", JsonRpcCodec.writeValueAsString(paramsMap))
+                                var schema = JsonSchema.of(JsonRpcCodec.writeValueAsString(Map.of(
+                                        "type",
+                                        "object",
+                                        "properties",
+                                        Map.<String, Object>of(
+                                                "name",
+                                                Map.of("type", "string", "default", "John Doe"),
+                                                "age",
+                                                Map.of("type", "integer", "default", 30),
+                                                "score",
+                                                Map.of("type", "number", "default", 95.5),
+                                                "status",
+                                                Map.of(
+                                                        "type",
+                                                        "string",
+                                                        "enum",
+                                                        List.of("active", "inactive"),
+                                                        "default",
+                                                        "active"),
+                                                "verified",
+                                                Map.of("type", "boolean", "default", true)))));
+                                var result = ctx.client()
+                                        .elicitation()
+                                        .create(new ElicitationRequest(
+                                                "Please provide your details with defaults", schema))
                                         .get(2, TimeUnit.SECONDS);
-                                var responseObj = (Map<String, Object>) JsonRpcCodec.readValue(responseJson);
-                                var action = responseObj.get("action");
-                                var content = responseObj.get("content");
-                                var text = "Defaults " + (action != null ? action : "unknown");
-                                if (content instanceof Map<?, ?> cm) text += ", " + cm;
+                                var text = "Defaults " + result.action().name().toLowerCase(Locale.ROOT);
+                                if (result.content() != null)
+                                    text += ", " + result.content().asMap();
                                 return ToolResult.text(text);
                             } catch (Exception e) {
                                 return ToolResult.error("Error: " + e.getMessage());
@@ -213,18 +203,15 @@ class DefaultConformanceServer extends AbstractConformanceServer {
                                                         List.of(
                                                                 Map.of("const", "item1", "title", "Item One"),
                                                                 Map.of("const", "item2", "title", "Item Two")))));
-                                var paramsMap = Map.of(
-                                        "mode", "form",
-                                        "message", "Please select your preferences",
-                                        "requestedSchema", Map.of("type", "object", "properties", props));
-                                var responseJson = ctx.sendRequest(
-                                                "elicitation/create", JsonRpcCodec.writeValueAsString(paramsMap))
+                                var schema = JsonSchema.of(
+                                        JsonRpcCodec.writeValueAsString(Map.of("type", "object", "properties", props)));
+                                var result = ctx.client()
+                                        .elicitation()
+                                        .create(new ElicitationRequest("Please select your preferences", schema))
                                         .get(2, TimeUnit.SECONDS);
-                                var responseObj = (Map<String, Object>) JsonRpcCodec.readValue(responseJson);
-                                var action = responseObj.get("action");
-                                var content = responseObj.get("content");
-                                var text = "Enums " + (action != null ? action : "unknown");
-                                if (content instanceof Map<?, ?> cm) text += ", " + cm;
+                                var text = "Enums " + result.action().name().toLowerCase(Locale.ROOT);
+                                if (result.content() != null)
+                                    text += ", " + result.content().asMap();
                                 return ToolResult.text(text);
                             } catch (Exception e) {
                                 return ToolResult.error("Error: " + e.getMessage());

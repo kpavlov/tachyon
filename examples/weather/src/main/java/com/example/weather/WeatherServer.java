@@ -148,9 +148,9 @@ public final class WeatherServer {
     }
 
     private static PromptResult rewriteForecast(WeatherService weatherService, PromptRequest request) {
-        var arguments = MAPPER.readTree(request.arguments() != null ? request.arguments() : "{}");
-        var forecast = arguments.path("forecast").asString();
-        var style = NarrationStyle.from(arguments.path("style").asString());
+        var arguments = request.arguments();
+        var forecast = arguments.stringOr("forecast", "");
+        var style = NarrationStyle.from(arguments.stringOr("style", ""));
         return PromptResult.messages(List.of(PromptMessage.user(weatherService.rewriteForecastInstruction(forecast, style))));
     }
 

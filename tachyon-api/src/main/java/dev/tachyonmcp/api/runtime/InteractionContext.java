@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.api.runtime;
 
+import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import org.jspecify.annotations.Nullable;
@@ -70,13 +71,26 @@ public interface InteractionContext {
     ContextNotifications notifications();
 
     /**
+     * Returns typed access to the client-facing elicitation and sampling services.
+     *
+     * <p>Prefer this over {@link #sendRequest(String, Object)} for sampling/elicitation
+     * round-trips — it returns domain results instead of raw JSON.
+     *
+     * @return the client context
+     */
+    ClientContext client();
+
+    /**
      * Sends a request to the client and returns a future that completes with the raw JSON response.
-     * Used for sampling/elicitation roundtrips.
+     *
+     * <p>Experimental escape hatch for client requests not covered by {@link #client()}, such as
+     * URL-mode elicitation or sampling parameters beyond what {@link SamplingService} models.
      *
      * @param method the request method name
      * @param params the request parameters
      * @return a future that completes with the raw JSON response
      */
+    @ExperimentalApi
     CompletableFuture<String> sendRequest(String method, Object params);
 
     /**
