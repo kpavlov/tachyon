@@ -21,4 +21,8 @@ import java.lang.annotation.Target;
 @Documented
 @Retention(RetentionPolicy.CLASS)
 @Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD, ElementType.PACKAGE})
-public @interface ExperimentalApi {}
+public @interface ExperimentalApi {
+
+    /** Version in which the annotated API became experimental. */
+    String since() default "";
+}

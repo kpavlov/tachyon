@@ -475,19 +475,19 @@ public final class UriTemplate {
             values.put(capture.variable().name(), candidate);
             return;
         }
-        if (current.value() instanceof UriTemplateValue.Scalar currentScalar
-                && candidate.value() instanceof UriTemplateValue.Scalar candidateScalar
+        if (current.value() instanceof UriTemplateValue.Scalar(String value1)
+                && candidate.value() instanceof UriTemplateValue.Scalar(String value2)
                 && current.prefix()
                 && !candidate.prefix()
-                && candidateScalar.value().startsWith(currentScalar.value())) {
+                && value2.startsWith(value1)) {
             values.put(capture.variable().name(), candidate);
             return;
         }
-        if (current.value() instanceof UriTemplateValue.Scalar currentScalar
-                && candidate.value() instanceof UriTemplateValue.Scalar candidateScalar
+        if (current.value() instanceof UriTemplateValue.Scalar(String value1)
+                && candidate.value() instanceof UriTemplateValue.Scalar(String value2)
                 && !current.prefix()
                 && candidate.prefix()
-                && currentScalar.value().startsWith(candidateScalar.value())) {
+                && value1.startsWith(value2)) {
             return;
         }
         if (!current.value().equals(candidate.value())) {
