@@ -139,6 +139,18 @@ public final class Args implements JsonObject {
     }
 
     /**
+     * Returns the JSON representation, so an accidental string concatenation of {@code Args}
+     * (e.g. in a log line or a prompt/tool message) produces readable JSON instead of an opaque
+     * object identity.
+     *
+     * @return the JSON string
+     */
+    @Override
+    public String toString() {
+        return json();
+    }
+
+    /**
      * Returns the full arguments as a JSON string.
      *
      * @return the JSON string
