@@ -14,11 +14,11 @@ import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.core.server.ServerBuilder
-import dev.tachyonmcp.core.server.TachyonServer
 import dev.tachyonmcp.core.server.config.NetworkConfig
+import dev.tachyonmcp.kotlin.server.DefaultKotlinTachyonServer
 import dev.tachyonmcp.kotlin.server.TachyonDsl
+import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
-import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
 import dev.tachyonmcp.kotlin.server.json.toJsonSchema
 import dev.tachyonmcp.kotlin.server.json.toJsonSchemaOrNull
 import io.netty.channel.ChannelPipeline
@@ -26,16 +26,14 @@ import kotlinx.serialization.json.JsonObject
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
+import dev.tachyonmcp.core.server.TachyonServer as CoreTachyonServer
 
 @TachyonDsl
 public class TachyonServerBuilder
     @PublishedApi
     internal constructor() {
         @PublishedApi
-        internal val delegate: ServerBuilder =
-            TachyonServer.builder().also {
-                it.json { config -> config.serde(KxSerializationSerde.Default) }
-            }
+        internal val delegate: ServerBuilder = CoreTachyonServer.builder()
 
         @PublishedApi
         internal var networkPortExplicitlySet: Boolean = false
@@ -382,5 +380,6 @@ public class TachyonServerBuilder
         internal fun start(): TachyonServer = build().also { it.start() }
 
         @PublishedApi
-        internal fun build(): TachyonServer = delegate.build()
+        internal fun build(): TachyonServer =
+            DefaultKotlinTachyonServer(delegate.build(), coroutineRuntime)
     }

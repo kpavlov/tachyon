@@ -13,11 +13,12 @@ import dev.tachyonmcp.api.server.domain.PromptMessage
 import dev.tachyonmcp.api.server.domain.Role
 import dev.tachyonmcp.api.server.features.completions.CompletionResult
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor
-import dev.tachyonmcp.core.server.TachyonServer
+import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.kotlin.server.buildServer
 import dev.tachyonmcp.kotlin.server.domain.Annotations
 import dev.tachyonmcp.kotlin.server.domain.Icon
 import dev.tachyonmcp.kotlin.server.features.prompts.PromptDescriptor
+import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
 import org.slf4j.LoggerFactory
 import tools.jackson.databind.ObjectMapper
 import java.net.http.HttpClient
@@ -68,6 +69,7 @@ fun assembleServer(
         }
     return buildServer {
         network { this.port = boundPort }
+        json { serde = KxSerializationSerde.Default }
         info {
             name = "weather-server-kotlin"
             title = "Weather Server (Kotlin)"

@@ -28,6 +28,25 @@ import kotlin.time.toJavaDuration
 
 @Suppress("LongMethod")
 internal class TachyonServerTest {
+    private data class JacksonPayload(
+        val message: String,
+    )
+
+    @Test
+    fun `Kotlin DSL retains Jackson serde by default`() {
+        TachyonServer(port = 0) {
+            name("jackson-default-test")
+            session { enabled = true }
+            tool("jackson-default") { success(JacksonPayload("ok")) }
+        }.use { server ->
+            McpProbe(server.port()).use { probe ->
+                probe.initialize()
+                probe.callTool("jackson-default").body() shouldContain
+                    """"structuredContent":{"message":"ok"}"""
+            }
+        }
+    }
+
     @Test
     fun `all DSL parameters`() {
         val appName = "tachyon-e2e"
@@ -194,7 +213,7 @@ internal class TachyonServerTest {
 
     @Test
     fun `buildServer without binding`() {
-        val server =
+        val server: TachyonServer =
             buildServer {
                 name("kotlin-build")
                 capabilities {

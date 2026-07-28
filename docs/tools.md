@@ -155,7 +155,7 @@ tool("echo", inputSchema = ..., outputSchema = ...) {
 }
 ```
 
-- `request.arguments().decode<T>()` — honors configured serde (kotlinx by default, ignores unknown keys)
+- `request.arguments().decode<T>()` — honors the configured serde (Jackson by default)
 - `scope.success(value)` / `scope.success(value, text)` — symmetric typed result via configured serializer
 
 See [kotlin.md](kotlin.md) for the full Kotlin DSL reference.

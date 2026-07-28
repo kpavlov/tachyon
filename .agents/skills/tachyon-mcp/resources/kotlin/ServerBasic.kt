@@ -3,7 +3,7 @@
 package dev.tachyonmcp.skill
 
 import dev.tachyonmcp.api.server.config.Mode
-import dev.tachyonmcp.core.server.TachyonServer
+import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.api.server.domain.Role
 import dev.tachyonmcp.core.server.config.NetworkConfig
 import dev.tachyonmcp.core.server.json.NetworkntJsonSchemaValidator
@@ -102,7 +102,7 @@ fun assembleServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer {
 
         // ── json — serde + schema validation ──────────────────────
         json {
-            serde = KxSerializationSerde.Default // default Kotlin serde
+            serde = KxSerializationSerde.Default
             inputValidator = NetworkntJsonSchemaValidator() // default NetworkntJsonSchemaValidator
             outputValidator = inputValidator // default = inputValidator
         }

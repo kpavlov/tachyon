@@ -55,6 +55,11 @@
             <artifactId>tachyon-kotlin</artifactId>
             <version>${tachyon.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlinx</groupId>
+            <artifactId>kotlinx-serialization-json</artifactId>
+            <version>${kotlinx-serialization-json.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -67,14 +72,6 @@
             <artifactId>slf4j-simple</artifactId>
             <version>${slf4j.version}</version>
             <scope>runtime</scope>
-        </dependency>
-
-        <!-- Required at runtime: TachyonServerBuilder wires KxSerializationSerde.Default
-             unconditionally, even though tachyon-kotlin declares this dependency optional. -->
-        <dependency>
-            <groupId>org.jetbrains.kotlinx</groupId>
-            <artifactId>kotlinx-serialization-json</artifactId>
-            <version>${kotlinx-serialization-json.version}</version>
         </dependency>
 
         <!-- Test -->

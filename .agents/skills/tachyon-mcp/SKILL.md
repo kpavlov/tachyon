@@ -317,8 +317,8 @@ Register with `.extension(myExtension)`.
 Kotlin DSL supports **suspend** tool/resource/prompt handlers, `buildServer { }`, and `TachyonServer { }`. Handler lambdas are `suspend` receivers: call suspending APIs directly, without `it`. Prompt lambdas expose `arguments` (renamed from `it` in beta.5).
 
 ```kotlin
-// buildServer {} → TachyonServer without transport
-// TachyonServer(port) {} → TachyonServer with Netty transport
+// buildServer {} → Kotlin TachyonServer without transport
+// TachyonServer(port) {} → Kotlin TachyonServer with Netty transport
 
 val server = TachyonServer(8080) {
     info {
@@ -343,7 +343,7 @@ val server = TachyonServer(8080) {
 
 ### Typed decode/result (Kotlin)
 
-`request.arguments().decode<T>()` uses configured serde (kotlinx by default); symmetric `success(value)` returns a typed result:
+`request.arguments().decode<T>()` uses the configured serde (Jackson by default); symmetric `success(value)` returns a typed result:
 
 ```kotlin
 @Serializable
@@ -358,7 +358,7 @@ tool(name = "greet", description = "Typed greet", inputSchema = ..., outputSchem
 }
 ```
 
-- `request.arguments().decode<T>()` — decodes through the configured serde (kotlinx by default), honors custom `Json` config
+- `request.arguments().decode<T>()` — decodes through the configured serde; select kotlinx explicitly to use custom `Json` config
 - `scope.success(value)` — mirrors `decode`, defers serialization to the configured serializer
 - `scope.success(value, text)` — structured + human-readable text fallback
 

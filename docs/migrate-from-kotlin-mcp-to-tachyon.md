@@ -104,8 +104,6 @@ handler receiver changes from `ClientConnection.(CallToolRequest)` to `ToolScope
 returns a `ToolResult`. `registerTool` returns the `TachyonServer`, so registrations chain.
 
 ```kotlin
-import dev.tachyonmcp.kotlin.server.features.tools.registerTool
-
 server.registerTool(
     name = "search",
     description = "Search the index.",

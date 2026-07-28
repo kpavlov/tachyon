@@ -78,9 +78,9 @@ public fun Args.double(
 public inline fun <reified T : Any> JsonArray.valuesAs(): List<T> = valuesAs(T::class.java)
 
 /**
- * Decodes tool arguments into [T] using the deserializer configured in server config
- * (kotlinx-serialization by default in the Kotlin DSL, or a custom serde). Honors a
- * custom-configured `Json` — configure it via `json { serde = KxSerializationSerde(Json { … }) }`.
+ * Decodes tool arguments into [T] using the deserializer configured in server config.
+ * The Kotlin DSL retains Tachyon's Jackson default. To use kotlinx serialization, configure
+ * `json { serde = KxSerializationSerde(Json { … }) }`.
  * Generic type arguments of containers are erased at runtime — prefer dedicated
  * [@Serializable][kotlinx.serialization.Serializable] payload classes.
  *

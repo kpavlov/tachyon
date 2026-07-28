@@ -15,7 +15,7 @@ The `tachyon-kotlin` module wraps `ServerBuilder` with a coroutine-first DSL, su
 ## Entry points
 
 ```kotlin
-// Start Netty transport — returns TachyonServer
+// Start Netty transport — returns the Kotlin TachyonServer
 val server = TachyonServer(port = 8080) { /* configure */ }
 
 // Server logic only, no transport — for testing
@@ -263,7 +263,8 @@ tool(
 }
 ```
 
-The default kotlinx serde ignores unknown keys; configure a strict `Json` via
+The Kotlin DSL retains Tachyon's Jackson serde by default. Select kotlinx serialization explicitly:
+`json { serde = KxSerializationSerde.Default }`. Configure a strict `Json` via
 `json { serde = KxSerializationSerde(Json { ignoreUnknownKeys = false }) }`.
 `success(value)` encodes via the configured serde; the value must encode to a JSON
 object and pairs with the declared `outputSchema`. For a pre-serialized JSON payload
@@ -300,7 +301,7 @@ tool(name = "greet", inputSchema = ..., outputSchema = ...) {
 | `request.arguments().stringValue("k")` / `intValue` / `boolValue` / `doubleValue` | Required — throws when missing |
 | `request.arguments().stringOrNull("k")` / `intOrNull` / `booleanOrNull` / `doubleOrNull` | Returns `null` when missing |
 | `request.arguments().stringOr("k", "d")` / `int("k", 0)` / `boolean("k", true)` / `double("k", 0.0)` | Falls back to default |
-| `request.arguments().decode<T>()` | typed decode via configured serde (default kotlinx ignores unknown keys) |
+| `request.arguments().decode<T>()` | typed decode via configured serde (Jackson by default) |
 
 ## Scope reference
 
@@ -318,7 +319,7 @@ tool(name = "greet", inputSchema = ..., outputSchema = ...) {
 
 ## Post-build registration
 
-Add tools after the server starts — useful for dynamic registration:
+The Kotlin `TachyonServer` supports suspend tool registration after construction:
 
 ```kotlin
 val server = buildServer { /* base config */ }
