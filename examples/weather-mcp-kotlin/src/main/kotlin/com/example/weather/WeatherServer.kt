@@ -8,6 +8,7 @@ import com.example.weather.service.WeatherService
 import com.example.weather.spi.CityNotFoundException
 import com.example.weather.spi.WeatherObservation
 import dev.tachyonmcp.api.json.JsonSchema
+import dev.tachyonmcp.api.server.domain.Args
 import dev.tachyonmcp.api.server.domain.InvalidArgumentException
 import dev.tachyonmcp.api.server.domain.PromptMessage
 import dev.tachyonmcp.api.server.domain.Role
@@ -52,7 +53,6 @@ fun assembleServer(
     port: Int,
     weatherService: WeatherService = createWeatherService(),
 ): TachyonServer {
-    val boundPort = port
     val predictionArticle = weatherService.predictionArticle
     val resourceAnnotations =
         Annotations {
@@ -68,7 +68,7 @@ fun assembleServer(
             theme = "light"
         }
     return buildServer {
-        network { this.port = boundPort }
+        network { this.port = port }
         json { serde = KxSerializationSerde.Default }
         info {
             name = "weather-server-kotlin"
@@ -81,7 +81,7 @@ fun assembleServer(
         }
         session { enabled = true }
 
-        tool(getWeatherToolDescriptor()) { getWeather(weatherService) }
+        tool(getWeatherToolDescriptor) { getWeather(weatherService) }
 
         resource(
             name = "prediction-article",
@@ -93,7 +93,7 @@ fun assembleServer(
             size = predictionArticle.toByteArray().size.toLong(),
             icons = listOf(resourceIcon),
         ) {
-            TextResourceContents { text = predictionArticle }
+            TextResourceContents { text = weatherService.predictionArticle }
         }
 
         resource(
@@ -162,11 +162,10 @@ private fun rewriteForecastPromptDescriptor(): PromptDescriptor =
 
 private fun rewriteForecast(
     weatherService: WeatherService,
-    argumentsJson: String?,
+    arguments: Args,
 ): List<PromptMessage> {
-    val arguments = MAPPER.readTree(argumentsJson ?: "{}")
-    val forecast = arguments.path("forecast").asString()
-    val style = NarrationStyle.from(arguments.path("style").asString())
+    val forecast = arguments.stringValue("forecast")
+    val style = NarrationStyle.from(arguments.stringValue("style"))
     return listOf(PromptMessage.user(weatherService.rewriteForecastInstruction(forecast, style)))
 }
 

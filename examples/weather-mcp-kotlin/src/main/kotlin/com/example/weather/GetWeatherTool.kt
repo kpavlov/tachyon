@@ -45,7 +45,7 @@ private const val INPUT_SCHEMA = """
 }
 """
 
-fun getWeatherToolDescriptor(): ToolDescriptor =
+val getWeatherToolDescriptor =
     ToolDescriptor {
         name = "get-weather"
         title = "Current Weather"
@@ -56,25 +56,26 @@ fun getWeatherToolDescriptor(): ToolDescriptor =
 fun ToolScope.getWeather(weatherService: WeatherService): ToolResult {
     val args = request.arguments()
     val city = args.stringValue("city")
-    val units = args.stringOr("units", "celsius") ?: "celsius"
+    val units = args.stringOr("units", "celsius")
     val progressToken = request.progressToken()
 
-    fun render(city: String) =
-        ToolResult.text(format(fetchWithProgress(ctx, progressToken, weatherService, city), units))
+    fun attempt(city: String): ToolResult =
+        try {
+            ToolResult.text(format(fetchWithProgress(ctx, progressToken, weatherService, city), units))
+        } catch (e: Exception) {
+            if (e is CityNotFoundException) throw e
+            internalError(e)
+        }
 
     return try {
-        render(city)
+        attempt(city)
     } catch (_: CityNotFoundException) {
         val elicitedCity = elicitCity(ctx, city) ?: return ToolResult.error("City not found")
         try {
-            render(elicitedCity)
+            attempt(elicitedCity)
         } catch (_: CityNotFoundException) {
             ToolResult.error("City not found")
-        } catch (x: Exception) {
-            internalError(x)
         }
-    } catch (e: Exception) {
-        internalError(e)
     }
 }
 
@@ -114,7 +115,7 @@ private fun elicitCity(
         try {
             future.get(ELICITATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         } catch (e: InterruptedException) {
-            Thread.currentThread().interrupt()
+            restoreInterruptStatus(e)
             throw e
         } catch (_: TimeoutException) {
             return null
