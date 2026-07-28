@@ -18,14 +18,34 @@ import org.jspecify.annotations.Nullable;
         typeImmutable = "Default*")
 public non-sealed interface ImageContent extends ContentBlock {
 
+    /**
+     * Returns the base64-encoded image data.
+     *
+     * @return the image data as a base64 string
+     */
     @Value.Redacted
     String data();
 
+    /**
+     * Returns the MIME type of the image content.
+     *
+     * @return the image MIME type
+     */
     String mimeType();
 
+    /**
+     * Returns the annotations for this content, or {@code null} if none.
+     *
+     * @return the annotations, or {@code null}
+     */
     @Nullable
     Annotations annotations();
 
+    /**
+     * Returns the request-level metadata for this content, or {@code null} if none.
+     *
+     * @return the metadata entries, or {@code null}
+     */
     @Nullable
     Map<String, Object> meta();
 
@@ -34,12 +54,22 @@ public non-sealed interface ImageContent extends ContentBlock {
         return Type.IMAGE;
     }
 
+    /**
+     * Validates that required fields are not blank.
+     *
+     * @throws IllegalArgumentException if {@code data} or {@code mimeType} is blank
+     */
     @Value.Check
     default void check() {
         if (data().isBlank()) throw new IllegalArgumentException("data must not be blank");
         if (mimeType().isBlank()) throw new IllegalArgumentException("mimeType must not be blank");
     }
 
+    /**
+     * Creates a new builder for constructing {@code ImageContent} instances.
+     *
+     * @return a new builder
+     */
     static Builder builder() {
         return DefaultImageContent.builder();
     }
@@ -108,15 +138,47 @@ public non-sealed interface ImageContent extends ContentBlock {
         return base64(data, mimeType, annotations, meta);
     }
 
+    /**
+     * Builder for {@link ImageContent}.
+     */
     interface Builder {
+        /**
+         * Sets the base64-encoded image data.
+         *
+         * @param data the image data
+         * @return this builder
+         */
         Builder data(String data);
 
+        /**
+         * Sets the MIME type of the image content.
+         *
+         * @param mimeType the image MIME type
+         * @return this builder
+         */
         Builder mimeType(String mimeType);
 
+        /**
+         * Sets the annotations.
+         *
+         * @param annotations the annotations, or {@code null}
+         * @return this builder
+         */
         Builder annotations(@Nullable Annotations annotations);
 
+        /**
+         * Sets the metadata entries.
+         *
+         * @param entries the metadata map, or {@code null}
+         * @return this builder
+         */
         Builder meta(@Nullable Map<String, ?> entries);
 
+        /**
+         * Builds the {@code ImageContent} instance.
+         *
+         * @return a new image content
+         */
         ImageContent build();
     }
 }

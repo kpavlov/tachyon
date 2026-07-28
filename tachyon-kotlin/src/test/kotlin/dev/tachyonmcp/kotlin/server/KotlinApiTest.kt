@@ -3,9 +3,6 @@ package dev.tachyonmcp.kotlin.server
 
 import dev.tachyonmcp.kotlin.server.config.PromptScope
 import dev.tachyonmcp.kotlin.server.config.ToolScope
-import dev.tachyonmcp.kotlin.server.config.content
-import dev.tachyonmcp.kotlin.server.config.success
-import dev.tachyonmcp.kotlin.server.config.text
 import dev.tachyonmcp.kotlin.server.domain.arrayOrNull
 import dev.tachyonmcp.kotlin.server.domain.boolean
 import dev.tachyonmcp.kotlin.server.domain.booleanOrNull

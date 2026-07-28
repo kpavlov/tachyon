@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 @file:Suppress("FunctionName")
 @file:JvmName("ContentBlocks")
+@file:JvmSynthetic
 
 // Copyright (c) 2026 Konstantin Pavlov and contributors.
 
@@ -72,7 +73,6 @@ public fun TextContent(
  * @param annotations optional presentation hints
  * @param meta        optional request-level metadata; null to omit
  */
-@JvmSynthetic
 public fun ImageContent(
     data: String,
     mimeType: String,

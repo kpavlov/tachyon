@@ -19,18 +19,19 @@ public class PromptScope
          */
         public val arguments: String?
             get() = request.arguments()
-    }
 
-/**
- * Builds a list of user-role [PromptMessage]s from the content blocks collected in [block] — one
- * message per block. For explicit roles use [dev.tachyonmcp.kotlin.server.domain.PromptMessage].
- *
- * ```kotlin
- * content {
- *     text("Summarize this")
- *     image(data, "image/png")
- * }
- * ```
- */
-public fun PromptScope.content(block: ContentScope.() -> Unit): List<PromptMessage> =
-    ContentScope().apply(block).blocks.map { PromptMessage.user(it) }
+        /**
+         * Builds a list of user-role [PromptMessage]s from the content blocks collected in
+         * [block] — one message per block. For explicit roles use
+         * [dev.tachyonmcp.kotlin.server.domain.PromptMessage].
+         *
+         * ```kotlin
+         * content {
+         *     text("Summarize this")
+         *     image(data, "image/png")
+         * }
+         * ```
+         */
+        public fun content(block: ContentScope.() -> Unit): List<PromptMessage> =
+            ContentScope().apply(block).blocks.map { PromptMessage.user(it) }
+    }

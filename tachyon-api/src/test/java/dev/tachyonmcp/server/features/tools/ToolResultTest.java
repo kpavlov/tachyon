@@ -33,6 +33,12 @@ class ToolResultTest {
     }
 
     @Test
+    void experimentalStructuredAliasesOf() {
+        assertThat(ToolResult.structured(42)).isEqualTo(ToolResult.of(42));
+        assertThat(ToolResult.structured("data", "custom text")).isEqualTo(ToolResult.of("data", "custom text"));
+    }
+
+    @Test
     void successAllowsNullStructuredAndEmptyContent() {
         var r = new ToolResult.Success(null, List.of());
         assertThat(r.structured()).isEmpty();

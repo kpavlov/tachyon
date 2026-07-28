@@ -10,7 +10,6 @@ import dev.tachyonmcp.server.features.tools.ToolResult
 import dev.tachyonmcp.json.JsonSchema
 import dev.tachyonmcp.kotlin.server.buildServer
 import dev.tachyonmcp.kotlin.server.config.TachyonServerBuilder
-import dev.tachyonmcp.kotlin.server.config.success
 import dev.tachyonmcp.kotlin.server.domain.decode
 import dev.tachyonmcp.kotlin.server.features.tools.registerTool
 import dev.tachyonmcp.kotlin.server.features.tools.toolDescriptor
