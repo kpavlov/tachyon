@@ -783,6 +783,11 @@ class Generator:
             return "Object"
         if "string" in non_null and "integer" in non_null:
             return "Object"
+        if "string" in non_null and all(
+            p == "string" or (p.startswith('"') and p.endswith('"'))
+            for p in non_null
+        ):
+            return "String"
         all_literals = all(p.startswith('"') and p.endswith('"') for p in non_null)
         if all_literals:
             return "String"
@@ -2592,10 +2597,16 @@ class Generator:
         self.add_model(
             "UnknownRequest",
             [
-                ("Object", "id", True, "", "id"),
+                (
+                    self.field_type_mappings.get("UnknownRequest.id", self.unknown_java_type),
+                    "id",
+                    True,
+                    "",
+                    "id",
+                ),
                 ("String", "method", False, "", "method"),
                 (
-                    "tools.jackson.databind.JsonNode",
+                    self.field_type_mappings.get("UnknownRequest.params", self.unknown_java_type),
                     "params",
                     True,
                     "",
@@ -2608,9 +2619,9 @@ class Generator:
         # 7. Message hierarchy interfaces
         hierarchy = [
             ("McpMessage", None, ["McpRequest", "McpNotification", "McpResponse"]),
-            ("McpRequest", "McpMessage", list(self.request_names) + ["UnknownRequest"]),
-            ("McpNotification", "McpMessage", list(self.notif_names)),
-            ("McpResponse", "McpMessage", list(self.result_names)),
+            ("McpRequest", "McpMessage", sorted(self.request_names) + ["UnknownRequest"]),
+            ("McpNotification", "McpMessage", sorted(self.notif_names)),
+            ("McpResponse", "McpMessage", sorted(self.result_names)),
         ]
         for cls, super_iface, permits in hierarchy:
             self.add_interface(cls, permits if permits else None, super_iface)

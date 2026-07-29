@@ -8,11 +8,13 @@ import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CallToolRequestParams;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CallToolResult;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ContentBlock;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CreateMessageResult;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.EmptyResult;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Implementation;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.InitializeResult;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ListToolsResult;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Role;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ServerCapabilities;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TextContent;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Tool;
@@ -43,6 +45,17 @@ class ProtocolMapperTest {
         assertThat(json).contains("\"content\"");
         assertThat(json).contains("\"text\"");
         assertThat(json).contains("\"hello\"");
+    }
+
+    @Test
+    void serializesOpenStringStopReason() {
+        var result =
+                new CreateMessageResult("test", "provider-stop", null, Role.ASSISTANT, TextContent.of("done"), null);
+
+        var json = new String(
+                CodecRegistry.codecFor(CreateMessageResult.class).encodeToBytes(result), StandardCharsets.UTF_8);
+
+        assertThat(json).contains("\"stopReason\":\"provider-stop\"");
     }
 
     @Test

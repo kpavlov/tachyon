@@ -153,8 +153,10 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
     private static Tool toTool(ToolDescriptor d) {
         return new Tool(
                 d.description(),
-                JsonUtils.parse(d.inputSchema() != null ? d.inputSchema() : JsonSchema.objectSchema()),
-                d.outputSchema() != null ? JsonUtils.parse(d.outputSchema()) : null,
+                d.inputSchema() != null
+                        ? d.inputSchema().json()
+                        : JsonSchema.objectSchema().json(),
+                d.outputSchema() != null ? d.outputSchema().json() : null,
                 null,
                 null,
                 d.name(),

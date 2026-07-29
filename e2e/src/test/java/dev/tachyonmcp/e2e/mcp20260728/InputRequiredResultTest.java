@@ -68,7 +68,10 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                         (ctx, request) -> {
                             var responses = request.inputResponses();
                             if (responses != null && responses.containsKey("capital_question")) {
-                                return ToolResult.text("done");
+                                return ToolResult.text("Sampling stopped: "
+                                        + stringField(responses.get("capital_question"), "stopReason", "missing")
+                                        + "; state: "
+                                        + request.requestState());
                             }
                             return ToolResult.inputRequired(Map.of("capital_question", samplingRequest()), null);
                         })
@@ -164,6 +167,25 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
             assertThatJson(round1.body())
                     .inPath("$.result.inputRequests.capital_question.method")
                     .isEqualTo("sampling/createMessage");
+
+            var round2 = client.post(toolCallBody(4, "ask_sampling", """
+                    "inputResponses": {
+                      "capital_question": {
+                        "role": "assistant",
+                        "content": {
+                          "type": "text",
+                          "text": "The capital of France is Paris."
+                        },
+                        "model": "claude-3-sonnet-20240307",
+                        "stopReason": "endTurn"
+                      }
+                    },
+                    "requestState": "sampling-round-1"
+                    """));
+            assertThat(round2.statusCode()).as(round2.body()).isEqualTo(200);
+            assertThatJson(round2.body())
+                    .inPath("$.result.content[0].text")
+                    .isEqualTo("Sampling stopped: endTurn; state: sampling-round-1");
         }
     }
 

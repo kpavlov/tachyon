@@ -482,12 +482,10 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
                     CallToolRequestParams(
                             String name,
                             Map<String, JsonNode> arguments,
-                            Map<String, JsonNode> inputResponses,
-                            String requestState,
                             Map<String, JsonNode> meta,
                             TaskMetadata task)) {
                 if (name == null) return null;
-                return new CallParams(name, arguments, meta, inputResponses, requestState, task);
+                return new CallParams(name, arguments, meta, null, null, task);
             }
             return null;
         }
