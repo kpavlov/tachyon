@@ -10,9 +10,11 @@ import dev.tachyonmcp.api.server.domain.InputRequest;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.RpcMethodRequest;
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
+import dev.tachyonmcp.api.server.features.completions.CompletionResult;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.api.server.features.prompts.PromptResult;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
+import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
 import java.util.LinkedHashMap;
@@ -20,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * MCP 2026-07-28 Multi Round-Trip Requests (SEP-2322): a server can respond to {@code tools/call}
@@ -30,6 +33,8 @@ import org.junit.jupiter.api.Test;
  * tool (see {@code StatelessDispatchTest}).
  */
 class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
+
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     // language=JSON
     private static final String NO_ARGS_SCHEMA = "{\"type\": \"object\", \"properties\": {}}";
@@ -127,7 +132,8 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                     .register(
                             tool -> tool.name("structured_array")
                                     .description("Returns an arbitrary structured JSON value")
-                                    .inputSchema(NO_ARGS_SCHEMA),
+                                    .inputSchema(NO_ARGS_SCHEMA)
+                                    .meta(Map.of("catalog", "tool")),
                             (ctx, request) -> ToolResult.of(JsonDocument.of("[1,true]"))
                                     .withMeta("echo-trace", request.meta().get("com.example/trace")));
             s.resources()
@@ -135,17 +141,47 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                             ResourceDescriptor.builder()
                                     .name("interactive-resource")
                                     .uri("memory://interactive")
+                                    .meta(Map.of("catalog", "resource"))
                                     .build(),
                             (ctx, request) -> TextResourceContents.of(
                                     request.uri(),
                                     field(request.inputResponses(), "answer") + ":" + request.requestState(),
                                     "text/plain",
-                                    Map.of("source", "interactive-resource")));
+                                    Map.of("source", "interactive-resource")))
+                    .registerTemplate(
+                            ResourceTemplateDescriptor.builder()
+                                    .name("interactive-template")
+                                    .uriTemplate("memory://interactive/{id}")
+                                    .meta(Map.of("catalog", "template"))
+                                    .build(),
+                            (ctx, request) -> TextResourceContents.of(request.uri(), "template", "text/plain"));
             s.prompts()
                     .register(
-                            PromptDescriptor.of("interactive-prompt", "Interactive prompt"),
-                            (ctx, request) -> PromptResult.messages(List.of(PromptMessage.user(
-                                    field(request.inputResponses(), "answer") + ":" + request.requestState()))));
+                            PromptDescriptor.builder()
+                                    .name("interactive-prompt")
+                                    .description("Interactive prompt")
+                                    .meta(Map.of("catalog", "prompt"))
+                                    .build(),
+                            (ctx, request) -> {
+                                var result = PromptResult.messages(List.of(PromptMessage.user(
+                                        field(request.inputResponses(), "answer") + ":" + request.requestState())));
+                                return request.meta() != null && request.meta().containsKey("com.example/trace")
+                                        ? result.withMeta(
+                                                "echo-trace", request.meta().get("com.example/trace"))
+                                        : result;
+                            })
+                    .register(
+                            PromptDescriptor.builder().name("input-meta-prompt").build(),
+                            (ctx, request) -> PromptResult.inputRequired(
+                                            Map.of("answer", elicitation("Answer?", "value")), "prompt-input-round")
+                                    .withMeta("trace", "input-required"));
+            s.completions()
+                    .registerForPrompt(
+                            "meta-completion",
+                            (ctx, request) -> CompletionResult.builder()
+                                    .values(request.argumentValue() + "-complete")
+                                    .meta(Map.of("echo-trace", request.meta().get("com.example/trace")))
+                                    .build());
         });
     }
 
@@ -386,5 +422,87 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                     }
                     """);
         }
+    }
+
+    @Test
+    void descriptorMetadataFlowsThroughAllListOperations() throws Exception {
+        try (var client = createModernTestClient()) {
+            var tools = client.post("{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/list\",\"params\":{}}");
+            var resources = client.post("{\"jsonrpc\":\"2.0\",\"id\":12,\"method\":\"resources/list\",\"params\":{}}");
+            var templates = client.post(
+                    "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"resources/templates/list\",\"params\":{}}");
+            var prompts = client.post("{\"jsonrpc\":\"2.0\",\"id\":14,\"method\":\"prompts/list\",\"params\":{}}");
+
+            assertThat(tools.statusCode()).as(tools.body()).isEqualTo(200);
+            assertThat(resources.statusCode()).as(resources.body()).isEqualTo(200);
+            assertThat(templates.statusCode()).as(templates.body()).isEqualTo(200);
+            assertThat(prompts.statusCode()).as(prompts.body()).isEqualTo(200);
+            assertThat(catalogMeta(tools.body(), "tools", "structured_array")).isEqualTo("tool");
+            assertThat(catalogMeta(resources.body(), "resources", "interactive-resource"))
+                    .isEqualTo("resource");
+            assertThat(catalogMeta(templates.body(), "resourceTemplates", "interactive-template"))
+                    .isEqualTo("template");
+            assertThat(catalogMeta(prompts.body(), "prompts", "interactive-prompt"))
+                    .isEqualTo("prompt");
+        }
+    }
+
+    @Test
+    void promptAndCompletionMetadataReachHandlersAndResults() throws Exception {
+        try (var client = createModernTestClient()) {
+            var prompt = client.post("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 15,
+                      "method": "prompts/get",
+                      "params": {
+                        "name": "interactive-prompt",
+                        "_meta": {"com.example/trace": "prompt-trace"}
+                      }
+                    }
+                    """);
+            var completion = client.post("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 16,
+                      "method": "completion/complete",
+                      "params": {
+                        "ref": {"type": "ref/prompt", "name": "meta-completion"},
+                        "argument": {"name": "name", "value": "A"},
+                        "_meta": {"com.example/trace": "completion-trace"}
+                      }
+                    }
+                    """);
+            var inputRequired = client.post("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 17,
+                      "method": "prompts/get",
+                      "params": {"name": "input-meta-prompt"}
+                    }
+                    """);
+
+            assertThat(prompt.statusCode()).as(prompt.body()).isEqualTo(200);
+            assertThat(completion.statusCode()).as(completion.body()).isEqualTo(200);
+            assertThat(inputRequired.statusCode()).as(inputRequired.body()).isEqualTo(200);
+            assertThatJson(prompt.body()).inPath("$.result._meta.echo-trace").isEqualTo("prompt-trace");
+            assertThatJson(completion.body())
+                    .inPath("$.result._meta.echo-trace")
+                    .isEqualTo("completion-trace");
+            assertThatJson(completion.body())
+                    .inPath("$.result.completion.values[0]")
+                    .isEqualTo("A-complete");
+            assertThatJson(inputRequired.body()).inPath("$.result.resultType").isEqualTo("input_required");
+            assertThatJson(inputRequired.body()).inPath("$.result._meta.trace").isEqualTo("input-required");
+        }
+    }
+
+    private static String catalogMeta(String body, String collection, String name) {
+        for (var item : JSON.readTree(body).at("/result/" + collection)) {
+            if (name.equals(item.path("name").asString())) {
+                return item.at("/_meta/catalog").asString();
+            }
+        }
+        return null;
     }
 }

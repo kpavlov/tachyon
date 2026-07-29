@@ -3,10 +3,12 @@ package dev.tachyonmcp.api.server.features.tools;
 
 import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.server.ServerFeature;
+import dev.tachyonmcp.api.server.domain.HasMeta;
 import dev.tachyonmcp.api.server.domain.Icon;
 import dev.tachyonmcp.api.server.domain.ToolAnnotations;
 import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
 import java.util.List;
+import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
@@ -15,7 +17,7 @@ import org.jspecify.annotations.Nullable;
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
         typeImmutable = "Default*")
-public interface ToolDescriptor extends ServerFeature.Descriptor {
+public interface ToolDescriptor extends ServerFeature.Descriptor, HasMeta {
 
     String name();
 
@@ -43,6 +45,11 @@ public interface ToolDescriptor extends ServerFeature.Descriptor {
     @Nullable
     String extensionId();
 
+    /** Optional protocol extension metadata. */
+    @Nullable
+    @Override
+    Map<String, Object> meta();
+
     @Value.Check
     default void check() {
         if (name().isBlank()) throw new IllegalArgumentException("name must not be blank");
@@ -53,11 +60,11 @@ public interface ToolDescriptor extends ServerFeature.Descriptor {
     }
 
     static ToolDescriptor of(String name) {
-        return DefaultToolDescriptor.of(name, null, null, null, null, null, null, null, null);
+        return DefaultToolDescriptor.of(name, null, null, null, null, null, null, null, null, null);
     }
 
     static ToolDescriptor of(String name, @Nullable String description) {
-        return DefaultToolDescriptor.of(name, null, description, null, null, null, null, null, null);
+        return DefaultToolDescriptor.of(name, null, description, null, null, null, null, null, null, null);
     }
 
     interface Builder {
@@ -90,6 +97,8 @@ public interface ToolDescriptor extends ServerFeature.Descriptor {
         }
 
         Builder extensionId(@Nullable String extensionId);
+
+        Builder meta(@Nullable Map<String, ?> entries);
 
         ToolDescriptor build();
     }

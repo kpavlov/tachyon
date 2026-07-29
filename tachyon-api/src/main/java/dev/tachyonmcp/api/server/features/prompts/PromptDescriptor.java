@@ -3,9 +3,11 @@ package dev.tachyonmcp.api.server.features.prompts;
 
 import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.server.ServerFeature;
+import dev.tachyonmcp.api.server.domain.HasMeta;
 import dev.tachyonmcp.api.server.domain.Icon;
 import dev.tachyonmcp.api.server.domain.PromptArgument;
 import java.util.List;
+import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
@@ -14,7 +16,7 @@ import org.jspecify.annotations.Nullable;
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
         typeImmutable = "Default*")
-public interface PromptDescriptor extends ServerFeature.Descriptor {
+public interface PromptDescriptor extends ServerFeature.Descriptor, HasMeta {
 
     String name();
 
@@ -36,6 +38,11 @@ public interface PromptDescriptor extends ServerFeature.Descriptor {
     @Nullable
     String extensionId();
 
+    /** Optional protocol extension metadata. */
+    @Nullable
+    @Override
+    Map<String, Object> meta();
+
     @Value.Check
     default void check() {
         if (name().isBlank()) throw new IllegalArgumentException("name must not be blank");
@@ -51,7 +58,7 @@ public interface PromptDescriptor extends ServerFeature.Descriptor {
             @Nullable String title,
             @Nullable List<PromptArgument> arguments,
             @Nullable JsonSchema inputSchema) {
-        return DefaultPromptDescriptor.of(name, title, description, arguments, inputSchema, null, null);
+        return DefaultPromptDescriptor.of(name, title, description, arguments, inputSchema, null, null, null);
     }
 
     static PromptDescriptor of(
@@ -61,11 +68,11 @@ public interface PromptDescriptor extends ServerFeature.Descriptor {
             @Nullable List<PromptArgument> arguments,
             @Nullable JsonSchema inputSchema,
             @Nullable List<Icon> icons) {
-        return DefaultPromptDescriptor.of(name, title, description, arguments, inputSchema, icons, null);
+        return DefaultPromptDescriptor.of(name, title, description, arguments, inputSchema, icons, null, null);
     }
 
     static PromptDescriptor of(String name, String description) {
-        return DefaultPromptDescriptor.of(name, null, description, null, null, null, null);
+        return DefaultPromptDescriptor.of(name, null, description, null, null, null, null, null);
     }
 
     interface Builder {
@@ -88,6 +95,8 @@ public interface PromptDescriptor extends ServerFeature.Descriptor {
         Builder icons(@Nullable Iterable<? extends Icon> elements);
 
         Builder extensionId(@Nullable String extensionId);
+
+        Builder meta(@Nullable Map<String, ?> entries);
 
         PromptDescriptor build();
     }

@@ -3,9 +3,11 @@ package dev.tachyonmcp.api.server.features.resources;
 
 import dev.tachyonmcp.api.server.ServerFeature;
 import dev.tachyonmcp.api.server.domain.Annotations;
+import dev.tachyonmcp.api.server.domain.HasMeta;
 import dev.tachyonmcp.api.server.domain.Icon;
 import dev.tachyonmcp.api.server.domain.UriTemplate;
 import java.util.List;
+import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
@@ -21,7 +23,7 @@ import org.jspecify.annotations.Nullable;
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
         typeImmutable = "Default*")
-public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor {
+public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor, HasMeta {
 
     @Override
     String name();
@@ -49,6 +51,11 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor {
 
     @Nullable
     List<Icon> icons();
+
+    /** Optional protocol extension metadata. */
+    @Nullable
+    @Override
+    Map<String, Object> meta();
 
     /**
      * Validates the resource template descriptor's name and URI template.
@@ -134,6 +141,8 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor {
         }
 
         Builder extensionId(@Nullable String extensionId);
+
+        Builder meta(@Nullable Map<String, ?> entries);
 
         ResourceTemplateDescriptor build();
     }

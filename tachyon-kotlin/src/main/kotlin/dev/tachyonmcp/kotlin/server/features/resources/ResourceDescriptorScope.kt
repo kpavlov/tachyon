@@ -21,6 +21,7 @@ public class ResourceDescriptorScope
         public var annotations: Annotations? = null
         public var size: Long? = null
         public var icons: List<Icon>? = null
+        public var meta: Map<String, Any>? = null
 
         @PublishedApi
         internal fun build(): ResourceDescriptor {
@@ -35,6 +36,7 @@ public class ResourceDescriptorScope
                 annotations = annotations,
                 size = size,
                 icons = icons,
+                meta = meta,
             )
         }
     }

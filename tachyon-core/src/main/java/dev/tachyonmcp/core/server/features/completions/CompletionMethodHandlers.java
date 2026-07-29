@@ -5,12 +5,12 @@ import dev.tachyonmcp.api.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.features.HandlerFutures;
 import dev.tachyonmcp.api.server.features.completions.AsyncCompletionFn;
+import dev.tachyonmcp.api.server.features.completions.CompletionResult;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper.CompletionReference;
 import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.session.DispatchContext;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -57,7 +57,7 @@ public final class CompletionMethodHandlers {
                     };
             if (fn.isEmpty()) {
                 return CompletableFuture.completedFuture(
-                        context.responseMapper().completeResult(List.of(), null, false));
+                        context.responseMapper().completeResult(CompletionResult.empty()));
             }
             return HandlerFutures.invokeAndMap(
                     "Completion handler returned a null CompletionStage",
@@ -79,11 +79,18 @@ public final class CompletionMethodHandlers {
                         }
                         var values = result.values();
                         var hasMore = result.hasMore();
+                        CompletionResult mappedResult = result;
                         if (values.size() > MAX_VALUES) {
                             values = values.subList(0, MAX_VALUES);
                             hasMore = true;
+                            mappedResult = CompletionResult.builder()
+                                    .values(values)
+                                    .total(result.total())
+                                    .hasMore(hasMore)
+                                    .meta(result.meta())
+                                    .build();
                         }
-                        return context.responseMapper().completeResult(values, result.total(), hasMore);
+                        return context.responseMapper().completeResult(mappedResult);
                     });
         }
     }

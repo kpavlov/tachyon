@@ -21,6 +21,7 @@ import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor
  * @param annotations optional presentation hints
  * @param size        estimated size hint in bytes; null = unknown
  * @param icons       list of associated icons; null to omit
+ * @param meta        protocol extension metadata; null to omit
  */
 public fun ResourceDescriptor(
     name: String,
@@ -31,14 +32,17 @@ public fun ResourceDescriptor(
     annotations: Annotations? = null,
     size: Long? = null,
     icons: List<Icon>? = null,
+    meta: Map<String, Any>? = null,
 ): ResourceDescriptor =
-    ResourceDescriptor.of(
-        name,
-        uri,
-        description,
-        mimeType,
-        title,
-        annotations,
-        size,
-        icons,
-    )
+    ResourceDescriptor
+        .builder()
+        .name(name)
+        .uri(uri)
+        .description(description)
+        .mimeType(mimeType)
+        .title(title)
+        .annotations(annotations)
+        .size(size)
+        .icons(icons)
+        .meta(meta)
+        .build()

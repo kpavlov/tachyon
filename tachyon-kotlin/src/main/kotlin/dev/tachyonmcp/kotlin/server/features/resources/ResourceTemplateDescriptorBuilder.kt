@@ -42,6 +42,9 @@ public class ResourceTemplateDescriptorBuilder
         /** Associated icons. */
         public var icons: List<Icon>? = null
 
+        /** Protocol extension metadata. */
+        public var meta: Map<String, Any>? = null
+
         @PublishedApi
         internal fun build(): ResourceTemplateDescriptor =
             ResourceTemplateDescriptor
@@ -60,6 +63,7 @@ public class ResourceTemplateDescriptorBuilder
                 .annotations(annotations)
                 .icons(icons)
                 .extensionId(extensionId)
+                .meta(meta)
                 .build()
     }
 

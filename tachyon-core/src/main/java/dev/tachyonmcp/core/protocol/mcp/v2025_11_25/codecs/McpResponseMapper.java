@@ -13,6 +13,7 @@ import dev.tachyonmcp.api.server.domain.Task;
 import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.domain.TextContent;
 import dev.tachyonmcp.api.server.domain.UrlInputRequest;
+import dev.tachyonmcp.api.server.features.completions.CompletionResult;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
@@ -94,10 +95,13 @@ public class McpResponseMapper implements ProtocolResponseMapper {
     }
 
     @Override
-    public Object completeResult(List<String> values, @Nullable Double total, @Nullable Boolean hasMore) {
+    public Object completeResult(CompletionResult result) {
         return new CompleteResult(
-                new CompleteResult.Completion(List.copyOf(Objects.requireNonNull(values, "values")), total, hasMore),
-                null,
+                new CompleteResult.Completion(
+                        List.copyOf(Objects.requireNonNull(result.values(), "values")),
+                        result.total(),
+                        result.hasMore()),
+                JsonUtils.toJsonNodeMap(result.meta()),
                 null);
     }
 
@@ -223,10 +227,11 @@ public class McpResponseMapper implements ProtocolResponseMapper {
     }
 
     @Override
-    public Object getPromptResult(@Nullable String description, List<PromptMessage> messages) {
+    public Object getPromptResult(
+            @Nullable String description, List<PromptMessage> messages, @Nullable Map<String, Object> meta) {
         var protocolMessages =
                 messages.stream().map(McpPromptMapper::toProtocolMessage).toList();
-        return new GetPromptResult(description, protocolMessages, null, null);
+        return new GetPromptResult(description, protocolMessages, JsonUtils.toJsonNodeMap(meta), null);
     }
 
     @Override
@@ -286,8 +291,10 @@ public class McpResponseMapper implements ProtocolResponseMapper {
 
     @Override
     public Object inputRequiredResult(
-            Map<String, ? extends InputRequest> inputRequests, @Nullable String requestState) {
-        return new InputRequiredPayload(inputRequests, requestState, null);
+            Map<String, ? extends InputRequest> inputRequests,
+            @Nullable String requestState,
+            @Nullable Map<String, Object> meta) {
+        return new InputRequiredPayload(inputRequests, requestState, JsonUtils.toJsonNodeMap(meta));
     }
 
     private record InputRequiredPayload(

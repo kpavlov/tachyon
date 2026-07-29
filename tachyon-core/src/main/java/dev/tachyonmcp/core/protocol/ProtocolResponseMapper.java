@@ -9,6 +9,7 @@ import dev.tachyonmcp.api.server.domain.ServerCapabilities;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.Task;
 import dev.tachyonmcp.api.server.domain.TaskResult;
+import dev.tachyonmcp.api.server.features.completions.CompletionResult;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
@@ -44,8 +45,8 @@ public interface ProtocolResponseMapper {
         throw new UnsupportedOperationException("server/discover is not supported by this protocol version");
     }
 
-    /** Builds a completion result from a list of candidate values with optional pagination. */
-    Object completeResult(List<String> values, @Nullable Double total, @Nullable Boolean hasMore);
+    /** Maps a completion result into a protocol-specific shape. */
+    Object completeResult(CompletionResult result);
 
     /** Maps the server's initialize response into protocol-specific shape. */
     Object initializeResult(InitializeResponse response);
@@ -68,11 +69,15 @@ public interface ProtocolResponseMapper {
     /** Maps a paginated list of prompt descriptors into protocol-specific shape. */
     Object listPromptsResult(List<PromptDescriptor> prompts, @Nullable String nextCursor);
 
-    /** Maps prompt messages plus optional description into protocol-specific shape. */
-    Object getPromptResult(@Nullable String description, List<PromptMessage> messages);
+    /** Maps prompt messages, metadata, and optional description into protocol-specific shape. */
+    Object getPromptResult(
+            @Nullable String description, List<PromptMessage> messages, @Nullable Map<String, Object> meta);
 
     /** Maps input-required metadata into protocol-specific shape. */
-    Object inputRequiredResult(Map<String, ? extends InputRequest> inputRequests, @Nullable String requestState);
+    Object inputRequiredResult(
+            Map<String, ? extends InputRequest> inputRequests,
+            @Nullable String requestState,
+            @Nullable Map<String, Object> meta);
 
     /** Maps a paginated list of task entries into protocol-specific shape. */
     Object listTasksResult(List<TaskEntry> entries, @Nullable String nextCursor);

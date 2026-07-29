@@ -65,9 +65,11 @@ public class McpRequestMapper implements ProtocolRequestMapper {
         var arguments = optionalMap(map, "arguments", "Invalid arguments");
         var inputResponses = optionalMap(map, "inputResponses", "Invalid inputResponses");
         var requestState = optionalString(map, "requestState", "Invalid requestState");
+        var meta = optionalMap(map, "_meta", "Invalid _meta");
         return new PromptCallRequest(
                 name,
-                new PromptRequest(arguments != null ? Args.of(arguments) : Args.empty(), inputResponses, requestState));
+                new PromptRequest(
+                        arguments != null ? Args.of(arguments) : Args.empty(), inputResponses, requestState, meta));
     }
 
     @Override
@@ -103,7 +105,14 @@ public class McpRequestMapper implements ProtocolRequestMapper {
         var resolved = context != null
                 ? stringMap(optionalMap(context, "arguments", "Invalid context.arguments"))
                 : Map.<String, String>of();
-        return new CompletionCallRequest(reference, CompletionRequest.of(argumentName, argumentValue, resolved));
+        return new CompletionCallRequest(
+                reference,
+                CompletionRequest.builder()
+                        .argumentName(argumentName)
+                        .argumentValue(argumentValue)
+                        .resolvedArguments(resolved)
+                        .meta(optionalMap(map, "_meta", "Invalid _meta"))
+                        .build());
     }
 
     @Override

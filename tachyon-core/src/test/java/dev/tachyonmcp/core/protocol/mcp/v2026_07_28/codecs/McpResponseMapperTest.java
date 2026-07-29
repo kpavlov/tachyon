@@ -12,6 +12,7 @@ import dev.tachyonmcp.api.server.domain.Role;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TextContent;
 import dev.tachyonmcp.api.server.domain.ToolAnnotations;
+import dev.tachyonmcp.api.server.features.completions.CompletionResult;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
@@ -50,10 +51,17 @@ class McpResponseMapperTest {
 
     @Test
     void completeResultsUseTheModernDiscriminator() {
-        var result = (CompleteResult) mapper.completeResult(List.of("one"), 1.0, false);
+        var domain = CompletionResult.builder()
+                .values("one")
+                .total(1.0)
+                .hasMore(false)
+                .meta(Map.of("trace", "complete-1"))
+                .build();
+        var result = (CompleteResult) mapper.completeResult(domain);
 
         assertThat(result.resultType()).isEqualTo("complete");
         assertThat(result.completion().values()).containsExactly("one");
+        assertThat(result._meta()).containsEntry("trace", JsonNodeFactory.instance.textNode("complete-1"));
     }
 
     @Test
@@ -71,12 +79,13 @@ class McpResponseMapperTest {
 
     @Test
     void promptResultsUseModernContentAndDiscriminator() {
-        var result = (GetPromptResult)
-                mapper.getPromptResult("Greeting", List.of(PromptMessage.of(Role.USER, TextContent.of("Hello"))));
+        var result = (GetPromptResult) mapper.getPromptResult(
+                "Greeting", List.of(PromptMessage.of(Role.USER, TextContent.of("Hello"))), Map.of("trace", "prompt-1"));
 
         assertThat(result.resultType()).isEqualTo("complete");
         assertThat(result.description()).isEqualTo("Greeting");
         assertThat(result.messages()).hasSize(1);
+        assertThat(result._meta()).containsEntry("trace", JsonNodeFactory.instance.textNode("prompt-1"));
     }
 
     @Test
@@ -88,23 +97,27 @@ class McpResponseMapperTest {
                 .name("weather")
                 .annotations(toolAnnotations)
                 .icons(icon)
+                .meta(Map.of("kind", "tool"))
                 .build();
         var resource = ResourceDescriptor.builder()
                 .name("forecast")
                 .uri("memory://forecast")
                 .annotations(annotations)
                 .icons(icon)
+                .meta(Map.of("kind", "resource"))
                 .build();
         var template = ResourceTemplateDescriptor.builder()
                 .name("city")
                 .uriTemplate("memory://forecast/{city}")
                 .annotations(annotations)
                 .icons(icon)
+                .meta(Map.of("kind", "template"))
                 .build();
         var prompt = PromptDescriptor.builder()
                 .name("greet")
                 .addArguments(PromptArgument.of("name", "Name", "Who to greet", true))
                 .icons(List.of(icon))
+                .meta(Map.of("kind", "prompt"))
                 .build();
 
         var toolResult = (ListToolsResult) mapper.listToolsResult(List.of(tool), null);
@@ -114,14 +127,22 @@ class McpResponseMapperTest {
 
         assertThat(toolResult.tools().getFirst().annotations().readOnlyHint()).isTrue();
         assertThat(toolResult.tools().getFirst().icons()).hasSize(1);
+        assertThat(toolResult.tools().getFirst()._meta())
+                .containsEntry("kind", JsonNodeFactory.instance.textNode("tool"));
         assertThat(resourceResult.resources().getFirst().annotations().priority())
                 .isEqualTo(0.5);
         assertThat(resourceResult.resources().getFirst().icons()).hasSize(1);
+        assertThat(resourceResult.resources().getFirst()._meta())
+                .containsEntry("kind", JsonNodeFactory.instance.textNode("resource"));
         assertThat(templateResult.resourceTemplates().getFirst().annotations().priority())
                 .isEqualTo(0.5);
         assertThat(templateResult.resourceTemplates().getFirst().icons()).hasSize(1);
+        assertThat(templateResult.resourceTemplates().getFirst()._meta())
+                .containsEntry("kind", JsonNodeFactory.instance.textNode("template"));
         assertThat(promptResult.prompts().getFirst().arguments().getFirst().name())
                 .isEqualTo("name");
         assertThat(promptResult.prompts().getFirst().icons()).hasSize(1);
+        assertThat(promptResult.prompts().getFirst()._meta())
+                .containsEntry("kind", JsonNodeFactory.instance.textNode("prompt"));
     }
 }

@@ -106,18 +106,22 @@ public final class PromptMethodHandlers {
                             }
                             return error;
                         }
-                        return switch (result) {
+                        var meta = result.meta();
+                        var unwrapped = result instanceof PromptResult.WithMeta withMeta ? withMeta.inner() : result;
+                        return switch (unwrapped) {
                             case PromptResult.Messages messages ->
                                 context.responseMapper()
                                         .getPromptResult(
                                                 entry.descriptor().description(),
                                                 messages.messages() != null
                                                         ? messages.messages()
-                                                        : List.<PromptMessage>of());
+                                                        : List.<PromptMessage>of(),
+                                                meta);
                             case PromptResult.InputRequired inputRequired ->
                                 context.responseMapper()
                                         .inputRequiredResult(
-                                                inputRequired.inputRequests(), inputRequired.requestState());
+                                                inputRequired.inputRequests(), inputRequired.requestState(), meta);
+                            case PromptResult.WithMeta ignored -> throw new AssertionError("WithMeta unwrapped above");
                         };
                     });
         }

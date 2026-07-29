@@ -3,8 +3,10 @@ package dev.tachyonmcp.api.server.features.resources;
 
 import dev.tachyonmcp.api.server.ServerFeature;
 import dev.tachyonmcp.api.server.domain.Annotations;
+import dev.tachyonmcp.api.server.domain.HasMeta;
 import dev.tachyonmcp.api.server.domain.Icon;
 import java.util.List;
+import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
@@ -19,7 +21,7 @@ import org.jspecify.annotations.Nullable;
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
         typeImmutable = "Default*")
-public interface ResourceDescriptor extends ServerFeature.Descriptor {
+public interface ResourceDescriptor extends ServerFeature.Descriptor, HasMeta {
 
     /** The resource name, unique within the server. */
     String name();
@@ -54,6 +56,11 @@ public interface ResourceDescriptor extends ServerFeature.Descriptor {
     /** Optional identifier of the extension that owns this resource. */
     @Nullable
     String extensionId();
+
+    /** Optional protocol extension metadata. */
+    @Nullable
+    @Override
+    Map<String, Object> meta();
 
     @Value.Check
     default void check() {
@@ -128,6 +135,8 @@ public interface ResourceDescriptor extends ServerFeature.Descriptor {
         }
 
         Builder extensionId(@Nullable String extensionId);
+
+        Builder meta(@Nullable Map<String, ?> entries);
 
         ResourceDescriptor build();
     }

@@ -24,6 +24,7 @@ public class PromptDescriptorScope
         public var arguments: List<PromptArgument>? = null
         public var inputSchema: JsonSchema? = null
         public var icons: List<Icon>? = null
+        public var meta: Map<String, Any>? = null
 
         /** Sets the input schema from a kotlinx-serialization [JsonObject]. */
         public fun inputSchema(json: JsonObject) {
@@ -45,14 +46,16 @@ public class PromptDescriptorScope
         @PublishedApi
         internal fun build(): PromptDescriptor {
             val n = requireNotNull(name) { "PromptDescriptor.name is required" }
-            return PromptDescriptor.of(
-                n,
-                description,
-                title,
-                arguments,
-                inputSchema,
-                icons,
-            )
+            return PromptDescriptor
+                .builder()
+                .name(n)
+                .description(description)
+                .title(title)
+                .arguments(arguments)
+                .inputSchema(inputSchema)
+                .icons(icons)
+                .meta(meta)
+                .build()
         }
     }
 

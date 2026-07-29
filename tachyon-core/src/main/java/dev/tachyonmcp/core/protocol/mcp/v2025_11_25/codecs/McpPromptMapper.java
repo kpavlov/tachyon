@@ -6,6 +6,7 @@ import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.Role;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Prompt;
+import dev.tachyonmcp.core.server.json.JsonUtils;
 import java.util.List;
 
 final class McpPromptMapper {
@@ -16,7 +17,7 @@ final class McpPromptMapper {
         return new Prompt(
                 d.description(),
                 toProtocolPromptArguments(d.arguments()),
-                null,
+                JsonUtils.toJsonNodeMap(d.meta()),
                 d.name(),
                 d.title(),
                 ContentBlockMappers.toProtocolIcons(d.icons()));

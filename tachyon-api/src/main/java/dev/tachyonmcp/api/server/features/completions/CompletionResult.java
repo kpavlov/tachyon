@@ -1,7 +1,9 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.api.server.features.completions;
 
+import dev.tachyonmcp.api.server.domain.HasMeta;
 import java.util.List;
+import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
@@ -15,7 +17,7 @@ import org.jspecify.annotations.Nullable;
         allParameters = true,
         visibility = Value.Style.ImplementationVisibility.PACKAGE,
         typeImmutable = "Default*")
-public interface CompletionResult {
+public interface CompletionResult extends HasMeta {
 
     /**
      * Candidate values ranked by relevance.
@@ -33,6 +35,11 @@ public interface CompletionResult {
      */
     @Nullable
     Boolean hasMore();
+
+    /** Optional protocol extension metadata. */
+    @Nullable
+    @Override
+    Map<String, Object> meta();
 
     /**
      * An empty completion result with no candidates, unknown total, and no more results.
@@ -76,6 +83,8 @@ public interface CompletionResult {
         Builder total(@Nullable Double total);
 
         Builder hasMore(@Nullable Boolean hasMore);
+
+        Builder meta(@Nullable Map<String, ?> entries);
 
         CompletionResult build();
     }

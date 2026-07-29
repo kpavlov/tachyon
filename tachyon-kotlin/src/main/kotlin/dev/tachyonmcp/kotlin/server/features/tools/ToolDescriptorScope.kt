@@ -27,6 +27,7 @@ public class ToolDescriptorScope
         public var annotations: ToolAnnotations? = null
         public var icons: List<Icon>? = null
         public var extensionId: String? = null
+        public var meta: Map<String, Any>? = null
 
         public fun inputSchema(json: String) {
             inputSchema = Jackson3JsonFactory.INSTANCE.toJsonSchema(json)
@@ -63,6 +64,7 @@ public class ToolDescriptorScope
             annotations?.let(builder::annotations)
             icons?.let(builder::icons)
             extensionId?.let(builder::extensionId)
+            meta?.let(builder::meta)
             return builder.build()
         }
     }

@@ -7,7 +7,18 @@ import dev.tachyonmcp.api.server.domain.ContentBlock;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.domain.TextContent;
+import dev.tachyonmcp.api.server.features.completions.CompletionResult;
+import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
+import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
+import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CallToolResult;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CompleteResult;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetPromptResult;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ListPromptsResult;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ListResourceTemplatesResult;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ListResourcesResult;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ListToolsResult;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -88,6 +99,49 @@ class McpResponseMapperTest {
         var error = mapper.error(new ServerError(ServerError.Kind.RESOURCE_NOT_FOUND, "Resource not found"));
 
         assertThat(error.code()).isEqualTo(-32002);
+    }
+
+    @Test
+    void domainMetadataMapsToLegacyResultAndDescriptorTypes() {
+        var completion = (CompleteResult) mapper.completeResult(CompletionResult.builder()
+                .values("one")
+                .meta(Map.of("kind", "completion"))
+                .build());
+        var promptResult =
+                (GetPromptResult) mapper.getPromptResult("Prompt", List.of(), Map.of("kind", "prompt-result"));
+        var tools = (ListToolsResult) mapper.listToolsResult(
+                List.of(ToolDescriptor.builder()
+                        .name("tool")
+                        .meta(Map.of("kind", "tool"))
+                        .build()),
+                null);
+        var resources = (ListResourcesResult) mapper.listResourcesResult(
+                List.of(ResourceDescriptor.builder()
+                        .name("resource")
+                        .uri("memory://resource")
+                        .meta(Map.of("kind", "resource"))
+                        .build()),
+                null);
+        var templates = (ListResourceTemplatesResult) mapper.listResourceTemplatesResult(
+                List.of(ResourceTemplateDescriptor.builder()
+                        .name("template")
+                        .uriTemplate("memory://{id}")
+                        .meta(Map.of("kind", "template"))
+                        .build()),
+                null);
+        var prompts = (ListPromptsResult) mapper.listPromptsResult(
+                List.of(PromptDescriptor.builder()
+                        .name("prompt")
+                        .meta(Map.of("kind", "prompt"))
+                        .build()),
+                null);
+
+        assertThat(completion._meta()).containsEntry("kind", JSON.textNode("completion"));
+        assertThat(promptResult._meta()).containsEntry("kind", JSON.textNode("prompt-result"));
+        assertThat(tools.tools().getFirst()._meta()).containsEntry("kind", JSON.textNode("tool"));
+        assertThat(resources.resources().getFirst()._meta()).containsEntry("kind", JSON.textNode("resource"));
+        assertThat(templates.resourceTemplates().getFirst()._meta()).containsEntry("kind", JSON.textNode("template"));
+        assertThat(prompts.prompts().getFirst()._meta()).containsEntry("kind", JSON.textNode("prompt"));
     }
 
     private static String relatedTaskId(CallToolResult payload) {

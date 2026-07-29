@@ -11,6 +11,7 @@ import dev.tachyonmcp.api.server.domain.ServerCapabilities;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TextContent;
 import dev.tachyonmcp.api.server.domain.ToolAnnotations;
+import dev.tachyonmcp.api.server.features.completions.CompletionResult;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
@@ -132,9 +133,12 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
     // discoverResult already uses above — no per-primitive caching config surface yet.
 
     @Override
-    public Object completeResult(List<String> values, @Nullable Double total, @Nullable Boolean hasMore) {
+    public Object completeResult(CompletionResult result) {
         return new CompleteResult(
-                new CompleteResult.Completion(List.copyOf(values), total, hasMore), null, COMPLETE, null);
+                new CompleteResult.Completion(List.copyOf(result.values()), result.total(), result.hasMore()),
+                JsonUtils.toJsonNodeMap(result.meta()),
+                COMPLETE,
+                null);
     }
 
     @Override
@@ -191,11 +195,12 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
     }
 
     @Override
-    public Object getPromptResult(@Nullable String description, List<PromptMessage> messages) {
+    public Object getPromptResult(
+            @Nullable String description, List<PromptMessage> messages, @Nullable Map<String, Object> meta) {
         return new GetPromptResult(
                 description,
                 messages.stream().map(McpResponseMapper::toPromptMessage).toList(),
-                null,
+                JsonUtils.toJsonNodeMap(meta),
                 COMPLETE,
                 null);
     }
@@ -208,7 +213,7 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
                         : JsonSchema.objectSchema().json(),
                 d.outputSchema() != null ? d.outputSchema().json() : null,
                 toToolAnnotations(d.annotations()),
-                null,
+                JsonUtils.toJsonNodeMap(d.meta()),
                 d.name(),
                 d.title(),
                 toIcons(d.icons()));
@@ -221,7 +226,7 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
                 d.mimeType(),
                 toAnnotations(d.annotations()),
                 d.size(),
-                null,
+                JsonUtils.toJsonNodeMap(d.meta()),
                 d.name(),
                 d.title(),
                 toIcons(d.icons()));
@@ -233,7 +238,7 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
                 d.description(),
                 d.mimeType(),
                 toAnnotations(d.annotations()),
-                null,
+                JsonUtils.toJsonNodeMap(d.meta()),
                 d.name(),
                 d.title(),
                 toIcons(d.icons()));
@@ -254,7 +259,8 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
                 : d.arguments().stream()
                         .map(a -> new PromptArgument(a.description(), a.required(), a.name(), a.title()))
                         .toList();
-        return new Prompt(d.description(), arguments, null, d.name(), d.title(), toIcons(d.icons()));
+        return new Prompt(
+                d.description(), arguments, JsonUtils.toJsonNodeMap(d.meta()), d.name(), d.title(), toIcons(d.icons()));
     }
 
     private static CallToolResult buildCallToolResult(

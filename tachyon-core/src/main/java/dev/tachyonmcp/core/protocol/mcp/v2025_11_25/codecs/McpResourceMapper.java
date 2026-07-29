@@ -6,6 +6,7 @@ import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Resource;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ResourceTemplate;
+import dev.tachyonmcp.core.server.json.JsonUtils;
 
 final class McpResourceMapper {
 
@@ -18,7 +19,7 @@ final class McpResourceMapper {
                 d.mimeType(),
                 ContentBlockMappers.toProtocolAnnotations(d.annotations()),
                 d.size(),
-                null,
+                JsonUtils.toJsonNodeMap(d.meta()),
                 d.name(),
                 d.title(),
                 ContentBlockMappers.toProtocolIcons(d.icons()));
@@ -30,7 +31,7 @@ final class McpResourceMapper {
                 descriptor.description(),
                 descriptor.mimeType(),
                 ContentBlockMappers.toProtocolAnnotations(descriptor.annotations()),
-                null,
+                JsonUtils.toJsonNodeMap(descriptor.meta()),
                 descriptor.name(),
                 descriptor.title(),
                 ContentBlockMappers.toProtocolIcons(descriptor.icons()));
