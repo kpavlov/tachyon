@@ -91,7 +91,7 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
     }
 
     @Test
-    void taskResultUsesConfiguredPayloadSerializer() throws Exception {
+    void taskResultUsesConfiguredPayloadSerializerAndMetadata() throws Exception {
         startServer(
                 b -> b.json(j -> j.serializer(new PayloadSerializer() {
                     @Override
@@ -103,7 +103,8 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
                 s -> s.tools()
                         .register(
                                 b -> b.name("custom-payload").taskSupport(TaskSupport.OPTIONAL),
-                                (context, request) -> ToolResult.of(new CustomPayload("task"))));
+                                (context, request) ->
+                                        ToolResult.of(new CustomPayload("task")).withMeta("result-meta", "kept")));
         try (var client = createTestClient()) {
             client.initialize();
 
@@ -131,6 +132,7 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
                           "value": "task"
                         },
                         "_meta": {
+                          "result-meta": "kept",
                           "io.modelcontextprotocol/related-task": {"taskId": "%s"}
                         }
                       }

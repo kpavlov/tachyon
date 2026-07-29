@@ -226,10 +226,15 @@ public final class ToolMethodHandlers {
         private void completeTask(TaskRegistry taskRegistry, TaskEntry task, @Nullable ToolResult result) {
             if (result == null || result instanceof ToolResult.Deferred) return;
             result = JsonUtils.serializeStructured(result, payloadSerializer);
+            Map<String, Object> meta = null;
+            if (result instanceof ToolResult.WithMeta(ToolResult inner, Map<String, Object> resultMeta)) {
+                result = inner;
+                meta = resultMeta;
+            }
             if (result instanceof ToolResult.Error(String message)) {
-                task.fail(new TaskResult.Failed(List.of(TextContent.of(message)), null, null));
+                task.fail(new TaskResult.Failed(List.of(TextContent.of(message)), null, meta));
             } else if (result instanceof ToolResult.Success(Object structuredValue, List<ContentBlock> content)) {
-                task.complete(new TaskResult.Completed(content, structuredValue, null));
+                task.complete(new TaskResult.Completed(content, structuredValue, meta));
             }
             taskRegistry.unregisterRunning(task.id());
         }
