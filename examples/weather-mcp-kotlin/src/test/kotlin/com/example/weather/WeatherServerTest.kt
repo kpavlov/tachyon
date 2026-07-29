@@ -118,14 +118,18 @@ class WeatherServerTest {
                     .build(),
             )
 
-        val content = result.content().first()
-        content.shouldBeInstanceOf<TextContent>()
-        val text = content.text()
-        text shouldStartWith "Weather in London:"
-        text shouldContain "Temperature:"
-        text shouldContain "°C"
-        text shouldContain "Humidity:"
-        text shouldContain "Wind:"
+        result.isError shouldNotBe true
+        result.structuredContent() shouldBe
+            mapOf(
+                "city" to "London",
+                "condition" to "Clear sky",
+                "temperature" to 18.5,
+                "temperatureUnit" to "Celsius",
+                "humidity" to 52,
+                "windSpeed" to 12.0,
+            )
+        result.content().single().shouldBeInstanceOf<TextContent>().text() shouldBe
+            """{"city":"London","condition":"Clear sky","temperature":18.5,"temperatureUnit":"Celsius","humidity":52,"windSpeed":12.0}"""
     }
 
     @Test
@@ -160,9 +164,18 @@ class WeatherServerTest {
                     .build(),
             )
 
-        val content = result.content().first()
-        content.shouldBeInstanceOf<TextContent>()
-        content.text() shouldStartWith "Weather in Tallinn:"
+        result.isError shouldNotBe true
+        result.structuredContent() shouldBe
+            mapOf(
+                "city" to "Tallinn",
+                "condition" to "Clear sky",
+                "temperature" to 18.5,
+                "temperatureUnit" to "Celsius",
+                "humidity" to 52,
+                "windSpeed" to 12.0,
+            )
+        result.content().single().shouldBeInstanceOf<TextContent>().text() shouldBe
+            """{"city":"Tallinn","condition":"Clear sky","temperature":18.5,"temperatureUnit":"Celsius","humidity":52,"windSpeed":12.0}"""
     }
 
     @Test

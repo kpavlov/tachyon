@@ -42,6 +42,9 @@ JsonDocument trusted = JsonDocument.of(jsonLiteral);
 JsonDocument checked = JsonDocument.parse(externalJson);
 ```
 
+**Kotlin developers** — if you're tired of hand-writing schema strings, kt-schema can generate
+them from your data classes. See [kt-schema integration](kt-schema-json.md) for the full guide.
+
 ## Read objects and arrays
 
 Create a provider-neutral object from standard Java collections:

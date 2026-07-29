@@ -32,6 +32,7 @@ mvn spotless:apply  # auto-fix
 
 ## Rules
 
+- **Unattended `git commit/push` is prohibited.** Always confirm with user.
 - TDD + SOLID. TachyonServer is SUT in unit tests.
 - **Tests**: JUnit 6 + Kotest (Kotlin) / AssertJ (Java) + Awaitility. `@TempDir` for unit, port 0 for E2E. Prefer E2E, esp. long scenarios; unit only when E2E can't cover, drop unit if E2E already does. No tautologies. Many asserts per test.
 - **Nullability**: JSpecify `@Nullable`/`@NonNull`. `@NullMarked` at package level.

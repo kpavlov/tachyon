@@ -39,6 +39,12 @@ No. `JsonDocument`, `JsonObject`, `JsonArray`, and `JsonSchema` provide a neutra
 
 Attach JSON Schema to a tool descriptor. Tachyon validates input and structured output, using JSON Schema 2020-12 when the schema doesn't declare another dialect. You can replace or disable either validator through [JSON configuration](json.md#configure-schema-validation).
 
+### How do I keep Kotlin tool schemas in sync with data classes?
+
+Generate input and output schemas from Kotlin model classes instead of maintaining JSON strings.
+The [kt-schema integration guide](kt-schema-json.md) shows the complete request and structured
+response path from the runnable Weather MCP Kotlin example.
+
 ### How do I report a tool failure?
 
 Return `ToolResult.error(message)` for an expected tool-level failure. Reserve thrown exceptions for unexpected failures that the server should map to a JSON-RPC error. See

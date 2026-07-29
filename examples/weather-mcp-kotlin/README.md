@@ -19,5 +19,5 @@ Kotlin builder (`tachyon-kotlin`) with the MCP Java SDK 2.0 client in tests.
 
 ```shell
 ./mvnw package && \
-java -jar target/weather-mcp-kotlin-example-1.0-SNAPSHOT.jar
+java -jar target/weather-mcp-kotlin-example.jar
 ```

@@ -56,21 +56,19 @@ fun ToolScope.getWeather(weatherService: WeatherService): ToolResult {
     val units = args.stringOrNull("units")
     val progressToken = request.progressToken()
     val temperatureUnit = when (units?.lowercase(Locale.getDefault())) {
-        "celsius" -> TemperatureUnit.Celsius
-        "fahrenheit" -> TemperatureUnit.Fahrenheit
+        "celsius" -> Celsius
+        "fahrenheit" -> Fahrenheit
         else -> {
-            TemperatureUnit.Celsius
+            Celsius
         }
     }
 
     fun attempt(city: String): ToolResult =
         try {
-            ToolResult.text(
-                format(
-                    fetchWithProgress(
-                        ctx, progressToken, weatherService, city, temperatureUnit
-                    ),
-                ),
+            ToolResult.structured(
+                fetchWithProgress(
+                    ctx, progressToken, weatherService, city, temperatureUnit
+                )
             )
         } catch (e: Exception) {
             if (e is CityNotFoundException) throw e
