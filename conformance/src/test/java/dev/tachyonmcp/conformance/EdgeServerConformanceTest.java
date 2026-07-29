@@ -9,7 +9,7 @@ class EdgeServerConformanceTest extends AbstractServerConformanceTest {
     EdgeServerConformanceTest() {
         super(
                 new EdgeConformanceServer(),
-                "0.2.0-alpha.9",
+                "0.2.0-alpha.10",
                 "conformance-baseline-0.2.yml",
                 "edge",
                 "2026-07-28",

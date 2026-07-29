@@ -10,11 +10,10 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
- * MCP 2026-07-28 requires {@code _meta.io.modelcontextprotocol/protocolVersion},
- * {@code .../clientInfo}, and {@code .../clientCapabilities} on every request (SEP-2575). A request
- * missing any of them is malformed: the server must reject it with JSON-RPC {@code -32602}
- * (Invalid params) and HTTP {@code 400 Bad Request}, and the error response must still carry the
- * original request id.
+ * MCP 2026-07-28 requires {@code _meta.io.modelcontextprotocol/protocolVersion} and
+ * {@code .../clientCapabilities}; {@code .../clientInfo} is optional. A request missing a required
+ * field is malformed: the server must reject it with JSON-RPC {@code -32602} (Invalid params) and
+ * HTTP {@code 400 Bad Request}, and the error response must still carry the original request id.
  */
 class MetaValidationTest extends AbstractStatelessMcpE2eTest {
 
@@ -60,9 +59,20 @@ class MetaValidationTest extends AbstractStatelessMcpE2eTest {
     }
 
     @Test
-    void rejectsMissingClientInfo() throws Exception {
+    void acceptsMissingClientInfo() throws Exception {
+        var response = postToolsCall("""
+                "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                "io.modelcontextprotocol/clientCapabilities": {}
+                """);
+        assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+        assertThatJson(response.body()).inPath("$.result.content[0].text").isEqualTo("hi");
+    }
+
+    @Test
+    void rejectsMalformedClientInfo() throws Exception {
         assertRejected(postToolsCall("""
                 "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                "io.modelcontextprotocol/clientInfo": {},
                 "io.modelcontextprotocol/clientCapabilities": {}
                 """));
     }

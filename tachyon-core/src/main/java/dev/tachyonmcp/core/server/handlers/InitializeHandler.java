@@ -74,7 +74,6 @@ public final class InitializeHandler implements RpcMethodHandler {
                         extension -> JsonUtils.parse(extension.serverSettings().values())));
     }
 
-    @SuppressWarnings("unchecked")
     private static Map<String, JsonNode> extractClientExtensions(Object params) {
         if (params instanceof InitializeRequestParams initParams) {
             if (initParams.capabilities() == null) {

@@ -111,8 +111,11 @@ public final class RequestValidationHandler extends ChannelInboundHandlerAdapter
         if (!(meta.get(PROTOCOL_VERSION_KEY) instanceof String metaProtocolVersion)) {
             return ServerErrors.invalidParams(META + " missing required field: " + PROTOCOL_VERSION_KEY);
         }
-        if (!(meta.get(CLIENT_INFO_KEY) instanceof Map<?, ?>)) {
-            return ServerErrors.invalidParams(META + " missing required field: " + CLIENT_INFO_KEY);
+        if (meta.containsKey(CLIENT_INFO_KEY)
+                && !(meta.get(CLIENT_INFO_KEY) instanceof Map<?, ?> clientInfo
+                        && clientInfo.get("name") instanceof String
+                        && clientInfo.get("version") instanceof String)) {
+            return ServerErrors.invalidParams(META + " invalid field: " + CLIENT_INFO_KEY);
         }
         if (!(meta.get(CLIENT_CAPABILITIES_KEY) instanceof Map<?, ?>)) {
             return ServerErrors.invalidParams(META + " missing required field: " + CLIENT_CAPABILITIES_KEY);
