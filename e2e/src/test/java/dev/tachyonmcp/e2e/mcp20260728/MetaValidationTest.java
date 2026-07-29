@@ -78,6 +78,33 @@ class MetaValidationTest extends AbstractStatelessMcpE2eTest {
     }
 
     @Test
+    void rejectsNonObjectClientInfo() throws Exception {
+        assertRejected(postToolsCall("""
+                "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                "io.modelcontextprotocol/clientInfo": "string-value",
+                "io.modelcontextprotocol/clientCapabilities": {}
+                """));
+    }
+
+    @Test
+    void rejectsClientInfoWithNonStringName() throws Exception {
+        assertRejected(postToolsCall("""
+                "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                "io.modelcontextprotocol/clientInfo": {"name": 123, "version": "1"},
+                "io.modelcontextprotocol/clientCapabilities": {}
+                """));
+    }
+
+    @Test
+    void rejectsClientInfoWithNonStringVersion() throws Exception {
+        assertRejected(postToolsCall("""
+                "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                "io.modelcontextprotocol/clientInfo": {"name": "t", "version": 456},
+                "io.modelcontextprotocol/clientCapabilities": {}
+                """));
+    }
+
+    @Test
     void rejectsMissingClientCapabilities() throws Exception {
         assertRejected(postToolsCall("""
                 "io.modelcontextprotocol/protocolVersion": "2026-07-28",
