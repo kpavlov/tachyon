@@ -36,7 +36,7 @@ package: ## Install artifacts to local Maven repo (skip tests)
 apidocs:
 	@echo "📚  Building API Docs..."
 	@rm -rf target/reports/apidocs
-	@./mvnw javadoc:aggregate \
+	@./mvnw compile javadoc:aggregate \
 		-pl tachyon-api,tachyon-core,tachyon-extensions -am \
 		--no-transfer-progress
 	@echo " ✅  Done!"
