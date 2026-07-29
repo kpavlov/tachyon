@@ -8,7 +8,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.tachyonmcp.api.json.JsonSchema;
-import dev.tachyonmcp.api.json.JsonSchemaValidator;
 import dev.tachyonmcp.api.json.PayloadSerde;
 import dev.tachyonmcp.api.runtime.InteractionContext;
 import dev.tachyonmcp.api.server.domain.Icon;
@@ -61,17 +60,17 @@ class DefaultToolRegistryTest {
     private static final PayloadSerde TEST_SERDE = new JacksonPayloadSerde();
 
     private final DefaultToolRegistry registry = new DefaultToolRegistry(
-            JsonSchemaValidator.noop(),
-            JsonSchemaValidator.noop(),
-            TEST_SERDE,
-            TEST_SERDE,
-            Jackson3JsonFactory.INSTANCE,
-            FeatureConfig.builder().build());
+            Jackson3JsonFactory.INSTANCE, FeatureConfig.builder().build());
+
+    private static void registerHandlers(DefaultToolRegistry registry, Map<String, RpcMethodHandler> handlers) {
+        var validator = new NetworkntJsonSchemaValidator();
+        ToolMethodHandlers.register(handlers, registry, validator, validator, TEST_SERDE, TEST_SERDE);
+    }
 
     @Test
     void listToolsReturnsEmptyListWhenNoToolsRegistered() throws Exception {
         var handlers = new HashMap<String, RpcMethodHandler>();
-        registry.registerHandlers(handlers);
+        registerHandlers(registry, handlers);
         var listHandler = handlers.get("tools/list");
         var result = listHandler.handle(DefaultDispatchContext.noop(), null);
         assertThat(result).isInstanceOf(ListToolsResult.class);
@@ -81,7 +80,7 @@ class DefaultToolRegistryTest {
     @Test
     void listTools() throws Exception {
         var handlers = new HashMap<String, RpcMethodHandler>();
-        registry.registerHandlers(handlers);
+        registerHandlers(registry, handlers);
 
         // minimal: only name set; all optional fields absent
         registry.register(testTool("minimal-tool", null, null));
@@ -138,7 +137,7 @@ class DefaultToolRegistryTest {
     @Test
     void callToolNotFound() throws Exception {
         var handlers = new HashMap<String, RpcMethodHandler>();
-        registry.registerHandlers(handlers);
+        registerHandlers(registry, handlers);
 
         var callHandler = handlers.get("tools/call");
         var params = Map.<String, Object>of("name", "nonexistent");
@@ -152,27 +151,27 @@ class DefaultToolRegistryTest {
     @Test
     void callToolMissingName() throws Exception {
         var handlers = new HashMap<String, RpcMethodHandler>();
-        registry.registerHandlers(handlers);
+        registerHandlers(registry, handlers);
 
         var callHandler = handlers.get("tools/call");
 
         var result = callHandler.handle(DefaultDispatchContext.noop(), Map.of());
         assertThat(result).isInstanceOf(ServerError.class);
         var err = (ServerError) result;
-        assertThat(err.kind()).isEqualTo(ServerError.Kind.INVALID_REQUEST);
+        assertThat(err.kind()).isEqualTo(ServerError.Kind.INVALID_PARAMS);
     }
 
     @Test
     void callToolWithNullParams() throws Exception {
         var handlers = new HashMap<String, RpcMethodHandler>();
-        registry.registerHandlers(handlers);
+        registerHandlers(registry, handlers);
 
         var callHandler = handlers.get("tools/call");
 
         var result = callHandler.handle(DefaultDispatchContext.noop(), null);
         assertThat(result).isInstanceOf(ServerError.class);
         var err = (ServerError) result;
-        assertThat(err.kind()).isEqualTo(ServerError.Kind.INVALID_REQUEST);
+        assertThat(err.kind()).isEqualTo(ServerError.Kind.INVALID_PARAMS);
     }
 
     @Test
@@ -181,7 +180,7 @@ class DefaultToolRegistryTest {
             var session = server.createSession("test");
             session.activate();
             var handlers = new HashMap<String, RpcMethodHandler>();
-            registry.registerHandlers(handlers);
+            registerHandlers(registry, handlers);
             registry.register(testTool("echo", "Echo", TEST_SCHEMA));
 
             var callHandler = handlers.get("tools/call");
@@ -283,7 +282,7 @@ class DefaultToolRegistryTest {
     @CsvSource({"FORBIDDEN,forbidden", "OPTIONAL,optional", "REQUIRED,required"})
     void taskSupportSerializesToWireValue(TaskSupport enumValue, String wireValue) throws Exception {
         var handlers = new HashMap<String, RpcMethodHandler>();
-        registry.registerHandlers(handlers);
+        registerHandlers(registry, handlers);
         registry.register(
                 ToolDescriptor.builder().name("ts-tool").taskSupport(enumValue).build(),
                 (context, request) -> ToolResult.text("ok"));
@@ -332,7 +331,7 @@ class DefaultToolRegistryTest {
     @Test
     void shouldMapIconsFromDescriptorToProtocolModel() throws Exception {
         var handlers = new HashMap<String, RpcMethodHandler>();
-        registry.registerHandlers(handlers);
+        registerHandlers(registry, handlers);
         var icon = Icon.of("https://example.com/tool-icon.png", "image/png", null, null);
         registry.register(
                 ToolDescriptor.builder()
@@ -414,10 +413,6 @@ class DefaultToolRegistryTest {
     @Test
     void listWithCustomPageSize() {
         var reg = new DefaultToolRegistry(
-                JsonSchemaValidator.noop(),
-                JsonSchemaValidator.noop(),
-                TEST_SERDE,
-                TEST_SERDE,
                 Jackson3JsonFactory.INSTANCE,
                 FeatureConfig.builder().pageSize(1).build());
         reg.register(testTool("a", null, null));
@@ -430,12 +425,7 @@ class DefaultToolRegistryTest {
     @Test
     void registerIsNoOpWhenToolsCapabilityIsOff() {
         var reg = new DefaultToolRegistry(
-                JsonSchemaValidator.noop(),
-                JsonSchemaValidator.noop(),
-                TEST_SERDE,
-                TEST_SERDE,
-                Jackson3JsonFactory.INSTANCE,
-                FeatureConfig.builder().off().build());
+                Jackson3JsonFactory.INSTANCE, FeatureConfig.builder().off().build());
         var changeCount = new AtomicInteger();
         reg.onChange(changeCount::incrementAndGet);
 
@@ -506,28 +496,28 @@ class DefaultToolRegistryTest {
     @Test
     void registerHandlersAddsBothMethods() {
         var handlers = new java.util.HashMap<String, RpcMethodHandler>();
-        registry.registerHandlers(handlers);
+        registerHandlers(registry, handlers);
         assertThat(handlers).containsOnlyKeys("tools/list", "tools/call");
     }
 
     @Test
     void toolsListHandlerMethodName() {
         var handlers = new java.util.HashMap<String, RpcMethodHandler>();
-        registry.registerHandlers(handlers);
+        registerHandlers(registry, handlers);
         assertThat(handlers.get("tools/list").method()).isEqualTo("tools/list");
     }
 
     @Test
     void toolsCallHandlerMethodName() {
         var handlers = new java.util.HashMap<String, RpcMethodHandler>();
-        registry.registerHandlers(handlers);
+        registerHandlers(registry, handlers);
         assertThat(handlers.get("tools/call").method()).isEqualTo("tools/call");
     }
 
     @Test
     void asyncToolHandlerCompletesFromSeparateThread() throws Exception {
         var handlers = new HashMap<String, RpcMethodHandler>();
-        registry.registerHandlers(handlers);
+        registerHandlers(registry, handlers);
         var executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "async-tool-pool"));
         registry.registerAsync(
                 builder -> builder.name("async-thread"),
@@ -551,7 +541,7 @@ class DefaultToolRegistryTest {
     @Test
     void asyncToolHandlerInvalidArgumentExceptionMapsToInvalidRequest() throws Exception {
         var handlers = new HashMap<String, RpcMethodHandler>();
-        registry.registerHandlers(handlers);
+        registerHandlers(registry, handlers);
         registry.registerAsync(
                 builder -> builder.name("invalid-arg-async"),
                 (ctx, request) -> CompletableFuture.failedFuture(new InvalidArgumentException("arg", "bad input")));
@@ -572,7 +562,7 @@ class DefaultToolRegistryTest {
     @Test
     void syncToolHandlerReturnsResultThroughHandle() throws Exception {
         var handlers = new HashMap<String, RpcMethodHandler>();
-        registry.registerHandlers(handlers);
+        registerHandlers(registry, handlers);
         registry.register(
                 configurer -> configurer.name("sync-handle").description("sync").inputSchema(TEST_SCHEMA.toString()),
                 (ctx, request) -> {
@@ -597,7 +587,7 @@ class DefaultToolRegistryTest {
     @Test
     void syncToolHandlerExceptionMapsToInternalError() throws Exception {
         var handlers = new HashMap<String, RpcMethodHandler>();
-        registry.registerHandlers(handlers);
+        registerHandlers(registry, handlers);
         registry.register(desc -> desc.name("sync-fail").description("sync"), (ctx, request) -> {
             throw new IllegalStateException("boom");
         });
@@ -732,14 +722,9 @@ class DefaultToolRegistryTest {
             {"type":"object","properties":{"message":{"type":"string"},"count":{"type":"integer"}},"required":["message","count"]}
             """);
         var registryVal = new DefaultToolRegistry(
-                new NetworkntJsonSchemaValidator(),
-                new NetworkntJsonSchemaValidator(),
-                TEST_SERDE,
-                TEST_SERDE,
-                Jackson3JsonFactory.INSTANCE,
-                FeatureConfig.builder().build());
+                Jackson3JsonFactory.INSTANCE, FeatureConfig.builder().build());
         var handlers = new HashMap<String, RpcMethodHandler>();
-        registryVal.registerHandlers(handlers);
+        registerHandlers(registryVal, handlers);
         registryVal.register(
                 ToolDescriptor.builder()
                         .name("structured-out")
@@ -769,14 +754,9 @@ class DefaultToolRegistryTest {
     @Test
     void shouldConvertMixedJavaAndJsonNodeEntries() throws Exception {
         var registryVal = new DefaultToolRegistry(
-                new NetworkntJsonSchemaValidator(),
-                new NetworkntJsonSchemaValidator(),
-                TEST_SERDE,
-                TEST_SERDE,
-                Jackson3JsonFactory.INSTANCE,
-                FeatureConfig.builder().build());
+                Jackson3JsonFactory.INSTANCE, FeatureConfig.builder().build());
         var handlers = new HashMap<String, RpcMethodHandler>();
-        registryVal.registerHandlers(handlers);
+        registerHandlers(registryVal, handlers);
         registryVal.register(
                 ToolDescriptor.builder().name("mixed-out").description("test").build(), (context, request) -> {
                     var jsonNodeVal = tools.jackson.databind.node.JsonNodeFactory.instance.stringNode("json-val");

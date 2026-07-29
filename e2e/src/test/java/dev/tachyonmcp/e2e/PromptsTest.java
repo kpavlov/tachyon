@@ -94,7 +94,7 @@ class PromptsTest extends AbstractStatelessMcpE2eTest {
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"unknown"}}
                 """);
 
-            assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32600);
+            assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32602);
         }
     }
 

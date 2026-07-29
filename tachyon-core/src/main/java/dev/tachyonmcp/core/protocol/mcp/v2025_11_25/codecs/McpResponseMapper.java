@@ -106,7 +106,9 @@ public class McpResponseMapper implements ProtocolResponseMapper {
         var capsBuilder = ServerInfoMapper.toServerCapabilities(response.capabilities());
         if (response.negotiatedExtensions() != null
                 && !response.negotiatedExtensions().isEmpty()) {
-            capsBuilder.extensions(response.negotiatedExtensions());
+            capsBuilder.extensions(response.negotiatedExtensions().entrySet().stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                            Map.Entry::getKey, entry -> JsonUtils.parse(entry.getValue()))));
         }
         return new InitializeResult(
                 response.protocolVersion(),

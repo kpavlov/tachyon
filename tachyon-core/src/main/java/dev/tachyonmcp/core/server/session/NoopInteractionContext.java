@@ -8,6 +8,7 @@ import dev.tachyonmcp.api.runtime.ContextNotifications;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.core.protocol.Protocol;
 import dev.tachyonmcp.core.protocol.ProtocolMappers;
+import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.core.runtime.Session;
@@ -101,6 +102,11 @@ public class NoopInteractionContext implements DispatchContext {
     @Override
     public ProtocolResponseMapper responseMapper() {
         return Objects.requireNonNull(ProtocolMappers.getMapper("mcp", McpProtocol.VERSION));
+    }
+
+    @Override
+    public ProtocolRequestMapper requestMapper() {
+        return new dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpRequestMapper();
     }
 
     @Override

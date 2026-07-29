@@ -1,13 +1,9 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.handlers;
 
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.LoggingLevelMapper;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.SetLevelRequestParams;
+import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
-import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.session.DispatchContext;
-import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
 import java.util.Map;
 
 public final class LoggingHandlers {
@@ -27,27 +23,11 @@ public final class LoggingHandlers {
 
         @Override
         public Object handle(DispatchContext context, Object params) {
-            SetLevelRequestParams typed;
-            if (params instanceof SetLevelRequestParams p) {
-                typed = p;
-            } else if (params instanceof Map<?, ?> map) {
-                try {
-                    var json = JsonRpcCodec.writeValueAsString(map);
-                    typed = ProtocolCodecUtil.decodeWithCodec(json, SetLevelRequestParams.class);
-                } catch (RuntimeException e) {
-                    return ServerErrors.invalidParams("Failed to decode params for logging/setLevel");
-                }
-            } else {
-                return ServerErrors.invalidParams("Invalid params for logging/setLevel");
+            try {
+                context.setLoggingLevel(context.requestMapper().loggingLevel(params));
+            } catch (RequestMappingException e) {
+                return e.error();
             }
-
-            var protocolLevel = typed.level();
-            if (protocolLevel == null) {
-                return ServerErrors.invalidParams("Missing level parameter");
-            }
-
-            context.setLoggingLevel(LoggingLevelMapper.toDomain(protocolLevel));
-
             return context.responseMapper().emptyResult();
         }
     }

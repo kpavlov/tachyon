@@ -2,57 +2,34 @@
 package dev.tachyonmcp.core.server.features.prompts;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
-import dev.tachyonmcp.api.json.JsonSchemaValidator;
 import dev.tachyonmcp.api.server.config.Mode;
-import dev.tachyonmcp.api.server.domain.Args;
-import dev.tachyonmcp.api.server.domain.PromptMessage;
-import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.features.HandlerFutures;
 import dev.tachyonmcp.api.server.features.prompts.AsyncPromptFn;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.api.server.features.prompts.PromptFn;
-import dev.tachyonmcp.api.server.features.prompts.PromptRequest;
-import dev.tachyonmcp.api.server.features.prompts.PromptResult;
 import dev.tachyonmcp.api.server.features.prompts.Prompts;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetPromptRequestParams;
-import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.config.FeatureConfig;
-import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.features.AbstractRegistry;
-import dev.tachyonmcp.core.server.features.ListRequests;
-import dev.tachyonmcp.core.server.json.JsonSchemaUtils;
-import dev.tachyonmcp.core.server.json.JsonUtils;
-import dev.tachyonmcp.core.server.session.DispatchContext;
-import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tools.jackson.databind.JsonNode;
 
 @InternalApi
 public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, PromptEntry> implements PromptRegistry {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultPromptRegistry.class);
 
-    private final JsonSchemaValidator validator;
     private final FeatureConfig config;
 
     /**
      * Creates a prompt registry with the specified schema validator and feature configuration.
      *
-     * @param validator the validator used for prompt input schemas
      * @param config the feature configuration governing registry behavior and page size
      */
-    public DefaultPromptRegistry(JsonSchemaValidator validator, FeatureConfig config) {
+    public DefaultPromptRegistry(FeatureConfig config) {
         super(config.pageSize());
-        this.validator = validator;
         this.config = config;
     }
 
@@ -115,149 +92,5 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
                 .map(PromptEntry::descriptor)
                 .sorted(Comparator.comparing(PromptDescriptor::name))
                 .toList();
-    }
-
-    /**
-     * Registers the RPC handlers for listing and retrieving prompts.
-     *
-     * @param registry the map to populate with prompt RPC handlers
-     */
-    public void registerHandlers(Map<String, RpcMethodHandler> registry) {
-        registry.put("prompts/list", new PromptsListHandler(this));
-        registry.put("prompts/get", new PromptsGetHandler(this, validator));
-    }
-
-    private record PromptsListHandler(DefaultPromptRegistry registry) implements RpcMethodHandler {
-
-        @Override
-        public String method() {
-            return "prompts/list";
-        }
-
-        @Override
-        public Object handle(DispatchContext context, Object params) {
-            var limit = ListRequests.parseLimit(params);
-            var cursor = ListRequests.parseCursor(params);
-            var paginated = registry.list(limit, cursor, descriptor -> {
-                var extId = descriptor.extensionId();
-                return extId == null || context.isExtensionEnabled(extId);
-            });
-            if (!paginated.cursorValid()) {
-                return ServerErrors.invalidParams("Invalid cursor");
-            }
-
-            var descriptors = paginated.items();
-            return context.responseMapper().listPromptsResult(descriptors, paginated.nextCursor());
-        }
-    }
-
-    private record PromptsGetHandler(DefaultPromptRegistry registry, JsonSchemaValidator validator)
-            implements RpcMethodHandler {
-
-        private static final Logger logger = LoggerFactory.getLogger(PromptsGetHandler.class);
-
-        @Override
-        public String method() {
-            return "prompts/get";
-        }
-
-        /** Compatibility fallback for callers invoking the blocking SPI method directly. */
-        @Override
-        public Object handle(DispatchContext context, Object params) throws Exception {
-            return HandlerFutures.joinInterruptibly(handleAsync(context, params));
-        }
-
-        /** Runs on the dispatcher's virtual thread; composes the handler's stage without blocking it. */
-        @Override
-        public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
-            var name = extractParamName(params);
-            if (name == null) {
-                return CompletableFuture.completedFuture(ServerErrors.invalidRequest("Missing prompt name"));
-            }
-            var entry = registry.get(name);
-            if (entry == null)
-                return CompletableFuture.completedFuture(ServerErrors.invalidRequest("Prompt not found"));
-            var extId = entry.descriptor().extensionId();
-            if (extId != null && !context.isExtensionEnabled(extId)) {
-                return CompletableFuture.completedFuture(ServerErrors.invalidRequest("Prompt not found"));
-            }
-            Map<String, JsonNode> argsMap;
-            try {
-                argsMap = extractArgumentsMap(params);
-            } catch (RuntimeException e) {
-                return CompletableFuture.completedFuture(ServerErrors.invalidParams("Invalid arguments"));
-            }
-
-            var inputSchema = entry.descriptor().inputSchema();
-            if (inputSchema != null) {
-                var error = JsonSchemaUtils.validateArguments(validator, inputSchema, argsMap);
-                if (error != null) return CompletableFuture.completedFuture(ServerErrors.invalidParams(error));
-            }
-
-            var request = new PromptRequest(
-                    argsMap != null ? Args.of(JsonUtils.toObjectMap(argsMap)) : Args.empty(),
-                    extractInputResponsesFromParams(params),
-                    extractRequestStateFromParams(params));
-
-            // invokeAndMap: guards the synchronous-throw/null-stage cases, then re-anchors onto a
-            // tachyon- virtual thread only when the handler's stage is still pending, so a
-            // foreign completer thread never leaks into response mapping, without adding an
-            // executor hop to the common already-resolved case.
-            return HandlerFutures.invokeAndMap(
-                    "Prompt '" + name + "' returned a null CompletionStage",
-                    () -> entry.fn().apply(context, request),
-                    context.engine().executor(),
-                    (result, cause) -> {
-                        if (cause != null) {
-                            var error = ServerErrors.fromUnhandledException(cause, "Prompt handler failed");
-                            if (error.kind() == ServerError.Kind.INVALID_PARAMS) {
-                                logger.debug("Prompt handler rejected invalid params for '{}'", name);
-                            } else {
-                                logger.error("Prompt handler error for '{}'", name, cause);
-                            }
-                            return error;
-                        }
-                        return switch (result) {
-                            case PromptResult.Messages m -> {
-                                var messages = m.messages() != null ? m.messages() : List.<PromptMessage>of();
-                                yield context.responseMapper()
-                                        .getPromptResult(entry.descriptor().description(), messages);
-                            }
-                            case PromptResult.InputRequired ir ->
-                                context.responseMapper().inputRequiredResult(ir.inputRequests(), ir.requestState());
-                        };
-                    });
-        }
-
-        private static @Nullable Map<String, JsonNode> extractArgumentsMap(Object params) {
-            if (params instanceof GetPromptRequestParams p && p.arguments() != null) {
-                return p.arguments();
-            }
-            if (params instanceof Map<?, ?> map) {
-                var json = JsonRpcCodec.writeValueAsString(map);
-                var typed = ProtocolCodecUtil.decodeWithCodec(json, GetPromptRequestParams.class);
-                return typed.arguments();
-            }
-            return null;
-        }
-
-        private static @Nullable String extractParamName(Object params) {
-            if (params instanceof GetPromptRequestParams p) {
-                return p.name();
-            }
-            if (!(params instanceof Map<?, ?> map)) return null;
-            if (map.get("name") instanceof String s) return s;
-            return null;
-        }
-
-        private static @Nullable Map<String, Object> extractInputResponsesFromParams(Object params) {
-            if (!(params instanceof Map<?, ?> map)) return null;
-            return JsonUtils.toObjectMap(ListRequests.extractInputResponses(map.get("inputResponses")));
-        }
-
-        private static @Nullable String extractRequestStateFromParams(Object params) {
-            if (!(params instanceof Map<?, ?> map)) return null;
-            return map.get("requestState") instanceof String s ? s : null;
-        }
     }
 }

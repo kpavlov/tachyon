@@ -41,7 +41,7 @@ class DefaultTaskRegistryTest {
 
     @BeforeEach
     void setUp() {
-        registry.registerHandlers(handlers);
+        TaskMethodHandlers.register(handlers, registry);
     }
 
     @Test

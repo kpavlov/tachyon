@@ -1,32 +1,11 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.features.tools;
 
-import static dev.tachyonmcp.core.server.domain.ServerErrors.fromUnhandledException;
-import static dev.tachyonmcp.core.server.domain.ServerErrors.internalError;
-import static dev.tachyonmcp.core.server.domain.ServerErrors.invalidParams;
-import static dev.tachyonmcp.core.server.domain.ServerErrors.invalidRequest;
-import static dev.tachyonmcp.core.server.domain.ServerErrors.missingRequiredClientCapability;
-
 import dev.tachyonmcp.api.annotations.InternalApi;
-import dev.tachyonmcp.api.json.JsonDocument;
-import dev.tachyonmcp.api.json.JsonSchema;
-import dev.tachyonmcp.api.json.JsonSchemaValidator;
-import dev.tachyonmcp.api.json.PayloadDeserializer;
-import dev.tachyonmcp.api.json.PayloadSerializer;
-import dev.tachyonmcp.api.json.SchemaValidationError;
 import dev.tachyonmcp.api.json.spi.JsonSchemaFactory;
 import dev.tachyonmcp.api.runtime.InteractionContext;
 import dev.tachyonmcp.api.server.config.Mode;
-import dev.tachyonmcp.api.server.domain.Args;
-import dev.tachyonmcp.api.server.domain.ContentBlock;
-import dev.tachyonmcp.api.server.domain.InvalidArgumentException;
-import dev.tachyonmcp.api.server.domain.LoggingLevel;
-import dev.tachyonmcp.api.server.domain.ProgressToken;
-import dev.tachyonmcp.api.server.domain.ServerError;
-import dev.tachyonmcp.api.server.domain.TaskResult;
-import dev.tachyonmcp.api.server.domain.TextContent;
 import dev.tachyonmcp.api.server.features.HandlerFutures;
-import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.api.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.api.server.features.tools.AsyncToolFn;
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
@@ -35,36 +14,17 @@ import dev.tachyonmcp.api.server.features.tools.ToolHandler;
 import dev.tachyonmcp.api.server.features.tools.ToolRequest;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.api.server.features.tools.Tools;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CallToolRequestParams;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskMetadata;
-import dev.tachyonmcp.core.server.OutboundSseStreamMessageRouter;
-import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.config.FeatureConfig;
-import dev.tachyonmcp.core.server.domain.MissingRequiredClientCapabilityException;
 import dev.tachyonmcp.core.server.features.AbstractRegistry;
-import dev.tachyonmcp.core.server.features.ListRequests;
-import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.core.server.json.JsonSchemaUtils;
-import dev.tachyonmcp.core.server.json.JsonUtils;
-import dev.tachyonmcp.core.server.session.DispatchContext;
-import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
-import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
-import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tools.jackson.databind.JsonNode;
 
 /**
  * AbstractRegistry for tool handlers with input/output schema validation.
@@ -74,10 +34,6 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultToolRegistry.class);
 
-    private final JsonSchemaValidator inputValidator;
-    private final JsonSchemaValidator outputValidator;
-    private final PayloadSerializer payloadSerializer;
-    private final PayloadDeserializer payloadDeserializer;
     private final JsonSchemaFactory<String> schemaFactory;
     private final FeatureConfig config;
 
@@ -90,18 +46,8 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
     /**
      * Creates a tool registry with the given schema validators and payload serde.
      */
-    public DefaultToolRegistry(
-            JsonSchemaValidator inputValidator,
-            JsonSchemaValidator outputValidator,
-            PayloadSerializer payloadSerializer,
-            PayloadDeserializer payloadDeserializer,
-            JsonSchemaFactory<String> schemaFactory,
-            FeatureConfig config) {
+    public DefaultToolRegistry(JsonSchemaFactory<String> schemaFactory, FeatureConfig config) {
         super(config.pageSize());
-        this.inputValidator = inputValidator;
-        this.outputValidator = outputValidator;
-        this.payloadSerializer = payloadSerializer;
-        this.payloadDeserializer = payloadDeserializer;
         this.schemaFactory = schemaFactory;
         this.config = config;
     }
@@ -200,334 +146,4 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
     }
 
     private static final Pattern VALID_NAME_PATTERN = Pattern.compile("[a-zA-Z0-9_\\-./]+");
-
-    /**
-     * Registers the JSON-RPC handlers for listing and invoking tools.
-     *
-     * @param registry the registry to receive the tool method handlers
-     */
-    public void registerHandlers(Map<String, RpcMethodHandler> registry) {
-        registry.put("tools/list", new ToolsListHandler(this));
-        registry.put(
-                "tools/call",
-                new ToolsCallHandler(this, inputValidator, outputValidator, payloadSerializer, payloadDeserializer));
-    }
-
-    private record ToolsListHandler(DefaultToolRegistry registry) implements RpcMethodHandler {
-
-        @Override
-        public String method() {
-            return "tools/list";
-        }
-
-        @Override
-        public Object handle(DispatchContext context, Object params) {
-            var limit = ListRequests.parseLimit(params);
-            var cursor = ListRequests.parseCursor(params);
-            var paginated = registry.list(limit, cursor, d -> {
-                var extId = d.extensionId();
-                return extId == null || context.isExtensionEnabled(extId);
-            });
-            if (!paginated.cursorValid()) {
-                return invalidParams("Invalid cursor");
-            }
-            return context.responseMapper().listToolsResult(paginated.items(), paginated.nextCursor());
-        }
-    }
-
-    private record ToolsCallHandler(
-            DefaultToolRegistry registry,
-            JsonSchemaValidator inputValidator,
-            JsonSchemaValidator outputValidator,
-            PayloadSerializer payloadSerializer,
-            PayloadDeserializer payloadDeserializer)
-            implements RpcMethodHandler {
-
-        @Override
-        public String method() {
-            return "tools/call";
-        }
-
-        /**
-         * Compatibility fallback for callers invoking the blocking SPI method directly.
-         */
-        @Override
-        public Object handle(DispatchContext context, Object params) throws Exception {
-            return HandlerFutures.joinInterruptibly(handleAsync(context, params));
-        }
-
-        /**
-         * Runs on the dispatcher's virtual thread; composes the handler's stage without blocking it.
-         */
-        @Override
-        public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
-            var parsed = parseCallParams(params);
-            if (parsed == null) return CompletableFuture.completedFuture(invalidRequest("Invalid params"));
-            if (parsed.name().isBlank()) {
-                return CompletableFuture.completedFuture(invalidRequest("Missing tool name"));
-            }
-            if (parsed.name().length() > 64) {
-                return CompletableFuture.completedFuture(invalidRequest("Tool name exceeds maximum length (SEP-986)"));
-            }
-
-            var handler = registry.get(parsed.name());
-            if (handler == null) {
-                return CompletableFuture.completedFuture(invalidParams("Unknown tool: " + parsed.name()));
-            }
-            var extId = handler.descriptor().extensionId();
-            if (extId != null && !context.isExtensionEnabled(extId)) {
-                return CompletableFuture.completedFuture(invalidParams("Unknown tool: " + parsed.name()));
-            }
-
-            var validationError = validateInput(handler.descriptor().inputSchema(), parsed.args());
-            if (validationError != null) return CompletableFuture.completedFuture(invalidParams(validationError));
-
-            var taskSupport = handler.descriptor().taskSupport();
-            if (taskSupport == null) taskSupport = TaskSupport.FORBIDDEN;
-            var taskMeta = parsed.task();
-
-            if (taskSupport == TaskSupport.FORBIDDEN && taskMeta != null) {
-                return CompletableFuture.completedFuture(
-                        invalidRequest("Task augmentation not supported for this tool"));
-            }
-            if (taskSupport == TaskSupport.REQUIRED && taskMeta == null) {
-                return CompletableFuture.completedFuture(invalidRequest("Task augmentation required for this tool"));
-            }
-
-            var request = ToolRequest.builder()
-                    .name(parsed.name())
-                    .arguments(Args.of(JsonUtils.toObjectMap(parsed.args()), payloadDeserializer))
-                    .meta(JsonUtils.toObjectMap(parsed.meta()))
-                    .progressToken(parseProgressToken(parsed.meta()))
-                    .payloadDeserializer(payloadDeserializer)
-                    .inputResponses(JsonUtils.toObjectMap(parsed.inputResponses()))
-                    .requestState(parsed.requestState())
-                    .build();
-
-            // Task-augmented path: branch BEFORE invoking handler so the dispatch thread
-            // returns CreateTaskResult immediately (even for sync/suspend handlers).
-            if (taskMeta != null) {
-                return CompletableFuture.completedFuture(
-                        dispatchTaskAugmented(context, handler, request, parsed.name(), taskMeta));
-            }
-
-            sendLoggingIfEnabled(context, parsed.name(), "started");
-            // invokeAndMap: guards the synchronous-throw/null-stage cases, then re-anchors onto a
-            // tachyon- virtual thread only when the handler's stage is still pending, so a
-            // foreign completer thread never leaks into output validation/response mapping,
-            // without adding an executor hop to the common already-resolved case.
-            return HandlerFutures.invokeAndMap(
-                    "Tool '" + parsed.name() + "' returned a null CompletionStage",
-                    () -> handler.handleAsync(context, request),
-                    context.engine().executor(),
-                    (toolResult, cause) -> {
-                        if (cause != null) {
-                            if (cause instanceof InvalidArgumentException e) {
-                                return invalidParams("invalid argument '" + e.argName() + "': " + e.getMessage());
-                            }
-                            if (cause instanceof MissingRequiredClientCapabilityException e) {
-                                return missingRequiredClientCapability(e.getMessage(), e.requiredCapabilities());
-                            }
-                            if (cause instanceof CancellationException) {
-                                logger.debug("Tool call cancelled for '{}'", parsed.name());
-                                return internalError("Tool call cancelled");
-                            }
-                            var error = fromUnhandledException(cause, "Tool handler failed");
-                            if (error.kind() == ServerError.Kind.INVALID_PARAMS) {
-                                logger.debug("Tool handler rejected invalid params for '{}'", parsed.name());
-                            } else {
-                                logger.error("Tool handler error for '{}'", parsed.name(), cause);
-                            }
-                            return error;
-                        }
-                        sendLoggingIfEnabled(context, parsed.name(), "completed");
-                        validateOutput(handler.descriptor().outputSchema(), toolResult);
-                        return context.responseMapper()
-                                .callToolResult(JsonUtils.serializeStructured(toolResult, payloadSerializer));
-                    });
-        }
-
-        /**
-         * Dispatches a tool request as a session task and returns its initial task result.
-         *
-         * @param context  the dispatch context used to execute the tool and create the response
-         * @param handler  the tool handler to invoke
-         * @param request  the tool request to execute
-         * @param id       the tool identifier used for logging
-         * @param taskMeta task execution metadata, including the optional time-to-live
-         * @return the initial result representing the created task
-         */
-        private Object dispatchTaskAugmented(
-                DispatchContext context, ToolHandler handler, ToolRequest request, String id, TaskMetadata taskMeta) {
-            sendLoggingIfEnabled(context, id, "started");
-            var engine = context.engine();
-            var taskRegistry = engine.tasksRegistry();
-            var sessionId = OutboundSseStreamMessageRouter.currentSessionId();
-            var ttl = taskMeta.ttl() != null ? Duration.ofMillis(taskMeta.ttl()) : null;
-            var progressToken = parseProgressToken(request.meta());
-            var task = taskRegistry.createSessionTask(ttl, request.meta(), sessionId, progressToken);
-
-            var taskRequest = ToolRequest.builder()
-                    .name(request.name())
-                    .arguments(request.arguments())
-                    .meta(request.meta())
-                    .progressToken(request.progressToken())
-                    .payloadDeserializer(request.payloadDeserializer())
-                    .inputResponses(request.inputResponses())
-                    .requestState(request.requestState())
-                    .task(task)
-                    .build();
-
-            var future = new CompletableFuture<ToolResult>();
-            var handlerFuture = new AtomicReference<CompletableFuture<? extends ToolResult>>();
-            var dispatchFuture = engine.executor().submit(() -> {
-                if (future.isCancelled()) return;
-                try {
-                    var stage = Objects.requireNonNull(
-                            handler.handleAsync(context, taskRequest),
-                            "Tool '" + id + "' returned a null CompletionStage");
-                    var actualFuture = stage.toCompletableFuture();
-                    handlerFuture.set(actualFuture);
-                    if (future.isCancelled()) {
-                        actualFuture.cancel(true);
-                    } else {
-                        actualFuture.whenComplete((result, failure) -> {
-                            if (failure == null) {
-                                future.complete(result);
-                            } else {
-                                future.completeExceptionally(failure);
-                            }
-                        });
-                    }
-                } catch (Throwable failure) {
-                    future.completeExceptionally(failure);
-                }
-            });
-            future.whenComplete((result, failure) -> {
-                if (!future.isCancelled()) return;
-                dispatchFuture.cancel(true);
-                var actualFuture = handlerFuture.get();
-                if (actualFuture != null) {
-                    actualFuture.cancel(true);
-                }
-            });
-
-            taskRegistry.registerRunning(task.id(), future);
-
-            future.thenAccept(toolResult -> {
-                if (toolResult == null) {
-                    return;
-                }
-                if (toolResult instanceof ToolResult.Deferred) {
-                    return;
-                }
-                if (toolResult instanceof ToolResult.Error(String message)) {
-                    task.fail(new TaskResult.Failed(List.of(TextContent.of(message)), null, null));
-                } else if (toolResult
-                        instanceof ToolResult.Success(Object structuredValue, List<ContentBlock> content)) {
-                    var structured = JsonUtils.valueToObjectNode(structuredValue, payloadSerializer);
-                    task.complete(new TaskResult.Completed(content, structured, null));
-                }
-                taskRegistry.unregisterRunning(task.id());
-            });
-            future.exceptionally(throwable -> {
-                var e = throwable instanceof CompletionException ce && ce.getCause() != null
-                        ? ce.getCause()
-                        : throwable;
-                if (e instanceof CancellationException) {
-                    logger.debug("Task handler cancelled for taskId={}", task.id());
-                } else if (e instanceof Exception ex) {
-                    handleTaskError(task, ex);
-                } else {
-                    logger.error("Non-exception throwable in task handler for  taskId={}", task.id(), e);
-                }
-                taskRegistry.unregisterRunning(task.id());
-                return null;
-            });
-
-            return context.responseMapper().createTaskResult(task);
-        }
-
-        private static @Nullable ProgressToken parseProgressToken(@Nullable Map<String, ?> meta) {
-            if (meta == null) return null;
-            var value = meta.get("progressToken");
-            if (value instanceof String text) return ProgressToken.of(text);
-            if (value instanceof Number number) return ProgressToken.of(number);
-            if (value instanceof JsonNode node && node.isString()) return ProgressToken.of(node.asString());
-            if (value instanceof JsonNode node && node.isNumber()) return ProgressToken.of(node.numberValue());
-            return null;
-        }
-
-        private record CallParams(
-                String name,
-                @Nullable Map<String, JsonNode> args,
-                @Nullable Map<String, JsonNode> meta,
-                @Nullable Map<String, JsonNode> inputResponses,
-                @Nullable String requestState,
-                @Nullable TaskMetadata task) {}
-
-        private @Nullable CallParams parseCallParams(Object params) {
-            if (params instanceof Map<?, ?> map) {
-                var json = JsonRpcCodec.writeValueAsString(map);
-                var typed = ProtocolCodecUtil.decodeWithCodec(json, CallToolRequestParams.class);
-                var name = typed.name();
-                if (name == null) return null;
-                var inputResponses = ListRequests.extractInputResponses(map.get("inputResponses"));
-                var requestState = map.get("requestState") instanceof String s ? s : null;
-                return new CallParams(
-                        name, typed.arguments(), typed._meta(), inputResponses, requestState, typed.task());
-            }
-            if (params
-                    instanceof
-                    CallToolRequestParams(
-                            String name,
-                            Map<String, JsonNode> arguments,
-                            Map<String, JsonNode> meta,
-                            TaskMetadata task)) {
-                if (name == null) return null;
-                return new CallParams(name, arguments, meta, null, null, task);
-            }
-            return null;
-        }
-
-        private @Nullable String validateInput(@Nullable JsonSchema schema, @Nullable Map<String, JsonNode> args) {
-            return JsonSchemaUtils.validateArguments(inputValidator, schema, args);
-        }
-
-        private void validateOutput(@Nullable JsonSchema schema, ToolResult result) {
-            if (schema == null || outputValidator == JsonSchemaValidator.noop()) return;
-            var inner = result instanceof ToolResult.WithMeta wm ? wm.inner() : result;
-            if (!(inner instanceof ToolResult.Success s)) return;
-            var contentNode = JsonUtils.valueToObjectNode(s.structuredValue(), payloadSerializer);
-            if (contentNode == null) return;
-            var errors = outputValidator.validate(schema, JsonDocument.of(contentNode.toString()));
-            if (!errors.isEmpty()) {
-                logger.debug(
-                        "Tool output failed schema validation (advisory only): {}", SchemaValidationError.join(errors));
-            }
-        }
-
-        private void handleTaskError(TaskEntry taskEntry, Exception e) {
-            var cause = e instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : e;
-            var error =
-                    switch (cause) {
-                        case InvalidArgumentException invalid ->
-                            invalidParams("invalid argument '" + invalid.argName() + "': " + invalid.getMessage());
-                        case MissingRequiredClientCapabilityException missing ->
-                            missingRequiredClientCapability(missing.getMessage(), missing.requiredCapabilities());
-                        default -> fromUnhandledException(cause, "Tool handler failed");
-                    };
-            if (error.kind() == ServerError.Kind.INVALID_PARAMS) {
-                logger.debug("Task handler rejected invalid params for taskId={}", taskEntry.id());
-            } else if (error.kind() == ServerError.Kind.INTERNAL_ERROR) {
-                logger.error("Task handler error for taskId={}", taskEntry.id(), cause);
-            }
-            taskEntry.fail(TaskResult.failed(error));
-        }
-
-        private void sendLoggingIfEnabled(DispatchContext context, String toolName, String status) {
-            context.notifications()
-                    .log(LoggingLevel.DEBUG, "tachyon.tools", Map.of("tool", toolName, "status", status));
-        }
-    }
 }

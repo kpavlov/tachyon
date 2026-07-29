@@ -12,6 +12,7 @@ import dev.tachyonmcp.core.runtime.SseEvent;
 import dev.tachyonmcp.core.server.OutboundSseStream;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.TachyonServer;
+import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.core.server.features.tasks.TaskRegistry;
 import dev.tachyonmcp.core.server.session.SessionEvent;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
@@ -94,6 +95,9 @@ public interface ServerEngine extends TachyonServer {
     ExecutorService executor();
 
     TaskRegistry tasksRegistry();
+
+    /** Maps and sends a task status notification. */
+    void notifyTaskStatus(TaskEntry entry);
 
     /** Sends a request to the client and returns a future that completes with the response. */
     CompletableFuture<String> sendRequest(Session session, String method, Object params);

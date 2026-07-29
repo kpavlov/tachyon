@@ -57,6 +57,9 @@ public interface Protocol {
     /** Response mapper for this protocol version. */
     ProtocolResponseMapper responseMapper();
 
+    /** Request mapper for this protocol version. */
+    ProtocolRequestMapper requestMapper();
+
     default ChannelContext createInteractionContext() {
         return new DefaultChannelContext(this);
     }

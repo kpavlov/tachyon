@@ -28,7 +28,7 @@ class DefaultCompletionRegistryTest {
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
 
     public DefaultCompletionRegistryTest() {
-        ((DefaultCompletionRegistry) registry).registerHandlers(handlers);
+        CompletionMethodHandlers.register(handlers, (DefaultCompletionRegistry) registry);
     }
 
     private static final JsonMapper JSON = new JsonMapper();

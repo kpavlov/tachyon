@@ -47,6 +47,22 @@ public interface ResourceRequest extends ServerFeature.Request {
     @Override
     Map<String, Object> meta();
 
+    /**
+     * Returns the client responses supplied when retrying an input-required resource read.
+     *
+     * @return input responses, or {@code null}
+     */
+    @Nullable
+    Map<String, Object> inputResponses();
+
+    /**
+     * Returns the opaque request state supplied when retrying an input-required resource read.
+     *
+     * @return request state, or {@code null}
+     */
+    @Nullable
+    String requestState();
+
     static Builder builder() {
         return DefaultResourceRequest.builder();
     }
@@ -59,6 +75,10 @@ public interface ResourceRequest extends ServerFeature.Request {
         Builder uriTemplate(@Nullable String uriTemplate);
 
         Builder meta(@Nullable Map<String, ?> entries);
+
+        Builder inputResponses(@Nullable Map<String, ?> inputResponses);
+
+        Builder requestState(@Nullable String requestState);
 
         ResourceRequest build();
     }

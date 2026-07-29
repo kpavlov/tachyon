@@ -6,22 +6,15 @@ import dev.tachyonmcp.api.server.domain.ProgressToken;
 import dev.tachyonmcp.api.server.domain.Task;
 import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.domain.TextContent;
+import dev.tachyonmcp.api.server.features.PaginatedResult;
 import dev.tachyonmcp.api.server.features.tasks.TaskDescriptor;
 import dev.tachyonmcp.api.server.features.tasks.TaskIdGenerator;
 import dev.tachyonmcp.api.server.features.tasks.TaskOptions;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
-import dev.tachyonmcp.api.server.features.tasks.Tasks;
-import dev.tachyonmcp.core.protocol.ProtocolMappers;
-import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.McpProtocol;
-import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.config.TasksConfig;
-import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.features.AbstractRegistry;
-import dev.tachyonmcp.core.server.features.ListRequests;
 import dev.tachyonmcp.core.server.internal.AbstractJanitor;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
-import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -37,9 +30,6 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultTaskRegistry.class);
     private static final long TTL_JANITOR_INTERVAL_SECONDS = 30;
-
-    private static final ProtocolResponseMapper mapper =
-            Objects.requireNonNull(ProtocolMappers.getMapper("mcp", McpProtocol.VERSION));
 
     private final ConcurrentHashMap<String, Future<?>> running = new ConcurrentHashMap<>();
     private final ServerEngine server;
@@ -64,6 +54,10 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
     @Override
     public @Nullable TaskEntry getById(String taskId) {
         return get(taskId);
+    }
+
+    PaginatedResult<TaskEntry> listEntries(int limit, @Nullable String cursor) {
+        return listItems(limit, cursor);
     }
 
     @Override
@@ -262,135 +256,6 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
     }
 
     private void fireStatusNotification(TaskEntry entry) {
-        var params = mapper.taskStatusNotificationParams(entry);
-        var sessionId = entry.sessionId();
-        if (sessionId != null) {
-            server.getSession(sessionId)
-                    .ifPresent(s -> server.sendNotification(s, "notifications/tasks/status", params));
-            return;
-        }
-        server.broadcastNotification("notifications/tasks/status", params);
-    }
-
-    public void registerHandlers(Map<String, RpcMethodHandler> registry) {
-        registry.put("tasks/list", new TasksListHandler(this));
-        registry.put("tasks/get", new TasksGetHandler(this));
-        registry.put("tasks/cancel", new TasksCancelHandler(this));
-        registry.put("tasks/result", new TasksResultHandler(this));
-    }
-
-    private record TasksListHandler(DefaultTaskRegistry registry) implements RpcMethodHandler {
-        @Override
-        public String method() {
-            return "tasks/list";
-        }
-
-        @Override
-        public Object handle(DispatchContext context, Object params) {
-            var limit = ListRequests.parseLimit(params);
-            var cursor = ListRequests.parseCursor(params);
-            var paginated = registry.listItems(limit, cursor);
-            if (!paginated.cursorValid()) {
-                return ServerErrors.invalidParams("Invalid cursor");
-            }
-            return context.responseMapper().listTasksResult(paginated.items(), paginated.nextCursor());
-        }
-    }
-
-    private record TasksGetHandler(Tasks registry) implements RpcMethodHandler {
-        @Override
-        public String method() {
-            return "tasks/get";
-        }
-
-        @Override
-        public Object handle(DispatchContext context, Object params) {
-            var taskId = extractParamId(params);
-            if (taskId == null) {
-                return ServerErrors.invalidParams("Missing task ID");
-            }
-            var entry = registry.get(taskId);
-            if (entry == null) {
-                return ServerErrors.invalidParams("Failed to retrieve task: Task not found");
-            }
-            return context.responseMapper().getTaskResult(entry);
-        }
-
-        private static @Nullable String extractParamId(Object params) {
-            if (!(params instanceof Map<?, ?> map)) {
-                return null;
-            }
-            var id = map.get("taskId");
-            if (id instanceof String s) {
-                return s;
-            }
-            id = map.get("id");
-            if (id instanceof String s) {
-                return s;
-            }
-            return null;
-        }
-    }
-
-    private record TasksCancelHandler(DefaultTaskRegistry registry) implements RpcMethodHandler {
-        @Override
-        public String method() {
-            return "tasks/cancel";
-        }
-
-        @Override
-        public Object handle(DispatchContext context, Object params) {
-            var taskId = TasksGetHandler.extractParamId(params);
-            if (taskId == null) {
-                return ServerErrors.invalidParams("Missing task ID");
-            }
-            final var task = registry.getAndCancelTask(taskId);
-            if (task == null) {
-                return ServerErrors.invalidParams("Failed to retrieve task: Task not found");
-            }
-            if (task.status() != TaskState.CANCELLED) {
-                return ServerErrors.invalidParams("Task cannot be cancelled in current state: " + task.status());
-            }
-            return context.responseMapper().cancelTaskResult(task);
-        }
-    }
-
-    private record TasksResultHandler(DefaultTaskRegistry registry) implements RpcMethodHandler {
-        @Override
-        public String method() {
-            return "tasks/result";
-        }
-
-        @Override
-        public Object handle(DispatchContext context, Object params) {
-            var taskId = TasksGetHandler.extractParamId(params);
-            if (taskId == null) {
-                return ServerErrors.invalidRequest("Missing task ID");
-            }
-            var entry = registry.get(taskId);
-            if (entry == null) {
-                return ServerErrors.invalidRequest("Task not found");
-            }
-            var status = entry.status();
-            if (status == TaskState.CANCELLED) {
-                return ServerErrors.invalidRequest("Task was cancelled");
-            }
-            if (status == TaskState.UNKNOWN) {
-                return ServerErrors.invalidRequest("Task is in unknown state");
-            }
-            if (status.isActive()) {
-                try {
-                    var result = entry.completion().toCompletableFuture().join();
-                    return context.responseMapper().getTaskPayloadResult(result, entry.id());
-                } catch (Exception e) {
-                    return ServerErrors.invalidRequest("Task result not available: " + e.getMessage());
-                }
-            }
-            var taskResult = entry.result();
-            if (taskResult == null) {
-                return ServerErrors.invalidRequest("Task result not available");
-            }
-            return context.responseMapper().getTaskPayloadResult(taskResult, entry.id());
-        }
+        server.notifyTaskStatus(entry);
     }
 }

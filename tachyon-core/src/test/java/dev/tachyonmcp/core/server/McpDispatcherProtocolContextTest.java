@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.core.protocol.Protocol;
+import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.protocol.Protocols;
 import dev.tachyonmcp.core.runtime.ChannelContext;
@@ -56,6 +57,11 @@ class McpDispatcherProtocolContextTest {
         @Override
         public ProtocolResponseMapper responseMapper() {
             return Protocols.list().getFirst().responseMapper();
+        }
+
+        @Override
+        public ProtocolRequestMapper requestMapper() {
+            return Protocols.list().getFirst().requestMapper();
         }
 
         @Override

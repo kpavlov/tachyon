@@ -8,6 +8,7 @@ import dev.tachyonmcp.api.runtime.ContextNotifications;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.api.server.domain.ProgressToken;
 import dev.tachyonmcp.core.protocol.Protocol;
+import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.protocol.Protocols;
 import dev.tachyonmcp.core.runtime.ChannelContext;
@@ -171,6 +172,11 @@ public class DefaultDispatchContext implements DispatchContext {
     @Override
     public ProtocolResponseMapper responseMapper() {
         return protocol().responseMapper();
+    }
+
+    @Override
+    public ProtocolRequestMapper requestMapper() {
+        return protocol().requestMapper();
     }
 
     private class NotificationsImpl implements ContextNotifications {

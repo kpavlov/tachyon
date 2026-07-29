@@ -1,28 +1,23 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.handlers;
 
+import dev.tachyonmcp.api.json.JsonObject;
 import dev.tachyonmcp.api.runtime.Extension;
 import dev.tachyonmcp.api.server.extensions.ExtensionSettings;
 import dev.tachyonmcp.api.server.extensions.ServerExtension;
+import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.McpProtocol;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.InitializeResponse;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
-import dev.tachyonmcp.core.server.json.JsonUtils;
 import dev.tachyonmcp.core.server.session.DispatchContext;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 
 public final class InitializeHandler implements RpcMethodHandler {
 
     private static final String MCP_VERSION = McpProtocol.VERSION;
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-
     private final ServerEngine server;
     private final List<ServerExtension> extensions;
 
@@ -40,7 +35,11 @@ public final class InitializeHandler implements RpcMethodHandler {
     public Object handle(DispatchContext context, Object params) {
         var capabilities = server.resolveCapabilities();
 
-        negotiateExtensions(context, params);
+        try {
+            negotiateExtensions(context, params);
+        } catch (RequestMappingException e) {
+            return e.error();
+        }
         var negotiatedExtensions = buildNegotiatedExtensions(context);
 
         final var serverConfig = server.config();
@@ -56,56 +55,21 @@ public final class InitializeHandler implements RpcMethodHandler {
     }
 
     private void negotiateExtensions(DispatchContext context, Object params) {
-        var clientExtensions = extractClientExtensions(params);
+        var clientExtensions = context.requestMapper().initialize(params).extensions();
         for (var ext : extensions) {
             if (clientExtensions.containsKey(ext.extensionId())) {
                 context.enableExtension(ext.extensionId());
                 var clientSettings = clientExtensions.get(ext.extensionId());
-                ext.onConnectionInit(context, ExtensionSettings.of(JsonUtils.toObjectMap(asMap(clientSettings))));
+                ext.onConnectionInit(context, ExtensionSettings.of(clientSettings.asMap()));
             }
         }
     }
 
-    private Map<String, JsonNode> buildNegotiatedExtensions(DispatchContext context) {
+    private Map<String, JsonObject> buildNegotiatedExtensions(DispatchContext context) {
         return extensions.stream()
                 .filter(e -> context.isExtensionEnabled(e.extensionId()))
                 .collect(Collectors.toMap(
                         Extension::extensionId,
-                        extension -> JsonUtils.parse(extension.serverSettings().values())));
-    }
-
-    private static Map<String, JsonNode> extractClientExtensions(Object params) {
-        if (params instanceof InitializeRequestParams initParams) {
-            if (initParams.capabilities() == null) {
-                return Map.of();
-            }
-            var clientExtensions = initParams.capabilities().extensions();
-            return clientExtensions != null ? clientExtensions : Map.of();
-        }
-        if (params instanceof Map<?, ?> map) {
-            var caps = map.get("capabilities");
-            if (caps instanceof Map<?, ?> capsMap) {
-                var exts = capsMap.get("extensions");
-                if (exts instanceof Map<?, ?> extMap) {
-                    var result = new LinkedHashMap<String, JsonNode>();
-                    for (var entry : extMap.entrySet()) {
-                        result.put(entry.getKey().toString(), MAPPER.valueToTree(entry.getValue()));
-                    }
-                    return result;
-                }
-            }
-        }
-        return Map.of();
-    }
-
-    private static Map<String, JsonNode> asMap(JsonNode node) {
-        if (node == null || !node.isObject()) {
-            return Map.of();
-        }
-        var map = new LinkedHashMap<String, JsonNode>();
-        for (var entry : node.properties()) {
-            map.put(entry.getKey(), entry.getValue());
-        }
-        return map;
+                        extension -> extension.serverSettings().values()));
     }
 }

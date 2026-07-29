@@ -4,9 +4,7 @@ package dev.tachyonmcp.core.server.features.resources;
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.runtime.InteractionContext;
 import dev.tachyonmcp.api.server.config.Mode;
-import dev.tachyonmcp.api.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.api.server.domain.ResourceContents;
-import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.UriTemplateValue;
 import dev.tachyonmcp.api.server.features.HandlerFutures;
 import dev.tachyonmcp.api.server.features.PaginatedResult;
@@ -16,20 +14,10 @@ import dev.tachyonmcp.api.server.features.resources.ResourceFn;
 import dev.tachyonmcp.api.server.features.resources.ResourceRequest;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.api.server.features.resources.Resources;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.ProtocolCodecUtil;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ReadResourceRequestParams;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.SubscribeRequestParams;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.UnsubscribeRequestParams;
-import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.config.ResourcesConfig;
-import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.features.ChangeSupport;
-import dev.tachyonmcp.core.server.features.ListRequests;
 import dev.tachyonmcp.core.server.features.Pagination;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
-import dev.tachyonmcp.core.server.json.JsonUtils;
-import dev.tachyonmcp.core.server.session.DispatchContext;
-import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Comparator;
@@ -40,8 +28,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -50,7 +36,6 @@ import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tools.jackson.databind.JsonNode;
 
 /**
  * Registry for resources, templates, and subscriptions.
@@ -106,7 +91,7 @@ public class DefaultResourceRegistry implements Resources {
         changes.fireOnChange();
     }
 
-    private static boolean isValidResourceUri(String uri) {
+    static boolean isValidResourceUri(String uri) {
         if (uri.isBlank() || uri.length() > MAX_RESOURCE_URI_LENGTH) {
             return false;
         }
@@ -375,7 +360,7 @@ public class DefaultResourceRegistry implements Resources {
         return index.byName().isEmpty();
     }
 
-    private record TemplateMatch(ResourceTemplateEntry entry, Map<String, UriTemplateValue> params) {}
+    record TemplateMatch(ResourceTemplateEntry entry, Map<String, UriTemplateValue> params) {}
 
     /**
      * Finds the most specific registered resource template matching the URI.
@@ -384,7 +369,7 @@ public class DefaultResourceRegistry implements Resources {
      * @return the matching template and extracted parameters, or {@code null} if no template matches
      */
     @Nullable
-    private TemplateMatch matchTemplate(String uri) {
+    TemplateMatch matchTemplate(String uri) {
         return templates.values().stream()
                 .sorted(Comparator.comparingInt((ResourceTemplateEntry t) -> -UriTemplatePatterns.EXPRESSION
                                 .matcher(t.descriptor().uriTemplate())
@@ -402,14 +387,6 @@ public class DefaultResourceRegistry implements Resources {
                 .filter(Objects::nonNull)
                 .findFirst()
                 .orElse(null);
-    }
-
-    public void registerHandlers(Map<String, RpcMethodHandler> registry) {
-        registry.put("resources/list", new ResourcesListHandler(this));
-        registry.put("resources/templates/list", new ResourcesTemplatesListHandler(this));
-        registry.put("resources/read", new ResourcesReadHandler(this));
-        registry.put("resources/subscribe", new ResourcesSubscribeHandler(this));
-        registry.put("resources/unsubscribe", new ResourcesUnsubscribeHandler(this));
     }
 
     /**
@@ -473,219 +450,6 @@ public class DefaultResourceRegistry implements Resources {
                             // subscriptions, so drop it lazily here to stop the set growing
                             // with dead ids. Safe while iterating: COW set snapshot.
                             () -> unsubscribe(uri, sessionId));
-        }
-    }
-
-    private record ResourcesListHandler(DefaultResourceRegistry registry) implements RpcMethodHandler {
-
-        @Override
-        public String method() {
-            return "resources/list";
-        }
-
-        @Override
-        public Object handle(DispatchContext context, Object params) {
-            var limit = ListRequests.parseLimit(params);
-            var cursor = ListRequests.parseCursor(params);
-            var paginated = registry.list(limit, cursor, e -> {
-                var extId = e.extensionId();
-                return extId == null || context.isExtensionEnabled(extId);
-            });
-            if (!paginated.cursorValid()) {
-                return ServerErrors.invalidParams("Invalid cursor");
-            }
-
-            return context.responseMapper().listResourcesResult(paginated.items(), paginated.nextCursor());
-        }
-    }
-
-    private record ResourcesTemplatesListHandler(DefaultResourceRegistry registry) implements RpcMethodHandler {
-
-        @Override
-        public String method() {
-            return "resources/templates/list";
-        }
-
-        @Override
-        public Object handle(DispatchContext context, Object params) {
-            if (ListRequests.parseCursor(params) != null) {
-                return ServerErrors.invalidParams("Invalid cursor");
-            }
-            var templates = registry.templates.values().stream()
-                    .map(ResourceTemplateEntry::descriptor)
-                    .toList();
-            return context.responseMapper().listResourceTemplatesResult(templates, null);
-        }
-    }
-
-    private record ResourcesReadHandler(DefaultResourceRegistry registry) implements RpcMethodHandler {
-
-        private static final Logger logger = LoggerFactory.getLogger(ResourcesReadHandler.class);
-
-        @Override
-        public String method() {
-            return "resources/read";
-        }
-
-        /** Compatibility fallback for callers invoking the blocking SPI method directly. */
-        @Override
-        public Object handle(DispatchContext context, Object params) throws Exception {
-            return HandlerFutures.joinInterruptibly(handleAsync(context, params));
-        }
-
-        /** Runs resource handlers on the server executor's virtual threads without blocking it. */
-        @Override
-        public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
-            var parsed = parseRequest(params);
-            if (parsed == null) {
-                return CompletableFuture.completedFuture(ServerErrors.invalidRequest("Missing resource URI"));
-            }
-            var uri = parsed.uri();
-            if (!isValidResourceUri(uri)) {
-                return CompletableFuture.completedFuture(ServerErrors.invalidParams("Invalid resource URI"));
-            }
-            var entry = registry.getByUri(uri);
-            if (entry != null) {
-                var extId = entry.descriptor().extensionId();
-                if (extId != null && !context.isExtensionEnabled(extId)) {
-                    return CompletableFuture.completedFuture(ServerErrors.resourceNotFound("Resource not found"));
-                }
-                var request = ResourceRequest.builder()
-                        .uri(uri)
-                        .meta(JsonUtils.toObjectMap(parsed.meta()))
-                        .build();
-                return readResult(context, uri, () -> entry.fn().apply(context, request));
-            }
-            var match = registry.matchTemplate(uri);
-            if (match == null) {
-                return CompletableFuture.completedFuture(
-                        ServerErrors.resourceNotFound("Resource not found", Map.of("uri", uri)));
-            }
-            var request = ResourceRequest.builder()
-                    .uri(uri)
-                    .params(match.params())
-                    .uriTemplate(match.entry().descriptor().uriTemplate())
-                    .meta(JsonUtils.toObjectMap(parsed.meta()))
-                    .build();
-            return readResult(context, uri, () -> match.entry().fn().apply(context, request));
-        }
-
-        private CompletionStage<Object> readResult(
-                DispatchContext context, String uri, Callable<CompletionStage<? extends ResourceContents>> invoker) {
-            // invokeAndMap: guards the synchronous-throw/null-stage cases, then re-anchors onto a
-            // tachyon- virtual thread only when the handler's stage is still pending, so a
-            // foreign completer thread never leaks into response mapping, without adding an
-            // executor hop to the common already-resolved case.
-            return HandlerFutures.invokeAndMap(
-                    "Resource handler for '" + uri + "' returned a null CompletionStage",
-                    invoker,
-                    context.engine().executor(),
-                    (contents, cause) -> {
-                        if (cause != null) {
-                            if (cause instanceof InvalidArgumentException e) {
-                                return ServerErrors.invalidParams(
-                                        "invalid argument '" + e.argName() + "': " + e.getMessage());
-                            }
-                            var error = ServerErrors.fromUnhandledException(cause, "Resource handler failed");
-                            if (error.kind() == ServerError.Kind.INVALID_PARAMS) {
-                                logger.debug("Resource handler rejected invalid params for '{}'", uri);
-                            } else {
-                                logger.error("Resource handler error for '{}'", uri, cause);
-                            }
-                            return error;
-                        }
-                        return context.responseMapper().readResourceResult(List.of(contents));
-                    });
-        }
-
-        private static @Nullable RequestParams parseRequest(Object params) {
-            if (params instanceof ReadResourceRequestParams(Map<String, JsonNode> meta, String uri)) {
-                return uri == null ? null : new RequestParams(uri, meta);
-            }
-            if (params instanceof Map<?, ?> map) {
-                var json = JsonRpcCodec.writeValueAsString(map);
-                var typed = ProtocolCodecUtil.decodeWithCodec(json, ReadResourceRequestParams.class);
-                return typed.uri() == null ? null : new RequestParams(typed.uri(), typed._meta());
-            }
-            return null;
-        }
-
-        private record RequestParams(String uri, @Nullable Map<String, JsonNode> meta) {}
-    }
-
-    private record ResourcesSubscribeHandler(DefaultResourceRegistry registry) implements RpcMethodHandler {
-
-        @Override
-        public String method() {
-            return "resources/subscribe";
-        }
-
-        @Override
-        public Object handle(DispatchContext context, Object params) {
-            var uri = extractUri(params);
-            if (uri == null) {
-                return ServerErrors.invalidRequest("Missing resource URI");
-            }
-            if (!isValidResourceUri(uri)) {
-                return ServerErrors.invalidParams("Invalid resource URI");
-            }
-            var session = context.session();
-            if (session == null) {
-                return ServerErrors.invalidRequest("resources/subscribe requires a session");
-            }
-            registry.subscribe(uri, session.id());
-            return context.responseMapper().emptyResult();
-        }
-
-        private static @Nullable String extractUri(Object params) {
-            if (params instanceof SubscribeRequestParams p) {
-                return p.uri();
-            }
-            if (!(params instanceof Map<?, ?> map)) {
-                return null;
-            }
-            if (map.get("uri") instanceof String s) {
-                return s;
-            }
-            return null;
-        }
-    }
-
-    private record ResourcesUnsubscribeHandler(DefaultResourceRegistry registry) implements RpcMethodHandler {
-
-        @Override
-        public String method() {
-            return "resources/unsubscribe";
-        }
-
-        @Override
-        public Object handle(DispatchContext context, Object params) {
-            var uri = extractUri(params);
-            if (uri == null) {
-                return ServerErrors.invalidRequest("Missing resource URI");
-            }
-            if (!isValidResourceUri(uri)) {
-                return ServerErrors.invalidParams("Invalid resource URI");
-            }
-            var session = context.session();
-            if (session == null) {
-                return ServerErrors.invalidRequest("resources/unsubscribe requires a session");
-            }
-            registry.unsubscribe(uri, session.id());
-            return context.responseMapper().emptyResult();
-        }
-
-        private static @Nullable String extractUri(Object params) {
-            if (params instanceof UnsubscribeRequestParams p) {
-                return p.uri();
-            }
-            if (!(params instanceof Map<?, ?> map)) {
-                return null;
-            }
-            if (map.get("uri") instanceof String s) {
-                return s;
-            }
-            return null;
         }
     }
 }

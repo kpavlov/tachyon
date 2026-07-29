@@ -8,6 +8,7 @@ import dev.tachyonmcp.api.runtime.InteractionContext;
 import dev.tachyonmcp.api.runtime.InteractionContext.Lifecycle;
 import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.core.protocol.Protocol;
+import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.server.McpDispatcher;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
@@ -141,6 +142,11 @@ class DefaultChannelContextTest {
         @Override
         public ProtocolResponseMapper responseMapper() {
             return null;
+        }
+
+        @Override
+        public ProtocolRequestMapper requestMapper() {
+            return new dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpRequestMapper();
         }
 
         @Override

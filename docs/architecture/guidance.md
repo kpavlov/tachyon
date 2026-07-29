@@ -2,6 +2,32 @@
 
 Rules for a new server-feature handler type (tools, resources, prompts, future ones). Read before adding or touching a handler SAM.
 
+## 🎯 Protocol boundary: map at the method handler
+
+Generated MCP models, JSON-RPC payloads, and JSON-library nodes are wire types. They stop at the
+protocol method handler. A feature registry is domain code: it receives API request objects and
+returns API result objects.
+
+```text
+wire JSON -> protocol request mapper -> domain request -> registry/feature handler
+registry/domain result -> protocol response mapper -> wire JSON
+```
+
+- The protocol method handler owns the RPC method name and calls the request mapper before it calls
+  a registry. It maps the returned domain result with the negotiated protocol's response mapper.
+- A registry must not implement `RpcMethodHandler`, accept `Object params`, inspect raw `Map`
+  payloads, invoke `JsonRpcCodec`/a generated codec, or import generated protocol models.
+- A request mapper is version-specific. It decodes its generated model and creates the stable API
+  domain request (`ToolRequest`, `PromptRequest`, `ResourceRequest`, and so on). It is the only
+  place that understands version-specific fields such as `inputResponses` and `requestState`.
+- A response mapper is version-specific and converts only domain results/errors to generated wire
+  models. It must not reach into a registry to reconstruct request data.
+- Keep JSON-library types inside mappers. Pass API JSON abstractions or ordinary domain values
+  across the boundary, so a different JSON backend changes a mapper/configuration, not a registry.
+
+`McpDispatcher` and transport code are wire glue and may handle raw JSON-RPC envelopes. This
+exception does not extend to feature registries or user-facing feature handlers.
+
 ## 🎯 Default shape: two independent SAMs
 
 Tools, resources, prompts, and completions use one request shape and two unrelated contracts:

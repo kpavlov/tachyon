@@ -9,6 +9,7 @@ import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams;
 import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
+import dev.tachyonmcp.core.server.json.JsonUtils;
 import java.time.Duration;
 import org.jspecify.annotations.Nullable;
 
@@ -44,7 +45,7 @@ final class McpTaskMapper {
 
     static GetTaskResult toGetTaskResult(TaskEntry entry) {
         return new GetTaskResult(
-                null,
+                JsonUtils.toJsonNodeMap(entry.meta()),
                 entry.id(),
                 toWireStatus(entry.status()),
                 entry.statusMessage(),
@@ -56,7 +57,7 @@ final class McpTaskMapper {
 
     public static CancelTaskResult toCancelTaskResult(TaskEntry entry) {
         return new CancelTaskResult(
-                null,
+                JsonUtils.toJsonNodeMap(entry.meta()),
                 entry.id(),
                 toWireStatus(entry.status()),
                 entry.statusMessage(),
@@ -67,12 +68,12 @@ final class McpTaskMapper {
     }
 
     static CreateTaskResult toCreateTaskResult(TaskEntry entry) {
-        return new CreateTaskResult(toTaskProto(entry), null, null);
+        return new CreateTaskResult(toTaskProto(entry), JsonUtils.toJsonNodeMap(entry.meta()), null);
     }
 
     static TaskStatusNotificationParams toStatusNotification(TaskEntry entry) {
         return new TaskStatusNotificationParams(
-                null,
+                JsonUtils.toJsonNodeMap(entry.meta()),
                 entry.id(),
                 toWireStatus(entry.status()),
                 entry.statusMessage(),

@@ -2,6 +2,7 @@
 package dev.tachyonmcp.core.protocol.mcp.v2025_11_25;
 
 import dev.tachyonmcp.core.protocol.Protocol;
+import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpResponseMapper;
@@ -30,6 +31,8 @@ public final class McpProtocol implements Protocol {
             );
 
     static final ProtocolResponseMapper RESPONSE_MAPPER = new McpResponseMapper();
+    private static final ProtocolRequestMapper REQUEST_MAPPER =
+            new dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpRequestMapper();
 
     @Override
     public String endpoint() {
@@ -62,5 +65,10 @@ public final class McpProtocol implements Protocol {
     @Override
     public ProtocolResponseMapper responseMapper() {
         return RESPONSE_MAPPER;
+    }
+
+    @Override
+    public ProtocolRequestMapper requestMapper() {
+        return REQUEST_MAPPER;
     }
 }

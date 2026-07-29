@@ -3,14 +3,12 @@ package dev.tachyonmcp.core.server;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.runtime.AttributeKey;
-import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.api.server.domain.ServerError;
-import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.protocol.Protocols;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus;
+import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.runtime.ChannelContext;
 import dev.tachyonmcp.core.runtime.Session;
 import dev.tachyonmcp.core.runtime.SessionState;
@@ -166,7 +164,11 @@ public class McpDispatcher {
         Objects.requireNonNull(method, "method");
 
         var requestCtx = dispatchContext(channelContext);
-        requestCtx.setPermittedLogLevel(metaLogLevel(params));
+        try {
+            requestCtx.setPermittedLogLevel(requestCtx.requestMapper().permittedLogLevel(params));
+        } catch (RequestMappingException e) {
+            return CompletableFuture.completedFuture(errorResult(id, e.error(), requestCtx));
+        }
         if (METHOD_INITIALIZE.equals(method)) {
             if (sessionId == null) {
                 return dispatchInitializeAsync(id, params, requestCtx, channelContext);
@@ -225,7 +227,8 @@ public class McpDispatcher {
         var owningExtensionId = server.extensionForMethod(method);
         if (owningExtensionId != null) {
             if (!ic.isExtensionEnabled(owningExtensionId)) return null;
-            if (server.extensionRequiresMeta(owningExtensionId) && !hasMetaKey(params, owningExtensionId)) return null;
+            if (server.extensionRequiresMeta(owningExtensionId)
+                    && !ic.requestMapper().hasMetaKey(params, owningExtensionId)) return null;
         }
         return server.getHandler(method);
     }
@@ -314,10 +317,19 @@ public class McpDispatcher {
     }
 
     public DispatchResult dispatchNotification(String method, @Nullable Object params, @Nullable String sessionId) {
+        return dispatchNotification(method, params, sessionId, null);
+    }
+
+    public DispatchResult dispatchNotification(
+            String method,
+            @Nullable Object params,
+            @Nullable String sessionId,
+            @Nullable ChannelContext channelContext) {
         if (server.isStateless()) {
             logger.debug("Stateless notification ignored: {}", method);
             return DispatchResult.Accepted.INSTANCE;
         }
+        var context = dispatchContext(channelContext);
 
         final Optional<Session> sessionOpt;
         if (sessionId != null) {
@@ -337,11 +349,11 @@ public class McpDispatcher {
                 return DispatchResult.Accepted.INSTANCE;
             }
             case NOTIFICATIONS_CANCELLED -> {
-                handleCancellation(params, sessionId);
+                handleCancellation(context, params, sessionId);
                 return DispatchResult.Accepted.INSTANCE;
             }
             case NOTIFICATIONS_TASKS_STATUS -> {
-                handleTaskStatusNotification(params, sessionId);
+                handleTaskStatusNotification(context, params, sessionId);
                 return DispatchResult.Accepted.INSTANCE;
             }
             default -> {}
@@ -350,94 +362,55 @@ public class McpDispatcher {
         return DispatchResult.Accepted.INSTANCE;
     }
 
-    private void handleCancellation(@Nullable Object params, @Nullable String sessionId) {
-        RequestId rawRequestId = null;
-        String rawReason = null;
-        if (params instanceof Map<?, ?> map) {
-            var rawId = map.get("requestId");
-            if (rawId != null && !(rawId instanceof CharSequence) && !(rawId instanceof Number)) {
-                logger.debug("Cancellation notification has invalid requestId: {}", rawId);
-                return;
-            }
-            rawRequestId = RequestId.ofNullable(rawId);
-            var r = map.get("reason");
-            rawReason = r instanceof String s ? s : null;
-        }
-        if (rawRequestId == null) {
+    private void handleCancellation(DispatchContext context, @Nullable Object params, @Nullable String sessionId) {
+        var cancellation = context.requestMapper().cancellation(params);
+        if (cancellation == null) {
             logger.debug("Cancellation notification missing requestId");
             return;
         }
         if (sessionId == null) {
-            logger.debug("Cancellation without session, requestId={}", rawRequestId);
+            logger.debug("Cancellation without session, requestId={}", cancellation.requestId());
             return;
         }
-        var finalRequestId = rawRequestId;
-        var finalReason = rawReason;
         server.getSession(sessionId)
                 .ifPresentOrElse(
                         session -> {
-                            var reasonMsg = finalReason != null ? ": " + finalReason : "";
-                            var cancelled = server.failPendingRequest(finalRequestId, "Cancelled" + reasonMsg);
+                            var reasonMsg = cancellation.reason() != null ? ": " + cancellation.reason() : "";
+                            var cancelled =
+                                    server.failPendingRequest(cancellation.requestId(), "Cancelled" + reasonMsg);
                             if (cancelled) {
                                 logger.debug(
                                         "Cancelled pending request: requestId={}, sessionId={}, reason={}",
-                                        finalRequestId,
+                                        cancellation.requestId(),
                                         sessionId,
-                                        finalReason);
+                                        cancellation.reason());
                             } else {
                                 logger.debug(
                                         "No pending request found for cancellation: requestId={}, sessionId={}",
-                                        finalRequestId,
+                                        cancellation.requestId(),
                                         sessionId);
                             }
                             server.appendEvent(new SessionEvent.CancelEvent(
-                                    sessionId, finalRequestId, System.currentTimeMillis()));
+                                    sessionId, cancellation.requestId(), System.currentTimeMillis()));
                         },
                         () -> logger.debug(
-                                "Cancellation for unknown session: {}, requestId={}", sessionId, finalRequestId));
+                                "Cancellation for unknown session: {}, requestId={}",
+                                sessionId,
+                                cancellation.requestId()));
     }
 
-    private void handleTaskStatusNotification(@Nullable Object params, @Nullable String sessionId) {
+    private void handleTaskStatusNotification(
+            DispatchContext context, @Nullable Object params, @Nullable String sessionId) {
         if (sessionId == null) {
             logger.debug("Task status notification without session");
             return;
         }
-        if (!(params instanceof Map<?, ?> map)) {
+        var status = context.requestMapper().taskStatus(params);
+        if (status == null) {
             logger.debug("Task status notification missing params");
             return;
         }
-        var rawTaskId = map.get("taskId");
-        if (!(rawTaskId instanceof String taskId)) {
-            logger.debug("Task status notification missing taskId");
-            return;
-        }
-        // version-specific (MCP 2025-11-25): task status enum — moves behind McpDialect
-        TaskStatus taskStatus = null;
-        var rawStatus = map.get("status");
-        if (rawStatus instanceof String s) {
-            try {
-                taskStatus = TaskStatus.fromValue(s);
-            } catch (IllegalArgumentException e) {
-                logger.debug("Unknown task status: {}", s);
-            }
-        } else if (rawStatus instanceof TaskStatus ts) {
-            taskStatus = ts;
-        }
-        if (taskStatus == null) {
-            taskStatus = TaskStatus.WORKING;
-        }
-        var newStatus =
-                switch (taskStatus) {
-                    case WORKING -> TaskState.WORKING;
-                    case INPUT_REQUIRED -> TaskState.INPUT_REQUIRED;
-                    case COMPLETED -> TaskState.COMPLETED;
-                    case FAILED -> TaskState.FAILED;
-                    case CANCELLED -> TaskState.CANCELLED;
-                };
-        var rawStatusMessage = map.get("statusMessage");
-        var statusMessage = rawStatusMessage instanceof String s ? s : null;
-        var taskRegistry = server.tasksRegistry();
-        taskRegistry.updateStatus(taskId, newStatus, statusMessage);
+        server.tasksRegistry().updateStatus(status.taskId(), status.state(), status.message());
     }
 
     private CompletableFuture<DispatchResult> dispatchInitializeAsync(
@@ -505,27 +478,5 @@ public class McpDispatcher {
                 channelContext != null ? channelContext.get(ATTR_INIT_REQUEST).orElse(null) : null;
         var generator = server.sessionIdGenerator();
         return generator.generate(channelContext, request != null ? request : EMPTY_INIT_REQUEST);
-    }
-
-    private static boolean hasMetaKey(Object params, String key) {
-        if (params instanceof Map<?, ?> map && map.get("_meta") instanceof Map<?, ?> meta) {
-            return meta.containsKey(key);
-        }
-        return false;
-    }
-
-    private static final String META_LOG_LEVEL_KEY = "io.modelcontextprotocol/logLevel";
-
-    private static @Nullable LoggingLevel metaLogLevel(Object params) {
-        if (params instanceof Map<?, ?> map
-                && map.get("_meta") instanceof Map<?, ?> meta
-                && meta.get(META_LOG_LEVEL_KEY) instanceof String level) {
-            try {
-                return LoggingLevel.fromValue(level);
-            } catch (IllegalArgumentException ignored) {
-                return null;
-            }
-        }
-        return null;
     }
 }

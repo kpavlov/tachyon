@@ -3,6 +3,7 @@ package dev.tachyonmcp.core.server.session;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
+import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.runtime.ChannelContext;
 import dev.tachyonmcp.core.server.OutboundSseStream;
@@ -34,6 +35,9 @@ public interface DispatchContext extends ChannelContext {
 
     /** Returns the protocol response mapper for the current protocol version. */
     ProtocolResponseMapper responseMapper();
+
+    /** Returns the protocol request mapper for the current protocol version. */
+    ProtocolRequestMapper requestMapper();
 
     /** Returns the outbound SSE stream, or {@code null} if not yet upgraded. */
     @Nullable

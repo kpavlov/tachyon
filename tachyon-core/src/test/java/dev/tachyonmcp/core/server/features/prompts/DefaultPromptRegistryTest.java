@@ -30,8 +30,8 @@ import org.junit.jupiter.api.Test;
 class DefaultPromptRegistryTest {
 
     private final ServerEngine server = newEngine(b -> {});
-    private final DefaultPromptRegistry registry = new DefaultPromptRegistry(
-            JsonSchemaValidator.noop(), FeatureConfig.builder().build());
+    private final DefaultPromptRegistry registry =
+            new DefaultPromptRegistry(FeatureConfig.builder().build());
     private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
 
     private static PromptDescriptor prompt(String name) {
@@ -40,7 +40,7 @@ class DefaultPromptRegistryTest {
 
     @BeforeEach
     void setUp() {
-        registry.registerHandlers(handlers);
+        PromptMethodHandlers.register(handlers, registry, JsonSchemaValidator.noop());
     }
 
     private Object getPrompt(Object params) throws Exception {
@@ -91,8 +91,7 @@ class DefaultPromptRegistryTest {
 
     @Test
     void listWithCustomPageSize() {
-        var reg = new DefaultPromptRegistry(
-                JsonSchemaValidator.noop(), FeatureConfig.builder().pageSize(1).build());
+        var reg = new DefaultPromptRegistry(FeatureConfig.builder().pageSize(1).build());
         reg.register(prompt("a"), List.of());
         reg.register(prompt("b"), List.of());
         var result = reg.list(0, null);
@@ -102,8 +101,7 @@ class DefaultPromptRegistryTest {
 
     @Test
     void registerIsNoOpWhenPromptsCapabilityIsOff() {
-        var reg = new DefaultPromptRegistry(
-                JsonSchemaValidator.noop(), FeatureConfig.builder().off().build());
+        var reg = new DefaultPromptRegistry(FeatureConfig.builder().off().build());
         var changeCount = new AtomicInteger();
         reg.onChange(changeCount::incrementAndGet);
 
@@ -140,7 +138,7 @@ class DefaultPromptRegistryTest {
         var result = getPrompt(Map.of("name", "nonexistent"));
 
         assertThat(result).isInstanceOf(ServerError.class);
-        assertThat(((ServerError) result).kind()).isEqualTo(ServerError.Kind.INVALID_REQUEST);
+        assertThat(((ServerError) result).kind()).isEqualTo(ServerError.Kind.INVALID_PARAMS);
     }
 
     @Test

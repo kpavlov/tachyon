@@ -15,6 +15,7 @@ import dev.tachyonmcp.core.server.session.DefaultDispatchContext;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -27,8 +28,8 @@ class ResourceRequestDispatchTest {
         var registry =
                 new DefaultResourceRegistry(server, ResourcesConfig.builder().build());
         var handlers = new HashMap<String, RpcMethodHandler>();
-        registry.registerHandlers(handlers);
-        var captured = new AtomicReference<ResourceRequest>();
+        ResourceMethodHandlers.register(handlers, registry);
+        var captured = new AtomicReference<@Nullable ResourceRequest>();
         registry.register(
                 ResourceDescriptor.of("meta-request", "test://meta-request", null, "text/plain"), (ctx, request) -> {
                     captured.set(request);

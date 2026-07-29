@@ -4,10 +4,8 @@ package dev.tachyonmcp.core.server.features;
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.server.ServerFeature;
 import dev.tachyonmcp.api.server.features.PaginatedResult;
-import dev.tachyonmcp.core.server.RpcMethodHandler;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
@@ -172,11 +170,4 @@ public abstract class AbstractRegistry<D extends ServerFeature.Descriptor, R ext
                 .toList();
         return Pagination.paginate(all, lim, cursor, ServerFeature.Descriptor::name);
     }
-
-    /**
-     * Registers all handlers from this registry into the given handler map.
-     *
-     * @param registry the handler registry to populate
-     */
-    public abstract void registerHandlers(Map<String, RpcMethodHandler> registry);
 }

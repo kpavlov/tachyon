@@ -2,6 +2,7 @@
 package dev.tachyonmcp.core.protocol.mcp.v2026_07_28;
 
 import dev.tachyonmcp.core.protocol.Protocol;
+import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs.McpResponseMapper;
@@ -14,6 +15,8 @@ public final class McpProtocol implements Protocol {
     private static final String ENDPOINT = "/mcp";
     public static final String VERSION = "2026-07-28";
     private static final ProtocolResponseMapper RESPONSE_MAPPER = new McpResponseMapper();
+    private static final ProtocolRequestMapper REQUEST_MAPPER =
+            new dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs.McpRequestMapper();
 
     @Override
     public String endpoint() {
@@ -40,6 +43,11 @@ public final class McpProtocol implements Protocol {
     @Override
     public ProtocolResponseMapper responseMapper() {
         return RESPONSE_MAPPER;
+    }
+
+    @Override
+    public ProtocolRequestMapper requestMapper() {
+        return REQUEST_MAPPER;
     }
 
     /** 2026-07-28 removed protocol-level sessions: every request self-describes via {@code _meta}. */

@@ -68,7 +68,7 @@ class DefaultResourceRegistryTest {
 
     @BeforeEach
     void setUp() {
-        registry.registerHandlers(handlers);
+        ResourceMethodHandlers.register(handlers, registry);
     }
 
     @Test
