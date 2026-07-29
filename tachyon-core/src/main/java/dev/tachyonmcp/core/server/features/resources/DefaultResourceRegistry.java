@@ -30,6 +30,8 @@ import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.server.json.JsonUtils;
 import dev.tachyonmcp.core.server.session.DispatchContext;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -56,6 +58,7 @@ import tools.jackson.databind.JsonNode;
 @InternalApi
 public class DefaultResourceRegistry implements Resources {
 
+    private static final int MAX_RESOURCE_URI_LENGTH = 8_192;
     private static final Logger logger = LoggerFactory.getLogger(DefaultResourceRegistry.class);
 
     /**
@@ -101,6 +104,18 @@ public class DefaultResourceRegistry implements Resources {
      */
     private void fireOnChange() {
         changes.fireOnChange();
+    }
+
+    private static boolean isValidResourceUri(String uri) {
+        if (uri.isBlank() || uri.length() > MAX_RESOURCE_URI_LENGTH) {
+            return false;
+        }
+        try {
+            new URI(uri);
+            return true;
+        } catch (URISyntaxException ignored) {
+            return false;
+        }
     }
 
     /**
@@ -526,6 +541,9 @@ public class DefaultResourceRegistry implements Resources {
                 return CompletableFuture.completedFuture(ServerErrors.invalidRequest("Missing resource URI"));
             }
             var uri = parsed.uri();
+            if (!isValidResourceUri(uri)) {
+                return CompletableFuture.completedFuture(ServerErrors.invalidParams("Invalid resource URI"));
+            }
             var entry = registry.getByUri(uri);
             if (entry != null) {
                 var extId = entry.descriptor().extensionId();
@@ -608,6 +626,9 @@ public class DefaultResourceRegistry implements Resources {
             if (uri == null) {
                 return ServerErrors.invalidRequest("Missing resource URI");
             }
+            if (!isValidResourceUri(uri)) {
+                return ServerErrors.invalidParams("Invalid resource URI");
+            }
             var session = context.session();
             if (session == null) {
                 return ServerErrors.invalidRequest("resources/subscribe requires a session");
@@ -642,6 +663,9 @@ public class DefaultResourceRegistry implements Resources {
             var uri = extractUri(params);
             if (uri == null) {
                 return ServerErrors.invalidRequest("Missing resource URI");
+            }
+            if (!isValidResourceUri(uri)) {
+                return ServerErrors.invalidParams("Invalid resource URI");
             }
             var session = context.session();
             if (session == null) {

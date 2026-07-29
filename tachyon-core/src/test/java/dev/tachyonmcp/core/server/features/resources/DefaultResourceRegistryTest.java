@@ -39,6 +39,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class DefaultResourceRegistryTest {
 
@@ -263,6 +265,34 @@ class DefaultResourceRegistryTest {
         var result = handlers.get("resources/read").handle(DefaultDispatchContext.stateless(server), Map.of());
 
         assertThat(result).isInstanceOf(ServerError.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", " ", "test://bad path", "test://bad%2", "test://bad\npath"})
+    void shouldRejectInvalidReadResourceUri(String uri) throws Exception {
+        var result = handlers.get("resources/read")
+                .handle(DefaultDispatchContext.stateless(server), Map.<String, Object>of("uri", uri));
+
+        assertThat(result).isEqualTo(new ServerError(ServerError.Kind.INVALID_PARAMS, "Invalid resource URI"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"resources/subscribe", "resources/unsubscribe"})
+    void shouldRejectInvalidSubscriptionUri(String method) throws Exception {
+        var result =
+                handlers.get(method).handle(DefaultDispatchContext.stateless(server), Map.of("uri", "test://bad uri"));
+
+        assertThat(result).isEqualTo(new ServerError(ServerError.Kind.INVALID_PARAMS, "Invalid resource URI"));
+    }
+
+    @Test
+    void shouldRejectOversizedResourceUri() throws Exception {
+        var result = handlers.get("resources/read")
+                .handle(
+                        DefaultDispatchContext.stateless(server),
+                        Map.<String, Object>of("uri", "test://" + "a".repeat(8_192)));
+
+        assertThat(result).isEqualTo(new ServerError(ServerError.Kind.INVALID_PARAMS, "Invalid resource URI"));
     }
 
     @Test

@@ -182,38 +182,7 @@ class UriTemplateTest {
                 sequenceArguments("empty exploded path list", "X{/colors*}", "X", "colors"),
                 sequenceArguments("empty exploded matrix list", "X{;colors*}", "X", "colors"),
                 sequenceArguments("empty exploded query list", "X{?colors*}", "X", "colors"),
-                sequenceArguments("empty exploded continuation list", "X{&colors*}", "X", "colors"),
-                arguments(
-                        "percent-encoded space and unicode in weather URI",
-                        "weather://current/{city}",
-                        "weather://current/Los%20%C3%81ngeles",
-                        Map.of("city", "Los Ángeles")),
-                arguments(
-                        "raw space and raw unicode in weather URI",
-                        "weather://current/{city}",
-                        "weather://current/Los Ángeles",
-                        Map.of("city", "Los Ángeles")),
-                arguments(
-                        "raw space in path variable",
-                        "/users/{name}/profile",
-                        "/users/John Doe/profile",
-                        Map.of("name", "John Doe")),
-                arguments(
-                        "percent-encoded space in path variable",
-                        "/users/{name}/profile",
-                        "/users/John%20Doe/profile",
-                        Map.of("name", "John Doe")),
-                arguments("raw unicode city name", "/weather/{city}", "/weather/México", Map.of("city", "México")),
-                arguments(
-                        "special chars in query value",
-                        "search?q={query}",
-                        "search?q=New%20York%20%26%20LA",
-                        Map.of("query", "New York & LA")),
-                arguments(
-                        "raw space in query value",
-                        "search?q={query}",
-                        "search?q=hello world",
-                        Map.of("query", "hello world")));
+                sequenceArguments("empty exploded continuation list", "X{&colors*}", "X", "colors"));
     }
 
     private static Stream<Arguments> invalidRfc6570Templates() {

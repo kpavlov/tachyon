@@ -237,6 +237,32 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
     }
 
     @Test
+    void shouldRejectInvalidResourceUri() throws Exception {
+        startEmptyServer();
+
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+            var response = client.post(sessionId, """
+                {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://bad uri"}}
+                """);
+
+            assertThat(response.statusCode()).isEqualTo(200);
+            // language=JSON
+            var expected = """
+                {
+                  "jsonrpc": "2.0",
+                  "id": 2,
+                  "error": {
+                    "code": -32602,
+                    "message": "Invalid resource URI"
+                  }
+                }
+                """;
+            assertThatJson(response.body()).isEqualTo(expected);
+        }
+    }
+
+    @Test
     void shouldReturnEmptyListWhenNoResources() throws Exception {
         startEmptyServer();
 

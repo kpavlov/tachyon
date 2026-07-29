@@ -90,9 +90,13 @@ public final class UriTemplate {
             throw noMatch(rawUri);
         }
 
-        final var normalizedUri = normalizeUri(rawUri);
+        try {
+            new URI(rawUri);
+        } catch (URISyntaxException exception) {
+            throw noMatch(rawUri);
+        }
 
-        Matcher matcher = pattern.matcher(normalizedUri);
+        Matcher matcher = pattern.matcher(rawUri);
         if (!matcher.matches()) {
             throw noMatch(rawUri);
         }
@@ -335,64 +339,6 @@ public final class UriTemplate {
             index += Character.charCount(codePoint);
         }
         regex.append(Pattern.quote(encoded.toString()));
-    }
-
-    /**
-     * Normalizes a raw URI by encoding characters that are illegal in
-     * URIs (spaces, control characters, non-ASCII, forbidden chars) and
-     * validates the result.
-     *
-     * @param rawUri the raw URI string
-     * @return the normalized URI string with illegal characters percent-encoded
-     * @throws IllegalArgumentException if the URI is invalid
-     */
-    private static String normalizeUri(String rawUri) {
-        String normalized = encodeIllegalCharacters(rawUri);
-        try {
-            new URI(normalized);
-            return normalized;
-        } catch (URISyntaxException exception) {
-            throw noMatch(rawUri);
-        }
-    }
-
-    /**
-     * Percent-encodes characters that are illegal in URIs (spaces,
-     * control characters, non-ASCII, and characters forbidden by RFC 3986).
-     *
-     * @param rawUri the raw URI string
-     * @return the repaired URI string with illegal characters percent-encoded
-     */
-    private static String encodeIllegalCharacters(String rawUri) {
-        var result = new StringBuilder(rawUri.length() + 16);
-        for (int index = 0; index < rawUri.length(); ) {
-            int codePoint = rawUri.codePointAt(index);
-            if (codePoint <= 0x20 || codePoint == 0x7F || isForbiddenInUri(codePoint) || codePoint > 0x7F) {
-                appendPercentEncoded(result, codePoint);
-            } else {
-                result.appendCodePoint(codePoint);
-            }
-            index += Character.charCount(codePoint);
-        }
-        return result.toString();
-    }
-
-    /**
-     * Determines whether a code point is forbidden in URIs per RFC 3986.
-     *
-     * @param codePoint the Unicode code point to check
-     * @return {@code true} if the code point is forbidden, {@code false} otherwise
-     */
-    private static boolean isForbiddenInUri(int codePoint) {
-        return codePoint == '"'
-                || codePoint == '<'
-                || codePoint == '>'
-                || codePoint == '\\'
-                || codePoint == '^'
-                || codePoint == '`'
-                || codePoint == '{'
-                || codePoint == '|'
-                || codePoint == '}';
     }
 
     /**
