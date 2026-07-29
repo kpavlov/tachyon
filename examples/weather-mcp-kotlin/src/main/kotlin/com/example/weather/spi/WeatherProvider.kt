@@ -2,6 +2,10 @@
 
 package com.example.weather.spi
 
+import com.example.weather.model.TemperatureUnit
+
 fun interface WeatherProvider {
-    fun currentWeather(city: String): WeatherObservation
+    fun currentWeather(city: String,
+                       temperatureUnit: TemperatureUnit
+    ): WeatherObservation
 }

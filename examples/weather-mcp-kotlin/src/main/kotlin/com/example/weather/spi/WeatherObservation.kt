@@ -2,10 +2,15 @@
 
 package com.example.weather.spi
 
+import com.example.weather.model.TemperatureUnit
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class WeatherObservation(
     val city: String,
     val condition: String,
-    val temperatureCelsius: Double,
+    val temperature: Double,
+    val temperatureUnit: TemperatureUnit,
     val humidity: Int,
     val windSpeed: Double,
 )

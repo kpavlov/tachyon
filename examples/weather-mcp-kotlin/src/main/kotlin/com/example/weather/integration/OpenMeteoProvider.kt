@@ -2,6 +2,7 @@
 
 package com.example.weather.integration
 
+import com.example.weather.model.TemperatureUnit
 import com.example.weather.spi.CityNotFoundException
 import com.example.weather.spi.CityProvider
 import com.example.weather.spi.WeatherCondition
@@ -21,10 +22,13 @@ class OpenMeteoProvider(
     private val httpClient: HttpClient,
 ) : WeatherProvider,
     CityProvider {
-    override fun currentWeather(city: String): WeatherObservation {
+    override fun currentWeather(
+        city: String,
+        temperatureUnit: TemperatureUnit
+    ): WeatherObservation {
         val location = location(city, get(geocodingRequest(city, count = 1)))
-        val forecast = get(forecastRequest(location))
-        return weather(city, forecast)
+        val forecast = get(forecastRequest(location, temperatureUnit))
+        return weather(city, temperatureUnit, forecast)
     }
 
     override fun searchCities(query: String): List<String> {
@@ -53,13 +57,15 @@ class OpenMeteoProvider(
 
     private fun weather(
         city: String,
+        temperatureUnit: TemperatureUnit,
         response: String,
     ): WeatherObservation {
         val current = parse(response).path("current")
         return WeatherObservation(
             city = city,
             condition = condition(current.path("weather_code").asInt()).displayName,
-            temperatureCelsius = current.path("temperature_2m").asDouble(),
+            temperature = current.path("temperature_2m").asDouble(),
+            temperatureUnit = temperatureUnit,
             humidity = current.path("relative_humidity_2m").asInt(),
             windSpeed = current.path("wind_speed_10m").asDouble(),
         )
@@ -94,11 +100,14 @@ class OpenMeteoProvider(
                 .build()
         }
 
-        private fun forecastRequest(location: Location): HttpRequest {
+        private fun forecastRequest(
+            location: Location,
+            temperatureUnit: TemperatureUnit
+        ): HttpRequest {
             val uri =
                 "$FORECAST_URL?latitude=${location.latitude}&longitude=${location.longitude}" +
                     "&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m" +
-                    "&wind_speed_unit=kmh"
+                    "&wind_speed_unit=kmh&temperature_unit=${temperatureUnit.name.lowercase()}"
             return HttpRequest
                 .newBuilder(URI.create(uri))
                 .timeout(REQUEST_TIMEOUT)

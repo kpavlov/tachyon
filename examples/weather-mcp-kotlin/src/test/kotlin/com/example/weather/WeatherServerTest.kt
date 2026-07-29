@@ -104,7 +104,7 @@ class WeatherServerTest {
             name() shouldBe "get-weather"
             title() shouldBe "Current Weather"
             description() shouldBe "Get current weather for a city"
-            outputSchema() shouldBe null
+            outputSchema() shouldNotBe null
         }
     }
 
@@ -114,7 +114,7 @@ class WeatherServerTest {
             client.callTool(
                 CallToolRequest
                     .builder("get-weather")
-                    .arguments(mapOf("city" to "London", "units" to "celsius"))
+                    .arguments(mapOf("city" to "London", "units" to "Celsius"))
                     .build(),
             )
 

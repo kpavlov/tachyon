@@ -2,6 +2,7 @@
 
 package com.example.weather
 
+import com.example.weather.model.TemperatureUnit
 import com.example.weather.service.WeatherService
 import com.example.weather.spi.WeatherProvider
 import io.kotest.matchers.shouldBe
@@ -67,7 +68,7 @@ class GetWeatherEdgeCasesTest {
     @Test
     fun `returns fixed error when provider fails without leaking details`() {
         val failingProvider =
-            WeatherProvider { throw IOException("connection refused to internal-host:6443") }
+            WeatherProvider { _, _ -> throw IOException("connection refused to internal-host:6443") }
 
         val result =
             callGetWeather(WeatherService(failingProvider, TestCityProvider())) {

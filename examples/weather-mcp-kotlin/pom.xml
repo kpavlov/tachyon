@@ -18,8 +18,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>21</java.version>
         <kotlin.version>2.2.21</kotlin.version>
-        <tachyon.version>1.0.0-beta.15</tachyon.version>
-<!--        <tachyon.version>1.0.0-SNAPSHOT</tachyon.version>-->
+<!--        <tachyon.version>1.0.0-beta.16</tachyon.version>-->
+        <tachyon.version>1.0.0-SNAPSHOT</tachyon.version>
         <junit.version>6.1.2</junit.version>
         <kotest.version>6.2.1</kotest.version>
         <jackson.version>3.2.0</jackson.version>
@@ -28,6 +28,7 @@
         <mcp-sdk.version>2.0.0</mcp-sdk.version>
         <awaitility.version>4.3.0</awaitility.version>
         <kotlinx-serialization-json.version>1.11.0</kotlinx-serialization-json.version>
+        <kt-schema.version>0.7.0</kt-schema.version>
     </properties>
 
     <dependencyManagement>
@@ -43,6 +44,13 @@
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
                 <version>${junit.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-bom</artifactId>
+                <version>${kotlin.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -72,6 +80,27 @@
             <artifactId>slf4j-simple</artifactId>
             <version>${slf4j.version}</version>
             <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>me.kpavlov.kt.schema</groupId>
+            <artifactId>kt-schema-generator-json-jvm</artifactId>
+            <version>${kt-schema.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>me.kpavlov.kt.schema</groupId>
+            <artifactId>kt-schema-generator-core-jvm</artifactId>
+            <version>${kt-schema.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>me.kpavlov.kt.schema</groupId>
+            <artifactId>kt-schema-json-jvm</artifactId>
+            <version>${kt-schema.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>me.kpavlov.kt.schema</groupId>
+            <artifactId>kt-schema-annotations</artifactId>
+            <version>${kt-schema.version}</version>
         </dependency>
 
         <!-- Test -->
@@ -132,7 +161,20 @@
                 <configuration>
                     <jvmTarget>${java.version}</jvmTarget>
                     <javaParameters>true</javaParameters>
+                    <args>
+                        <arg>-Xannotation-default-target=param-property</arg>
+                    </args>
+                    <compilerPlugins>
+                        <plugin>kotlinx-serialization</plugin>
+                    </compilerPlugins>
                 </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.jetbrains.kotlin</groupId>
+                        <artifactId>kotlin-maven-serialization</artifactId>
+                        <version>${kotlin.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

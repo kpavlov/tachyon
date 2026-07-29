@@ -2,6 +2,10 @@
 
 package com.example.weather
 
+import com.example.weather.model.GetWeatherInput
+import com.example.weather.model.TemperatureUnit
+import com.example.weather.model.TemperatureUnit.Celsius
+import com.example.weather.model.TemperatureUnit.Fahrenheit
 import com.example.weather.service.WeatherService
 import com.example.weather.spi.CityNotFoundException
 import com.example.weather.spi.WeatherObservation
@@ -10,10 +14,12 @@ import dev.tachyonmcp.api.runtime.ElicitationRequest
 import dev.tachyonmcp.api.runtime.ElicitationResult
 import dev.tachyonmcp.api.runtime.InteractionContext
 import dev.tachyonmcp.api.server.domain.ProgressToken
-import dev.tachyonmcp.api.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.kotlin.server.config.ToolScope
+import dev.tachyonmcp.kotlin.server.domain.stringOrNull
 import dev.tachyonmcp.kotlin.server.features.tools.ToolDescriptor
+import me.kpavlov.kt.schema.generator.json.JsonSchemaConfig
+import me.kpavlov.kt.schema.generator.json.ReflectionClassJsonSchemaGenerator
 import org.slf4j.LoggerFactory
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -21,47 +27,51 @@ import java.util.concurrent.TimeoutException
 
 private val log = LoggerFactory.getLogger("com.example.weather.GetWeatherTool")
 private const val ELICITATION_TIMEOUT_SECONDS = 600L
-private val CITY_SCHEMA =
-    JsonSchema.of(
-        """{"type":"object","properties":{"city":{"type":"string","title":"City"}},"required":["city"]}""",
+
+private val schemaGenerator =
+    ReflectionClassJsonSchemaGenerator(
+        json = kotlinx.serialization.json.Json { encodeDefaults = false },
+        config = JsonSchemaConfig.Default,
     )
 
-// language=json
-private const val INPUT_SCHEMA = """
-{
-  "type": "object",
-  "properties": {
-    "city": {
-      "type": "string",
-      "description": "City name (e.g., London, Tokyo, New York)"
-    },
-    "units": {
-      "type": "string",
-      "enum": ["celsius", "fahrenheit"],
-      "description": "Temperature unit (default: celsius)"
-    }
-  },
-  "required": ["city"]
-}
-"""
+private val CITY_SCHEMA =
+    JsonSchema.parse(
+        schemaGenerator.generateSchemaString(CityElicitationInput::class),
+    )
+
+private data class CityElicitationInput(val city: String)
 
 val getWeatherToolDescriptor =
     ToolDescriptor {
         name = "get-weather"
         title = "Current Weather"
         description = "Get current weather for a city"
-        inputSchema(INPUT_SCHEMA)
+        inputSchema(schemaGenerator.generateSchemaString(GetWeatherInput::class))
+        outputSchema(schemaGenerator.generateSchemaString(WeatherObservation::class))
     }
 
 fun ToolScope.getWeather(weatherService: WeatherService): ToolResult {
     val args = request.arguments()
     val city = args.stringValue("city")
-    val units = args.stringOr("units", "celsius")
+    val units = args.stringOrNull("units")
     val progressToken = request.progressToken()
+    val temperatureUnit = when (units?.lowercase(Locale.getDefault())) {
+        "celsius" -> TemperatureUnit.Celsius
+        "fahrenheit" -> TemperatureUnit.Fahrenheit
+        else -> {
+            TemperatureUnit.Celsius
+        }
+    }
 
     fun attempt(city: String): ToolResult =
         try {
-            ToolResult.text(format(fetchWithProgress(ctx, progressToken, weatherService, city), units))
+            ToolResult.text(
+                format(
+                    fetchWithProgress(
+                        ctx, progressToken, weatherService, city, temperatureUnit
+                    ),
+                ),
+            )
         } catch (e: Exception) {
             if (e is CityNotFoundException) throw e
             internalError(e)
@@ -84,10 +94,12 @@ private fun fetchWithProgress(
     progressToken: ProgressToken?,
     weatherService: WeatherService,
     city: String,
+    temperatureUnit: TemperatureUnit,
 ): WeatherObservation {
     ctx.notifications().progress(progressToken, 0.1, 1.0, "Fetching weather for $city")
-    val weather = weatherService.currentWeather(city)
-    ctx.notifications().progress(progressToken, 1.0, 1.0, "Weather retrieved for $city")
+    val weather = weatherService.currentWeather(city, temperatureUnit)
+    ctx.notifications()
+        .progress(progressToken, 1.0, 1.0, "Weather retrieved for $city")
     return weather
 }
 
@@ -126,13 +138,16 @@ private fun elicitCity(
 
 private fun format(
     weather: WeatherObservation,
-    units: String,
 ): String {
     val temperature =
-        if (units == "celsius") {
-            "%.1f°C".format(Locale.ROOT, weather.temperatureCelsius)
-        } else {
-            "%.1f°F".format(Locale.ROOT, weather.temperatureCelsius * 9 / 5 + 32)
+        when (weather.temperatureUnit) {
+            Celsius -> {
+                "%.1f°C".format(Locale.ROOT, weather.temperature)
+            }
+
+            Fahrenheit -> {
+                "%.1f°F".format(Locale.ROOT, weather.temperature * 9 / 5 + 32)
+            }
         }
     return """
         Weather in ${weather.city}:

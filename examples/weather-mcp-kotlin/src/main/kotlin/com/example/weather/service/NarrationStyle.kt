@@ -5,9 +5,9 @@ package com.example.weather.service
 enum class NarrationStyle(
     val value: String,
 ) {
-    PLAIN("plain"),
-    CONCISE("concise"),
-    PIRATE("pirate"),
+    plain("plain"),
+    concise("concise"),
+    pirate("pirate"),
     ;
 
     companion object {
@@ -16,20 +16,5 @@ enum class NarrationStyle(
         fun from(value: String): NarrationStyle =
             entries.firstOrNull { it.value == value }
                 ?: throw IllegalArgumentException("Unsupported style: $value")
-
-        fun inputSchema(): String {
-            val values = entries.joinToString(", ") { "\"${it.value}\"" }
-            // language=json
-            return """
-                {
-                  "type": "object",
-                  "properties": {
-                    "forecast": {"type": "string"},
-                    "style": {"type": "string", "enum": [$values]}
-                  },
-                  "required": ["forecast", "style"]
-                }
-                """.trimIndent()
-        }
     }
 }

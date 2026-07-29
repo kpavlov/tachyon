@@ -3,6 +3,7 @@
 package com.example.weather
 
 import com.example.weather.integration.OpenMeteoProvider
+import com.example.weather.model.TemperatureUnit
 import com.example.weather.service.NarrationStyle
 import com.example.weather.service.WeatherService
 import com.example.weather.spi.CityNotFoundException
@@ -20,6 +21,8 @@ import dev.tachyonmcp.kotlin.server.domain.Annotations
 import dev.tachyonmcp.kotlin.server.domain.Icon
 import dev.tachyonmcp.kotlin.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
+import me.kpavlov.kt.schema.generator.json.JsonSchemaConfig
+import me.kpavlov.kt.schema.generator.json.ReflectionClassJsonSchemaGenerator
 import org.slf4j.LoggerFactory
 import tools.jackson.databind.ObjectMapper
 import java.net.http.HttpClient
@@ -31,6 +34,14 @@ import java.util.concurrent.Executors
 private val log = LoggerFactory.getLogger("com.example.weather.WeatherServer")
 private val MAPPER = ObjectMapper()
 private val LOGO by lazy { classpathDataUri("/images/logo.png", "image/png") }
+
+private val schemaGenerator =
+    ReflectionClassJsonSchemaGenerator(
+        json = kotlinx.serialization.json.Json { encodeDefaults = false },
+        config = JsonSchemaConfig.Default,
+    )
+
+private data class NarrationStyleInput(val forecast: String, val style: NarrationStyle)
 
 fun main() {
     val server = assembleServer(8080)
@@ -106,7 +117,7 @@ fun assembleServer(
             icons = listOf(resourceIcon),
         ) {
             TextResourceContents {
-                text = asJson(weatherService.currentWeather("Tallinn"))
+                text = asJson(weatherService.currentWeather("Tallinn", TemperatureUnit.Celsius))
             }
         }
 
@@ -128,7 +139,10 @@ fun assembleServer(
             description = "Weather forecast for a city",
             mimeType = "application/json",
         ) {
-            TextResourceContents { text = handleWeatherTemplate(weatherService, param("city")) }
+            TextResourceContents {
+                text =
+                    handleWeatherTemplate(weatherService, param("city"))
+            }
         }
 
         resourceCompletion("weather://current/{city}") {
@@ -157,7 +171,8 @@ private fun rewriteForecastPromptDescriptor(): PromptDescriptor =
             description = "plain, concise, or pirate"
             required = true
         }
-        inputSchema = JsonSchema.parse(NarrationStyle.inputSchema())
+        inputSchema =
+            JsonSchema.parse(schemaGenerator.generateSchemaString(NarrationStyleInput::class))
     }
 
 private fun rewriteForecast(
@@ -184,7 +199,7 @@ private fun handleWeatherTemplate(
     city: String,
 ): String =
     try {
-        asJson(weatherService.currentWeather(city))
+        asJson(weatherService.currentWeather(city, TemperatureUnit.Celsius))
     } catch (e: CityNotFoundException) {
         throw InvalidArgumentException("city", e.message ?: "City not found: $city", e)
     } catch (e: Exception) {

@@ -2,6 +2,7 @@
 
 package com.example.weather.service
 
+import com.example.weather.model.TemperatureUnit
 import com.example.weather.spi.CityProvider
 import com.example.weather.spi.WeatherObservation
 import com.example.weather.spi.WeatherProvider
@@ -10,7 +11,11 @@ class WeatherService(
     private val weatherProvider: WeatherProvider,
     private val cityProvider: CityProvider,
 ) {
-    fun currentWeather(city: String): WeatherObservation = weatherProvider.currentWeather(city)
+    fun currentWeather(city: String, temperatureUnit: TemperatureUnit): WeatherObservation =
+        weatherProvider.currentWeather(
+            city = city,
+            temperatureUnit = temperatureUnit
+        )
 
     fun searchCities(query: String): List<String> = cityProvider.searchCities(query)
 
