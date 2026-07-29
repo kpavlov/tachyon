@@ -4,6 +4,7 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.api.json.PayloadSerializer;
 import dev.tachyonmcp.api.runtime.InteractionContext;
 import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
@@ -86,6 +87,55 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
                     }
                     """.formatted(taskId);
             assertThatJson(resultJson).isEqualTo(expected);
+        }
+    }
+
+    @Test
+    void taskResultUsesConfiguredPayloadSerializer() throws Exception {
+        startServer(
+                b -> b.json(j -> j.serializer(new PayloadSerializer() {
+                    @Override
+                    public <T> String serialize(T value) {
+                        var payload = (CustomPayload) value;
+                        return "{\"serializedBy\":\"custom\",\"value\":\"" + payload.value() + "\"}";
+                    }
+                })),
+                s -> s.tools()
+                        .register(
+                                b -> b.name("custom-payload").taskSupport(TaskSupport.OPTIONAL),
+                                (context, request) -> ToolResult.of(new CustomPayload("task"))));
+        try (var client = createTestClient()) {
+            client.initialize();
+
+            var response = client.sendRpc("""
+                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{
+                  "name":"custom-payload","arguments":{},"task":{}}}
+                """);
+            var taskId = extractTaskId(response);
+            client.awaitTaskStatus(taskId, "completed");
+
+            var resultJson = client.sendRpc("""
+                {"jsonrpc":"2.0","id":4,"method":"tasks/result","params":{"taskId":"%s"}}
+                """.formatted(taskId));
+            assertThatJson(resultJson).isEqualTo("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 4,
+                      "result": {
+                        "content": [{
+                          "type": "text",
+                          "text": "{\\"serializedBy\\":\\"custom\\",\\"value\\":\\"task\\"}"
+                        }],
+                        "structuredContent": {
+                          "serializedBy": "custom",
+                          "value": "task"
+                        },
+                        "_meta": {
+                          "io.modelcontextprotocol/related-task": {"taskId": "%s"}
+                        }
+                      }
+                    }
+                    """.formatted(taskId));
         }
     }
 
@@ -255,4 +305,6 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
             return ToolResult.text("done");
         }
     }
+
+    private record CustomPayload(String value) {}
 }

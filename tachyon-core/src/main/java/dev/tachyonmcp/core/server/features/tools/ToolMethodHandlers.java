@@ -225,6 +225,7 @@ public final class ToolMethodHandlers {
 
         private void completeTask(TaskRegistry taskRegistry, TaskEntry task, @Nullable ToolResult result) {
             if (result == null || result instanceof ToolResult.Deferred) return;
+            result = JsonUtils.serializeStructured(result, payloadSerializer);
             if (result instanceof ToolResult.Error(String message)) {
                 task.fail(new TaskResult.Failed(List.of(TextContent.of(message)), null, null));
             } else if (result instanceof ToolResult.Success(Object structuredValue, List<ContentBlock> content)) {

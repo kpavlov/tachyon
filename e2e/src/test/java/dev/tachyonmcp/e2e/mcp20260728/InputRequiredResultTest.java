@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * MCP 2026-07-28 Multi Round-Trip Requests (SEP-2322): a server can respond to {@code tools/call}
@@ -33,8 +32,6 @@ import tools.jackson.databind.ObjectMapper;
  * tool (see {@code StatelessDispatchTest}).
  */
 class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
-
-    private static final ObjectMapper JSON = new ObjectMapper();
 
     // language=JSON
     private static final String NO_ARGS_SCHEMA = "{\"type\": \"object\", \"properties\": {}}";
@@ -437,13 +434,101 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
             assertThat(resources.statusCode()).as(resources.body()).isEqualTo(200);
             assertThat(templates.statusCode()).as(templates.body()).isEqualTo(200);
             assertThat(prompts.statusCode()).as(prompts.body()).isEqualTo(200);
-            assertThat(catalogMeta(tools.body(), "tools", "structured_array")).isEqualTo("tool");
-            assertThat(catalogMeta(resources.body(), "resources", "interactive-resource"))
-                    .isEqualTo("resource");
-            assertThat(catalogMeta(templates.body(), "resourceTemplates", "interactive-template"))
-                    .isEqualTo("template");
-            assertThat(catalogMeta(prompts.body(), "prompts", "interactive-prompt"))
-                    .isEqualTo("prompt");
+            assertThatJson(tools.body()).isEqualTo("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 11,
+                      "result": {
+                        "tools": [
+                          {
+                            "description": "Requests multiple inputs at once",
+                            "inputSchema": {"type": "object", "properties": {}},
+                            "name": "ask_multiple"
+                          },
+                          {
+                            "description": "Requests roots/list",
+                            "inputSchema": {"type": "object", "properties": {}},
+                            "name": "ask_roots"
+                          },
+                          {
+                            "description": "Requests sampling",
+                            "inputSchema": {"type": "object", "properties": {}},
+                            "name": "ask_sampling"
+                          },
+                          {
+                            "description": "Elicits a name",
+                            "inputSchema": {"type": "object", "properties": {}},
+                            "name": "elicit_name"
+                          },
+                          {
+                            "description": "Only asks for declared capabilities",
+                            "inputSchema": {"type": "object", "properties": {}},
+                            "name": "respect_capabilities"
+                          },
+                          {
+                            "description": "Returns an arbitrary structured JSON value",
+                            "inputSchema": {"type": "object", "properties": {}},
+                            "_meta": {"catalog": "tool"},
+                            "name": "structured_array"
+                          }
+                        ],
+                        "resultType": "complete",
+                        "ttlMs": 0,
+                        "cacheScope": "public"
+                      }
+                    }
+                    """);
+            assertThatJson(resources.body()).isEqualTo("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 12,
+                      "result": {
+                        "resources": [{
+                          "uri": "memory://interactive",
+                          "_meta": {"catalog": "resource"},
+                          "name": "interactive-resource"
+                        }],
+                        "resultType": "complete",
+                        "ttlMs": 0,
+                        "cacheScope": "public"
+                      }
+                    }
+                    """);
+            assertThatJson(templates.body()).isEqualTo("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 13,
+                      "result": {
+                        "resourceTemplates": [{
+                          "uriTemplate": "memory://interactive/{id}",
+                          "_meta": {"catalog": "template"},
+                          "name": "interactive-template"
+                        }],
+                        "resultType": "complete",
+                        "ttlMs": 0,
+                        "cacheScope": "public"
+                      }
+                    }
+                    """);
+            assertThatJson(prompts.body()).isEqualTo("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 14,
+                      "result": {
+                        "prompts": [
+                          {"name": "input-meta-prompt"},
+                          {
+                            "description": "Interactive prompt",
+                            "_meta": {"catalog": "prompt"},
+                            "name": "interactive-prompt"
+                          }
+                        ],
+                        "resultType": "complete",
+                        "ttlMs": 0,
+                        "cacheScope": "public"
+                      }
+                    }
+                    """);
         }
     }
 
@@ -485,24 +570,55 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
             assertThat(prompt.statusCode()).as(prompt.body()).isEqualTo(200);
             assertThat(completion.statusCode()).as(completion.body()).isEqualTo(200);
             assertThat(inputRequired.statusCode()).as(inputRequired.body()).isEqualTo(200);
-            assertThatJson(prompt.body()).inPath("$.result._meta.echo-trace").isEqualTo("prompt-trace");
-            assertThatJson(completion.body())
-                    .inPath("$.result._meta.echo-trace")
-                    .isEqualTo("completion-trace");
-            assertThatJson(completion.body())
-                    .inPath("$.result.completion.values[0]")
-                    .isEqualTo("A-complete");
-            assertThatJson(inputRequired.body()).inPath("$.result.resultType").isEqualTo("input_required");
-            assertThatJson(inputRequired.body()).inPath("$.result._meta.trace").isEqualTo("input-required");
+            assertThatJson(prompt.body()).isEqualTo("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 15,
+                      "result": {
+                        "description": "Interactive prompt",
+                        "messages": [{
+                          "role": "user",
+                          "content": {"type": "text", "text": "null:null"}
+                        }],
+                        "_meta": {"echo-trace": "prompt-trace"},
+                        "resultType": "complete"
+                      }
+                    }
+                    """);
+            assertThatJson(completion.body()).isEqualTo("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 16,
+                      "result": {
+                        "completion": {"values": ["A-complete"]},
+                        "_meta": {"echo-trace": "completion-trace"},
+                        "resultType": "complete"
+                      }
+                    }
+                    """);
+            assertThatJson(inputRequired.body()).isEqualTo("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 17,
+                      "result": {
+                        "resultType": "input_required",
+                        "inputRequests": {
+                          "answer": {
+                            "method": "elicitation/create",
+                            "params": {
+                              "message": "Answer?",
+                              "requestedSchema": {
+                                "type": "object",
+                                "properties": {"value": {"type": "string"}}
+                              }
+                            }
+                          }
+                        },
+                        "requestState": "prompt-input-round",
+                        "_meta": {"trace": "input-required"}
+                      }
+                    }
+                    """);
         }
-    }
-
-    private static String catalogMeta(String body, String collection, String name) {
-        for (var item : JSON.readTree(body).at("/result/" + collection)) {
-            if (name.equals(item.path("name").asString())) {
-                return item.at("/_meta/catalog").asString();
-            }
-        }
-        return null;
     }
 }
