@@ -51,8 +51,12 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest {
                                     .description("Returns an arbitrary structured JSON value")
                                     .inputSchema(NO_ARGS_SCHEMA)
                                     .meta(Map.of("catalog", "tool")),
-                            (ctx, request) -> ToolResult.of(JsonDocument.of("[1,true]"))
-                                    .withMeta("echo-trace", request.meta().get("com.example/trace")));
+                            (ctx, request) -> {
+                                var meta = request.meta();
+                                var trace = meta != null ? meta.get("com.example/trace") : null;
+                                var result = ToolResult.of(JsonDocument.of("[1,true]"));
+                                return trace != null ? result.withMeta("echo-trace", trace) : result;
+                            });
             s.resources()
                     .register(
                             ResourceDescriptor.builder()
@@ -92,13 +96,12 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest {
                             (ctx, request) -> PromptResult.inputRequired(
                                             Map.of("answer", elicitation("Answer?", "value")), "prompt-input-round")
                                     .withMeta("trace", "input-required"));
-            s.completions()
-                    .registerForPrompt(
-                            "meta-completion",
-                            (ctx, request) -> CompletionResult.builder()
-                                    .values(request.argumentValue() + "-complete")
-                                    .meta(Map.of("echo-trace", request.meta().get("com.example/trace")))
-                                    .build());
+            s.completions().registerForPrompt("meta-completion", (ctx, request) -> {
+                var meta = request.meta();
+                var trace = meta != null ? meta.get("com.example/trace") : null;
+                var result = CompletionResult.builder().values(request.argumentValue() + "-complete");
+                return trace != null ? result.meta(Map.of("echo-trace", trace)).build() : result.build();
+            });
         });
     }
 
@@ -127,6 +130,55 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest {
                         "content": [{"type": "text", "text": "[1,true]"}],
                         "structuredContent": [1, true],
                         "_meta": {"echo-trace": "trace-7"},
+                        "resultType": "complete"
+                      }
+                    }
+                    """);
+        }
+    }
+
+    @Test
+    void toolAndCompletionAcceptMissingMetadata() throws Exception {
+        try (var client = createModernTestClient()) {
+            var tool = client.post("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 11,
+                      "method": "tools/call",
+                      "params": {"name": "structured_array", "arguments": {}}
+                    }
+                    """);
+            var completion = client.post("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 12,
+                      "method": "completion/complete",
+                      "params": {
+                        "ref": {"type": "ref/prompt", "name": "meta-completion"},
+                        "argument": {"name": "name", "value": "B"}
+                      }
+                    }
+                    """);
+
+            assertThat(tool.statusCode()).as(tool.body()).isEqualTo(200);
+            assertThat(completion.statusCode()).as(completion.body()).isEqualTo(200);
+            assertThatJson(tool.body()).isEqualTo("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 11,
+                      "result": {
+                        "content": [{"type": "text", "text": "[1,true]"}],
+                        "structuredContent": [1, true],
+                        "resultType": "complete"
+                      }
+                    }
+                    """);
+            assertThatJson(completion.body()).isEqualTo("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 12,
+                      "result": {
+                        "completion": {"values": ["B-complete"]},
                         "resultType": "complete"
                       }
                     }
