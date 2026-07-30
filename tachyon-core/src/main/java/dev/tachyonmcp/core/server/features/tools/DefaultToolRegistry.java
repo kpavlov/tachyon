@@ -5,6 +5,7 @@ import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.json.spi.JsonSchemaFactory;
 import dev.tachyonmcp.api.runtime.InteractionContext;
 import dev.tachyonmcp.api.server.config.Mode;
+import dev.tachyonmcp.api.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.api.server.features.HandlerFutures;
 import dev.tachyonmcp.api.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.api.server.features.tools.AsyncToolFn;
@@ -135,14 +136,14 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
     static void validateName(String name) {
         Objects.requireNonNull(name, "Tool name must not be null");
         if (name.isBlank()) {
-            throw new IllegalArgumentException("Tool name must not be blank");
+            throw new InvalidArgumentException("name", "Tool name must not be blank");
         }
         if (name.length() > MAX_NAME_LENGTH) {
-            throw new IllegalArgumentException(
-                    "Tool name must not exceed " + MAX_NAME_LENGTH + " characters (SEP-986)");
+            throw new InvalidArgumentException(
+                    "name", "Tool name must not exceed " + MAX_NAME_LENGTH + " characters (SEP-986)");
         }
         if (!VALID_NAME_PATTERN.matcher(name).matches()) {
-            throw new IllegalArgumentException("Tool name must match [a-zA-Z0-9_\\-./]+ per SEP-986: " + name);
+            throw new InvalidArgumentException("name", "Tool name must match [a-zA-Z0-9_\\-./]+ per SEP-986: " + name);
         }
     }
 

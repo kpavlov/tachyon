@@ -8,11 +8,17 @@ public final class RequestMappingException extends RuntimeException {
 
     private final ServerError error;
 
+    /**
+     * @param error the mapping failure to surface as a protocol-level error response
+     */
     public RequestMappingException(ServerError error) {
         super(error.message());
         this.error = error;
     }
 
+    /**
+     * @return the {@link ServerError} to return to the client
+     */
     public ServerError error() {
         return error;
     }
