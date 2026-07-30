@@ -242,6 +242,7 @@ public class McpRequestMapper implements ProtocolRequestMapper {
         var result = new LinkedHashMap<String, String>();
         map.forEach((key, value) -> {
             if (value instanceof String text) result.put(key, text);
+            else throw invalidParams("context.arguments values must be strings");
         });
         return result;
     }

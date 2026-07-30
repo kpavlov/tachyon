@@ -137,6 +137,31 @@ class McpRequestMapperTest {
     }
 
     @Test
+    void completeRejectsNonStringContextArgumentValue() {
+        var mapper = new McpRequestMapper();
+
+        assertThatThrownBy(() -> mapper.complete(Map.of(
+                        "ref", Map.of("type", "ref/prompt", "name", "greet"),
+                        "argument", Map.of("name", "n", "value", "v"),
+                        "context", Map.of("arguments", Map.of("prior", 123)))))
+                .isInstanceOf(RequestMappingException.class)
+                .satisfies(e -> assertThat(((RequestMappingException) e).error().kind())
+                        .isEqualTo(ServerError.Kind.INVALID_PARAMS));
+    }
+
+    @Test
+    void completePreservesStringContextArguments() {
+        var mapper = new McpRequestMapper();
+
+        var completion = mapper.complete(Map.of(
+                "ref", Map.of("type", "ref/prompt", "name", "greet"),
+                "argument", Map.of("name", "n", "value", "v"),
+                "context", Map.of("arguments", Map.of("prior", "answer"))));
+
+        assertThat(completion.request().resolvedArguments()).containsEntry("prior", "answer");
+    }
+
+    @Test
     void pageMapsLimitAndCursorDefaultingWhenAbsent() {
         var mapper = new McpRequestMapper();
 
