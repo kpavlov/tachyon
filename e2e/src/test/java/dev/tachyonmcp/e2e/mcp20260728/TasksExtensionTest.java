@@ -33,10 +33,15 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
                     """.formatted(task.id()));
 
             assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-            assertThatJson(response.body()).inPath("$.result.taskId").isEqualTo(task.id());
-            assertThatJson(response.body()).inPath("$.result.status").isEqualTo("submitted");
-            assertThatJson(response.body()).inPath("$.result.createdAt").isString();
-            assertThatJson(response.body()).inPath("$.result.lastUpdatedAt").isString();
+            assertThatJson(response.body())
+                    .whenIgnoringPaths("$.result.createdAt", "$.result.lastUpdatedAt")
+                    .isEqualTo("""
+                            {
+                              "jsonrpc":"2.0",
+                              "id":1,
+                              "result":{"taskId":"%s","status":"submitted","ttl":null}
+                            }
+                            """.formatted(task.id()));
         }
     }
 
@@ -52,7 +57,15 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
                     """.formatted(task.id()));
 
             assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-            assertThatJson(response.body()).inPath("$.result.status").isEqualTo("completed");
+            assertThatJson(response.body())
+                    .whenIgnoringPaths("$.result.createdAt", "$.result.lastUpdatedAt")
+                    .isEqualTo("""
+                            {
+                              "jsonrpc":"2.0",
+                              "id":2,
+                              "result":{"taskId":"%s","status":"completed","ttl":null}
+                            }
+                            """.formatted(task.id()));
         }
     }
 }

@@ -77,6 +77,9 @@ public class DefaultDispatchContext implements DispatchContext {
 
     @Override
     public void setSession(@Nullable Session session) {
+        if (session != null) {
+            session.protocol(protocol());
+        }
         channel.setSession(session);
     }
 

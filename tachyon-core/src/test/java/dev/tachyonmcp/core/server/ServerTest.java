@@ -8,6 +8,7 @@ import dev.tachyonmcp.api.server.domain.TextResourceContents;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.protocol.Protocols;
 import dev.tachyonmcp.core.runtime.Backpressure;
 import dev.tachyonmcp.core.runtime.SessionState;
 import dev.tachyonmcp.core.runtime.SseConnection;
@@ -302,6 +303,39 @@ class ServerTest {
                     .filter(e -> e.data().contains("list_changed"))
                     .toList();
             assertThat(listChanged).isEmpty();
+        }
+    }
+
+    @Test
+    void broadcastsTaskStatusWithEachSessionProtocol() {
+        try (DefaultTachyonServer server =
+                (DefaultTachyonServer) TachyonServer.builder().build()) {
+            var legacyConnection = new TestConnection();
+            var legacy = server.createSession("legacy");
+            legacy.protocol(Protocols.list().stream()
+                    .filter(protocol -> protocol.versionString().equals("2025-11-25"))
+                    .findFirst()
+                    .orElseThrow());
+            legacy.connection(legacyConnection);
+            legacy.activate();
+
+            var modernConnection = new TestConnection();
+            var modern = server.createSession("modern");
+            modern.protocol(Protocols.list().stream()
+                    .filter(protocol -> protocol.versionString().equals("2026-07-28"))
+                    .findFirst()
+                    .orElseThrow());
+            modern.connection(modernConnection);
+            modern.activate();
+
+            server.tasks().create();
+
+            assertThat(legacyConnection.sent)
+                    .singleElement()
+                    .satisfies(event -> assertThat(event.data()).contains("\"status\":\"working\""));
+            assertThat(modernConnection.sent)
+                    .singleElement()
+                    .satisfies(event -> assertThat(event.data()).contains("\"status\":\"submitted\""));
         }
     }
 

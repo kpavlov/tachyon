@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.runtime;
 
+import dev.tachyonmcp.core.protocol.Protocol;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,6 +24,7 @@ public class Session {
     private final AtomicReference<Backpressure> backpressure;
     private final AtomicLong cursor;
     private final Set<String> enabledExtensions = ConcurrentHashMap.newKeySet();
+    private final AtomicReference<@Nullable Protocol> protocol = new AtomicReference<>();
     private volatile @Nullable String resumingStreamKey;
 
     public Session(String id, SseConnection connection) {
@@ -129,6 +131,16 @@ public class Session {
     /** Sets the replayed SSE event cursor. */
     public void cursor(long position) {
         cursor.set(position);
+    }
+
+    /** Returns the protocol negotiated when this session was initialized, if available. */
+    public @Nullable Protocol protocol() {
+        return protocol.get();
+    }
+
+    /** Records the protocol negotiated when this session was initialized. */
+    public void protocol(Protocol protocol) {
+        this.protocol.compareAndSet(null, Objects.requireNonNull(protocol, "protocol"));
     }
 
     /** Enables an extension for this session. */

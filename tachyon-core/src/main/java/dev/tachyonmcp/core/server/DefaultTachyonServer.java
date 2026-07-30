@@ -48,6 +48,7 @@ import dev.tachyonmcp.core.server.handlers.PingHandler;
 import dev.tachyonmcp.core.server.internal.NotificationLogSupport;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.server.json.JacksonPayloadSerde;
+import dev.tachyonmcp.core.server.json.JsonUtils;
 import dev.tachyonmcp.core.server.json.NetworkntJsonSchemaValidator;
 import dev.tachyonmcp.core.server.session.DispatchContext;
 import dev.tachyonmcp.core.server.session.SessionEvent;
@@ -395,13 +396,25 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
 
     @Override
     public void notifyTaskStatus(TaskEntry entry) {
-        var params = responseMapper().taskStatusNotificationParams(entry);
         var sessionId = entry.sessionId();
         if (sessionId != null) {
-            getSession(sessionId).ifPresent(session -> sendNotification(session, "notifications/tasks/status", params));
+            getSession(sessionId).ifPresent(session -> notifyTaskStatus(session, entry));
         } else {
-            broadcastNotification("notifications/tasks/status", params);
+            for (var session : sessionManager.allSessions()) {
+                if (session.state() == SessionState.ACTIVE) {
+                    notifyTaskStatus(session, entry);
+                }
+            }
         }
+    }
+
+    private void notifyTaskStatus(Session session, TaskEntry entry) {
+        var protocol = session.protocol();
+        var params =
+                (protocol != null ? protocol.responseMapper() : responseMapper()).taskStatusNotificationParams(entry);
+        var paramsJson = JsonUtils.writeString(params);
+        var notificationJson = JsonRpcCodec.serializeNotificationAsString("notifications/tasks/status", paramsJson);
+        sendSerializedNotification(session, "notifications/tasks/status", paramsJson, notificationJson, null);
     }
 
     private void registerDefaults() {

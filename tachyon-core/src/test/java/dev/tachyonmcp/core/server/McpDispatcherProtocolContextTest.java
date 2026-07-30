@@ -111,6 +111,7 @@ class McpDispatcherProtocolContextTest {
             assertThat(handlerContext.get()).isNotNull();
             assertThat(handlerContext.get().protocol()).isSameAs(protocol);
             assertThat(handlerContext.get().session()).isSameAs(session);
+            assertThat(session.protocol()).isSameAs(protocol);
         }
     }
 
