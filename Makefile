@@ -50,7 +50,7 @@ examples: ## Build live examples against published artifacts
 	@./mvnw verify -f examples/pom.xml --no-transfer-progress
 	@echo " ✅  Done!"
 
-examples-snapshot: ## Build examples against local SNAPSHOT artifacts
+examples-snapshot: install-server ## Build examples against local SNAPSHOT artifacts
 	@echo "🌤️ 🎬 Building SNAPSHOT examples..."
 	@./mvnw verify -f examples/pom.xml -Dtachyon.version=1.0.0-SNAPSHOT --no-transfer-progress
 	@echo " ✅  Done!"

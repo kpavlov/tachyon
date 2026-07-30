@@ -8,32 +8,41 @@ component_management:
         target: auto
         branches:
           - "!main"
+
   individual_components:
     - component_id: tachyon-api
-      name: API
-      paths:
-        - tachyon-api/**
+      name: Tachyon API
+      flag_regexes:
+        - "tachyon-api"
     - component_id: tachyon-core
-      name: Core
-      paths:
-        - tachyon-core/**
+      name: Tachyon Core
+      flag_regexes:
+        - "tachyon-core"
     - component_id: tachyon-kotlin
-      name: Kotlin DSL
-      paths:
-        - tachyon-kotlin/**
+      name: Tachyon Kotlin DSL
+      flag_regexes:
+        - "tachyon-kotlin"
     - component_id: tachyon-extensions
-      name: Extensions
-      paths:
-        - tachyon-extensions/**
+      name: Tachyon Extensions
+      flag_regexes:
+        - "tachyon-extensions"
     - component_id: e2e
       name: E2E Tests
-      paths:
-        - e2e/**
+      flag_regexes:
+        - "e2e"
     - component_id: conformance
       name: Conformance Tests
-      paths:
-        - conformance/**
-    - component_id: examples
-      name: Examples
-      paths:
-        - examples/**
+      flag_regexes:
+        - "conformance"
+    - component_id: example-echo-kotlin
+      name: Example Echo Kotlin
+      flag_regexes:
+        - "example-echo-kotlin"
+    - component_id: example-weather
+      name: Example Weather
+      flag_regexes:
+        - "example-weather"
+    - component_id: example-weather-mcp-kotlin
+      name: Example Weather MCP Kotlin
+      flag_regexes:
+        - "example-weather-mcp-kotlin"
