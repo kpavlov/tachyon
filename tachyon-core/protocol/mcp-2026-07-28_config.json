@@ -11,6 +11,7 @@
     "SubscriptionsListenResultMetaObject": "java.util.Map<String, tools.jackson.databind.JsonNode>",
     "UnknownRequest.id": "tools.jackson.databind.JsonNode",
     "UnknownRequest.params": "tools.jackson.databind.JsonNode",
+    "CompleteResult.Completion.total": "Long",
     "ElicitRequestFormParams.requestedSchema": "String",
     "Tool.inputSchema": "String",
     "Tool.outputSchema": "String",

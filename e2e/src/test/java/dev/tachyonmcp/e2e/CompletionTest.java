@@ -16,7 +16,7 @@ class CompletionTest extends AbstractStatelessMcpE2eTest {
         server.completions()
                 .registerForPrompt(
                         "code_review",
-                        (ctx, request) -> CompletionResult.of(List.of("python", "pytorch", "pyside"), 10.0, true));
+                        (ctx, request) -> CompletionResult.of(List.of("python", "pytorch", "pyside"), 10L, true));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -31,7 +31,7 @@ class CompletionTest extends AbstractStatelessMcpE2eTest {
                     .inPath("$.result.completion.values")
                     .isArray()
                     .containsExactly("python", "pytorch", "pyside");
-            assertThatJson(response.body()).inPath("$.result.completion.total").isEqualTo(10.0);
+            assertThatJson(response.body()).inPath("$.result.completion.total").isEqualTo(10);
             assertThatJson(response.body())
                     .inPath("$.result.completion.hasMore")
                     .isEqualTo(true);

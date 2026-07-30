@@ -7,6 +7,7 @@
     "JSONArray": "tools.jackson.databind.node.ArrayNode",
     "UnknownRequest.id": "tools.jackson.databind.JsonNode",
     "UnknownRequest.params": "tools.jackson.databind.JsonNode",
+    "CompleteResult.Completion.total": "Long",
     "ElicitRequestFormParams.requestedSchema": "String",
     "Resource.size": "Long",
     "CancelTaskResult.pollInterval": "Long",

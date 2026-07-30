@@ -53,7 +53,7 @@ class McpResponseMapperTest {
     void completeResultsUseTheModernDiscriminator() {
         var domain = CompletionResult.builder()
                 .values("one")
-                .total(1.0)
+                .total(100500)
                 .hasMore(false)
                 .meta(Map.of("trace", "complete-1"))
                 .build();
@@ -61,6 +61,7 @@ class McpResponseMapperTest {
 
         assertThat(result.resultType()).isEqualTo("complete");
         assertThat(result.completion().values()).containsExactly("one");
+        assertThat(result.completion().total()).isEqualTo(100500);
         assertThat(result._meta()).containsEntry("trace", JsonNodeFactory.instance.textNode("complete-1"));
     }
 

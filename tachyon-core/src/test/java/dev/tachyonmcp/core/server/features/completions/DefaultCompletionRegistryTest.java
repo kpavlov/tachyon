@@ -87,7 +87,7 @@ class DefaultCompletionRegistryTest {
     void completesPromptArgumentUsingRegisteredHandler() throws Exception {
         completions.registerForPrompt(
                 "code_review",
-                (ctx, request) -> CompletionResult.of(List.of("python", "pytorch", "pyside"), 10.0, true));
+                (ctx, request) -> CompletionResult.of(List.of("python", "pytorch", "pyside"), 10L, true));
 
         var result = complete(
                 handlers,

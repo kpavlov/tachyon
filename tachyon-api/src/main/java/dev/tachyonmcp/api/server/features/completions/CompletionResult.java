@@ -28,7 +28,7 @@ public interface CompletionResult extends HasMeta {
      * The total number of matches, if known.
      */
     @Nullable
-    Double total();
+    Long total();
 
     /**
      * Whether additional results exist beyond {@link #values()}.
@@ -61,7 +61,7 @@ public interface CompletionResult extends HasMeta {
     /**
      * Creates a result with candidate values and total/hasMore metadata.
      */
-    static CompletionResult of(List<String> values, @Nullable Double total, @Nullable Boolean hasMore) {
+    static CompletionResult of(List<String> values, @Nullable Long total, @Nullable Boolean hasMore) {
         return DefaultCompletionResult.builder()
                 .values(values)
                 .total(total)
@@ -93,7 +93,21 @@ public interface CompletionResult extends HasMeta {
             return values(List.of(values));
         }
 
-        Builder total(@Nullable Double total);
+        /**
+         * Sets the total number of matches, if known.
+         *
+         * @param total total match count, or {@code null} if unknown
+         */
+        Builder total(@Nullable Long total);
+
+        /**
+         * Sets the total number of matches, if known.
+         *
+         * @param total total match count, or {@code null} if unknown
+         */
+        default Builder total(int total) {
+            return total((long) total);
+        }
 
         /**
          * Sets whether additional results exist beyond {@link #values()}.
