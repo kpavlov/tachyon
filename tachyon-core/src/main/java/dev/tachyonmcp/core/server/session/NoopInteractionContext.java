@@ -23,6 +23,10 @@ import org.jspecify.annotations.Nullable;
 public class NoopInteractionContext implements DispatchContext {
 
     public static final NoopInteractionContext INSTANCE = new NoopInteractionContext();
+    private static final dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpRequestMapper REQUEST_MAPPER =
+            new dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpRequestMapper();
+    public static final @Nullable ProtocolResponseMapper RESPONSE_MAPPER =
+            Objects.requireNonNull(ProtocolMappers.getMapper("mcp", McpProtocol.VERSION));
 
     @Override
     public Protocol protocol() {
@@ -101,12 +105,12 @@ public class NoopInteractionContext implements DispatchContext {
 
     @Override
     public ProtocolResponseMapper responseMapper() {
-        return Objects.requireNonNull(ProtocolMappers.getMapper("mcp", McpProtocol.VERSION));
+        return RESPONSE_MAPPER;
     }
 
     @Override
     public ProtocolRequestMapper requestMapper() {
-        return new dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpRequestMapper();
+        return REQUEST_MAPPER;
     }
 
     @Override
