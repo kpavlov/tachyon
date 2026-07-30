@@ -25,6 +25,7 @@ import org.jspecify.annotations.Nullable;
         typeImmutable = "Default*")
 public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor, HasMeta {
 
+    /** The template name, unique within the server. */
     @Override
     String name();
 
@@ -39,9 +40,11 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor, Ha
     @Nullable
     String mimeType();
 
+    /** Optional human-readable title. */
     @Nullable
     String title();
 
+    /** Optional annotations shared by resources matching this template. */
     @Nullable
     Annotations annotations();
 
@@ -49,6 +52,7 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor, Ha
     @Nullable
     String extensionId();
 
+    /** Optional icons for resources matching this template. */
     @Nullable
     List<Icon> icons();
 
@@ -122,28 +126,44 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor, Ha
 
     /** Builder for {@link ResourceTemplateDescriptor}. */
     interface Builder {
+
+        /** Sets the template name, unique within the server. */
         Builder name(String name);
 
+        /** Sets the URI template pattern (e.g. {@code file:///{path}}). */
         Builder uriTemplate(String uriTemplate);
 
+        /** Sets the optional description of the resource family. */
         Builder description(@Nullable String description);
 
+        /** Sets the optional MIME type that all matching resources share. */
         Builder mimeType(@Nullable String mimeType);
 
+        /** Sets the optional human-readable title. */
         Builder title(@Nullable String title);
 
+        /** Sets the optional annotations shared by resources matching this template. */
         Builder annotations(@Nullable Annotations annotations);
 
+        /** Sets the optional icons for resources matching this template. */
         Builder icons(@Nullable Iterable<? extends Icon> elements);
 
+        /** Sets the optional icons for resources matching this template. */
         default Builder icons(Icon... elements) {
             return icons(List.of(elements));
         }
 
+        /** Sets the optional identifier of the extension that owns this template. */
         Builder extensionId(@Nullable String extensionId);
 
+        /**
+         * Sets optional protocol extension metadata.
+         *
+         * @param entries metadata entries, or {@code null} for none
+         */
         Builder meta(@Nullable Map<String, ?> entries);
 
+        /** Builds the {@link ResourceTemplateDescriptor}. */
         ResourceTemplateDescriptor build();
     }
 }

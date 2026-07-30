@@ -25,6 +25,13 @@ public record PromptRequest(
         if (arguments == null) arguments = Args.empty();
     }
 
+    /**
+     * Compatibility constructor for callers that predate {@link #meta()}; sets it to {@code null}.
+     *
+     * @param arguments the prompt arguments, or empty if none were provided
+     * @param inputResponses client's input responses for input-required prompts, or null
+     * @param requestState opaque state token for input-required prompts, or null
+     */
     public PromptRequest(Args arguments, @Nullable Map<String, Object> inputResponses, @Nullable String requestState) {
         this(arguments, inputResponses, requestState, null);
     }

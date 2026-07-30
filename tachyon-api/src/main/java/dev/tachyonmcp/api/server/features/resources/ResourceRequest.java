@@ -43,6 +43,7 @@ public interface ResourceRequest extends ServerFeature.Request {
     @Nullable
     String uriTemplate();
 
+    /** Optional protocol extension metadata. */
     @Nullable
     @Override
     Map<String, Object> meta();
@@ -63,23 +64,41 @@ public interface ResourceRequest extends ServerFeature.Request {
     @Nullable
     String requestState();
 
+    /** Creates a new builder for {@link ResourceRequest}. */
     static Builder builder() {
         return DefaultResourceRequest.builder();
     }
 
+    /** Builder for {@link ResourceRequest}. */
     interface Builder {
+
+        /** Sets the resource URI being requested. */
         Builder uri(String uri);
 
+        /** Sets the URI-template variable values extracted during template matching. */
         Builder params(Map<String, ? extends UriTemplateValue> params);
 
+        /** Sets the URI template that matched the request. */
         Builder uriTemplate(@Nullable String uriTemplate);
 
+        /** Sets the optional protocol extension metadata. */
         Builder meta(@Nullable Map<String, ?> entries);
 
+        /**
+         * Sets the client responses supplied when retrying an input-required resource read.
+         *
+         * @param inputResponses input responses, or {@code null}
+         */
         Builder inputResponses(@Nullable Map<String, ?> inputResponses);
 
+        /**
+         * Sets the opaque request state supplied when retrying an input-required resource read.
+         *
+         * @param requestState request state, or {@code null}
+         */
         Builder requestState(@Nullable String requestState);
 
+        /** Builds the {@link ResourceRequest}. */
         ResourceRequest build();
     }
 }

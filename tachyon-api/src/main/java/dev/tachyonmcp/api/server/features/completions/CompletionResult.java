@@ -69,23 +69,47 @@ public interface CompletionResult extends HasMeta {
                 .build();
     }
 
+    /** Creates a new builder for {@link CompletionResult}. */
     static Builder builder() {
         return DefaultCompletionResult.builder();
     }
 
+    /** Builder for {@link CompletionResult}. */
     interface Builder {
+
+        /**
+         * Sets the candidate values ranked by relevance.
+         *
+         * @param elements candidate values
+         */
         Builder values(Iterable<String> elements);
 
+        /**
+         * Sets the candidate values ranked by relevance.
+         *
+         * @param values candidate values
+         */
         default Builder values(String... values) {
             return values(List.of(values));
         }
 
         Builder total(@Nullable Double total);
 
+        /**
+         * Sets whether additional results exist beyond {@link #values()}.
+         *
+         * @param hasMore {@code true} if more results exist, or {@code null} if unknown
+         */
         Builder hasMore(@Nullable Boolean hasMore);
 
+        /**
+         * Sets optional protocol extension metadata.
+         *
+         * @param entries metadata entries, or {@code null} for none
+         */
         Builder meta(@Nullable Map<String, ?> entries);
 
+        /** Builds the {@link CompletionResult}. */
         CompletionResult build();
     }
 }
