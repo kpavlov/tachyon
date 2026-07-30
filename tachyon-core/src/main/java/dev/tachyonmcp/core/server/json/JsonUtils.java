@@ -106,8 +106,7 @@ public final class JsonUtils {
                 list.forEach(item -> array.add(toValueNode(item)));
                 return array;
             }
-            default -> {
-            }
+            default -> {}
         }
         return parseJsonNode(JsonRpcCodec.writeValueAsString(value));
     }

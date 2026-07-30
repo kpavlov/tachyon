@@ -11,6 +11,7 @@ import tools.jackson.core.JsonEncoding;
 import tools.jackson.core.JsonGenerator;
 import tools.jackson.core.ObjectWriteContext;
 import tools.jackson.core.json.JsonFactory;
+import tools.jackson.databind.JsonNode;
 
 public final class ValueSerializer {
 
@@ -32,6 +33,7 @@ public final class ValueSerializer {
     public static void writeJsonValue(JsonGenerator gen, @Nullable Object value) {
         switch (value) {
             case null -> gen.writeNull();
+            case JsonNode node -> gen.writeRawValue(node.toString());
             case Map<?, ?> map -> {
                 gen.writeStartObject();
                 for (var entry : map.entrySet()) {
