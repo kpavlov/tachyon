@@ -1,0 +1,39 @@
+comment:
+  layout: "header, diff, flags, components"
+
+component_management:
+  default_rules:
+    statuses:
+      - type: project
+        target: auto
+        branches:
+          - "!main"
+  individual_components:
+    - component_id: tachyon-api
+      name: API
+      paths:
+        - tachyon-api/**
+    - component_id: tachyon-core
+      name: Core
+      paths:
+        - tachyon-core/**
+    - component_id: tachyon-kotlin
+      name: Kotlin DSL
+      paths:
+        - tachyon-kotlin/**
+    - component_id: tachyon-extensions
+      name: Extensions
+      paths:
+        - tachyon-extensions/**
+    - component_id: e2e
+      name: E2E Tests
+      paths:
+        - e2e/**
+    - component_id: conformance
+      name: Conformance Tests
+      paths:
+        - conformance/**
+    - component_id: examples
+      name: Examples
+      paths:
+        - examples/**

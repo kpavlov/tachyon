@@ -27,6 +27,9 @@ jobs:
           - 21
           - 25
           - 26
+        include:
+          - java: 21
+            codecov: true
     runs-on: ubuntu-latest
     timeout-minutes: 7
 
@@ -68,7 +71,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload results to Codecov
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && matrix.codecov }}
         uses: codecov/codecov-action@v7
         with:
           name: codecov-jdk${{ matrix.java }}
@@ -77,7 +80,7 @@ jobs:
           slug: kpavlov/tachyon
 
       - name: Upload test results to Codecov
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && matrix.codecov }}
         uses: codecov/codecov-action@v7
         with:
           report_type: test_results
