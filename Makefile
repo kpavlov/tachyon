@@ -1,4 +1,4 @@
-.PHONY: all ci build test lint package conformance apidocs e2e clean format help mcp-inspector examples examples-snapshot
+.PHONY: all ci build test lint package install-server conformance apidocs e2e clean format help mcp-inspector examples examples-snapshot
 
 .DEFAULT_GOAL := help
 
@@ -15,7 +15,7 @@ MAVEN_TEST_ARGS := -Dsurefire.forkCount=$(SUREFIRE_FORK_COUNT) $(NETTY_ARGS)
 help: ## List available targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-22s %s\n", $$1, $$2}'
 
-all: clean format build examples-snapshot examples ## Full build: clean, format, build, examples
+all: clean install-server examples-snapshot examples ## Full build: clean, live examples, build+install, SNAPSHOT examples
 
 ci: clean build ## CI pipeline: clean + build
 
@@ -27,6 +27,10 @@ build: ## Compile, test, verify (mvn verify)
 test: ## Run unit + e2e tests
 	@echo " 🧪 Running tests..."
 	@./mvnw test $(MAVEN_TEST_ARGS) --no-transfer-progress
+
+install-server: ## Build with tests and install to local Maven repo
+	@echo "🔄  Building and installing with tests..."
+	@./mvnw install $(MAVEN_TEST_ARGS) --no-transfer-progress
 
 package: ## Install artifacts to local Maven repo (skip tests)
 	@echo "📦 Packaging and installing to local repository..."
@@ -43,16 +47,12 @@ apidocs:
 
 examples: ## Build live examples against published artifacts
 	@echo "🌤️ 📡  Building LIVE examples..."
-	@./mvnw verify -f examples/weather/pom.xml --no-transfer-progress
-	@./mvnw verify -f examples/weather-mcp-kotlin/pom.xml --no-transfer-progress
-	@./mvnw verify -f examples/echo-kotlin/pom.xml --no-transfer-progress
+	@./mvnw verify -f examples/pom.xml --no-transfer-progress
 	@echo " ✅  Done!"
 
-examples-snapshot: package ## Build examples against local SNAPSHOT artifacts
+examples-snapshot: ## Build examples against local SNAPSHOT artifacts
 	@echo "🌤️ 🎬 Building SNAPSHOT examples..."
-	@./mvnw verify -f examples/weather/pom.xml -Dtachyon.version=1.0.0-SNAPSHOT --no-transfer-progress
-	@./mvnw verify -f examples/weather-mcp-kotlin/pom.xml -Dtachyon.version=1.0.0-SNAPSHOT --no-transfer-progress
-	@./mvnw verify -f examples/echo-kotlin/pom.xml -Dtachyon.version=1.0.0-SNAPSHOT --no-transfer-progress
+	@./mvnw verify -f examples/pom.xml -Dtachyon.version=1.0.0-SNAPSHOT --no-transfer-progress
 	@echo " ✅  Done!"
 
 conformance: ## Run MCP conformance suite
