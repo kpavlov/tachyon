@@ -24,9 +24,9 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
     private final FeatureConfig config;
 
     /**
-     * Creates a prompt registry with the specified schema validator and feature configuration.
+     * Creates a prompt registry with the given feature configuration.
      *
-     * @param config the feature configuration governing registry behavior and page size
+     * `@param` config the feature configuration governing registry behavior and page size
      */
     public DefaultPromptRegistry(FeatureConfig config) {
         super(config.pageSize());

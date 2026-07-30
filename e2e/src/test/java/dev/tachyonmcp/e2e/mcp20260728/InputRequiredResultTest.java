@@ -382,10 +382,20 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
             var response = client.post(body);
 
             assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-            assertThatJson(response.body())
-                    .inPath("$.result.messages[0].content.text")
-                    .isEqualTo("Paris:prompt-round-1");
-            assertThatJson(response.body()).inPath("$.result.resultType").isEqualTo("complete");
+            assertThatJson(response.body()).isEqualTo("""
+                            {
+                              "jsonrpc": "2.0",
+                              "id": 9,
+                              "result": {
+                                "description": "Interactive prompt",
+                                "messages": [{
+                                  "role": "user",
+                                  "content": {"type": "text", "text": "Paris:prompt-round-1"}
+                                }],
+                                "resultType": "complete"
+                              }
+                            }
+                            """);
         }
     }
 

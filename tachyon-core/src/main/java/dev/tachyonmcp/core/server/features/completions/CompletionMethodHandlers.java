@@ -1,7 +1,6 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.features.completions;
 
-import dev.tachyonmcp.api.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.features.HandlerFutures;
 import dev.tachyonmcp.api.server.features.completions.AsyncCompletionFn;
@@ -65,10 +64,6 @@ public final class CompletionMethodHandlers {
                     context.engine().executor(),
                     (result, cause) -> {
                         if (cause != null) {
-                            if (cause instanceof InvalidArgumentException invalid) {
-                                return ServerErrors.invalidParams(
-                                        "invalid argument '" + invalid.argName() + "': " + invalid.getMessage());
-                            }
                             var error = ServerErrors.fromUnhandledException(cause, "Completion handler failed");
                             if (error.kind() == ServerError.Kind.INVALID_PARAMS) {
                                 logger.debug("Completion handler rejected invalid params");

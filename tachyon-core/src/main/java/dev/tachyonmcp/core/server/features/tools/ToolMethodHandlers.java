@@ -4,7 +4,6 @@ package dev.tachyonmcp.core.server.features.tools;
 import static dev.tachyonmcp.core.server.domain.ServerErrors.fromUnhandledException;
 import static dev.tachyonmcp.core.server.domain.ServerErrors.internalError;
 import static dev.tachyonmcp.core.server.domain.ServerErrors.invalidParams;
-import static dev.tachyonmcp.core.server.domain.ServerErrors.missingRequiredClientCapability;
 
 import dev.tachyonmcp.api.json.JsonDocument;
 import dev.tachyonmcp.api.json.JsonSchema;
@@ -13,7 +12,6 @@ import dev.tachyonmcp.api.json.PayloadDeserializer;
 import dev.tachyonmcp.api.json.PayloadSerializer;
 import dev.tachyonmcp.api.json.SchemaValidationError;
 import dev.tachyonmcp.api.server.domain.ContentBlock;
-import dev.tachyonmcp.api.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TaskResult;
@@ -26,7 +24,6 @@ import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.server.OutboundSseStreamMessageRouter;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
-import dev.tachyonmcp.core.server.domain.MissingRequiredClientCapabilityException;
 import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.core.server.features.tasks.TaskRegistry;
 import dev.tachyonmcp.core.server.json.JsonUtils;
@@ -37,7 +34,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
@@ -207,9 +203,7 @@ public final class ToolMethodHandlers {
             taskRegistry.registerRunning(task.id(), future);
             future.thenAccept(toolResult -> completeTask(taskRegistry, task, toolResult));
             future.exceptionally(throwable -> {
-                var cause = throwable instanceof CompletionException completion && completion.getCause() != null
-                        ? completion.getCause()
-                        : throwable;
+                var cause = HandlerFutures.unwrap(throwable);
                 if (cause instanceof CancellationException) {
                     logger.debug("Task handler cancelled for taskId={}", task.id());
                 } else if (cause instanceof Exception exception) {
@@ -260,12 +254,6 @@ public final class ToolMethodHandlers {
         }
 
         private Object handlerError(String name, Throwable cause) {
-            if (cause instanceof InvalidArgumentException invalid) {
-                return invalidParams("invalid argument '" + invalid.argName() + "': " + invalid.getMessage());
-            }
-            if (cause instanceof MissingRequiredClientCapabilityException missing) {
-                return missingRequiredClientCapability(missing.getMessage(), missing.requiredCapabilities());
-            }
             if (cause instanceof CancellationException) {
                 logger.debug("Tool call cancelled for '{}'", name);
                 return internalError("Tool call cancelled");
@@ -273,24 +261,15 @@ public final class ToolMethodHandlers {
             var error = fromUnhandledException(cause, "Tool handler failed");
             if (error.kind() == ServerError.Kind.INVALID_PARAMS) {
                 logger.debug("Tool handler rejected invalid params for '{}'", name);
-            } else {
+            } else if (error.kind() == ServerError.Kind.INTERNAL_ERROR) {
                 logger.error("Tool handler error for '{}'", name, cause);
             }
             return error;
         }
 
         private void handleTaskError(TaskEntry task, Exception exception) {
-            var cause = exception instanceof CompletionException completion && completion.getCause() != null
-                    ? completion.getCause()
-                    : exception;
-            var error =
-                    switch (cause) {
-                        case InvalidArgumentException invalid ->
-                            invalidParams("invalid argument '" + invalid.argName() + "': " + invalid.getMessage());
-                        case MissingRequiredClientCapabilityException missing ->
-                            missingRequiredClientCapability(missing.getMessage(), missing.requiredCapabilities());
-                        default -> fromUnhandledException(cause, "Tool handler failed");
-                    };
+            var cause = HandlerFutures.unwrap(exception);
+            var error = fromUnhandledException(cause, "Tool handler failed");
             if (error.kind() == ServerError.Kind.INVALID_PARAMS) {
                 logger.debug("Task handler rejected invalid params for taskId={}", task.id());
             } else if (error.kind() == ServerError.Kind.INTERNAL_ERROR) {

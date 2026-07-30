@@ -7,7 +7,7 @@ import static dev.tachyonmcp.core.transport.netty.ProtocolVersionHandler.SUPPORT
 import static dev.tachyonmcp.core.transport.netty.ProtocolVersionHandler.UNSUPPORTED_VERSION_KEY;
 
 import dev.tachyonmcp.api.server.domain.RequestId;
-import dev.tachyonmcp.api.server.domain.ServerError;
+import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcMessage;
 import io.netty.channel.ChannelHandler.Sharable;
@@ -39,8 +39,7 @@ public class UnsupportedProtocolVersionHandler extends ChannelInboundHandlerAdap
 
         var error = LATEST_PROTOCOL
                 .responseMapper()
-                .error(new ServerError(
-                        ServerError.Kind.UNSUPPORTED_PROTOCOL_VERSION,
+                .error(ServerErrors.unsupportedProtocolVersion(
                         "Unsupported protocol version",
                         Map.of("supported", SUPPORTED_VERSIONS, "requested", requestedVersion)));
         var origin = req.headers().get(HttpHeaderNames.ORIGIN);

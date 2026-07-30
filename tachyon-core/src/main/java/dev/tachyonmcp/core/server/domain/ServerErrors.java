@@ -36,12 +36,16 @@ public final class ServerErrors {
      * {@link IllegalArgumentException} is treated as bad input (INVALID_PARAMS) without echoing its
      * message, which may originate from arbitrary library code and isn't vetted for sensitive
      * content — unlike {@link InvalidArgumentException}, which handler authors throw deliberately
-     * with a message they control. Everything else is INTERNAL_ERROR.
+     * with a message they control. {@link MissingRequiredClientCapabilityException} maps to its own
+     * wire error. Everything else is INTERNAL_ERROR.
      */
     @InternalApi
     public static ServerError fromUnhandledException(Throwable cause, String internalErrorDetail) {
         if (cause instanceof InvalidArgumentException invalid) {
             return invalidParams("invalid argument '" + invalid.argName() + "': " + invalid.getMessage());
+        }
+        if (cause instanceof MissingRequiredClientCapabilityException missing) {
+            return missingRequiredClientCapability(missing.getMessage(), missing.requiredCapabilities());
         }
         if (cause instanceof IllegalArgumentException) {
             return invalidParams("Invalid params");
@@ -67,5 +71,9 @@ public final class ServerErrors {
                 ServerError.Kind.MISSING_REQUIRED_CLIENT_CAPABILITY,
                 detail,
                 Map.of("requiredCapabilities", requiredCapabilities));
+    }
+
+    public static ServerError unsupportedProtocolVersion(String detail, Map<String, Object> data) {
+        return new ServerError(ServerError.Kind.UNSUPPORTED_PROTOCOL_VERSION, detail, data);
     }
 }
