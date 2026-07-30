@@ -37,6 +37,7 @@ import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ResourceContents;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ResourceTemplate;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.TextResourceContents;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.Tool;
+import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.core.server.json.JsonUtils;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcError;
 import java.io.ByteArrayOutputStream;
@@ -44,6 +45,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
@@ -203,6 +205,37 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
                 JsonUtils.toJsonNodeMap(meta),
                 COMPLETE,
                 null);
+    }
+
+    @Override
+    public Object listTasksResult(List<TaskEntry> entries, @Nullable String nextCursor) {
+        var tasks = entries.stream().map(McpTaskMapper::toTaskProto).toList();
+        var result = new LinkedHashMap<String, Object>();
+        result.put("tasks", tasks);
+        if (nextCursor != null) {
+            result.put("nextCursor", nextCursor);
+        }
+        return JsonUtils.toObjectNode(result);
+    }
+
+    @Override
+    public Object getTaskResult(dev.tachyonmcp.api.server.domain.Task entry) {
+        return McpTaskMapper.toGetTaskResult((TaskEntry) entry);
+    }
+
+    @Override
+    public Object createTaskResult(TaskEntry entry) {
+        return McpTaskMapper.toCreateTaskResult(entry);
+    }
+
+    @Override
+    public Object cancelTaskResult(TaskEntry entry) {
+        return McpTaskMapper.toCancelTaskResult(entry);
+    }
+
+    @Override
+    public Object taskStatusNotificationParams(TaskEntry entry) {
+        return McpTaskMapper.toStatusNotification(entry);
     }
 
     private static Tool toTool(ToolDescriptor d) {

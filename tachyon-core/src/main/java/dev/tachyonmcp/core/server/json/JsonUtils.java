@@ -73,6 +73,45 @@ public final class JsonUtils {
         return result;
     }
 
+    /**
+     * Builds an object {@link JsonNode} from an ordered field map, preserving field order and
+     * explicit {@code null} values (mapped to JSON {@code null} rather than omitted). Nested
+     * {@link Map} and {@link List} values are converted recursively; other values are serialized
+     * with the JSON-RPC serializer. Use it to emit hand-shaped wire objects for protocol versions
+     * that lack generated codecs.
+     */
+    public static JsonNode toObjectNode(Map<String, ?> fields) {
+        var node = JsonNodeFactory.instance.objectNode();
+        fields.forEach((key, value) -> node.set(key, toValueNode(value)));
+        return node;
+    }
+
+    private static JsonNode toValueNode(@Nullable Object value) {
+        switch (value) {
+            case null -> {
+                return JsonNodeFactory.instance.nullNode();
+            }
+            case JsonNode node -> {
+                return node;
+            }
+            case Map<?, ?> map -> {
+                var node = JsonNodeFactory.instance.objectNode();
+                map.forEach((key, val) -> {
+                    if (key instanceof String text) node.set(text, toValueNode(val));
+                });
+                return node;
+            }
+            case List<?> list -> {
+                var array = JsonNodeFactory.instance.arrayNode();
+                list.forEach(item -> array.add(toValueNode(item)));
+                return array;
+            }
+            default -> {
+            }
+        }
+        return parseJsonNode(JsonRpcCodec.writeValueAsString(value));
+    }
+
     public static JsonNode parseJsonNode(String json) {
         try (var p = FACTORY.createParser(TREE_READ_CONTEXT, json)) {
             p.nextToken();
