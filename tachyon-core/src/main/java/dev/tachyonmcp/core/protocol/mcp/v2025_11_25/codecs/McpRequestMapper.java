@@ -15,7 +15,6 @@ import dev.tachyonmcp.api.server.features.tools.ToolRequest;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
-import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -197,8 +196,12 @@ public class McpRequestMapper implements ProtocolRequestMapper {
     protected Map<String, Object> asMap(@Nullable Object params) {
         if (params == null) return Map.of();
         if (params instanceof Map<?, ?> map) return stringKeyed(map);
-        var decoded = JsonRpcCodec.readValue(JSON.valueToTree(params).toString());
-        return decoded instanceof Map<?, ?> map ? stringKeyed(map) : Map.of();
+        try {
+            Map<?, ?> decoded = JSON.convertValue(params, Map.class);
+            return stringKeyed(decoded);
+        } catch (RuntimeException ignored) {
+            return Map.of();
+        }
     }
 
     private static Map<String, Object> stringKeyed(Map<?, ?> source) {

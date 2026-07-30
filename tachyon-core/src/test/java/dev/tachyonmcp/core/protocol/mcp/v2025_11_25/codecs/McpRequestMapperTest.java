@@ -11,6 +11,16 @@ import org.junit.jupiter.api.Test;
 class McpRequestMapperTest {
 
     @Test
+    void asMapConvertsPojoAndFallsBackForNonMaps() {
+        var mapper = new McpRequestMapper();
+
+        assertThat(mapper.asMap(new Params("greet", Map.of("trace", 7))))
+                .containsEntry("name", "greet")
+                .containsEntry("meta", Map.of("trace", 7));
+        assertThat(mapper.asMap(List.of("not", "a", "map"))).isEmpty();
+    }
+
+    @Test
     void promptAndCompletionRequestsPreserveMetadataInBothProtocolVersions() {
         List<ProtocolRequestMapper> mappers = List.of(
                 new McpRequestMapper(), new dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs.McpRequestMapper());
@@ -27,4 +37,6 @@ class McpRequestMapperTest {
             assertThat(completion.request().meta()).isEqualTo(meta);
         }
     }
+
+    private record Params(String name, Map<String, Object> meta) {}
 }
