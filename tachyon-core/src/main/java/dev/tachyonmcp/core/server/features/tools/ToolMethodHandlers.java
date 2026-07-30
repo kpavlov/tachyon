@@ -107,7 +107,7 @@ public final class ToolMethodHandlers {
                 return CompletableFuture.completedFuture(e.error());
             }
             var request = mapped.request();
-            if (request.name().length() > 64) {
+            if (request.name().length() > DefaultToolRegistry.MAX_NAME_LENGTH) {
                 return CompletableFuture.completedFuture(invalidParams("Tool name exceeds maximum length (SEP-986)"));
             }
 

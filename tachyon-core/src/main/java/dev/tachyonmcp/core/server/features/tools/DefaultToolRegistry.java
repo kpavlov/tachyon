@@ -137,13 +137,16 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
         if (name.isBlank()) {
             throw new IllegalArgumentException("Tool name must not be blank");
         }
-        if (name.length() > 64) {
-            throw new IllegalArgumentException("Tool name must not exceed 64 characters (SEP-986)");
+        if (name.length() > MAX_NAME_LENGTH) {
+            throw new IllegalArgumentException(
+                    "Tool name must not exceed " + MAX_NAME_LENGTH + " characters (SEP-986)");
         }
         if (!VALID_NAME_PATTERN.matcher(name).matches()) {
             throw new IllegalArgumentException("Tool name must match [a-zA-Z0-9_\\-./]+ per SEP-986: " + name);
         }
     }
+
+    static final int MAX_NAME_LENGTH = 64;
 
     private static final Pattern VALID_NAME_PATTERN = Pattern.compile("[a-zA-Z0-9_\\-./]+");
 }
