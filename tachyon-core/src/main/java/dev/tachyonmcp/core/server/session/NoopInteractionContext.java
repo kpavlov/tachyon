@@ -25,7 +25,7 @@ public class NoopInteractionContext implements DispatchContext {
     public static final NoopInteractionContext INSTANCE = new NoopInteractionContext();
     private static final dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpRequestMapper REQUEST_MAPPER =
             new dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpRequestMapper();
-    public static final @Nullable ProtocolResponseMapper RESPONSE_MAPPER =
+    private static final ProtocolResponseMapper RESPONSE_MAPPER =
             Objects.requireNonNull(ProtocolMappers.getMapper("mcp", McpProtocol.VERSION));
 
     @Override
