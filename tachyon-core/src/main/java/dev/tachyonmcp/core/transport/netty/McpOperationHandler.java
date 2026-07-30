@@ -31,6 +31,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.timeout.IdleStateEvent;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import org.jspecify.annotations.Nullable;
@@ -184,9 +185,15 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                 } else {
                     ctx.executor().execute(() -> sendAccepted(ctx, origin));
                     CompletableFuture.runAsync(
-                            () -> dispatcher.dispatchNotification(
-                                    not.method(), not.params(), sessionId, channelContext),
-                            executor);
+                                    () -> dispatcher.dispatchNotification(
+                                            not.method(), not.params(), sessionId, channelContext),
+                                    executor)
+                            .whenComplete((unused, e) -> {
+                                var cause = e instanceof CompletionException ce ? ce.getCause() : e;
+                                if (cause instanceof RuntimeException re) {
+                                    logger.warn("Failed to process {} notification", not.method(), re);
+                                }
+                            });
                 }
             }
             default -> {
