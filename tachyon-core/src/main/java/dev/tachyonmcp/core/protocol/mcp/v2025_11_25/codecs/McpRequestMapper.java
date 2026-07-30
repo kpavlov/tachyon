@@ -22,7 +22,13 @@ import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.json.JsonMapper;
 
-/** Request mapper for MCP 2025-11-25 and its backward-compatible request shapes. */
+/**
+ * Request mapper for MCP 2025-11-25 and its backward-compatible request shapes.
+ *
+ * <p>Also parses the 2026-07-28 {@code inputResponses}/{@code requestState} fields (SEP-2322)
+ * unconditionally: they're simply absent on 2025-11-25 wire payloads, so this is a no-op for that
+ * version. The 2026-07-28 mapper reuses this class as-is (no override needed).
+ */
 public class McpRequestMapper implements ProtocolRequestMapper {
 
     private static final String META_LOG_LEVEL_KEY = "io.modelcontextprotocol/logLevel";
