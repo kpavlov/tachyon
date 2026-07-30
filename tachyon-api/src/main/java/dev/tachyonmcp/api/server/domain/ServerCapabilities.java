@@ -9,7 +9,10 @@ import org.jspecify.annotations.Nullable;
  * Capabilities the server advertises to the client during initialization.
  */
 @Value.Immutable
-@Value.Style(allParameters = true, visibility = Value.Style.ImplementationVisibility.PUBLIC, typeImmutable = "Default*")
+@Value.Style(
+        allParameters = true,
+        visibility = Value.Style.ImplementationVisibility.PACKAGE,
+        typeImmutable = "Default*")
 public interface ServerCapabilities {
 
     /** Prompt capabilities ({@code null} = not supported). */
@@ -38,9 +41,36 @@ public interface ServerCapabilities {
     @Nullable
     JsonObject experimental();
 
-    /** Returns a builder for {@link ServerCapabilities}. */
-    static DefaultServerCapabilities.Builder builder() {
+    static Builder builder() {
         return DefaultServerCapabilities.builder();
+    }
+
+    /**
+     * Builder for {@link ServerCapabilities}.
+     */
+    interface Builder {
+        /** Prompt capabilities ({@code null} = not supported). */
+        Builder prompts(@Nullable Prompts prompts);
+
+        /** Resource capabilities ({@code null} = not supported). */
+        Builder resources(@Nullable Resources resources);
+
+        /** Tool capabilities ({@code null} = not supported). */
+        Builder tools(@Nullable Tools tools);
+
+        /** Whether logging is supported. */
+        Builder logging(boolean logging);
+
+        /** Whether completion is supported. */
+        Builder completions(boolean completions);
+
+        /** Task capabilities ({@code null} = not supported). */
+        Builder tasks(@Nullable Tasks tasks);
+
+        /** Experimental capability extensions. */
+        Builder experimental(@Nullable JsonObject experimental);
+
+        ServerCapabilities build();
     }
 
     /**
