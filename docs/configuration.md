@@ -189,7 +189,7 @@ Native transports are optional runtime dependencies — `tachyon-core` itself de
 </profiles>
 ```
 
-See [examples/weather/pom.xml](../examples/weather/pom.xml) for a complete working setup.
+See [examples/weather-mcp/pom.xml](../examples/weather-mcp/pom.xml) for a complete working setup.
 
 Requesting an explicit engine whose transport is not on the classpath (or not supported by the OS) throws `UnsupportedOperationException` at startup, with Netty's unavailability cause in the message:
 

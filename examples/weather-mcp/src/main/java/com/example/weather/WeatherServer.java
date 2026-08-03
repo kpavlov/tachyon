@@ -72,7 +72,7 @@ public final class WeatherServer {
                         .name("weather-server")
                         .title("Weather Server")
                         .description("Weather MCP server")
-                        .websiteUrl("https://github.com/kpavlov/tachyon/tree/main/examples/weather")
+                        .websiteUrl("https://github.com/kpavlov/tachyon/tree/main/examples/weather-mcp")
                         .instructions("Test instructions")
                         .icons(Icon.of(LOGO, "image/png", List.of("256x256"), null))
                         .version("1.0"))

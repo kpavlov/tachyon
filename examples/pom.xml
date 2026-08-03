@@ -15,8 +15,8 @@
     <url>https://github.com/kpavlov/tachyon</url>
 
     <modules>
-        <module>weather</module>
         <module>echo-kotlin</module>
+        <module>weather-mcp</module>
         <module>weather-mcp-kotlin</module>
     </modules>
 </project>
