@@ -24,7 +24,7 @@ jobs:
         java:
           - 21
         example:
-          - weather
+          - weather-mcp
           - weather-mcp-kotlin
           - echo-kotlin
 
