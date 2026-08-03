@@ -1,7 +1,6 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.api.server.features.tools;
 
-import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import dev.tachyonmcp.api.json.JsonDocument;
 import dev.tachyonmcp.api.server.domain.ContentBlock;
 import dev.tachyonmcp.api.server.domain.InputRequest;
@@ -12,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
 /** Outcome of a tool invocation: success, error, input-required, or deferred. */
@@ -44,11 +44,58 @@ public sealed interface ToolResult
     }
 
     /**
-     * A failed invocation carrying a human-readable error message.
-     *
-     * @param message the error message
+     * A failed invocation carrying the error's content blocks.
      */
-    record Error(String message) implements ToolResult {}
+    @Value.Immutable
+    @Value.Style(visibility = Value.Style.ImplementationVisibility.PACKAGE, typeImmutable = "Default*")
+    non-sealed interface Error extends ToolResult {
+
+        /**
+         * Returns the error content blocks.
+         *
+         * @return the error content blocks
+         */
+        List<ContentBlock> content();
+
+        /**
+         * Creates a new builder for constructing {@code Error} instances.
+         *
+         * @return a new builder
+         */
+        static Builder builder() {
+            return DefaultError.builder();
+        }
+
+        /**
+         * Creates a failed result carrying the given content blocks.
+         *
+         * @param content the error content blocks
+         * @return a new error
+         */
+        static Error of(List<? extends ContentBlock> content) {
+            return DefaultError.builder().content(content).build();
+        }
+
+        /**
+         * Builder for {@link Error}.
+         */
+        interface Builder {
+            /**
+             * Sets the error content blocks.
+             *
+             * @param content the error content blocks
+             * @return this builder
+             */
+            Builder content(Iterable<? extends ContentBlock> content);
+
+            /**
+             * Builds the {@code Error} instance.
+             *
+             * @return a new error
+             */
+            Error build();
+        }
+    }
 
     /**
      * Wraps another result with request-level {@code _meta} entries.
@@ -134,15 +181,15 @@ public sealed interface ToolResult
     }
 
     /**
-     * Creates a successful result containing the given content blocks.
+     * Creates a success result carrying {@code payload} as structured content plus an explicit
+     * human-readable text block.
      *
-     * @param blocks the content blocks
+     * @param payload the structured payload
+     * @param text    the text content for the content block
      * @return a successful tool result
-     * @deprecated use {@link #content(ContentBlock...)}
      */
-    @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
-    static ToolResult blocks(ContentBlock... blocks) {
-        return content(blocks);
+    static <T> ToolResult structured(T payload, String text) {
+        return new Success(payload, List.of(TextContent.of(text)));
     }
 
     /**
@@ -152,55 +199,59 @@ public sealed interface ToolResult
      * @param payload the structured payload
      * @param text    the text content for the content block
      * @return a successful tool result
+     * @deprecated Use {@link #structured(Object, String)}
      */
-    static ToolResult of(Object payload, String text) {
-        return new Success(payload, List.of(TextContent.of(text)));
-    }
-
-    /**
-     * Alias for {@link #of(Object, String)} with a name that states what the payload becomes
-     * (structured content) rather than how it's constructed.
-     *
-     * @param payload the structured payload
-     * @param text    the text content for the content block
-     * @return a successful tool result
-     */
-    @ExperimentalApi
-    static ToolResult structured(Object payload, String text) {
-        return of(payload, text);
+    @Deprecated(forRemoval = true)
+    static <T> ToolResult of(T payload, String text) {
+        return structured(payload, text);
     }
 
     /**
      * Creates a success result carrying {@code payload} as structured content with no text block.
      *
      * <p>The server emits the serialized JSON of {@code payload} as the text content at encode
-     * time (MCP backwards-compat for structured results). Use {@link #of(Object, String)} to
-     * supply an explicit human-readable text block instead.
-     */
-    static ToolResult of(Object payload) {
-        return new Success(payload, List.of());
-    }
-
-    /**
-     * Alias for {@link #of(Object)} with a name that states what the payload becomes (structured
-     * content) rather than how it's constructed.
+     * time (MCP backwards-compat for structured results). Use {@link #structured(Object, String)}
+     * to supply an explicit human-readable text block instead.
      *
      * @param payload the structured payload
      * @return a successful tool result
      */
-    @ExperimentalApi
-    static ToolResult structured(Object payload) {
-        return of(payload);
+    static <T> ToolResult structured(T payload) {
+        return new Success(payload, List.of());
     }
 
     /**
-     * Creates a failed result with the given error message.
+     * Creates a success result carrying {@code payload} as structured content with no text block.
+     *
+     * <p>The server emits the serialized JSON of {@code payload} as the text content at encode
+     * time (MCP backwards-compat for structured results). Use {@link #structured(Object, String)} to
+     * supply an explicit human-readable text block instead.
+     *
+     * @deprecated Use {@link #structured(Object)}
+     */
+    @Deprecated(forRemoval = true)
+    static ToolResult of(Object payload) {
+        return structured(payload);
+    }
+
+    /**
+     * Creates a failed result with a single text content block carrying the given error message.
      *
      * @param message the error message
      * @return a failed tool result
      */
     static ToolResult error(String message) {
-        return new Error(message);
+        return Error.of(List.of(TextContent.of(message)));
+    }
+
+    /**
+     * Creates a failed result carrying the given content blocks.
+     *
+     * @param blocks the error content blocks
+     * @return a failed tool result
+     */
+    static ToolResult error(ContentBlock... blocks) {
+        return Error.of(List.of(blocks));
     }
 
     /** Creates a successful result with no structured value and no content. */

@@ -40,7 +40,7 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
                     """{"type":"object"}""",
                 ) {
                     val input = request.arguments().decode<GreetArgs>()
-                    ToolResult.of(
+                    ToolResult.structured(
                         GreetReply("${input.greeting}, ${input.name}!"),
                         "greeting response",
                     )
@@ -83,7 +83,7 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
                     """{"type":"object"}""",
                 ) {
                     val input = request.arguments().decode<GreetArgs>()
-                    ToolResult.of(GreetReply("${input.greeting}, ${input.name}!"))
+                    ToolResult.structured(GreetReply("${input.greeting}, ${input.name}!"))
                 }
             }
         port = sv.port()
@@ -126,7 +126,7 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
                     """{"type":"object"}""",
                 ) {
                     val input = request.arguments().decode<GreetArgs>()
-                    ToolResult.of(
+                    ToolResult.structured(
                         GreetReply("${input.greeting}, ${input.name}!"),
                         "greeting response",
                     )

@@ -44,7 +44,7 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
                         .register(
                                 builder -> builder.name("gson-tool").description("Gson tool"),
                                 (ctx, request) ->
-                                        ToolResult.of(Map.of("message", "hello from Gson"), "text fallback")));
+                                        ToolResult.structured(Map.of("message", "hello from Gson"), "text fallback")));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -110,7 +110,8 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
                                         .description("Validated output")
                                         .outputSchema(JsonSchema.of(outputSchema.toString()))
                                         .build(),
-                                (ctx, request) -> ToolResult.of(Map.of("message", "valid", "extra", 42), "ok")));
+                                (ctx, request) ->
+                                        ToolResult.structured(Map.of("message", "valid", "extra", 42), "ok")));
 
         try (var client = createTestClient()) {
             client.initialize();

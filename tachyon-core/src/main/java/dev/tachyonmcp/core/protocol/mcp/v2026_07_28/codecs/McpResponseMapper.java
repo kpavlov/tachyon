@@ -186,8 +186,7 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
         }
         return switch (unwrapped) {
             case ToolResult.InputRequired ignored -> super.callToolResult(result);
-            case ToolResult.Error error ->
-                buildCallToolResult(List.of(TextContent.of(error.message())), null, true, meta);
+            case ToolResult.Error error -> buildCallToolResult(error.content(), null, true, meta);
             case ToolResult.Success success ->
                 buildCallToolResult(success.content(), success.structuredValue(), null, meta);
             case ToolResult.WithMeta ignored -> throw new AssertionError("WithMeta unwrapped above");

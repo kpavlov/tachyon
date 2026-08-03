@@ -144,7 +144,9 @@ public class ImageContentBuilder
         @PublishedApi
         internal fun build(): ImageContent =
             ImageContent.of(
-                Base64.getDecoder().decode(requireNotNull(data) { "ImageContent.data is required" }),
+                Base64.getDecoder().decode(
+                    requireNotNull(data) { "ImageContent.data is required" },
+                ),
                 requireNotNull(mimeType) { "ImageContent.mimeType is required" },
                 annotations,
                 meta,
@@ -171,7 +173,9 @@ public class AudioContentBuilder
         @PublishedApi
         internal fun build(): AudioContent =
             AudioContent.of(
-                Base64.getDecoder().decode(requireNotNull(data) { "AudioContent.data is required" }),
+                Base64.getDecoder().decode(
+                    requireNotNull(data) { "AudioContent.data is required" },
+                ),
                 requireNotNull(mimeType) { "AudioContent.mimeType is required" },
                 annotations,
                 meta,
@@ -204,7 +208,9 @@ public class BlobResourceContentsBuilder
                     "BlobResourceContents.uri is required: set it explicitly, or build inside a " +
                         "resource/template handler where BlobResourceContents { } defaults it from the request"
                 },
-                Base64.getDecoder().decode(requireNotNull(blob) { "BlobResourceContents.blob is required" }),
+                Base64.getDecoder().decode(
+                    requireNotNull(blob) { "BlobResourceContents.blob is required" },
+                ),
                 mimeType,
                 meta,
             )

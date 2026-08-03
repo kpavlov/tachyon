@@ -94,7 +94,7 @@ public class YouComSearchTool extends AbstractToolHandler {
             }
 
             var json = MAPPER.readTree(body);
-            return ToolResult.of(json, formatResults(json, args.boolOr("news", false)));
+            return ToolResult.structured(json, formatResults(json, args.boolOr("news", false)));
 
         } catch (Exception e) {
             return ToolResult.error("You.com search error: " + e.getMessage());

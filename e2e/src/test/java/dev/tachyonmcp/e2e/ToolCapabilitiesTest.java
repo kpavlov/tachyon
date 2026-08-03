@@ -194,7 +194,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
                         (ctx, request) -> {
                             var msg = request.arguments().stringValue("message");
                             var echo = JsonNodeFactory.instance.objectNode().put("echo", msg);
-                            return ToolResult.of(echo, "Echo: " + msg);
+                            return ToolResult.structured(echo, "Echo: " + msg);
                         }));
 
         try (var client = createTestClient()) {

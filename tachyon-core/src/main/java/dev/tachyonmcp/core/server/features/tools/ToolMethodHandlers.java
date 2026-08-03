@@ -15,7 +15,6 @@ import dev.tachyonmcp.api.server.domain.ContentBlock;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TaskResult;
-import dev.tachyonmcp.api.server.domain.TextContent;
 import dev.tachyonmcp.api.server.features.HandlerFutures;
 import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.api.server.features.tools.ToolHandler;
@@ -225,8 +224,8 @@ public final class ToolMethodHandlers {
                 result = inner;
                 meta = resultMeta;
             }
-            if (result instanceof ToolResult.Error(String message)) {
-                task.fail(new TaskResult.Failed(List.of(TextContent.of(message)), null, meta));
+            if (result instanceof ToolResult.Error error) {
+                task.fail(new TaskResult.Failed(error.content(), null, meta));
             } else if (result instanceof ToolResult.Success(Object structuredValue, List<ContentBlock> content)) {
                 task.complete(new TaskResult.Completed(content, structuredValue, meta));
             }

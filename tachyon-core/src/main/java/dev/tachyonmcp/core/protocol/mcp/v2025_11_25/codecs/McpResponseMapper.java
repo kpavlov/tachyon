@@ -140,13 +140,7 @@ public class McpResponseMapper implements ProtocolResponseMapper {
         final var resolvedMeta = meta;
         return switch (unwrapped) {
             case InputRequired ir -> new InputRequiredPayload(ir.inputRequests(), ir.requestState(), resolvedMeta);
-            case ToolResult.Error er ->
-                new CallToolResult(
-                        List.of(McpToolMapper.toProtocolContentBlock(TextContent.of(er.message()))),
-                        null,
-                        true,
-                        resolvedMeta,
-                        null);
+            case ToolResult.Error er -> buildCallToolResult(er.content(), null, true, resolvedMeta);
             case Success s -> wireSuccess(s, resolvedMeta);
             case WithMeta ignored -> throw new AssertionError("WithMeta unwrapped above");
             case ToolResult.Deferred ignored ->

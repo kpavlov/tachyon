@@ -21,10 +21,10 @@ class ToolResultTest {
 
     @Test
     @SuppressWarnings("removal")
-    void deprecatedResponseFactoriesDelegateToCanonicalFactories() {
+    void deprecatedBase64FactoriesDelegateToCanonicalFactories() {
         var image = ImageContent.base64("aGVsbG8=", "image/png");
         var audio = AudioContent.base64("aGVsbG8=", "audio/wav");
-        var result = ToolResult.blocks(image, audio);
+        var result = ToolResult.content(image, audio);
 
         assertThat(image).isEqualTo(ImageContent.base64("aGVsbG8=", "image/png"));
         assertThat(audio).isEqualTo(AudioContent.base64("aGVsbG8=", "audio/wav"));
@@ -32,9 +32,17 @@ class ToolResultTest {
     }
 
     @Test
-    void experimentalStructuredAliasesOf() {
-        assertThat(ToolResult.structured(42)).isEqualTo(ToolResult.of(42));
-        assertThat(ToolResult.structured("data", "custom text")).isEqualTo(ToolResult.of("data", "custom text"));
+    void structuredWithoutTextHasNoContent() {
+        var r = (ToolResult.Success) ToolResult.structured(42);
+        assertThat(r.structured()).contains(42);
+        assertThat(r.content()).isEmpty();
+    }
+
+    @Test
+    void structuredWithTextCarriesContent() {
+        var r = (ToolResult.Success) ToolResult.structured("data", "custom text");
+        assertThat(r.structured()).contains("data");
+        assertThat(((TextContent) r.content().getFirst()).text()).isEqualTo("custom text");
     }
 
     @Test
@@ -110,7 +118,19 @@ class ToolResultTest {
     void errorIsErrorResult() {
         ToolResult err = ToolResult.error("boom");
 
-        assertThat(err).isInstanceOf(ToolResult.Error.class).hasFieldOrPropertyWithValue("message", "boom");
+        assertThat(err).isInstanceOf(ToolResult.Error.class);
+        var content = ((ToolResult.Error) err).content();
+        assertThat(content).hasSize(1);
+        assertThat(((TextContent) content.getFirst()).text()).isEqualTo("boom");
+    }
+
+    @Test
+    void errorFactoryAcceptsContentBlocks() {
+        var image = ImageContent.of(new byte[] {1, 2, 3}, "image/png");
+        ToolResult err = ToolResult.error(TextContent.of("boom"), image);
+
+        assertThat(err).isInstanceOf(ToolResult.Error.class);
+        assertThat(((ToolResult.Error) err).content()).containsExactly(TextContent.of("boom"), image);
     }
 
     @Test
@@ -149,23 +169,5 @@ class ToolResultTest {
         var r = ToolResult.inputRequired(req, null);
         assertThat(r).isInstanceOf(ToolResult.InputRequired.class);
         assertThat(((ToolResult.InputRequired) r).requestState()).isNull();
-    }
-
-    @Test
-    void ofFactoryWithPayload() {
-        ToolResult r = ToolResult.of(42);
-        assertThat(r).isInstanceOf(ToolResult.Success.class);
-        var s = (ToolResult.Success) r;
-        assertThat(s.structured()).contains(42);
-        assertThat(s.content()).isEmpty();
-    }
-
-    @Test
-    void ofFactoryWithPayloadAndText() {
-        ToolResult r = ToolResult.of("data", "custom text");
-        assertThat(r).isInstanceOf(ToolResult.Success.class);
-        var s = (ToolResult.Success) r;
-        assertThat(s.structured()).contains("data");
-        assertThat(((TextContent) s.content().getFirst()).text()).isEqualTo("custom text");
     }
 }

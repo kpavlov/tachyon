@@ -733,7 +733,7 @@ class DefaultToolRegistryTest {
                         .build(),
                 (context, request) -> {
                     // Map with plain Java values, not JsonNode
-                    return ToolResult.of(Map.of("message", "hello", "count", 42), "text fallback");
+                    return ToolResult.structured(Map.of("message", "hello", "count", 42), "text fallback");
                 });
 
         try (ServerEngine server = newEngine(b -> {})) {
@@ -761,7 +761,8 @@ class DefaultToolRegistryTest {
                 ToolDescriptor.builder().name("mixed-out").description("test").build(), (context, request) -> {
                     var jsonNodeVal = tools.jackson.databind.node.JsonNodeFactory.instance.stringNode("json-val");
                     // Mixed map: one JsonNode value, one plain String value
-                    return ToolResult.of(Map.of("jsonField", jsonNodeVal, "plainField", "plain-val"), "fallback");
+                    return ToolResult.structured(
+                            Map.of("jsonField", jsonNodeVal, "plainField", "plain-val"), "fallback");
                 });
 
         try (ServerEngine server = newEngine(b -> {})) {

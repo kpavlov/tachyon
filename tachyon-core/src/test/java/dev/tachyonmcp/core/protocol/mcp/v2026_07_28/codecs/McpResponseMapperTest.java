@@ -67,8 +67,8 @@ class McpResponseMapperTest {
 
     @Test
     void toolResultsPreserveArbitraryStructuredValuesAndMetadata() {
-        var result = (CallToolResult)
-                mapper.callToolResult(ToolResult.of(JsonDocument.of("[1,true]")).withMeta("trace", Map.of("id", 7)));
+        var result = (CallToolResult) mapper.callToolResult(
+                ToolResult.structured(JsonDocument.of("[1,true]")).withMeta("trace", Map.of("id", 7)));
 
         assertThat(result.resultType()).isEqualTo("complete");
         assertThat(result.structuredContent())

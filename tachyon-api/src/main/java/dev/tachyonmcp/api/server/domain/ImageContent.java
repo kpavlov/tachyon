@@ -4,7 +4,6 @@ package dev.tachyonmcp.api.server.domain;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 import org.immutables.value.Value;

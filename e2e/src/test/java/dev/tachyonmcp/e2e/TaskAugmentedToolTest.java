@@ -103,8 +103,8 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
                 s -> s.tools()
                         .register(
                                 b -> b.name("custom-payload").taskSupport(TaskSupport.OPTIONAL),
-                                (context, request) ->
-                                        ToolResult.of(new CustomPayload("task")).withMeta("result-meta", "kept")));
+                                (context, request) -> ToolResult.structured(new CustomPayload("task"))
+                                        .withMeta("result-meta", "kept")));
         try (var client = createTestClient()) {
             client.initialize();
 

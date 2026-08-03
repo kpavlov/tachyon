@@ -54,7 +54,7 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest {
                             (ctx, request) -> {
                                 var meta = request.meta();
                                 var trace = meta != null ? meta.get("com.example/trace") : null;
-                                var result = ToolResult.of(JsonDocument.of("[1,true]"));
+                                var result = ToolResult.structured(JsonDocument.of("[1,true]"));
                                 return trace != null ? result.withMeta("echo-trace", trace) : result;
                             });
             s.resources()

@@ -90,7 +90,7 @@ class JsonUtilsTest {
 
     @Test
     void serializeStructuredWithJsonDocumentPassesThrough() {
-        var result = ToolResult.of(JsonDocument.of("{\"x\":1}"), "text");
+        var result = ToolResult.structured(JsonDocument.of("{\"x\":1}"), "text");
         var serialized = JsonUtils.serializeStructured(result, SERDE);
         assertThat(serialized).isSameAs(result);
     }
@@ -98,7 +98,7 @@ class JsonUtilsTest {
     @Test
     void serializeStructuredWithJsonNodePassesThrough() {
         var sv = parseJson("{\"y\":2}");
-        var result = ToolResult.of(sv, "text");
+        var result = ToolResult.structured(sv, "text");
         var serialized = JsonUtils.serializeStructured(result, SERDE);
         assertThat(serialized).isSameAs(result);
     }
@@ -112,7 +112,7 @@ class JsonUtilsTest {
 
     @Test
     void serializeStructuredWithPojoWrapsInJsonDocument() {
-        var result = ToolResult.of(new SamplePojo("x", 1), "text");
+        var result = ToolResult.structured(new SamplePojo("x", 1), "text");
         var serialized = JsonUtils.serializeStructured(result, SERDE);
         assertThat(serialized).isInstanceOf(ToolResult.Success.class);
         var sv = ((ToolResult.Success) serialized).structuredValue();
@@ -125,7 +125,7 @@ class JsonUtilsTest {
     @Test
     void serializeStructuredWithMapContainingJsonNodesUsesJackson() {
         var jsonVal = parseJson("{\"inner\":\"val\"}");
-        var result = ToolResult.of(Map.of("field", jsonVal), "text");
+        var result = ToolResult.structured(Map.of("field", jsonVal), "text");
         var serialized = JsonUtils.serializeStructured(result, SERDE);
         assertThat(serialized).isInstanceOf(ToolResult.Success.class);
         var sv = ((ToolResult.Success) serialized).structuredValue();
@@ -134,7 +134,7 @@ class JsonUtilsTest {
 
     @Test
     void serializeStructuredUnwrapsWithMeta() {
-        var inner = ToolResult.of(new SamplePojo("m", 2), "text");
+        var inner = ToolResult.structured(new SamplePojo("m", 2), "text");
         var withMeta = inner.withMeta("k", "v");
         var serialized = JsonUtils.serializeStructured(withMeta, SERDE);
         assertThat(serialized).isInstanceOf(ToolResult.WithMeta.class);

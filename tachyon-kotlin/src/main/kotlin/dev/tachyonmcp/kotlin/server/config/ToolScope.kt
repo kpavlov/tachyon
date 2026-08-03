@@ -29,7 +29,14 @@ public class ToolScope
         public fun <T : Any> success(
             value: T,
             text: String? = null,
-        ): ToolResult = if (text != null) ToolResult.of(value, text) else ToolResult.of(value)
+        ): ToolResult =
+            if (text !=
+                null
+            ) {
+                ToolResult.structured(value, text)
+            } else {
+                ToolResult.structured(value)
+            }
 
         /** Returns a [ToolResult] carrying a single plain-text content block. */
         public fun text(text: String): ToolResult = ToolResult.text(text)

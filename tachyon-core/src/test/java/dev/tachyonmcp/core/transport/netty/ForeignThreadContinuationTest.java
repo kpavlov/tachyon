@@ -46,7 +46,7 @@ class ForeignThreadContinuationTest {
         var fn = (AsyncToolFn) (ctx, request) -> {
             var future = new CompletableFuture<ToolResult>();
             var completer = new Thread(
-                    () -> future.complete(ToolResult.of(Map.of("result", "from-foreign"), "from-foreign")),
+                    () -> future.complete(ToolResult.structured(Map.of("result", "from-foreign"), "from-foreign")),
                     "foreign-completer");
             completer.start();
             return future;
