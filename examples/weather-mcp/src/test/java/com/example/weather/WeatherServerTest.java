@@ -85,6 +85,7 @@ class WeatherServerTest {
             .tools(null)
             .resources(null, null)
             .prompts(null)
+            .logging()
             .completions()
             .build());
     }
