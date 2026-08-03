@@ -14,6 +14,7 @@ import dev.tachyonmcp.api.server.domain.ToolAnnotations
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.config.ResourceScope
 import tools.jackson.databind.JsonNode
+import java.util.Base64
 
 /** Builds [dev.tachyonmcp.api.server.domain.Annotations]. */
 @TachyonDsl
@@ -142,8 +143,8 @@ public class ImageContentBuilder
 
         @PublishedApi
         internal fun build(): ImageContent =
-            ImageContent.base64(
-                requireNotNull(data) { "ImageContent.data is required" },
+            ImageContent.of(
+                Base64.getDecoder().decode(requireNotNull(data) { "ImageContent.data is required" }),
                 requireNotNull(mimeType) { "ImageContent.mimeType is required" },
                 annotations,
                 meta,
@@ -169,8 +170,8 @@ public class AudioContentBuilder
 
         @PublishedApi
         internal fun build(): AudioContent =
-            AudioContent.base64(
-                requireNotNull(data) { "AudioContent.data is required" },
+            AudioContent.of(
+                Base64.getDecoder().decode(requireNotNull(data) { "AudioContent.data is required" }),
                 requireNotNull(mimeType) { "AudioContent.mimeType is required" },
                 annotations,
                 meta,
@@ -203,7 +204,7 @@ public class BlobResourceContentsBuilder
                     "BlobResourceContents.uri is required: set it explicitly, or build inside a " +
                         "resource/template handler where BlobResourceContents { } defaults it from the request"
                 },
-                requireNotNull(blob) { "BlobResourceContents.blob is required" },
+                Base64.getDecoder().decode(requireNotNull(blob) { "BlobResourceContents.blob is required" }),
                 mimeType,
                 meta,
             )

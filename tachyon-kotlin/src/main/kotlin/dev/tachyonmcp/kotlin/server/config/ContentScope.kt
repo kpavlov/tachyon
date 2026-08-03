@@ -10,6 +10,7 @@ import dev.tachyonmcp.api.server.domain.ImageContent
 import dev.tachyonmcp.api.server.domain.ResourceContents
 import dev.tachyonmcp.api.server.domain.TextContent
 import dev.tachyonmcp.kotlin.server.TachyonDsl
+import java.util.Base64
 
 /**
  * Collects [dev.tachyonmcp.api.server.domain.ContentBlock]s inside a `content { }` result builder.
@@ -32,7 +33,7 @@ public class ContentScope
             data: String,
             mimeType: String,
         ) {
-            blocks += ImageContent.base64(data, mimeType)
+            blocks += ImageContent.of(Base64.getDecoder().decode(data), mimeType)
         }
 
         /** Appends a base64-encoded audio block. */
@@ -40,7 +41,7 @@ public class ContentScope
             data: String,
             mimeType: String,
         ) {
-            blocks += AudioContent.base64(data, mimeType)
+            blocks += AudioContent.of(Base64.getDecoder().decode(data), mimeType)
         }
 
         /** Appends an embedded resource block. */

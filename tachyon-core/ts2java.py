@@ -1411,10 +1411,10 @@ class Generator:
                 ("user", ["String text"], ["Role.USER", "TextContent.of(text)"]),
             ],
             "ImageContent": [
-                ("of", ["String data", "String mimeType"], ['"image"', "data", "mimeType"]),
+                ("of", ["byte[] data", "String mimeType"], ['"image"', "data", "mimeType"]),
             ],
             "AudioContent": [
-                ("of", ["String data", "String mimeType"], ['"audio"', "data", "mimeType"]),
+                ("of", ["byte[] data", "String mimeType"], ['"audio"', "data", "mimeType"]),
             ],
             "TextResourceContents": [
                 ("of", ["String text", "String uri", "String mimeType"], ["text", "uri", "mimeType"]),
@@ -1674,6 +1674,8 @@ class Generator:
                 out.append(f"                    {fname} = parser.getLongValue();\n")
             elif typ in ("double", "Double"):
                 out.append(f"                    {fname} = parser.getDoubleValue();\n")
+            elif typ == "byte[]":
+                out.append(f"                    {fname} = parser.getBinaryValue();\n")
             elif "java.util.List" in typ:
                 item = typ.split("<")[1][:-1]
                 item_ref = self.ref_for_type(item, model_name)
@@ -1819,6 +1821,8 @@ class Generator:
                 out.append(f'{ind}gen.writeNumberProperty("{json_name}", {acc});\n')
             elif typ in ("double", "Double"):
                 out.append(f'{ind}gen.writeNumberProperty("{json_name}", {acc});\n')
+            elif typ == "byte[]":
+                out.append(f'{ind}gen.writeBinaryProperty("{json_name}", {acc});\n')
             elif "java.util.List" in typ:
                 out.append(f'{ind}gen.writeArrayPropertyStart("{json_name}");\n')
                 out.append(f"{ind}for (var item : {acc}) {{\n")

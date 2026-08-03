@@ -84,10 +84,10 @@ final class McpToolMapper {
             case dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TextContent t ->
                 TextContent.of(t.text(), JsonUtils.toObjectMap(t._meta()), toDomainAnnotations(t.annotations()));
             case dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ImageContent i ->
-                ImageContent.base64(
+                ImageContent.of(
                         i.data(), i.mimeType(), toDomainAnnotations(i.annotations()), JsonUtils.toObjectMap(i._meta()));
             case dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.AudioContent a ->
-                AudioContent.base64(
+                AudioContent.of(
                         a.data(), a.mimeType(), toDomainAnnotations(a.annotations()), JsonUtils.toObjectMap(a._meta()));
             case dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ResourceLink r ->
                 ResourceLink.builder(r.uri(), r.name())

@@ -16,6 +16,7 @@ import dev.tachyonmcp.api.server.domain.TextContent
 import dev.tachyonmcp.kotlin.server.json.toJacksonNodeMap
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
+import java.util.Base64
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -79,8 +80,8 @@ public fun ImageContent(
     annotations: Annotations? = null,
     meta: Map<String, JsonNode>? = null,
 ): ImageContent =
-    ImageContent.base64(
-        data,
+    ImageContent.of(
+        Base64.getDecoder().decode(data),
         mimeType,
         annotations,
         meta,
@@ -97,8 +98,8 @@ public fun ImageContent(
     annotations: Annotations? = null,
     meta: Map<String, JsonObject>?,
 ): ImageContent =
-    ImageContent.base64(
-        data,
+    ImageContent.of(
+        Base64.getDecoder().decode(data),
         mimeType,
         annotations,
         meta?.toJacksonNodeMap(),
@@ -118,8 +119,8 @@ public fun AudioContent(
     annotations: Annotations? = null,
     meta: Map<String, JsonNode>? = null,
 ): AudioContent =
-    AudioContent.base64(
-        data,
+    AudioContent.of(
+        Base64.getDecoder().decode(data),
         mimeType,
         annotations,
         meta,
@@ -136,8 +137,8 @@ public fun AudioContent(
     annotations: Annotations? = null,
     meta: Map<String, JsonObject>?,
 ): AudioContent =
-    AudioContent.base64(
-        data,
+    AudioContent.of(
+        Base64.getDecoder().decode(data),
         mimeType,
         annotations,
         meta?.toJacksonNodeMap(),

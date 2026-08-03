@@ -21,7 +21,10 @@
     "TaskStatusNotificationParams.pollInterval": "Long",
     "TaskStatusNotificationParams.ttl": "Long",
     "Tool.inputSchema": "String",
-    "Tool.outputSchema": "String"
+    "Tool.outputSchema": "String",
+    "ImageContent.data": "byte[]",
+    "AudioContent.data": "byte[]",
+    "BlobResourceContents.blob": "byte[]"
   },
   "additionalProperties": {
     "ClientCapabilities": [

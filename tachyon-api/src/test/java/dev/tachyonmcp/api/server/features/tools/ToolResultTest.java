@@ -22,8 +22,8 @@ class ToolResultTest {
     @Test
     @SuppressWarnings("removal")
     void deprecatedResponseFactoriesDelegateToCanonicalFactories() {
-        var image = ImageContent.of("aGVsbG8=", "image/png");
-        var audio = AudioContent.of("aGVsbG8=", "audio/wav");
+        var image = ImageContent.base64("aGVsbG8=", "image/png");
+        var audio = AudioContent.base64("aGVsbG8=", "audio/wav");
         var result = ToolResult.blocks(image, audio);
 
         assertThat(image).isEqualTo(ImageContent.base64("aGVsbG8=", "image/png"));

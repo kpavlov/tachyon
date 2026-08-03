@@ -11,6 +11,7 @@ import dev.tachyonmcp.api.server.domain.TextResourceContents
 import dev.tachyonmcp.kotlin.server.json.toJacksonNodeMap
 import kotlinx.serialization.json.JsonObject
 import tools.jackson.databind.JsonNode
+import java.util.Base64
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -92,7 +93,7 @@ public fun BlobResourceContents(
 ): BlobResourceContents =
     BlobResourceContents.of(
         uri,
-        blob,
+        Base64.getDecoder().decode(blob),
         mimeType,
         meta,
     )
@@ -112,7 +113,7 @@ public fun BlobResourceContents(
 ): BlobResourceContents =
     BlobResourceContents.of(
         uri,
-        blob,
+        Base64.getDecoder().decode(blob),
         mimeType,
         meta.toJacksonNodeMap(),
     )
