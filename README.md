@@ -68,17 +68,18 @@ Opt into sessions for SSE resumability, `Last-Event-ID` replay, and TTL cleanup.
 
 ## Documentation
 
-| Guide | Description |
-|---|---|
-| [Quickstart](docs/quickstart.md) | Build a working server in 5 minutes |
-| [Configuration](docs/configuration.md) | Network, I/O engine (native transports), sessions, CORS |
-| [Tools](docs/tools.md) | Sync/async handlers, input schema, `ToolResult` |
-| [Resources](docs/resources.md) | Static URIs, dynamic handlers, URI templates |
-| [Tasks](docs/tasks.md) | Long-running operations, state machine, `TasksExtension` |
-| [Extensions](docs/extensions.md) | Custom protocol extensions, negotiation |
-| [FAQ](docs/faq.md) | Java, frameworks, concurrency, deployment, and compatibility |
-| [Kotlin DSL](docs/kotlin.md) | Coroutine-first DSL, `TachyonServer { }`, scope reference |
-| [Kotlin module](tachyon-kotlin/README.md) | `tachyon-kotlin` module overview |
+| Guide                                     | Description                                                  |
+|-------------------------------------------|--------------------------------------------------------------|
+| [Quickstart](docs/quickstart.md)          | Build a working server in 5 minutes                          |
+| [Configuration](docs/configuration.md)    | Network, I/O engine (native transports), sessions, CORS      |
+| [Tools](docs/tools.md)                    | Sync/async handlers, input schema, `ToolResult`              |
+| [Resources](docs/resources.md)            | Static URIs, dynamic handlers, URI templates                 |
+| [Tasks](docs/tasks.md)                    | Long-running operations, state machine, `TasksExtension`     |
+| [Extensions](docs/extensions.md)          | Custom protocol extensions, negotiation                      |
+| [FAQ](docs/faq.md)                        | Java, frameworks, concurrency, deployment, and compatibility |
+| [Kotlin DSL](docs/kotlin.md)              | Coroutine-first DSL, `TachyonServer { }`, scope reference    |
+| [Kotlin module](tachyon-kotlin/README.md) | `tachyon-kotlin` module overview                             |
+| [Examples](examples/README.md)            | Runnable Java & Kotlin example servers                       |
 
 ## Agent Skill
 
