@@ -133,14 +133,14 @@ class JsonUtilsTest {
     }
 
     @Test
-    void serializeStructuredUnwrapsWithMeta() {
+    void serializeStructuredPreservesMeta() {
         var inner = ToolResult.structured(new SamplePojo("m", 2), "text");
         var withMeta = inner.withMeta("k", "v");
         var serialized = JsonUtils.serializeStructured(withMeta, SERDE);
-        assertThat(serialized).isInstanceOf(ToolResult.WithMeta.class);
-        var innerSerialized = ((ToolResult.WithMeta) serialized).inner();
-        var sv = ((ToolResult.Success) innerSerialized).structuredValue();
-        assertThat(sv).isInstanceOf(JsonDocument.class);
+        assertThat(serialized).isInstanceOf(ToolResult.Success.class);
+        var success = (ToolResult.Success) serialized;
+        assertThat(success.structuredValue()).isInstanceOf(JsonDocument.class);
+        assertThat(success.meta()).containsEntry("k", "v");
     }
 
     public record SamplePojo(String name, int value) {}

@@ -5,10 +5,9 @@ import dev.tachyonmcp.api.server.domain.HasMeta;
 import dev.tachyonmcp.api.server.domain.InputRequest;
 import dev.tachyonmcp.api.server.domain.InputRequestBundle;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -16,59 +15,11 @@ import org.jspecify.annotations.Nullable;
  * <p>
  * A function returns either a list of messages or a request for additional input.
  */
-public sealed interface PromptResult extends HasMeta
-        permits PromptResult.Messages, PromptResult.InputRequired, PromptResult.WithMeta {
+public sealed interface PromptResult extends HasMeta permits PromptResult.Messages, PromptResult.InputRequired {
 
-    /** Returns no metadata unless this result is wrapped with {@link WithMeta}. */
     @Override
     default @Nullable Map<String, Object> meta() {
         return null;
-    }
-
-    /**
-     * A prompt result containing one or more prompt messages.
-     *
-     * @param messages the prompt messages, or {@code null} for an empty response
-     */
-    record Messages(@Nullable List<PromptMessage> messages) implements PromptResult {
-        public Messages {
-            messages = messages == null ? null : List.copyOf(messages);
-        }
-    }
-
-    /**
-     * A prompt result that requests additional input from the client.
-     *
-     * @param request the input request bundle
-     */
-    record InputRequired(InputRequestBundle request) implements PromptResult {
-        public InputRequired {
-            Objects.requireNonNull(request, "request");
-        }
-
-        /** Returns the input requests keyed by field name. */
-        public Map<String, ? extends InputRequest> inputRequests() {
-            return request.inputRequests();
-        }
-
-        /** Returns the optional opaque state for resuming this prompt. */
-        public @Nullable String requestState() {
-            return request.requestState();
-        }
-    }
-
-    /**
-     * Wraps another prompt result with protocol extension metadata.
-     *
-     * @param inner the wrapped result
-     * @param meta the metadata entries
-     */
-    record WithMeta(PromptResult inner, Map<String, Object> meta) implements PromptResult {
-        public WithMeta {
-            Objects.requireNonNull(inner, "inner");
-            Objects.requireNonNull(meta, "meta");
-            meta = Map.copyOf(meta);
-        }
     }
 
     /**
@@ -77,15 +28,7 @@ public sealed interface PromptResult extends HasMeta
      * @param entries metadata entries to merge
      * @return a result carrying the merged metadata
      */
-    default PromptResult withMeta(Map<String, Object> entries) {
-        if (entries.isEmpty()) return this;
-        if (this instanceof WithMeta(PromptResult inner, Map<String, Object> current)) {
-            var merged = new HashMap<>(current);
-            merged.putAll(entries);
-            return new WithMeta(inner, merged);
-        }
-        return new WithMeta(this, entries);
-    }
+    PromptResult withMeta(Map<String, Object> entries);
 
     /**
      * Returns this result with one metadata entry.
@@ -99,13 +42,169 @@ public sealed interface PromptResult extends HasMeta
     }
 
     /**
+     * A prompt result containing one or more prompt messages.
+     */
+    @Value.Immutable
+    @Value.Style(
+            visibility = Value.Style.ImplementationVisibility.PACKAGE,
+            typeImmutable = "Default*",
+            with = "",
+            from = "")
+    non-sealed interface Messages extends PromptResult {
+
+        /**
+         * Returns the prompt messages, or {@code null} for an empty response.
+         *
+         * @return the prompt messages, or {@code null}
+         */
+        @Nullable
+        List<PromptMessage> messages();
+
+        @Override
+        @Nullable
+        Map<String, Object> meta();
+
+        @Override
+        default Messages withMeta(Map<String, Object> m) {
+            if (m.isEmpty()) return this;
+            return builder().messages(messages()).meta(HasMeta.merge(meta(), m)).build();
+        }
+
+        /**
+         * Creates a new builder for constructing {@code Messages} instances.
+         *
+         * @return a new builder
+         */
+        static Builder builder() {
+            return DefaultMessages.builder();
+        }
+
+        /**
+         * Creates a message result with no {@code _meta}.
+         *
+         * @param messages the prompt messages, or {@code null}
+         * @return a new message result
+         */
+        static Messages of(@Nullable List<PromptMessage> messages) {
+            return builder().messages(messages).build();
+        }
+
+        /**
+         * Builder for {@link Messages}.
+         */
+        interface Builder {
+            /**
+             * Sets the prompt messages.
+             *
+             * @param messages the prompt messages, or {@code null}
+             * @return this builder
+             */
+            Builder messages(@Nullable Iterable<? extends PromptMessage> messages);
+
+            /**
+             * Sets the prompt messages.
+             *
+             * @param messages the prompt messages
+             * @return this builder
+             */
+            default Builder messages(PromptMessage... messages) {
+                return messages(List.of(messages));
+            }
+
+            /**
+             * Sets the metadata entries.
+             *
+             * @param meta the metadata map, or {@code null}
+             * @return this builder
+             */
+            Builder meta(@Nullable Map<String, ?> meta);
+
+            /**
+             * Builds the {@code Messages} instance.
+             *
+             * @return a new message result
+             */
+            Messages build();
+        }
+    }
+
+    /**
+     * A prompt result that requests additional input from the client.
+     */
+    @Value.Immutable
+    @Value.Style(
+            visibility = Value.Style.ImplementationVisibility.PACKAGE,
+            typeImmutable = "Default*",
+            with = "",
+            from = "")
+    non-sealed interface InputRequired extends PromptResult, dev.tachyonmcp.api.server.domain.InputRequired {
+
+        @Override
+        @Nullable
+        Map<String, Object> meta();
+
+        /**
+         * Creates a new builder for constructing {@code InputRequired} instances.
+         *
+         * @return a new builder
+         */
+        static Builder builder() {
+            return DefaultInputRequired.builder();
+        }
+
+        /**
+         * Creates an input-required result with no {@code _meta}.
+         *
+         * @param request the requested inputs and opaque state to echo back
+         * @return a new input-required result
+         */
+        static InputRequired of(InputRequestBundle request) {
+            return builder().request(request).build();
+        }
+
+        @Override
+        default InputRequired withMeta(Map<String, Object> m) {
+            if (m.isEmpty()) return this;
+            return builder().request(request()).meta(HasMeta.merge(meta(), m)).build();
+        }
+
+        /**
+         * Builder for {@link InputRequired}.
+         */
+        interface Builder {
+            /**
+             * Sets the requested inputs and opaque state to echo back.
+             *
+             * @param request the input request bundle
+             * @return this builder
+             */
+            Builder request(InputRequestBundle request);
+
+            /**
+             * Sets the metadata entries.
+             *
+             * @param meta the metadata map, or {@code null}
+             * @return this builder
+             */
+            Builder meta(@Nullable Map<String, ?> meta);
+
+            /**
+             * Builds the {@code InputRequired} instance.
+             *
+             * @return a new input-required result
+             */
+            InputRequired build();
+        }
+    }
+
+    /**
      * Creates a prompt result with the given messages.
      *
      * @param messages the prompt messages, or {@code null}
      * @return the prompt result
      */
     static PromptResult messages(@Nullable List<PromptMessage> messages) {
-        return new Messages(messages);
+        return Messages.of(messages);
     }
 
     /**
@@ -117,6 +216,6 @@ public sealed interface PromptResult extends HasMeta
      */
     static PromptResult inputRequired(
             Map<String, ? extends InputRequest> inputRequests, @Nullable String requestState) {
-        return new InputRequired(new InputRequestBundle(inputRequests, requestState));
+        return InputRequired.of(new InputRequestBundle(inputRequests, requestState));
     }
 }

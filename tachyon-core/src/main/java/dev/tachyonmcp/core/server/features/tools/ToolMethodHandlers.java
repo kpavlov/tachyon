@@ -11,7 +11,6 @@ import dev.tachyonmcp.api.json.JsonSchemaValidator;
 import dev.tachyonmcp.api.json.PayloadDeserializer;
 import dev.tachyonmcp.api.json.PayloadSerializer;
 import dev.tachyonmcp.api.json.SchemaValidationError;
-import dev.tachyonmcp.api.server.domain.ContentBlock;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TaskResult;
@@ -28,7 +27,6 @@ import dev.tachyonmcp.core.server.features.tasks.TaskRegistry;
 import dev.tachyonmcp.core.server.json.JsonUtils;
 import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.time.Duration;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
@@ -219,15 +217,11 @@ public final class ToolMethodHandlers {
         private void completeTask(TaskRegistry taskRegistry, TaskEntry task, @Nullable ToolResult result) {
             if (result == null || result instanceof ToolResult.Deferred) return;
             result = JsonUtils.serializeStructured(result, payloadSerializer);
-            Map<String, Object> meta = null;
-            if (result instanceof ToolResult.WithMeta(ToolResult inner, Map<String, Object> resultMeta)) {
-                result = inner;
-                meta = resultMeta;
-            }
+            var meta = result.meta();
             if (result instanceof ToolResult.Error error) {
                 task.fail(new TaskResult.Failed(error.content(), null, meta));
-            } else if (result instanceof ToolResult.Success(Object structuredValue, List<ContentBlock> content)) {
-                task.complete(new TaskResult.Completed(content, structuredValue, meta));
+            } else if (result instanceof ToolResult.Success success) {
+                task.complete(new TaskResult.Completed(success.content(), success.structuredValue(), meta));
             }
             taskRegistry.unregisterRunning(task.id());
         }
@@ -241,8 +235,7 @@ public final class ToolMethodHandlers {
 
         private void validateOutput(@Nullable JsonSchema schema, ToolResult result) {
             if (schema == null || outputValidator == JsonSchemaValidator.noop()) return;
-            var inner = result instanceof ToolResult.WithMeta withMeta ? withMeta.inner() : result;
-            if (!(inner instanceof ToolResult.Success success) || success.structuredValue() == null) return;
+            if (!(result instanceof ToolResult.Success success) || success.structuredValue() == null) return;
             var value = success.structuredValue();
             var json = value instanceof JsonDocument document ? document.json() : payloadSerializer.serialize(value);
             var errors = outputValidator.validate(schema, JsonDocument.of(json));

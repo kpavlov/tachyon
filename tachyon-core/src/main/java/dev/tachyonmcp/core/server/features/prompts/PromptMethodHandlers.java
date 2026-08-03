@@ -107,8 +107,7 @@ public final class PromptMethodHandlers {
                             return error;
                         }
                         var meta = result.meta();
-                        var unwrapped = result instanceof PromptResult.WithMeta withMeta ? withMeta.inner() : result;
-                        return switch (unwrapped) {
+                        return switch (result) {
                             case PromptResult.Messages messages ->
                                 context.responseMapper()
                                         .getPromptResult(
@@ -121,7 +120,6 @@ public final class PromptMethodHandlers {
                                 context.responseMapper()
                                         .inputRequiredResult(
                                                 inputRequired.inputRequests(), inputRequired.requestState(), meta);
-                            case PromptResult.WithMeta ignored -> throw new AssertionError("WithMeta unwrapped above");
                         };
                     });
         }

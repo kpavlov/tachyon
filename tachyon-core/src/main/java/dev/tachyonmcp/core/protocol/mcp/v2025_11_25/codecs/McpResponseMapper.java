@@ -21,7 +21,6 @@ import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.api.server.features.tools.ToolResult.InputRequired;
 import dev.tachyonmcp.api.server.features.tools.ToolResult.Success;
-import dev.tachyonmcp.api.server.features.tools.ToolResult.WithMeta;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CallToolResult;
@@ -131,18 +130,12 @@ public class McpResponseMapper implements ProtocolResponseMapper {
 
     @Override
     public Object callToolResult(ToolResult result) {
-        Map<String, JsonNode> meta = null;
-        ToolResult unwrapped = result;
-        if (result instanceof WithMeta(ToolResult inner, Map<String, Object> meta1)) {
-            meta = meta1.isEmpty() ? null : JsonUtils.toJsonNodeMap(meta1);
-            unwrapped = inner;
-        }
-        final var resolvedMeta = meta;
-        return switch (unwrapped) {
+        var meta = result.meta();
+        var resolvedMeta = meta == null || meta.isEmpty() ? null : JsonUtils.toJsonNodeMap(meta);
+        return switch (result) {
             case InputRequired ir -> new InputRequiredPayload(ir.inputRequests(), ir.requestState(), resolvedMeta);
             case ToolResult.Error er -> buildCallToolResult(er.content(), null, true, resolvedMeta);
             case Success s -> wireSuccess(s, resolvedMeta);
-            case WithMeta ignored -> throw new AssertionError("WithMeta unwrapped above");
             case ToolResult.Deferred ignored ->
                 throw new AssertionError("Deferred should not reach callToolResult mapping");
         };

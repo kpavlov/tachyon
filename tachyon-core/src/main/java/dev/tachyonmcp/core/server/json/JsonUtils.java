@@ -6,7 +6,6 @@ import static dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec.readTreeValue;
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.json.JsonDocument;
 import dev.tachyonmcp.api.json.PayloadSerializer;
-import dev.tachyonmcp.api.server.domain.ContentBlock;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
 import java.io.IOException;
@@ -170,14 +169,15 @@ public final class JsonUtils {
      * cannot encode Jackson trees.
      */
     public static ToolResult serializeStructured(ToolResult result, PayloadSerializer serializer) {
-        if (result instanceof ToolResult.WithMeta(ToolResult inner1, Map<String, Object> meta)) {
-            var inner = serializeStructured(inner1, serializer);
-            return inner == inner1 ? result : new ToolResult.WithMeta(inner, meta);
-        }
-        if (!(result instanceof ToolResult.Success(Object sv, List<ContentBlock> content))) return result;
+        if (!(result instanceof ToolResult.Success success)) return result;
+        var sv = success.structuredValue();
         if (sv == null || sv instanceof JsonDocument || sv instanceof JsonNode) return result;
         var json = containsJsonNodes(sv) ? MAPPER.writeValueAsString(sv) : serializer.serialize(sv);
-        return new ToolResult.Success(JsonDocument.of(json), content);
+        return ToolResult.Success.builder()
+                .structuredValue(JsonDocument.of(json))
+                .content(success.content())
+                .meta(success.meta())
+                .build();
     }
 
     private static boolean containsJsonNodes(Object structuredValue) {
