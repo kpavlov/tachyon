@@ -14,7 +14,6 @@ class TestWeatherProvider : WeatherProvider {
     ): WeatherObservation {
         if (city == "Unknown") throw CityNotFoundException(city)
         return WeatherObservation(
-            city = city,
             condition = "Clear sky",
             temperature = 18.5,
             temperatureUnit = temperatureUnit,

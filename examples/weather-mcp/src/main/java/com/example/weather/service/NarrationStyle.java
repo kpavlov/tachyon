@@ -4,14 +4,19 @@
 
 package com.example.weather.service;
 
+import com.fasterxml.jackson.annotation.JsonClassDescription;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
+@JsonClassDescription("Style used to narrate a weather forecast.")
+@JsonTypeName("NarrationStyle")
 public enum NarrationStyle {
-    PLAIN("plain"),
-    CONCISE("concise"),
-    PIRATE("pirate");
+    @JsonProperty("plain") PLAIN("plain"),
+    @JsonProperty("concise") CONCISE("concise"),
+    @JsonProperty("pirate") PIRATE("pirate");
 
     private final String value;
 
@@ -19,7 +24,7 @@ public enum NarrationStyle {
         this.value = value;
     }
 
-    String value() {
+    public String value() {
         return value;
     }
 
@@ -32,22 +37,5 @@ public enum NarrationStyle {
             .filter(style -> style.value.equals(value))
             .findFirst()
             .orElseThrow(() -> new IllegalArgumentException("Unsupported style: " + value));
-    }
-
-    public static String inputSchema() {
-        var values = Arrays.stream(values())
-            .map(style -> "\"%s\"".formatted(style.value))
-            .collect(Collectors.joining(", "));
-        // language=json
-        return """
-            {
-                  "type": "object",
-                  "properties": {
-                    "forecast": {"type": "string"},
-                    "style": {"type": "string", "enum": [%s]}
-                  },
-                  "required": ["forecast", "style"]
-                }
-            """.formatted(values);
     }
 }

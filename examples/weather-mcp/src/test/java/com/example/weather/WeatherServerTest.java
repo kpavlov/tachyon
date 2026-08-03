@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -100,17 +101,45 @@ class WeatherServerTest {
         assertThat(tool.title()).isEqualTo("Current Weather");
         assertThat(tool.description()).isEqualTo("Get current weather for a city");
         assertThat(tool.inputSchema()).isEqualTo(Map.of(
+            "$schema", "https://json-schema.org/draft/2020-12/schema",
+            "$id", "GetWeatherRequest",
+            "description", "Input for looking up the current weather in a city.",
             "type", "object",
-            "required", List.of("city"),
+            "required", List.of("city", "units"),
+            "additionalProperties", false,
             "properties", Map.of(
                 "city", Map.of(
                     "description", "City name (e.g., London, Tokyo, New York)",
                     "type", "string"),
                 "units", Map.of(
                     "description", "Temperature unit (default: celsius)",
-                    "enum", List.of("celsius", "fahrenheit"),
-                    "type", "string"))));
-        assertThat(tool.outputSchema()).isNull();
+                    "oneOf", List.of(
+                        Map.of("type", "null"),
+                        Map.of("$ref", "#/$defs/TemperatureUnit")))),
+            "$defs", Map.of(
+                "TemperatureUnit", Map.of(
+                    "type", "string",
+                    "description", "Unit used to represent temperature.",
+                    "enum", List.of("celsius", "fahrenheit")))));
+        assertThat(tool.outputSchema()).isEqualTo(Map.of(
+            "$schema", "https://json-schema.org/draft/2020-12/schema",
+            "$id", "GetWeatherResponse",
+            "description", "Current weather observation for a city.",
+            "type", "object",
+            "required", List.of("city", "condition", "temperature", "unit", "humidity", "windSpeed"),
+            "additionalProperties", false,
+            "properties", Map.of(
+                "city", Map.of("description", "City name", "type", "string"),
+                "condition", Map.of("description", "Weather condition", "type", "string"),
+                "temperature", Map.of("description", "Temperature in the response unit", "type", "number"),
+                "unit", Map.of("description", "Temperature unit", "$ref", "#/$defs/TemperatureUnit"),
+                "humidity", Map.of("description", "Relative humidity percentage", "type", "integer"),
+                "windSpeed", Map.of("description", "Wind speed in km/h", "type", "number")),
+            "$defs", Map.of(
+                "TemperatureUnit", Map.of(
+                    "type", "string",
+                    "description", "Unit used to represent temperature.",
+                    "enum", List.of("celsius", "fahrenheit")))));
         assertThat(tool.meta()).isNull();
     }
 
@@ -121,21 +150,22 @@ class WeatherServerTest {
             .build());
 
         assertThat(result).isNotNull();
-        var content = result.content().getFirst();
-        assertThat(content).isInstanceOf(McpSchema.TextContent.class);
-        var textContent = ((McpSchema.TextContent) content);
-        assertThat(textContent.text())
-            .startsWith("Weather in London:")
-            .contains("Temperature:")
-            .contains("°C")
-            .contains("Humidity:")
-            .contains("Wind:");
+        assertThat(result.structuredContent()).isEqualTo(Map.of(
+            "city", "London",
+            "condition", "Clear sky",
+            "temperature", 18.5,
+            "unit", "celsius",
+            "humidity", 52,
+            "windSpeed", 12.0));
     }
 
     @Test
     void shouldEmitProgressWhileFetchingWeather() {
+        var arguments = new HashMap<String, Object>();
+        arguments.put("city", "London");
+        arguments.put("units", null);
         final var result = client.callTool(McpSchema.CallToolRequest.builder("get-weather")
-            .arguments(Map.of("city", "London"))
+            .arguments(arguments)
             .progressToken("weather-progress")
             .build());
 
@@ -155,13 +185,20 @@ class WeatherServerTest {
 
     @Test
     void shouldCallWeatherToolAfterElicitingAnotherCity() {
+        var arguments = new HashMap<String, Object>();
+        arguments.put("city", "Unknown");
+        arguments.put("units", null);
         final var result = client.callTool(McpSchema.CallToolRequest.builder("get-weather")
-            .arguments(Map.of("city", "Unknown"))
+            .arguments(arguments)
             .build());
 
-        var content = result.content().getFirst();
-        assertThat(content).isInstanceOf(McpSchema.TextContent.class);
-        assertThat(((McpSchema.TextContent) content).text()).startsWith("Weather in Tallinn:");
+        assertThat(result.structuredContent()).isEqualTo(Map.of(
+            "city", "Tallinn",
+            "condition", "Clear sky",
+            "temperature", 18.5,
+            "unit", "celsius",
+            "humidity", 52,
+            "windSpeed", 12.0));
     }
 
     @Test
@@ -235,7 +272,7 @@ class WeatherServerTest {
         var textContents = ((McpSchema.TextResourceContents) contents);
         assertThat(textContents.uri()).isEqualTo("weather://featured/current");
         assertThat(textContents.mimeType()).isEqualTo("application/json");
-        assertThat(textContents.text()).contains("Tallinn", "Clear sky");
+        assertThat(textContents.text()).contains("Clear sky");
     }
 
     @Test
@@ -259,7 +296,7 @@ class WeatherServerTest {
         var textContents = ((McpSchema.TextResourceContents) contents);
         assertThat(textContents.uri()).isEqualTo("weather://current/London");
         assertThat(textContents.mimeType()).isEqualTo("application/json");
-        assertThat(textContents.text()).contains("London");
+        assertThat(textContents.text()).contains("Clear sky");
     }
 
     @Test

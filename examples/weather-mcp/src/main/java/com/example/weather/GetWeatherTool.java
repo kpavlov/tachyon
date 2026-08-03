@@ -4,6 +4,9 @@
 package com.example.weather;
 
 import com.example.weather.model.CityInput;
+import com.example.weather.model.GetWeatherRequest;
+import com.example.weather.model.GetWeatherResponse;
+import com.example.weather.model.TemperatureUnit;
 import com.example.weather.service.WeatherService;
 import com.example.weather.spi.CityNotFoundException;
 import com.example.weather.spi.WeatherObservation;
@@ -18,37 +21,20 @@ import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 class GetWeatherTool {
     private static final Logger log = LoggerFactory.getLogger(GetWeatherTool.class);
-    private static final JsonSchema CITY_SCHEMA = JsonSchema.parse(readSchemaResource(CityInput.class));
-    // language=json
-    private static final String INPUT_SCHEMA = """
-        {
-          "type": "object",
-          "properties": {
-            "city": {
-              "type": "string",
-              "description": "City name (e.g., London, Tokyo, New York)"
-            },
-            "units": {
-              "type": "string",
-              "enum": ["celsius", "fahrenheit"],
-              "description": "Temperature unit (default: celsius)"
-            }
-          },
-          "required": ["city"]
-        }
-        """;
+    private static final JsonSchema CITY_SCHEMA = SchemaResources.load(CityInput.class);
+    private static final JsonSchema INPUT_SCHEMA = SchemaResources.load(GetWeatherRequest.class);
+    private static final JsonSchema OUTPUT_SCHEMA = SchemaResources.load(GetWeatherResponse.class);
 
     static final ToolDescriptor DESCRIPTOR = ToolDescriptor.builder()
         .name("get-weather")
         .title("Current Weather")
         .description("Get current weather for a city")
         .inputSchema(INPUT_SCHEMA)
+        .outputSchema(OUTPUT_SCHEMA)
         .build();
 
     static ToolFn fn(WeatherService weatherService) {
@@ -58,7 +44,7 @@ class GetWeatherTool {
             var units = args.stringOr("units", "celsius");
             var progressToken = request.progressToken();
             try {
-                return ToolResult.text(format(fetchWithProgress(ctx, progressToken, weatherService, city), units));
+                return ToolResult.structured(toResponse(city, fetchWithProgress(ctx, progressToken, weatherService, city), units));
             } catch (CityNotFoundException e) {
                 var elicitedCity = elicitCity(ctx, city);
                 if (elicitedCity.isEmpty()) {
@@ -66,7 +52,7 @@ class GetWeatherTool {
                 }
                 try {
                     final var fetched = fetchWithProgress(ctx, progressToken, weatherService, elicitedCity.get());
-                    return ToolResult.text(format(fetched, units));
+                    return ToolResult.structured(toResponse(elicitedCity.get(), fetched, units));
                 } catch (CityNotFoundException ignored) {
                     return ToolResult.error("City not found");
                 }
@@ -83,18 +69,6 @@ class GetWeatherTool {
         var weather = weatherService.currentWeather(city);
         ctx.notifications().progress(progressToken, 1.0, 1.0, "Weather retrieved for " + city);
         return weather;
-    }
-
-    private static String readSchemaResource(Class<?> type) {
-        var path = "META-INF/kt-schema/schemas/%s.json".formatted(type.getName().replace('.', '/'));
-        try (var in = type.getClassLoader().getResourceAsStream(path)) {
-            if (in == null) {
-                throw new IllegalStateException("Missing generated schema resource: " + path);
-            }
-            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new IllegalStateException("Could not read schema resource: " + path, e);
-        }
     }
 
     private static ToolResult internalError(Exception e) {
@@ -122,22 +96,11 @@ class GetWeatherTool {
         return correctedCity.isBlank() ? Optional.empty() : Optional.of(correctedCity);
     }
 
-    private static String format(WeatherObservation weather, String units) {
-        var temperature = "celsius".equals(units)
-            ? "%.1f°C".formatted(weather.temperatureCelsius())
-            : "%.1f°F".formatted(weather.temperatureCelsius() * 9 / 5 + 32);
-        return """
-            Weather in %s:
-              Condition: %s
-              Temperature: %s
-              Humidity: %d%%
-              Wind: %.1f km/h
-            """.formatted(
-            weather.city(),
-            weather.condition(),
-            temperature,
-            weather.humidity(),
-            weather.windSpeed()
-        );
+    private static GetWeatherResponse toResponse(String city, WeatherObservation weather, String units) {
+        var fahrenheit = "fahrenheit".equals(units);
+        var temperature = fahrenheit ? weather.temperatureCelsius() * 9 / 5 + 32 : weather.temperatureCelsius();
+        var unit = fahrenheit ? TemperatureUnit.FAHRENHEIT : TemperatureUnit.CELSIUS;
+        return new GetWeatherResponse(
+            city, weather.condition(), temperature, unit, weather.humidity(), weather.windSpeed());
     }
 }

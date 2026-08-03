@@ -7,7 +7,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class WeatherObservation(
-    val city: String,
     val condition: String,
     val temperature: Double,
     val temperatureUnit: TemperatureUnit,

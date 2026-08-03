@@ -17,7 +17,7 @@ final class TestWeatherProvider implements WeatherProvider {
         if ("Unknown".equals(city)) {
             throw new CityNotFoundException(city);
         }
-        return new WeatherObservation(city, "Clear sky", 18.5, 52, 12.0);
+        return new WeatherObservation("Clear sky", 18.5, 52, 12.0);
     }
 
     @Override

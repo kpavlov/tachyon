@@ -64,7 +64,7 @@ model in its own file.
 
 ### Define the input and output models
 
-`GetWeatherInput` uses `@Description` for schema descriptions and a default value for the optional
+`GetWeatherRequest` uses `@Description` for schema descriptions and a default value for the optional
 temperature unit:
 
 ```kotlin
@@ -119,7 +119,7 @@ data class WeatherObservation(
 Create one generator and use the same source models as the handler:
 
 ```kotlin
-import com.example.weather.model.GetWeatherInput
+import com.example.weather.model.GetWeatherRequest
 import com.example.weather.spi.WeatherObservation
 import dev.tachyonmcp.kotlin.server.features.tools.ToolDescriptor
 import me.kpavlov.kt.schema.generator.json.JsonSchemaConfig
@@ -159,7 +159,7 @@ The running weather server publishes both generated schemas through `tools/list`
         "description": "Get current weather for a city",
         "inputSchema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
-          "$id": "com.example.weather.model.GetWeatherInput",
+          "$id": "com.example.weather.model.GetWeatherRequestst",
           "type": "object",
           "properties": {
             "city": {
@@ -276,7 +276,7 @@ This gives one end-to-end contract:
 
 | Stage | Source of truth |
 |---|---|
-| Tool input schema | `GetWeatherInput` |
+| Tool input schema | `GetWeatherRequest` |
 | Handler arguments | `request.arguments()` |
 | Tool output schema | `WeatherObservation` |
 | Structured result | `WeatherObservation` returned through `ToolResult.structured` |

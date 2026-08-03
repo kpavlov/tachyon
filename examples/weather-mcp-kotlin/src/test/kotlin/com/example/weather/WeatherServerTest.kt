@@ -250,7 +250,6 @@ class WeatherServerTest {
             shouldBeInstanceOf<TextResourceContents>()
             uri() shouldBe "weather://featured/current"
             mimeType() shouldBe "application/json"
-            text() shouldContain "Tallinn"
             text() shouldContain "Clear sky"
         }
     }
@@ -278,7 +277,7 @@ class WeatherServerTest {
         contents.shouldBeInstanceOf<TextResourceContents>()
         contents.uri() shouldBe "weather://current/London"
         contents.mimeType() shouldBe "application/json"
-        contents.text() shouldContain "London"
+        contents.text() shouldContain "Clear sky"
     }
 
     @Test

@@ -3,6 +3,7 @@
 package com.example.weather;
 
 import com.example.weather.integration.OpenMeteoProvider;
+import com.example.weather.model.RewriteForecastPromptRequest;
 import com.example.weather.service.NarrationStyle;
 import com.example.weather.service.WeatherService;
 import com.example.weather.spi.CityNotFoundException;
@@ -21,7 +22,6 @@ import dev.tachyonmcp.api.server.features.completions.CompletionResult;
 import dev.tachyonmcp.api.server.features.prompts.PromptRequest;
 import dev.tachyonmcp.api.server.features.prompts.PromptResult;
 import dev.tachyonmcp.core.server.TachyonServer;
-import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.ObjectMapper;
@@ -107,7 +107,7 @@ public final class WeatherServer {
                                 .addArguments(
                                         PromptArgument.of("forecast", "Forecast", "Weather forecast to rewrite", true),
                                         PromptArgument.of("style", "Style", "plain, concise, or pirate", true))
-                                .inputSchema(NarrationStyle.inputSchema()),
+                                .inputSchema(SchemaResources.load(RewriteForecastPromptRequest.class)),
                         (ctx, request) -> rewriteForecast(weatherService, request)))
                 .withResources(resources -> resources.registerTemplate(
                         template -> template.name("current-weather")

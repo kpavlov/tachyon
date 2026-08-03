@@ -21,7 +21,7 @@
         <maven.compiler.release>21</maven.compiler.release>
         <jackson.version>3.2.0</jackson.version>
         <junit.version>6.1.2</junit.version>
-        <kt-schema.version>0.8.1</kt-schema.version>
+        <kt-schema.version>0.8.2</kt-schema.version>
         <tachyon.version>1.0.0-beta.16</tachyon.version>
 <!--        <tachyon.version>1.0.0-SNAPSHOT</tachyon.version>-->
         <assertj.version>3.27.7</assertj.version>
@@ -137,8 +137,8 @@
                         </path>
                     </annotationProcessorPaths>
                     <compilerArgs>
-                        <arg>-Ame.kpavlov.kt.schema.rootPackage=com.example.weather.model</arg>
-                        <arg>-Ame.kpavlov.kt.schema.include=com.example.weather.model.**</arg>
+                        <arg>-Ame.kpavlov.kt.schema.rootPackage=com.example.weather</arg>
+                        <arg>-Ame.kpavlov.kt.schema.include=com.example.weather.model.**,com.example.weather.service.NarrationStyle</arg>
                     </compilerArgs>
                 </configuration>
             </plugin>

@@ -28,7 +28,7 @@ class OpenMeteoProvider(
     ): WeatherObservation {
         val location = location(city, get(geocodingRequest(city, count = 1)))
         val forecast = get(forecastRequest(location, temperatureUnit))
-        return weather(city, temperatureUnit, forecast)
+        return weather(temperatureUnit, forecast)
     }
 
     override fun searchCities(query: String): List<String> {
@@ -56,13 +56,11 @@ class OpenMeteoProvider(
     }
 
     private fun weather(
-        city: String,
         temperatureUnit: TemperatureUnit,
         response: String,
     ): WeatherObservation {
         val current = parse(response).path("current")
         return WeatherObservation(
-            city = city,
             condition = condition(current.path("weather_code").asInt()).displayName,
             temperature = current.path("temperature_2m").asDouble(),
             temperatureUnit = temperatureUnit,

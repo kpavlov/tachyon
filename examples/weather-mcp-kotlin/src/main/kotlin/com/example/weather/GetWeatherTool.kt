@@ -2,7 +2,8 @@
 
 package com.example.weather
 
-import com.example.weather.model.GetWeatherInput
+import com.example.weather.model.GetWeatherRequest
+import com.example.weather.model.GetWeatherResponse
 import com.example.weather.model.TemperatureUnit
 import com.example.weather.model.TemperatureUnit.Celsius
 import com.example.weather.model.TemperatureUnit.Fahrenheit
@@ -39,15 +40,17 @@ private val CITY_SCHEMA =
         schemaGenerator.generateSchemaString(CityElicitationInput::class),
     )
 
-private data class CityElicitationInput(val city: String)
+private data class CityElicitationInput(
+    val city: String,
+)
 
 val getWeatherToolDescriptor =
     ToolDescriptor {
         name = "get-weather"
         title = "Current Weather"
         description = "Get current weather for a city"
-        inputSchema(schemaGenerator.generateSchemaString(GetWeatherInput::class))
-        outputSchema(schemaGenerator.generateSchemaString(WeatherObservation::class))
+        inputSchema(schemaGenerator.generateSchemaString(GetWeatherRequest::class))
+        outputSchema(schemaGenerator.generateSchemaString(GetWeatherResponse::class))
     }
 
 fun ToolScope.getWeather(weatherService: WeatherService): ToolResult {
@@ -55,20 +58,34 @@ fun ToolScope.getWeather(weatherService: WeatherService): ToolResult {
     val city = args.stringValue("city")
     val units = args.stringOrNull("units")
     val progressToken = request.progressToken()
-    val temperatureUnit = when (units?.lowercase(Locale.getDefault())) {
-        "celsius" -> Celsius
-        "fahrenheit" -> Fahrenheit
-        else -> {
-            Celsius
+    val temperatureUnit =
+        when (units?.lowercase(Locale.getDefault())) {
+            "celsius" -> {
+                Celsius
+            }
+
+            "fahrenheit" -> {
+                Fahrenheit
+            }
+
+            else -> {
+                Celsius
+            }
         }
-    }
 
     fun attempt(city: String): ToolResult =
         try {
             ToolResult.structured(
-                fetchWithProgress(
-                    ctx, progressToken, weatherService, city, temperatureUnit
-                )
+                toResponse(
+                    city,
+                    fetchWithProgress(
+                        ctx,
+                        progressToken,
+                        weatherService,
+                        city,
+                        temperatureUnit,
+                    ),
+                ),
             )
         } catch (e: Exception) {
             if (e is CityNotFoundException) throw e
@@ -96,10 +113,21 @@ private fun fetchWithProgress(
 ): WeatherObservation {
     ctx.notifications().progress(progressToken, 0.1, 1.0, "Fetching weather for $city")
     val weather = weatherService.currentWeather(city, temperatureUnit)
-    ctx.notifications()
+    ctx
+        .notifications()
         .progress(progressToken, 1.0, 1.0, "Weather retrieved for $city")
     return weather
 }
+
+private fun toResponse(city: String, weather: WeatherObservation): GetWeatherResponse =
+    GetWeatherResponse(
+        city = city,
+        condition = weather.condition,
+        temperature = weather.temperature,
+        temperatureUnit = weather.temperatureUnit,
+        humidity = weather.humidity,
+        windSpeed = weather.windSpeed,
+    )
 
 internal fun restoreInterruptStatus(e: Exception) {
     if (e is InterruptedException) {
@@ -132,27 +160,4 @@ private fun elicitCity(
         }
     if (result.action() != ElicitationResult.Action.ACCEPT) return null
     return result.content()?.stringOr("city", "")?.takeIf(String::isNotBlank)
-}
-
-private fun format(
-    weather: WeatherObservation,
-): String {
-    val temperature =
-        when (weather.temperatureUnit) {
-            Celsius -> {
-                "%.1f°C".format(Locale.ROOT, weather.temperature)
-            }
-
-            Fahrenheit -> {
-                "%.1f°F".format(Locale.ROOT, weather.temperature * 9 / 5 + 32)
-            }
-        }
-    return """
-        Weather in ${weather.city}:
-          Condition: ${weather.condition}
-          Temperature: $temperature
-          Humidity: ${weather.humidity}%
-          Wind: ${"%.1f".format(weather.windSpeed)} km/h
-
-        """.trimIndent()
 }

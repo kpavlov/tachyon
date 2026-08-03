@@ -41,7 +41,7 @@ public final class OpenMeteoProvider implements WeatherProvider, CityProvider {
     public WeatherObservation currentWeather(String city) throws Exception {
         var location = location(city, responseBody(httpClient.send(geocodingRequest(city, 1), HttpResponse.BodyHandlers.ofString())));
         var forecast = responseBody(httpClient.send(forecastRequest(location), HttpResponse.BodyHandlers.ofString()));
-        return weather(city, forecast);
+        return weather(forecast);
     }
 
     @Override
@@ -51,7 +51,7 @@ public final class OpenMeteoProvider implements WeatherProvider, CityProvider {
             .thenApply(response -> location(city, response))
             .thenCompose(location -> httpClient.sendAsync(forecastRequest(location), HttpResponse.BodyHandlers.ofString()))
             .thenApplyAsync(OpenMeteoProvider::responseBody, executor)
-            .thenApply(forecast -> weather(city, forecast));
+            .thenApply(this::weather);
     }
 
     @Override
@@ -107,10 +107,9 @@ public final class OpenMeteoProvider implements WeatherProvider, CityProvider {
         return new Location(result.path("latitude").asDouble(), result.path("longitude").asDouble());
     }
 
-    private WeatherObservation weather(String city, String response) {
+    private WeatherObservation weather(String response) {
         var current = parse(response).path("current");
         return new WeatherObservation(
-            city,
             condition(current.path("weather_code").asInt()).displayName(),
             current.path("temperature_2m").asDouble(),
             current.path("relative_humidity_2m").asInt(),
