@@ -112,7 +112,7 @@ internal class TachyonServerTest {
                     sessionTtl = 15.seconds
                     sessionStore = InMemorySessionStore()
                     sessionEventStore = InMemorySessionEventStore()
-                    sessionIdGenerator { _, req -> req.headers().get("X-Tenant-Id") ?: "anon" }
+                    sessionIdGenerator { _, req -> req?.headers()?.get("X-Tenant-Id") ?: "anon" }
                 }
                 monitoring {
                     slowRequestLogging = true

@@ -3,6 +3,7 @@ package dev.tachyonmcp.api.server.session;
 
 import dev.tachyonmcp.api.runtime.InteractionContext;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Derives the session id for a newly initialized session from the incoming {@code initialize}
@@ -53,23 +54,18 @@ public interface SessionIdGenerator<T> {
     /**
      * Derives a session id from the initialize request (headers, URI, …).
      *
-     * <p>Contract for the <em>initialize</em> flow:
-     * <ul>
-     *   <li>A {@code null} return value or any thrown exception causes the server to respond
-     *       with an {@code internal-error} and abort session creation.
-     *   <li>A blank string ({@code ""} or whitespace-only) is accepted as-is and used directly
-     *       as the session id — the generator must produce a non-blank value if a valid id is
-     *       required.
-     * </ul>
+     * <p>Contract for the <em>initialize</em> flow: a {@code null} or blank ({@code ""} or
+     * whitespace-only) return value, or any thrown exception, causes the server to respond with
+     * an {@code internal-error} and abort session creation.
      *
      * @param channelContext the per-channel interaction (protocol version, lifecycle phase,
      *     attribute scratch space); may be {@code null} in contexts that create a session without
      *     an established channel
      * @param request the incoming initialize request; may be {@code null} when
      *     {@link #readsRequest()} is {@code false}
-     * @return the session id to assign; must be non-blank when a valid id is required
+     * @return the non-blank session id to assign
      */
-    String generate(InteractionContext channelContext, T request);
+    String generate(@Nullable InteractionContext channelContext, @Nullable T request);
 
     /**
      * Whether {@link #generate} inspects the request (headers, URI, …). When {@code false}, the

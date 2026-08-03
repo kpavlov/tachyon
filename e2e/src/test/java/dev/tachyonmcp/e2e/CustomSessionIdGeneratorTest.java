@@ -10,12 +10,16 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.function.BiConsumer;
 import net.javacrumbs.jsonunit.assertj.JsonAssertions;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Verifies a custom {@link SessionIdGenerator} derives the session id
@@ -28,25 +32,25 @@ class CustomSessionIdGeneratorTest {
 
     private static final String TENANT_HEADER = "X-Tenant-Id";
 
-    private TachyonServer serverHandle;
+    private TachyonServer server;
     private int port;
 
     @BeforeAll
     void beforeAll() {
-        serverHandle = TachyonServer.builder()
+        server = TachyonServer.builder()
                 .session(s -> s.enabled(true)
                         .sessionIdGenerator((channelContext, request) ->
                                 "tenant-" + request.headers().get(TENANT_HEADER)))
                 .network(n -> n.host("localhost").port(0))
                 .build();
-        serverHandle.tools().registerAsync(EchoToolHandler.DESCRIPTOR, EchoToolHandler.FN);
-        serverHandle.start();
-        port = serverHandle.port();
+        server.tools().registerAsync(EchoToolHandler.DESCRIPTOR, EchoToolHandler.FN);
+        server.start();
+        port = server.port();
     }
 
     @AfterAll
     void afterAll() {
-        serverHandle.close();
+        server.close();
     }
 
     @Test
@@ -85,35 +89,62 @@ class CustomSessionIdGeneratorTest {
         // SessionIdGenerator has no fallback by design (see its javadoc): a thrown exception
         // aborts session creation with an internal-error response, it does not fall back to
         // the default generator.
-        var failingHandle = TachyonServer.builder()
-                .session(s -> s.enabled(true).sessionIdGenerator((channelContext, request) -> {
+        initializeAndVerify(
+                (channelContext, request) -> {
                     throw new IllegalStateException("boom");
-                }))
-                .network(n -> n.host("localhost").port(0))
-                .build();
-        failingHandle.start();
-        try (failingHandle;
+                },
+                33,
+                this::assertInternalErrorResponse);
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = " ")
+    void shouldReturnInternalErrorWhenGeneratedSessionIdIsNullOrBlank(@Nullable String generatedId) throws Exception {
+        // SessionIdGenerator's javadoc: a null or blank return value aborts session creation
+        // with an internal-error, same as a thrown exception.
+        initializeAndVerify((channelContext, request) -> generatedId, 34, this::assertInternalErrorResponse);
+    }
+
+    private void initializeAndVerify(
+            SessionIdGenerator<Object> generator, int requestId, BiConsumer<HttpResponse<String>, Integer> verifier)
+            throws Exception {
+        var handle = startServerWith(generator);
+        try (handle;
                 var client = HttpClient.newHttpClient()) {
             var init = post(
                     client,
-                    failingHandle.port(),
+                    handle.port(),
                     null,
                     null,
                     // language=JSON
                     """
-                    {"jsonrpc":"2.0","id":33,"method":"initialize",
+                    {"jsonrpc":"2.0","id":%d,"method":"initialize",
                      "params":{"protocolVersion":"2025-11-25","capabilities":{},
                                "clientInfo":{"name":"test","version":"1.0"}}}
-                    """);
+                    """.formatted(requestId));
 
-            assertThat(init.statusCode()).isEqualTo(200);
-            JsonAssertions.assertThatJson(init.body())
-                    .isEqualTo(
-                            // language=JSON
-                            """
-                         {"jsonrpc":"2.0","id":33,"error":{"code":-32603,"message":"Internal error"}}
-                        """);
+            verifier.accept(init, requestId);
         }
+    }
+
+    private TachyonServer startServerWith(SessionIdGenerator<Object> generator) {
+        var handle = TachyonServer.builder()
+                .session(s -> s.enabled(true).sessionIdGenerator(generator))
+                .network(n -> n.host("localhost").port(0))
+                .build();
+        handle.start();
+        return handle;
+    }
+
+    private void assertInternalErrorResponse(HttpResponse<String> response, int requestId) {
+        assertThat(response.statusCode()).isEqualTo(200);
+        JsonAssertions.assertThatJson(response.body())
+                .isEqualTo(
+                        // language=JSON
+                        """
+                     {"jsonrpc":"2.0","id":%d,"error":{"code":-32603,"message":"Internal error"}}
+                    """.formatted(requestId));
     }
 
     private HttpResponse<String> post(

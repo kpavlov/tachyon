@@ -474,9 +474,13 @@ public class McpDispatcher {
     }
 
     private String generateSessionId(@Nullable ChannelContext channelContext) {
-        var request =
+        final var request =
                 channelContext != null ? channelContext.get(ATTR_INIT_REQUEST).orElse(null) : null;
-        var generator = server.sessionIdGenerator();
-        return generator.generate(channelContext, request != null ? request : EMPTY_INIT_REQUEST);
+        final var generator = server.sessionIdGenerator();
+        final var id = generator.generate(channelContext, request != null ? request : EMPTY_INIT_REQUEST);
+        if (id == null || id.isBlank()) {
+            throw new IllegalStateException("SessionIdGenerator produced a blank session id");
+        }
+        return id;
     }
 }

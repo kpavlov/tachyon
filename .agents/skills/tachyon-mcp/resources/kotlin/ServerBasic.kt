@@ -3,12 +3,12 @@
 package dev.tachyonmcp.skill
 
 import dev.tachyonmcp.api.server.config.Mode
-import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.api.server.domain.Role
+import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.core.server.config.NetworkConfig
 import dev.tachyonmcp.core.server.json.NetworkntJsonSchemaValidator
 import dev.tachyonmcp.core.transport.netty.NettyIoEngine
-import dev.tachyonmcp.api.server.features.tools.ToolResult
+import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.kotlin.server.buildServer
 import dev.tachyonmcp.kotlin.server.domain.Icon
 import dev.tachyonmcp.kotlin.server.domain.PromptMessage
@@ -20,8 +20,8 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toKotlinDuration
 
-fun assembleServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer {
-    return buildServer {
+fun assembleServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer =
+    buildServer {
         // ── identity ──────────────────────────────────────────────
         info {
             name = "demo-server"
@@ -72,7 +72,7 @@ fun assembleServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer {
             sessionStore = null // default: InMemorySessionStore
             sessionEventStore = null // default: InMemorySessionEventStore
             // lambda DSL
-            sessionIdGenerator { _, request -> request.headers().get("X-Tenant-Id") ?: "anon" }
+            sessionIdGenerator { _, request -> request?.headers()?.get("X-Tenant-Id") ?: "anon" }
             // or direct assignment, request-independent:
             // sessionIdGenerator = SessionIdGenerator { _, _ -> "sid_" + Uuid.random().toHexString() }
         }
@@ -89,6 +89,7 @@ fun assembleServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer {
             endpointPath = NetworkConfig.DEFAULT_ENDPOINT_PATH
             allowedOrigins.add("*")
             allowedHeaders.add("Authorization")
+            allowedHosts.add("host.docker.internal")
             allowNullOrigin = true
             allowPrivateNetworks = true
             readerIdleTimeout = NetworkConfig.DEFAULT_READER_IDLE_TIMEOUT.toKotlinDuration()
@@ -138,7 +139,6 @@ fun assembleServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer {
         // ── netty pipeline customiser (escape hatch) ──────────────
         pipelineCustomizer { }
     }
-}
 
 fun main() {
     val server = assembleServer(8080)

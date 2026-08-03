@@ -47,7 +47,7 @@ public class SessionScope
          * Do not key sessions off an unauthenticated client header — that invites session
          * fixation and cross-tenant collisions, and a missing header would crash the request thread.
          */
-        public fun sessionIdGenerator(generator: (InteractionContext, HttpRequest) -> String) {
+        public fun sessionIdGenerator(generator: (InteractionContext?, HttpRequest?) -> String) {
             // readsRequest() defaults to true (not overridden below), so the request is never null.
             sessionIdGenerator = SessionIdGenerator { ctx, request -> generator(ctx, request) }
         }
