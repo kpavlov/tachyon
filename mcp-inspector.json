@@ -3,7 +3,10 @@
     "default-server": {
       "type": "streamable-http",
       "url": "http://127.0.0.1:8080/mcp",
-      "note": "For Streamable HTTP connections, add this URL directly in your MCP Client"
+      "note": "For Streamable HTTP connections, add this URL directly in your MCP Client",
+      "autoRefreshOnListChanged": true,
+      "paginatedLists": true,
+      "protocolEra": "auto"
     }
   }
 }

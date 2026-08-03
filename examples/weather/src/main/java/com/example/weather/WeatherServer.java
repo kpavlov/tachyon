@@ -159,7 +159,11 @@ public final class WeatherServer {
             Map<String, UriTemplateValue> params) {
         var city = ((UriTemplateValue.Scalar) params.get("city")).value();
         try {
-            return TextResourceContents.of(uri, asJson(weatherService.currentWeather(city)), "application/json");
+            return TextResourceContents.builder()
+                .text(asJson(weatherService.currentWeather(city)))
+                .mimeType("application/json")
+                .uri(uri)
+                .build();
         } catch (CityNotFoundException e) {
             throw new InvalidArgumentException("city", e.getMessage());
         } catch (Exception e) {

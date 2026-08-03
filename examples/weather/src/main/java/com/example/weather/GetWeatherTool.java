@@ -1,8 +1,9 @@
 /*
- * Copyright (c) 2026 Konstantin Pavlov and contributors.
+ * Copyright (c) 2026 Konstantin Pavlov.
  */
 package com.example.weather;
 
+import com.example.weather.model.CityInput;
 import com.example.weather.service.WeatherService;
 import com.example.weather.spi.CityNotFoundException;
 import com.example.weather.spi.WeatherObservation;
@@ -17,13 +18,13 @@ import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 class GetWeatherTool {
     private static final Logger log = LoggerFactory.getLogger(GetWeatherTool.class);
-    private static final JsonSchema CITY_SCHEMA = JsonSchema.of("""
-        {"type":"object","properties":{"city":{"type":"string","title":"City"}},"required":["city"]}
-        """);
+    private static final JsonSchema CITY_SCHEMA = JsonSchema.parse(readSchemaResource(CityInput.class));
     // language=json
     private static final String INPUT_SCHEMA = """
         {
@@ -82,6 +83,18 @@ class GetWeatherTool {
         var weather = weatherService.currentWeather(city);
         ctx.notifications().progress(progressToken, 1.0, 1.0, "Weather retrieved for " + city);
         return weather;
+    }
+
+    private static String readSchemaResource(Class<?> type) {
+        var path = "META-INF/kt-schema/schemas/%s.json".formatted(type.getName().replace('.', '/'));
+        try (var in = type.getClassLoader().getResourceAsStream(path)) {
+            if (in == null) {
+                throw new IllegalStateException("Missing generated schema resource: " + path);
+            }
+            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not read schema resource: " + path, e);
+        }
     }
 
     private static ToolResult internalError(Exception e) {

@@ -7,18 +7,18 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>dev.tachyonmcp.example</groupId>
-    <artifactId>weather-mcp-kotlin-example</artifactId>
+    <artifactId>weather-mcp-kotlin</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <name>Weather MCP Kotlin Example</name>
-    <description>Weather MCP server using Tachyon MCP Kotlin DSL</description>
+    <description>Weather MCP server using Tachyon MCP on Kotlin</description>
     <url>https://github.com/kpavlov/tachyon</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>21</java.version>
         <kotlin.version>2.2.21</kotlin.version>
-        <tachyon.version>1.0.0-beta.15</tachyon.version>
+        <tachyon.version>1.0.0-beta.16</tachyon.version>
 <!--        <tachyon.version>1.0.0-SNAPSHOT</tachyon.version>-->
         <junit.version>6.1.2</junit.version>
         <kotest.version>6.2.1</kotest.version>
