@@ -84,46 +84,6 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor, Ha
         return DefaultResourceTemplateDescriptor.builder();
     }
 
-    /**
-     * Creates a template descriptor from a name and URI template pattern.
-     *
-     * @deprecated Use {@link #builder()}
-     */
-    @Deprecated
-    static ResourceTemplateDescriptor of(String name, String uriTemplate) {
-        return ResourceTemplateDescriptor.builder()
-                .name(name)
-                .uriTemplate(uriTemplate)
-                .build();
-    }
-
-    /**
-     * Creates a fully specified resource template descriptor.
-     *
-     * @deprecated Use {@link #builder()}
-     */
-    @Deprecated
-    static ResourceTemplateDescriptor of(
-            String name,
-            String uriTemplate,
-            @Nullable String description,
-            @Nullable String mimeType,
-            @Nullable String title,
-            @Nullable Annotations annotations,
-            @Nullable List<Icon> icons,
-            @Nullable String extensionId) {
-        return ResourceTemplateDescriptor.builder()
-                .name(name)
-                .uriTemplate(uriTemplate)
-                .description(description)
-                .mimeType(mimeType)
-                .title(title)
-                .annotations(annotations)
-                .icons(icons)
-                .extensionId(extensionId)
-                .build();
-    }
-
     /** Builder for {@link ResourceTemplateDescriptor}. */
     interface Builder {
 

@@ -153,7 +153,7 @@ class McpToolMapperTest {
     @Test
     void metaSurvivesBlobResourceContentsRoundTrip() {
         var meta = Map.<String, Object>of("key", META_VALUE);
-        var domain = BlobResourceContents.of("test://blob", "blobdata", "application/octet-stream", meta);
+        var domain = BlobResourceContents.of("test://blob", DATA_BYTES, "application/octet-stream", meta);
         var protocol = (dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.BlobResourceContents)
                 McpToolMapper.toProtocolResourceContents(domain);
         assertThat(protocol._meta()).containsEntry("key", PROTOCOL_META_VALUE);

@@ -11,6 +11,7 @@ import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.api.server.features.prompts.PromptResult;
+import java.util.Base64;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
@@ -194,7 +195,8 @@ class PromptsTest extends AbstractStatelessMcpE2eTest {
         server.prompts()
                 .register(
                         PromptDescriptor.of("image-prompt", "Prompt with image"),
-                        List.of(PromptMessage.user(ImageContent.base64("iVBORw0KGgo=", "image/png"))));
+                        List.of(PromptMessage.user(
+                                ImageContent.of(Base64.getDecoder().decode("iVBORw0KGgo="), "image/png"))));
 
         try (var client = createTestClient()) {
             client.initialize();

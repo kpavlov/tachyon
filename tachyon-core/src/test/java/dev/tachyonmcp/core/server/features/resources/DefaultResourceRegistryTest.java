@@ -132,7 +132,10 @@ class DefaultResourceRegistryTest {
 
         reg.register(resource("a"), EMPTY_HANDLER);
         reg.registerTemplate(
-                ResourceTemplateDescriptor.of("template-entry", "test://entry/{id}"),
+                ResourceTemplateDescriptor.builder()
+                        .name("template-entry")
+                        .uriTemplate("test://entry/{id}")
+                        .build(),
                 (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain"));
 
         assertThat(reg.find("a")).isEmpty();
@@ -350,7 +353,11 @@ class DefaultResourceRegistryTest {
         var capturedParams = new AtomicReference<@Nullable Map<String, UriTemplateValue>>();
         var capturedTemplate = new AtomicReference<@Nullable String>();
         registry.registerTemplate(
-                ResourceTemplateDescriptor.of("template-request", "test://items/{id}"), (ctx, request) -> {
+                ResourceTemplateDescriptor.builder()
+                        .name("template-request")
+                        .uriTemplate("test://items/{id}")
+                        .build(),
+                (ctx, request) -> {
                     capturedUri.set(request.uri());
                     capturedParams.set(request.params());
                     capturedTemplate.set(request.uriTemplate());
@@ -600,7 +607,10 @@ class DefaultResourceRegistryTest {
         registry.onChange(callCount::incrementAndGet);
 
         registry.registerTemplate(
-                ResourceTemplateDescriptor.of("tmpl", "test://tmpl/{id}"),
+                ResourceTemplateDescriptor.builder()
+                        .name("tmpl")
+                        .uriTemplate("test://tmpl/{id}")
+                        .build(),
                 (ctx, request) -> TextResourceContents.of(request.uri(), "", "text/plain"));
 
         assertThat(callCount).hasValue(1);
@@ -702,42 +712,60 @@ class DefaultResourceRegistryTest {
 
     @Test
     void shouldRejectTemplateWithBlankName() {
-        assertThatThrownBy(() -> ResourceTemplateDescriptor.of("", "resource://{id}"))
+        assertThatThrownBy(() -> ResourceTemplateDescriptor.builder()
+                        .name("")
+                        .uriTemplate("resource://{id}")
+                        .build())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("name");
     }
 
     @Test
     void shouldRejectTemplateWithBlankUriTemplate() {
-        assertThatThrownBy(() -> ResourceTemplateDescriptor.of("tmpl", "  "))
+        assertThatThrownBy(() -> ResourceTemplateDescriptor.builder()
+                        .name("tmpl")
+                        .uriTemplate("  ")
+                        .build())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("uriTemplate");
     }
 
     @Test
     void shouldRejectTemplateWithInvalidVariableName() {
-        assertThatThrownBy(() -> ResourceTemplateDescriptor.of("bad", "resource://{foo-bar}"))
+        assertThatThrownBy(() -> ResourceTemplateDescriptor.builder()
+                        .name("bad")
+                        .uriTemplate("resource://{foo-bar}")
+                        .build())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("foo-bar");
     }
 
     @Test
     void shouldRejectTemplateWithEmptyBraces() {
-        assertThatThrownBy(() -> ResourceTemplateDescriptor.of("bad", "resource://{}"))
+        assertThatThrownBy(() -> ResourceTemplateDescriptor.builder()
+                        .name("bad")
+                        .uriTemplate("resource://{}")
+                        .build())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Empty URI template expression");
     }
 
     @Test
     void shouldRejectTemplateWithUnmatchedOpenBrace() {
-        assertThatThrownBy(() -> ResourceTemplateDescriptor.of("bad", "resource://{foo"))
+        assertThatThrownBy(() -> ResourceTemplateDescriptor.builder()
+                        .name("bad")
+                        .uriTemplate("resource://{foo")
+                        .build())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Malformed URI template");
     }
 
     @Test
     void shouldAllowRepeatedVariableNames() {
-        var descriptor = ResourceTemplateDescriptor.of("dictionary", "resource://dictionary/{term:1}/{term}");
+        var descriptor = ResourceTemplateDescriptor.builder()
+                .name("dictionary")
+                .uriTemplate("resource://dictionary/{term:1}/{term}")
+                .build();
 
         assertThat(descriptor.uriTemplate()).isEqualTo("resource://dictionary/{term:1}/{term}");
     }
@@ -746,7 +774,11 @@ class DefaultResourceRegistryTest {
     void shouldPassExplodedSequenceToTemplateHandler() throws Exception {
         var captured = new AtomicReference<@Nullable Map<String, UriTemplateValue>>();
         registry.registerTemplate(
-                ResourceTemplateDescriptor.of("files", "resource://files{/segments*}"), (ctx, request) -> {
+                ResourceTemplateDescriptor.builder()
+                        .name("files")
+                        .uriTemplate("resource://files{/segments*}")
+                        .build(),
+                (ctx, request) -> {
                     captured.set(request.params());
                     return TextResourceContents.of(request.uri(), "ok", "text/plain");
                 });
@@ -765,12 +797,20 @@ class DefaultResourceRegistryTest {
     void shouldPreferMoreSpecificTemplateOnOverlap() throws Exception {
         var matched = new AtomicReference<@Nullable String>();
         registry.registerTemplate(
-                ResourceTemplateDescriptor.of("generic", "resource://{type}/{id}"), (ctx, request) -> {
+                ResourceTemplateDescriptor.builder()
+                        .name("generic")
+                        .uriTemplate("resource://{type}/{id}")
+                        .build(),
+                (ctx, request) -> {
                     matched.set("generic");
                     return TextResourceContents.of(request.uri(), "generic", "text/plain");
                 });
         registry.registerTemplate(
-                ResourceTemplateDescriptor.of("specific", "resource://users/{id}"), (ctx, request) -> {
+                ResourceTemplateDescriptor.builder()
+                        .name("specific")
+                        .uriTemplate("resource://users/{id}")
+                        .build(),
+                (ctx, request) -> {
                     matched.set("specific");
                     return TextResourceContents.of(request.uri(), "specific", "text/plain");
                 });

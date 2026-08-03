@@ -4,7 +4,6 @@ package dev.tachyonmcp.api.server.domain;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.util.Base64;
 import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
@@ -112,40 +111,6 @@ public non-sealed interface ImageContent extends ContentBlock {
         return DefaultImageContent.of(data, mimeType, annotations, meta);
     }
 
-    /**
-     * Creates an image content block from base64-encoded data, with no metadata or annotations.
-     *
-     * @param data     the base64-encoded image data
-     * @param mimeType the image MIME type (e.g. {@code image/png})
-     * @return a new image content block
-     * @deprecated use {@link #of(byte[], String)}
-     */
-    @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
-    static ImageContent base64(String data, String mimeType) {
-        return of(Base64.getDecoder().decode(data), mimeType);
-    }
-
-    /**
-     * Creates an image content block from base64-encoded data with given annotations and no metadata.
-     *
-     * @deprecated use {@link #of(byte[], String, Annotations)}
-     */
-    @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
-    static ImageContent base64(String data, String mimeType, @Nullable Annotations annotations) {
-        return of(Base64.getDecoder().decode(data), mimeType, annotations);
-    }
-
-    /**
-     * Creates an image content block from base64-encoded data with annotations and metadata.
-     *
-     * @deprecated use {@link #of(byte[], String, Annotations, Map)}
-     */
-    @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
-    static ImageContent base64(
-            String data, String mimeType, @Nullable Annotations annotations, @Nullable Map<String, Object> meta) {
-        return of(Base64.getDecoder().decode(data), mimeType, annotations, meta);
-    }
-
     private static byte[] readAllBytes(InputStream in) {
         try {
             return in.readAllBytes();
@@ -175,18 +140,6 @@ public non-sealed interface ImageContent extends ContentBlock {
          */
         default Builder data(InputStream data) {
             return data(readAllBytes(data));
-        }
-
-        /**
-         * Sets the image data from a base64-encoded string.
-         *
-         * @param data the base64-encoded image data
-         * @return this builder
-         * @deprecated use {@link #data(byte[])}
-         */
-        @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
-        default Builder data(String data) {
-            return data(Base64.getDecoder().decode(data));
         }
 
         /**

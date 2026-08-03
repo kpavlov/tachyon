@@ -4,7 +4,6 @@ package dev.tachyonmcp.api.server.domain;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.util.Base64;
 import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
@@ -94,36 +93,6 @@ public non-sealed interface BlobResourceContents extends ResourceContents {
         return of(uri, readAllBytes(blob), mimeType);
     }
 
-    /**
-     * Creates binary resource contents from base64-encoded data, with no {@code _meta}.
-     *
-     * @param uri      the resource URI
-     * @param blob     the base64-encoded binary content
-     * @param mimeType the content's MIME type, or {@code null} if unspecified
-     * @return a new blob resource contents
-     * @deprecated use {@link #of(String, byte[], String)}
-     */
-    @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
-    static BlobResourceContents of(String uri, String blob, @Nullable String mimeType) {
-        return of(uri, Base64.getDecoder().decode(blob), mimeType);
-    }
-
-    /**
-     * Creates binary resource contents from base64-encoded data.
-     *
-     * @param uri      the resource URI
-     * @param blob     the base64-encoded binary content
-     * @param mimeType the content's MIME type, or {@code null} if unspecified
-     * @param meta     the {@code _meta} entries, or {@code null} if none
-     * @return a new blob resource contents
-     * @deprecated use {@link #of(String, byte[], String, Map)}
-     */
-    @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
-    static BlobResourceContents of(
-            String uri, String blob, @Nullable String mimeType, @Nullable Map<String, Object> meta) {
-        return of(uri, Base64.getDecoder().decode(blob), mimeType, meta);
-    }
-
     private static byte[] readAllBytes(InputStream in) {
         try {
             return in.readAllBytes();
@@ -170,18 +139,6 @@ public non-sealed interface BlobResourceContents extends ResourceContents {
          */
         default Builder blob(InputStream blob) {
             return blob(readAllBytes(blob));
-        }
-
-        /**
-         * Sets the binary content from a base64-encoded string.
-         *
-         * @param blob the base64-encoded blob data
-         * @return this builder
-         * @deprecated use {@link #blob(byte[])}
-         */
-        @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
-        default Builder blob(String blob) {
-            return blob(Base64.getDecoder().decode(blob));
         }
 
         /**

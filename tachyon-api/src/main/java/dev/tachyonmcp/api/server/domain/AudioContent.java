@@ -4,7 +4,6 @@ package dev.tachyonmcp.api.server.domain;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.util.Base64;
 import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
@@ -124,49 +123,6 @@ public non-sealed interface AudioContent extends ContentBlock, HasMeta {
         return DefaultAudioContent.of(data, mimeType, annotations, meta);
     }
 
-    /**
-     * Creates an audio content block from base64-encoded data.
-     *
-     * @param data the base64-encoded audio data
-     * @param mimeType the audio MIME type
-     * @return a new audio content
-     * @deprecated use {@link #of(byte[], String)}
-     */
-    @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
-    static AudioContent base64(String data, String mimeType) {
-        return of(Base64.getDecoder().decode(data), mimeType);
-    }
-
-    /**
-     * Creates an audio content block from base64-encoded data with annotations.
-     *
-     * @param data the base64-encoded audio data
-     * @param mimeType the audio MIME type
-     * @param annotations the annotations, or {@code null}
-     * @return a new audio content
-     * @deprecated use {@link #of(byte[], String, Annotations)}
-     */
-    @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
-    static AudioContent base64(String data, String mimeType, @Nullable Annotations annotations) {
-        return of(Base64.getDecoder().decode(data), mimeType, annotations);
-    }
-
-    /**
-     * Creates an audio content block from base64-encoded data with annotations and metadata.
-     *
-     * @param data the base64-encoded audio data
-     * @param mimeType the audio MIME type
-     * @param annotations the annotations, or {@code null}
-     * @param meta the metadata entries, or {@code null}
-     * @return a new audio content
-     * @deprecated use {@link #of(byte[], String, Annotations, Map)}
-     */
-    @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
-    static AudioContent base64(
-            String data, String mimeType, @Nullable Annotations annotations, @Nullable Map<String, Object> meta) {
-        return of(Base64.getDecoder().decode(data), mimeType, annotations, meta);
-    }
-
     private static byte[] readAllBytes(InputStream in) {
         try {
             return in.readAllBytes();
@@ -196,18 +152,6 @@ public non-sealed interface AudioContent extends ContentBlock, HasMeta {
          */
         default Builder data(InputStream data) {
             return data(readAllBytes(data));
-        }
-
-        /**
-         * Sets the audio data from a base64-encoded string.
-         *
-         * @param data the base64-encoded audio data
-         * @return this builder
-         * @deprecated use {@link #data(byte[])}
-         */
-        @Deprecated(since = "1.0.0-beta.15", forRemoval = true)
-        default Builder data(String data) {
-            return data(Base64.getDecoder().decode(data));
         }
 
         /**

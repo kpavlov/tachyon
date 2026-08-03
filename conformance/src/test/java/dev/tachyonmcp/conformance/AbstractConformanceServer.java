@@ -62,8 +62,10 @@ abstract class AbstractConformanceServer {
 
     private static final String MINI_PNG_BASE64 =
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
+    private static final byte[] MINI_PNG_BYTES = Base64.getDecoder().decode(MINI_PNG_BASE64);
 
     private static final String MINI_WAV_BASE64 = "UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+    private static final byte[] MINI_WAV_BYTES = Base64.getDecoder().decode(MINI_WAV_BASE64);
 
     private static final String HMAC_SECRET = "conformance-test-hmac-secret";
 
@@ -193,14 +195,14 @@ abstract class AbstractConformanceServer {
                         b -> b.name("test_image_content")
                                 .description("Returns image content")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, request) -> ToolResult.content(ImageContent.base64(MINI_PNG_BASE64, "image/png")));
+                        (ctx, request) -> ToolResult.content(ImageContent.of(MINI_PNG_BYTES, "image/png")));
 
         server.tools()
                 .register(
                         b -> b.name("test_audio_content")
                                 .description("Returns audio content")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
-                        (ctx, request) -> ToolResult.content(AudioContent.base64(MINI_WAV_BASE64, "audio/wav")));
+                        (ctx, request) -> ToolResult.content(AudioContent.of(MINI_WAV_BYTES, "audio/wav")));
 
         server.tools()
                 .register(
@@ -225,7 +227,7 @@ abstract class AbstractConformanceServer {
                                     "application/json");
                             return ToolResult.content(
                                     TextContent.of("Multiple content types test:"),
-                                    ImageContent.base64(MINI_PNG_BASE64, "image/png"),
+                                    ImageContent.of(MINI_PNG_BYTES, "image/png"),
                                     EmbeddedResource.of(mixed));
                         });
 
@@ -502,7 +504,7 @@ abstract class AbstractConformanceServer {
                 .register(
                         ResourceDescriptor.of(
                                 "static-binary", "test://static-binary", "Static binary resource", "image/png"),
-                        (ctx, request) -> BlobResourceContents.of(request.uri(), MINI_PNG_BASE64, "image/png"));
+                        (ctx, request) -> BlobResourceContents.of(request.uri(), MINI_PNG_BYTES, "image/png"));
 
         server.resources()
                 .registerTemplate(
@@ -538,7 +540,7 @@ abstract class AbstractConformanceServer {
         server.prompts()
                 .register(
                         PromptDescriptor.of("test_prompt_with_image", "Prompt with image"),
-                        List.of(PromptMessage.user(ImageContent.base64(MINI_PNG_BASE64, "image/png"))));
+                        List.of(PromptMessage.user(ImageContent.of(MINI_PNG_BYTES, "image/png"))));
 
         registerVersionSpecificPrompts(server);
     }

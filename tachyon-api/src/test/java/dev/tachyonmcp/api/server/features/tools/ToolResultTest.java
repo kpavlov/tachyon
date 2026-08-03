@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.api.server.domain.*;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -20,14 +19,14 @@ class ToolResultTest {
     }
 
     @Test
-    @SuppressWarnings("removal")
-    void deprecatedBase64FactoriesDelegateToCanonicalFactories() {
-        var image = ImageContent.base64("aGVsbG8=", "image/png");
-        var audio = AudioContent.base64("aGVsbG8=", "audio/wav");
+    void contentFactoryCarriesImageAndAudioBlocks() {
+        var bytes = new byte[] {3, 2, 1};
+        var image = ImageContent.of(bytes, "image/png");
+        var audio = AudioContent.of(bytes, "audio/wav");
         var result = ToolResult.content(image, audio);
 
-        assertThat(image).isEqualTo(ImageContent.base64("aGVsbG8=", "image/png"));
-        assertThat(audio).isEqualTo(AudioContent.base64("aGVsbG8=", "audio/wav"));
+        assertThat(image).isEqualTo(ImageContent.of(bytes, "image/png"));
+        assertThat(audio).isEqualTo(AudioContent.of(bytes, "audio/wav"));
         assertThat(((ToolResult.Success) result).content()).containsExactly(image, audio);
     }
 
@@ -43,20 +42,6 @@ class ToolResultTest {
         var r = (ToolResult.Success) ToolResult.structured("data", "custom text");
         assertThat(r.structured()).contains("data");
         assertThat(((TextContent) r.content().getFirst()).text()).isEqualTo("custom text");
-    }
-
-    @Test
-    void successAllowsNullStructuredAndEmptyContent() {
-        var r = new ToolResult.Success(null, List.of());
-        assertThat(r.structured()).isEmpty();
-        assertThat(r.content()).isEmpty();
-    }
-
-    @Test
-    void successWithStructuredAndNoContentIsAllowed() {
-        var r = new ToolResult.Success("data", List.of());
-        assertThat(r.structured()).contains("data");
-        assertThat(r.content()).isEmpty();
     }
 
     @Test

@@ -67,13 +67,16 @@ public class TasksExtension implements ServerExtension {
 
         server.tools().registerAsync(descriptor, new CreateTaskFn(server));
 
-        server.resources()
-                .registerTemplate(ResourceTemplateDescriptor.of("task-status", "task://{id}"), (ctx, request) -> {
-                    var id = request.params().get("id").scalarValue();
-                    var entry = server.tasks().get(id);
-                    var text = entry != null ? entry.status().name() : "not_found";
-                    return TextResourceContents.of(request.uri(), text, "text/plain", null);
-                });
+        var taskStatusTemplate = ResourceTemplateDescriptor.builder()
+                .name("task-status")
+                .uriTemplate("task://{id}")
+                .build();
+        server.resources().registerTemplate(taskStatusTemplate, (ctx, request) -> {
+            var id = request.params().get("id").scalarValue();
+            var entry = server.tasks().get(id);
+            var text = entry != null ? entry.status().name() : "not_found";
+            return TextResourceContents.of(request.uri(), text, "text/plain", null);
+        });
     }
 
     private static final class CreateTaskFn implements AsyncToolFn {
