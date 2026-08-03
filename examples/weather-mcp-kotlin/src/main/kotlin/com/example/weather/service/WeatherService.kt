@@ -1,4 +1,6 @@
-// Copyright (c) 2026 Konstantin Pavlov and contributors.
+/*
+ * Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
+ */
 
 package com.example.weather.service
 
@@ -11,10 +13,13 @@ class WeatherService(
     private val weatherProvider: WeatherProvider,
     private val cityProvider: CityProvider,
 ) {
-    fun currentWeather(city: String, temperatureUnit: TemperatureUnit): WeatherObservation =
+    fun currentWeather(
+        city: String,
+        temperatureUnit: TemperatureUnit,
+    ): WeatherObservation =
         weatherProvider.currentWeather(
             city = city,
-            temperatureUnit = temperatureUnit
+            temperatureUnit = temperatureUnit,
         )
 
     fun searchCities(query: String): List<String> = cityProvider.searchCities(query)

@@ -9,11 +9,10 @@ import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.kotlin.server.buildServer
 
 fun assembleServer(port: Int = 0): TachyonServer {
-    val boundPort = port
     val inputSchema = buildEchoSchema()
     val server =
         buildServer {
-            network { this.port = boundPort }
+            network { this.port = port }
             info {
                 name = "echo-server"
                 title = "Echo Server"

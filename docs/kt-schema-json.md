@@ -28,8 +28,8 @@ Tachyon implements the contract in this order:
 | Compatibility | `result.content` contains serialized JSON text | Tachyon adds the text block when the handler doesn't provide one |
 
 Schema generation doesn't deserialize arguments. The weather handler reads its already-validated
-`Args` through `request.arguments()`. Its `WeatherObservation` result is serialized after the
-handler returns.
+`Args` through `request.arguments()`. It maps the provider's `WeatherObservation` into a
+`GetWeatherResponse`, which is serialized after the handler returns.
 
 ## Add the dependencies
 
@@ -65,14 +65,17 @@ model in its own file.
 ### Define the input and output models
 
 `GetWeatherRequest` uses `@Description` for schema descriptions and a default value for the optional
-temperature unit:
+temperature unit. `@SerialName` pins the generated `$id`/`$ref` name so it doesn't change if the
+class is renamed or moved:
 
 ```kotlin
 package com.example.weather.model
 
+import kotlinx.serialization.SerialName
 import me.kpavlov.kt.schema.Description
 
-data class GetWeatherInput(
+@SerialName("GetWeatherRequest")
+data class GetWeatherRequest(
     @Description("City name (e.g., London, Tokyo, New York)")
     val city: String,
     @Description("Temperature unit (default: Celsius)")
@@ -85,17 +88,20 @@ The enum supplies the schema values:
 ```kotlin
 package com.example.weather.model
 
+import kotlinx.serialization.SerialName
 import me.kpavlov.kt.schema.Description
 
 @Description("Unit used to represent temperature")
+@SerialName("TemperatureUnit")
 enum class TemperatureUnit {
     Celsius,
-    Fahrenheit
+    Fahrenheit,
 }
 ```
 
-The handler returns `WeatherObservation` as structured content. The example marks it
-`@Serializable` because its configured Tachyon serde is kotlinx.serialization:
+The handler's domain provider returns `WeatherObservation`, an SPI type owned by weather
+providers. It carries no `city` field — the caller already knows which city it asked for, so
+echoing it back would be redundant:
 
 ```kotlin
 package com.example.weather.spi
@@ -105,11 +111,40 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class WeatherObservation(
-    val city: String,
     val condition: String,
     val temperature: Double,
     val temperatureUnit: TemperatureUnit,
     val humidity: Int,
+    val windSpeed: Double,
+)
+```
+
+The tool returns a dedicated wire model instead of the SPI type. `GetWeatherResponse` lives in
+`model`, next to `GetWeatherRequest`, and is what `ToolResult.structured` actually serializes.
+Keeping it separate from `WeatherObservation` lets the domain type evolve independently of the
+tool's public contract:
+
+```kotlin
+package com.example.weather.model
+
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import me.kpavlov.kt.schema.Description
+
+@Serializable
+@SerialName("GetWeatherResponse")
+data class GetWeatherResponse(
+    @Description("City name")
+    val city: String,
+    @Description("Weather condition")
+    val condition: String,
+    @Description("Temperature in the response unit")
+    val temperature: Double,
+    @Description("Temperature unit")
+    val temperatureUnit: TemperatureUnit,
+    @Description("Relative humidity percentage")
+    val humidity: Int,
+    @Description("Wind speed in km/h")
     val windSpeed: Double,
 )
 ```
@@ -120,7 +155,7 @@ Create one generator and use the same source models as the handler:
 
 ```kotlin
 import com.example.weather.model.GetWeatherRequest
-import com.example.weather.spi.WeatherObservation
+import com.example.weather.model.GetWeatherResponse
 import dev.tachyonmcp.kotlin.server.features.tools.ToolDescriptor
 import me.kpavlov.kt.schema.generator.json.JsonSchemaConfig
 import me.kpavlov.kt.schema.generator.json.ReflectionClassJsonSchemaGenerator
@@ -136,8 +171,8 @@ val getWeatherToolDescriptor =
         name = "get-weather"
         title = "Current Weather"
         description = "Get current weather for a city"
-        inputSchema(schemaGenerator.generateSchemaString(GetWeatherInput::class))
-        outputSchema(schemaGenerator.generateSchemaString(WeatherObservation::class))
+        inputSchema(schemaGenerator.generateSchemaString(GetWeatherRequest::class))
+        outputSchema(schemaGenerator.generateSchemaString(GetWeatherResponse::class))
     }
 ```
 
@@ -159,7 +194,7 @@ The running weather server publishes both generated schemas through `tools/list`
         "description": "Get current weather for a city",
         "inputSchema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
-          "$id": "com.example.weather.model.GetWeatherRequestst",
+          "$id": "GetWeatherRequest",
           "type": "object",
           "properties": {
             "city": {
@@ -167,7 +202,7 @@ The running weather server publishes both generated schemas through `tools/list`
               "description": "City name (e.g., London, Tokyo, New York)"
             },
             "units": {
-              "$ref": "#/$defs/com.example.weather.model.TemperatureUnit",
+              "$ref": "#/$defs/TemperatureUnit",
               "description": "Temperature unit (default: Celsius)"
             }
           },
@@ -176,7 +211,7 @@ The running weather server publishes both generated schemas through `tools/list`
             "city"
           ],
           "$defs": {
-            "com.example.weather.model.TemperatureUnit": {
+            "TemperatureUnit": {
               "type": "string",
               "description": "Unit used to represent temperature",
               "enum": [
@@ -188,26 +223,32 @@ The running weather server publishes both generated schemas through `tools/list`
         },
         "outputSchema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
-          "$id": "com.example.weather.spi.WeatherObservation",
+          "$id": "GetWeatherResponse",
           "type": "object",
           "properties": {
             "city": {
-              "type": "string"
+              "type": "string",
+              "description": "City name"
             },
             "condition": {
-              "type": "string"
+              "type": "string",
+              "description": "Weather condition"
             },
             "temperature": {
-              "type": "number"
+              "type": "number",
+              "description": "Temperature in the response unit"
             },
             "temperatureUnit": {
-              "$ref": "#/$defs/com.example.weather.model.TemperatureUnit"
+              "$ref": "#/$defs/TemperatureUnit",
+              "description": "Temperature unit"
             },
             "humidity": {
-              "type": "integer"
+              "type": "integer",
+              "description": "Relative humidity percentage"
             },
             "windSpeed": {
-              "type": "number"
+              "type": "number",
+              "description": "Wind speed in km/h"
             }
           },
           "additionalProperties": false,
@@ -220,7 +261,7 @@ The running weather server publishes both generated schemas through `tools/list`
             "windSpeed"
           ],
           "$defs": {
-            "com.example.weather.model.TemperatureUnit": {
+            "TemperatureUnit": {
               "type": "string",
               "description": "Unit used to represent temperature",
               "enum": [
@@ -242,24 +283,42 @@ The running weather server publishes both generated schemas through `tools/list`
 
 ### Return the output model and register the tool
 
-The weather handler passes a `WeatherObservation` to `ToolResult.structured`:
+The weather handler maps the provider's `WeatherObservation` to a `GetWeatherResponse` before
+passing it to `ToolResult.structured`:
 
 ```kotlin
 fun attempt(city: String): ToolResult =
     try {
         ToolResult.structured(
-            fetchWithProgress(
-                ctx, progressToken, weatherService, city, temperatureUnit
-            )
+            toResponse(
+                city,
+                fetchWithProgress(
+                    ctx,
+                    progressToken,
+                    weatherService,
+                    city,
+                    temperatureUnit,
+                ),
+            ),
         )
     } catch (e: Exception) {
         if (e is CityNotFoundException) throw e
         internalError(e)
     }
+
+private fun toResponse(city: String, weather: WeatherObservation): GetWeatherResponse =
+    GetWeatherResponse(
+        city = city,
+        condition = weather.condition,
+        temperature = weather.temperature,
+        temperatureUnit = weather.temperatureUnit,
+        humidity = weather.humidity,
+        windSpeed = weather.windSpeed,
+    )
 ```
 
-The configured payload serde serializes this value. Tachyon validates the serialized value against
-the generated `outputSchema` before writing the MCP response.
+The configured payload serde serializes the `GetWeatherResponse` value. Tachyon validates the
+serialized value against the generated `outputSchema` before writing the MCP response.
 
 The server selects kotlinx.serialization and registers the generated descriptor with the handler:
 
@@ -278,8 +337,8 @@ This gives one end-to-end contract:
 |---|---|
 | Tool input schema | `GetWeatherRequest` |
 | Handler arguments | `request.arguments()` |
-| Tool output schema | `WeatherObservation` |
-| Structured result | `WeatherObservation` returned through `ToolResult.structured` |
+| Tool output schema | `GetWeatherResponse` |
+| Structured result | `WeatherObservation` mapped to `GetWeatherResponse` and returned through `ToolResult.structured` |
 | Payload encoding | `KxSerializationSerde.Default` |
 
 The MCP 2026-07-28 specification permits any JSON value in `structuredContent`. Tachyon currently
@@ -303,7 +362,9 @@ private val CITY_SCHEMA =
         schemaGenerator.generateSchemaString(CityElicitationInput::class),
     )
 
-private data class CityElicitationInput(val city: String)
+private data class CityElicitationInput(
+    val city: String,
+)
 ```
 
 The generator configuration determines how Kotlin types map to JSON Schema:
@@ -326,7 +387,7 @@ From the repository root:
 ```shell
 cd examples/weather-mcp-kotlin
 ./mvnw package
-java -jar target/weather-mcp-kotlin-example.jar
+java -jar target/weather-mcp-kotlin.jar
 ```
 
 Connect an MCP client to `http://localhost:8080/mcp`, then inspect `get-weather` through

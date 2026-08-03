@@ -1,4 +1,6 @@
-// Copyright (c) 2026 Konstantin Pavlov and contributors.
+/*
+ * Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
+ */
 
 package com.example.weather
 
@@ -10,7 +12,7 @@ import com.example.weather.spi.WeatherProvider
 class TestWeatherProvider : WeatherProvider {
     override fun currentWeather(
         city: String,
-        temperatureUnit: TemperatureUnit
+        temperatureUnit: TemperatureUnit,
     ): WeatherObservation {
         if (city == "Unknown") throw CityNotFoundException(city)
         return WeatherObservation(
@@ -18,7 +20,7 @@ class TestWeatherProvider : WeatherProvider {
             temperature = 18.5,
             temperatureUnit = temperatureUnit,
             humidity = 52,
-            windSpeed = 12.0
+            windSpeed = 12.0,
         )
     }
 }

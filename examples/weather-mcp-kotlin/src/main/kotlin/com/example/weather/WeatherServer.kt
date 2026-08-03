@@ -1,4 +1,6 @@
-// Copyright (c) 2026 Konstantin Pavlov and contributors.
+/*
+ * Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
+ */
 
 package com.example.weather
 
@@ -41,7 +43,10 @@ private val schemaGenerator =
         config = JsonSchemaConfig.Default,
     )
 
-private data class NarrationStyleInput(val forecast: String, val style: NarrationStyle)
+private data class NarrationStyleInput(
+    val forecast: String,
+    val style: NarrationStyle,
+)
 
 fun main() {
     val server = assembleServer(8080)

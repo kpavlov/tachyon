@@ -1,4 +1,6 @@
-// Copyright (c) 2026 Konstantin Pavlov and contributors.
+/*
+ * Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
+ */
 
 package com.example.weather
 
@@ -119,7 +121,10 @@ private fun fetchWithProgress(
     return weather
 }
 
-private fun toResponse(city: String, weather: WeatherObservation): GetWeatherResponse =
+private fun toResponse(
+    city: String,
+    weather: WeatherObservation,
+): GetWeatherResponse =
     GetWeatherResponse(
         city = city,
         condition = weather.condition,

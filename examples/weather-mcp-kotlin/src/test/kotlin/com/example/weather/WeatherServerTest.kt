@@ -1,4 +1,6 @@
-// Copyright (c) 2026 Konstantin Pavlov and contributors.
+/*
+ * Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
+ */
 
 package com.example.weather
 
@@ -128,7 +130,11 @@ class WeatherServerTest {
                 "humidity" to 52,
                 "windSpeed" to 12.0,
             )
-        result.content().single().shouldBeInstanceOf<TextContent>().text() shouldBe
+        result
+            .content()
+            .single()
+            .shouldBeInstanceOf<TextContent>()
+            .text() shouldBe
             """{"city":"London","condition":"Clear sky","temperature":18.5,"temperatureUnit":"Celsius","humidity":52,"windSpeed":12.0}"""
     }
 
@@ -174,7 +180,11 @@ class WeatherServerTest {
                 "humidity" to 52,
                 "windSpeed" to 12.0,
             )
-        result.content().single().shouldBeInstanceOf<TextContent>().text() shouldBe
+        result
+            .content()
+            .single()
+            .shouldBeInstanceOf<TextContent>()
+            .text() shouldBe
             """{"city":"Tallinn","condition":"Clear sky","temperature":18.5,"temperatureUnit":"Celsius","humidity":52,"windSpeed":12.0}"""
     }
 

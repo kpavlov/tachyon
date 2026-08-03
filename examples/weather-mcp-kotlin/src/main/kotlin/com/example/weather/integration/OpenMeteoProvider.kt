@@ -1,4 +1,6 @@
-// Copyright (c) 2026 Konstantin Pavlov and contributors.
+/*
+ * Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
+ */
 
 package com.example.weather.integration
 
@@ -24,7 +26,7 @@ class OpenMeteoProvider(
     CityProvider {
     override fun currentWeather(
         city: String,
-        temperatureUnit: TemperatureUnit
+        temperatureUnit: TemperatureUnit,
     ): WeatherObservation {
         val location = location(city, get(geocodingRequest(city, count = 1)))
         val forecast = get(forecastRequest(location, temperatureUnit))
@@ -100,7 +102,7 @@ class OpenMeteoProvider(
 
         private fun forecastRequest(
             location: Location,
-            temperatureUnit: TemperatureUnit
+            temperatureUnit: TemperatureUnit,
         ): HttpRequest {
             val uri =
                 "$FORECAST_URL?latitude=${location.latitude}&longitude=${location.longitude}" +

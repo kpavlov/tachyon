@@ -1,4 +1,6 @@
-// Copyright (c) 2026 Konstantin Pavlov and contributors.
+/*
+ * Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
+ */
 
 package com.example.weather
 
@@ -68,7 +70,12 @@ class GetWeatherEdgeCasesTest {
     @Test
     fun `returns fixed error when provider fails without leaking details`() {
         val failingProvider =
-            WeatherProvider { _, _ -> throw IOException("connection refused to internal-host:6443") }
+            WeatherProvider {
+                _,
+                _,
+                ->
+                throw IOException("connection refused to internal-host:6443")
+            }
 
         val result =
             callGetWeather(WeatherService(failingProvider, TestCityProvider())) {
