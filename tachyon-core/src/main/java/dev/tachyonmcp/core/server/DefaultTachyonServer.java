@@ -342,6 +342,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
                                 network.allowNullOrigin(),
                                 network.allowPrivateNetworks(),
                                 network.allowedHeaders()),
+                        network.allowedHosts(),
                         network.ioEngine(),
                         pipelineCustomizer));
         transport = netty;

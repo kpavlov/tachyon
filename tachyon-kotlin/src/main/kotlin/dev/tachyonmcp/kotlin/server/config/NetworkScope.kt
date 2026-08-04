@@ -51,6 +51,13 @@ public class NetworkScope
         /** Allowed CORS headers. */
         public val allowedHeaders: MutableList<String> = mutableListOf()
 
+        /**
+         * Additional `Host` authorities the DNS-rebinding guard accepts beyond `localhost`/`127.0.0.1`
+         * — e.g. `"host.docker.internal:8096"` for a sanctioned server reached over a Docker bridge.
+         * Empty (default) keeps the localhost-only behaviour.
+         */
+        public val allowedHosts: MutableList<String> = mutableListOf()
+
         @PublishedApi
         internal fun applyTo(builder: NetworkConfig.Builder) {
             val addr = address
@@ -65,6 +72,7 @@ public class NetworkScope
             allowNullOrigin?.let(builder::allowNullOrigin)
             allowPrivateNetworks?.let(builder::allowPrivateNetworks)
             if (allowedHeaders.isNotEmpty()) builder.allowedHeaders(*allowedHeaders.toTypedArray())
+            if (allowedHosts.isNotEmpty()) builder.allowedHosts(*allowedHosts.toTypedArray())
             readerIdleTimeout?.let { builder.readerIdleTimeout(it.toJavaDuration()) }
             writerIdleTimeout?.let { builder.writerIdleTimeout(it.toJavaDuration()) }
             heartbeatInterval?.let { builder.heartbeatInterval(it.toJavaDuration()) }

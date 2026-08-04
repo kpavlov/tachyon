@@ -118,6 +118,7 @@ class ProgressKeepAliveTest {
                 Duration.ofMinutes(5),
                 McpChannelInitializer.DEFAULT_MAX_CONTENT_LENGTH,
                 NettyServerConfig.buildCorsConfig(null, false, false, null),
+                null,
                 NettyIoEngine.AUTO,
                 null);
         nettyServer = new NettyServer(server, config);

@@ -36,6 +36,8 @@ import org.jspecify.annotations.Nullable;
  * @param allowNullOrigin    whether to allow {@code Origin: null}
  * @param allowPrivateNetworks whether to allow private network CORS
  * @param allowedHeaders     additional allowed CORS headers
+ * @param allowedHosts       additional {@code Host} authorities the DNS-rebinding guard accepts
+ *                           beyond localhost ({@code null} = localhost-only)
  * @param ioEngine           Netty I/O engine; defaults to {@link NettyIoEngine#AUTO}
  * @param heartbeatInterval  SSE heartbeat interval that keeps an upgraded stream alive (default
  *                           15s); keep below {@code readerIdleTimeout}; {@code <= 0} disables
@@ -52,6 +54,7 @@ public record NetworkConfig(
         boolean allowNullOrigin,
         boolean allowPrivateNetworks,
         @Nullable List<String> allowedHeaders,
+        @Nullable List<String> allowedHosts,
         NettyIoEngine ioEngine,
         Duration heartbeatInterval) {
 
@@ -61,6 +64,9 @@ public record NetworkConfig(
         }
         if (allowedHeaders != null) {
             allowedHeaders = List.copyOf(allowedHeaders);
+        }
+        if (allowedHosts != null) {
+            allowedHosts = List.copyOf(allowedHosts);
         }
     }
 
@@ -82,6 +88,7 @@ public record NetworkConfig(
             false,
             false,
             null,
+            null,
             NettyIoEngine.AUTO,
             DEFAULT_HEARTBEAT_INTERVAL);
 
@@ -101,6 +108,7 @@ public record NetworkConfig(
         private boolean allowNullOrigin = DEFAULT.allowNullOrigin;
         private boolean allowPrivateNetworks = DEFAULT.allowPrivateNetworks;
         private @Nullable List<String> allowedHeaders = DEFAULT.allowedHeaders;
+        private @Nullable List<String> allowedHosts = DEFAULT.allowedHosts;
         private NettyIoEngine ioEngine = DEFAULT.ioEngine;
         private Duration heartbeatInterval = DEFAULT.heartbeatInterval;
         private boolean hostPortExplicitlySet;
@@ -192,6 +200,17 @@ public record NetworkConfig(
             return this;
         }
 
+        /**
+         * Sets additional {@code Host} authorities the DNS-rebinding guard accepts beyond
+         * {@code localhost}/{@code 127.0.0.1} — e.g. {@code "host.docker.internal:8096"} for a
+         * sanctioned server reached over a Docker bridge. Entries match the request's full authority
+         * ({@code host} or {@code host:port}) and its host part, case-insensitively.
+         */
+        public Builder allowedHosts(String... hosts) {
+            this.allowedHosts = List.of(hosts);
+            return this;
+        }
+
         /** Sets the Netty I/O engine; defaults to {@link NettyIoEngine#AUTO}. */
         public Builder ioEngine(NettyIoEngine ioEngine) {
             this.ioEngine = Objects.requireNonNull(ioEngine, "ioEngine cannot be null");
@@ -222,6 +241,7 @@ public record NetworkConfig(
                     allowNullOrigin,
                     allowPrivateNetworks,
                     allowedHeaders,
+                    allowedHosts,
                     ioEngine,
                     heartbeatInterval);
         }

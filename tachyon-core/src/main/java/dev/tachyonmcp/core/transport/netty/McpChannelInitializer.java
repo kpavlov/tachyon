@@ -23,6 +23,7 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
@@ -59,7 +60,8 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
     private final boolean stateless;
     private final EndpointValidatorHandler endpointValidatorHandler;
     private final InteractionHandler interactionHandler;
-    private static final DnsRebindingProtectionHandler DNS_REBINDING_HANDLER = new DnsRebindingProtectionHandler();
+    // Per-server, not static: carries this server's allowedHosts allowlist (DNS-rebinding protection).
+    private final DnsRebindingProtectionHandler dnsRebindingHandler;
 
     @Nullable
     private final CorsConfig corsConfig;
@@ -88,6 +90,7 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
             int maxContentLength,
             ChannelGroup childChannels,
             @Nullable CorsConfig corsConfig,
+            @Nullable List<String> allowedHosts,
             @Nullable Consumer<ChannelPipeline> pipelineCustomizer) {
         this.stateless = stateless;
         this.server = server;
@@ -95,6 +98,9 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
         this.writerIdleTimeout = writerIdleTimeout;
         this.maxContentLength = maxContentLength;
         this.corsConfig = corsConfig;
+        this.dnsRebindingHandler = allowedHosts == null
+                ? new DnsRebindingProtectionHandler()
+                : new DnsRebindingProtectionHandler(allowedHosts);
         this.pipelineCustomizer = pipelineCustomizer;
         this.childChannels = childChannels;
         this.dispatcher = new McpDispatcher(server, server.executor());
@@ -125,7 +131,7 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
         // Placed right after the codec so it governs responses from ALL downstream handlers
         // (validation handlers write before the aggregator; protocol handlers write after it).
         p.addLast("http-keep-alive", new HttpServerKeepAliveHandler());
-        p.addLast("dns-rebinding", DNS_REBINDING_HANDLER);
+        p.addLast("dns-rebinding", dnsRebindingHandler);
         if (corsConfig != null) {
             p.addLast("cors", new CorsHandler(corsConfig));
         }

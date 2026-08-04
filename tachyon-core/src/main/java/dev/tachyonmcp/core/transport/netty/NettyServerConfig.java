@@ -20,6 +20,8 @@ import org.jspecify.annotations.Nullable;
  * @param writerIdleTimeout  idle timeout for writing
  * @param maxContentLength   maximum HTTP content length in bytes
  * @param corsConfig         CORS configuration, or {@code null} for defaults
+ * @param allowedHosts       additional {@code Host} authorities the DNS-rebinding guard accepts
+ *                           beyond localhost, or {@code null} for localhost-only
  * @param ioEngine           the Netty I/O engine to use
  * @param pipelineCustomizer optional customizer for the Netty channel pipeline
  */
@@ -31,6 +33,7 @@ public record NettyServerConfig(
         Duration writerIdleTimeout,
         int maxContentLength,
         @Nullable CorsConfig corsConfig,
+        @Nullable List<String> allowedHosts,
         NettyIoEngine ioEngine,
         @Nullable Consumer<ChannelPipeline> pipelineCustomizer) {
 
@@ -68,6 +71,7 @@ public record NettyServerConfig(
                 NetworkConfig.DEFAULT_WRITER_IDLE_TIMEOUT,
                 McpChannelInitializer.DEFAULT_MAX_CONTENT_LENGTH,
                 buildCorsConfig(null, false, false, null),
+                null,
                 NettyIoEngine.AUTO,
                 null);
     }

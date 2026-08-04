@@ -80,6 +80,7 @@ public final class NettyServer implements Closeable {
                         config.maxContentLength(),
                         childChannels,
                         config.corsConfig(),
+                        config.allowedHosts(),
                         config.pipelineCustomizer()));
 
         try {

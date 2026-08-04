@@ -63,6 +63,7 @@ class NetworkConfigTest {
     void directConstructionWithMutableListIsDefended() {
         var origins = new ArrayList<>(List.of("http://example.com"));
         var headers = new ArrayList<>(List.of("X-Foo"));
+        var hosts = new ArrayList<>(List.of("host.docker.internal:8096"));
         var config = new NetworkConfig(
                 "127.0.0.1",
                 8080,
@@ -74,15 +75,18 @@ class NetworkConfigTest {
                 false,
                 false,
                 headers,
+                hosts,
                 NettyIoEngine.AUTO,
                 Duration.ofSeconds(15));
 
         // Mutating the original lists must not affect the config
         origins.add("http://evil.com");
         headers.add("X-Evil");
+        hosts.add("evil.example:1");
 
         assertThat(config.allowedOrigins()).containsExactly("http://example.com");
         assertThat(config.allowedHeaders()).containsExactly("X-Foo");
+        assertThat(config.allowedHosts()).containsExactly("host.docker.internal:8096");
     }
 
     @Test
