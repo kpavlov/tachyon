@@ -9,27 +9,40 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.ReferenceCountUtil;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
  * Guards against DNS-rebinding attacks by validating the {@code Host} and {@code Origin} headers.
+ * Rejected requests receive {@code 403 Forbidden} and the connection is closed.
  *
- * <p>Both headers, when present, must resolve to {@code localhost} or {@code 127.0.0.1} (any
- * scheme, any port). Requests without an {@code Origin} header (non-browser clients) are passed
- * through unchanged. Invalid requests receive {@code 403 Forbidden} and the connection is closed.
+ * <p><b>Host.</b> A request's {@code Host} authority must be {@code localhost}/{@code 127.0.0.1} or
+ * match one of the configured {@link #DnsRebindingProtectionHandler(List) allowedHosts}. The guard
+ * fails closed: a request carrying <em>multiple</em> {@code Host} headers is rejected (RFC&nbsp;7230
+ * §5.4), and a missing/blank {@code Host} is rejected on HTTP/1.1+ (where {@code Host} is mandatory).
+ * HTTP/1.0, where {@code Host} is optional, is exempt from the missing-Host rule.
  *
- * <p>An optional {@code allowedHosts} allowlist extends the accepted {@code Host} authorities beyond
- * localhost — e.g. {@code "host.docker.internal:8096"} so a sanctioned server reached over a Docker
- * bridge is not rejected. Entries are matched case-insensitively against the request's full
- * authority ({@code host} or {@code host:port}) and against its host part with the port stripped, so
- * either {@code "host.docker.internal"} or {@code "host.docker.internal:8096"} accepts a request
- * whose {@code Host} is {@code host.docker.internal:8096}. IPv6 literals must be bracketed
- * ({@code "[2001:db8::1]"} or {@code "[2001:db8::1]:8096"}). The default (empty allowlist) preserves
- * the localhost-only behaviour.
+ * <p><b>Origin.</b> When present, {@code Origin} must be localhost/{@code 127.0.0.1}. {@code
+ * allowedHosts} does <em>not</em> widen this: a browser page whose {@code Origin} is a non-local host
+ * (e.g. {@code http://host.docker.internal:3000}) is still rejected. {@code allowedHosts} only helps
+ * non-browser clients — which send no {@code Origin} — reach a server whose {@code Host} is non-local
+ * (e.g. a container reaching the host via {@code host.docker.internal}).
+ *
+ * <p><b>{@code allowedHosts} semantics.</b> Each entry is a bare <em>authority</em> (a host, or
+ * {@code host:port}) — not a URL. Matching is case-insensitive.
+ * <ul>
+ *   <li>{@code "example.com"} — that host on <em>any</em> port.</li>
+ *   <li>{@code "example.com:8096"} — only that {@code host:port}.</li>
+ *   <li>IPv6 literals must be bracketed: {@code "[2001:db8::1]"} or {@code "[2001:db8::1]:8096"}.</li>
+ * </ul>
+ * Entries are trimmed; an entry that is blank, or contains whitespace, control characters, or URL
+ * syntax (scheme, path, user-info, query, or fragment) is rejected with {@link
+ * IllegalArgumentException}. The default (empty allowlist) preserves the localhost-only behaviour.
  */
 @ChannelHandler.Sharable
 public class DnsRebindingProtectionHandler extends ChannelInboundHandlerAdapter {
@@ -42,12 +55,16 @@ public class DnsRebindingProtectionHandler extends ChannelInboundHandlerAdapter 
     }
 
     /**
-     * @param allowedHosts additional {@code Host} authorities to accept beyond localhost/127.0.0.1;
-     *     matched case-insensitively against the full authority and its host part
+     * @param allowedHosts additional {@code Host} authorities to accept beyond localhost/127.0.0.1
+     *     (see the class documentation for entry syntax and matching rules)
+     * @throws IllegalArgumentException if an entry is not a bare host/{@code host:port} authority
      */
     public DnsRebindingProtectionHandler(List<String> allowedHosts) {
         this.allowedHosts = allowedHosts.stream()
-                .filter(h -> h != null && !h.isEmpty())
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(h -> !h.isEmpty())
+                .map(DnsRebindingProtectionHandler::validateHostEntry)
                 .map(h -> h.toLowerCase(Locale.ROOT))
                 .collect(Collectors.toUnmodifiableSet());
     }
@@ -60,8 +77,21 @@ public class DnsRebindingProtectionHandler extends ChannelInboundHandlerAdapter 
                 reject(ctx, msg);
                 return;
             }
-            var host = req.headers().getAsString(HttpHeaderNames.HOST);
-            if (host != null && !host.isEmpty() && !isLocalhostAuthority(host) && !isAllowedHost(host)) {
+            var hosts = req.headers().getAll(HttpHeaderNames.HOST);
+            if (hosts.size() > 1) {
+                // Multiple Host headers are ambiguous and a request-smuggling vector — reject.
+                reject(ctx, msg);
+                return;
+            }
+            var host = hosts.isEmpty() ? null : hosts.get(0);
+            if (host == null || host.isBlank()) {
+                // HTTP/1.1+ mandates Host; a DNS-rebinding guard must fail closed on its absence.
+                // HTTP/1.0 permits omitting it, so it is exempt.
+                if (req.protocolVersion().compareTo(HttpVersion.HTTP_1_1) >= 0) {
+                    reject(ctx, msg);
+                    return;
+                }
+            } else if (!isLocalhostAuthority(host) && !isAllowedHost(host)) {
                 reject(ctx, msg);
                 return;
             }
@@ -116,5 +146,21 @@ public class DnsRebindingProtectionHandler extends ChannelInboundHandlerAdapter 
         }
         int colon = authority.lastIndexOf(':');
         return colon >= 0 ? authority.substring(0, colon) : authority;
+    }
+
+    /** Validates a trimmed, non-empty allowlist entry is a bare authority; throws otherwise. */
+    private static String validateHostEntry(String entry) {
+        for (int i = 0; i < entry.length(); i++) {
+            char c = entry.charAt(i);
+            if (Character.isWhitespace(c) || Character.isISOControl(c)) {
+                throw new IllegalArgumentException(
+                        "allowedHosts entry must not contain whitespace or control characters: '" + entry + "'");
+            }
+        }
+        if (entry.indexOf('/') >= 0 || entry.indexOf('@') >= 0 || entry.indexOf('?') >= 0 || entry.indexOf('#') >= 0) {
+            throw new IllegalArgumentException(
+                    "allowedHosts entry must be a bare host or host:port authority, not a URL: '" + entry + "'");
+        }
+        return entry;
     }
 }

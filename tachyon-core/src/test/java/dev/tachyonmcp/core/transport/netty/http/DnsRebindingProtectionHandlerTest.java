@@ -2,6 +2,7 @@
 package dev.tachyonmcp.core.transport.netty.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -29,7 +30,11 @@ class DnsRebindingProtectionHandlerTest {
     }
 
     private static HttpRequest requestWithHost(@Nullable String host) {
-        var req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/mcp");
+        return request(HttpVersion.HTTP_1_1, host);
+    }
+
+    private static HttpRequest request(HttpVersion version, @Nullable String host) {
+        var req = new DefaultFullHttpRequest(version, HttpMethod.POST, "/mcp");
         if (host != null) {
             req.headers().set(HttpHeaderNames.HOST, host);
         }
@@ -116,5 +121,74 @@ class DnsRebindingProtectionHandlerTest {
                 .as("a rejected inbound request must be released, not leaked")
                 .isZero();
         assertThat(rejectionStatus(channel)).isEqualTo(HttpResponseStatus.FORBIDDEN);
+    }
+
+    @Test
+    void rejectsMultipleHostHeaders() {
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler());
+        var req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/mcp");
+        req.headers().add(HttpHeaderNames.HOST, "localhost:8096");
+        req.headers().add(HttpHeaderNames.HOST, "evil.example");
+        channel.writeInbound(req);
+        assertThat(rejectionStatus(channel)).isEqualTo(HttpResponseStatus.FORBIDDEN);
+    }
+
+    @Test
+    void rejectsMissingHostOnHttp11() {
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler());
+        channel.writeInbound(request(HttpVersion.HTTP_1_1, null));
+        assertThat(rejectionStatus(channel)).isEqualTo(HttpResponseStatus.FORBIDDEN);
+    }
+
+    @Test
+    void rejectsEmptyHostOnHttp11() {
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler());
+        channel.writeInbound(requestWithHost(""));
+        assertThat(rejectionStatus(channel)).isEqualTo(HttpResponseStatus.FORBIDDEN);
+    }
+
+    @Test
+    void allowsMissingHostOnHttp10() {
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler());
+        assertThat(channel.writeInbound(request(HttpVersion.HTTP_1_0, null)))
+                .as("HTTP/1.0 permits omitting the Host header")
+                .isTrue();
+    }
+
+    @Test
+    void portSpecificEntryDoesNotMatchAnotherPort() {
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler(List.of("host.docker.internal:8096")));
+        channel.writeInbound(requestWithHost("host.docker.internal:9000"));
+        assertThat(rejectionStatus(channel)).isEqualTo(HttpResponseStatus.FORBIDDEN);
+    }
+
+    @Test
+    void nonLocalBrowserOriginStillRejectedEvenWhenHostIsAllowlisted() {
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler(List.of("host.docker.internal:8096")));
+        var req = requestWithHost("host.docker.internal:8096");
+        req.headers().set(HttpHeaderNames.ORIGIN, "http://host.docker.internal:3000");
+        channel.writeInbound(req);
+        assertThat(rejectionStatus(channel))
+                .as("allowedHosts must not widen the localhost-only Origin check")
+                .isEqualTo(HttpResponseStatus.FORBIDDEN);
+    }
+
+    @Test
+    void allowlistEntryIsTrimmed() {
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler(List.of("  host.docker.internal:8096  ")));
+        assertThat(channel.writeInbound(requestWithHost("host.docker.internal:8096")))
+                .isTrue();
+    }
+
+    @Test
+    void constructorRejectsUrlEntry() {
+        assertThatThrownBy(() -> new DnsRebindingProtectionHandler(List.of("http://host.docker.internal:8096")))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void constructorRejectsEntryWithInternalWhitespace() {
+        assertThatThrownBy(() -> new DnsRebindingProtectionHandler(List.of("host docker:8096")))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }
