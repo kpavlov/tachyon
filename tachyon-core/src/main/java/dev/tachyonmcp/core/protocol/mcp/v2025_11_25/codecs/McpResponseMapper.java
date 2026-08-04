@@ -130,15 +130,17 @@ public class McpResponseMapper implements ProtocolResponseMapper {
 
     @Override
     public Object callToolResult(ToolResult result) {
-        var meta = result.meta();
-        var resolvedMeta = meta == null || meta.isEmpty() ? null : JsonUtils.toJsonNodeMap(meta);
         return switch (result) {
-            case InputRequired ir -> new InputRequiredPayload(ir.inputRequests(), ir.requestState(), resolvedMeta);
-            case ToolResult.Error er -> buildCallToolResult(er.content(), null, true, resolvedMeta);
-            case Success s -> wireSuccess(s, resolvedMeta);
-            case ToolResult.Deferred ignored ->
-                throw new AssertionError("Deferred should not reach callToolResult mapping");
+            case InputRequired ir ->
+                new InputRequiredPayload(ir.inputRequests(), ir.requestState(), resolveMeta(result));
+            case ToolResult.Error er -> buildCallToolResult(er.content(), null, true, resolveMeta(result));
+            case Success s -> wireSuccess(s, resolveMeta(result));
         };
+    }
+
+    protected static @Nullable Map<String, JsonNode> resolveMeta(ToolResult result) {
+        var meta = result.meta();
+        return meta == null || meta.isEmpty() ? null : JsonUtils.toJsonNodeMap(meta);
     }
 
     private Object wireSuccess(Success s, @Nullable Map<String, JsonNode> meta) {

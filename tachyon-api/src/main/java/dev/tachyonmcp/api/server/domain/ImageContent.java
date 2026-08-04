@@ -1,7 +1,6 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.api.server.domain;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.util.Map;
@@ -83,6 +82,7 @@ public non-sealed interface ImageContent extends ContentBlock {
      *
      * @param data     the image data
      * @param mimeType the image MIME type (e.g. {@code image/png})
+     * @return a new image content
      */
     static ImageContent of(byte[] data, String mimeType) {
         return DefaultImageContent.of(data, mimeType, null, null);
@@ -95,9 +95,10 @@ public non-sealed interface ImageContent extends ContentBlock {
      * @param data     the image data stream, read fully but not closed by this method
      * @param mimeType the image MIME type (e.g. {@code image/png})
      * @throws UncheckedIOException if reading {@code data} fails
+     * @return a new image content
      */
     static ImageContent of(InputStream data, String mimeType) {
-        return of(readAllBytes(data), mimeType);
+        return of(BinaryData.readAllBytes(data), mimeType);
     }
 
     /** Creates an image content block with given annotations and no metadata. */
@@ -109,14 +110,6 @@ public non-sealed interface ImageContent extends ContentBlock {
     static ImageContent of(
             byte[] data, String mimeType, @Nullable Annotations annotations, @Nullable Map<String, Object> meta) {
         return DefaultImageContent.of(data, mimeType, annotations, meta);
-    }
-
-    private static byte[] readAllBytes(InputStream in) {
-        try {
-            return in.readAllBytes();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
     }
 
     /**
@@ -139,7 +132,7 @@ public non-sealed interface ImageContent extends ContentBlock {
          * @throws UncheckedIOException if reading {@code data} fails
          */
         default Builder data(InputStream data) {
-            return data(readAllBytes(data));
+            return data(BinaryData.readAllBytes(data));
         }
 
         /**

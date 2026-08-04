@@ -34,8 +34,12 @@ final class ResourceFnExample {
      */
     static ResourceFn imageHandler() {
         return (ctx, request) -> {
-            byte[] pngBytes = ResourceFnExample.class.getResourceAsStream("/logo.png").readAllBytes();
-            return BlobResourceContents.of(request.uri(), pngBytes, "image/png");
+            try (var stream = ResourceFnExample.class.getResourceAsStream("/logo.png")) {
+                if (stream == null) {
+                    throw new IllegalStateException("Missing classpath resource: /logo.png");
+                }
+                return BlobResourceContents.of(request.uri(), stream.readAllBytes(), "image/png");
+            }
         };
     }
 

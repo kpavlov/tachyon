@@ -321,7 +321,7 @@ internal class TachyonServerTest {
             }
 
             resource(blobDescriptor) {
-                BlobResourceContents { blob = "AQI=" }
+                BlobResourceContents { data = byteArrayOf(1, 2) }
             }
         }.use { handle ->
             with(handle.resources().find("text").orElseThrow()) {

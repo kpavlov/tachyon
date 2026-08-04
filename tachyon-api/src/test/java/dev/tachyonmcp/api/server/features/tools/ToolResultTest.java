@@ -3,7 +3,12 @@ package dev.tachyonmcp.api.server.features.tools;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.api.server.domain.*;
+import dev.tachyonmcp.api.server.domain.AudioContent;
+import dev.tachyonmcp.api.server.domain.ContentBlock;
+import dev.tachyonmcp.api.server.domain.ImageContent;
+import dev.tachyonmcp.api.server.domain.InputRequest;
+import dev.tachyonmcp.api.server.domain.TextContent;
+import dev.tachyonmcp.api.server.domain.UrlInputRequest;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -25,8 +30,9 @@ class ToolResultTest {
         var audio = AudioContent.of(bytes, "audio/wav");
         var result = ToolResult.content(image, audio);
 
-        assertThat(image).isEqualTo(ImageContent.of(bytes, "image/png"));
-        assertThat(audio).isEqualTo(AudioContent.of(bytes, "audio/wav"));
+        var copy = bytes.clone();
+        assertThat(image).isEqualTo(ImageContent.of(copy, "image/png"));
+        assertThat(audio).isEqualTo(AudioContent.of(copy, "audio/wav"));
         assertThat(((ToolResult.Success) result).content()).containsExactly(image, audio);
     }
 

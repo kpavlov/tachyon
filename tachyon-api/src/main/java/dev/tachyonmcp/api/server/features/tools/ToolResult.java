@@ -13,9 +13,9 @@ import java.util.Optional;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
-/** Outcome of a tool invocation: success, error, input-required, or deferred. */
+/** Outcome of a tool invocation: success, error, input-required. */
 public sealed interface ToolResult extends HasMeta
-        permits ToolResult.Success, ToolResult.Error, ToolResult.InputRequired, ToolResult.Deferred {
+        permits ToolResult.Success, ToolResult.Error, ToolResult.InputRequired {
 
     @Override
     default @Nullable Map<String, Object> meta() {
@@ -40,26 +40,6 @@ public sealed interface ToolResult extends HasMeta
      */
     default ToolResult withMeta(String key, Object value) {
         return withMeta(Map.of(key, value));
-    }
-
-    /** Sentinel returned by a task-augmented handler that defers completion to the caller. */
-    @Value.Immutable
-    @Value.Style(visibility = Value.Style.ImplementationVisibility.PACKAGE, typeImmutable = "Default*")
-    non-sealed interface Deferred extends ToolResult {
-
-        /**
-         * Returns the deferred sentinel.
-         *
-         * @return the deferred sentinel
-         */
-        static Deferred instance() {
-            return DefaultDeferred.builder().build();
-        }
-
-        @Override
-        default Deferred withMeta(Map<String, Object> m) {
-            return this;
-        }
     }
 
     /**

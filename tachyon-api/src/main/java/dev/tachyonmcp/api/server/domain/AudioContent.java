@@ -1,7 +1,6 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.api.server.domain;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.util.Map;
@@ -94,7 +93,7 @@ public non-sealed interface AudioContent extends ContentBlock, HasMeta {
      * @throws UncheckedIOException if reading {@code data} fails
      */
     static AudioContent of(InputStream data, String mimeType) {
-        return of(readAllBytes(data), mimeType);
+        return of(BinaryData.readAllBytes(data), mimeType);
     }
 
     /**
@@ -123,14 +122,6 @@ public non-sealed interface AudioContent extends ContentBlock, HasMeta {
         return DefaultAudioContent.of(data, mimeType, annotations, meta);
     }
 
-    private static byte[] readAllBytes(InputStream in) {
-        try {
-            return in.readAllBytes();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
     /**
      * Builder for {@link AudioContent}.
      */
@@ -151,7 +142,7 @@ public non-sealed interface AudioContent extends ContentBlock, HasMeta {
          * @throws UncheckedIOException if reading {@code data} fails
          */
         default Builder data(InputStream data) {
-            return data(readAllBytes(data));
+            return data(BinaryData.readAllBytes(data));
         }
 
         /**

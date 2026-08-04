@@ -215,7 +215,7 @@ public final class ToolMethodHandlers {
         }
 
         private void completeTask(TaskRegistry taskRegistry, TaskEntry task, @Nullable ToolResult result) {
-            if (result == null || result instanceof ToolResult.Deferred) return;
+            if (result == null) return;
             result = JsonUtils.serializeStructured(result, payloadSerializer);
             var meta = result.meta();
             if (result instanceof ToolResult.Error error) {

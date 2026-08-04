@@ -1,7 +1,6 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.api.server.domain;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.util.Map;
@@ -90,15 +89,7 @@ public non-sealed interface BlobResourceContents extends ResourceContents {
      * @throws UncheckedIOException if reading {@code blob} fails
      */
     static BlobResourceContents of(String uri, InputStream blob, @Nullable String mimeType) {
-        return of(uri, readAllBytes(blob), mimeType);
-    }
-
-    private static byte[] readAllBytes(InputStream in) {
-        try {
-            return in.readAllBytes();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        return of(uri, BinaryData.readAllBytes(blob), mimeType);
     }
 
     /**
@@ -138,7 +129,7 @@ public non-sealed interface BlobResourceContents extends ResourceContents {
          * @throws UncheckedIOException if reading {@code blob} fails
          */
         default Builder blob(InputStream blob) {
-            return blob(readAllBytes(blob));
+            return blob(BinaryData.readAllBytes(blob));
         }
 
         /**

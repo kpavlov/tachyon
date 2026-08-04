@@ -77,6 +77,48 @@ public fun TextResourceContents(
     )
 
 /**
+ * Creates [BlobResourceContents] — binary resource data.
+ *
+ * @param uri      originating resource URI
+ * @param blob     the binary content
+ * @param mimeType MIME type of the binary data; null to omit
+ * @param meta     optional request-level metadata; defaults to empty map
+ * @author Konstantin Pavlov
+ */
+public fun BlobResourceContents(
+    uri: String,
+    blob: ByteArray,
+    mimeType: String? = null,
+    meta: Map<String, JsonNode> = emptyMap(),
+): BlobResourceContents =
+    BlobResourceContents.of(
+        uri,
+        blob,
+        mimeType,
+        meta,
+    )
+
+/**
+ * Creates [BlobResourceContents] using a kotlinx-serialization metadata map.
+ * Requires kotlinx-serialization-json on the classpath.
+ *
+ * @author Konstantin Pavlov
+ */
+@JvmName("blobResourceContentsBytesWithKxMeta")
+public fun BlobResourceContents(
+    uri: String,
+    blob: ByteArray,
+    mimeType: String? = null,
+    meta: Map<String, JsonObject>,
+): BlobResourceContents =
+    BlobResourceContents.of(
+        uri,
+        blob,
+        mimeType,
+        meta.toJacksonNodeMap(),
+    )
+
+/**
  * Creates [BlobResourceContents] — binary resource data encoded as base64.
  *
  * @param uri      originating resource URI
@@ -84,7 +126,16 @@ public fun TextResourceContents(
  * @param mimeType MIME type of the binary data; null to omit
  * @param meta     optional request-level metadata; defaults to empty map
  * @author Konstantin Pavlov
+ * @deprecated base64-encoded String input is deprecated; use the [ByteArray] overload
  */
+@Deprecated(
+    message = "Base64-encoded String input is deprecated; pass raw bytes instead.",
+    replaceWith =
+        ReplaceWith(
+            "BlobResourceContents(uri, Base64.getDecoder().decode(blob), mimeType, meta)",
+            "java.util.Base64",
+        ),
+)
 public fun BlobResourceContents(
     uri: String,
     blob: String,
@@ -99,12 +150,21 @@ public fun BlobResourceContents(
     )
 
 /**
- * Creates [BlobResourceContents] using a kotlinx-serialization metadata map.
- * Requires kotlinx-serialization-json on the classpath.
+ * Creates [BlobResourceContents] from base64-encoded data using a kotlinx-serialization
+ * metadata map. Requires kotlinx-serialization-json on the classpath.
  *
  * @author Konstantin Pavlov
+ * @deprecated base64-encoded String input is deprecated; use the [ByteArray] overload
  */
 @JvmName("blobResourceContentsWithKxMeta")
+@Deprecated(
+    message = "Base64-encoded String input is deprecated; pass raw bytes instead.",
+    replaceWith =
+        ReplaceWith(
+            "BlobResourceContents(uri, Base64.getDecoder().decode(blob), mimeType, meta)",
+            "java.util.Base64",
+        ),
+)
 public fun BlobResourceContents(
     uri: String,
     blob: String,

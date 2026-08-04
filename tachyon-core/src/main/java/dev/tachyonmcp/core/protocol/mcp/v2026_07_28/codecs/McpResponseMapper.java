@@ -178,15 +178,11 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
 
     @Override
     public Object callToolResult(ToolResult result) {
-        var meta = result.meta();
-        var resolvedMeta = meta == null || meta.isEmpty() ? null : JsonUtils.toJsonNodeMap(meta);
         return switch (result) {
             case ToolResult.InputRequired ignored -> super.callToolResult(result);
-            case ToolResult.Error error -> buildCallToolResult(error.content(), null, true, resolvedMeta);
+            case ToolResult.Error error -> buildCallToolResult(error.content(), null, true, resolveMeta(result));
             case ToolResult.Success success ->
-                buildCallToolResult(success.content(), success.structuredValue(), null, resolvedMeta);
-            case ToolResult.Deferred ignored ->
-                throw new AssertionError("Deferred should not reach callToolResult mapping");
+                buildCallToolResult(success.content(), success.structuredValue(), null, resolveMeta(result));
         };
     }
 
