@@ -5,6 +5,8 @@ import static dev.tachyonmcp.core.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.tachyonmcp.api.server.domain.FormInputRequest;
+import dev.tachyonmcp.api.server.domain.InputRequestBundle;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.features.tasks.TaskDescriptor;
@@ -265,6 +267,47 @@ class DefaultTaskRegistryTest {
                 .isTrue();
         assertThat(entry.transitionTo(TaskState.FAILED)).isFalse();
         assertThat(entry.transitionTo(TaskState.WORKING)).isFalse();
+    }
+
+    @Test
+    void requireInputTransitionsToInputRequiredAndStoresPendingRequest() {
+        var task = registry.create();
+        // Task has no public "start" method; resume() also legally moves SUBMITTED -> WORKING
+        // per the FSM, so it's the server-facing way to leave SUBMITTED before requireInput().
+        task.resume(null);
+        var bundle = new InputRequestBundle(
+                Map.of("user_name", FormInputRequest.of("What is your name?", Map.of())), "state-token");
+
+        assertThat(task.requireInput(bundle, "need more info")).isTrue();
+
+        assertThat(task.status()).isEqualTo(TaskState.INPUT_REQUIRED);
+        assertThat(task.statusMessage()).isEqualTo("need more info");
+        assertThat(registry.getById(task.id()).pendingInput()).isEqualTo(bundle);
+    }
+
+    @Test
+    void pendingInputClearsOnceTaskLeavesInputRequired() {
+        var task = registry.create();
+        task.resume(null);
+        var bundle =
+                new InputRequestBundle(Map.of("user_name", FormInputRequest.of("What is your name?", Map.of())), null);
+        task.requireInput(bundle, null);
+
+        assertThat(task.resume(null)).isTrue();
+
+        assertThat(registry.getById(task.id()).pendingInput()).isNull();
+    }
+
+    @Test
+    void requireInputFailsFromSubmittedWithoutReachingWorkingFirst() {
+        var task = registry.create();
+        var bundle =
+                new InputRequestBundle(Map.of("user_name", FormInputRequest.of("What is your name?", Map.of())), null);
+
+        assertThat(task.requireInput(bundle, null)).isFalse();
+
+        assertThat(task.status()).isEqualTo(TaskState.SUBMITTED);
+        assertThat(registry.getById(task.id()).pendingInput()).isNull();
     }
 
     @Test

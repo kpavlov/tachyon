@@ -73,11 +73,12 @@ public interface Task extends HasMeta {
     /**
      * Signals that this task requires additional input from the client.
      *
-     * @param request       the input request
+     * @param request       the requested inputs and opaque state to echo back
      * @param statusMessage optional status message
      * @return {@code true} if the state transition was applied
      */
-    boolean requireInput(InputRequest request, @Nullable String statusMessage);
+    @ExperimentalApi
+    boolean requireInput(InputRequestBundle request, @Nullable String statusMessage);
 
     /**
      * Resumes a task that was waiting for input.

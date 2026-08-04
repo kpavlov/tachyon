@@ -4,7 +4,7 @@ package dev.tachyonmcp.core.server.features.tasks;
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.server.ServerFeature;
 import dev.tachyonmcp.api.server.domain.ContentBlock;
-import dev.tachyonmcp.api.server.domain.InputRequest;
+import dev.tachyonmcp.api.server.domain.InputRequestBundle;
 import dev.tachyonmcp.api.server.domain.ProgressToken;
 import dev.tachyonmcp.api.server.domain.Task;
 import dev.tachyonmcp.api.server.domain.TaskResult;
@@ -38,6 +38,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     private volatile long lastUpdatedAt;
     private volatile long expiredAt;
     private volatile @Nullable String statusMessage;
+    private volatile @Nullable InputRequestBundle pendingInput;
     private final CompletableFuture<TaskResult> completionFuture = new CompletableFuture<>();
     private final @Nullable ProgressToken progressToken;
     private final Consumer<TaskEntry> statusListener;
@@ -245,8 +246,17 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     }
 
     @Override
-    public boolean requireInput(InputRequest request, @Nullable String statusMessage) {
-        return transitionTo(TaskState.INPUT_REQUIRED, null, statusMessage);
+    public boolean requireInput(InputRequestBundle request, @Nullable String statusMessage) {
+        Objects.requireNonNull(request, "request");
+        return transitionTo(TaskState.INPUT_REQUIRED, null, statusMessage, request);
+    }
+
+    /**
+     * Returns the requested inputs while this task is awaiting a response, or {@code null} when
+     * the task isn't currently in the {@link TaskState#INPUT_REQUIRED} state.
+     */
+    public @Nullable InputRequestBundle pendingInput() {
+        return status() == TaskState.INPUT_REQUIRED ? pendingInput : null;
     }
 
     @Override
@@ -321,6 +331,21 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
      * (when non-null) atomically with the state change, then notifying the status listener.
      */
     boolean transitionTo(TaskState newStatus, @Nullable TaskResult result, @Nullable String statusMessage) {
+        return transitionTo(newStatus, result, statusMessage, null);
+    }
+
+    /**
+     * Transitions to {@code newStatus}, publishing {@code result}, {@code statusMessage} (when
+     * non-null), and {@code pendingInput} atomically with the state change, then notifying the
+     * status listener. {@code pendingInput} is only retained for {@link TaskState#INPUT_REQUIRED};
+     * any other target status clears it, so a task never carries a stale bundle once it has moved
+     * on, and the listener never observes {@code INPUT_REQUIRED} without its bundle already set.
+     */
+    private boolean transitionTo(
+            TaskState newStatus,
+            @Nullable TaskResult result,
+            @Nullable String statusMessage,
+            @Nullable InputRequestBundle pendingInput) {
         Objects.requireNonNull(newStatus, "status is required");
         if (newStatus == TaskState.COMPLETED) {
             Objects.requireNonNull(result, "result is required when transitioning to completed status");
@@ -334,6 +359,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             if (statusMessage != null) {
                 this.statusMessage = statusMessage;
             }
+            this.pendingInput = newStatus == TaskState.INPUT_REQUIRED ? pendingInput : null;
             if (newStatus.isTerminal()) {
                 this.expiredAt = computeExpiredAt(this.lastUpdatedAt);
                 if (result != null) {

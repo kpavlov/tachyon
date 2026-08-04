@@ -15,6 +15,7 @@ import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.features.HandlerFutures;
+import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.api.server.features.tools.ToolHandler;
 import dev.tachyonmcp.api.server.features.tools.ToolRequest;
@@ -157,6 +158,7 @@ public final class ToolMethodHandlers {
                     request.meta(),
                     OutboundSseStreamMessageRouter.currentSessionId(),
                     request.progressToken());
+            task.transitionTo(TaskState.WORKING);
             var taskRequest = ToolRequest.builder()
                     .name(request.name())
                     .arguments(request.arguments())
@@ -169,7 +171,7 @@ public final class ToolMethodHandlers {
                     .build();
 
             var future = new CompletableFuture<ToolResult>();
-            var handlerFuture = new AtomicReference<CompletableFuture<? extends ToolResult>>();
+            var handlerFuture = new AtomicReference<@Nullable CompletableFuture<? extends ToolResult>>();
             var dispatchFuture = context.engine().executor().submit(() -> {
                 if (future.isCancelled()) return;
                 try {
@@ -222,6 +224,8 @@ public final class ToolMethodHandlers {
                 task.fail(new TaskResult.Failed(error.content(), null, meta));
             } else if (result instanceof ToolResult.Success success) {
                 task.complete(new TaskResult.Completed(success.content(), success.structuredValue(), meta));
+            } else if (result instanceof ToolResult.InputRequired inputRequired) {
+                task.requireInput(inputRequired.request(), null);
             }
             taskRegistry.unregisterRunning(task.id());
         }

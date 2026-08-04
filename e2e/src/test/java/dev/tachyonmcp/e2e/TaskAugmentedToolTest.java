@@ -6,13 +6,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.json.PayloadSerializer;
 import dev.tachyonmcp.api.runtime.InteractionContext;
+import dev.tachyonmcp.api.server.domain.FormInputRequest;
 import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.api.server.features.tools.AbstractToolHandler;
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolRequest;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import java.util.Map;
 import net.javacrumbs.jsonunit.core.Option;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
@@ -245,6 +248,92 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
     }
 
     @Test
+    void taskAugmentedToolInputRequiredMovesTaskToInputRequiredWithoutFailing() throws Exception {
+        startServerWith(s -> s.tools()
+                .register(
+                        b -> b.name("needs-input").taskSupport(TaskSupport.OPTIONAL),
+                        (context, request) -> ToolResult.inputRequired(
+                                Map.of("user_name", FormInputRequest.of("What is your name?", Map.of())), null)));
+        try (var client = createTestClient()) {
+            client.initialize();
+
+            var response = client.sendRpc("""
+                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"needs-input","arguments":{},"task":{}}}
+                """);
+            var taskId = extractTaskId(response);
+
+            var inputRequiredTask = client.awaitTaskStatus(taskId, "input_required");
+            // language=JSON
+            var expectedTask = """
+                    {
+                      "jsonrpc": "2.0",
+                      "id": "tasks-get",
+                      "result": {
+                        "taskId": "%s",
+                        "status": "input_required"
+                      }
+                    }
+                    """.formatted(taskId);
+            assertThatJson(inputRequiredTask).when(Option.IGNORING_EXTRA_FIELDS).isEqualTo(expectedTask);
+
+            // INPUT_REQUIRED is non-terminal: the task must still accept a cancel (SEP-1686 / A2A).
+            var cancelJson = client.sendRpc("""
+                {"jsonrpc":"2.0","id":3,"method":"tasks/cancel","params":{"taskId":"%s"}}
+                """.formatted(taskId));
+            assertThatJson(cancelJson).inPath("$.result.status").isEqualTo("cancelled");
+        }
+    }
+
+    @Test
+    void taskAugmentedToolInputRequiredThenClientAnswersAndTaskCompletes() throws Exception {
+        startServerWith(s -> s.tools()
+                .register(b -> b.name("greet").taskSupport(TaskSupport.OPTIONAL), (context, request) -> {
+                    var inputResponses = request.inputResponses();
+                    if (inputResponses == null || !inputResponses.containsKey("user_name")) {
+                        return ToolResult.inputRequired(
+                                Map.of("user_name", FormInputRequest.of("What is your name?", Map.of())),
+                                "greet-state");
+                    }
+                    var name = stringField(inputResponses.get("user_name"), "name", "World");
+                    return ToolResult.text("Hello, " + name + "!");
+                }));
+        try (var client = createTestClient()) {
+            client.initialize();
+
+            // Round 1: task-augmented call with no answer yet -> its task parks at input_required.
+            var round1 = client.sendRpc("""
+                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"greet","arguments":{},"task":{}}}
+                """);
+            var firstTaskId = extractTaskId(round1);
+            client.awaitTaskStatus(firstTaskId, "input_required");
+
+            // Round 2: client answers, re-issuing the call with inputResponses + requestState.
+            // Task-augmented tools/call has no "resume this task" wire affordance (task id isn't
+            // echoed back on input_required) -- resuming means a fresh task carries the answered
+            // call to completion, same as the non-task-augmented elicitation flow.
+            var round2 = client.sendRpc("""
+                {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{
+                  "name":"greet","arguments":{},"task":{},
+                  "inputResponses":{"user_name":{"name":"Alice"}},"requestState":"greet-state"}}
+                """);
+            var secondTaskId = extractTaskId(round2);
+            assertThat(secondTaskId).isNotEqualTo(firstTaskId);
+
+            client.awaitTaskStatus(secondTaskId, "completed");
+            var resultJson = client.sendRpc("""
+                {"jsonrpc":"2.0","id":4,"method":"tasks/result","params":{"taskId":"%s"}}
+                """.formatted(secondTaskId));
+            assertThatJson(resultJson).inPath("$.result.content[0].text").isEqualTo("Hello, Alice!");
+
+            // The original task was never resumed -- still parked, exactly where round 1 left it.
+            var firstAfter = client.sendRpc("""
+                {"jsonrpc":"2.0","id":5,"method":"tasks/get","params":{"taskId":"%s"}}
+                """.formatted(firstTaskId));
+            assertThatJson(firstAfter).inPath("$.result.status").isEqualTo("input_required");
+        }
+    }
+
+    @Test
     void taskResultReplaysInvalidParamsWithoutLeakingHandlerMessage() throws Exception {
         // MCP 2025-11-25 Tasks: tasks/result MUST return the underlying JSON-RPC error.
         startServerWith(s -> s.tools()
@@ -288,6 +377,13 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
         } catch (Exception e) {
             throw new RuntimeException("Failed to extract taskId from: " + json, e);
         }
+    }
+
+    private static String stringField(@Nullable Object value, String name, String defaultValue) {
+        if (value instanceof Map<?, ?> map && map.get(name) instanceof String text) {
+            return text;
+        }
+        return defaultValue;
     }
 
     private static final class SleepingSyncTool extends AbstractToolHandler {
