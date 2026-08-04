@@ -2,6 +2,7 @@
 package dev.tachyonmcp.kotlin.server
 
 import dev.tachyonmcp.api.server.domain.Args
+import dev.tachyonmcp.api.server.domain.AudioContent
 import dev.tachyonmcp.api.server.domain.ImageContent
 import dev.tachyonmcp.api.server.domain.InvalidArgumentException
 import dev.tachyonmcp.api.server.domain.Role
@@ -383,6 +384,7 @@ internal class KotlinApiTest {
     }
 
     @Test
+    @Suppress("DEPRECATION")
     fun `content DSL collects text and image blocks into a ToolResult`() {
         withStatelessContext { ctx ->
             val request =
@@ -407,6 +409,30 @@ internal class KotlinApiTest {
     }
 
     @Test
+    fun `content DSL accepts raw byte array image and audio blocks`() {
+        withStatelessContext { ctx ->
+            val request =
+                ToolRequest
+                    .builder()
+                    .name("render")
+                    .arguments(Args.of(null, null))
+                    .build()
+            val scope = ToolScope(ctx, request = request)
+            val result =
+                scope.content {
+                    image(byteArrayOf(1, 2, 3), "image/png")
+                    audio(byteArrayOf(4, 5, 6), "audio/wav")
+                }
+            result.shouldBeInstanceOf<ToolResult.Success>()
+            assertSoftly {
+                result.content() shouldHaveSize 2
+                (result.content()[0] as ImageContent).data().toList() shouldBe listOf<Byte>(1, 2, 3)
+                (result.content()[1] as AudioContent).data().toList() shouldBe listOf<Byte>(4, 5, 6)
+            }
+        }
+    }
+
+    @Test
     fun `text DSL returns a single-block ToolResult`() {
         withStatelessContext { ctx ->
             val request =
@@ -423,6 +449,7 @@ internal class KotlinApiTest {
     }
 
     @Test
+    @Suppress("DEPRECATION")
     fun `PromptScope content DSL builds one user message per block`() {
         withStatelessContext { ctx ->
             val request = PromptRequest(Args.empty(), null, null)

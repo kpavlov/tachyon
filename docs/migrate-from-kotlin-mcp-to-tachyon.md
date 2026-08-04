@@ -139,7 +139,7 @@ CallToolResult(content = listOf(TextContent(json)))               → ToolResult
 CallToolResult(content = listOf(TextContent(json)), isError=true) → ToolResult.error(json)
 ToolResult.raw(structuredJson, textFallback)                    // pre-serialized JSON, skips serde
 success(EchoReply(...))                                         // configured serde → structuredContent
-ToolResult.of(pojo)                                             // Jackson: POJO → structuredContent
+ToolResult.structured(pojo)                                     // Jackson: POJO → structuredContent
 ```
 
 ## 6. Schemas — three shapes, one gotcha

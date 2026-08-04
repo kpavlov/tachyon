@@ -126,7 +126,6 @@ public fun BlobResourceContents(
  * @param mimeType MIME type of the binary data; null to omit
  * @param meta     optional request-level metadata; defaults to empty map
  * @author Konstantin Pavlov
- * @deprecated base64-encoded String input is deprecated; use the [ByteArray] overload
  */
 @Deprecated(
     message = "Base64-encoded String input is deprecated; pass raw bytes instead.",
@@ -154,7 +153,6 @@ public fun BlobResourceContents(
  * metadata map. Requires kotlinx-serialization-json on the classpath.
  *
  * @author Konstantin Pavlov
- * @deprecated base64-encoded String input is deprecated; use the [ByteArray] overload
  */
 @JvmName("blobResourceContentsWithKxMeta")
 @Deprecated(

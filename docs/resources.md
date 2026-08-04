@@ -98,9 +98,7 @@ Return binary content with `BlobResourceContents`:
 ```java
 import dev.tachyonmcp.api.server.domain.BlobResourceContents;
 
-(ctx,request)->BlobResourceContents.
-
-of(request.uri(),base64Image, "image/png")
+(ctx, request) -> BlobResourceContents.of(request.uri(), imageBytes, "image/png")
 ```
 
 ## Subscribe to changes

@@ -101,6 +101,7 @@ internal class TachyonServerTest {
                     port = 0
                     endpointPath = "/mcp"
                     allowedOrigins.add("*")
+                    allowedHosts.add("host.docker.internal:8096")
                     allowNullOrigin = true
                     allowPrivateNetworks = true
                     readerIdleTimeout = 124.seconds
@@ -184,6 +185,7 @@ internal class TachyonServerTest {
             with(config.network) {
                 host shouldBe "127.0.0.1"
                 endpointPath shouldBe "/mcp"
+                allowedHosts shouldBe listOf("host.docker.internal:8096")
                 allowNullOrigin shouldBe true
                 readerIdleTimeout shouldBe 124.seconds.toJavaDuration()
                 writerIdleTimeout shouldBe 60.seconds.toJavaDuration()

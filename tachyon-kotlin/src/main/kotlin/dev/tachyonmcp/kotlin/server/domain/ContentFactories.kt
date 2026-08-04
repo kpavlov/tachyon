@@ -112,7 +112,6 @@ public fun ImageContent(
  * @param mimeType    image format (e.g. "image/png")
  * @param annotations optional presentation hints
  * @param meta        optional request-level metadata; null to omit
- * @deprecated base64-encoded String input is deprecated since 1.0.0-beta.17; use the [ByteArray] overload
  */
 @Deprecated(
     message = "Base64-encoded String input is deprecated; pass raw bytes instead.",
@@ -138,7 +137,6 @@ public fun ImageContent(
 /**
  * Creates an [ImageContent] block from base64-encoded data using a kotlinx-serialization
  * metadata map. Requires kotlinx-serialization-json on the classpath.
- * @deprecated base64-encoded String input is deprecated since 1.0.0-beta.17; use the [ByteArray] overload
  */
 @JvmName("imageContentWithKxMeta")
 @Deprecated(
@@ -208,7 +206,6 @@ public fun AudioContent(
  * @param mimeType    audio format (e.g. "audio/mp3")
  * @param annotations optional presentation hints
  * @param meta        optional request-level metadata; null to omit
- * @deprecated base64-encoded String input is deprecated since 1.0.0-beta.17; use the [ByteArray] overload
  */
 @Deprecated(
     message = "Base64-encoded String input is deprecated; pass raw bytes instead.",
@@ -234,7 +231,6 @@ public fun AudioContent(
 /**
  * Creates an [AudioContent] block from base64-encoded data using a kotlinx-serialization
  * metadata map. Requires kotlinx-serialization-json on the classpath.
- * @deprecated base64-encoded String input is deprecated since 1.0.0-beta.17; use the [ByteArray] overload
  */
 @JvmName("audioContentWithKxMeta")
 @Deprecated(

@@ -124,6 +124,30 @@ Guidance:
 | `allowPrivateNetworks` | `false` | Allow private-network CORS preflight |
 | `allowedHeaders` | — | Extra allowed request headers |
 
+### DNS-rebinding protection
+
+Every request's `Host` (and, when present, `Origin`) header must resolve to
+`localhost`/`127.0.0.1`, or the connection is rejected with `403 Forbidden`. `allowedHosts`
+extends the `Host` check with additional authorities — e.g. a container reaching the server
+via `host.docker.internal`. It does **not** widen the `Origin` check: a browser page on a
+non-local origin is still rejected even if `Host` is allowlisted.
+
+| Option | Default | Description |
+|---|---|---|
+| `allowedHosts` | — (localhost-only) | Extra `Host` authorities (`host` or `host:port`) accepted beyond localhost |
+
+```java
+.network(n -> n.allowedHosts("host.docker.internal:8096"))
+```
+
+```kotlin
+network { allowedHosts += "host.docker.internal:8096" }
+```
+
+Entries are bare authorities, not URLs, matched case-insensitively; an entry without a port
+matches that host on any port. See `DnsRebindingProtectionHandler`'s class docs for exact
+matching rules (bracketed IPv6, multiple/missing `Host` headers, HTTP/1.0 exemption).
+
 ## I/O engine
 
 `NettyIoEngine` selects the Netty transport:

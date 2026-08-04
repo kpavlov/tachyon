@@ -132,11 +132,7 @@ public class ImageContentBuilder
         /** Raw image bytes. */
         public var data: ByteArray? = null
 
-        /**
-         * Base64-encoded image bytes.
-         *
-         * @deprecated base64-encoded String input is deprecated; assign raw bytes to [data] instead
-         */
+        /** Base64-encoded image bytes. */
         @Deprecated(
             "Base64-encoded String input is deprecated; assign raw bytes to `data` instead.",
         )
@@ -173,11 +169,7 @@ public class AudioContentBuilder
         /** Raw audio bytes. */
         public var data: ByteArray? = null
 
-        /**
-         * Base64-encoded audio bytes.
-         *
-         * @deprecated base64-encoded String input is deprecated; assign raw bytes to [data] instead
-         */
+        /** Base64-encoded audio bytes. */
         @Deprecated(
             "Base64-encoded String input is deprecated; assign raw bytes to `data` instead.",
         )
@@ -219,11 +211,11 @@ public class BlobResourceContentsBuilder
         /** Raw resource bytes. */
         public var data: ByteArray? = null
 
-        /**
-         * Base64-encoded resource bytes.
-         *
-         * @deprecated base64-encoded String input is deprecated; assign raw bytes to [data] instead
-         */
+        /** Alias for [data]; kept for the pre-rename `blob` property name. */
+        @Deprecated("Renamed to `data`.", ReplaceWith("data"))
+        public var blob: ByteArray? by ::data
+
+        /** Base64-encoded resource bytes. */
         @Deprecated(
             "Base64-encoded String input is deprecated; assign raw bytes to `data` instead.",
         )

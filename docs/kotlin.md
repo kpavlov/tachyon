@@ -309,7 +309,7 @@ tool(name = "greet", inputSchema = ..., outputSchema = ...) {
 |---|---|---|
 | `ServerInfoScope` | `info { }` | `name`, `version`, `description`, `title`, `instructions` |
 | `CapabilitiesScope` | `capabilities { }` | `tools()`, `resources()`, `prompts()`, `tasks()`, `logging()`, `completions()` |
-| `NetworkScope` | `network { }` | `host`, `port`, `endpointPath`, `allowedOrigins`, `maxContentLength` |
+| `NetworkScope` | `network { }` | `host`, `port`, `endpointPath`, `allowedOrigins`, `allowedHeaders`, `allowedHosts`, `maxContentLength` |
 | `SessionScope` | `session { }` | `enabled`, `sessionTtl`, `sessionIdGenerator` |
 | `RuntimeScope` | `runtime { }` | `shutdownGracePeriod` |
 | `ToolScope` | tool lambda | `ctx`, `request` |
@@ -350,8 +350,8 @@ TachyonServer(port = 8080) {
 | `ToolResult.text(t)` | Text content block |
 | `ToolResult.error(msg)` | `isError = true` |
 | `ToolResult.content(vararg b)` | Multiple content blocks |
-| `ToolResult.of(payload)` | POJO → `structuredContent` via Jackson |
-| `ToolResult.of(payload, text)` | Structured + human-readable text |
+| `ToolResult.structured(payload)` | POJO → `structuredContent` via Jackson |
+| `ToolResult.structured(payload, text)` | Structured + human-readable text |
 | `ToolResult.empty()` | No content |
 
 `structuredContent` requires a JSON object shape. Tachyon rejects primitives and arrays at runtime.

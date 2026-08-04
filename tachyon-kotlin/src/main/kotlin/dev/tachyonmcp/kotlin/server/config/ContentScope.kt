@@ -28,7 +28,19 @@ public class ContentScope
             blocks += TextContent.of(text)
         }
 
-        /** Appends a base64-encoded image block. */
+        /** Appends an image block. */
+        public fun image(
+            data: ByteArray,
+            mimeType: String,
+        ) {
+            blocks += ImageContent.of(data, mimeType)
+        }
+
+        /** Appends an image block from base64-encoded data. */
+        @Deprecated(
+            "Base64-encoded String input is deprecated; pass raw bytes instead.",
+            ReplaceWith("image(Base64.getDecoder().decode(data), mimeType)", "java.util.Base64"),
+        )
         public fun image(
             data: String,
             mimeType: String,
@@ -36,7 +48,19 @@ public class ContentScope
             blocks += ImageContent.of(Base64.getDecoder().decode(data), mimeType)
         }
 
-        /** Appends a base64-encoded audio block. */
+        /** Appends an audio block. */
+        public fun audio(
+            data: ByteArray,
+            mimeType: String,
+        ) {
+            blocks += AudioContent.of(data, mimeType)
+        }
+
+        /** Appends an audio block from base64-encoded data. */
+        @Deprecated(
+            "Base64-encoded String input is deprecated; pass raw bytes instead.",
+            ReplaceWith("audio(Base64.getDecoder().decode(data), mimeType)", "java.util.Base64"),
+        )
         public fun audio(
             data: String,
             mimeType: String,
