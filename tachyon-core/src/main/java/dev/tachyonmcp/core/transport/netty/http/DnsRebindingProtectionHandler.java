@@ -9,6 +9,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.ReferenceCountUtil;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -26,7 +27,8 @@ import java.util.stream.Collectors;
  * bridge is not rejected. Entries are matched case-insensitively against the request's full
  * authority ({@code host} or {@code host:port}) and against its host part with the port stripped, so
  * either {@code "host.docker.internal"} or {@code "host.docker.internal:8096"} accepts a request
- * whose {@code Host} is {@code host.docker.internal:8096}. The default (empty allowlist) preserves
+ * whose {@code Host} is {@code host.docker.internal:8096}. IPv6 literals must be bracketed
+ * ({@code "[2001:db8::1]"} or {@code "[2001:db8::1]:8096"}). The default (empty allowlist) preserves
  * the localhost-only behaviour.
  */
 @ChannelHandler.Sharable
@@ -55,16 +57,25 @@ public class DnsRebindingProtectionHandler extends ChannelInboundHandlerAdapter 
         if (msg instanceof HttpRequest req) {
             var origin = req.headers().getAsString(HttpHeaderNames.ORIGIN);
             if (origin != null && !origin.isEmpty() && !isLocalhostOrigin(origin)) {
-                sendPlainTextAndClose(ctx, HttpResponseStatus.FORBIDDEN, "Forbidden");
+                reject(ctx, msg);
                 return;
             }
             var host = req.headers().getAsString(HttpHeaderNames.HOST);
             if (host != null && !host.isEmpty() && !isLocalhostAuthority(host) && !isAllowedHost(host)) {
-                sendPlainTextAndClose(ctx, HttpResponseStatus.FORBIDDEN, "Forbidden");
+                reject(ctx, msg);
                 return;
             }
         }
         ctx.fireChannelRead(msg);
+    }
+
+    /**
+     * Rejects the request with {@code 403 Forbidden} and closes the connection. Releases the inbound
+     * message first: it is not forwarded down the pipeline, so nothing else will free its buffers.
+     */
+    private static void reject(ChannelHandlerContext ctx, Object msg) {
+        ReferenceCountUtil.release(msg);
+        sendPlainTextAndClose(ctx, HttpResponseStatus.FORBIDDEN, "Forbidden");
     }
 
     /** Returns {@code true} when {@code authority} matches a configured allowed host. */
@@ -73,11 +84,7 @@ public class DnsRebindingProtectionHandler extends ChannelInboundHandlerAdapter 
             return false;
         }
         var lower = authority.toLowerCase(Locale.ROOT);
-        if (allowedHosts.contains(lower)) {
-            return true;
-        }
-        var hostOnly = lower.startsWith("[") ? lower : stripPort(lower);
-        return allowedHosts.contains(hostOnly);
+        return allowedHosts.contains(lower) || allowedHosts.contains(stripPort(lower));
     }
 
     /** Returns {@code true} when the origin's host part is {@code localhost} or {@code 127.0.0.1}. */
@@ -94,12 +101,19 @@ public class DnsRebindingProtectionHandler extends ChannelInboundHandlerAdapter 
     /** Returns {@code true} when {@code authority} ({@code host} or {@code host:port}) is localhost. */
     static boolean isLocalhostAuthority(String authority) {
         if (authority.isEmpty()) return false;
-        // Strip port: last colon for host:port; skip bracketed IPv6 addresses
-        var host = authority.startsWith("[") ? authority : stripPort(authority);
+        var host = stripPort(authority);
         return host.equalsIgnoreCase("localhost") || host.equals("127.0.0.1");
     }
 
+    /**
+     * Strips a trailing {@code :port} from an authority, leaving the host. Handles bracketed IPv6
+     * literals ({@code [::1]:8096} -> {@code [::1]}); the colons inside the brackets are not ports.
+     */
     private static String stripPort(String authority) {
+        if (authority.startsWith("[")) {
+            int close = authority.indexOf(']');
+            return close >= 0 ? authority.substring(0, close + 1) : authority;
+        }
         int colon = authority.lastIndexOf(':');
         return colon >= 0 ? authority.substring(0, colon) : authority;
     }

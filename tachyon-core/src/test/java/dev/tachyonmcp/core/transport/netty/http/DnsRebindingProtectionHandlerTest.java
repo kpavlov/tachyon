@@ -11,11 +11,22 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.util.ReferenceCountUtil;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 class DnsRebindingProtectionHandlerTest {
+
+    private @Nullable EmbeddedChannel channel;
+
+    @AfterEach
+    void releaseChannel() {
+        if (channel != null) {
+            channel.finishAndReleaseAll();
+        }
+    }
 
     private static HttpRequest requestWithHost(@Nullable String host) {
         var req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/mcp");
@@ -25,15 +36,19 @@ class DnsRebindingProtectionHandlerTest {
         return req;
     }
 
-    /** Returns the status of a rejection response written outbound, or {@code null} if none. */
+    /** Returns the status of a rejection response written outbound (releasing it), or {@code null}. */
     private static @Nullable HttpResponseStatus rejectionStatus(EmbeddedChannel channel) {
         Object out = channel.readOutbound();
-        return out instanceof HttpResponse resp ? resp.status() : null;
+        try {
+            return out instanceof HttpResponse resp ? resp.status() : null;
+        } finally {
+            ReferenceCountUtil.release(out);
+        }
     }
 
     @Test
     void allowsLocalhostHostByDefault() {
-        var channel = new EmbeddedChannel(new DnsRebindingProtectionHandler());
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler());
         assertThat(channel.writeInbound(requestWithHost("localhost:8096")))
                 .as("localhost Host must pass through")
                 .isTrue();
@@ -42,14 +57,14 @@ class DnsRebindingProtectionHandlerTest {
 
     @Test
     void rejectsNonLocalhostHostByDefault() {
-        var channel = new EmbeddedChannel(new DnsRebindingProtectionHandler());
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler());
         channel.writeInbound(requestWithHost("host.docker.internal:8096"));
         assertThat(rejectionStatus(channel)).isEqualTo(HttpResponseStatus.FORBIDDEN);
     }
 
     @Test
     void allowsHostOnTheAllowlist() {
-        var channel = new EmbeddedChannel(new DnsRebindingProtectionHandler(List.of("host.docker.internal:8096")));
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler(List.of("host.docker.internal:8096")));
         assertThat(channel.writeInbound(requestWithHost("host.docker.internal:8096")))
                 .as("an allowlisted Host must pass through")
                 .isTrue();
@@ -58,22 +73,48 @@ class DnsRebindingProtectionHandlerTest {
 
     @Test
     void allowlistEntryWithoutPortMatchesAnyPort() {
-        var channel = new EmbeddedChannel(new DnsRebindingProtectionHandler(List.of("host.docker.internal")));
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler(List.of("host.docker.internal")));
         assertThat(channel.writeInbound(requestWithHost("host.docker.internal:8096")))
                 .isTrue();
     }
 
     @Test
     void allowlistIsCaseInsensitive() {
-        var channel = new EmbeddedChannel(new DnsRebindingProtectionHandler(List.of("Host.Docker.Internal:8096")));
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler(List.of("Host.Docker.Internal:8096")));
         assertThat(channel.writeInbound(requestWithHost("host.docker.internal:8096")))
                 .isTrue();
     }
 
     @Test
     void stillRejectsHostsNotOnTheAllowlist() {
-        var channel = new EmbeddedChannel(new DnsRebindingProtectionHandler(List.of("host.docker.internal:8096")));
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler(List.of("host.docker.internal:8096")));
         channel.writeInbound(requestWithHost("evil.example:80"));
+        assertThat(rejectionStatus(channel)).isEqualTo(HttpResponseStatus.FORBIDDEN);
+    }
+
+    @Test
+    void allowlistMatchesBracketedIpv6WithPort() {
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler(List.of("[2001:db8::1]:8096")));
+        assertThat(channel.writeInbound(requestWithHost("[2001:db8::1]:8096"))).isTrue();
+    }
+
+    @Test
+    void allowlistBracketedIpv6HostOnlyMatchesAnyPort() {
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler(List.of("[2001:db8::1]")));
+        assertThat(channel.writeInbound(requestWithHost("[2001:db8::1]:8096")))
+                .as("a host-only IPv6 entry must match any port")
+                .isTrue();
+    }
+
+    @Test
+    void releasesRejectedInboundRequest() {
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler());
+        var req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/mcp");
+        req.headers().set(HttpHeaderNames.HOST, "host.docker.internal:8096");
+        channel.writeInbound(req);
+        assertThat(req.refCnt())
+                .as("a rejected inbound request must be released, not leaked")
+                .isZero();
         assertThat(rejectionStatus(channel)).isEqualTo(HttpResponseStatus.FORBIDDEN);
     }
 }
