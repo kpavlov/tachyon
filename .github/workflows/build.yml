@@ -48,7 +48,7 @@ jobs:
 
       - name: Publish test results
         uses: mikepenz/action-junit-report@v6
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && github.event.pull_request.head.repo.fork != true }}
         with:
           report_paths: '**/target/*-reports/TEST-*.xml'
           check_name: Test Report (JDK ${{ matrix.java }})
@@ -62,7 +62,7 @@ jobs:
 
       - name: Publish coverage report
         uses: madrapps/jacoco-report@v1.8.0
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && github.event.pull_request.head.repo.fork != true }}
         with:
           paths: 'reports/target/site/jacoco-aggregate/jacoco.xml'
           title: Coverage Report (JDK ${{ matrix.java }})
@@ -71,7 +71,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload results to Codecov
-        if: ${{ !cancelled() && matrix.codecov }}
+        if: ${{ !cancelled() && matrix.codecov && github.event.pull_request.head.repo.fork != true }}
         uses: codecov/codecov-action@v7
         with:
           name: codecov-jdk${{ matrix.java }}
@@ -80,7 +80,7 @@ jobs:
           slug: kpavlov/tachyon
 
       - name: Upload test results to Codecov
-        if: ${{ !cancelled() && matrix.codecov }}
+        if: ${{ !cancelled() && matrix.codecov && github.event.pull_request.head.repo.fork != true }}
         uses: codecov/codecov-action@v7
         with:
           report_type: test_results
@@ -133,7 +133,7 @@ jobs:
 
       - name: Publish test results
         uses: mikepenz/action-junit-report@v6
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && github.event.pull_request.head.repo.fork != true }}
         with:
           report_paths: 'examples/${{ matrix.example }}/target/*-reports/TEST-*.xml'
           check_name: 'Test Report: ${{ matrix.example }} (JDK ${{ matrix.java }})'
