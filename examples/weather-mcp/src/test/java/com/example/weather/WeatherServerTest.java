@@ -20,6 +20,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,7 +38,6 @@ class WeatherServerTest {
     private static HttpClientStreamableHttpTransport clientTransport;
     private static McpSyncClient client;
     private static McpSchema.InitializeResult initResult;
-    private static final List<McpSchema.ProgressNotification> progressNotifications = new CopyOnWriteArrayList<>();
 
     @BeforeAll
     static void beforeAll() {
@@ -50,7 +51,6 @@ class WeatherServerTest {
         client = McpClient.sync(clientTransport)
             .elicitation(request -> new McpSchema.ElicitResult(
                 McpSchema.ElicitResult.Action.ACCEPT, Map.of("city", "Tallinn")))
-            .progressConsumer(progressNotifications::add)
             .build();
 
         initResult = client.initialize();
@@ -163,26 +163,40 @@ class WeatherServerTest {
 
     @Test
     void shouldEmitProgressWhileFetchingWeather() {
-        var arguments = new HashMap<String, Object>();
-        arguments.put("city", "London");
-        arguments.put("units", null);
-        final var result = client.callTool(McpSchema.CallToolRequest.builder("get-weather")
-            .arguments(arguments)
-            .progressToken("weather-progress")
-            .build());
+        var progressNotifications = new CopyOnWriteArrayList<McpSchema.ProgressNotification>();
+        var progressScheduler = Schedulers.newSingle("weather-progress");
+        var progressClient = McpClient.async(HttpClientStreamableHttpTransport
+            .builder("http://localhost:" + handle.port())
+            .build())
+            .progressConsumer(notification -> Mono.<Void>fromRunnable(() -> progressNotifications.add(notification))
+                .subscribeOn(progressScheduler))
+            .build();
+        try {
+            progressClient.initialize().block();
+            var arguments = new HashMap<String, Object>();
+            arguments.put("city", "London");
+            arguments.put("units", null);
+            final var result = progressClient.callTool(McpSchema.CallToolRequest.builder("get-weather")
+                .arguments(arguments)
+                .progressToken("weather-progress")
+                .build())
+                .block();
 
-        assertThat(result.isError()).isNotEqualTo(true);
-        await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
-            assertThat(progressNotifications).hasSize(2));
-        assertThat(progressNotifications)
-            .extracting(
-                McpSchema.ProgressNotification::progressToken,
-                McpSchema.ProgressNotification::progress,
-                McpSchema.ProgressNotification::total,
-                McpSchema.ProgressNotification::message)
-            .containsExactly(
-                tuple("weather-progress", 0.1, 1.0, "Fetching weather for London"),
-                tuple("weather-progress", 1.0, 1.0, "Weather retrieved for London"));
+            assertThat(result.isError()).isNotEqualTo(true);
+            await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
+                assertThat(progressNotifications)
+                    .extracting(
+                        McpSchema.ProgressNotification::progressToken,
+                        McpSchema.ProgressNotification::progress,
+                        McpSchema.ProgressNotification::total,
+                        McpSchema.ProgressNotification::message)
+                    .containsExactly(
+                        tuple("weather-progress", 0.1, 1.0, "Fetching weather for London"),
+                        tuple("weather-progress", 1.0, 1.0, "Weather retrieved for London")));
+        } finally {
+            progressClient.close();
+            progressScheduler.dispose();
+        }
     }
 
     @Test
