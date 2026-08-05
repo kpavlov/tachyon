@@ -191,7 +191,8 @@ public final class ToolMethodHandlers {
                     OutboundSseStreamMessageRouter.currentSessionId(),
                     request.progressToken());
             task.transitionTo(TaskState.WORKING);
-            var taskRequest = ToolRequest.builder()
+            final var taskResult = context.responseMapper().createTaskResult(task);
+            final var taskRequest = ToolRequest.builder()
                     .name(request.name())
                     .arguments(request.arguments())
                     .meta(request.meta())
@@ -246,7 +247,7 @@ public final class ToolMethodHandlers {
                 handleFutureFailure(taskRegistry, task, throwable);
                 return null;
             });
-            return context.responseMapper().createTaskResult(task);
+            return taskResult;
         }
 
         private void completeTask(
