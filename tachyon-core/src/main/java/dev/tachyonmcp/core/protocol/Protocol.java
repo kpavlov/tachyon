@@ -4,7 +4,10 @@ package dev.tachyonmcp.core.protocol;
 import dev.tachyonmcp.core.runtime.ChannelContext;
 import dev.tachyonmcp.core.runtime.DefaultChannelContext;
 import dev.tachyonmcp.core.server.ServerBuilder;
+import dev.tachyonmcp.core.server.internal.ServerEngine;
+import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpRequest;
+import java.util.List;
 
 /**
  * SPI for protocol versions, loadable via {@link java.util.ServiceLoader}.
@@ -62,5 +65,19 @@ public interface Protocol {
 
     default ChannelContext createInteractionContext() {
         return new DefaultChannelContext(this);
+    }
+
+    /**
+     * Per-request Netty pipeline handlers this protocol version needs, in the order they must run
+     * (e.g. request-shape validation before extension negotiation). Added once per channel alongside
+     * every other registered protocol's handlers — a channel's negotiated protocol isn't fixed at
+     * construction time (a single keep-alive connection can carry requests for different negotiated
+     * versions, e.g. behind a proxy that pools upstream connections across unrelated clients), so
+     * each handler must recognize and no-op for a request that didn't negotiate this version.
+     * Returned handlers are shared across every channel for this server, so each must be
+     * {@code @Sharable}. Empty by default.
+     */
+    default List<ChannelHandler> requestHandlers(ServerEngine server) {
+        return List.of();
     }
 }

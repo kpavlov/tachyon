@@ -6,8 +6,14 @@ import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs.McpResponseMapper;
+import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.transport.ExtensionNegotiationHandler;
+import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.transport.RequestValidationHandler;
+import dev.tachyonmcp.core.server.handlers.ExtensionNegotiator;
+import dev.tachyonmcp.core.server.internal.ServerEngine;
+import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
+import java.util.List;
 
 /** MCP protocol implementation for the modern, per-request 2026-07-28 revision. */
 public final class McpProtocol implements Protocol {
@@ -54,5 +60,11 @@ public final class McpProtocol implements Protocol {
     @Override
     public boolean supportsSessions() {
         return false;
+    }
+
+    @Override
+    public List<ChannelHandler> requestHandlers(ServerEngine server) {
+        var negotiator = new ExtensionNegotiator(server.extensions());
+        return List.of(new RequestValidationHandler(server), new ExtensionNegotiationHandler(negotiator));
     }
 }

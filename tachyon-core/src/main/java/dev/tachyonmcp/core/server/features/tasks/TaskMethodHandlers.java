@@ -1,12 +1,14 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.features.tasks;
 
+import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 
 /** JSON-RPC adapters for task operations. */
 public final class TaskMethodHandlers {
@@ -18,6 +20,22 @@ public final class TaskMethodHandlers {
         handlers.put("tasks/get", new TasksGetHandler(registry));
         handlers.put("tasks/cancel", new TasksCancelHandler(registry));
         handlers.put("tasks/result", new TasksResultHandler(registry));
+    }
+
+    /**
+     * 2026-07-28 requires every {@code tasks/get}/{@code tasks/cancel} request to declare the {@code
+     * io.modelcontextprotocol/tasks} extension capability (SEP-2663) or be rejected with {@code
+     * -32021}. 2025-11-25's legacy, session-negotiated task support predates that extension and isn't
+     * gated by it (SEP-2663's protocol-version compatibility table: "this extension does not apply"
+     * under 2025-11-25) — {@code protocol().supportsSessions()} is exactly that version boundary.
+     */
+    private static @Nullable ServerError requireTasksExtension(DispatchContext context) {
+        if (context.protocol().supportsSessions() || context.isExtensionEnabled(TasksExtension.ID)) {
+            return null;
+        }
+        return ServerErrors.missingRequiredClientCapability(
+                "Requires the '" + TasksExtension.ID + "' extension",
+                Map.of("extensions", Map.of(TasksExtension.ID, Map.of())));
     }
 
     private record TasksListHandler(DefaultTaskRegistry registry) implements RpcMethodHandler {
@@ -45,6 +63,8 @@ public final class TaskMethodHandlers {
 
         @Override
         public Object handle(DispatchContext context, Object params) {
+            var missingCapability = requireTasksExtension(context);
+            if (missingCapability != null) return missingCapability;
             final String taskId;
             try {
                 taskId = context.requestMapper().taskId(params);
@@ -66,6 +86,8 @@ public final class TaskMethodHandlers {
 
         @Override
         public Object handle(DispatchContext context, Object params) {
+            var missingCapability = requireTasksExtension(context);
+            if (missingCapability != null) return missingCapability;
             final String taskId;
             try {
                 taskId = context.requestMapper().taskId(params);

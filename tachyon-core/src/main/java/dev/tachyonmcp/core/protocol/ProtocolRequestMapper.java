@@ -55,6 +55,15 @@ public interface ProtocolRequestMapper {
     /** Maps {@code initialize} params into the client's requested extensions. */
     InitializeRequest initialize(@Nullable Object params);
 
+    /**
+     * Extracts the extensions the client declares support for on this request (ID to client settings),
+     * from {@code _meta."io.modelcontextprotocol/clientCapabilities".extensions} (2026-07-28, SEP-2575) —
+     * same shape as {@link InitializeRequest#extensions()}, so both feed the same negotiator. Protocols
+     * negotiated once via {@code initialize} (e.g. 2025-11-25) carry no such per-request declaration and
+     * return an empty map.
+     */
+    Map<String, JsonObject> declaredExtensions(@Nullable Object params);
+
     /** Extracts the client's permitted {@link LoggingLevel}, or {@code null} if unset. */
     @Nullable
     LoggingLevel permittedLogLevel(@Nullable Object params);

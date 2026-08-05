@@ -4,6 +4,7 @@ package dev.tachyonmcp.core.server.features.tools;
 import static dev.tachyonmcp.core.server.domain.ServerErrors.fromUnhandledException;
 import static dev.tachyonmcp.core.server.domain.ServerErrors.internalError;
 import static dev.tachyonmcp.core.server.domain.ServerErrors.invalidParams;
+import static dev.tachyonmcp.core.server.domain.ServerErrors.missingRequiredClientCapability;
 
 import dev.tachyonmcp.api.json.JsonDocument;
 import dev.tachyonmcp.api.json.JsonSchema;
@@ -25,6 +26,7 @@ import dev.tachyonmcp.core.server.OutboundSseStreamMessageRouter;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.core.server.features.tasks.TaskRegistry;
+import dev.tachyonmcp.core.server.features.tasks.TasksExtension;
 import dev.tachyonmcp.core.server.json.JsonUtils;
 import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.time.Duration;
@@ -97,7 +99,7 @@ public final class ToolMethodHandlers {
         }
 
         @Override
-        public CompletionStage<@Nullable Object> handleAsync(DispatchContext context, Object params) {
+        public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
             final dev.tachyonmcp.core.protocol.ProtocolRequestMapper.ToolCallRequest mapped;
             try {
                 mapped = context.requestMapper().callTool(params, payloadDeserializer);
@@ -130,6 +132,16 @@ public final class ToolMethodHandlers {
             if (taskSupport == TaskSupport.REQUIRED && !mapped.taskAugmented()) {
                 return CompletableFuture.completedFuture(invalidParams("Task augmentation required for this tool"));
             }
+            // 2026-07-28 (no session) requires the client to declare the tasks extension per request
+            // (SEP-2663) before the server may return a CreateTaskResult; 2025-11-25's legacy,
+            // session-negotiated task augmentation predates that extension and isn't gated by it.
+            if (mapped.taskAugmented()
+                    && !context.protocol().supportsSessions()
+                    && !context.isExtensionEnabled(TasksExtension.ID)) {
+                return CompletableFuture.completedFuture(missingRequiredClientCapability(
+                        "Requires the '" + TasksExtension.ID + "' extension",
+                        Map.of("extensions", Map.of(TasksExtension.ID, Map.of()))));
+            }
             if (mapped.taskAugmented()) {
                 return CompletableFuture.completedFuture(
                         dispatchTaskAugmented(context, handler, request, mapped.taskTtl()));
@@ -152,7 +164,8 @@ public final class ToolMethodHandlers {
         private @Nullable Object dispatchTaskAugmented(
                 DispatchContext context, ToolHandler handler, ToolRequest request, @Nullable Duration taskTtl) {
             sendLogging(context, request.name(), "started");
-            var taskRegistry = context.engine().tasksRegistry();
+            final var engine = context.engine();
+            var taskRegistry = engine.tasksRegistry();
             var task = taskRegistry.createSessionTask(
                     taskTtl,
                     request.meta(),
@@ -172,7 +185,7 @@ public final class ToolMethodHandlers {
 
             var future = new CompletableFuture<ToolResult>();
             var handlerFuture = new AtomicReference<@Nullable CompletableFuture<? extends ToolResult>>();
-            var dispatchFuture = context.engine().executor().submit(() -> {
+            var dispatchFuture = engine.executor().submit(() -> {
                 if (future.isCancelled()) return;
                 try {
                     var stage = Objects.requireNonNull(
@@ -200,7 +213,7 @@ public final class ToolMethodHandlers {
             });
 
             taskRegistry.registerRunning(task.id(), future);
-            HandlerFutures.completeOn(future, context.engine().executor(), (toolResult, failure) -> {
+            HandlerFutures.completeOn(future, engine.executor(), (toolResult, failure) -> {
                         if (failure == null)
                             completeTask(
                                     taskRegistry, task, handler.descriptor().outputSchema(), toolResult);

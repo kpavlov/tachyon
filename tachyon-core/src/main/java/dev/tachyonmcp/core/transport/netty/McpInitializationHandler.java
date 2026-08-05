@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.timeout.IdleStateEvent;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -170,30 +171,50 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                                 origin);
                         return;
                     }
-                    if (result instanceof McpDispatcher.DispatchResult.Accepted) {
-                        postStream.terminate();
-                        sendAccepted(ctx, origin);
-                        return;
-                    }
-                    if (result instanceof McpDispatcher.DispatchResult.Status(int code, String statusMessage)) {
-                        postStream.terminate();
-                        sendPlainTextAndClose(ctx, HttpResponseStatus.valueOf(code), statusMessage, origin);
-                        return;
-                    }
-                    var response = (McpDispatcher.DispatchResult.Response) result;
-                    if (postStream.started()) {
-                        postStream.writeEvent(server.nextEventId(), response.responseBody(), null);
-                        postStream.terminate();
-                        return;
-                    }
-                    postStream.terminate();
-                    sendJsonResponse(
-                            ctx,
-                            response.responseBody(),
-                            HttpResponseStatus.valueOf(response.httpStatus()),
-                            response.sessionId(),
-                            origin);
+                    completeDispatch(ctx, postStream, result, origin, null);
                 }));
+    }
+
+    /**
+     * Terminates {@code postStream} and writes the response for a completed {@link
+     * McpDispatcher.DispatchResult}, handling all three outcomes (accepted/status/response). Shared
+     * by {@link #dispatchPreSessionRequest} and {@link #handleInitialize} — the only difference
+     * between the two call sites is that {@code initialize} must fire the OPERATION-phase lifecycle
+     * transition once the {@link McpDispatcher.DispatchResult.Response} is known, before the response
+     * is written; {@code onResponseReady} carries that (a no-op for every other pre-session request).
+     */
+    private void completeDispatch(
+            ChannelHandlerContext ctx,
+            PostSseStream postStream,
+            McpDispatcher.DispatchResult result,
+            @Nullable String origin,
+            @Nullable Consumer<McpDispatcher.DispatchResult.Response> onResponseReady) {
+        if (result instanceof McpDispatcher.DispatchResult.Accepted) {
+            postStream.terminate();
+            sendAccepted(ctx, origin);
+            return;
+        }
+        if (result instanceof McpDispatcher.DispatchResult.Status(int code, String statusMessage)) {
+            postStream.terminate();
+            sendPlainTextAndClose(ctx, HttpResponseStatus.valueOf(code), statusMessage, origin);
+            return;
+        }
+        var response = (McpDispatcher.DispatchResult.Response) result;
+        if (onResponseReady != null) {
+            onResponseReady.accept(response);
+        }
+        if (postStream.started()) {
+            postStream.writeEvent(server.nextEventId(), response.responseBody(), null);
+            postStream.terminate();
+            return;
+        }
+        postStream.terminate();
+        sendJsonResponse(
+                ctx,
+                response.responseBody(),
+                HttpResponseStatus.valueOf(response.httpStatus()),
+                response.sessionId(),
+                origin);
     }
 
     private void handleInitialize(ChannelHandlerContext ctx, RequestId id, Object params, @Nullable String origin) {
@@ -212,10 +233,8 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                         ChannelHandlerUtils.requireInteractionContext(ctx))
                 .whenComplete((result, ex) -> ctx.executor().execute(() -> {
                     var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
-                    // initialize never emits server→client messages, but neutralize defensively so
-                    // the keep-alive JSON response below can never be preceded by an SSE upgrade.
-                    postStream.terminate();
                     if (ex != null) {
+                        postStream.terminate();
                         logger.error("Initialize dispatch failed: id={}, elapsed={}ms", id, elapsedMs, ex);
                         sendResponseAndClose(
                                 ctx,
@@ -226,20 +245,17 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                         return;
                     }
                     logger.debug("Initialize response: id={}, elapsed={}ms", id, elapsedMs);
-
-                    var response = (McpDispatcher.DispatchResult.Response) result;
-                    var resultSessionId = response.sessionId();
-
-                    // Fire event with the live Session — InteractionHandler binds it into
-                    // InteractionContext, and LifecyclePipelineCoordinator replaces this handler
-                    // with McpOperationHandler.
-                    var mcpSession = resultSessionId != null
-                            ? server.getSession(resultSessionId).orElse(null)
-                            : null;
-                    ctx.pipeline().fireUserEventTriggered(new InteractionEvent.OperationStarted(mcpSession));
-                    logger.debug("Pipeline transitioned to OPERATION phase for session: {}", resultSessionId);
-
-                    sendJsonResponse(ctx, response.responseBody(), resultSessionId, origin);
+                    completeDispatch(ctx, postStream, result, origin, response -> {
+                        var resultSessionId = response.sessionId();
+                        // Fire event with the live Session — InteractionHandler binds it into
+                        // InteractionContext, and LifecyclePipelineCoordinator replaces this handler
+                        // with McpOperationHandler.
+                        var mcpSession = resultSessionId != null
+                                ? server.getSession(resultSessionId).orElse(null)
+                                : null;
+                        ctx.pipeline().fireUserEventTriggered(new InteractionEvent.OperationStarted(mcpSession));
+                        logger.debug("Pipeline transitioned to OPERATION phase for session: {}", resultSessionId);
+                    });
                 }));
     }
 

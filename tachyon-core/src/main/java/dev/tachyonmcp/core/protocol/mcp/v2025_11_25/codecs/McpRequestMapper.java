@@ -31,6 +31,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class McpRequestMapper implements ProtocolRequestMapper {
 
     private static final String META_LOG_LEVEL_KEY = "io.modelcontextprotocol/logLevel";
+    private static final String META_CLIENT_CAPABILITIES_KEY = "io.modelcontextprotocol/clientCapabilities";
     private static final JsonMapper JSON = new JsonMapper();
 
     @Override
@@ -144,11 +145,26 @@ public class McpRequestMapper implements ProtocolRequestMapper {
     public InitializeRequest initialize(@Nullable Object params) {
         var capabilities = optionalMap(asMap(params), "capabilities", "Invalid capabilities");
         var extensions = capabilities != null ? optionalMap(capabilities, "extensions", "Invalid extensions") : null;
-        if (extensions == null || extensions.isEmpty()) return new InitializeRequest(Map.of());
+        return new InitializeRequest(mapExtensions(extensions));
+    }
+
+    @Override
+    public Map<String, JsonObject> declaredExtensions(@Nullable Object params) {
+        var map = asMap(params);
+        if (!(map.get("_meta") instanceof Map<?, ?> meta)) return Map.of();
+        if (!(meta.get(META_CLIENT_CAPABILITIES_KEY) instanceof Map<?, ?> capabilities)) return Map.of();
+        if (!(capabilities.get("extensions") instanceof Map<?, ?> extensions)) return Map.of();
+        return mapExtensions(extensions);
+    }
+
+    /** Maps a raw {@code extensions} object (id -> settings) to the domain {@code Map<String, JsonObject>} shape. */
+    private static Map<String, JsonObject> mapExtensions(@Nullable Map<?, ?> extensions) {
+        if (extensions == null || extensions.isEmpty()) return Map.of();
         var mapped = new LinkedHashMap<String, JsonObject>();
-        extensions.forEach((key, value) ->
-                mapped.put(key, value instanceof Map<?, ?> map ? JsonObject.of(stringKeyed(map)) : JsonObject.empty()));
-        return new InitializeRequest(Map.copyOf(mapped));
+        stringKeyed(extensions)
+                .forEach((key, value) -> mapped.put(
+                        key, value instanceof Map<?, ?> map ? JsonObject.of(stringKeyed(map)) : JsonObject.empty()));
+        return Map.copyOf(mapped);
     }
 
     @Override

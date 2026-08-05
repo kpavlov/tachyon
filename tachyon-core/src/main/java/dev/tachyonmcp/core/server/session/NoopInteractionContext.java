@@ -27,10 +27,11 @@ public class NoopInteractionContext implements DispatchContext {
             new dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpRequestMapper();
     private static final ProtocolResponseMapper RESPONSE_MAPPER =
             Objects.requireNonNull(ProtocolMappers.getMapper("mcp", McpProtocol.VERSION));
+    private static final Protocol PROTOCOL = new McpProtocol();
 
     @Override
     public Protocol protocol() {
-        throw new UnsupportedOperationException("No interaction context available");
+        return PROTOCOL;
     }
 
     @Override

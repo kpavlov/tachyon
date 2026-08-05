@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.transport.netty;
 
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.transport.RequestValidationHandler;
+import dev.tachyonmcp.core.protocol.Protocols;
 import dev.tachyonmcp.core.server.McpDispatcher;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.transport.netty.http.AcceptValidationHandler;
@@ -23,7 +23,9 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
@@ -31,7 +33,9 @@ import org.jspecify.annotations.Nullable;
 /**
  * Assembles the Netty pipeline for each new MCP channel: validation handlers
  * (endpoint, origin, protocol version, accept header, stateless guard),
- * {@link InteractionHandler}, HTTP aggregation, idle timeout, the
+ * {@link InteractionHandler}, HTTP aggregation, idle timeout, each registered
+ * {@link dev.tachyonmcp.core.protocol.Protocol}'s own
+ * {@link dev.tachyonmcp.core.protocol.Protocol#requestHandlers request handlers}, the
  * initialization-phase handler ({@link McpInitializationHandler}), and the
  * {@link LifecyclePipelineCoordinator}.
  *
@@ -67,11 +71,11 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
     private final CorsConfig corsConfig;
 
     private static final ChannelHandler statelessValidator = new StatelessValidatorHandler();
-    private static final ChannelHandler MCP_2025_11_25_REQUEST_VALIDATOR = new RequestValidationHandler();
 
-    // Per-server, not static: Mcp-Param-* validation resolves x-mcp-header tool-schema annotations
-    // via this server's own tool registry.
-    private final ChannelHandler mcp20260728RequestValidator;
+    // Built once per server from every registered Protocol's own requestHandlers(server) — see
+    // Protocol#requestHandlers. Per-server, not static: several of these handlers are bound to this
+    // server's own tool registry / registered extensions.
+    private final Map<String, ChannelHandler> protocolRequestHandlers;
 
     private final ServerEngine server;
     private final McpDispatcher dispatcher;
@@ -105,8 +109,17 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
         this.childChannels = childChannels;
         this.dispatcher = new McpDispatcher(server, server.executor());
         this.interactionHandler = new InteractionHandler();
-        this.mcp20260728RequestValidator =
-                new dev.tachyonmcp.core.protocol.mcp.v2026_07_28.transport.RequestValidationHandler(server);
+
+        var handlers = new LinkedHashMap<String, ChannelHandler>();
+        for (var protocol : Protocols.list()) {
+            for (var handler : protocol.requestHandlers(server)) {
+                handlers.put(
+                        protocol.familyName() + "-" + protocol.versionString() + "-"
+                                + handler.getClass().getSimpleName(),
+                        handler);
+            }
+        }
+        this.protocolRequestHandlers = handlers;
 
         protocolVersionHandler = new ProtocolVersionHandler(endpointPath);
         acceptHeaderValidator = new AcceptValidationHandler(endpointPath);
@@ -168,13 +181,15 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
                             readerIdleTimeout.toMillis(), writerIdleTimeout.toMillis(), 0, TimeUnit.MILLISECONDS));
         }
 
-        // Protocol-bound request validation, one handler per protocol version (see each handler's
-        // own package). Each checks the negotiated protocol on the interaction context and no-ops
-        // for any other version, so both can sit unconditionally ahead of dispatch — no dynamic
-        // pipeline surgery. Needs the aggregated body (peeked read-only), so it must run after
-        // http-aggregator and before the phase handlers below.
-        p.addLast("mcp-request-validation-2025-11-25", MCP_2025_11_25_REQUEST_VALIDATOR);
-        p.addLast("mcp-request-validation-2026-07-28", mcp20260728RequestValidator);
+        // Every registered Protocol's own request handlers (see Protocol#requestHandlers), e.g.
+        // request-shape validation and, for 2026-07-28, per-request extension negotiation. Each
+        // checks the negotiated protocol on the interaction context and no-ops for any other
+        // version, so all of them can sit unconditionally ahead of dispatch — no dynamic pipeline
+        // surgery, since a channel's negotiated protocol isn't fixed at construction time (a
+        // keep-alive connection can carry requests for different negotiated versions, e.g. behind a
+        // proxy that pools upstream connections across unrelated clients). Needs the aggregated body
+        // (peeked read-only), so it must run after http-aggregator and before the phase handlers below.
+        protocolRequestHandlers.forEach(p::addLast);
 
         // Both stateless and stateful modes go through the initialization phase handler.
         // It negotiates the protocol, fires InteractionEvent.OperationStarted, then the

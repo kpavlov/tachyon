@@ -88,6 +88,32 @@ class ProtocolVersionHandlerTest {
     }
 
     @Test
+    void latestVersionRebindsFreshInteractionOnEveryRequest() {
+        // 2026-07-28 is stateless/per-request: a keep-alive connection carrying two requests must
+        // never let the second one see state (e.g. negotiated extensions) left on the interaction
+        // context by the first. A fresh EmbeddedChannel per request can't catch a regression to
+        // setIfAbsent here — there'd be nothing yet to overwrite either way — so this reuses one
+        // channel across both requests, the same way a real keep-alive connection would.
+        var negotiationChannel = new EmbeddedChannel(new ProtocolVersionHandler("/mcp"), new InteractionHandler());
+        var firstRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/mcp");
+        firstRequest.headers().set("MCP-Protocol-Version", McpProtocol.VERSION);
+        negotiationChannel.writeInbound(firstRequest);
+        var firstContext = negotiationChannel
+                .attr(InteractionHandler.INTERACTION_CONTEXT_KEY)
+                .get();
+
+        var secondRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/mcp");
+        secondRequest.headers().set("MCP-Protocol-Version", McpProtocol.VERSION);
+        negotiationChannel.writeInbound(secondRequest);
+        var secondContext = negotiationChannel
+                .attr(InteractionHandler.INTERACTION_CONTEXT_KEY)
+                .get();
+
+        assertThat(secondContext).isNotSameAs(firstContext);
+        negotiationChannel.finishAndReleaseAll();
+    }
+
+    @Test
     void missingVersionPassesThrough() {
         var body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{}}";
         var request = new DefaultFullHttpRequest(
