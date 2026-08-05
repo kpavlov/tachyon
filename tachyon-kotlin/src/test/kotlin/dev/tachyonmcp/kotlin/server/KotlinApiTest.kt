@@ -8,6 +8,7 @@ import dev.tachyonmcp.api.server.domain.InvalidArgumentException
 import dev.tachyonmcp.api.server.domain.Role
 import dev.tachyonmcp.api.server.domain.TextContent
 import dev.tachyonmcp.api.server.features.prompts.PromptRequest
+import dev.tachyonmcp.api.server.features.tasks.TaskSupport
 import dev.tachyonmcp.api.server.features.tools.ToolRequest
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.kotlin.server.config.PromptScope
@@ -426,6 +427,73 @@ internal class KotlinApiTest {
             (result.content().single() as TextContent).text() shouldBe "hi"
         }
     }
+
+    // endregion
+
+    // region: ToolScope convenience accessors
+
+    @Test
+    fun `ToolScope arguments delegates to request arguments`() {
+        withStatelessContext { ctx ->
+            val args = Args.of(mapOf("k" to "v"), null)
+            val request =
+                ToolRequest
+                    .builder()
+                    .name("t")
+                    .arguments(args)
+                    .build()
+            val scope = ToolScope(ctx, request = request)
+            scope.arguments shouldBe args
+        }
+    }
+
+    @Test
+    fun `ToolScope task delegates to request task`() {
+        withStatelessContext { ctx ->
+            val request =
+                ToolRequest
+                    .builder()
+                    .name("t")
+                    .arguments(Args.of(null, null))
+                    .build()
+            val scope = ToolScope(ctx, request = request)
+            scope.task shouldBe null
+        }
+    }
+
+    @Test
+    fun `ToolScope fail returns a failed ToolResult with the message`() {
+        withStatelessContext { ctx ->
+            val request =
+                ToolRequest
+                    .builder()
+                    .name("t")
+                    .arguments(Args.of(null, null))
+                    .build()
+            val scope = ToolScope(ctx, request = request)
+            val result = scope.fail("boom")
+            result.shouldBeInstanceOf<ToolResult.Error>()
+            (result.content().single() as TextContent).text() shouldBe "boom"
+        }
+    }
+
+    @Test
+    fun `tool builder sets taskSupport on the registered descriptor`() {
+        TachyonServer(port = 0) {
+            name("task-support-test")
+            tool("t-task", taskSupport = TaskSupport.OPTIONAL) {
+                ToolResult.text("ok")
+            }
+        }.use { handle ->
+            handle
+                .tools()
+                .find("t-task")
+                .orElse(null)
+                ?.taskSupport() shouldBe TaskSupport.OPTIONAL
+        }
+    }
+
+    // endregion
 
     @Test
     @Suppress("DEPRECATION")

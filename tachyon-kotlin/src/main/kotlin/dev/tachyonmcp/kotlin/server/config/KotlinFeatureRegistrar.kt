@@ -10,6 +10,7 @@ import dev.tachyonmcp.api.server.features.completions.CompletionResult
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor
+import dev.tachyonmcp.api.server.features.tasks.TaskSupport
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.core.server.ServerBuilder
@@ -107,6 +108,7 @@ internal class KotlinFeatureRegistrar(
         description: String?,
         inputSchema: JsonSchema?,
         outputSchema: JsonSchema?,
+        taskSupport: TaskSupport?,
         handler: suspend ToolScope.() -> ToolResult,
     ) {
         delegate.withTools { tools ->
@@ -117,6 +119,7 @@ internal class KotlinFeatureRegistrar(
                         .description(description)
                         .inputSchema(inputSchema)
                         .outputSchema(outputSchema)
+                        .taskSupport(taskSupport)
                 },
                 toolFn(name, runtime, handler),
             )
@@ -128,6 +131,7 @@ internal class KotlinFeatureRegistrar(
         description: String?,
         inputSchema: String,
         outputSchema: String?,
+        taskSupport: TaskSupport?,
         handler: suspend ToolScope.() -> ToolResult,
     ) {
         delegate.withTools { tools ->
@@ -138,6 +142,7 @@ internal class KotlinFeatureRegistrar(
                         .description(description)
                         .inputSchema(inputSchema)
                         .outputSchema(outputSchema)
+                        .taskSupport(taskSupport)
                 },
                 toolFn(name, runtime, handler),
             )

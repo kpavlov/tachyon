@@ -8,14 +8,13 @@ Kotlin coroutine-first DSL for [Tachyon MCP](../README.md). Wraps the Java `Serv
 <dependency>
     <groupId>dev.tachyonmcp</groupId>
     <artifactId>tachyon-kotlin</artifactId>
-    <version>1.0.0-beta.15</version>
+    <version>[LATEST]</version>
 </dependency>
 ```
 
 Requires `tachyon-core` on the classpath (included transitively).
 
-Optionally add `org.jetbrains.kotlinx:kotlinx-serialization-json` to unlock `JsonObject`
-schemas, `request.arguments().decode<T>()`, and `success(value)` tool results.
+Uses `tachyon-core` and `org.jetbrains.kotlinx:kotlinx-serialization-json`, and provides `JsonObject` schemas, `request.arguments().decode<T>()`, and `success(value)` tool results.
 
 ## Documentation
 

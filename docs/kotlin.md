@@ -107,10 +107,10 @@ Tool lambdas are `suspend` functions with access to `ToolScope`:
 ```kotlin
 tool(name = "reverse", description = "Reverse a string") {
     // this: ToolScope
-    // ctx: InteractionContext
-    // request: ToolRequest
-    val msg = request.arguments().stringValue("message")
-    ToolResult.text(msg.reversed())
+    // ctx: InteractionContext, request: ToolRequest
+    // arguments: Args, task: Task? — convenience access to request.arguments()/request.task()
+    val msg = arguments.stringValue("message")
+    text(msg.reversed())
 }
 ```
 
@@ -239,7 +239,7 @@ clients may truncate them.
 ## kotlinx.serialization integration
 
 `kotlinx-serialization-json` is an **optional** dependency of `tachyon-kotlin`.
-Add it to use `JsonObject` schemas, `request.arguments().decode<T>()`, and `success(value)`:
+Add it to use `JsonObject` schemas, `arguments.decode<T>()`, and `success(value)`:
 
 ```xml
 <dependency>
@@ -258,7 +258,7 @@ tool(
     inputSchema = """{"type":"object","properties":{"message":{"type":"string"}}}""",
     outputSchema = """{"type":"object","properties":{"echo":{"type":"string"}}}""",
 ) {
-    val input = request.arguments().decode<EchoArgs>() // typed decode via configured serde
+    val input = arguments.decode<EchoArgs>() // typed decode via configured serde
     success(EchoReply(input.message)) // structuredContent via configured serde
 }
 ```
@@ -289,19 +289,21 @@ through the deserializer set in `json { serde = ... }`.
 @Serializable data class GreetReply(val message: String)
 
 tool(name = "greet", inputSchema = ..., outputSchema = ...) {
-    val input = request.arguments().decode<GreetArgs>() // honors configured serde
+    val input = arguments.decode<GreetArgs>() // honors configured serde
     success(GreetReply("${input.greeting}, ${input.name}!"), "greeting response")  // symmetric typed result
 }
 ```
 
 ## Args accessors
 
+Available via `ToolScope.arguments` (or `PromptScope.arguments`):
+
 | Call | Behaviour |
 |---|---|
-| `request.arguments().stringValue("k")` / `intValue` / `boolValue` / `doubleValue` | Required — throws when missing |
-| `request.arguments().stringOrNull("k")` / `intOrNull` / `booleanOrNull` / `doubleOrNull` | Returns `null` when missing |
-| `request.arguments().stringOr("k", "d")` / `int("k", 0)` / `boolean("k", true)` / `double("k", 0.0)` | Falls back to default |
-| `request.arguments().decode<T>()` | typed decode via configured serde (Jackson by default) |
+| `arguments.stringValue("k")` / `intValue` / `boolValue` / `doubleValue` | Required — throws when missing |
+| `arguments.stringOrNull("k")` / `intOrNull` / `booleanOrNull` / `doubleOrNull` | Returns `null` when missing |
+| `arguments.stringOr("k", "d")` / `int("k", 0)` / `boolean("k", true)` / `double("k", 0.0)` | Falls back to default |
+| `arguments.decode<T>()` | typed decode via configured serde (Jackson by default) |
 
 ## Scope reference
 
@@ -312,7 +314,7 @@ tool(name = "greet", inputSchema = ..., outputSchema = ...) {
 | `NetworkScope` | `network { }` | `host`, `port`, `endpointPath`, `allowedOrigins`, `allowedHeaders`, `allowedHosts`, `maxContentLength` |
 | `SessionScope` | `session { }` | `enabled`, `sessionTtl`, `sessionIdGenerator` |
 | `RuntimeScope` | `runtime { }` | `shutdownGracePeriod` |
-| `ToolScope` | tool lambda | `ctx`, `request` |
+| `ToolScope` | tool lambda | `ctx`, `request`, `arguments`, `task`; `success(v)`, `text(t)`, `fail(msg)`, `content { }` |
 | `ResourceScope` | resource lambda | `ctx`, `uri`, `params`, `uriTemplate` |
 | `TemplateScope` | resource-template lambda | `ctx`, `uri`, `params`, `uriTemplate`; contextual `TextResourceContents { }` |
 | `PromptScope` | prompt lambda | `ctx`, `request`, `arguments` |
@@ -329,7 +331,7 @@ server.registerTool(
         description = "Echo a message"
     },
 ) {
-    ToolResult.text(request.arguments().stringValue("msg"))
+    text(arguments.stringValue("msg"))
 }
 ```
 
@@ -353,6 +355,10 @@ TachyonServer(port = 8080) {
 | `ToolResult.structured(payload)` | POJO → `structuredContent` via Jackson |
 | `ToolResult.structured(payload, text)` | Structured + human-readable text |
 | `ToolResult.empty()` | No content |
+
+Inside a tool lambda, prefer the `ToolScope` shortcuts: `text(t)`, `success(v)`, `fail(msg)`.
+`fail`, not `error` — a member `error(String)` would shadow Kotlin's stdlib `error()`, silently
+turning a thrown `IllegalStateException` into a returned value.
 
 `structuredContent` requires a JSON object shape. Tachyon rejects primitives and arrays at runtime.
 

@@ -138,8 +138,8 @@ Tachyon uses **Jackson 3** (`tools.jackson.*`), not Jackson 2. Import `tools.jac
 
 ```kotlin
 tool(name = "reverse", description = "Reverse a string") {
-    val msg = request.arguments().stringValue("message")
-    ToolResult.text(msg.reversed())
+    val msg = arguments.stringValue("message")
+    text(msg.reversed())
 }
 ```
 
@@ -150,12 +150,12 @@ tool(name = "reverse", description = "Reverse a string") {
 @Serializable data class Reply(val echo: String)
 
 tool("echo", inputSchema = ..., outputSchema = ...) {
-    val input = request.arguments().decode<Args>() // via configured serde
+    val input = arguments.decode<Args>() // via configured serde
     success(Reply(input.message))       // symmetric typed result
 }
 ```
 
-- `request.arguments().decode<T>()` — honors the configured serde (Jackson by default)
+- `arguments.decode<T>()` — honors the configured serde (Jackson by default)
 - `scope.success(value)` / `scope.success(value, text)` — symmetric typed result via configured serializer
 
 See [kotlin.md](kotlin.md) for the full Kotlin DSL reference.

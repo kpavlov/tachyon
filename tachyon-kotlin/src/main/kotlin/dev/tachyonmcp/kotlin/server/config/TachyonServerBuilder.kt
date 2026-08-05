@@ -11,6 +11,7 @@ import dev.tachyonmcp.api.server.features.completions.CompletionResult
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor
+import dev.tachyonmcp.api.server.features.tasks.TaskSupport
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.core.server.ServerBuilder
@@ -119,6 +120,7 @@ public class TachyonServerBuilder
             description: String? = null,
             inputSchema: JsonSchema? = null,
             outputSchema: JsonSchema? = null,
+            taskSupport: TaskSupport? = null,
             handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
             this.also {
@@ -127,6 +129,7 @@ public class TachyonServerBuilder
                     description,
                     inputSchema,
                     outputSchema,
+                    taskSupport,
                     handler,
                 )
             }
@@ -137,6 +140,7 @@ public class TachyonServerBuilder
             description: String? = null,
             inputSchema: String,
             outputSchema: String? = null,
+            taskSupport: TaskSupport? = null,
             handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
             this.also {
@@ -145,6 +149,7 @@ public class TachyonServerBuilder
                     description,
                     inputSchema,
                     outputSchema,
+                    taskSupport,
                     handler,
                 )
             }
@@ -338,6 +343,7 @@ public class TachyonServerBuilder
             description: String? = null,
             inputSchema: JsonObject,
             outputSchema: JsonObject? = null,
+            taskSupport: TaskSupport? = null,
             handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
             this.tool(
@@ -345,6 +351,7 @@ public class TachyonServerBuilder
                 description = description,
                 inputSchema = inputSchema.toJsonSchema(),
                 outputSchema = outputSchema.toJsonSchemaOrNull(),
+                taskSupport = taskSupport,
                 handler = handler,
             )
 

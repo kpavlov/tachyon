@@ -85,6 +85,14 @@ var descriptor = ToolDescriptor.builder()
         .build();
 ```
 
+Kotlin DSL — the name-based `tool(...)` registration takes `taskSupport` directly, no descriptor needed:
+
+```kotlin
+tool("import-data", description = "Long-running import", taskSupport = TaskSupport.OPTIONAL) {
+    success(runImport())
+}
+```
+
 ```json
 {"method": "tools/call", "params": {"name": "import-data", "arguments": {}, "task": {"ttl": 60000}}}
 ```
