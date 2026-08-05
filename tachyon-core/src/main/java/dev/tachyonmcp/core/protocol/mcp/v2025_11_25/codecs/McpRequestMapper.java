@@ -26,7 +26,7 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <p>Also parses the 2026-07-28 {@code inputResponses}/{@code requestState} fields (SEP-2322)
  * unconditionally: they're simply absent on 2025-11-25 wire payloads, so this is a no-op for that
- * version. The 2026-07-28 mapper reuses this class as-is (no override needed).
+ * version.
  */
 public class McpRequestMapper implements ProtocolRequestMapper {
 
@@ -44,13 +44,19 @@ public class McpRequestMapper implements ProtocolRequestMapper {
 
     @Override
     public ToolCallRequest callTool(@Nullable Object params, PayloadDeserializer payloadDeserializer) {
+        return callTool(params, payloadDeserializer, true);
+    }
+
+    /** Maps a tool call, optionally preserving MCP 2025-11-25's legacy task augmentation fields. */
+    protected final ToolCallRequest callTool(
+            @Nullable Object params, PayloadDeserializer payloadDeserializer, boolean legacyTaskAugmentation) {
         var map = asMap(params);
         var name = requiredString(map, "name", "Missing tool name");
         var arguments = optionalMap(map, "arguments", "Invalid arguments");
         var meta = optionalMap(map, "_meta", "Invalid _meta");
         var inputResponses = optionalMap(map, "inputResponses", "Invalid inputResponses");
         var requestState = optionalString(map, "requestState", "Invalid requestState");
-        var task = optionalMap(map, "task", "Invalid task metadata");
+        var task = legacyTaskAugmentation ? optionalMap(map, "task", "Invalid task metadata") : null;
         var ttl = task != null && task.get("ttl") instanceof Number value ? Duration.ofMillis(value.longValue()) : null;
         var request = ToolRequest.builder()
                 .name(name)
@@ -61,7 +67,7 @@ public class McpRequestMapper implements ProtocolRequestMapper {
                 .inputResponses(inputResponses)
                 .requestState(requestState)
                 .build();
-        return new ToolCallRequest(request, task != null, ttl);
+        return new ToolCallRequest(request, legacyTaskAugmentation && task != null, ttl);
     }
 
     @Override

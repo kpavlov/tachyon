@@ -4,19 +4,26 @@ package dev.tachyonmcp.e2e.mcp20260728;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TaskResult;
+import dev.tachyonmcp.api.server.domain.TextContent;
 import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.features.tasks.TasksExtension;
 import dev.tachyonmcp.core.server.json.JsonUtils;
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
+import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * MCP 2026-07-28 tasks (<a href="https://modelcontextprotocol.io/seps/1686-tasks">SEP-1686</a>):
- * this revision exposes the wider seven-state workflow, so a freshly created task reports
- * {@code "submitted"} on the wire — where 2025-11-25 folds the same internal {@code SUBMITTED}
- * state down to {@code "working"} (see {@code TasksExtensionTest} in the default package).
+ * MCP 2026-07-28 tasks (<a href="https://modelcontextprotocol.io/seps/2663-tasks-extension">SEP-2663</a>):
+ * task creation is server-directed and gated on the client declaring {@code
+ * io.modelcontextprotocol/tasks} per request (there's no session to negotiate it once, and no
+ * client-side {@code task} field to opt in with — that legacy 2025-11-25 field is ignored
+ * entirely). {@code tasks/list} and {@code tasks/result} are removed outright; {@code tasks/get}
+ * and {@code tasks/cancel} remain, gated the same way as task-augmented {@code tools/call}.
  */
 class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
 
@@ -25,51 +32,56 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
     }
 
     @Test
-    void freshTaskReportsSubmittedStatus() throws Exception {
-        startTasksServer();
-        var task = server.tasks().create();
+    void ignoresLegacyTaskAugmentation() throws Exception {
+        startServer(
+                builder -> {},
+                registrar -> registrar
+                        .tools()
+                        .register(
+                                b -> b.name("sleep").taskSupport(TaskSupport.OPTIONAL),
+                                (context, request) -> ToolResult.text("done")));
 
         try (var client = createModernTestClient()) {
             var response = client.post("""
-                    {"jsonrpc":"2.0","id":1,"method":"tasks/get","params":{"taskId":"%s",\
-                    "_meta":{"io.modelcontextprotocol/clientCapabilities":{"extensions":{"%s":{}}}}}}
-                    """.formatted(task.id(), TasksExtension.ID));
+                    {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{
+                    "name":"sleep","arguments":{},"task":"ignored",
+                    "_meta":{"io.modelcontextprotocol/clientCapabilities":{"extensions":{
+                    "io.modelcontextprotocol/tasks":{}}}}}}
+                    """);
 
             assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-            assertThatJson(response.body())
-                    .whenIgnoringPaths("$.result.createdAt", "$.result.lastUpdatedAt")
-                    .isEqualTo("""
-                            {
-                              "jsonrpc":"2.0",
-                              "id":1,
-                              "result":{"taskId":"%s","status":"submitted","ttl":null}
-                            }
-                            """.formatted(task.id()));
+            assertThatJson(response.body()).isEqualTo("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 1,
+                      "result": {
+                        "content": [{"type": "text", "text": "done"}],
+                        "resultType": "complete"
+                      }
+                    }
+                    """);
         }
     }
 
-    @Test
-    void completedTaskReportsCompletedStatus() throws Exception {
-        startTasksServer();
-        var task = server.tasks().create();
-        task.complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"done\"}")));
+    @ParameterizedTest
+    @ValueSource(strings = {"tasks/list", "tasks/result"})
+    void doesNotExposeMethodsRemovedBySep2663(String method) throws Exception {
+        startServer(builder -> {}, registrar -> {});
 
         try (var client = createModernTestClient()) {
+            var params = "tasks/list".equals(method) ? "{}" : "{\"taskId\":\"task-1\"}";
             var response = client.post("""
-                    {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"%s",\
-                    "_meta":{"io.modelcontextprotocol/clientCapabilities":{"extensions":{"%s":{}}}}}}
-                    """.formatted(task.id(), TasksExtension.ID));
+                    {"jsonrpc":"2.0","id":1,"method":"%s","params":%s}
+                    """.formatted(method, params));
 
-            assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-            assertThatJson(response.body())
-                    .whenIgnoringPaths("$.result.createdAt", "$.result.lastUpdatedAt")
-                    .isEqualTo("""
-                            {
-                              "jsonrpc":"2.0",
-                              "id":2,
-                              "result":{"taskId":"%s","status":"completed","ttl":null}
-                            }
-                            """.formatted(task.id()));
+            assertThat(response.statusCode()).as(response.body()).isEqualTo(404);
+            assertThatJson(response.body()).isEqualTo("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 1,
+                      "error": {"code": -32601, "message": "Method not found"}
+                    }
+                    """);
         }
     }
 
@@ -115,6 +127,131 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
     }
 
     @Test
+    void freshTaskReportsSubmittedStatus() throws Exception {
+        startTasksServer();
+        var task = server.tasks().create();
+
+        try (var client = createModernTestClient()) {
+            var response = client.post("""
+                    {"jsonrpc":"2.0","id":1,"method":"tasks/get","params":{"taskId":"%s",\
+                    "_meta":{"io.modelcontextprotocol/clientCapabilities":{"extensions":{"%s":{}}}}}}
+                    """.formatted(task.id(), TasksExtension.ID));
+
+            assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+            assertThatJson(response.body())
+                    .whenIgnoringPaths("$.result.createdAt", "$.result.lastUpdatedAt")
+                    .isEqualTo("""
+                            {
+                              "jsonrpc":"2.0",
+                              "id":1,
+                              "result":{"taskId":"%s","status":"submitted","ttlMs":null,"resultType":"complete"}
+                            }
+                            """.formatted(task.id()));
+        }
+    }
+
+    @Test
+    void completedTaskInlinesItsResult() throws Exception {
+        startTasksServer();
+        var task = server.tasks().create();
+        task.complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"done\"}")));
+
+        try (var client = createModernTestClient()) {
+            var response = client.post("""
+                    {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"%s",\
+                    "_meta":{"io.modelcontextprotocol/clientCapabilities":{"extensions":{"%s":{}}}}}}
+                    """.formatted(task.id(), TasksExtension.ID));
+
+            assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+            assertThatJson(response.body())
+                    .whenIgnoringPaths("$.result.createdAt", "$.result.lastUpdatedAt")
+                    .isEqualTo("""
+                            {
+                              "jsonrpc":"2.0",
+                              "id":2,
+                              "result":{
+                                "taskId":"%s",
+                                "status":"completed",
+                                "ttlMs":null,
+                                "resultType":"complete",
+                                "result":{
+                                  "content":[{"type":"text","text":"{\\"output\\":\\"done\\"}"}],
+                                  "structuredContent":{"output":"done"},
+                                  "resultType":"complete"
+                                }
+                              }
+                            }
+                            """.formatted(task.id()));
+        }
+    }
+
+    @Test
+    void toolLevelErrorInlinesResultAndReportsCompletedNotFailed() throws Exception {
+        startTasksServer();
+        var task = server.tasks().create();
+        task.fail(new TaskResult.Failed(List.of(TextContent.of("bad input")), null, null));
+
+        try (var client = createModernTestClient()) {
+            var response = client.post("""
+                    {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"%s",\
+                    "_meta":{"io.modelcontextprotocol/clientCapabilities":{"extensions":{"%s":{}}}}}}
+                    """.formatted(task.id(), TasksExtension.ID));
+
+            assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+            assertThatJson(response.body())
+                    .whenIgnoringPaths("$.result.createdAt", "$.result.lastUpdatedAt")
+                    .isEqualTo("""
+                            {
+                              "jsonrpc":"2.0",
+                              "id":2,
+                              "result":{
+                                "taskId":"%s",
+                                "status":"completed",
+                                "ttlMs":null,
+                                "resultType":"complete",
+                                "result":{
+                                  "content":[{"type":"text","text":"bad input"}],
+                                  "isError":true,
+                                  "resultType":"complete"
+                                }
+                              }
+                            }
+                            """.formatted(task.id()));
+        }
+    }
+
+    @Test
+    void protocolFailureInlinesErrorAndReportsFailedStatus() throws Exception {
+        startTasksServer();
+        var task = server.tasks().create();
+        task.fail(TaskResult.failed(new ServerError(ServerError.Kind.INVALID_PARAMS, "bad request")));
+
+        try (var client = createModernTestClient()) {
+            var response = client.post("""
+                    {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"%s",\
+                    "_meta":{"io.modelcontextprotocol/clientCapabilities":{"extensions":{"%s":{}}}}}}
+                    """.formatted(task.id(), TasksExtension.ID));
+
+            assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+            assertThatJson(response.body())
+                    .whenIgnoringPaths("$.result.createdAt", "$.result.lastUpdatedAt")
+                    .isEqualTo("""
+                            {
+                              "jsonrpc":"2.0",
+                              "id":2,
+                              "result":{
+                                "taskId":"%s",
+                                "status":"failed",
+                                "ttlMs":null,
+                                "resultType":"complete",
+                                "error":{"code":-32602,"message":"bad request"}
+                              }
+                            }
+                            """.formatted(task.id()));
+        }
+    }
+
+    @Test
     void rejectsTasksCancelWithoutDeclaredExtension() throws Exception {
         startTasksServer();
         var task = server.tasks().create();
@@ -130,18 +267,48 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
     }
 
     @Test
+    void acceptsTasksCancelWhenDeclared() throws Exception {
+        startTasksServer();
+        var task = server.tasks().create();
+
+        try (var client = createModernTestClient()) {
+            var response = client.post("""
+                    {"jsonrpc":"2.0","id":1,"method":"tasks/cancel","params":{"taskId":"%s",\
+                    "_meta":{"io.modelcontextprotocol/clientCapabilities":{"extensions":{"%s":{}}}}}}
+                    """.formatted(task.id(), TasksExtension.ID));
+
+            assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+            assertThatJson(response.body()).isEqualTo("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 1,
+                      "result": {"resultType": "complete"}
+                    }
+                    """);
+
+            var getResponse = client.post("""
+                    {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"%s",\
+                    "_meta":{"io.modelcontextprotocol/clientCapabilities":{"extensions":{"%s":{}}}}}}
+                    """.formatted(task.id(), TasksExtension.ID));
+
+            assertThat(getResponse.statusCode()).as(getResponse.body()).isEqualTo(200);
+            assertThatJson(getResponse.body()).inPath("$.result.status").isEqualTo("cancelled");
+        }
+    }
+
+    @Test
     void rejectsTaskAugmentedToolCallWithoutDeclaredExtension() throws Exception {
         startServer(
                 builder -> {},
                 registrar -> registrar
                         .tools()
                         .register(
-                                b -> b.name("sleep").taskSupport(TaskSupport.OPTIONAL),
+                                b -> b.name("sleep").taskSupport(TaskSupport.REQUIRED),
                                 (context, request) -> ToolResult.text("done")));
 
         try (var client = createModernTestClient()) {
             var response = client.post("""
-                    {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"sleep","arguments":{},"task":{}}}
+                    {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"sleep","arguments":{}}}
                     """);
 
             assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
@@ -166,24 +333,19 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
         try (var client = createModernTestClient()) {
             var response = client.post("""
                     {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{\
-                    "name":"sleep","arguments":{},"task":{},\
+                    "name":"sleep","arguments":{},\
                     "_meta":{"io.modelcontextprotocol/clientCapabilities":{"extensions":{"%s":{}}}}}}
                     """.formatted(TasksExtension.ID));
 
             assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
             assertThatJson(response.body())
                     .whenIgnoringPaths(
-                            "$.result.task.taskId",
-                            "$.result.task.createdAt",
-                            "$.result.task.lastUpdatedAt",
-                            "$.result._meta")
+                            "$.result.taskId", "$.result.createdAt", "$.result.lastUpdatedAt", "$.result._meta")
                     .isEqualTo("""
                             {
                               "jsonrpc": "2.0",
                               "id": 1,
-                              "result": {
-                                "task": {"status": "working", "ttl": null}
-                              }
+                              "result": {"status": "working", "ttlMs": null, "resultType": "task"}
                             }
                             """);
         }

@@ -1,12 +1,14 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.features.tasks;
 
+import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 
 /** JSON-RPC adapters for task operations. */
 public final class TaskMethodHandlers {
@@ -20,6 +22,18 @@ public final class TaskMethodHandlers {
         handlers.put("tasks/result", new TasksResultHandler(registry));
     }
 
+    /**
+     * MCP 2026-07-28 (SEP-2663) reserves no scoping mechanism for {@code tasks/list} (a poorly-
+     * scoped list could leak one caller's tasks to another) and replaces {@code tasks/result} with
+     * the outcome inlined into {@code tasks/get} -- both methods are removed under that protocol
+     * version. MCP 2025-11-25's legacy task model predates the extension and keeps both.
+     */
+    private static @Nullable ServerError legacyTasksUnavailable(DispatchContext context) {
+        return context.requestMapper().supportsLegacyTaskAugmentation()
+                ? null
+                : ServerErrors.methodNotFound("Method not found");
+    }
+
     private record TasksListHandler(DefaultTaskRegistry registry) implements RpcMethodHandler {
         @Override
         public String method() {
@@ -28,6 +42,8 @@ public final class TaskMethodHandlers {
 
         @Override
         public Object handle(DispatchContext context, Object params) {
+            var unavailable = legacyTasksUnavailable(context);
+            if (unavailable != null) return unavailable;
             var page = context.requestMapper().page(params);
             var paginated = registry.listEntries(page.limit(), page.cursor());
             if (!paginated.cursorValid()) {
@@ -95,6 +111,8 @@ public final class TaskMethodHandlers {
 
         @Override
         public Object handle(DispatchContext context, Object params) {
+            var unavailable = legacyTasksUnavailable(context);
+            if (unavailable != null) return unavailable;
             final String taskId;
             try {
                 taskId = context.requestMapper().taskId(params);

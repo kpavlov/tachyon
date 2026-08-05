@@ -33,6 +33,16 @@ public interface ProtocolRequestMapper {
     ToolCallRequest callTool(@Nullable Object params, PayloadDeserializer payloadDeserializer);
 
     /**
+     * Whether this protocol supports MCP 2025-11-25's legacy {@code tools/call.task} augmentation.
+     *
+     * <p>MCP 2026-07-28 ignores that field; task creation is server-directed through the tasks
+     * extension instead.
+     */
+    default boolean supportsLegacyTaskAugmentation() {
+        return true;
+    }
+
+    /**
      * Maps {@code prompts/get} params into a prompt name and its argument request.
      */
     PromptCallRequest getPrompt(@Nullable Object params);

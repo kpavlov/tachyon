@@ -30,10 +30,10 @@ public class TasksExtension implements ServerExtension {
     public static final String ID = "io.modelcontextprotocol/tasks";
 
     /**
-     * 2026-07-28 requires every task-augmented request (task-augmented {@code tools/call},
-     * {@code tasks/get}, {@code tasks/cancel}) to declare this extension per request (SEP-2663) or be
-     * rejected with {@code -32021}; 2025-11-25's legacy, session-negotiated task support predates the
-     * extension and isn't gated by it.
+     * MCP 2026-07-28 (SEP-2663) requires every task-augmented request (task-augmented
+     * {@code tools/call}, {@code tasks/get}, {@code tasks/cancel}) to declare this extension per
+     * request or be rejected with {@code -32021}; MCP 2025-11-25's legacy, session-negotiated task
+     * support predates the extension and isn't gated by it.
      */
     public static @Nullable ServerError requireDeclared(DispatchContext context) {
         if (context.protocol().supportsSessions() || context.isExtensionEnabled(ID)) {

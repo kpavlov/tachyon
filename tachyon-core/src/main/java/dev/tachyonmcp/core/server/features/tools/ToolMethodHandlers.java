@@ -5,6 +5,7 @@ import static dev.tachyonmcp.core.server.domain.ServerErrors.fromUnhandledExcept
 import static dev.tachyonmcp.core.server.domain.ServerErrors.internalError;
 import static dev.tachyonmcp.core.server.domain.ServerErrors.invalidParams;
 
+import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.json.JsonDocument;
 import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.json.JsonSchemaValidator;
@@ -40,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** JSON-RPC adapters for tool operations. */
+@InternalApi
 public final class ToolMethodHandlers {
 
     private ToolMethodHandlers() {}
@@ -124,23 +126,9 @@ public final class ToolMethodHandlers {
 
             var taskSupport = handler.descriptor().taskSupport();
             if (taskSupport == null) taskSupport = TaskSupport.FORBIDDEN;
-            if (taskSupport == TaskSupport.FORBIDDEN && mapped.taskAugmented()) {
-                return CompletableFuture.completedFuture(
-                        invalidParams("Task augmentation not supported for this tool"));
-            }
-            if (taskSupport == TaskSupport.REQUIRED && !mapped.taskAugmented()) {
-                return CompletableFuture.completedFuture(invalidParams("Task augmentation required for this tool"));
-            }
-            if (mapped.taskAugmented()) {
-                // 2026-07-28 (no session) requires the client to declare the tasks extension per
-                // request (SEP-2663) before the server may return a CreateTaskResult; 2025-11-25's
-                // legacy, session-negotiated task augmentation predates the extension and isn't
-                // gated by it.
-                var missingCapability = TasksExtension.requireDeclared(context);
-                if (missingCapability != null) return CompletableFuture.completedFuture(missingCapability);
-                return CompletableFuture.completedFuture(
-                        dispatchTaskAugmented(context, handler, request, mapped.taskTtl()));
-            }
+
+            var taskDispatch = dispatchIfTaskAugmented(context, handler, request, mapped, taskSupport);
+            if (taskDispatch != null) return CompletableFuture.completedFuture(taskDispatch);
 
             sendLogging(context, request.name(), "started");
             return HandlerFutures.invokeAndMap(
@@ -154,6 +142,42 @@ public final class ToolMethodHandlers {
                                 .callToolResult(
                                         prepareResult(handler.descriptor().outputSchema(), toolResult));
                     });
+        }
+
+        /**
+         * Decides whether this call runs as a task instead of synchronously, dispatching it if so.
+         * Returns {@code null} to signal "run synchronously" -- the only case that falls through to
+         * {@link #handleAsync}'s normal dispatch below.
+         */
+        private @Nullable Object dispatchIfTaskAugmented(
+                DispatchContext context,
+                ToolHandler handler,
+                ToolRequest request,
+                dev.tachyonmcp.core.protocol.ProtocolRequestMapper.ToolCallRequest mapped,
+                TaskSupport taskSupport) {
+            if (context.requestMapper().supportsLegacyTaskAugmentation()) {
+                if (taskSupport == TaskSupport.FORBIDDEN && mapped.taskAugmented()) {
+                    return invalidParams("Task augmentation not supported for this tool");
+                }
+                if (taskSupport == TaskSupport.REQUIRED && !mapped.taskAugmented()) {
+                    return invalidParams("Task augmentation required for this tool");
+                }
+                return mapped.taskAugmented()
+                        ? dispatchTaskAugmented(context, handler, request, mapped.taskTtl())
+                        : null;
+            }
+            if (taskSupport != TaskSupport.REQUIRED) {
+                return null;
+            }
+            // MCP 2026-07-28 (SEP-2663): task creation is server-directed, not client-requested --
+            // the legacy "task" field is ignored entirely (see McpRequestMapper). A REQUIRED tool
+            // can't run synchronously, so the server always creates a task for it, gated on the
+            // client having declared the tasks extension per request (the server can't return a
+            // CreateTaskResult otherwise).
+            var missingCapability = TasksExtension.requireDeclared(context);
+            return missingCapability != null
+                    ? missingCapability
+                    : dispatchTaskAugmented(context, handler, request, null);
         }
 
         private @Nullable Object dispatchTaskAugmented(

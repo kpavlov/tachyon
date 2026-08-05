@@ -9,6 +9,7 @@ import dev.tachyonmcp.api.server.domain.ContentBlock;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.ServerCapabilities;
 import dev.tachyonmcp.api.server.domain.ServerError;
+import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.domain.TextContent;
 import dev.tachyonmcp.api.server.domain.ToolAnnotations;
 import dev.tachyonmcp.api.server.features.completions.CompletionResult;
@@ -113,13 +114,13 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
     public Object discoverResult(
             List<String> supportedVersions, ServerCapabilities capabilities, ServerIdentity serverIdentity) {
         var implementation = ServerInfoMapper.toImplementation(serverIdentity);
-        var meta = Map.of("io.modelcontextprotocol/serverInfo", encodeToTree(implementation));
+        var meta = Map.of("io.modelcontextprotocol/serverInfo", encodeToTree(Implementation.class, implementation));
         // The schema models server identity only via the optional
         // _meta["io.modelcontextprotocol/serverInfo"] key (see `meta` above), but the pinned
         // conformance suite still requires a top-level `serverInfo` field too. `Result` permits
         // arbitrary extra keys (`[key: string]: unknown`), so mirror it there via
         // additionalProperties for conformance, in addition to the spec-correct `_meta` location.
-        var additionalProperties = Map.of("serverInfo", encodeToTree(implementation));
+        var additionalProperties = Map.of("serverInfo", encodeToTree(Implementation.class, implementation));
         return new DiscoverResult(
                 supportedVersions,
                 ServerInfoMapper.toServerCapabilities(capabilities).build(),
@@ -198,19 +199,9 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
     }
 
     @Override
-    public Object listTasksResult(List<TaskEntry> entries, @Nullable String nextCursor) {
-        var tasks = entries.stream().map(McpTaskMapper::toTaskProto).toList();
-        var result = new LinkedHashMap<String, Object>();
-        result.put("tasks", tasks);
-        if (nextCursor != null) {
-            result.put("nextCursor", nextCursor);
-        }
-        return JsonUtils.toObjectNode(result);
-    }
-
-    @Override
     public Object getTaskResult(dev.tachyonmcp.api.server.domain.Task entry) {
-        return McpTaskMapper.toGetTaskResult((TaskEntry) entry);
+        var taskEntry = (TaskEntry) entry;
+        return McpTaskMapper.toGetTaskResult(taskEntry, taskResultNode(taskEntry), taskErrorNode(taskEntry));
     }
 
     @Override
@@ -220,12 +211,50 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
 
     @Override
     public Object cancelTaskResult(TaskEntry entry) {
-        return McpTaskMapper.toCancelTaskResult(entry);
+        return McpTaskMapper.toCancelTaskResult();
     }
 
     @Override
     public Object taskStatusNotificationParams(TaskEntry entry) {
         return McpTaskMapper.toStatusNotification(entry);
+    }
+
+    /**
+     * Inlines a completed task's outcome (or a tool-level {@code isError: true} failure — see
+     * {@link TaskResult.Failed#protocolError()}) into {@code tasks/get}'s {@code result} field, in
+     * the same shape a synchronous {@code tools/call} would have returned. {@code null} while the
+     * task hasn't reached a result-bearing state.
+     */
+    private @Nullable JsonNode taskResultNode(TaskEntry entry) {
+        return switch (entry.result()) {
+            case TaskResult.Completed c ->
+                encodeToTree(
+                        CallToolResult.class,
+                        buildCallToolResult(
+                                c.content(), c.structuredContent(), null, JsonUtils.toJsonNodeMap(c.meta())));
+            case TaskResult.Failed f
+            when f.protocolError() == null ->
+                encodeToTree(
+                        CallToolResult.class,
+                        buildCallToolResult(
+                                f.content(), f.structuredContent(), true, JsonUtils.toJsonNodeMap(f.meta())));
+            case null, default -> null;
+        };
+    }
+
+    /** Inlines a genuine JSON-RPC protocol failure into {@code tasks/get}'s {@code error} field. */
+    private @Nullable JsonNode taskErrorNode(TaskEntry entry) {
+        if (!(entry.result() instanceof TaskResult.Failed f) || f.protocolError() == null) {
+            return null;
+        }
+        var mapped = error(f.protocolError());
+        var fields = new LinkedHashMap<String, Object>();
+        fields.put("code", mapped.code());
+        fields.put("message", mapped.message());
+        if (mapped.data() != null) {
+            fields.put("data", mapped.data());
+        }
+        return JsonUtils.toObjectNode(fields);
     }
 
     private static Tool toTool(ToolDescriptor d) {
@@ -396,14 +425,14 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
                         .toList();
     }
 
-    private static JsonNode encodeToTree(Implementation implementation) {
+    private static <T> JsonNode encodeToTree(Class<T> type, T value) {
         try (var out = new ByteArrayOutputStream(256);
                 var gen = JsonUtils.FACTORY.createGenerator(ObjectWriteContext.empty(), out, JsonEncoding.UTF8)) {
-            CodecRegistry.<Implementation>codecFor(Implementation.class).encode(gen, implementation);
+            CodecRegistry.<T>codecFor(type).encode(gen, value);
             gen.flush();
             return JsonUtils.parseJsonNode(out.toString(StandardCharsets.UTF_8));
         } catch (IOException e) {
-            throw new UncheckedIOException("Failed to encode Implementation", e);
+            throw new UncheckedIOException("Failed to encode " + type.getSimpleName(), e);
         }
     }
 
