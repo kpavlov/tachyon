@@ -92,12 +92,12 @@ public final class ToolMethodHandlers {
         }
 
         @Override
-        public Object handle(DispatchContext context, Object params) throws Exception {
+        public @Nullable Object handle(DispatchContext context, Object params) throws Exception {
             return HandlerFutures.joinInterruptibly(handleAsync(context, params));
         }
 
         @Override
-        public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
+        public CompletionStage<@Nullable Object> handleAsync(DispatchContext context, Object params) {
             final dev.tachyonmcp.core.protocol.ProtocolRequestMapper.ToolCallRequest mapped;
             try {
                 mapped = context.requestMapper().callTool(params, payloadDeserializer);
@@ -143,13 +143,13 @@ public final class ToolMethodHandlers {
                     (toolResult, cause) -> {
                         if (cause != null) return handlerError(request.name(), cause);
                         sendLogging(context, request.name(), "completed");
-                        validateOutput(handler.descriptor().outputSchema(), toolResult);
                         return context.responseMapper()
-                                .callToolResult(JsonUtils.serializeStructured(toolResult, payloadSerializer));
+                                .callToolResult(
+                                        prepareResult(handler.descriptor().outputSchema(), toolResult));
                     });
         }
 
-        private Object dispatchTaskAugmented(
+        private @Nullable Object dispatchTaskAugmented(
                 DispatchContext context, ToolHandler handler, ToolRequest request, @Nullable Duration taskTtl) {
             sendLogging(context, request.name(), "started");
             var taskRegistry = context.engine().tasksRegistry();
@@ -200,34 +200,47 @@ public final class ToolMethodHandlers {
             });
 
             taskRegistry.registerRunning(task.id(), future);
-            future.thenAccept(toolResult -> completeTask(taskRegistry, task, toolResult));
+            HandlerFutures.completeOn(future, context.engine().executor(), (toolResult, failure) -> {
+                        if (failure == null)
+                            completeTask(
+                                    taskRegistry, task, handler.descriptor().outputSchema(), toolResult);
+                        return null;
+                    })
+                    .exceptionally(throwable -> {
+                        handleFutureFailure(taskRegistry, task, throwable);
+                        return null;
+                    });
             future.exceptionally(throwable -> {
-                var cause = HandlerFutures.unwrap(throwable);
-                if (cause instanceof CancellationException) {
-                    logger.debug("Task handler cancelled for taskId={}", task.id());
-                } else if (cause instanceof Exception exception) {
-                    handleTaskError(task, exception);
-                } else {
-                    logger.error("Non-exception throwable in task handler for taskId={}", task.id(), cause);
-                }
-                taskRegistry.unregisterRunning(task.id());
+                handleFutureFailure(taskRegistry, task, throwable);
                 return null;
             });
             return context.responseMapper().createTaskResult(task);
         }
 
-        private void completeTask(TaskRegistry taskRegistry, TaskEntry task, @Nullable ToolResult result) {
-            if (result == null) return;
-            result = JsonUtils.serializeStructured(result, payloadSerializer);
+        private void completeTask(
+                TaskRegistry taskRegistry,
+                TaskEntry task,
+                @Nullable JsonSchema outputSchema,
+                @Nullable ToolResult result) {
+            if (result == null) {
+                throw new NullPointerException("Tool handler completed task " + task.id() + " with a null result");
+            }
+            result = prepareResult(outputSchema, result);
             var meta = result.meta();
-            if (result instanceof ToolResult.Error error) {
-                task.fail(new TaskResult.Failed(error.content(), null, meta));
-            } else if (result instanceof ToolResult.Success success) {
-                task.complete(new TaskResult.Completed(success.content(), success.structuredValue(), meta));
-            } else if (result instanceof ToolResult.InputRequired inputRequired) {
-                task.requireInput(inputRequired.request(), null);
+            switch (result) {
+                case ToolResult.Error error -> task.fail(new TaskResult.Failed(error.content(), null, meta));
+                case ToolResult.Success success ->
+                    task.complete(new TaskResult.Completed(success.content(), success.structuredValue(), meta));
+                case ToolResult.InputRequired inputRequired ->
+                    task.requireInput(inputRequired.request(), "Input required");
             }
             taskRegistry.unregisterRunning(task.id());
+        }
+
+        private ToolResult prepareResult(@Nullable JsonSchema outputSchema, ToolResult result) {
+            var serialized = JsonUtils.serializeStructured(result, payloadSerializer);
+            validateOutput(outputSchema, serialized);
+            return serialized;
         }
 
         private @Nullable String validateInput(@Nullable JsonSchema schema, ToolRequest request) {
@@ -263,7 +276,17 @@ public final class ToolMethodHandlers {
             return error;
         }
 
-        private void handleTaskError(TaskEntry task, Exception exception) {
+        private void handleFutureFailure(TaskRegistry taskRegistry, TaskEntry task, Throwable throwable) {
+            var cause = HandlerFutures.unwrap(throwable);
+            if (cause instanceof CancellationException) {
+                logger.debug("Task handler cancelled for taskId={}", task.id());
+            } else {
+                handleTaskError(task, cause);
+            }
+            taskRegistry.unregisterRunning(task.id());
+        }
+
+        private void handleTaskError(TaskEntry task, Throwable exception) {
             var cause = HandlerFutures.unwrap(exception);
             var error = fromUnhandledException(cause, "Tool handler failed");
             if (error.kind() == ServerError.Kind.INVALID_PARAMS) {

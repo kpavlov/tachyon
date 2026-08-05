@@ -4,6 +4,7 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.json.PayloadSerializer;
 import dev.tachyonmcp.api.runtime.InteractionContext;
 import dev.tachyonmcp.api.server.domain.FormInputRequest;
@@ -14,6 +15,7 @@ import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolRequest;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import net.javacrumbs.jsonunit.core.Option;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -141,6 +143,118 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
                       }
                     }
                     """.formatted(taskId));
+        }
+    }
+
+    @Test
+    void taskResultValidatesStructuredOutput() throws Exception {
+        // language=json
+        var outputSchema = JsonSchema.of("""
+            {"type":"object","properties":{"result":{"type":"string"}},"required":["result"]}
+            """);
+        var validationCalls = new AtomicInteger();
+        startServer(
+                b -> b.json(j -> j.outputSchemaValidator((schema, document) -> {
+                    validationCalls.incrementAndGet();
+                    return java.util.List.of();
+                })),
+                s -> s.tools()
+                        .register(
+                                ToolDescriptor.builder()
+                                        .name("validated-task-output")
+                                        .outputSchema(outputSchema)
+                                        .taskSupport(TaskSupport.OPTIONAL)
+                                        .build(),
+                                (context, request) ->
+                                        ToolResult.structured(Map.of("result", "validated"), "validated")));
+        try (var client = createTestClient()) {
+            client.initialize();
+
+            var response = client.sendRpc("""
+                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{
+                  "name":"validated-task-output","arguments":{},"task":{}}}
+                """);
+            var taskId = extractTaskId(response);
+            client.awaitTaskStatus(taskId, "completed");
+
+            var resultJson = client.sendRpc("""
+                {"jsonrpc":"2.0","id":4,"method":"tasks/result","params":{"taskId":"%s"}}
+                """.formatted(taskId));
+            assertThatJson(resultJson).isEqualTo("""
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 4,
+                      "result": {
+                        "content": [{"type": "text", "text": "validated"}],
+                        "structuredContent": {"result": "validated"},
+                        "_meta": {
+                          "io.modelcontextprotocol/related-task": {"taskId": "%s"}
+                        }
+                      }
+                    }
+                    """.formatted(taskId));
+            assertThat(validationCalls.get()).isEqualTo(1);
+        }
+    }
+
+    @Test
+    void taskFailsInsteadOfHangingWhenStructuredResultCannotBeSerialized() throws Exception {
+        startServer(
+                b -> b.json(j -> j.serializer(new PayloadSerializer() {
+                    @Override
+                    public <T> String serialize(T value) {
+                        throw new RuntimeException("boom-unserializable");
+                    }
+                })),
+                s -> s.tools()
+                        .register(
+                                b -> b.name("unserializable-task-output").taskSupport(TaskSupport.OPTIONAL),
+                                (context, request) -> ToolResult.structured(new CustomPayload("task"))));
+        try (var client = createTestClient()) {
+            client.initialize();
+
+            var response = client.sendRpc("""
+                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{
+                  "name":"unserializable-task-output","arguments":{},"task":{}}}
+                """);
+            var taskId = extractTaskId(response);
+
+            // Before the fix, the failure was swallowed by a discarded CompletionStage and the
+            // task stayed in "working" forever; awaitTaskStatus times out if that regresses.
+            client.awaitTaskStatus(taskId, "failed");
+
+            var resultJson = client.sendRpc("""
+                {"jsonrpc":"2.0","id":4,"method":"tasks/result","params":{"taskId":"%s"}}
+                """.formatted(taskId));
+            assertThatJson(resultJson).node("error").isPresent();
+            assertThat(resultJson).doesNotContain("boom-unserializable");
+        }
+    }
+
+    @Test
+    void taskFailsInsteadOfHangingWhenHandlerCompletesWithNullResult() throws Exception {
+        startServerWith(s -> s.tools()
+                .registerAsync(
+                        b -> b.name("null-task-result").taskSupport(TaskSupport.OPTIONAL),
+                        (context, request) ->
+                                java.util.concurrent.CompletableFuture.<ToolResult>completedFuture(null)));
+        try (var client = createTestClient()) {
+            client.initialize();
+
+            var response = client.sendRpc("""
+                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{
+                  "name":"null-task-result","arguments":{},"task":{}}}
+                """);
+            var taskId = extractTaskId(response);
+
+            // Before the fix, a null result was silently discarded and the task stayed
+            // "working" forever; awaitTaskStatus times out if that regresses.
+            client.awaitTaskStatus(taskId, "failed");
+
+            var resultJson = client.sendRpc("""
+                {"jsonrpc":"2.0","id":4,"method":"tasks/result","params":{"taskId":"%s"}}
+                """.formatted(taskId));
+            assertThatJson(resultJson).node("error").isPresent();
         }
     }
 

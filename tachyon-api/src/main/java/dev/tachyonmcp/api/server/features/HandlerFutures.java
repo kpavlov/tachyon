@@ -76,7 +76,9 @@ public final class HandlerFutures {
      * @return a new stage with the mapped result
      */
     public static <T, R> CompletionStage<R> completeOn(
-            CompletionStage<T> stage, Executor executor, BiFunction<? super T, Throwable, ? extends R> fn) {
+            CompletionStage<T> stage,
+            Executor executor,
+            BiFunction<@Nullable ? super T, @Nullable Throwable, ? extends R> fn) {
         var future = stage.toCompletableFuture();
         return future.isDone() ? future.handle(fn) : future.handleAsync(fn, executor);
     }

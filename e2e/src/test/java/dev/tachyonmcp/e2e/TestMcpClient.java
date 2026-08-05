@@ -163,7 +163,8 @@ public abstract class TestMcpClient implements Closeable {
      * Polls {@code tasks/get} until the task reaches {@code status}, then returns the last
      * response body. Fails if {@code status} is not reached within {@code timeout}.
      */
-    public String awaitTaskStatus(@Nullable String sessionId, String taskId, String status, Duration timeout) {
+    public @Nullable String awaitTaskStatus(
+            @Nullable String sessionId, String taskId, String status, Duration timeout) {
         var lastResponse = new AtomicReference<@Nullable String>();
         var nextPollInterval = new AtomicReference<>(DEFAULT_TASK_POLL_INTERVAL);
         await().alias("task %s to reach status %s".formatted(taskId, status))
@@ -183,17 +184,17 @@ public abstract class TestMcpClient implements Closeable {
     }
 
     /** {@link #awaitTaskStatus(String, String, String, Duration)} with a 5s timeout. */
-    public String awaitTaskStatus(String sessionId, String taskId, String status) {
+    public @Nullable String awaitTaskStatus(String sessionId, String taskId, String status) {
         return awaitTaskStatus(sessionId, taskId, status, Duration.ofSeconds(5));
     }
 
     /** {@link #awaitTaskStatus(String, String, String, Duration)} against the stored session. */
-    public String awaitTaskStatus(String taskId, String status, Duration timeout) {
+    public @Nullable String awaitTaskStatus(String taskId, String status, Duration timeout) {
         return awaitTaskStatus(sessionId, taskId, status, timeout);
     }
 
     /** {@link #awaitTaskStatus(String, String, String)} against the stored session, 5s timeout. */
-    public String awaitTaskStatus(String taskId, String status) {
+    public @Nullable String awaitTaskStatus(String taskId, String status) {
         return awaitTaskStatus(taskId, status, Duration.ofSeconds(5));
     }
 

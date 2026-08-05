@@ -18,7 +18,7 @@ public final class Mcp20260728TestClient extends TestMcpClient {
     }
 
     @Override
-    protected String requestBody(String body) throws Exception {
+    protected String requestBody(String body) {
         var request = MAPPER.readTree(body);
         if (!(request instanceof ObjectNode requestObject)) {
             throw new IllegalArgumentException("MCP request must be a JSON object");
@@ -33,7 +33,7 @@ public final class Mcp20260728TestClient extends TestMcpClient {
     }
 
     @Override
-    protected void configureRequest(HttpRequest.Builder builder, String body) throws Exception {
+    protected void configureRequest(HttpRequest.Builder builder, String body) {
         var request = MAPPER.readTree(body);
         var method = request.path("method").asString(null);
         if (method != null) builder.header(McpHeaderNames.MCP_METHOD, method);
