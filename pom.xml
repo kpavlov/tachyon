@@ -87,7 +87,7 @@
         <palantir-java-format.version>2.92.0</palantir-java-format.version>
         <spotless-maven-plugin.version>3.9.0</spotless-maven-plugin.version>
         <spotbugs-maven-plugin.version>4.10.3.0</spotbugs-maven-plugin.version>
-        <detekt.version>2.0.0-alpha.5</detekt.version>
+        <detekt.version>2.0.0-alpha.6</detekt.version>
         <ktlint.version>1.5.0</ktlint.version>
         <spotbugs.version>4.10.3</spotbugs.version>
         <findsecbugs-plugin.version>1.14.0</findsecbugs-plugin.version>
