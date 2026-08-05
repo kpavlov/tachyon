@@ -52,6 +52,7 @@
         <module>tachyon-core</module>
         <module>tachyon-kotlin</module>
         <module>tachyon-extensions</module>
+        <module>tachyon-testkit</module>
     </modules>
 
     <properties>
@@ -64,6 +65,7 @@
         <!-- Dependencies -->
         <assertj.version>3.27.7</assertj.version>
         <awaitility.version>4.3.0</awaitility.version>
+        <finchly.version>0.2.0</finchly.version>
         <immutables.version>2.12.2</immutables.version>
         <jackson.version>3.2.1</jackson.version>
         <java-mcp-sdk.version>2.0.0</java-mcp-sdk.version>
@@ -125,6 +127,11 @@
             <dependency>
                 <groupId>dev.tachyonmcp</groupId>
                 <artifactId>tachyon-extensions</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>dev.tachyonmcp</groupId>
+                <artifactId>tachyon-testkit</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -225,6 +232,12 @@
                 <artifactId>awaitility</artifactId>
                 <version>${awaitility.version}</version>
                 <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>me.kpavlov.finchly</groupId>
+                <artifactId>finchly-core</artifactId>
+                <version>${finchly.version}</version>
             </dependency>
 
             <dependency>

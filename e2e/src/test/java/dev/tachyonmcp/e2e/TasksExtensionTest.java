@@ -15,6 +15,7 @@ import dev.tachyonmcp.core.server.features.tasks.DefaultTaskRegistry;
 import dev.tachyonmcp.core.server.features.tasks.TasksExtension;
 import dev.tachyonmcp.core.server.json.JsonUtils;
 import dev.tachyonmcp.core.server.session.DispatchContext;
+import dev.tachyonmcp.testkit.McpClient;
 import java.util.Map;
 import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.Test;
@@ -256,7 +257,7 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
                     {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"remove-active-sync","arguments":{}}}
                     """);
             assertThat(response.body()).contains("\"status\":\"cancelled\"");
-            var taskId = extractText(extractJsonRpcResponse(response.body(), "2"));
+            var taskId = extractText(McpClient.extractJsonRpcResponse(response.body(), "2"));
 
             var getAfterRemove = client.sendRpc("""
                     {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
@@ -287,7 +288,7 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
             assertThat(notificationCount)
                     .as("create + complete only, removal of an already-terminal task is silent")
                     .isEqualTo(2);
-            var taskId = extractText(extractJsonRpcResponse(response.body(), "2"));
+            var taskId = extractText(McpClient.extractJsonRpcResponse(response.body(), "2"));
 
             var getAfterRemove = client.sendRpc("""
                     {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
@@ -316,7 +317,7 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
         }
     }
 
-    private String initializeWithExtension(TestMcpClient client) throws Exception {
+    private String initializeWithExtension(McpClient client) throws Exception {
         var initBody = """
             {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/tasks":{}}},"clientInfo":{"name":"test","version":"1.0"}}}
             """;

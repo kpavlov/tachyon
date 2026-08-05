@@ -15,6 +15,7 @@ import dev.tachyonmcp.core.transport.netty.McpChannelInitializer;
 import dev.tachyonmcp.core.transport.netty.NettyIoEngine;
 import dev.tachyonmcp.core.transport.netty.NettyServer;
 import dev.tachyonmcp.core.transport.netty.NettyServerConfig;
+import dev.tachyonmcp.testkit.Mcp20251125Client;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -138,7 +139,7 @@ class ProgressKeepAliveTest {
      * the reader-idle timer.
      */
     private void warmUp() throws Exception {
-        try (var client = new Mcp20251125TestClient(port)) {
+        try (var client = new Mcp20251125Client(port)) {
             var sessionId = client.initialize();
             client.post(
                     sessionId, // language=JSON
@@ -164,7 +165,7 @@ class ProgressKeepAliveTest {
     @Timeout(30)
     void progressKeepAliveEmitsHeartbeat() throws Exception {
         var lines = new CopyOnWriteArrayList<String>();
-        try (var client = new Mcp20251125TestClient(port)) {
+        try (var client = new Mcp20251125Client(port)) {
             var sessionId = client.initialize();
             var response = client.sendStreamingRequest(sessionId, TOOL_CALL);
             assertThat(response.statusCode()).isEqualTo(200);
@@ -185,7 +186,7 @@ class ProgressKeepAliveTest {
     @Timeout(30)
     void commentKeepAliveUpgradesWithoutProgressToken() throws Exception {
         var lines = new CopyOnWriteArrayList<String>();
-        try (var client = new Mcp20251125TestClient(port)) {
+        try (var client = new Mcp20251125Client(port)) {
             var sessionId = client.initialize();
             var response = client.sendStreamingRequest(sessionId, COMMENT_CALL);
             assertThat(response.statusCode()).isEqualTo(200);
@@ -209,7 +210,7 @@ class ProgressKeepAliveTest {
      * content type, progress notification, tool result) and returns the accumulated SSE body.
      */
     private void callSlowProgressAndAssertSse() throws Exception {
-        try (var client = new Mcp20251125TestClient(port)) {
+        try (var client = new Mcp20251125Client(port)) {
             var sessionId = client.initialize();
             var response = client.post(sessionId, TOOL_CALL);
 

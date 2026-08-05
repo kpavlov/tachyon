@@ -32,6 +32,11 @@
         </dependency>
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-testkit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
             <artifactId>tachyon-kotlin</artifactId>
             <scope>test</scope>
         </dependency>

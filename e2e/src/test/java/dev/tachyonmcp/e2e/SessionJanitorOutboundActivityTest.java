@@ -9,6 +9,7 @@ import static org.awaitility.Awaitility.await;
 import dev.tachyonmcp.core.runtime.SessionState;
 import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
+import dev.tachyonmcp.testkit.Mcp20251125Client;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
@@ -64,7 +65,7 @@ class SessionJanitorOutboundActivityTest {
                 assertThat(session.get().state()).isEqualTo(SessionState.ACTIVE);
             });
 
-            try (var client = new Mcp20251125TestClient(port)) {
+            try (var client = new Mcp20251125Client(port)) {
                 var ping = client.post(sessionId, """
                     {"jsonrpc":"2.0","id":1,"method":"ping"}
                     """);
@@ -117,7 +118,7 @@ class SessionJanitorOutboundActivityTest {
     }
 
     private String initializeAndActivate(int targetPort) throws Exception {
-        try (var client = new Mcp20251125TestClient(targetPort)) {
+        try (var client = new Mcp20251125Client(targetPort)) {
             return client.initialize();
         }
     }

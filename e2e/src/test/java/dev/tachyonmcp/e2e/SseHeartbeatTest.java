@@ -9,6 +9,7 @@ import dev.tachyonmcp.core.transport.netty.McpChannelInitializer;
 import dev.tachyonmcp.core.transport.netty.NettyIoEngine;
 import dev.tachyonmcp.core.transport.netty.NettyServer;
 import dev.tachyonmcp.core.transport.netty.NettyServerConfig;
+import dev.tachyonmcp.testkit.Mcp20251125Client;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
@@ -76,7 +77,7 @@ class SseHeartbeatTest {
     }
 
     private String initializeSession() throws Exception {
-        try (var client = new Mcp20251125TestClient(port)) {
+        try (var client = new Mcp20251125Client(port)) {
             return client.initialize();
         }
     }

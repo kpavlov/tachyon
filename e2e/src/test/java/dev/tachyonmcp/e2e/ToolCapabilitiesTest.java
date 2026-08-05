@@ -10,6 +10,7 @@ import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolFn;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.testkit.McpClient;
 import java.net.http.HttpResponse;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
@@ -243,7 +244,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
 
     // region: Tool Handler Implementations
 
-    private static HttpResponse<String> listTools(TestMcpClient client) throws Exception {
+    private static HttpResponse<String> listTools(McpClient client) throws Exception {
         client.initialize();
         return client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/list"}

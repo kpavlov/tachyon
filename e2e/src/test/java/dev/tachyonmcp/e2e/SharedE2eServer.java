@@ -2,6 +2,7 @@
 package dev.tachyonmcp.e2e;
 
 import dev.tachyonmcp.core.server.TachyonServer;
+import dev.tachyonmcp.testkit.McpTestServers;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +17,7 @@ final class SharedE2eServer {
         if (started.get()) {
             return handle;
         }
-        handle = TestServers.startSafely(
+        handle = McpTestServers.startSafely(
                 TachyonServer.builder()
                         .capabilities(c -> c.tools().logging())
                         .session(s -> s.enabled(true))

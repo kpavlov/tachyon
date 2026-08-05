@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2026 Konstantin Pavlov and contributors.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>dev.tachyonmcp</groupId>
+        <artifactId>root</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>tachyon-testkit</artifactId>
+
+    <name>Tachyon MCP Testkit</name>
+    <description>Test harness: MCP clients with protocol request shaping and in-process port-0 server helpers</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+        </dependency>
+
+        <!-- Notifications/awaits: finchly-core MessageAggregator (thread-safe queue + await via Awaitility). -->
+        <dependency>
+            <groupId>me.kpavlov.finchly</groupId>
+            <artifactId>finchly-core</artifactId>
+        </dependency>
+
+        <!-- The client relies on AssertJ/Awaitility internally for its waiting/state assertions. -->
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <scope>compile</scope>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>detekt</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <phase>none</phase>
+                        <configuration>
+                            <skip>true</skip>
+                            <mainClass>ignored</mainClass>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>detekt-format</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <phase>none</phase>
+                        <configuration>
+                            <skip>true</skip>
+                            <mainClass>ignored</mainClass>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -1,12 +1,14 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import dev.tachyonmcp.core.server.ServerBuilder;
 import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
-import dev.tachyonmcp.e2e.mcp20260728.Mcp20260728TestClient;
+import dev.tachyonmcp.testkit.Mcp20251125Client;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpClient;
+import dev.tachyonmcp.testkit.McpTestClients;
+import dev.tachyonmcp.testkit.McpTestServers;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -42,12 +44,16 @@ public abstract class AbstractMcpE2eTest {
         closeCustomServerIfRunning();
     }
 
-    protected TestMcpClient createTestClient() {
-        return new Mcp20251125TestClient(port);
+    protected Mcp20251125Client createTestClient() {
+        return new Mcp20251125Client(port);
     }
 
-    protected TestMcpClient createModernTestClient() {
-        return new Mcp20260728TestClient(port);
+    protected McpClient createTestClient(String protocolVersion) {
+        return McpTestClients.forVersion(port, protocolVersion);
+    }
+
+    protected Mcp20260728Client createModernTestClient() {
+        return McpTestClients.latest(port);
     }
 
     // region: ---- McpServer lifecycle management (call from subclass setup / teardown) ----
@@ -81,7 +87,7 @@ public abstract class AbstractMcpE2eTest {
         var builder = TachyonServer.builder().port(0);
         configurer.accept(builder);
         builder.session(s -> s.enabled(sessionMode() == SessionMode.STATEFUL));
-        var started = TestServers.startSafely(builder, registrar);
+        var started = McpTestServers.startSafely(builder, registrar);
         this.server = started;
         this.port = started.port();
         this.usingCustomServer = true;
@@ -101,46 +107,6 @@ public abstract class AbstractMcpE2eTest {
             server = null;
             usingCustomServer = false;
         }
-    }
-
-    // endregion
-
-    // region: ---- JSON-RPC helpers ----
-
-    /** Parses {@code "id":<n>} or {@code "id":"<s>"} out of a JSON-RPC request body. */
-    protected static String extractRequestId(String requestBody) {
-        var idx = requestBody.indexOf("\"id\"");
-        if (idx < 0) return "";
-        var colon = requestBody.indexOf(':', idx);
-        if (colon < 0) return "";
-        var sb = new StringBuilder();
-        for (int i = colon + 1; i < requestBody.length(); i++) {
-            var c = requestBody.charAt(i);
-            if (c == ',' || c == '}') break;
-            if (!Character.isWhitespace(c)) sb.append(c);
-        }
-        return sb.toString();
-    }
-
-    /**
-     * Walks all {@code data:} lines in an SSE body and returns the JSON payload whose JSON-RPC
-     * envelope has an id matching {@code requestId}. Falls back to the last data line if no match.
-     */
-    protected static String extractJsonRpcResponse(String sseBody, String requestId) {
-        String last = null;
-        var idMarker = "\"id\":" + requestId;
-        for (var line : sseBody.split("\n")) {
-            String data = null;
-            if (line.startsWith("data: ")) data = line.substring("data: ".length());
-            else if (line.startsWith("data:")) data = line.substring("data:".length());
-            if (data == null) continue;
-            last = data;
-            if (!requestId.isEmpty() && data.contains(idMarker)) {
-                return data;
-            }
-        }
-        assertThat(last).as("SSE response must contain at least one data line").isNotNull();
-        return last;
     }
 
     // endregion

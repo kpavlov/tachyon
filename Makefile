@@ -35,13 +35,13 @@ install-server: ## Build with tests and install to local Maven repo
 package: ## Install artifacts to local Maven repo (skip tests)
 	@echo "📦 Packaging and installing to local repository..."
 	@rm -rf ~/.m2/repository/dev/tachyonmcp/
-	@./mvnw install -pl tachyon-kotlin -am -DskipTests -Dspotbugs.skip -Dspotless.skip
+	@./mvnw install -pl tachyon-kotlin,tachyon-testkit -am -DskipTests -Dspotbugs.skip -Dspotless.skip
 
 apidocs:
 	@echo "📚  Building API Docs..."
 	@rm -rf target/reports/apidocs
 	@./mvnw compile javadoc:aggregate \
-		-pl tachyon-api,tachyon-core,tachyon-extensions -am \
+		-pl tachyon-api,tachyon-core,tachyon-extensions,tachyon-testkit -am \
 		--no-transfer-progress
 	@echo " ✅  Done!"
 

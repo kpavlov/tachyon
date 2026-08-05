@@ -223,7 +223,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
     @Test
     void respectsDeclaredCapabilities() throws Exception {
         try (var client = createModernTestClient()) {
-            // Mcp20260728TestClient always declares an empty clientCapabilities object — no
+            // Mcp20260728Client always declares an empty clientCapabilities object — no
             // "sampling" key — so the tool must not include a sampling inputRequest.
             var response = client.post(toolCallBody(6, "respect_capabilities", ""));
             assertThat(response.statusCode()).as(response.body()).isEqualTo(200);

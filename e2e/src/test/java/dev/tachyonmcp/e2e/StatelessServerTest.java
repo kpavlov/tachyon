@@ -5,6 +5,7 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.core.server.TachyonServer;
+import dev.tachyonmcp.testkit.Mcp20251125Client;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -45,7 +46,7 @@ class StatelessServerTest {
 
     @Test
     void shouldCompleteLifecycleAndDispatchWithoutSessionId() throws Exception {
-        try (var client = new Mcp20251125TestClient(port)) {
+        try (var client = new Mcp20251125Client(port)) {
             // MCP 2025-11-25 lifecycle: initialize first, then notify initialized.
             var sessionId = client.initialize();
 
@@ -83,7 +84,7 @@ class StatelessServerTest {
 
     @Test
     void shouldExecuteToolCallWithoutSessionId() throws Exception {
-        try (var client = new Mcp20251125TestClient(port)) {
+        try (var client = new Mcp20251125Client(port)) {
             client.initialize();
 
             var response = client.sendRpc("""
@@ -107,7 +108,7 @@ class StatelessServerTest {
 
     @Test
     void shouldAcceptNotificationWithoutSessionId() throws Exception {
-        try (var client = new Mcp20251125TestClient(port)) {
+        try (var client = new Mcp20251125Client(port)) {
             var response = client.post(null, """
                     {"jsonrpc":"2.0","method":"notifications/initialized"}
                     """);
@@ -119,7 +120,7 @@ class StatelessServerTest {
     @ParameterizedTest(name = "POST method={0}")
     @ValueSource(strings = {"tools/list", "tools/call", "ping"})
     void shouldReturn404WhenPostCarriesSessionId(String method) throws Exception {
-        try (var client = new Mcp20251125TestClient(port)) {
+        try (var client = new Mcp20251125Client(port)) {
             var response = client.post("sess_12345678", """
                     {"jsonrpc":"2.0","id":1,"method":"%s"}
                     """.formatted(method));

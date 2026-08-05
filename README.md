@@ -79,6 +79,7 @@ Opt into sessions for SSE resumability, `Last-Event-ID` replay, and TTL cleanup.
 | [FAQ](docs/faq.md)                        | Java, frameworks, concurrency, deployment, and compatibility |
 | [Kotlin DSL](docs/kotlin.md)              | Coroutine-first DSL, `TachyonServer { }`, scope reference    |
 | [Kotlin module](tachyon-kotlin/README.md) | `tachyon-kotlin` module overview                             |
+| [Testkit](tachyon-testkit/README.md)     | Test harness: shaping clients, dynamic-port servers        |
 | [Examples](examples/README.md)            | Runnable Java & Kotlin example servers                       |
 
 ## Agent Skill
