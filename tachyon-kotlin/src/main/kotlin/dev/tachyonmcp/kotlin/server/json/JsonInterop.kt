@@ -4,7 +4,6 @@ package dev.tachyonmcp.kotlin.server.json
 import dev.tachyonmcp.api.json.JsonSchema
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.core.server.json.Jackson3JsonFactory
-import dev.tachyonmcp.core.server.json.JsonUtils
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -14,19 +13,11 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
-import tools.jackson.core.JacksonException
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.node.JsonNodeFactory
 import java.math.BigDecimal
 
 private val nodes = JsonNodeFactory.instance
-
-internal fun String.toJsonNode(): JsonNode =
-    try {
-        JsonUtils.parse(this)
-    } catch (e: JacksonException) {
-        throw IllegalArgumentException("Failed to parse JSON schema: '$this'", e)
-    }
 
 internal fun ToolDescriptor.Builder.schemas(
     inputSchema: String? = null,
@@ -80,11 +71,6 @@ private fun JsonPrimitive.toValueNode(): JsonNode =
                 ?: nodes.numberNode(BigDecimal(content))
         }
     }
-
-internal fun JsonObject?.toJacksonNodeOrNull(): JsonNode? = this?.toJacksonNode()
-
-internal fun Map<String, JsonObject>.toJacksonNodeMap(): Map<String, JsonNode> =
-    mapValues { (_, v) -> v.toJacksonNode() }
 
 internal fun JsonObject.toJsonSchema(): JsonSchema =
     KotlinxJsonObjectFactory.INSTANCE.toJsonSchema(this)

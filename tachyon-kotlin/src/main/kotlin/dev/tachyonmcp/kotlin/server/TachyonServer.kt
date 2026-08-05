@@ -82,7 +82,6 @@ public sealed interface TachyonServer : CoreTachyonServer {
 
     /**
      * Registers a suspend tool handler using kotlinx JSON schemas.
-     * Requires kotlinx-serialization-json on the classpath.
      */
     @JvmSynthetic
     public fun registerTool(

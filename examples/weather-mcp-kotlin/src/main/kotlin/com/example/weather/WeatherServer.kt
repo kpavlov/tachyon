@@ -22,6 +22,7 @@ import dev.tachyonmcp.kotlin.server.buildServer
 import dev.tachyonmcp.kotlin.server.domain.Annotations
 import dev.tachyonmcp.kotlin.server.domain.Icon
 import dev.tachyonmcp.kotlin.server.features.prompts.PromptDescriptor
+import dev.tachyonmcp.kotlin.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
 import me.kpavlov.kt.schema.generator.json.JsonSchemaConfig
 import me.kpavlov.kt.schema.generator.json.ReflectionClassJsonSchemaGenerator
@@ -100,26 +101,30 @@ fun assembleServer(
         tool(getWeatherToolDescriptor) { getWeather(weatherService) }
 
         resource(
-            name = "prediction-article",
-            uri = "weather://prediction/article",
-            description = "Weather prediction article",
-            mimeType = "text/markdown",
-            title = "Weather Prediction",
-            annotations = resourceAnnotations,
-            size = predictionArticle.toByteArray().size.toLong(),
-            icons = listOf(resourceIcon),
+            ResourceDescriptor {
+                name = "prediction-article"
+                uri = "weather://prediction/article"
+                description = "Weather prediction article"
+                mimeType = "text/markdown"
+                title = "Weather Prediction"
+                annotations = resourceAnnotations
+                size = predictionArticle.toByteArray().size.toLong()
+                icons = listOf(resourceIcon)
+            },
         ) {
             TextResourceContents { text = weatherService.predictionArticle }
         }
 
         resource(
-            name = "featured-current-weather",
-            uri = "weather://featured/current",
-            description = "Current weather in Tallinn",
-            mimeType = "application/json",
-            title = "Featured Current Weather",
-            annotations = resourceAnnotations,
-            icons = listOf(resourceIcon),
+            ResourceDescriptor {
+                name = "featured-current-weather"
+                uri = "weather://featured/current"
+                description = "Current weather in Tallinn"
+                mimeType = "application/json"
+                title = "Featured Current Weather"
+                annotations = resourceAnnotations
+                icons = listOf(resourceIcon)
+            },
         ) {
             TextResourceContents {
                 text = asJson(weatherService.currentWeather("Tallinn", TemperatureUnit.Celsius))

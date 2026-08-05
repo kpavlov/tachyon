@@ -13,9 +13,6 @@ import dev.tachyonmcp.api.server.domain.EmbeddedResource
 import dev.tachyonmcp.api.server.domain.ImageContent
 import dev.tachyonmcp.api.server.domain.ResourceContents
 import dev.tachyonmcp.api.server.domain.TextContent
-import dev.tachyonmcp.kotlin.server.json.toJacksonNodeMap
-import kotlinx.serialization.json.JsonObject
-import tools.jackson.databind.JsonNode
 import java.util.Base64
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
@@ -30,7 +27,7 @@ import kotlin.contracts.contract
  */
 public fun TextContent(
     text: String,
-    meta: Map<String, JsonNode>? = null,
+    meta: Map<String, Any>? = null,
     annotations: Annotations? = null,
 ): TextContent =
     TextContent
@@ -51,22 +48,6 @@ public inline fun AudioContent(block: AudioContentBuilder.() -> Unit): AudioCont
 }
 
 /**
- * Creates a [TextContent] block using a kotlinx-serialization metadata map.
- * Requires kotlinx-serialization-json on the classpath.
- */
-@JvmName("textContentWithKxMeta")
-public fun TextContent(
-    text: String,
-    meta: Map<String, JsonObject>?,
-    annotations: Annotations? = null,
-): TextContent =
-    TextContent.of(
-        text,
-        meta?.toJacksonNodeMap(),
-        annotations,
-    )
-
-/**
  * Creates an [ImageContent] block — raw image bytes.
  *
  * @param data        the image bytes
@@ -78,31 +59,13 @@ public fun ImageContent(
     data: ByteArray,
     mimeType: String,
     annotations: Annotations? = null,
-    meta: Map<String, JsonNode>? = null,
+    meta: Map<String, Any>? = null,
 ): ImageContent =
     ImageContent.of(
         data,
         mimeType,
         annotations,
         meta,
-    )
-
-/**
- * Creates an [ImageContent] block using a kotlinx-serialization metadata map.
- * Requires kotlinx-serialization-json on the classpath.
- */
-@JvmName("imageContentBytesWithKxMeta")
-public fun ImageContent(
-    data: ByteArray,
-    mimeType: String,
-    annotations: Annotations? = null,
-    meta: Map<String, JsonObject>?,
-): ImageContent =
-    ImageContent.of(
-        data,
-        mimeType,
-        annotations,
-        meta?.toJacksonNodeMap(),
     )
 
 /**
@@ -111,7 +74,7 @@ public fun ImageContent(
  * @param data        base64-encoded image bytes
  * @param mimeType    image format (e.g. "image/png")
  * @param annotations optional presentation hints
- * @param meta        optional request-level metadata; null to omit
+ * @param meta        optional request metadata; null to omit
  */
 @Deprecated(
     message = "Base64-encoded String input is deprecated; pass raw bytes instead.",
@@ -125,39 +88,13 @@ public fun ImageContent(
     data: String,
     mimeType: String,
     annotations: Annotations? = null,
-    meta: Map<String, JsonNode>? = null,
+    meta: Map<String, Any>? = null,
 ): ImageContent =
     ImageContent.of(
         Base64.getDecoder().decode(data),
         mimeType,
         annotations,
         meta,
-    )
-
-/**
- * Creates an [ImageContent] block from base64-encoded data using a kotlinx-serialization
- * metadata map. Requires kotlinx-serialization-json on the classpath.
- */
-@JvmName("imageContentWithKxMeta")
-@Deprecated(
-    message = "Base64-encoded String input is deprecated; pass raw bytes instead.",
-    replaceWith =
-        ReplaceWith(
-            "ImageContent(Base64.getDecoder().decode(data), mimeType, annotations, meta)",
-            "java.util.Base64",
-        ),
-)
-public fun ImageContent(
-    data: String,
-    mimeType: String,
-    annotations: Annotations? = null,
-    meta: Map<String, JsonObject>?,
-): ImageContent =
-    ImageContent.of(
-        Base64.getDecoder().decode(data),
-        mimeType,
-        annotations,
-        meta?.toJacksonNodeMap(),
     )
 
 /**
@@ -166,37 +103,19 @@ public fun ImageContent(
  * @param data        the audio bytes
  * @param mimeType    audio format (e.g. "audio/mp3")
  * @param annotations optional presentation hints
- * @param meta        optional request-level metadata; null to omit
+ * @param meta        optional request metadata; null to omit
  */
 public fun AudioContent(
     data: ByteArray,
     mimeType: String,
     annotations: Annotations? = null,
-    meta: Map<String, JsonNode>? = null,
+    meta: Map<String, Any>? = null,
 ): AudioContent =
     AudioContent.of(
         data,
         mimeType,
         annotations,
         meta,
-    )
-
-/**
- * Creates an [AudioContent] block using a kotlinx-serialization metadata map.
- * Requires kotlinx-serialization-json on the classpath.
- */
-@JvmName("audioContentBytesWithKxMeta")
-public fun AudioContent(
-    data: ByteArray,
-    mimeType: String,
-    annotations: Annotations? = null,
-    meta: Map<String, JsonObject>?,
-): AudioContent =
-    AudioContent.of(
-        data,
-        mimeType,
-        annotations,
-        meta?.toJacksonNodeMap(),
     )
 
 /**
@@ -205,7 +124,7 @@ public fun AudioContent(
  * @param data        base64-encoded audio bytes
  * @param mimeType    audio format (e.g. "audio/mp3")
  * @param annotations optional presentation hints
- * @param meta        optional request-level metadata; null to omit
+ * @param meta        optional request metadata; null to omit
  */
 @Deprecated(
     message = "Base64-encoded String input is deprecated; pass raw bytes instead.",
@@ -219,7 +138,7 @@ public fun AudioContent(
     data: String,
     mimeType: String,
     annotations: Annotations? = null,
-    meta: Map<String, JsonNode>? = null,
+    meta: Map<String, Any>? = null,
 ): AudioContent =
     AudioContent.of(
         Base64.getDecoder().decode(data),
@@ -229,58 +148,16 @@ public fun AudioContent(
     )
 
 /**
- * Creates an [AudioContent] block from base64-encoded data using a kotlinx-serialization
- * metadata map. Requires kotlinx-serialization-json on the classpath.
- */
-@JvmName("audioContentWithKxMeta")
-@Deprecated(
-    message = "Base64-encoded String input is deprecated; pass raw bytes instead.",
-    replaceWith =
-        ReplaceWith(
-            "AudioContent(Base64.getDecoder().decode(data), mimeType, annotations, meta)",
-            "java.util.Base64",
-        ),
-)
-public fun AudioContent(
-    data: String,
-    mimeType: String,
-    annotations: Annotations? = null,
-    meta: Map<String, JsonObject>?,
-): AudioContent =
-    AudioContent.of(
-        Base64.getDecoder().decode(data),
-        mimeType,
-        annotations,
-        meta?.toJacksonNodeMap(),
-    )
-
-/**
  * Creates an [EmbeddedResource] — a complete resource inlined within a result.
  *
  * @param resource    the resource contents (text or blob)
  * @param annotations optional presentation hints
- * @param meta        optional request-level metadata; null to omit
+ * @param meta        optional request metadata; null to omit
  */
 public fun EmbeddedResource(
     resource: ResourceContents,
     annotations: Annotations? = null,
-    meta: Map<String, JsonNode>? = null,
+    meta: Map<String, Any>? = null,
 ): EmbeddedResource =
     EmbeddedResource
         .of(resource, annotations, meta)
-
-/**
- * Creates an [EmbeddedResource] using a kotlinx-serialization metadata map.
- * Requires kotlinx-serialization-json on the classpath.
- */
-@JvmName("embeddedResourceWithKxMeta")
-public fun EmbeddedResource(
-    resource: ResourceContents,
-    annotations: Annotations? = null,
-    meta: Map<String, JsonObject>?,
-): EmbeddedResource =
-    EmbeddedResource.of(
-        resource,
-        annotations,
-        meta?.toJacksonNodeMap(),
-    )

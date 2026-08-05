@@ -28,7 +28,6 @@ import dev.tachyonmcp.kotlin.server.domain.string
 import dev.tachyonmcp.kotlin.server.domain.stringOrNull
 import dev.tachyonmcp.kotlin.server.domain.valuesAs
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
-import dev.tachyonmcp.kotlin.server.json.toJsonNode
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.throwables.shouldThrow
@@ -100,26 +99,6 @@ internal class KotlinApiTest {
         ).use { handle ->
             handle.tools().find("t3").orElse(null) shouldNotBe null
         }
-    }
-
-    // endregion
-
-    // region: String.toJsonNode parse
-
-    @Test
-    fun `toJsonNode parses valid JSON`() {
-        val node = """{"type":"object"}""".toJsonNode()
-        node.isObject shouldBe true
-        @Suppress("DEPRECATION")
-        val type = node.get("type").asText()
-        type shouldBe "object"
-    }
-
-    @Test
-    fun `toJsonNode parses array JSON`() {
-        val node = """[1,2,3]""".toJsonNode()
-        node.isArray shouldBe true
-        node.size() shouldBe 3
     }
 
     // endregion

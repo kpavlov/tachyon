@@ -5,7 +5,6 @@ import dev.tachyonmcp.core.server.json.JsonUtils
 import io.kotest.assertions.assertSoftly
 import io.kotest.matchers.shouldBe
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Test
 
 internal class JsonInteropTest {
@@ -54,23 +53,6 @@ internal class JsonInteropTest {
             node.get("version").isString shouldBe true
             node.get("version").asString() shouldBe "1.0"
             node.get("count").isNumber shouldBe true
-        }
-    }
-
-    @Test
-    fun `toJacksonNodeMap converts each entry`() {
-        val meta =
-            mapOf(
-                "a" to Json.parseToJsonElement("""{"x": 1}""") as JsonObject,
-                "b" to Json.parseToJsonElement("""{"y": "z"}""") as JsonObject,
-            )
-
-        val converted = meta.toJacksonNodeMap()
-
-        assertSoftly {
-            converted.keys shouldBe setOf("a", "b")
-            converted["a"] shouldBe JsonUtils.parse("""{"x": 1}""")
-            converted["b"] shouldBe JsonUtils.parse("""{"y": "z"}""")
         }
     }
 }

@@ -13,7 +13,6 @@ import dev.tachyonmcp.api.server.domain.Role
 import dev.tachyonmcp.api.server.domain.ToolAnnotations
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.config.ResourceScope
-import tools.jackson.databind.JsonNode
 import java.util.Base64
 
 /** Builds [dev.tachyonmcp.api.server.domain.Annotations]. */
@@ -149,7 +148,7 @@ public class ImageContentBuilder
         public var annotations: Annotations? = null
 
         /** Optional content metadata. */
-        public var meta: Map<String, JsonNode>? = null
+        public var meta: Map<String, Any>? = null
 
         @PublishedApi
         internal fun build(): ImageContent =
@@ -186,7 +185,7 @@ public class AudioContentBuilder
         public var annotations: Annotations? = null
 
         /** Optional content metadata. */
-        public var meta: Map<String, JsonNode>? = null
+        public var meta: Map<String, Any>? = null
 
         @PublishedApi
         internal fun build(): AudioContent =
@@ -229,7 +228,7 @@ public class BlobResourceContentsBuilder
         public var mimeType: String? = scope?.registeredMimeType
 
         /** Optional resource metadata. */
-        public var meta: Map<String, JsonNode> = emptyMap()
+        public var meta: Map<String, Any> = emptyMap()
 
         @PublishedApi
         internal fun build(): BlobResourceContents =

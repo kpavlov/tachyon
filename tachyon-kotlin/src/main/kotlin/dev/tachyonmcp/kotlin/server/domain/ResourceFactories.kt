@@ -8,9 +8,6 @@ package dev.tachyonmcp.kotlin.server.domain
 
 import dev.tachyonmcp.api.server.domain.BlobResourceContents
 import dev.tachyonmcp.api.server.domain.TextResourceContents
-import dev.tachyonmcp.kotlin.server.json.toJacksonNodeMap
-import kotlinx.serialization.json.JsonObject
-import tools.jackson.databind.JsonNode
 import java.util.Base64
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
@@ -47,33 +44,13 @@ public fun TextResourceContents(
     uri: String,
     text: String,
     mimeType: String? = null,
-    meta: Map<String, JsonNode>? = null,
+    meta: Map<String, Any>? = null,
 ): TextResourceContents =
     TextResourceContents.of(
         uri,
         text,
         mimeType,
         meta,
-    )
-
-/**
- * Creates [TextResourceContents] using a kotlinx-serialization metadata map.
- * Requires kotlinx-serialization-json on the classpath.
- *
- * @author Konstantin Pavlov
- */
-@JvmName("textResourceContentsWithKxMeta")
-public fun TextResourceContents(
-    uri: String,
-    text: String,
-    mimeType: String? = null,
-    meta: Map<String, JsonObject>?,
-): TextResourceContents =
-    TextResourceContents.of(
-        uri,
-        text,
-        mimeType,
-        meta?.toJacksonNodeMap(),
     )
 
 /**
@@ -89,33 +66,13 @@ public fun BlobResourceContents(
     uri: String,
     blob: ByteArray,
     mimeType: String? = null,
-    meta: Map<String, JsonNode> = emptyMap(),
+    meta: Map<String, Any> = emptyMap(),
 ): BlobResourceContents =
     BlobResourceContents.of(
         uri,
         blob,
         mimeType,
         meta,
-    )
-
-/**
- * Creates [BlobResourceContents] using a kotlinx-serialization metadata map.
- * Requires kotlinx-serialization-json on the classpath.
- *
- * @author Konstantin Pavlov
- */
-@JvmName("blobResourceContentsBytesWithKxMeta")
-public fun BlobResourceContents(
-    uri: String,
-    blob: ByteArray,
-    mimeType: String? = null,
-    meta: Map<String, JsonObject>,
-): BlobResourceContents =
-    BlobResourceContents.of(
-        uri,
-        blob,
-        mimeType,
-        meta.toJacksonNodeMap(),
     )
 
 /**
@@ -139,39 +96,11 @@ public fun BlobResourceContents(
     uri: String,
     blob: String,
     mimeType: String? = null,
-    meta: Map<String, JsonNode> = emptyMap(),
+    meta: Map<String, Any> = emptyMap(),
 ): BlobResourceContents =
     BlobResourceContents.of(
         uri,
         Base64.getDecoder().decode(blob),
         mimeType,
         meta,
-    )
-
-/**
- * Creates [BlobResourceContents] from base64-encoded data using a kotlinx-serialization
- * metadata map. Requires kotlinx-serialization-json on the classpath.
- *
- * @author Konstantin Pavlov
- */
-@JvmName("blobResourceContentsWithKxMeta")
-@Deprecated(
-    message = "Base64-encoded String input is deprecated; pass raw bytes instead.",
-    replaceWith =
-        ReplaceWith(
-            "BlobResourceContents(uri, Base64.getDecoder().decode(blob), mimeType, meta)",
-            "java.util.Base64",
-        ),
-)
-public fun BlobResourceContents(
-    uri: String,
-    blob: String,
-    mimeType: String? = null,
-    meta: Map<String, JsonObject>,
-): BlobResourceContents =
-    BlobResourceContents.of(
-        uri,
-        Base64.getDecoder().decode(blob),
-        mimeType,
-        meta.toJacksonNodeMap(),
     )

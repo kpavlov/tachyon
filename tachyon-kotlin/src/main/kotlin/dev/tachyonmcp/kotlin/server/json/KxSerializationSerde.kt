@@ -14,7 +14,6 @@ import java.util.concurrent.ConcurrentHashMap
  * Serializers are resolved from the [json] serializers module by runtime type, so payload
  * classes must be `@Serializable` (or built-in). Generic containers lose their type arguments
  * at runtime — prefer dedicated `@Serializable` payload classes over raw maps.
- * Requires kotlinx-serialization-json on the classpath.
  *
  * @author Konstantin Pavlov
  */

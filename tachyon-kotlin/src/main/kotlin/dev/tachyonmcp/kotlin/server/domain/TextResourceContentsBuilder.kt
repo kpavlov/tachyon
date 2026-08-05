@@ -5,7 +5,6 @@ import dev.tachyonmcp.api.server.domain.TextResourceContents
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.config.ResourceScope
 import dev.tachyonmcp.kotlin.server.config.TemplateScope
-import tools.jackson.databind.JsonNode
 
 /**
  * Builds [dev.tachyonmcp.api.server.domain.TextResourceContents] for a matched resource template.
@@ -28,7 +27,7 @@ public class TextResourceContentsBuilder
         public var text: String? = null
 
         /** Optional resource metadata. */
-        public var meta: Map<String, JsonNode>? = null
+        public var meta: Map<String, Any>? = null
 
         /**
          * Returns a scalar URI-template parameter.

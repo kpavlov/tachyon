@@ -256,13 +256,15 @@ internal class TachyonServerTest {
             session { enabled = true }
             tool("check", inputSchema = schema) { ToolResult.text("ok") }
             resourceTemplate(
-                name = "user-profile",
-                uriTemplate = "user://{userId}/profile",
-                description = "User profile template",
-                mimeType = "application/json",
-                title = "User profile",
-                annotations = annotations,
-                icons = listOf(icon),
+                ResourceTemplateDescriptor {
+                    name = "user-profile"
+                    uriTemplate = "user://{userId}/profile"
+                    description = "User profile template"
+                    mimeType = "application/json"
+                    title = "User profile"
+                    this.annotations = annotations
+                    icons = listOf(icon)
+                },
             ) {
                 TextResourceContents {
                     text = "{\"id\":\"${param("userId")}\"}"
@@ -310,14 +312,16 @@ internal class TachyonServerTest {
             name("contextual-resource-contents-test")
             session { enabled = true }
             resource(
-                name = "text",
-                uri = "test://text",
-                description = "Text resource",
-                mimeType = "text/plain",
-                title = "Text resource title",
-                annotations = expectedAnnotations,
-                size = 5,
-                icons = listOf(icon),
+                ResourceDescriptor {
+                    name = "text"
+                    uri = "test://text"
+                    description = "Text resource"
+                    mimeType = "text/plain"
+                    title = "Text resource title"
+                    annotations = expectedAnnotations
+                    size = 5
+                    icons = listOf(icon)
+                },
             ) {
                 TextResourceContents { text = "hello" }
             }

@@ -10,9 +10,7 @@ import dev.tachyonmcp.api.server.domain.FormInputRequest
 import dev.tachyonmcp.api.server.domain.RpcMethodRequest
 import dev.tachyonmcp.api.server.domain.UrlInputRequest
 import dev.tachyonmcp.kotlin.server.json.toJacksonNode
-import dev.tachyonmcp.kotlin.server.json.toJacksonNodeMap
 import kotlinx.serialization.json.JsonObject
-import tools.jackson.databind.JsonNode
 
 /**
  * Creates an [RpcMethodRequest] — requests user input by invoking an RPC method.
@@ -22,14 +20,14 @@ import tools.jackson.databind.JsonNode
  */
 public fun RpcMethodRequest(
     method: String,
-    params: JsonNode? = null,
+    params: Any? = null,
 ): RpcMethodRequest =
     RpcMethodRequest
         .of(method, params)
 
 /**
  * Creates an [RpcMethodRequest] using a kotlinx-serialization [JsonObject] params.
- * Requires kotlinx-serialization-json on the classpath.
+ * The params are converted to the wire format, so they serialize correctly.
  */
 public fun RpcMethodRequest(
     method: String,
@@ -48,24 +46,10 @@ public fun RpcMethodRequest(
  */
 public fun FormInputRequest(
     message: String,
-    requestedSchema: Map<String, JsonNode>,
+    requestedSchema: Map<String, Any>,
 ): FormInputRequest =
     FormInputRequest
         .of(message, requestedSchema)
-
-/**
- * Creates a [FormInputRequest] using a kotlinx-serialization schema map.
- * Requires kotlinx-serialization-json on the classpath.
- */
-@JvmName("formInputRequestWithKxSchema")
-public fun FormInputRequest(
-    message: String,
-    requestedSchema: Map<String, JsonObject>,
-): FormInputRequest =
-    FormInputRequest.of(
-        message,
-        requestedSchema.toJacksonNodeMap(),
-    )
 
 /**
  * Creates a [UrlInputRequest] — requests user input by opening a URL.

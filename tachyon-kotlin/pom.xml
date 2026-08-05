@@ -49,12 +49,10 @@
             <artifactId>slf4j-api</artifactId>
         </dependency>
 
-        <!-- Optional: kotlinx-serialization-json for KotlinxExtensions -->
         <dependency>
             <groupId>org.jetbrains.kotlinx</groupId>
             <artifactId>kotlinx-serialization-json</artifactId>
             <version>${kotlinx-serialization-json.version}</version>
-            <optional>true</optional>
         </dependency>
 
         <!-- Test -->
