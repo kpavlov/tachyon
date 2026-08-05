@@ -4,7 +4,6 @@ package dev.tachyonmcp.core.server.features.tools;
 import static dev.tachyonmcp.core.server.domain.ServerErrors.fromUnhandledException;
 import static dev.tachyonmcp.core.server.domain.ServerErrors.internalError;
 import static dev.tachyonmcp.core.server.domain.ServerErrors.invalidParams;
-import static dev.tachyonmcp.core.server.domain.ServerErrors.missingRequiredClientCapability;
 
 import dev.tachyonmcp.api.json.JsonDocument;
 import dev.tachyonmcp.api.json.JsonSchema;
@@ -132,17 +131,13 @@ public final class ToolMethodHandlers {
             if (taskSupport == TaskSupport.REQUIRED && !mapped.taskAugmented()) {
                 return CompletableFuture.completedFuture(invalidParams("Task augmentation required for this tool"));
             }
-            // 2026-07-28 (no session) requires the client to declare the tasks extension per request
-            // (SEP-2663) before the server may return a CreateTaskResult; 2025-11-25's legacy,
-            // session-negotiated task augmentation predates that extension and isn't gated by it.
-            if (mapped.taskAugmented()
-                    && !context.protocol().supportsSessions()
-                    && !context.isExtensionEnabled(TasksExtension.ID)) {
-                return CompletableFuture.completedFuture(missingRequiredClientCapability(
-                        "Requires the '" + TasksExtension.ID + "' extension",
-                        Map.of("extensions", Map.of(TasksExtension.ID, Map.of()))));
-            }
             if (mapped.taskAugmented()) {
+                // 2026-07-28 (no session) requires the client to declare the tasks extension per
+                // request (SEP-2663) before the server may return a CreateTaskResult; 2025-11-25's
+                // legacy, session-negotiated task augmentation predates the extension and isn't
+                // gated by it.
+                var missingCapability = TasksExtension.requireDeclared(context);
+                if (missingCapability != null) return CompletableFuture.completedFuture(missingCapability);
                 return CompletableFuture.completedFuture(
                         dispatchTaskAugmented(context, handler, request, mapped.taskTtl()));
             }

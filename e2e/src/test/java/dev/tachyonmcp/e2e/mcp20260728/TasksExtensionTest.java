@@ -154,6 +154,42 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
     }
 
     @Test
+    void acceptsTaskAugmentedRequiredToolWhenDeclaredPerRequest() throws Exception {
+        startServer(
+                builder -> builder.extension(TasksExtension.instance()),
+                registrar -> registrar
+                        .tools()
+                        .register(
+                                b -> b.name("sleep").taskSupport(TaskSupport.REQUIRED),
+                                (context, request) -> ToolResult.text("done")));
+
+        try (var client = createModernTestClient()) {
+            var response = client.post("""
+                    {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{\
+                    "name":"sleep","arguments":{},"task":{},\
+                    "_meta":{"io.modelcontextprotocol/clientCapabilities":{"extensions":{"%s":{}}}}}}
+                    """.formatted(TasksExtension.ID));
+
+            assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+            assertThatJson(response.body())
+                    .whenIgnoringPaths(
+                            "$.result.task.taskId",
+                            "$.result.task.createdAt",
+                            "$.result.task.lastUpdatedAt",
+                            "$.result._meta")
+                    .isEqualTo("""
+                            {
+                              "jsonrpc": "2.0",
+                              "id": 1,
+                              "result": {
+                                "task": {"status": "working", "ttl": null}
+                              }
+                            }
+                            """);
+        }
+    }
+
+    @Test
     void rejectsExtensionGatedToolWithoutPerRequestDeclaration() throws Exception {
         startTasksServer();
 

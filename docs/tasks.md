@@ -94,6 +94,10 @@ background — sync, async, and Kotlin suspend handlers all work. The client the
 `tasks/get` and fetches the outcome via `tasks/result`.
 
 - `taskSupport = REQUIRED` rejects plain calls; `FORBIDDEN` (default) rejects task-augmented calls.
+- MCP 2026-07-28 has no session, so it additionally requires the client to declare the
+  `io.modelcontextprotocol/tasks` extension on the request itself (SEP-2663) — a task-augmented
+  call without that declaration is rejected with `-32021`, regardless of `taskSupport`. 2025-11-25's
+  session-negotiated task support predates the extension and isn't gated by it.
 - `task.ttl` (milliseconds) bounds retention; expired tasks transition to `FAILED`.
 - `tasks/cancel` interrupts synchronous handlers running on virtual threads and cancels the
   `CompletionStage` returned by asynchronous handlers. Kotlin suspend handlers receive coroutine

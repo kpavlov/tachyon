@@ -3,6 +3,7 @@ package dev.tachyonmcp.core.server.features.tasks;
 
 import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.runtime.InteractionContext;
+import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
 import dev.tachyonmcp.api.server.extensions.ExtensionContext;
 import dev.tachyonmcp.api.server.extensions.ServerExtension;
@@ -14,15 +15,33 @@ import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolRequest;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.OutboundSseStreamMessageRouter;
+import dev.tachyonmcp.core.server.domain.ServerErrors;
+import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import org.jspecify.annotations.Nullable;
 
 public class TasksExtension implements ServerExtension {
 
     public static final String ID = "io.modelcontextprotocol/tasks";
+
+    /**
+     * 2026-07-28 requires every task-augmented request (task-augmented {@code tools/call},
+     * {@code tasks/get}, {@code tasks/cancel}) to declare this extension per request (SEP-2663) or be
+     * rejected with {@code -32021}; 2025-11-25's legacy, session-negotiated task support predates the
+     * extension and isn't gated by it.
+     */
+    public static @Nullable ServerError requireDeclared(DispatchContext context) {
+        if (context.protocol().supportsSessions() || context.isExtensionEnabled(ID)) {
+            return null;
+        }
+        return ServerErrors.missingRequiredClientCapability(
+                "Requires the '" + ID + "' extension", Map.of("extensions", Map.of(ID, Map.of())));
+    }
 
     // language=json
     private static final JsonSchema CREATE_TASK_SCHEMA = JsonSchema.of("""
