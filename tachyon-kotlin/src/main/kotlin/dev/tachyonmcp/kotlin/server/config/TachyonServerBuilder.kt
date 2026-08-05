@@ -3,6 +3,8 @@ package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.api.annotations.ExperimentalApi
 import dev.tachyonmcp.api.json.JsonSchema
+import dev.tachyonmcp.api.server.domain.Annotations
+import dev.tachyonmcp.api.server.domain.Icon
 import dev.tachyonmcp.api.server.domain.PromptMessage
 import dev.tachyonmcp.api.server.domain.ResourceContents
 import dev.tachyonmcp.api.server.features.completions.CompletionResult
@@ -168,6 +170,9 @@ public class TachyonServerBuilder
          * @param description optional resource description
          * @param mimeType optional resource MIME type
          * @param title optional human-readable title
+         * @param annotations optional presentation hints
+         * @param size optional raw content size in bytes
+         * @param icons optional associated icons
          * @param block handles reads of the registered resource
          * @return this builder
          */
@@ -178,6 +183,9 @@ public class TachyonServerBuilder
             description: String? = null,
             mimeType: String? = null,
             title: String? = null,
+            annotations: Annotations? = null,
+            size: Long? = null,
+            icons: List<Icon>? = null,
             block: suspend ResourceScope.() -> ResourceContents,
         ): TachyonServerBuilder =
             this.also {
@@ -187,9 +195,9 @@ public class TachyonServerBuilder
                     description = description,
                     mimeType = mimeType,
                     title = title,
-                    annotations = null,
-                    size = null,
-                    icons = null,
+                    annotations = annotations,
+                    size = size,
+                    icons = icons,
                     block = block,
                 )
             }
@@ -247,6 +255,8 @@ public class TachyonServerBuilder
          * @param description The optional template description.
          * @param mimeType The optional MIME type of the resources.
          * @param title The optional template title.
+         * @param annotations The optional template annotations.
+         * @param icons The optional template icons.
          * @param block Handles requests for resources matching the template.
          * @return This builder.
          */
@@ -257,6 +267,8 @@ public class TachyonServerBuilder
             description: String? = null,
             mimeType: String? = null,
             title: String? = null,
+            annotations: Annotations? = null,
+            icons: List<Icon>? = null,
             block: suspend TemplateScope.() -> ResourceContents,
         ): TachyonServerBuilder =
             this.also {
@@ -266,8 +278,8 @@ public class TachyonServerBuilder
                     description = description,
                     mimeType = mimeType,
                     title = title,
-                    annotations = null,
-                    icons = null,
+                    annotations = annotations,
+                    icons = icons,
                     block = block,
                 )
             }
