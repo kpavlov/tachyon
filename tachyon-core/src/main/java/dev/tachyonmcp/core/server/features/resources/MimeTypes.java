@@ -1,13 +1,14 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.features.resources;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
 
 /**
  * Default filename-extension-to-MIME-type mapping for resource and skill content.
@@ -15,22 +16,45 @@ import java.util.Set;
  * <p>The JDK's own {@code URLConnection.guessContentTypeFromName} and {@code
  * Files.probeContentType} are platform-dependent and miss common extensions such as {@code .yaml}
  * or {@code .toml}, so this table is maintained explicitly, loaded from the {@code
- * mime-types.properties} classpath resource bundled alongside this class. {@link #guess(String)}
- * falls back to {@code application/octet-stream} for unknown extensions; {@link #guess(String,
- * Map)} lets a caller override or extend individual extensions without replacing the whole table.
+ * mime-types.csv} classpath resource bundled alongside this class ({@code extension,mimeType,
+ * isText} rows). {@link #guess(String)} falls back to {@code application/octet-stream} for
+ * unknown extensions; {@link #guess(String, Map)} lets a caller override or extend individual
+ * extensions without replacing the whole table. {@link #isText(String)} reads the {@code isText}
+ * column for a known MIME type rather than guessing.
  */
 public final class MimeTypes {
 
     /** MIME type returned by {@link #guess} for an extension with no known mapping. */
     public static final String DEFAULT_MIME_TYPE = "application/octet-stream";
 
-    private static final Map<String, String> DEFAULTS = loadDefaults();
+    private static final Map<String, String> DEFAULTS;
+    private static final Map<String, Boolean> TEXTUAL;
 
-    /**
-     * Non-{@code text/}-prefixed types in {@link #DEFAULTS} that are nonetheless textual, so
-     * {@link #isText(String)} can classify them alongside every {@code text/*} type.
-     */
-    private static final Set<String> TEXTUAL_TYPES = Set.of("application/json", "application/yaml", "application/toml");
+    static {
+        var byExtension = new HashMap<String, String>();
+        var textByMimeType = new HashMap<String, Boolean>();
+        try (var in = MimeTypes.class.getResourceAsStream("mime-types.csv")) {
+            if (in == null) {
+                throw new IllegalStateException("mime-types.csv not found on classpath");
+            }
+            try (var reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
+                reader.readLine(); // header
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.isBlank()) {
+                        continue;
+                    }
+                    var columns = line.split(",", 3);
+                    byExtension.put(columns[0], columns[1]);
+                    textByMimeType.put(columns[1], Boolean.parseBoolean(columns[2]));
+                }
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        DEFAULTS = Map.copyOf(byExtension);
+        TEXTUAL = Map.copyOf(textByMimeType);
+    }
 
     private MimeTypes() {}
 
@@ -64,37 +88,21 @@ public final class MimeTypes {
 
     /**
      * Returns whether {@code mimeType} represents textual content, i.e. it should be delivered as
-     * UTF-8 text rather than a binary blob. Covers every {@code text/*} type plus the non-{@code
-     * text/}-prefixed textual types this class's default table can produce ({@code
-     * application/json}, {@code application/yaml}, {@code application/toml}).
+     * UTF-8 text rather than a binary blob, per the {@code isText} column of {@code
+     * mime-types.csv}. Falls back to the {@code text/} prefix convention for a MIME type the table
+     * doesn't know, e.g. one supplied via a {@link #guess(String, Map)} override.
      *
      * @param mimeType the MIME type to classify
      * @return {@code true} when the content should be read/served as text
      */
     public static boolean isText(String mimeType) {
-        return mimeType.startsWith("text/") || TEXTUAL_TYPES.contains(mimeType);
+        var known = TEXTUAL.get(mimeType);
+        return known != null ? known : mimeType.startsWith("text/");
     }
 
     private static String extensionOf(String fileName) {
         var lower = fileName.toLowerCase(Locale.ROOT);
         var dot = lower.lastIndexOf('.');
         return dot >= 0 ? lower.substring(dot + 1) : "";
-    }
-
-    private static Map<String, String> loadDefaults() {
-        var properties = new Properties();
-        try (var in = MimeTypes.class.getResourceAsStream("mime-types.properties")) {
-            if (in == null) {
-                throw new IllegalStateException("mime-types.properties not found on classpath");
-            }
-            properties.load(in);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-        var defaults = new HashMap<String, String>(properties.size());
-        for (var name : properties.stringPropertyNames()) {
-            defaults.put(name, properties.getProperty(name));
-        }
-        return Map.copyOf(defaults);
     }
 }
