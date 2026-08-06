@@ -15,9 +15,9 @@ MAVEN_TEST_ARGS := -Dsurefire.forkCount=$(SUREFIRE_FORK_COUNT) $(NETTY_ARGS)
 help: ## List available targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-22s %s\n", $$1, $$2}'
 
-all: clean install-server examples-snapshot examples ## Full build: clean, live examples, build+install, SNAPSHOT examples
+all: clean install-server revapi examples-snapshot examples ## Full build: clean, live examples, build+install, SNAPSHOT examples
 
-ci: clean build ## CI pipeline: clean + build
+ci: clean build revapi ## CI pipeline: clean + build
 
 build: ## Compile, test, verify (mvn verify)
 	@echo " 🏗️ Building..."
@@ -27,6 +27,12 @@ build: ## Compile, test, verify (mvn verify)
 test: ## Run unit + e2e tests
 	@echo " 🧪 Running tests..."
 	@./mvnw test $(MAVEN_TEST_ARGS) --no-transfer-progress
+
+revapi: ## Check API compatibility against baseline (oldVersion) + write report
+	@echo " 🔄  Checking API compatibility..."
+	@./mvnw revapi:check -pl tachyon-api,tachyon-core,tachyon-extensions,tachyon-testkit -DskipTests --no-transfer-progress
+	@./mvnw revapi:report -pl tachyon-api,tachyon-core,tachyon-extensions,tachyon-testkit -DskipTests --no-transfer-progress
+	@echo " ✅  Done!"
 
 install-server: ## Build with tests and install to local Maven repo
 	@echo "🔄  Building and installing with tests..."

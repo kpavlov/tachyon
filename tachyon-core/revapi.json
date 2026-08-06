@@ -1,0 +1,19 @@
+[
+  {
+    "extension": "revapi.java",
+    "configuration": {
+      "checks": {
+        "nonPublicPartOfAPI": {
+          "reportUnchanged": false
+        }
+      }
+    }
+  },
+  {
+    "extension": "revapi.differences",
+    "configuration": {
+      "ignore": true,
+      "differences": []
+    }
+  }
+]

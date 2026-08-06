@@ -61,6 +61,7 @@
         <java.version>21</java.version>
         <kotlin.version>2.2.21</kotlin.version>
         <kotlin-language.version>2.2</kotlin-language.version>
+        <api.oldVersion>1.0.0-beta.18</api.oldVersion>
 
         <!-- Dependencies -->
         <assertj.version>3.27.7</assertj.version>
@@ -84,6 +85,8 @@
 
         <!-- Plugins -->
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
+        <revapi.version>0.15.1</revapi.version>
+        <revapi-java.version>0.28.4</revapi-java.version>
         <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
         <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
         <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
@@ -442,6 +445,68 @@
                             <phase>verify</phase>
                         </execution>
                     </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.revapi</groupId>
+                    <artifactId>revapi-maven-plugin</artifactId>
+                    <version>${revapi.version}</version>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.revapi</groupId>
+                            <artifactId>revapi-java</artifactId>
+                            <version>${revapi-java.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.revapi</groupId>
+                            <artifactId>revapi-reporter-text</artifactId>
+                            <version>${revapi.version}</version>
+                        </dependency>
+                    </dependencies>
+                    <configuration>
+                        <oldVersion>${api.oldVersion}</oldVersion>
+                        <failCriticality>error</failCriticality>
+                        <pipelineConfiguration>
+                            <severityMapping>
+                                <equivalent>allowed</equivalent>
+                                <nonBreaking>documented</nonBreaking>
+                                <potentiallyBreaking>highlight</potentiallyBreaking>
+                                <breaking>error</breaking>
+                            </severityMapping>
+                        </pipelineConfiguration>
+                        <analysisConfigurationFiles>
+                            <configurationFile>
+                                <path>${project.basedir}/revapi.json</path>
+                            </configurationFile>
+                        </analysisConfigurationFiles>
+                        <failOnMissingConfigurationFiles>false</failOnMissingConfigurationFiles>
+                        <analysisConfiguration>
+                            <revapi.filter>
+                                <archives>
+                                    <include>
+                                        <item>dev\.tachyonmcp:.*</item>
+                                    </include>
+                                </archives>
+                            </revapi.filter>
+                            <revapi.differences>
+                                <ignore>true</ignore>
+                                <differences>
+                                    <item>
+                                        <regex>true</regex>
+                                        <code>java\.annotation\.(added|removed)</code>
+                                        <annotation>@org\.immutables\..*</annotation>
+                                        <justification>Same annotation; revapi renders nested name $ vs .
+                                            inconsistently.
+                                        </justification>
+                                    </item>
+                                </differences>
+                            </revapi.differences>
+                            <revapi.reporter.text>
+                                <output>${project.build.directory}/revapi-report.txt</output>
+                                <minCriticality>documented</minCriticality>
+                                <keepEmptyFile>true</keepEmptyFile>
+                            </revapi.reporter.text>
+                        </analysisConfiguration>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>

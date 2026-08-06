@@ -95,6 +95,7 @@ jobs:
             **/target/*-reports/**
             reports/target/site/jacoco-aggregate/
             **/spotbugsXml.xml
+            **/target/revapi-report.txt
 
   examples-snapshot:
     strategy:
