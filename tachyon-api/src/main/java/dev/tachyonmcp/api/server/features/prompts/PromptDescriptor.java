@@ -97,6 +97,9 @@ public interface PromptDescriptor extends ServerFeature.Descriptor, HasMeta {
     /** Builder for {@link PromptDescriptor}. */
     interface Builder {
 
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(PromptDescriptor instance);
+
         /** Sets the prompt name, unique within the server. */
         Builder name(String name);
 

@@ -90,6 +90,9 @@ public interface ToolDescriptor extends ServerFeature.Descriptor, HasMeta {
     /** Builder for {@link ToolDescriptor}. */
     interface Builder {
 
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(ToolDescriptor instance);
+
         /** Sets the tool name, unique within the server. */
         Builder name(String name);
 

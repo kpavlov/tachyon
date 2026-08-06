@@ -59,6 +59,9 @@ public interface CompletionRequest extends ServerFeature.Request {
     }
 
     interface Builder {
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(CompletionRequest instance);
+
         Builder argumentName(String argumentName);
 
         Builder argumentValue(String argumentValue);

@@ -46,6 +46,9 @@ public interface TaskOptions extends HasMeta {
     }
 
     interface Builder {
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(TaskOptions instance);
+
         Builder id(@Nullable String id);
 
         Builder ttl(@Nullable Duration ttl);

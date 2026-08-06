@@ -39,6 +39,9 @@ public interface PromptMessage {
     }
 
     interface Builder {
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(PromptMessage instance);
+
         Builder role(Role role);
 
         Builder content(ContentBlock content);

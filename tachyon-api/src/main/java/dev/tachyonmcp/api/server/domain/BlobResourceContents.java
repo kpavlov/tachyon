@@ -105,6 +105,9 @@ public non-sealed interface BlobResourceContents extends ResourceContents {
      * Builder for {@link BlobResourceContents}.
      */
     interface Builder {
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(BlobResourceContents instance);
+
         /**
          * Sets the resource URI.
          *

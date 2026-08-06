@@ -36,6 +36,9 @@ public non-sealed interface UrlInputRequest extends InputRequest {
     }
 
     interface Builder {
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(UrlInputRequest instance);
+
         Builder message(String message);
 
         Builder elicitationId(String elicitationId);

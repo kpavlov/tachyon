@@ -39,6 +39,9 @@ public interface MonitoringConfig {
     /** Builder for {@link MonitoringConfig}. */
     interface Builder {
 
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(MonitoringConfig instance);
+
         /** Sets whether slow request logging is enabled. */
         Builder slowRequestLogging(boolean slowRequestLogging);
 

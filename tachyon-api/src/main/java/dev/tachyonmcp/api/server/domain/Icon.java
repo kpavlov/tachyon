@@ -86,6 +86,9 @@ public interface Icon {
     /** Builder for {@link Icon}. */
     interface Builder {
 
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(Icon instance);
+
         /**
          * Sets the image URL or data URI.
          *

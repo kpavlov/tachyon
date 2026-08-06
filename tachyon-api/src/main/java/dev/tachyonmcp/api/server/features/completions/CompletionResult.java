@@ -77,6 +77,9 @@ public interface CompletionResult extends HasMeta {
     /** Builder for {@link CompletionResult}. */
     interface Builder {
 
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(CompletionResult instance);
+
         /**
          * Sets the candidate values ranked by relevance.
          *

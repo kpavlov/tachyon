@@ -82,6 +82,9 @@ public interface Annotations {
     /** Builder for {@link Annotations}. */
     interface Builder {
 
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(Annotations instance);
+
         /**
          * Sets the intended audience.
          *

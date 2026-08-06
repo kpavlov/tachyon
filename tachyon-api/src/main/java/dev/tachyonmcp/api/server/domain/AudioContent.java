@@ -126,6 +126,9 @@ public non-sealed interface AudioContent extends ContentBlock, HasMeta {
      * Builder for {@link AudioContent}.
      */
     interface Builder {
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(AudioContent instance);
+
         /**
          * Sets the audio data.
          *

@@ -56,6 +56,9 @@ public non-sealed interface TextContent extends ContentBlock {
     }
 
     interface Builder {
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(TextContent instance);
+
         Builder text(String text);
 
         Builder meta(@Nullable Map<String, ?> entries);

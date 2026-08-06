@@ -33,6 +33,9 @@ public non-sealed interface RpcMethodRequest extends InputRequest {
     }
 
     interface Builder {
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(RpcMethodRequest instance);
+
         Builder method(String method);
 
         Builder params(@Nullable Object params);

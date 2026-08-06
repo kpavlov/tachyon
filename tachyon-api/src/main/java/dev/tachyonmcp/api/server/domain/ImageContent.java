@@ -116,6 +116,9 @@ public non-sealed interface ImageContent extends ContentBlock {
      * Builder for {@link ImageContent}.
      */
     interface Builder {
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(ImageContent instance);
+
         /**
          * Sets the image data.
          *

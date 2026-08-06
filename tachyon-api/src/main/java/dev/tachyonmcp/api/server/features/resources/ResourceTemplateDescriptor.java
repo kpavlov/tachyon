@@ -87,6 +87,9 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor, Ha
     /** Builder for {@link ResourceTemplateDescriptor}. */
     interface Builder {
 
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(ResourceTemplateDescriptor instance);
+
         /** Sets the template name, unique within the server. */
         Builder name(String name);
 

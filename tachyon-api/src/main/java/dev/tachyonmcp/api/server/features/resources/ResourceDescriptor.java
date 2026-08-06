@@ -110,6 +110,9 @@ public interface ResourceDescriptor extends ServerFeature.Descriptor, HasMeta {
     /** Builder for {@link ResourceDescriptor}. */
     interface Builder {
 
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(ResourceDescriptor instance);
+
         Builder name(String name);
 
         Builder title(@Nullable String title);

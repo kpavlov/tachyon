@@ -72,6 +72,9 @@ public interface ResourceRequest extends ServerFeature.Request {
     /** Builder for {@link ResourceRequest}. */
     interface Builder {
 
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(ResourceRequest instance);
+
         /** Sets the resource URI being requested. */
         Builder uri(String uri);
 

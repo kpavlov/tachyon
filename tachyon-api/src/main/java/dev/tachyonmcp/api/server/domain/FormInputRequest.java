@@ -32,6 +32,9 @@ public non-sealed interface FormInputRequest extends InputRequest {
     }
 
     interface Builder {
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(FormInputRequest instance);
+
         Builder message(String message);
 
         Builder requestedSchema(Map<String, ?> entries);

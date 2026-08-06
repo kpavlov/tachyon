@@ -28,6 +28,9 @@ public interface TaskDescriptor extends ServerFeature.Descriptor {
     }
 
     interface Builder {
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(TaskDescriptor instance);
+
         Builder id(String id);
 
         TaskDescriptor build();

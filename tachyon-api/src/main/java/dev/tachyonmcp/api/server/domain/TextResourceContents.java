@@ -68,6 +68,9 @@ public non-sealed interface TextResourceContents extends ResourceContents {
     }
 
     interface Builder {
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(TextResourceContents instance);
+
         Builder uri(String uri);
 
         Builder text(String text);

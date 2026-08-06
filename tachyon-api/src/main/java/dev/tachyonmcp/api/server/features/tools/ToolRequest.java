@@ -110,6 +110,9 @@ public interface ToolRequest extends ServerFeature.Request {
     }
 
     interface Builder {
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(ToolRequest instance);
+
         /**
          * Sets the tool name.
          *

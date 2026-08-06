@@ -53,6 +53,9 @@ public interface PaginatedResult<R> {
     }
 
     interface Builder<R> {
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder<R> from(PaginatedResult<R> instance);
+
         Builder<R> items(Iterable<? extends R> elements);
 
         Builder<R> nextCursor(@Nullable String nextCursor);

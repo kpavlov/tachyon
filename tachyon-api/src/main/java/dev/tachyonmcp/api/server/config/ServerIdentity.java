@@ -50,6 +50,9 @@ public interface ServerIdentity {
     /** Builder for {@link ServerIdentity}. */
     interface Builder {
 
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(ServerIdentity instance);
+
         Builder name(String name);
 
         Builder version(String version);

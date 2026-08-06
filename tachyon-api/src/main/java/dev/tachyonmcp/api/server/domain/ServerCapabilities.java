@@ -49,6 +49,9 @@ public interface ServerCapabilities {
      * Builder for {@link ServerCapabilities}.
      */
     interface Builder {
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(ServerCapabilities instance);
+
         /** Prompt capabilities ({@code null} = not supported). */
         Builder prompts(@Nullable Prompts prompts);
 

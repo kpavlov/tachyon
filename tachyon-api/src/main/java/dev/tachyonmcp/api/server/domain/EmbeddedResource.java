@@ -53,6 +53,9 @@ public non-sealed interface EmbeddedResource extends ContentBlock, HasMeta {
     }
 
     interface Builder {
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(EmbeddedResource instance);
+
         Builder resource(ResourceContents resource);
 
         Builder annotations(@Nullable Annotations annotations);

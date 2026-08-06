@@ -49,6 +49,9 @@ public interface ToolAnnotations {
     }
 
     interface Builder {
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(ToolAnnotations instance);
+
         Builder title(@Nullable String title);
 
         Builder readOnlyHint(@Nullable Boolean readOnlyHint);

@@ -84,6 +84,9 @@ public non-sealed interface ResourceLink extends ContentBlock {
 
     interface Builder {
 
+        /** Fills this builder with the attribute values from {@code instance}. */
+        Builder from(ResourceLink instance);
+
         Builder name(String name);
 
         Builder title(@Nullable String title);
