@@ -16,6 +16,7 @@ import dev.tachyonmcp.api.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.core.server.ServerBuilder
 import dev.tachyonmcp.core.server.config.NetworkConfig
+import dev.tachyonmcp.core.server.features.resources.MimeTypes
 import dev.tachyonmcp.kotlin.server.DefaultKotlinTachyonServer
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.TachyonServer
@@ -173,7 +174,7 @@ public class TachyonServerBuilder
          * @param name resource name
          * @param uri resource URI
          * @param description optional resource description
-         * @param mimeType optional resource MIME type
+         * @param mimeType resource MIME type; defaults to a guess from `uri`'s extension
          * @param title optional human-readable title
          * @param annotations optional presentation hints
          * @param size optional raw content size in bytes
@@ -186,7 +187,7 @@ public class TachyonServerBuilder
             name: String,
             uri: String,
             description: String? = null,
-            mimeType: String? = null,
+            mimeType: String? = MimeTypes.guess(uri),
             title: String? = null,
             annotations: Annotations? = null,
             size: Long? = null,

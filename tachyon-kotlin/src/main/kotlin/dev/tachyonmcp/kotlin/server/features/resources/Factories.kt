@@ -9,6 +9,7 @@ package dev.tachyonmcp.kotlin.server.features.resources
 import dev.tachyonmcp.api.server.domain.Annotations
 import dev.tachyonmcp.api.server.domain.Icon
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor
+import dev.tachyonmcp.core.server.features.resources.MimeTypes
 
 /**
  * Creates a [ResourceDescriptor] describing a static resource.
@@ -16,7 +17,7 @@ import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor
  * @param name        resource name (used for lookup)
  * @param uri         resource URI
  * @param description description of the resource; null to omit
- * @param mimeType    MIME type of the resource content; null to omit
+ * @param mimeType    MIME type of the resource content; defaults to a guess from `uri`'s extension
  * @param title       human-readable title; null to omit
  * @param annotations optional presentation hints
  * @param size        estimated size hint in bytes; null = unknown
@@ -27,7 +28,7 @@ public fun ResourceDescriptor(
     name: String,
     uri: String,
     description: String? = null,
-    mimeType: String? = null,
+    mimeType: String? = MimeTypes.guess(uri),
     title: String? = null,
     annotations: Annotations? = null,
     size: Long? = null,

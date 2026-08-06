@@ -8,6 +8,7 @@ package dev.tachyonmcp.kotlin.server.domain
 
 import dev.tachyonmcp.api.server.domain.BlobResourceContents
 import dev.tachyonmcp.api.server.domain.TextResourceContents
+import dev.tachyonmcp.core.server.features.resources.MimeTypes
 import java.util.Base64
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
@@ -36,14 +37,14 @@ public inline fun BlobResourceContents(
  *
  * @param uri      originating resource URI
  * @param text     the actual text content
- * @param mimeType MIME type of the text (e.g. "application/json"); null to omit
+ * @param mimeType MIME type of the text (e.g. "application/json"); defaults to a guess from `uri`'s extension
  * @param meta     optional request-level metadata; null to omit
  * @author Konstantin Pavlov
  */
 public fun TextResourceContents(
     uri: String,
     text: String,
-    mimeType: String? = null,
+    mimeType: String? = MimeTypes.guess(uri),
     meta: Map<String, Any>? = null,
 ): TextResourceContents =
     TextResourceContents.of(
@@ -58,14 +59,14 @@ public fun TextResourceContents(
  *
  * @param uri      originating resource URI
  * @param blob     the binary content
- * @param mimeType MIME type of the binary data; null to omit
+ * @param mimeType MIME type of the binary data; defaults to a guess from `uri`'s extension
  * @param meta     optional request-level metadata; defaults to empty map
  * @author Konstantin Pavlov
  */
 public fun BlobResourceContents(
     uri: String,
     blob: ByteArray,
-    mimeType: String? = null,
+    mimeType: String? = MimeTypes.guess(uri),
     meta: Map<String, Any> = emptyMap(),
 ): BlobResourceContents =
     BlobResourceContents.of(
@@ -80,7 +81,7 @@ public fun BlobResourceContents(
  *
  * @param uri      originating resource URI
  * @param blob     base64-encoded binary content
- * @param mimeType MIME type of the binary data; null to omit
+ * @param mimeType MIME type of the binary data; defaults to a guess from `uri`'s extension
  * @param meta     optional request-level metadata; defaults to empty map
  * @author Konstantin Pavlov
  */
@@ -95,7 +96,7 @@ public fun BlobResourceContents(
 public fun BlobResourceContents(
     uri: String,
     blob: String,
-    mimeType: String? = null,
+    mimeType: String? = MimeTypes.guess(uri),
     meta: Map<String, Any> = emptyMap(),
 ): BlobResourceContents =
     BlobResourceContents.of(

@@ -7,6 +7,7 @@
 package dev.tachyonmcp.kotlin.server.domain
 
 import dev.tachyonmcp.api.server.domain.Icon
+import dev.tachyonmcp.core.server.features.resources.MimeTypes
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -22,13 +23,13 @@ public inline fun Icon(block: IconBuilder.() -> Unit): Icon {
  * Creates an [Icon] pointing to an image resource.
  *
  * @param src     image URL or data URI
- * @param mimeType image MIME type (e.g. "image/png"); null when unknown
+ * @param mimeType image MIME type (e.g. "image/png"); defaults to a guess from `src`'s extension
  * @param sizes   conventional size labels (e.g. ["16x16", "32x32"]); null when unspecified
  * @param theme   theme variant ("light", "dark"); null when universal
  */
 public fun Icon(
     src: String,
-    mimeType: String? = null,
+    mimeType: String? = MimeTypes.guess(src),
     sizes: List<String>? = null,
     theme: String? = null,
 ): Icon =

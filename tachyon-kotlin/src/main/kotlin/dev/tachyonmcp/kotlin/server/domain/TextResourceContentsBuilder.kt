@@ -2,6 +2,7 @@
 package dev.tachyonmcp.kotlin.server.domain
 
 import dev.tachyonmcp.api.server.domain.TextResourceContents
+import dev.tachyonmcp.core.server.features.resources.MimeTypes
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.config.ResourceScope
 import dev.tachyonmcp.kotlin.server.config.TemplateScope
@@ -20,8 +21,8 @@ public class TextResourceContentsBuilder
         /** Resource URI. Defaults to the requested URI. */
         public var uri: String? = scope?.uri
 
-        /** Resource MIME type. Defaults to the registered template MIME type. */
-        public var mimeType: String? = scope?.registeredMimeType
+        /** Resource MIME type. Defaults to the registered template MIME type, or a guess from [uri]'s extension. */
+        public var mimeType: String? = scope?.registeredMimeType ?: uri?.let { MimeTypes.guess(it) }
 
         /** Text payload. */
         public var text: String? = null

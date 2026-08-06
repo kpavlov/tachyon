@@ -11,6 +11,7 @@ import dev.tachyonmcp.api.server.domain.ImageContent
 import dev.tachyonmcp.api.server.domain.PromptArgument
 import dev.tachyonmcp.api.server.domain.Role
 import dev.tachyonmcp.api.server.domain.ToolAnnotations
+import dev.tachyonmcp.core.server.features.resources.MimeTypes
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.config.ResourceScope
 import java.util.Base64
@@ -46,8 +47,8 @@ public class IconBuilder
         /** Image URL or data URI. */
         public var src: String? = null
 
-        /** Image MIME type. */
-        public var mimeType: String? = null
+        /** Image MIME type. Defaults to a guess from [src]'s extension. */
+        public var mimeType: String? = src?.let { MimeTypes.guess(it) }
 
         /** Conventional image sizes. */
         public var sizes: List<String>? = null
@@ -224,8 +225,8 @@ public class BlobResourceContentsBuilder
                 data = value?.let { Base64.getDecoder().decode(it) }
             }
 
-        /** Resource MIME type. */
-        public var mimeType: String? = scope?.registeredMimeType
+        /** Resource MIME type. Defaults to the registered template MIME type, or a guess from [uri]'s extension. */
+        public var mimeType: String? = scope?.registeredMimeType ?: uri?.let { MimeTypes.guess(it) }
 
         /** Optional resource metadata. */
         public var meta: Map<String, Any> = emptyMap()
