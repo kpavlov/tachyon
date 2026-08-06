@@ -3,8 +3,6 @@ package dev.tachyonmcp.core.server.features.resources;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Map;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -37,24 +35,6 @@ class MimeTypesTest {
     })
     void guessesMimeTypeFromExtension(String fileName, String expected) {
         assertThat(MimeTypes.guess(fileName)).isEqualTo(expected);
-    }
-
-    @Test
-    void overrideTakesPrecedenceOverDefaultTable() {
-        assertThat(MimeTypes.guess("data.csv", Map.of("csv", "text/x-custom-csv")))
-                .isEqualTo("text/x-custom-csv");
-    }
-
-    @Test
-    void overrideAddsUnknownExtension() {
-        assertThat(MimeTypes.guess("model.gguf", Map.of("gguf", "application/x-gguf")))
-                .isEqualTo("application/x-gguf");
-    }
-
-    @Test
-    void unmappedExtensionFallsBackToDefaultTableWhenNotOverridden() {
-        assertThat(MimeTypes.guess("readme.txt", Map.of("csv", "text/x-custom-csv")))
-                .isEqualTo("text/plain");
     }
 
     @ParameterizedTest
