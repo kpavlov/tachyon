@@ -4,10 +4,8 @@ package dev.tachyonmcp.extensions.skills;
 import java.nio.file.Path;
 
 /**
- * Default {@link SkillsRegistry} serving skills from the filesystem.
- *
- * <p>Use {@link SkillsExtension.Builder#addSkillDir(Path)} or
- * {@link SkillsExtension.Builder#addSkill(Path, String)} instead of constructing directly.
+ * Default {@link SkillsRegistry} serving skills from the filesystem. Pass an instance to
+ * {@link SkillsExtension.Builder#registry(SkillsRegistry)}.
  */
 public final class PathSkillsRegistry extends BaseSkillsRegistry {
 

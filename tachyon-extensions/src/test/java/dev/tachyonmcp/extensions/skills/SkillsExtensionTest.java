@@ -30,7 +30,9 @@ class SkillsExtensionTest {
     @BeforeEach
     void setUp() {
         tachyon = TachyonServer.builder()
-                .extension(SkillsExtension.builder().addSkillDir(FIXTURES).build())
+                .extension(SkillsExtension.builder()
+                        .registry(new PathSkillsRegistry(FIXTURES))
+                        .build())
                 .build();
         server = (ServerEngine) tachyon;
         dispatcher = new McpDispatcher(server, server.executor());

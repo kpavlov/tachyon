@@ -58,8 +58,9 @@ class ClasspathSkillsRegistryTest {
             assertThat(registry.skills().get(0).files())
                     .extracting(SkillsRegistry.SkillFile::relativePath)
                     .containsExactly("SKILL.md", "guide.md");
-            assertThat(new String(registry.readFile("skill://demo/guide.md"), StandardCharsets.UTF_8))
-                    .contains("usage");
+            final var guide = registry.readFile("skill://demo/guide.md");
+            assertThat(guide).isNotNull();
+            assertThat(new String(guide, StandardCharsets.UTF_8)).contains("usage");
         }
     }
 

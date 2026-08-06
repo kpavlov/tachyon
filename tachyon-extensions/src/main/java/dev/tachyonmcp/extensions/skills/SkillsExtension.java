@@ -13,7 +13,6 @@ import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.features.resources.MimeTypes;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -31,8 +30,8 @@ import org.jspecify.annotations.Nullable;
  * <pre>{@code
  * TachyonServer.builder()
  *         .extension(SkillsExtension.builder()
- *                 .addSkillDir(Path.of("skills"))
- *                 .addClasspathSkillDir("bundled-skills")
+ *                 .registry(new PathSkillsRegistry(Path.of("skills")))
+ *                 .registry(new ClasspathSkillsRegistry("bundled-skills"))
  *                 .build())
  *         .build();
  * }</pre>
@@ -159,10 +158,11 @@ public final class SkillsExtension implements ServerExtension {
                 found |= collectChildren(skill, "", children);
             } else if (dirPath.startsWith(skillPath + "/")) {
                 found |= collectChildren(skill, dirPath.substring(skillPath.length() + 1) + "/", children);
-            } else if (skillPath.startsWith(dirPrefix)
-                    && !skillPath.substring(dirPrefix.length()).contains("/")) {
+            } else if (skillPath.startsWith(dirPrefix)) {
+                var rest = skillPath.substring(dirPrefix.length());
+                var index = rest.indexOf('/');
                 found = true;
-                children.putIfAbsent(skillPath.substring(dirPrefix.length()), DIRECTORY_MIME);
+                children.putIfAbsent(index >= 0 ? rest.substring(0, index) : rest, DIRECTORY_MIME);
             }
         }
         return found ? children : null;
@@ -186,10 +186,11 @@ public final class SkillsExtension implements ServerExtension {
     }
 
     private static List<Map<String, Object>> toResourceEntries(String parentUri, Map<String, String> children) {
+        var prefix = parentUri.endsWith("/") ? parentUri : parentUri + "/";
         return children.entrySet().stream()
                 .map(entry -> {
                     Map<String, Object> child = new LinkedHashMap<>();
-                    child.put("uri", parentUri + "/" + entry.getKey());
+                    child.put("uri", prefix + entry.getKey());
                     child.put("name", entry.getKey());
                     child.put("mimeType", entry.getValue());
                     return child;
@@ -231,69 +232,13 @@ public final class SkillsExtension implements ServerExtension {
         private final List<SkillsRegistry> registries = new ArrayList<>();
 
         /**
-         * Adds every skill directory under {@code skillsRoot}: each subdirectory containing a
-         * {@code SKILL.md} becomes a skill named after its directory.
+         * Adds a skill registry. Construct {@link PathSkillsRegistry} or
+         * {@link ClasspathSkillsRegistry} directly, or supply a custom {@link SkillsRegistry} —
+         * the registry itself resolves skills from its source.
          *
-         * @param skillsRoot the directory containing the skill directories
+         * @param registry the skill registry
          * @return this builder
          */
-        public Builder addSkillDir(Path skillsRoot) {
-            return registry(new PathSkillsRegistry(skillsRoot));
-        }
-
-        /**
-         * Adds a single skill from the directory {@code skillDir}, named after its directory.
-         *
-         * @param skillDir the skill directory
-         * @return this builder
-         */
-        public Builder addSkill(Path skillDir) {
-            return addSkill(skillDir, skillDir.getFileName().toString());
-        }
-
-        /**
-         * Adds a single skill from the directory {@code skillDir} under the given skill path.
-         *
-         * @param skillDir the skill directory
-         * @param skillPath the skill path; its final segment must equal the frontmatter {@code name}
-         * @return this builder
-         */
-        public Builder addSkill(Path skillDir, String skillPath) {
-            return registry(new PathSkillsRegistry(skillDir, skillPath));
-        }
-
-        /**
-         * Adds every classpath skill directory under {@code skillsResource}.
-         *
-         * @param skillsResource the classpath directory containing the skill directories
-         * @return this builder
-         */
-        public Builder addClasspathSkillDir(String skillsResource) {
-            return registry(new ClasspathSkillsRegistry(skillsResource));
-        }
-
-        /**
-         * Adds a single classpath skill directory, named after its last path segment.
-         *
-         * @param skillResource the classpath path of the skill directory
-         * @return this builder
-         */
-        public Builder addClasspathSkill(String skillResource) {
-            return addClasspathSkill(skillResource, SkillsScanner.lastSegment(skillResource));
-        }
-
-        /**
-         * Adds a single classpath skill directory under the given skill path.
-         *
-         * @param skillResource the classpath path of the skill directory
-         * @param skillPath the skill path; its final segment must equal the frontmatter {@code name}
-         * @return this builder
-         */
-        public Builder addClasspathSkill(String skillResource, String skillPath) {
-            return registry(new ClasspathSkillsRegistry(skillResource, skillPath));
-        }
-
-        /** Adds a custom skill registry. */
         public Builder registry(SkillsRegistry registry) {
             registries.add(registry);
             return this;

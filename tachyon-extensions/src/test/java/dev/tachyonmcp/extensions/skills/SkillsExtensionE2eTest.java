@@ -38,8 +38,9 @@ class SkillsExtensionE2eTest {
 
     @Test
     void classpathSkillsListedWithDigests() throws Exception {
-        startServer(builder -> builder.extension(
-                SkillsExtension.builder().addClasspathSkillDir("skills").build()));
+        startServer(builder -> builder.extension(SkillsExtension.builder()
+                .registry(new ClasspathSkillsRegistry("skills"))
+                .build()));
 
         try (var client = createClient()) {
             // language=JSON
@@ -86,8 +87,9 @@ class SkillsExtensionE2eTest {
 
     @Test
     void classpathSkillGetReturnsRequestedSkill() throws Exception {
-        startServer(builder -> builder.extension(
-                SkillsExtension.builder().addClasspathSkillDir("skills").build()));
+        startServer(builder -> builder.extension(SkillsExtension.builder()
+                .registry(new ClasspathSkillsRegistry("skills"))
+                .build()));
 
         try (var client = createClient()) {
             // language=JSON
@@ -121,8 +123,9 @@ class SkillsExtensionE2eTest {
 
     @Test
     void classpathSkillFileReadAsTextResource() throws Exception {
-        startServer(builder -> builder.extension(
-                SkillsExtension.builder().addClasspathSkillDir("skills").build()));
+        startServer(builder -> builder.extension(SkillsExtension.builder()
+                .registry(new ClasspathSkillsRegistry("skills"))
+                .build()));
 
         try (var client = createClient()) {
             // language=JSON
@@ -149,8 +152,9 @@ class SkillsExtensionE2eTest {
 
     @Test
     void classpathSkillDirectoryListsRootChildren() throws Exception {
-        startServer(builder -> builder.extension(
-                SkillsExtension.builder().addClasspathSkillDir("skills").build()));
+        startServer(builder -> builder.extension(SkillsExtension.builder()
+                .registry(new ClasspathSkillsRegistry("skills"))
+                .build()));
 
         try (var client = createClient()) {
             // language=JSON
@@ -176,8 +180,9 @@ class SkillsExtensionE2eTest {
 
     @Test
     void classpathSkillDirectoryListsNestedChildren() throws Exception {
-        startServer(builder -> builder.extension(
-                SkillsExtension.builder().addClasspathSkillDir("skills").build()));
+        startServer(builder -> builder.extension(SkillsExtension.builder()
+                .registry(new ClasspathSkillsRegistry("skills"))
+                .build()));
 
         try (var client = createClient()) {
             // language=JSON
@@ -201,8 +206,9 @@ class SkillsExtensionE2eTest {
 
     @Test
     void fileSystemSkillsServed() throws Exception {
-        startServer(builder -> builder.extension(
-                SkillsExtension.builder().addSkillDir(FIXTURES).build()));
+        startServer(builder -> builder.extension(SkillsExtension.builder()
+                .registry(new PathSkillsRegistry(FIXTURES))
+                .build()));
 
         try (var client = createClient()) {
             // language=JSON
@@ -251,8 +257,8 @@ class SkillsExtensionE2eTest {
     @Test
     void singleSkillsUnderExplicitPaths() throws Exception {
         startServer(builder -> builder.extension(SkillsExtension.builder()
-                .addSkill(FIXTURES.resolve("git-workflow"), "team/git-workflow")
-                .addClasspathSkill("skills/pdf-processing", "acme/pdf-processing")
+                .registry(new PathSkillsRegistry(FIXTURES.resolve("git-workflow"), "team/git-workflow"))
+                .registry(new ClasspathSkillsRegistry("skills/pdf-processing", "acme/pdf-processing"))
                 .build()));
 
         try (var client = createClient()) {
@@ -300,9 +306,55 @@ class SkillsExtensionE2eTest {
     }
 
     @Test
+    void rootDirectoryListsNamespaces() throws Exception {
+        startServer(builder -> builder.extension(SkillsExtension.builder()
+                .registry(new PathSkillsRegistry(FIXTURES.resolve("git-workflow"), "team/git-workflow"))
+                .registry(new ClasspathSkillsRegistry("skills/pdf-processing", "acme/pdf-processing"))
+                .build()));
+
+        try (var client = createClient()) {
+            // language=JSON
+            var root = client.post("""
+                {"jsonrpc":"2.0","id":1,"method":"resources/directory/read","params":{"uri":"skill://","_meta":{"%s":{}}}}
+                """.formatted(SkillsExtension.ID));
+            // language=JSON
+            assertThatJson(root.body()).isEqualTo("""
+                {
+                  "jsonrpc":"2.0",
+                  "id":1,
+                  "result":{
+                    "resources":[
+                      {"uri":"skill://acme","name":"acme","mimeType":"inode/directory"},
+                      {"uri":"skill://team","name":"team","mimeType":"inode/directory"}
+                    ]
+                  }
+                }
+                """);
+
+            // language=JSON
+            var namespace = client.post("""
+                {"jsonrpc":"2.0","id":2,"method":"resources/directory/read","params":{"uri":"skill://team","_meta":{"%s":{}}}}
+                """.formatted(SkillsExtension.ID));
+            // language=JSON
+            assertThatJson(namespace.body()).isEqualTo("""
+                {
+                  "jsonrpc":"2.0",
+                  "id":2,
+                  "result":{
+                    "resources":[
+                      {"uri":"skill://team/git-workflow","name":"git-workflow","mimeType":"inode/directory"}
+                    ]
+                  }
+                }
+                """);
+        }
+    }
+
+    @Test
     void methodsHiddenUntilExtensionDeclared() throws Exception {
-        startServer(builder -> builder.extension(
-                SkillsExtension.builder().addClasspathSkillDir("skills").build()));
+        startServer(builder -> builder.extension(SkillsExtension.builder()
+                .registry(new ClasspathSkillsRegistry("skills"))
+                .build()));
 
         try (var client = new Mcp20260728Client(server.port())) {
             // language=JSON
@@ -345,8 +397,9 @@ class SkillsExtensionE2eTest {
 
     @Test
     void unknownSkillsAndDirectoriesFail() throws Exception {
-        startServer(builder -> builder.extension(
-                SkillsExtension.builder().addClasspathSkillDir("skills").build()));
+        startServer(builder -> builder.extension(SkillsExtension.builder()
+                .registry(new ClasspathSkillsRegistry("skills"))
+                .build()));
 
         try (var client = createClient()) {
             // language=JSON
@@ -371,8 +424,9 @@ class SkillsExtensionE2eTest {
 
     @Test
     void skillResourcesVisibleInResourcesListWhenDeclared() throws Exception {
-        startServer(builder -> builder.extension(
-                SkillsExtension.builder().addClasspathSkillDir("skills").build()));
+        startServer(builder -> builder.extension(SkillsExtension.builder()
+                .registry(new ClasspathSkillsRegistry("skills"))
+                .build()));
 
         try (var client = createClient()) {
             // language=JSON
@@ -403,8 +457,7 @@ class SkillsExtensionE2eTest {
     }
 
     private void startServer(Consumer<ServerBuilder> configurer) {
-        var started = McpTestServers.start(configurer, server -> {});
-        this.server = started;
+        this.server = McpTestServers.start(configurer, server -> {});
     }
 
     private Mcp20260728Client createClient() {

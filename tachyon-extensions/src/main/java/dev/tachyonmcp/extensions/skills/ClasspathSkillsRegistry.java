@@ -15,11 +15,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Default {@link SkillsRegistry} serving skills from classpath resources (a directory inside a
- * JAR or on the classpath).
- *
- * <p>Use {@link SkillsExtension.Builder#addClasspathSkillDir(String)} or
- * {@link SkillsExtension.Builder#addClasspathSkill(String, String)} instead of constructing
- * directly.
+ * JAR or on the classpath). Pass an instance to {@link SkillsExtension.Builder#registry(SkillsRegistry)}.
  */
 public final class ClasspathSkillsRegistry extends BaseSkillsRegistry {
 
@@ -75,7 +71,8 @@ public final class ClasspathSkillsRegistry extends BaseSkillsRegistry {
 
     private void scanJar(URL url, @Nullable String skillPath) {
         try {
-            var connection = (JarURLConnection) url.openConnection();
+            final var connection = (JarURLConnection) url.openConnection();
+            connection.setUseCaches(false);
             var base = connection.getEntryName();
             if (base == null) {
                 throw new IllegalArgumentException("Jar resource has no entry: " + url);

@@ -80,6 +80,11 @@ server.start();
 
 `TasksExtension.instance()` is the reference implementation. See [tasks.md](tasks.md) for details.
 
+## Built-in: SkillsExtension
+
+`SkillsExtension` serves Agent Skills as `skill://` resources per SEP-2640. See
+[extensions/mcp-skills.md](extensions/mcp-skills.md) for details.
+
 ## Extension shutdown
 
 Override `shutdown()` to release resources when the server stops:
