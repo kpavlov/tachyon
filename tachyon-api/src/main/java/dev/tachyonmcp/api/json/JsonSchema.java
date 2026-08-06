@@ -4,7 +4,6 @@ package dev.tachyonmcp.api.json;
 import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import dev.tachyonmcp.api.json.spi.JsonSchemaFactory;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 

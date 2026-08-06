@@ -22,5 +22,13 @@ import java.util.concurrent.CompletionStage;
 @ExperimentalApi
 public interface AsyncTypedToolFn<I, O> {
 
+    /**
+     * Invokes the handler with the decoded input.
+     *
+     * @param ctx the interaction context
+     * @param input the tool arguments decoded into {@code I}
+     * @return a future that completes with the result, wrapped as structured content; failures
+     *     propagate through the returned stage
+     */
     CompletionStage<? extends O> apply(InteractionContext ctx, I input);
 }

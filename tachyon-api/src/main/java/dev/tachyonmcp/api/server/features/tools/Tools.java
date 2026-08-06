@@ -41,6 +41,8 @@ public interface Tools {
      * ToolDescriptor#outputSchema()}, they are filled in via {@link JsonSchema#generated(Class)}
      * for {@code inputType}/{@code outputType} respectively.
      *
+     * @param <I> the type arguments are decoded into
+     * @param <O> the result type
      * @param inputType  the type arguments are decoded into
      * @param outputType the result type
      * @param descriptor the tool descriptor
@@ -60,6 +62,8 @@ public interface Tools {
      * Builds and registers a tool with a synchronous function operating on decoded, typed
      * arguments. See {@link #register(Class, Class, ToolDescriptor, TypedToolFn)}.
      *
+     * @param <I> the type arguments are decoded into
+     * @param <O> the result type
      * @param inputType  the type arguments are decoded into
      * @param outputType the result type
      * @param configurer the descriptor builder configurer
@@ -103,6 +107,8 @@ public interface Tools {
      * Registers a tool with an asynchronous function operating on decoded, typed arguments. See
      * {@link #register(Class, Class, ToolDescriptor, TypedToolFn)}.
      *
+     * @param <I> the type arguments are decoded into
+     * @param <O> the result type
      * @param inputType  the type arguments are decoded into
      * @param outputType the result type
      * @param descriptor the tool descriptor
@@ -122,6 +128,8 @@ public interface Tools {
      * Builds and registers a tool with an asynchronous function operating on decoded, typed
      * arguments. See {@link #register(Class, Class, ToolDescriptor, TypedToolFn)}.
      *
+     * @param <I> the type arguments are decoded into
+     * @param <O> the result type
      * @param inputType  the type arguments are decoded into
      * @param outputType the result type
      * @param configurer the descriptor builder configurer

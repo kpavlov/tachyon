@@ -21,5 +21,14 @@ import dev.tachyonmcp.api.runtime.InteractionContext;
 @ExperimentalApi
 public interface TypedToolFn<I, O> {
 
+    /**
+     * Invokes the handler with the decoded input.
+     *
+     * @param ctx the interaction context
+     * @param input the tool arguments decoded into {@code I}
+     * @return the result, wrapped as structured content
+     * @throws Exception if the handler fails; the dispatcher logs it and maps it to a JSON-RPC
+     *     error
+     */
     O apply(InteractionContext ctx, I input) throws Exception;
 }
