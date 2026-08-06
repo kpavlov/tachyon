@@ -151,15 +151,6 @@ public final class Args implements JsonObject {
     }
 
     /**
-     * Returns the full arguments as a JSON string.
-     *
-     * @return the JSON string
-     */
-    public String rawJson() {
-        return json();
-    }
-
-    /**
      * Decodes the full arguments into the given type using the configured serde.
      *
      * @param <T>        the target type
@@ -174,7 +165,7 @@ public final class Args implements JsonObject {
             throw new IllegalStateException("PayloadDeserializer is not configured for these args");
         }
         try {
-            return deserializer.deserialize(rawJson(), targetType);
+            return deserializer.deserialize(json(), targetType);
         } catch (InvalidArgumentException e) {
             throw e;
         } catch (RuntimeException e) {

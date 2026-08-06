@@ -166,7 +166,7 @@ class ArgsTest {
         var args = Args.from(values, new EchoingPayloadDeserializer());
 
         assertThat(args.stringValue("source")).isEqualTo("map");
-        assertThat(args.rawJson()).isEqualTo("{\"source\":\"provider\"}");
+        assertThat(args.json()).isEqualTo("{\"source\":\"provider\"}");
         assertThat(args.decode(String.class)).isEqualTo("{\"source\":\"provider\"}");
         assertThat(args.unwrap(Object.class)).containsSame(provider);
     }
