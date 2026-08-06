@@ -25,8 +25,7 @@ public interface SkillsRegistry {
      * @param fileUri the file's resource URI, as in {@link SkillFile#uri()}
      * @return the file bytes, or {@code null} if no such file is served
      */
-    @Nullable
-    byte[] readFile(String fileUri);
+    byte @Nullable [] readFile(String fileUri);
 
     /**
      * A single skill: the directory {@code <skill-path>} whose files are exposed as

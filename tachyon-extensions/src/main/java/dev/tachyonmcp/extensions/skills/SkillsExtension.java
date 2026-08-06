@@ -48,8 +48,12 @@ public final class SkillsExtension implements ServerExtension {
     private final SkillsRegistry registry;
     private final Map<String, SkillsRegistry.Skill> skillsByPath = new LinkedHashMap<>();
     private final Set<String> fileUris;
+    private final long cacheTtlMs;
+    private final String cacheScope;
 
-    private SkillsExtension(List<SkillsRegistry> registries) {
+    private SkillsExtension(List<SkillsRegistry> registries, long cacheTtlMs, String cacheScope) {
+        this.cacheTtlMs = cacheTtlMs;
+        this.cacheScope = cacheScope;
         this.registry = new CompositeSkillsRegistry(registries);
         var uris = new HashSet<String>();
         for (var skill : registry.skills()) {
@@ -117,7 +121,13 @@ public final class SkillsExtension implements ServerExtension {
         }
         return Map.of(
                 "skills",
-                skillsByPath.values().stream().map(SkillsExtension::skillEntry).toList());
+                skillsByPath.values().stream().map(SkillsExtension::skillEntry).toList(),
+                "resultType",
+                "complete",
+                "ttlMs",
+                cacheTtlMs,
+                "cacheScope",
+                cacheScope);
     }
 
     private Object getSkill(InteractionContext interaction, @Nullable JsonObject params) {
@@ -230,6 +240,8 @@ public final class SkillsExtension implements ServerExtension {
     public static final class Builder {
 
         private final List<SkillsRegistry> registries = new ArrayList<>();
+        private long cacheTtlMs = 0;
+        private String cacheScope = "public";
 
         /**
          * Adds a skill registry. Construct {@link PathSkillsRegistry} or
@@ -244,9 +256,43 @@ public final class SkillsExtension implements ServerExtension {
             return this;
         }
 
+        /**
+         * Sets the {@code ttlMs} cache-freshness hint (SEP-2549) attached to {@code skills/list}
+         * results: how long, in milliseconds, a client MAY cache the listing before re-fetching.
+         * Defaults to {@code 0} (always stale — the client MAY re-fetch every time).
+         *
+         * @param cacheTtlMs milliseconds to consider the listing fresh; must be {@code >= 0}
+         * @return this builder
+         */
+        public Builder cacheTtlMs(long cacheTtlMs) {
+            if (cacheTtlMs < 0) {
+                throw new IllegalArgumentException("cacheTtlMs must be >= 0, was " + cacheTtlMs);
+            }
+            this.cacheTtlMs = cacheTtlMs;
+            return this;
+        }
+
+        /**
+         * Sets the {@code cacheScope} (SEP-2549) attached to {@code skills/list} results:
+         * {@code "public"} when the listing may be cached and shared across authorization
+         * contexts, or {@code "private"} when it must be cached only within the same
+         * authorization context. Defaults to {@code "public"}.
+         *
+         * @param cacheScope {@code "public"} or {@code "private"}
+         * @return this builder
+         */
+        public Builder cacheScope(String cacheScope) {
+            if (!cacheScope.equals("public") && !cacheScope.equals("private")) {
+                throw new IllegalArgumentException(
+                        "cacheScope must be 'public' or 'private', was '" + cacheScope + "'");
+            }
+            this.cacheScope = cacheScope;
+            return this;
+        }
+
         /** Builds the extension. */
         public SkillsExtension build() {
-            return new SkillsExtension(registries);
+            return new SkillsExtension(registries, cacheTtlMs, cacheScope);
         }
     }
 }

@@ -2,17 +2,28 @@
 package dev.tachyonmcp.extensions.skills;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.core.server.ServerBuilder;
 import dev.tachyonmcp.core.server.TachyonServer;
+import dev.tachyonmcp.core.server.features.resources.MimeTypes;
 import dev.tachyonmcp.testkit.Mcp20260728Client;
 import dev.tachyonmcp.testkit.McpTestServers;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.JsonNodeFactory;
 
 /**
@@ -78,10 +89,34 @@ class SkillsExtensionE2eTest {
                           {"uri":"skill://pdf-processing/templates/invoice.md","digest":"sha256:cd1a5be9eb7a5a46feea259ca26620f73dbd3587cc5111da44fff6489993c643"}
                         ]
                       }
-                    ]
+                    ],
+                    "resultType":"complete",
+                    "ttlMs":0,
+                    "cacheScope":"public"
                   }
                 }
                 """);
+        }
+    }
+
+    @Test
+    void skillsListHonorsConfiguredCacheTtlAndScope() throws Exception {
+        startServer(builder -> builder.extension(SkillsExtension.builder()
+                .registry(new ClasspathSkillsRegistry("skills"))
+                .cacheTtlMs(60_000)
+                .cacheScope("private")
+                .build()));
+
+        try (var client = createClient()) {
+            // language=JSON
+            var list = client.post("""
+                {"jsonrpc":"2.0","id":1,"method":"skills/list","params":{"_meta":{"%s":{}}}}
+                """.formatted(SkillsExtension.ID));
+
+            var result = new ObjectMapper().readTree(list.body()).path("result");
+            assertThat(result.path("resultType").asString()).isEqualTo("complete");
+            assertThat(result.path("ttlMs").asLong()).isEqualTo(60_000L);
+            assertThat(result.path("cacheScope").asString()).isEqualTo("private");
         }
     }
 
@@ -247,7 +282,10 @@ class SkillsExtensionE2eTest {
                           {"uri":"skill://pdf-processing/templates/invoice.md","digest":"sha256:cd1a5be9eb7a5a46feea259ca26620f73dbd3587cc5111da44fff6489993c643"}
                         ]
                       }
-                    ]
+                    ],
+                    "resultType":"complete",
+                    "ttlMs":0,
+                    "cacheScope":"public"
                   }
                 }
                 """);
@@ -298,7 +336,10 @@ class SkillsExtensionE2eTest {
                           {"uri":"skill://acme/pdf-processing/templates/invoice.md","digest":"sha256:cd1a5be9eb7a5a46feea259ca26620f73dbd3587cc5111da44fff6489993c643"}
                         ]
                       }
-                    ]
+                    ],
+                    "resultType":"complete",
+                    "ttlMs":0,
+                    "cacheScope":"public"
                   }
                 }
                 """);
@@ -423,37 +464,104 @@ class SkillsExtensionE2eTest {
     }
 
     @Test
-    void skillResourcesVisibleInResourcesListWhenDeclared() throws Exception {
+    void resourcesListMatchesFixtures() throws Exception {
         startServer(builder -> builder.extension(SkillsExtension.builder()
                 .registry(new ClasspathSkillsRegistry("skills"))
                 .build()));
 
         try (var client = createClient()) {
+            var mapper = new ObjectMapper();
+            var digestsByUri = digestsByUri(client, mapper);
+
             // language=JSON
-            var response = client.post("""
+            var list = client.post("""
                 {"jsonrpc":"2.0","id":1,"method":"resources/list","params":{"_meta":{"%s":{}}}}
                 """.formatted(SkillsExtension.ID));
 
-            // language=JSON
-            assertThatJson(response.body()).isEqualTo("""
-                {
-                  "jsonrpc":"2.0",
-                  "id":1,
-                  "result":{
-                    "resources":[
-                      {"uri":"skill://git-workflow/SKILL.md","name":"git-workflow/SKILL.md","description":"Follow this team's Git conventions for branching and commits","mimeType":"text/markdown"},
-                      {"uri":"skill://git-workflow/references/BRANCHING.md","name":"git-workflow/references/BRANCHING.md","mimeType":"text/markdown"},
-                      {"uri":"skill://pdf-processing/SKILL.md","name":"pdf-processing/SKILL.md","description":"Extract, fill, and assemble PDF documents","mimeType":"text/markdown"},
-                      {"uri":"skill://pdf-processing/scripts/extract.py","name":"pdf-processing/scripts/extract.py","mimeType":"text/plain"},
-                      {"uri":"skill://pdf-processing/templates/invoice.md","name":"pdf-processing/templates/invoice.md","mimeType":"text/markdown"}
-                    ],
-                    "resultType":"complete",
-                    "ttlMs":0,
-                    "cacheScope":"public"
-                  }
-                }
-                """);
+            var resources = mapper.readTree(list.body()).path("result").path("resources");
+            assertThat(resources.isArray()).isTrue();
+
+            var relativePaths = new ArrayList<String>();
+            for (var resource : resources) {
+                var uri = resource.path("uri").asString();
+                var relativePath = uri.substring("skill://".length());
+                relativePaths.add(relativePath);
+
+                assertMatchesFixture(client, mapper, resource, uri, relativePath, digestsByUri.get(uri));
+            }
+
+            assertThat(relativePaths)
+                    .containsExactlyInAnyOrder(
+                            "git-workflow/SKILL.md",
+                            "git-workflow/references/BRANCHING.md",
+                            "pdf-processing/SKILL.md",
+                            "pdf-processing/scripts/extract.py",
+                            "pdf-processing/templates/invoice.md");
         }
+    }
+
+    private Map<String, String> digestsByUri(Mcp20260728Client client, ObjectMapper mapper) throws Exception {
+        // language=JSON
+        var skillsList = client.post("""
+                {"jsonrpc":"2.0","id":1,"method":"skills/list","params":{"_meta":{"%s":{}}}}
+                """.formatted(SkillsExtension.ID));
+
+        var digests = new HashMap<String, String>();
+        for (var skill : mapper.readTree(skillsList.body()).path("result").path("skills")) {
+            for (var resource : skill.path("resources")) {
+                digests.put(
+                        resource.path("uri").asString(), resource.path("digest").asString());
+            }
+        }
+        return digests;
+    }
+
+    private void assertMatchesFixture(
+            Mcp20260728Client client,
+            ObjectMapper mapper,
+            JsonNode resource,
+            String uri,
+            String relativePath,
+            String expectedDigest)
+            throws Exception {
+        var actualBytes = Files.readAllBytes(FIXTURES.resolve(relativePath));
+        var loadedBytes = readContent(client, mapper, uri);
+
+        assertThat(loadedBytes).as("content of %s", uri).isEqualTo(actualBytes);
+        assertThat(sha256(loadedBytes)).as("digest of %s", uri).isEqualTo(expectedDigest);
+
+        assertThat(resource.path("name").asString()).as("name of %s", uri).isEqualTo(relativePath);
+        assertThat(resource.path("mimeType").asString())
+                .as("mimeType of %s", uri)
+                .isEqualTo(MimeTypes.guess(relativePath));
+
+        if (relativePath.endsWith("/SKILL.md")) {
+            var frontmatter = FrontmatterParser.parse(actualBytes);
+            assertThat(resource.path("description").asString())
+                    .as("description of %s", uri)
+                    .isEqualTo(String.valueOf(frontmatter.get("description")));
+        } else {
+            assertThat(resource.has("description"))
+                    .as("no description for %s", uri)
+                    .isFalse();
+        }
+    }
+
+    private byte[] readContent(Mcp20260728Client client, ObjectMapper mapper, String uri) throws Exception {
+        // language=JSON
+        var read = client.post("""
+                {"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"%s","_meta":{"%s":{}}}}
+                """.formatted(uri, SkillsExtension.ID));
+        var content =
+                mapper.readTree(read.body()).path("result").path("contents").get(0);
+        return content.has("text")
+                ? content.path("text").asString().getBytes(StandardCharsets.UTF_8)
+                : Base64.getDecoder().decode(content.path("blob").asString());
+    }
+
+    private static String sha256(byte[] bytes) throws Exception {
+        var digest = MessageDigest.getInstance("SHA-256");
+        return "sha256:" + HexFormat.of().formatHex(digest.digest(bytes));
     }
 
     private void startServer(Consumer<ServerBuilder> configurer) {
