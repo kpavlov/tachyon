@@ -10,12 +10,14 @@
 <div style="align-content: center">
   <img
     src="docs/assets/social-banner.jpg"
-    alt=""
+    alt="Tachyon MCP banner"
     style="width: 100%; height: auto;border-radius: 10px"
   />
 </div>
 
-**Tachyon MCP** is a Java 21+ and Kotlin [Model Context Protocol](https://modelcontextprotocol.io) (MCP) SDK built with [Netty](https://netty.io). It implements **MCP 2025-11-25** and the upcoming **MCP 2026-07-28** over Streamable HTTP and runs stateless by default. **It passes all official conformance tests for both protocol versions!**
+**Tachyon MCP** is a Java 21+ and Kotlin [Model Context Protocol](https://modelcontextprotocol.io) (MCP) SDK built
+with [Netty](https://netty.io). It implements **MCP 2025-11-25** and **MCP 2026-07-28** over Streamable HTTP and runs
+stateless by default. **It passes all official conformance tests for both protocol versions!**
 
 ## 💫 Why Tachyon?
 
@@ -67,19 +69,19 @@ Opt into sessions for SSE resumability, `Last-Event-ID` replay, and TTL cleanup.
 
 ## Documentation
 
-| Guide                                     | Description                                                  |
-|-------------------------------------------|--------------------------------------------------------------|
-| [Quickstart](docs/quickstart.md)          | Build a working server in 5 minutes                          |
-| [Configuration](docs/configuration.md)    | Network, I/O engine (native transports), sessions, CORS      |
-| [Tools](docs/tools.md)                    | Sync/async handlers, input schema, `ToolResult`              |
-| [Resources](docs/resources.md)            | Static URIs, dynamic handlers, URI templates                 |
-| [Tasks](docs/tasks.md)                    | Long-running operations, state machine, `TasksExtension`     |
-| [Extensions](docs/extensions.md)          | Custom protocol extensions, negotiation                      |
-| [FAQ](docs/faq.md)                        | Java, frameworks, concurrency, deployment, and compatibility |
-| [Kotlin DSL](docs/kotlin.md)              | Coroutine-first DSL, `TachyonServer { }`, scope reference    |
-| [Kotlin module](tachyon-kotlin/README.md) | `tachyon-kotlin` module overview                             |
-| [Testkit](tachyon-testkit/README.md)     | Test harness: shaping clients, dynamic-port servers        |
-| [Examples](examples/README.md)            | Runnable Java & Kotlin example servers                       |
+- [Quickstart](docs/quickstart.md) - Build a working server in 5 minutes
+- [Configuration](docs/configuration.md) - Network, I/O engine (native transports), sessions, CORS
+- [Tools](docs/tools.md) - Sync/async handlers, input schema, `ToolResult`
+- [Resources](docs/resources.md) - Static URIs, dynamic handlers, URI templates
+- [Tasks](docs/tasks.md) - Long-running operations, state machine, `TasksExtension`
+- [Extensions](docs/extensions.md) - Custom protocol extensions, negotiation
+- [FAQ](docs/faq.md) - Java, frameworks, concurrency, deployment, and compatibility
+- [Kotlin DSL](docs/kotlin.md) - Coroutine-first DSL, `TachyonServer { }`, scope reference
+- [Kotlin module](tachyon-kotlin/README.md) - `tachyon-kotlin` module overview
+- [Testkit](tachyon-testkit/README.md) - Test harness: shaping clients, dynamic-port servers
+- [Examples](examples/README.md) - Runnable Java & Kotlin example servers
+- [Migrate from Kotlin MCP SDK](docs/migrate-from-kotlin-mcp-to-tachyon.md) - Moving an existing Kotlin MCP SDK server
+  to Tachyon
 
 ## Agent Skill
 

@@ -13,7 +13,7 @@
     <packaging>pom</packaging>
 
     <name>Tachyon MCP</name>
-    <description>Post-quantum Model Context Protocol (MCP) server</description>
+    <description>Model Context Protocol (MCP) server for Java and Kotlin</description>
     <url>https://github.com/kpavlov/tachyon</url>
     <organization>
         <name>IT Staff</name>
