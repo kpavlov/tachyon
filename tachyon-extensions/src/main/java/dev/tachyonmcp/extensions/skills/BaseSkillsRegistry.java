@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +22,7 @@ abstract class BaseSkillsRegistry implements SkillsRegistry {
 
     private final Map<String, SkillsRegistry.Skill> skillsByPath = new LinkedHashMap<>();
     private final Map<String, byte[]> bytesByUri = new HashMap<>();
+    private final Map<String, Path> pathsByUri = new HashMap<>();
 
     @Override
     public final List<SkillsRegistry.Skill> skills() {
@@ -29,7 +31,21 @@ abstract class BaseSkillsRegistry implements SkillsRegistry {
 
     @Override
     public final @Nullable byte[] readFile(String fileUri) {
-        return bytesByUri.get(fileUri);
+        var cached = bytesByUri.get(fileUri);
+        if (cached != null) {
+            return cached;
+        }
+        var path = pathsByUri.get(fileUri);
+        if (path == null) {
+            return null;
+        }
+        // Filesystem-backed files are re-read on demand rather than cached at scan time; a file
+        // edited on disk after scanning can therefore diverge from the digest reported by skills().
+        try {
+            return Files.readAllBytes(path);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /** Scans a directory of skills: every subdirectory containing a {@code SKILL.md} becomes a skill. */
@@ -37,7 +53,7 @@ abstract class BaseSkillsRegistry implements SkillsRegistry {
         try (var children = Files.list(root)) {
             children.filter(Files::isDirectory)
                     .sorted(Comparator.comparing(child -> child.getFileName().toString()))
-                    .forEach(child -> addPath(child, child.getFileName().toString(), false));
+                    .forEach(child -> addPath(child, child.getFileName().toString(), this::registerOrSkip));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -45,39 +61,73 @@ abstract class BaseSkillsRegistry implements SkillsRegistry {
 
     /** Scans a single skill directory; rethrows {@link IllegalArgumentException} on invalid skills. */
     protected final void addSkill(Path skillDir, String skillPath) {
-        addPath(skillDir, skillPath, true);
+        addPath(skillDir, skillPath, this::registerStrict);
     }
 
-    /** Registers a skill from pre-read files (relative path → bytes); skips invalid skills unless strict. */
-    protected final void addFiles(String skillPath, Map<String, byte[]> files, boolean strict) {
-        try {
-            var skill = SkillsScanner.buildSkill(skillPath, files);
-            skillsByPath.put(skill.skillPath(), skill);
-            for (var file : skill.files()) {
-                bytesByUri.put(file.uri(), files.get(file.relativePath()));
-            }
-        } catch (IllegalArgumentException e) {
-            if (strict) {
-                throw e;
-            }
-            logger.warn("Skipping skill directory '{}': {}", skillPath, e.getMessage());
+    /** Registers a skill from pre-read files (relative path → bytes); rethrows on an invalid skill. */
+    protected final void addFilesStrict(String skillPath, Map<String, byte[]> files) {
+        registerFiles(skillPath, files, this::registerStrict);
+    }
+
+    /** Registers a skill from pre-read files (relative path → bytes); skips and logs an invalid skill. */
+    protected final void addFilesLenient(String skillPath, Map<String, byte[]> files) {
+        registerFiles(skillPath, files, this::registerOrSkip);
+    }
+
+    private void registerFiles(
+            String skillPath,
+            Map<String, byte[]> files,
+            BiFunction<String, Map<String, byte[]>, SkillsRegistry.@Nullable Skill> register) {
+        var skill = register.apply(skillPath, files);
+        if (skill == null) {
+            return;
+        }
+        for (var file : skill.files()) {
+            bytesByUri.put(file.uri(), files.get(file.relativePath()));
         }
     }
 
-    private void addPath(Path skillDir, String skillPath, boolean strict) {
+    private void addPath(
+            Path skillDir,
+            String skillPath,
+            BiFunction<String, Map<String, byte[]>, SkillsRegistry.@Nullable Skill> register) {
         try (var walk = Files.walk(skillDir)) {
+            var relativePaths = new HashMap<String, Path>();
             var files = new HashMap<String, byte[]>();
             walk.filter(Files::isRegularFile).forEach(file -> {
                 var relative = skillDir.relativize(file).toString().replace('\\', '/');
+                relativePaths.put(relative, file);
                 try {
                     files.put(relative, Files.readAllBytes(file));
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
                 }
             });
-            addFiles(skillPath, files, strict);
+            var skill = register.apply(skillPath, files);
+            if (skill != null) {
+                for (var file : skill.files()) {
+                    pathsByUri.put(file.uri(), relativePaths.get(file.relativePath()));
+                }
+            }
         } catch (IOException e) {
             throw new UncheckedIOException(e);
+        }
+    }
+
+    /** Builds and registers the skill, rethrowing {@link IllegalArgumentException} on an invalid skill. */
+    private SkillsRegistry.Skill registerStrict(String skillPath, Map<String, byte[]> files) {
+        var skill = SkillsScanner.buildSkill(skillPath, files);
+        skillsByPath.put(skill.skillPath(), skill);
+        return skill;
+    }
+
+    /** Builds and registers the skill, or returns {@code null} and logs a warning when invalid. */
+    private SkillsRegistry.@Nullable Skill registerOrSkip(String skillPath, Map<String, byte[]> files) {
+        try {
+            return registerStrict(skillPath, files);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Skipping skill directory '{}': {}", skillPath, e.getMessage());
+            return null;
         }
     }
 }

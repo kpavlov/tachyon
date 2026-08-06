@@ -6,6 +6,7 @@ import java.io.UncheckedIOException;
 import java.net.JarURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -29,7 +30,7 @@ public final class ClasspathSkillsRegistry extends BaseSkillsRegistry {
      * @param skillsResource the classpath directory containing the skill directories
      */
     public ClasspathSkillsRegistry(String skillsResource) {
-        scan(Thread.currentThread().getContextClassLoader(), skillsResource, null);
+        scan(contextClassLoader(), skillsResource, null);
     }
 
     /**
@@ -39,11 +40,16 @@ public final class ClasspathSkillsRegistry extends BaseSkillsRegistry {
      * @param skillPath the skill path; its final segment must equal the frontmatter {@code name}
      */
     public ClasspathSkillsRegistry(String skillResource, String skillPath) {
-        scan(Thread.currentThread().getContextClassLoader(), skillResource, skillPath);
+        scan(contextClassLoader(), skillResource, skillPath);
     }
 
     ClasspathSkillsRegistry(ClassLoader classLoader, String resource, @Nullable String skillPath) {
         scan(classLoader, resource, skillPath);
+    }
+
+    private static ClassLoader contextClassLoader() {
+        var loader = Thread.currentThread().getContextClassLoader();
+        return loader != null ? loader : ClasspathSkillsRegistry.class.getClassLoader();
     }
 
     private void scan(ClassLoader classLoader, String resource, @Nullable String skillPath) {
@@ -93,8 +99,8 @@ public final class ClasspathSkillsRegistry extends BaseSkillsRegistry {
                     var file = relative;
                     if (skillPath == null) {
                         var index = relative.indexOf('/');
-                        if (index <= 1) {
-                            // not a file inside a skill directory under the base
+                        if (index <= 0) {
+                            // no separator (file sits directly under the base) or an empty group name
                             continue;
                         }
                         group = relative.substring(0, index);
@@ -104,14 +110,18 @@ public final class ClasspathSkillsRegistry extends BaseSkillsRegistry {
                 }
             }
             for (var entry : groups.entrySet()) {
-                addFiles(entry.getKey(), entry.getValue(), skillPath != null);
+                if (skillPath != null) {
+                    addFilesStrict(entry.getKey(), entry.getValue());
+                } else {
+                    addFilesLenient(entry.getKey(), entry.getValue());
+                }
             }
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
-    private static java.nio.file.Path toPath(URL url) {
+    private static Path toPath(URL url) {
         try {
             return Paths.get(url.toURI());
         } catch (URISyntaxException e) {

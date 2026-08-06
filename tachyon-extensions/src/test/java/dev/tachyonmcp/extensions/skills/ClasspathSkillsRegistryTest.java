@@ -77,6 +77,33 @@ class ClasspathSkillsRegistryTest {
         }
     }
 
+    @Test
+    void includesSingleCharacterSkillDirectory(@TempDir Path tempDir) throws Exception {
+        var jarPath = tempDir.resolve("skills.jar");
+        try (var out = new JarOutputStream(Files.newOutputStream(jarPath))) {
+            out.putNextEntry(new JarEntry("bundled/"));
+            out.closeEntry();
+            out.putNextEntry(new JarEntry("bundled/k/"));
+            out.closeEntry();
+            out.putNextEntry(new JarEntry("bundled/k/SKILL.md"));
+            out.write("""
+                    ---
+                    name: k
+                    description: A single-letter skill
+                    ---
+                    # K
+                    """.getBytes(StandardCharsets.UTF_8));
+            out.closeEntry();
+        }
+        try (var loader = new URLClassLoader(new URL[] {jarPath.toUri().toURL()}, null)) {
+            var registry = new ClasspathSkillsRegistry(loader, "bundled", null);
+
+            assertThat(registry.skills())
+                    .extracting(SkillsRegistry.Skill::skillPath)
+                    .containsExactly("k");
+        }
+    }
+
     private static void writeTestJar(Path jarPath) throws IOException {
         try (var out = new JarOutputStream(Files.newOutputStream(jarPath))) {
             out.putNextEntry(new JarEntry("bundled/"));

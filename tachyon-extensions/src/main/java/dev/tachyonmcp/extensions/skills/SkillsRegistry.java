@@ -1,7 +1,6 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.extensions.skills;
 
-import dev.tachyonmcp.api.annotations.InternalApi;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
@@ -14,7 +13,6 @@ import org.jspecify.annotations.Nullable;
  * with YAML frontmatter) and serves their files. Default implementations: {@link PathSkillsRegistry}
  * and {@link ClasspathSkillsRegistry}.
  */
-@InternalApi
 public interface SkillsRegistry {
 
     /** Returns the skills served by this registry, in scan order. */

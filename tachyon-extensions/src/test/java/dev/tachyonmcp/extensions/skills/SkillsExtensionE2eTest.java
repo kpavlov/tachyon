@@ -37,14 +37,16 @@ class SkillsExtensionE2eTest {
     }
 
     @Test
-    void classpathSkillsServedEndToEnd() throws Exception {
+    void classpathSkillsListedWithDigests() throws Exception {
         startServer(builder -> builder.extension(
                 SkillsExtension.builder().addClasspathSkillDir("skills").build()));
 
         try (var client = createClient()) {
+            // language=JSON
             var list = client.post("""
                 {"jsonrpc":"2.0","id":1,"method":"skills/list","params":{"_meta":{"%s":{}}}}
                 """.formatted(SkillsExtension.ID));
+            // language=JSON
             assertThatJson(list.body()).isEqualTo("""
                 {
                   "jsonrpc":"2.0",
@@ -79,14 +81,24 @@ class SkillsExtensionE2eTest {
                   }
                 }
                 """);
+        }
+    }
 
+    @Test
+    void classpathSkillGetReturnsRequestedSkill() throws Exception {
+        startServer(builder -> builder.extension(
+                SkillsExtension.builder().addClasspathSkillDir("skills").build()));
+
+        try (var client = createClient()) {
+            // language=JSON
             var get = client.post("""
-                {"jsonrpc":"2.0","id":2,"method":"skills/get","params":{"uri":"skill://pdf-processing/SKILL.md","_meta":{"%s":{}}}}
+                {"jsonrpc":"2.0","id":1,"method":"skills/get","params":{"uri":"skill://pdf-processing/SKILL.md","_meta":{"%s":{}}}}
                 """.formatted(SkillsExtension.ID));
+            // language=JSON
             assertThatJson(get.body()).isEqualTo("""
                 {
                   "jsonrpc":"2.0",
-                  "id":2,
+                  "id":1,
                   "result":{
                     "skill":{
                       "uri":"skill://pdf-processing/SKILL.md",
@@ -104,14 +116,24 @@ class SkillsExtensionE2eTest {
                   }
                 }
                 """);
+        }
+    }
 
+    @Test
+    void classpathSkillFileReadAsTextResource() throws Exception {
+        startServer(builder -> builder.extension(
+                SkillsExtension.builder().addClasspathSkillDir("skills").build()));
+
+        try (var client = createClient()) {
+            // language=JSON
             var read = client.post("""
-                {"jsonrpc":"2.0","id":3,"method":"resources/read","params":{"uri":"skill://git-workflow/SKILL.md","_meta":{"%s":{}}}}
+                {"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"skill://git-workflow/SKILL.md","_meta":{"%s":{}}}}
                 """.formatted(SkillsExtension.ID));
+            // language=JSON
             assertThatJson(read.body()).isEqualTo("""
                 {
                   "jsonrpc":"2.0",
-                  "id":3,
+                  "id":1,
                   "result":{
                     "contents":[
                       {"uri":"skill://git-workflow/SKILL.md","mimeType":"text/markdown","text":"---\\nname: git-workflow\\ndescription: Follow this team's Git conventions for branching and commits\\n---\\n\\n# Git Workflow\\n\\nFollow this team's Git conventions for branching and commits.\\nUse the branching guide in `references/BRANCHING.md`.\\n"}
@@ -122,14 +144,24 @@ class SkillsExtensionE2eTest {
                   }
                 }
                 """);
+        }
+    }
 
+    @Test
+    void classpathSkillDirectoryListsRootChildren() throws Exception {
+        startServer(builder -> builder.extension(
+                SkillsExtension.builder().addClasspathSkillDir("skills").build()));
+
+        try (var client = createClient()) {
+            // language=JSON
             var directory = client.post("""
-                {"jsonrpc":"2.0","id":4,"method":"resources/directory/read","params":{"uri":"skill://pdf-processing","_meta":{"%s":{}}}}
+                {"jsonrpc":"2.0","id":1,"method":"resources/directory/read","params":{"uri":"skill://pdf-processing","_meta":{"%s":{}}}}
                 """.formatted(SkillsExtension.ID));
+            // language=JSON
             assertThatJson(directory.body()).isEqualTo("""
                 {
                   "jsonrpc":"2.0",
-                  "id":4,
+                  "id":1,
                   "result":{
                     "resources":[
                       {"uri":"skill://pdf-processing/SKILL.md","name":"SKILL.md","mimeType":"text/markdown"},
@@ -143,15 +175,42 @@ class SkillsExtensionE2eTest {
     }
 
     @Test
+    void classpathSkillDirectoryListsNestedChildren() throws Exception {
+        startServer(builder -> builder.extension(
+                SkillsExtension.builder().addClasspathSkillDir("skills").build()));
+
+        try (var client = createClient()) {
+            // language=JSON
+            var nestedDirectory = client.post("""
+                {"jsonrpc":"2.0","id":1,"method":"resources/directory/read","params":{"uri":"skill://pdf-processing/scripts","_meta":{"%s":{}}}}
+                """.formatted(SkillsExtension.ID));
+            // language=JSON
+            assertThatJson(nestedDirectory.body()).isEqualTo("""
+                {
+                  "jsonrpc":"2.0",
+                  "id":1,
+                  "result":{
+                    "resources":[
+                      {"uri":"skill://pdf-processing/scripts/extract.py","name":"extract.py","mimeType":"text/plain"}
+                    ]
+                  }
+                }
+                """);
+        }
+    }
+
+    @Test
     void fileSystemSkillsServed() throws Exception {
         startServer(builder -> builder.extension(
                 SkillsExtension.builder().addSkillDir(FIXTURES).build()));
 
         try (var client = createClient()) {
+            // language=JSON
             var response = client.post("""
                 {"jsonrpc":"2.0","id":1,"method":"skills/list","params":{"_meta":{"%s":{}}}}
                 """.formatted(SkillsExtension.ID));
 
+            // language=JSON
             assertThatJson(response.body()).isEqualTo("""
                 {
                   "jsonrpc":"2.0",
@@ -197,10 +256,12 @@ class SkillsExtensionE2eTest {
                 .build()));
 
         try (var client = createClient()) {
+            // language=JSON
             var response = client.post("""
                 {"jsonrpc":"2.0","id":1,"method":"skills/list","params":{"_meta":{"%s":{}}}}
                 """.formatted(SkillsExtension.ID));
 
+            // language=JSON
             assertThatJson(response.body()).isEqualTo("""
                 {
                   "jsonrpc":"2.0",
@@ -244,23 +305,29 @@ class SkillsExtensionE2eTest {
                 SkillsExtension.builder().addClasspathSkillDir("skills").build()));
 
         try (var client = new Mcp20260728Client(server.port())) {
+            // language=JSON
             var list = client.post("""
                 {"jsonrpc":"2.0","id":1,"method":"skills/list","params":{}}
                 """);
+            // language=JSON
             assertThatJson(list.body()).isEqualTo("""
                 {"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"Method not found"}}
                 """);
 
+            // language=JSON
             var read = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"skill://git-workflow/SKILL.md"}}
                 """);
+            // language=JSON
             assertThatJson(read.body()).isEqualTo("""
                 {"jsonrpc":"2.0","id":2,"error":{"code":-32602,"message":"Resource not found"}}
                 """);
 
+            // language=JSON
             var resources = client.post("""
                 {"jsonrpc":"2.0","id":3,"method":"resources/list","params":{}}
                 """);
+            // language=JSON
             assertThatJson(resources.body()).isEqualTo("""
                 {
                   "jsonrpc":"2.0",
@@ -282,16 +349,20 @@ class SkillsExtensionE2eTest {
                 SkillsExtension.builder().addClasspathSkillDir("skills").build()));
 
         try (var client = createClient()) {
+            // language=JSON
             var get = client.post("""
                 {"jsonrpc":"2.0","id":1,"method":"skills/get","params":{"uri":"skill://nope/SKILL.md","_meta":{"%s":{}}}}
                 """.formatted(SkillsExtension.ID));
+            // language=JSON
             assertThatJson(get.body()).isEqualTo("""
                 {"jsonrpc":"2.0","id":1,"error":{"code":-32602,"message":"Unknown skill: skill://nope/SKILL.md"}}
                 """);
 
+            // language=JSON
             var directory = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"resources/directory/read","params":{"uri":"skill://git-workflow/SKILL.md","_meta":{"%s":{}}}}
                 """.formatted(SkillsExtension.ID));
+            // language=JSON
             assertThatJson(directory.body()).isEqualTo("""
                 {"jsonrpc":"2.0","id":2,"error":{"code":-32602,"message":"Unknown skill directory: skill://git-workflow/SKILL.md"}}
                 """);
@@ -304,10 +375,12 @@ class SkillsExtensionE2eTest {
                 SkillsExtension.builder().addClasspathSkillDir("skills").build()));
 
         try (var client = createClient()) {
+            // language=JSON
             var response = client.post("""
                 {"jsonrpc":"2.0","id":1,"method":"resources/list","params":{"_meta":{"%s":{}}}}
                 """.formatted(SkillsExtension.ID));
 
+            // language=JSON
             assertThatJson(response.body()).isEqualTo("""
                 {
                   "jsonrpc":"2.0",

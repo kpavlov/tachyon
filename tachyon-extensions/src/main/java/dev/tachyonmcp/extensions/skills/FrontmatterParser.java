@@ -4,16 +4,20 @@ package dev.tachyonmcp.extensions.skills;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
 
 /** Parses the YAML frontmatter block of a {@code SKILL.md} into a JSON-compatible map. */
 final class FrontmatterParser {
 
     private static final String DELIMITER = "---";
 
-    private static final Yaml YAML = new Yaml();
-
     private FrontmatterParser() {}
+
+    private static Yaml yaml() {
+        return new Yaml(new SafeConstructor(new LoaderOptions()));
+    }
 
     /**
      * Parses the frontmatter of a {@code SKILL.md}, requiring a non-blank {@code name} and
@@ -34,9 +38,9 @@ final class FrontmatterParser {
         }
         Object loaded;
         try {
-            loaded = YAML.load(text.substring(3, end + 1));
+            loaded = yaml().load(text.substring(3, end + 1));
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid SKILL.md YAML frontmatter: " + e.getMessage());
+            throw new IllegalArgumentException("Invalid SKILL.md YAML frontmatter: " + e.getMessage(), e);
         }
         if (!(loaded instanceof Map<?, ?> map)) {
             throw new IllegalArgumentException("SKILL.md frontmatter must be a YAML mapping");

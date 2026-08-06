@@ -11,13 +11,15 @@ import dev.tachyonmcp.api.server.extensions.ExtensionSettings;
 import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
+import dev.tachyonmcp.core.server.features.resources.MimeTypes;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import org.jspecify.annotations.Nullable;
 
@@ -44,20 +46,20 @@ public final class SkillsExtension implements ServerExtension {
     private static final String SKILL_MD = "/SKILL.md";
     private static final String DIRECTORY_MIME = "inode/directory";
 
-    private final List<SkillsRegistry> registries;
+    private final SkillsRegistry registry;
     private final Map<String, SkillsRegistry.Skill> skillsByPath = new LinkedHashMap<>();
-    private final Map<String, SkillsRegistry> registryByUri = new HashMap<>();
+    private final Set<String> fileUris;
 
     private SkillsExtension(List<SkillsRegistry> registries) {
-        this.registries = List.copyOf(registries);
-        for (var registry : registries) {
-            for (var skill : registry.skills()) {
-                skillsByPath.put(skill.skillPath(), skill);
-                for (var file : skill.files()) {
-                    registryByUri.put(file.uri(), registry);
-                }
+        this.registry = new CompositeSkillsRegistry(registries);
+        var uris = new HashSet<String>();
+        for (var skill : registry.skills()) {
+            skillsByPath.put(skill.skillPath(), skill);
+            for (var file : skill.files()) {
+                uris.add(file.uri());
             }
         }
+        this.fileUris = Set.copyOf(uris);
     }
 
     /** Creates a new {@link SkillsExtension} builder. */
@@ -91,8 +93,7 @@ public final class SkillsExtension implements ServerExtension {
                 if (file.relativePath().equals("SKILL.md")) {
                     descriptor.description(String.valueOf(skill.frontmatter().get("description")));
                 }
-                var registry = registryByUri.get(file.uri());
-                server.resources().register(descriptor.build(), (context, request) -> contents(registry, file));
+                server.resources().register(descriptor.build(), (context, request) -> contents(file));
             }
         }
         server.registerHandler("skills/list", this::listSkills);
@@ -100,12 +101,12 @@ public final class SkillsExtension implements ServerExtension {
         server.registerHandler("resources/directory/read", this::readDirectory);
     }
 
-    private static ResourceContents contents(SkillsRegistry registry, SkillsRegistry.SkillFile file) {
+    private ResourceContents contents(SkillsRegistry.SkillFile file) {
         var bytes = registry.readFile(file.uri());
         if (bytes == null) {
             throw new IllegalStateException("Skill file is no longer available: " + file.uri());
         }
-        return file.mimeType().startsWith("text/")
+        return MimeTypes.isText(file.mimeType())
                 ? TextResourceContents.of(file.uri(), new String(bytes, StandardCharsets.UTF_8), file.mimeType(), null)
                 : BlobResourceContents.of(file.uri(), bytes, file.mimeType(), null);
     }
@@ -137,41 +138,63 @@ public final class SkillsExtension implements ServerExtension {
         if (uri == null) {
             return ServerErrors.invalidParams("Missing 'uri' parameter");
         }
-        if (!uri.startsWith(SKILL_SCHEME) || registryByUri.containsKey(uri)) {
+        if (!uri.startsWith(SKILL_SCHEME) || fileUris.contains(uri)) {
             return ServerErrors.invalidParams("Unknown skill directory: " + uri);
         }
-        var dirPath = uri.substring(SKILL_SCHEME.length());
+        var children = directoryChildren(uri.substring(SKILL_SCHEME.length()));
+        if (children == null) {
+            return ServerErrors.invalidParams("Unknown skill directory: " + uri);
+        }
+        return Map.of("resources", toResourceEntries(uri, children));
+    }
+
+    /** Returns the immediate children of {@code dirPath}, or {@code null} when it names no known directory. */
+    private @Nullable TreeMap<String, String> directoryChildren(String dirPath) {
         var dirPrefix = dirPath.isEmpty() ? "" : dirPath + "/";
         var children = new TreeMap<String, String>();
         var found = false;
         for (var skill : skillsByPath.values()) {
-            if (skill.skillPath().equals(dirPath)) {
+            var skillPath = skill.skillPath();
+            if (skillPath.equals(dirPath)) {
+                found |= collectChildren(skill, "", children);
+            } else if (dirPath.startsWith(skillPath + "/")) {
+                found |= collectChildren(skill, dirPath.substring(skillPath.length() + 1) + "/", children);
+            } else if (skillPath.startsWith(dirPrefix)
+                    && !skillPath.substring(dirPrefix.length()).contains("/")) {
                 found = true;
-                for (var file : skill.files()) {
-                    var index = file.relativePath().indexOf('/');
-                    children.putIfAbsent(
-                            index >= 0 ? file.relativePath().substring(0, index) : file.relativePath(),
-                            index >= 0 ? DIRECTORY_MIME : file.mimeType());
-                }
-            } else if (skill.skillPath().startsWith(dirPrefix)
-                    && !skill.skillPath().substring(dirPrefix.length()).contains("/")) {
-                found = true;
-                children.putIfAbsent(skill.skillPath().substring(dirPrefix.length()), DIRECTORY_MIME);
+                children.putIfAbsent(skillPath.substring(dirPrefix.length()), DIRECTORY_MIME);
             }
         }
-        if (!found) {
-            return ServerErrors.invalidParams("Unknown skill directory: " + uri);
+        return found ? children : null;
+    }
+
+    /** Adds every file of {@code skill} under {@code innerPrefix} as a child; returns whether any matched. */
+    private static boolean collectChildren(
+            SkillsRegistry.Skill skill, String innerPrefix, Map<String, String> children) {
+        var matched = false;
+        for (var file : skill.files()) {
+            if (!file.relativePath().startsWith(innerPrefix)) {
+                continue;
+            }
+            matched = true;
+            var rest = file.relativePath().substring(innerPrefix.length());
+            var index = rest.indexOf('/');
+            children.putIfAbsent(
+                    index >= 0 ? rest.substring(0, index) : rest, index >= 0 ? DIRECTORY_MIME : file.mimeType());
         }
-        var resources = children.entrySet().stream()
+        return matched;
+    }
+
+    private static List<Map<String, Object>> toResourceEntries(String parentUri, Map<String, String> children) {
+        return children.entrySet().stream()
                 .map(entry -> {
-                    var child = new LinkedHashMap<String, Object>();
-                    child.put("uri", uri + "/" + entry.getKey());
+                    Map<String, Object> child = new LinkedHashMap<>();
+                    child.put("uri", parentUri + "/" + entry.getKey());
                     child.put("name", entry.getKey());
                     child.put("mimeType", entry.getValue());
                     return child;
                 })
                 .toList();
-        return Map.of("resources", resources);
     }
 
     private static Map<String, Object> skillEntry(SkillsRegistry.Skill skill) {

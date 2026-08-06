@@ -1,11 +1,11 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.extensions.skills;
 
+import dev.tachyonmcp.core.server.features.resources.MimeTypes;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Comparator;
 import java.util.HexFormat;
-import java.util.Locale;
 import java.util.Map;
 
 /** Builds {@link SkillsRegistry.Skill} instances from a skill directory's files. */
@@ -38,7 +38,7 @@ final class SkillsScanner {
                 .map(entry -> new SkillsRegistry.SkillFile(
                         entry.getKey(),
                         "skill://" + skillPath + "/" + entry.getKey(),
-                        mimeType(entry.getKey()),
+                        MimeTypes.guess(entry.getKey()),
                         digest(entry.getValue())))
                 .sorted(Comparator.comparing(SkillsRegistry.SkillFile::relativePath))
                 .toList();
@@ -59,21 +59,5 @@ final class SkillsScanner {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 is unavailable", e);
         }
-    }
-
-    /** Returns the MIME type for a skill file name. */
-    static String mimeType(String fileName) {
-        var lower = fileName.toLowerCase(Locale.ROOT);
-        if (lower.endsWith(".md") || lower.endsWith(".markdown")) {
-            return "text/markdown";
-        }
-        if (lower.endsWith(".txt")
-                || lower.endsWith(".json")
-                || lower.endsWith(".py")
-                || lower.endsWith(".js")
-                || lower.endsWith(".sh")) {
-            return "text/plain";
-        }
-        return "application/octet-stream";
     }
 }
