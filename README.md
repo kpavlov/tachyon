@@ -6,7 +6,6 @@
 [![Docs](https://img.shields.io/badge/Docs-blue?logo=github)](https://github.com/kpavlov/tachyon/blob/main/docs/README.md)
 [![Api](https://img.shields.io/badge/API-blue?logo=github)](https://kpavlov.github.io/tachyon/apidocs/)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/kpavlov/tachyon)
-<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=fd923998-7054-4524-b014-cd368cfba9fc" />
 
 <div style="align-content: center">
   <img
