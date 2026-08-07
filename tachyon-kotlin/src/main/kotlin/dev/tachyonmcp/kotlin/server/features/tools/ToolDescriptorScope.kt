@@ -30,11 +30,11 @@ public class ToolDescriptorScope
         public var meta: Map<String, Any>? = null
 
         public fun inputSchema(json: String) {
-            inputSchema = Jackson3JsonFactory.INSTANCE.toJsonSchema(json)
+            inputSchema = Jackson3JsonFactory.INSTANCE.toJsonSchema(json).orElseThrow()
         }
 
         public fun outputSchema(json: String) {
-            outputSchema = Jackson3JsonFactory.INSTANCE.toJsonSchema(json)
+            outputSchema = Jackson3JsonFactory.INSTANCE.toJsonSchema(json).orElseThrow()
         }
 
         /** Sets the input schema from a kotlinx-serialization [JsonObject]. */

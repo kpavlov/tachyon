@@ -12,8 +12,12 @@ final class JsonSchemas {
     private JsonSchemas() {}
 
     static <T> JsonSchema from(T source, Class<T> type) {
-        for (JsonSchemaFactory factory : Holder.FACTORIES) {
-            var schema = factory.toJsonSchema(source, type);
+        for (JsonSchemaFactory<?> factory : Holder.FACTORIES) {
+            if (factory.sourceType() != type) {
+                continue;
+            }
+            @SuppressWarnings("unchecked")
+            var schema = ((JsonSchemaFactory<T>) factory).toJsonSchema(source);
             if (schema.isPresent()) {
                 return schema.get();
             }
@@ -24,8 +28,12 @@ final class JsonSchemas {
     }
 
     static JsonSchema generated(Class<?> type) {
-        for (JsonSchemaFactory factory : Holder.FACTORIES) {
-            var schema = factory.tryGenerate(type);
+        for (JsonSchemaFactory<?> factory : Holder.FACTORIES) {
+            if (factory.sourceType() != Class.class) {
+                continue;
+            }
+            @SuppressWarnings("unchecked")
+            var schema = ((JsonSchemaFactory<Class<?>>) factory).toJsonSchema(type);
             if (schema.isPresent()) {
                 return schema.get();
             }
@@ -39,11 +47,11 @@ final class JsonSchemas {
     }
 
     private static final class Holder {
-        static final List<JsonSchemaFactory> FACTORIES = discover();
+        static final List<JsonSchemaFactory<?>> FACTORIES = discover();
 
-        private static List<JsonSchemaFactory> discover() {
-            var factories = new ArrayList<JsonSchemaFactory>();
-            for (JsonSchemaFactory factory : ServiceLoader.load(JsonSchemaFactory.class)) {
+        private static List<JsonSchemaFactory<?>> discover() {
+            var factories = new ArrayList<JsonSchemaFactory<?>>();
+            for (JsonSchemaFactory<?> factory : ServiceLoader.load(JsonSchemaFactory.class)) {
                 factories.add(factory);
             }
             factories.sort(Comparator.comparingInt(JsonSchemaFactory::priority));

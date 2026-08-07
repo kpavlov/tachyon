@@ -13,7 +13,29 @@
     "extension": "revapi.differences",
     "configuration": {
       "ignore": true,
-      "differences": []
+      "differences": [
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method dev.tachyonmcp.api.json.JsonSchema dev.tachyonmcp.core.server.json.Jackson3JsonFactory::toJsonSchema(java.lang.String)",
+          "new": "method java.util.Optional<dev.tachyonmcp.api.json.JsonSchema> dev.tachyonmcp.core.server.json.Jackson3JsonFactory::toJsonSchema(java.lang.String)",
+          "justification": "JsonSchemaFactory SPI returns Optional so factories decline sources and the resolution chain continues"
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method dev.tachyonmcp.api.json.JsonSchema dev.tachyonmcp.core.server.json.JacksonNodeJsonFactory::toJsonSchema(tools.jackson.databind.JsonNode)",
+          "new": "method java.util.Optional<dev.tachyonmcp.api.json.JsonSchema> dev.tachyonmcp.core.server.json.JacksonNodeJsonFactory::toJsonSchema(tools.jackson.databind.JsonNode)",
+          "justification": "JsonSchemaFactory returns Optional to continue the resolution chain"
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method dev.tachyonmcp.api.json.JsonSchema dev.tachyonmcp.core.server.json.JacksonObjectJsonFactory::toJsonSchema(tools.jackson.databind.node.ObjectNode)",
+          "new": "method java.util.Optional<dev.tachyonmcp.api.json.JsonSchema> dev.tachyonmcp.core.server.json.JacksonObjectJsonFactory::toJsonSchema(tools.jackson.databind.node.ObjectNode)",
+          "justification": "JsonSchemaFactory returns Optional to continue the resolution chain"
+        }
+      ]
     }
   }
 ]

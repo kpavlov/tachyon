@@ -44,8 +44,7 @@ public interface JsonSchema extends JsonDocument {
     /**
      * Creates a schema from an already-parsed representation, via the {@link
      * JsonSchemaFactory} chain discovered through {@link java.util.ServiceLoader}: the
-     * registered factory whose {@link JsonSchemaFactory#toJsonSchema(Object, Class)} covers
-     * {@code type} wins.
+     * registered factory whose {@link JsonSchemaFactory#sourceType()} equals {@code type} wins.
      *
      * @param source the source representation, e.g. a Jackson {@code JsonNode}
      * @param type   the source representation's type

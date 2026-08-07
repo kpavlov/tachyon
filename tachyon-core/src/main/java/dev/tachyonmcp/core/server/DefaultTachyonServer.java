@@ -250,7 +250,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
             @Nullable JsonSchemaValidator outputValidator,
             @Nullable PayloadSerializer payloadSerializer,
             @Nullable PayloadDeserializer payloadDeserializer,
-            @Nullable JsonSchemaFactory schemaFactory,
+            @Nullable JsonSchemaFactory<?> schemaFactory,
             @Nullable List<ServerExtension> extensions,
             @Nullable Consumer<ChannelPipeline> pipelineCustomizer) {
         this.executor = executor;
@@ -268,7 +268,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         final PayloadSerializer payloadSerializer1 = payloadSerializer != null ? payloadSerializer : defaultSerde;
         final PayloadDeserializer payloadDeserializer1 =
                 payloadDeserializer != null ? payloadDeserializer : defaultSerde;
-        final JsonSchemaFactory schemaFactory1 = schemaFactory != null ? schemaFactory : discoverSchemaFactory();
+        final JsonSchemaFactory<?> schemaFactory1 = schemaFactory != null ? schemaFactory : discoverSchemaFactory();
         this.inputValidator = inputValidator1;
         this.outputValidator = outputValidator1;
         this.payloadSerializer = payloadSerializer1;
@@ -299,10 +299,10 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
                 Thread.ofVirtual().name("tachyon-", 0).factory());
     }
 
-    private static JsonSchemaFactory discoverSchemaFactory() {
-        JsonSchemaFactory found = null;
-        for (JsonSchemaFactory provider : ServiceLoader.load(JsonSchemaFactory.class)) {
-            if (provider.toJsonSchema("{\"type\": \"object\"}", String.class).isPresent()) {
+    private static JsonSchemaFactory<?> discoverSchemaFactory() {
+        JsonSchemaFactory<?> found = null;
+        for (JsonSchemaFactory<?> provider : ServiceLoader.load(JsonSchemaFactory.class)) {
+            if (provider.sourceType() == String.class) {
                 if (found != null) {
                     throw new IllegalStateException(
                             "Duplicate JsonSchemaFactory implementations handling String sources found: "

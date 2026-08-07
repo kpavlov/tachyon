@@ -35,7 +35,7 @@ class JacksonObjectJsonFactoryTest {
     @Test
     void shouldRetainSameNodeInstanceForSchemaUnwrap() {
         var node = NODES.objectNode().put("type", "object");
-        var schema = factory.toJsonSchema(node);
+        var schema = factory.toJsonSchema(node).orElseThrow();
         assertThat(schema.unwrap(ObjectNode.class).orElseThrow()).isSameAs(node);
         assertThatJson(schema.json()).isEqualTo(node.toString());
     }

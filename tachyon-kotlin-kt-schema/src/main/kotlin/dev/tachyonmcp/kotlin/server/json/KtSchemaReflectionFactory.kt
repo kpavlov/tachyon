@@ -18,11 +18,14 @@ import java.util.Optional
  * always loads once that artifact is on the classpath — add it explicitly to use `typedTool`.
  */
 @ExperimentalApi
-internal class KtSchemaReflectionFactory : JsonSchemaFactory {
+internal class KtSchemaReflectionFactory : JsonSchemaFactory<Class<*>> {
     private val generator = ReflectionClassJsonSchemaGenerator.Default
+
+    @Suppress("UNCHECKED_CAST")
+    override fun sourceType(): Class<Class<*>> = Class::class.java as Class<Class<*>>
 
     override fun priority(): Int = 10
 
-    override fun tryGenerate(type: Class<*>): Optional<JsonSchema> =
+    override fun toJsonSchema(type: Class<*>): Optional<JsonSchema> =
         Optional.of(JsonSchema.of(generator.generateSchemaString(type.kotlin)))
 }

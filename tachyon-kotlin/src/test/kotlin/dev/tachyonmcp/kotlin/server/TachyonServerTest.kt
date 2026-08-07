@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server
 
+import dev.tachyonmcp.api.json.JsonSchema
+import dev.tachyonmcp.api.json.spi.JsonSchemaFactory
 import dev.tachyonmcp.api.server.config.Mode
 import dev.tachyonmcp.api.server.domain.Role
 import dev.tachyonmcp.api.server.extensions.ExtensionContext
@@ -24,6 +26,7 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import kotlinx.coroutines.delay
 import org.junit.jupiter.api.Test
+import java.util.Optional
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
@@ -33,6 +36,42 @@ internal class TachyonServerTest {
     private data class JacksonPayload(
         val message: String,
     )
+
+    private class TypedInput
+
+    private class TypedOutput
+
+    @Test
+    fun `typed tool uses server configured schema factory`() {
+        val generatedTypes = mutableListOf<Class<*>>()
+        val factory =
+            object : JsonSchemaFactory<Any> {
+                override fun sourceType(): Class<Any> {
+                    @Suppress("UNCHECKED_CAST")
+                    return String::class.java as Class<Any>
+                }
+
+                override fun toJsonSchema(source: Any): Optional<JsonSchema> {
+                    if (source is Class<*>) {
+                        generatedTypes += source
+                        return Optional.of(
+                            JsonSchema.of("""{"type":"object","title":"${source.simpleName}"}"""),
+                        )
+                    }
+                    return Optional.of(JsonSchema.of(source as String))
+                }
+            }
+
+        buildServer {
+            typedTool<TypedInput, TypedOutput>("typed") { ToolResult.text("unused") }
+            json { schemaFactory = factory }
+        }.use { server ->
+            val descriptor = server.tools().find("typed").orElseThrow()
+            descriptor.inputSchema()?.json() shouldBe """{"type":"object","title":"TypedInput"}"""
+            descriptor.outputSchema()?.json() shouldBe """{"type":"object","title":"TypedOutput"}"""
+        }
+        generatedTypes shouldBe listOf(TypedInput::class.java, TypedOutput::class.java)
+    }
 
     @Test
     fun `Kotlin DSL retains Jackson serde by default`() {

@@ -79,8 +79,8 @@ clean: ## Remove all build artifacts
 format: ## Auto-format code (Spotless + Detekt)
 	@echo " 🎨  Formatting code..."
 	@./mvnw spotless:apply -q
-	@./mvnw install -pl tachyon-api,tachyon-core -DskipTests -Dspotbugs.skip -Dspotless.skip -q
-	@./mvnw exec:java@detekt-format -pl tachyon-kotlin,tachyon-kotlin-kt-schema -am -q
+	@./mvnw install -pl tachyon-api,tachyon-core,tachyon-kotlin -DskipTests -Dspotbugs.skip -Dspotless.skip -q
+	@./mvnw exec:java@detekt-format -pl tachyon-kotlin-kt-schema -am -q
 	@echo " ✅  Done..."
 
 lint: ## Check code style and bugs (Spotless + Detekt + SpotBugs)

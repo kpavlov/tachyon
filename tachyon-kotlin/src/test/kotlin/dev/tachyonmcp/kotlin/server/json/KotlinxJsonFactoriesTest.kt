@@ -24,10 +24,8 @@ internal class KotlinxJsonFactoriesTest {
 
         val schema =
             KotlinxJsonElementFactory.INSTANCE
-                .toJsonSchema(
-                    element,
-                    JsonElement::class.java,
-                ).get()
+                .toJsonSchema(element)
+                .get()
 
         schema.json() shouldEqualJson element.toString()
     }
@@ -36,7 +34,7 @@ internal class KotlinxJsonFactoriesTest {
     fun `KotlinxJsonElementFactory retains the same element instance for unwrap`() {
         val element = Json.parseToJsonElement("""{"type": "object"}""")
 
-        val schema = KotlinxJsonElementFactory.INSTANCE.toJsonSchema(element)
+        val schema = KotlinxJsonElementFactory.INSTANCE.toJsonSchema(element).get()
         val document = KotlinxJsonElementFactory.INSTANCE.toJsonDocument(element)
 
         assertSoftly {
@@ -57,10 +55,8 @@ internal class KotlinxJsonFactoriesTest {
 
         val schema =
             KotlinxJsonObjectFactory.INSTANCE
-                .toJsonSchema(
-                    obj,
-                    JsonObject::class.java,
-                ).get()
+                .toJsonSchema(obj)
+                .get()
         val document = KotlinxJsonObjectFactory.INSTANCE.toJsonDocument(obj)
 
         assertSoftly {

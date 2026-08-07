@@ -33,7 +33,7 @@ class Jackson3JsonFactoryTest {
 
     @Test
     void shouldWrapValidJsonStringAsSchema() {
-        var schema = factory.toJsonSchema("{\"type\":\"object\"}");
+        var schema = factory.toJsonSchema("{\"type\":\"object\"}").orElseThrow();
         assertThatJson(schema.json()).isEqualTo("{\"type\":\"object\"}");
     }
 
@@ -46,9 +46,9 @@ class Jackson3JsonFactoryTest {
 
     @Test
     void shouldBeDiscoverableAsServiceLoaderProviderForString() {
-        JsonSchemaFactory discovered = null;
-        for (JsonSchemaFactory candidate : ServiceLoader.load(JsonSchemaFactory.class)) {
-            if (candidate.toJsonSchema("{\"a\":1}", String.class).isPresent()) {
+        JsonSchemaFactory<?> discovered = null;
+        for (JsonSchemaFactory<?> candidate : ServiceLoader.load(JsonSchemaFactory.class)) {
+            if (candidate.sourceType() == String.class) {
                 discovered = candidate;
             }
         }

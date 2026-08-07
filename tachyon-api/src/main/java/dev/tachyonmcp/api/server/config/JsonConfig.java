@@ -24,7 +24,7 @@ public record JsonConfig(
         @Nullable PayloadDeserializer deserializer,
         @Nullable JsonSchemaValidator inputValidator,
         @Nullable JsonSchemaValidator outputValidator,
-        @Nullable JsonSchemaFactory schemaFactory) {
+        @Nullable JsonSchemaFactory<?> schemaFactory) {
 
     public static Builder builder() {
         return new Builder();
@@ -38,7 +38,7 @@ public record JsonConfig(
         private @Nullable PayloadDeserializer deserializer;
         private @Nullable JsonSchemaValidator inputValidator;
         private @Nullable JsonSchemaValidator outputValidator;
-        private @Nullable JsonSchemaFactory schemaFactory;
+        private @Nullable JsonSchemaFactory<?> schemaFactory;
 
         private Builder() {}
 
@@ -73,7 +73,7 @@ public record JsonConfig(
             return this;
         }
 
-        public Builder schemaFactory(@Nullable JsonSchemaFactory schemaFactory) {
+        public Builder schemaFactory(@Nullable JsonSchemaFactory<?> schemaFactory) {
             this.schemaFactory = schemaFactory;
             return this;
         }

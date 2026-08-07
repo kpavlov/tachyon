@@ -21,16 +21,24 @@ public class JsonSchemaUtils {
      * Validates that a tool schema is well-formed JSON with an object root declaring
      * {@code "type": "object"}.
      *
-     * @param factory    parses and validates the schema's raw JSON
+     * @param factory    parses and validates the schema's raw JSON; must handle {@link String}
+     *     sources, otherwise schemas cannot be validated
      * @param schemaKind the kind of schema being validated
      * @param toolName   the name of the tool owning the schema
      * @param schema     the schema to validate, or {@code null}
      * @throws IllegalArgumentException if the schema is not valid JSON, or its root is invalid
      */
     public static void validateSchemaRoot(
-            JsonSchemaFactory factory, String schemaKind, String toolName, @Nullable JsonSchema schema) {
+            JsonSchemaFactory<?> factory, String schemaKind, String toolName, @Nullable JsonSchema schema) {
         if (schema == null) return;
-        var validated = factory.toJsonSchema(schema.json(), String.class);
+        if (factory.sourceType() != String.class) {
+            throw new IllegalStateException(
+                    "Configured schema factory '" + factory.getClass().getName()
+                            + "' does not handle String sources and cannot validate the schema of tool '"
+                            + toolName + "'.");
+        }
+        @SuppressWarnings("unchecked")
+        var validated = ((JsonSchemaFactory<String>) factory).toJsonSchema(schema.json());
         if (validated.isEmpty()) {
             throw new IllegalStateException(
                     "Configured schema factory does not handle String sources and cannot validate the schema of tool '"

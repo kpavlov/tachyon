@@ -24,10 +24,10 @@ internal fun ToolDescriptor.Builder.schemas(
     outputSchema: String? = null,
 ): ToolDescriptor.Builder {
     if (inputSchema != null) {
-        inputSchema(Jackson3JsonFactory.INSTANCE.toJsonSchema(inputSchema))
+        inputSchema(Jackson3JsonFactory.INSTANCE.toJsonSchema(inputSchema).orElseThrow())
     }
     if (outputSchema != null) {
-        outputSchema(Jackson3JsonFactory.INSTANCE.toJsonSchema(outputSchema))
+        outputSchema(Jackson3JsonFactory.INSTANCE.toJsonSchema(outputSchema).orElseThrow())
     }
     return this
 }
@@ -73,6 +73,6 @@ private fun JsonPrimitive.toValueNode(): JsonNode =
     }
 
 internal fun JsonObject.toJsonSchema(): JsonSchema =
-    KotlinxJsonObjectFactory.INSTANCE.toJsonSchema(this)
+    KotlinxJsonObjectFactory.INSTANCE.toJsonSchema(this).orElseThrow()
 
 internal fun JsonObject?.toJsonSchemaOrNull(): JsonSchema? = this?.toJsonSchema()

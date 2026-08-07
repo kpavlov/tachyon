@@ -6,22 +6,24 @@ import dev.tachyonmcp.api.json.JsonSchema;
 import java.util.Optional;
 
 /**
- * Pluggable source of {@link JsonSchema} documents.
+ * Pluggable source of {@link JsonSchema} documents, generic over the JSON source representation
+ * {@code T} it accepts.
  *
- * <p>Factories cover two resolution paths on {@link JsonSchema}:
+ * <p>Factories cover two resolution paths on {@link JsonSchema} through a single {@link
+ * #sourceType()} and {@link #toJsonSchema(Object)}:
  * <ul>
- *   <li><b>from a source representation</b> — {@code JsonSchema.from(source, type)} parses
- *       {@code source} (e.g. a JSON string or an already-parsed node) via
- *       {@link #toJsonSchema(Object, Class)};</li>
- *   <li><b>from a type alone</b> — {@code JsonSchema.generated(type)} derives the schema without
- *       any instance via {@link #tryGenerate(Class)} (e.g. from a build-time codegen resource or
- *       runtime reflection).</li>
+ *   <li><b>parsed sources</b> — {@code JsonSchema.from(source, type)} parses {@code source} (e.g.
+ *       a JSON string or an already-parsed node) via the factory whose {@link #sourceType()}
+ *       equals {@code type};</li>
+ *   <li><b>type-only generation</b> — {@code JsonSchema.generated(type)} derives a schema without
+ *       an instance. Generation factories expose {@link Class} as their source type and treat the
+ *       target type as the source (e.g. a build-time codegen resource or runtime reflection).</li>
  * </ul>
  *
- * <p>Factories form a single resolution chain: both entry points try the registered factories in
- * ascending {@link #priority()} order and use the first non-empty result. An implementation
- * returns {@link Optional#empty()} on the paths it does not cover so resolution continues with the
- * next factory. Fabricating an empty result for a particular type/source is what lets a
+ * <p>Factories of the same source type form a resolution chain: entry points try the registered
+ * factories in ascending {@link #priority()} order and use the first non-empty result. An
+ * implementation returns {@link Optional#empty()} on sources it does not cover so resolution
+ * continues with the next factory. Fabricating an empty result for a given target is what lets a
  * low-priority resource factory and a high-priority reflection generator coexist.
  *
  * <p>Discoverable via {@link java.util.ServiceLoader}: implementations register themselves in
@@ -30,11 +32,20 @@ import java.util.Optional;
  * @author Konstantin Pavlov
  */
 @ExperimentalApi
-public interface JsonSchemaFactory {
+public interface JsonSchemaFactory<T> {
 
     /**
-     * Returns the position of this factory in the resolution chain; factories are tried in
-     * ascending order of priority. Lower numbers are attempted first. Defaults to {@code 0}.
+     * Returns the type of the JSON source representation this factory accepts, e.g. {@link
+     * String} or a JSON object type.
+     *
+     * @return the source representation type
+     */
+    Class<T> sourceType();
+
+    /**
+     * Returns the position of this factory within the resolution chain for its {@link
+     * #sourceType()}; factories are tried in ascending order of priority. Lower numbers are
+     * attempted first. Defaults to {@code 0}.
      *
      * @return the chain priority
      */
@@ -43,27 +54,16 @@ public interface JsonSchemaFactory {
     }
 
     /**
-     * Parses a schema out of an instance of a source representation, or {@link Optional#empty()}
-     * if the source type {@code type} is not one this factory covers.
+     * Converts a source instance into a schema, or {@link Optional#empty()} if this factory does
+     * not cover the given source.
      *
-     * @param source the source representation, e.g. a JSON string or a parsed node
-     * @param type   the source representation type
-     * @return the parsed schema, or empty if this factory does not handle {@code type}
-     * @throws IllegalArgumentException if this factory handles {@code type} but {@code source} is
-     *     not valid JSON
+     * @param source the source representation, e.g. a JSON string, a parsed node, or a target
+     *     class for a generation factory
+     * @return the resulting schema, or empty if this factory cannot handle {@code source}
+     * @throws IllegalArgumentException if this factory covers {@code source}'s type but {@code
+     *     source} is not valid JSON
      */
-    default Optional<JsonSchema> toJsonSchema(Object source, Class<?> type) {
-        return Optional.empty();
-    }
-
-    /**
-     * Generates a schema for {@code type} without a source instance, or {@link
-     * Optional#empty()} if this factory cannot produce one for the given type.
-     *
-     * @param type the type whose schema to generate
-     * @return the generated schema, or empty if this factory does not cover {@code type}
-     */
-    default Optional<JsonSchema> tryGenerate(Class<?> type) {
+    default Optional<JsonSchema> toJsonSchema(T source) {
         return Optional.empty();
     }
 }

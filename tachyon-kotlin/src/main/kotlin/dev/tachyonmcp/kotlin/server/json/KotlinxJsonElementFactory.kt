@@ -15,7 +15,7 @@ import java.util.Optional
  */
 internal class KotlinxJsonElementFactory :
     JsonDocumentFactory<JsonElement>,
-    JsonSchemaFactory {
+    JsonSchemaFactory<JsonElement> {
     companion object {
         @JvmField
         val INSTANCE: KotlinxJsonElementFactory = KotlinxJsonElementFactory()
@@ -30,18 +30,8 @@ internal class KotlinxJsonElementFactory :
     override fun toJsonDocument(source: JsonElement): JsonDocument =
         KotlinxJsonElementDocument(source)
 
-    override fun toJsonSchema(
-        source: Any,
-        type: Class<*>,
-    ): Optional<JsonSchema> {
-        if (type != JsonElement::class.java) {
-            return Optional.empty()
-        }
-        @Suppress("UNCHECKED_CAST")
-        return Optional.of(KotlinxJsonElementSchema(source as JsonElement))
-    }
-
-    fun toJsonSchema(source: JsonElement): JsonSchema = KotlinxJsonElementSchema(source)
+    override fun toJsonSchema(source: JsonElement): Optional<JsonSchema> =
+        Optional.of(KotlinxJsonElementSchema(source))
 }
 
 private class KotlinxJsonElementDocument(

@@ -14,20 +14,27 @@ import java.util.Optional;
  * <a href="https://github.com/kpavlov/kt-schema">kt-schema</a> annotation processor from
  * {@code META-INF/kt-schema/schemas/<binary-class-name>.json} on the target class's classloader.
  *
- * <p>Returns {@link Optional#empty()} when no such resource exists for a type, letting the
- * resolution chain continue to a lower-priority factory (e.g. the runtime reflection generator).
- * Ships in {@code tachyon-core} so Java-only servers resolve codegen schemas without adding a
- * Kotlin integration artifact.
+ * <p>Exposes {@link Class} as its {@link #sourceType()}: each call passes the target {@link Class}
+ * as the source and loads that type's codegen resource, returning {@link Optional#empty()} when
+ * none exists so the resolution chain continues to a lower-priority factory (e.g. the runtime
+ * reflection generator). Ships in {@code tachyon-core} so Java-only servers resolve codegen schemas
+ * without adding a Kotlin integration artifact.
  *
  * @author Konstantin Pavlov
  */
 @ExperimentalApi
-public final class KtSchemaResourceFactory implements JsonSchemaFactory {
+public final class KtSchemaResourceFactory implements JsonSchemaFactory<Class<?>> {
 
     public KtSchemaResourceFactory() {}
 
     @Override
-    public Optional<JsonSchema> tryGenerate(Class<?> type) {
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public Class<Class<?>> sourceType() {
+        return (Class) Class.class;
+    }
+
+    @Override
+    public Optional<JsonSchema> toJsonSchema(Class<?> type) {
         var path = "META-INF/kt-schema/schemas/%s.json".formatted(type.getName().replace('.', '/'));
         try (var in = Thread.currentThread().getContextClassLoader().getResourceAsStream(path)) {
             if (in == null) {

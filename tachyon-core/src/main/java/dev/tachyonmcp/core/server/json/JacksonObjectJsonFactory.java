@@ -18,7 +18,7 @@ import tools.jackson.databind.node.ObjectNode;
  *
  * @author Konstantin Pavlov
  */
-public final class JacksonObjectJsonFactory implements JsonDocumentFactory<ObjectNode>, JsonSchemaFactory {
+public final class JacksonObjectJsonFactory implements JsonDocumentFactory<ObjectNode>, JsonSchemaFactory<ObjectNode> {
 
     public static final JacksonObjectJsonFactory INSTANCE = new JacksonObjectJsonFactory();
 
@@ -35,18 +35,7 @@ public final class JacksonObjectJsonFactory implements JsonDocumentFactory<Objec
     }
 
     @Override
-    public Optional<JsonSchema> toJsonSchema(Object source, Class<?> type) {
-        if (type != ObjectNode.class) {
-            return Optional.empty();
-        }
-        return Optional.of(new JacksonObjectJsonSchema((ObjectNode) source));
-    }
-
-    /**
-     * Wraps the given node as a schema without type probing. Equivalent to {@code
-     * toJsonSchema(node, ObjectNode.class).orElseThrow()}.
-     */
-    public JsonSchema toJsonSchema(ObjectNode node) {
-        return new JacksonObjectJsonSchema(node);
+    public Optional<JsonSchema> toJsonSchema(ObjectNode source) {
+        return Optional.of(new JacksonObjectJsonSchema(source));
     }
 }

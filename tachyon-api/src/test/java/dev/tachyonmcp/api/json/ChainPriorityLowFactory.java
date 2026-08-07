@@ -9,14 +9,20 @@ import java.util.Optional;
  * schema for {@link LowTarget}, mirroring a build-time resource factory: it claims the default
  * slot so a higher-priority generator underneath never gets consulted for that type.
  */
-public final class ChainPriorityLowFactory implements JsonSchemaFactory {
+public final class ChainPriorityLowFactory implements JsonSchemaFactory<Class<?>> {
 
     public static final class LowTarget {}
 
     public ChainPriorityLowFactory() {}
 
     @Override
-    public Optional<JsonSchema> tryGenerate(Class<?> type) {
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public Class<Class<?>> sourceType() {
+        return (Class) Class.class;
+    }
+
+    @Override
+    public Optional<JsonSchema> toJsonSchema(Class<?> type) {
         if (type == LowTarget.class) {
             return Optional.of(JsonSchema.of("{\"title\":\"low\"}"));
         }
