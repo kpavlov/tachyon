@@ -10,6 +10,7 @@ import com.example.weather.service.NarrationStyle;
 import com.example.weather.service.WeatherService;
 import com.example.weather.spi.CityNotFoundException;
 import com.example.weather.spi.WeatherObservation;
+import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.server.domain.Annotations;
 import dev.tachyonmcp.api.server.domain.Icon;
 import dev.tachyonmcp.api.server.domain.InvalidArgumentException;
@@ -71,6 +72,7 @@ public final class WeatherServer {
             Annotations.of(List.of(Role.USER, Role.ASSISTANT), 0.8, "2026-07-23T00:00:00Z");
         var resourceIcon = Icon.of(LOGO, "image/png", List.of("256x256"), "light");
         return TachyonServer.builder()
+                .port(port)
                 .info(it -> it
                         .name("weather-server")
                         .title("Weather Server")
@@ -80,7 +82,9 @@ public final class WeatherServer {
                         .icons(Icon.of(LOGO, "image/png", List.of("256x256"), null))
                         .version("1.0"))
                 .capabilities(c->c.logging())
+
                 .withTools(tools -> tools.register(GetWeatherTool.DESCRIPTOR, GetWeatherTool.fn(weatherService)))
+
                 .withResources(resources -> resources.register(
                         resource -> resource.name("prediction-article")
                                 .uri("weather://prediction/article")
@@ -92,6 +96,7 @@ public final class WeatherServer {
                                 .mimeType("text/markdown"),
                         (ctx, request) ->
                                 TextResourceContents.of(request.uri(), predictionArticle, "text/markdown"))
+
                 .registerAsync(
                         resource -> resource.name("featured-current-weather")
                                 .uri("weather://featured/current")
@@ -103,14 +108,16 @@ public final class WeatherServer {
                         (ctx, request) -> weatherService.currentWeatherAsync("Tallinn")
                                 .thenApply(weather ->
                                         TextResourceContents.of(request.uri(), asJson(weather), "application/json"))))
+
                 .withPrompts(prompts -> prompts.register(
                         prompt -> prompt.name("rewrite-forecast")
                                 .description("Rewrites a weather forecast in a chosen style")
                                 .addArguments(
                                         PromptArgument.of("forecast", "Forecast", "Weather forecast to rewrite", true),
                                         PromptArgument.of("style", "Style", "plain, concise, or pirate", true))
-                                .inputSchema(SchemaResources.load(RewriteForecastPromptRequest.class)),
+                                .inputSchema(JsonSchema.generated(RewriteForecastPromptRequest.class)),
                         (ctx, request) -> rewriteForecast(weatherService, request)))
+
                 .withResources(resources -> resources.registerTemplate(
                         template -> template.name("current-weather")
                                 .uriTemplate("weather://current/{city}")
@@ -119,6 +126,7 @@ public final class WeatherServer {
                                 .mimeType("application/json"),
                         (ctx, request) ->
                                 handleWeatherTemplate(weatherService, request.uri(), request.params())))
+
                 .withCompletions(completions -> completions
                         .registerForPrompt("rewrite-forecast", (ctx, request) -> completeStyle(request))
                         .registerForResourceAsync(
@@ -132,7 +140,6 @@ public final class WeatherServer {
                                             .exceptionally(e -> CompletionResult.of(List.of()));
                                 }))
                 .session(session -> session.enabled(true))
-                .network(network -> network.port(port))
                 .build();
     }
 

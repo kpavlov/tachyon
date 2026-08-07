@@ -18,6 +18,7 @@ import dev.tachyonmcp.api.server.domain.ProgressToken;
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolFn;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,9 +26,9 @@ import java.util.Optional;
 
 class GetWeatherTool {
     private static final Logger log = LoggerFactory.getLogger(GetWeatherTool.class);
-    private static final JsonSchema CITY_SCHEMA = SchemaResources.load(CityInput.class);
-    private static final JsonSchema INPUT_SCHEMA = SchemaResources.load(GetWeatherRequest.class);
-    private static final JsonSchema OUTPUT_SCHEMA = SchemaResources.load(GetWeatherResponse.class);
+    private static final JsonSchema CITY_SCHEMA = JsonSchema.generated(CityInput.class);
+    private static final JsonSchema INPUT_SCHEMA = JsonSchema.generated(GetWeatherRequest.class);
+    private static final JsonSchema OUTPUT_SCHEMA = JsonSchema.generated(GetWeatherResponse.class);
 
     static final ToolDescriptor DESCRIPTOR = ToolDescriptor.builder()
         .name("get-weather")
@@ -39,9 +40,9 @@ class GetWeatherTool {
 
     static ToolFn fn(WeatherService weatherService) {
         return (ctx, request) -> {
-            var args = request.arguments();
-            var city = args.stringValue("city");
-            var units = args.stringOr("units", "celsius");
+            var args = request.arguments().decode(GetWeatherRequest.class);
+            var city = args.city();
+            var units = args.units();
             var progressToken = request.progressToken();
             try {
                 return ToolResult.structured(toResponse(city, fetchWithProgress(ctx, progressToken, weatherService, city), units));
@@ -96,8 +97,8 @@ class GetWeatherTool {
         return correctedCity.isBlank() ? Optional.empty() : Optional.of(correctedCity);
     }
 
-    private static GetWeatherResponse toResponse(String city, WeatherObservation weather, String units) {
-        var fahrenheit = "fahrenheit".equals(units);
+    private static GetWeatherResponse toResponse(String city, WeatherObservation weather, @Nullable TemperatureUnit units) {
+        var fahrenheit = units == TemperatureUnit.FAHRENHEIT;
         var temperature = fahrenheit ? weather.temperatureCelsius() * 9 / 5 + 32 : weather.temperatureCelsius();
         var unit = fahrenheit ? TemperatureUnit.FAHRENHEIT : TemperatureUnit.CELSIUS;
         return new GetWeatherResponse(

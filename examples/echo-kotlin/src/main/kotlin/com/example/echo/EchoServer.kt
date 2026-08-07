@@ -4,7 +4,6 @@ package com.example.echo
 
 import dev.tachyonmcp.api.json.JsonSchema
 import dev.tachyonmcp.api.server.config.Mode
-import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.kotlin.server.buildServer
 
@@ -30,7 +29,7 @@ fun assembleServer(port: Int = 0): TachyonServer {
                 description = "Echo message",
                 inputSchema = inputSchema,
             ) {
-                ToolResult.text(request.arguments().stringValue("message"))
+                text(arguments.stringValue("message"))
             }
         }
 
@@ -39,8 +38,7 @@ fun assembleServer(port: Int = 0): TachyonServer {
         description = "Echo reverse message",
         inputSchema = inputSchema,
     ) {
-        val message = request.arguments().stringValue("message")
-        ToolResult.text(message.reversed())
+        text(arguments.stringValue("message").reversed())
     }
     return server
 }

@@ -56,9 +56,8 @@ val getWeatherToolDescriptor =
     }
 
 fun ToolScope.getWeather(weatherService: WeatherService): ToolResult {
-    val args = request.arguments()
-    val city = args.stringValue("city")
-    val units = args.stringOrNull("units")
+    val city = arguments.stringValue("city")
+    val units = arguments.stringOrNull("units")
     val progressToken = request.progressToken()
     val temperatureUnit =
         when (units?.lowercase(Locale.getDefault())) {
@@ -77,7 +76,7 @@ fun ToolScope.getWeather(weatherService: WeatherService): ToolResult {
 
     fun attempt(city: String): ToolResult =
         try {
-            ToolResult.structured(
+            success(
                 toResponse(
                     city,
                     fetchWithProgress(
@@ -97,11 +96,11 @@ fun ToolScope.getWeather(weatherService: WeatherService): ToolResult {
     return try {
         attempt(city)
     } catch (_: CityNotFoundException) {
-        val elicitedCity = elicitCity(ctx, city) ?: return ToolResult.error("City not found")
+        val elicitedCity = elicitCity(ctx, city) ?: return fail("City not found")
         try {
             attempt(elicitedCity)
         } catch (_: CityNotFoundException) {
-            ToolResult.error("City not found")
+            fail("City not found")
         }
     }
 }

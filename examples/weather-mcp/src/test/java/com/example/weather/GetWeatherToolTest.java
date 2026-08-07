@@ -16,6 +16,7 @@ import dev.tachyonmcp.api.server.domain.ProgressToken;
 import dev.tachyonmcp.api.server.features.tools.ToolFn;
 import dev.tachyonmcp.api.server.features.tools.ToolRequest;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.server.json.JacksonPayloadSerde;
 import dev.tachyonmcp.core.server.session.NoopInteractionContext;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -119,7 +120,7 @@ class GetWeatherToolTest {
                         context,
                         ToolRequest.builder()
                                 .name("get-weather")
-                                .arguments(Args.of(Map.of("city", "Unknown")))
+                                .arguments(Args.of(Map.of("city", "Unknown"), JacksonPayloadSerde.INSTANCE))
                                 .build()));
             } catch (Exception e) {
                 failure.set(e);
