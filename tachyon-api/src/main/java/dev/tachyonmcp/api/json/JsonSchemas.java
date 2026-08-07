@@ -4,7 +4,6 @@ package dev.tachyonmcp.api.json;
 import dev.tachyonmcp.api.json.spi.JsonSchemaFactory;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 
 final class JsonSchemas {
@@ -31,17 +30,7 @@ final class JsonSchemas {
 
         private static Map<Class<?>, JsonSchemaFactory<?>> discover() {
             var map = new HashMap<Class<?>, JsonSchemaFactory<?>>();
-            // A provider class may fail to load when its module treats the backing
-            // implementation as an optional runtime dependency (e.g. tachyon-kotlin's
-            // KtSchemaJsonSchemaFactory). Skip it instead of failing discovery for every provider.
-            var providers = ServiceLoader.load(JsonSchemaFactory.class).iterator();
-            while (providers.hasNext()) {
-                JsonSchemaFactory<?> factory;
-                try {
-                    factory = providers.next();
-                } catch (ServiceConfigurationError e) {
-                    continue;
-                }
+            for (JsonSchemaFactory<?> factory : ServiceLoader.load(JsonSchemaFactory.class)) {
                 var existing = map.putIfAbsent(factory.sourceType(), factory);
                 if (existing != null) {
                     throw new IllegalStateException("Duplicate JsonSchemaFactory<"

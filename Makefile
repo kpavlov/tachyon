@@ -41,7 +41,7 @@ install-server: ## Build with tests and install to local Maven repo
 package: ## Install artifacts to local Maven repo (skip tests)
 	@echo "📦 Packaging and installing to local repository..."
 	@rm -rf ~/.m2/repository/dev/tachyonmcp/
-	@./mvnw install -pl tachyon-kotlin,tachyon-testkit -am -DskipTests -Dspotbugs.skip -Dspotless.skip
+	@./mvnw install -pl tachyon-kotlin-kt-schema,tachyon-testkit -am -DskipTests -Dspotbugs.skip -Dspotless.skip
 
 apidocs:
 	@echo "📚  Building API Docs..."
@@ -80,13 +80,13 @@ format: ## Auto-format code (Spotless + Detekt)
 	@echo " 🎨  Formatting code..."
 	@./mvnw spotless:apply -q
 	@./mvnw install -pl tachyon-api,tachyon-core -DskipTests -Dspotbugs.skip -Dspotless.skip -q
-	@./mvnw exec:java@detekt-format -pl tachyon-kotlin -am -q
+	@./mvnw exec:java@detekt-format -pl tachyon-kotlin,tachyon-kotlin-kt-schema -am -q
 	@echo " ✅  Done..."
 
 lint: ## Check code style and bugs (Spotless + Detekt + SpotBugs)
 	@echo " 🔍  Linting code..."
 	@./mvnw spotless:check -pl !reports
-	@./mvnw exec:java@detekt -pl tachyon-kotlin
+	@./mvnw exec:java@detekt -pl tachyon-kotlin-kt-schema -am
 	@./mvnw spotbugs:check -pl !reports,!e2e
 	@echo " ✅  Done..."
 

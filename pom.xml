@@ -51,6 +51,7 @@
         <module>tachyon-api</module>
         <module>tachyon-core</module>
         <module>tachyon-kotlin</module>
+        <module>tachyon-kotlin-kt-schema</module>
         <module>tachyon-extensions</module>
         <module>tachyon-testkit</module>
     </modules>
@@ -127,6 +128,11 @@
             <dependency>
                 <groupId>dev.tachyonmcp</groupId>
                 <artifactId>tachyon-kotlin</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>dev.tachyonmcp</groupId>
+                <artifactId>tachyon-kotlin-kt-schema</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

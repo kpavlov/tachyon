@@ -41,6 +41,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-kotlin-kt-schema</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib</artifactId>
             <scope>test</scope>
@@ -110,12 +115,6 @@
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>${gson.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>me.kpavlov.kt.schema</groupId>
-            <artifactId>kt-schema-generator-json-jvm</artifactId>
-            <version>${kt-schema.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
