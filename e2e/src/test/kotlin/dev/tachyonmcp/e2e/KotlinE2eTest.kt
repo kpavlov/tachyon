@@ -4,7 +4,7 @@ package dev.tachyonmcp.e2e
 import dev.tachyonmcp.api.json.JsonSchema
 import dev.tachyonmcp.api.server.features.tools.ToolResult.structured
 import dev.tachyonmcp.kotlin.server.TachyonServer
-import dev.tachyonmcp.kotlin.server.domain.decode
+import dev.tachyonmcp.kotlin.server.domain.arguments
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.matchers.equals.shouldEqual
@@ -41,7 +41,7 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
                     // language=json
                     """{"type":"object"}""",
                 ) {
-                    val input = request.arguments().decode<GreetArgs>()
+                    val input = request.arguments<GreetArgs>()
 
                     structured(
                         GreetReply("${input.greeting}, ${input.name}!"),
@@ -85,7 +85,7 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
                     // language=json
                     """{"type":"object"}""",
                 ) {
-                    val input = request.arguments().decode<GreetArgs>()
+                    val input = request.arguments<GreetArgs>()
 
                     structured(GreetReply("${input.greeting}, ${input.name}!"))
                 }
@@ -129,7 +129,7 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
                     inputSchema = JsonSchema.objectSchema(),
                     outputSchema = JsonSchema.objectSchema(),
                 ) {
-                    val input = request.arguments().decode<GreetArgs>()
+                    val input = request.arguments<GreetArgs>()
 
                     structured(
                         GreetReply("${input.greeting}, ${input.name}!"),

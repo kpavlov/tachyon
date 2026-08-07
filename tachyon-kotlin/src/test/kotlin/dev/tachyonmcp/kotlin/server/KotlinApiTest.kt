@@ -14,6 +14,7 @@ import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.kotlin.server.config.PromptScope
 import dev.tachyonmcp.kotlin.server.config.ToolScope
 import dev.tachyonmcp.kotlin.server.domain.RpcMethodRequest
+import dev.tachyonmcp.kotlin.server.domain.arguments
 import dev.tachyonmcp.kotlin.server.domain.arrayOrNull
 import dev.tachyonmcp.kotlin.server.domain.boolean
 import dev.tachyonmcp.kotlin.server.domain.booleanOrNull
@@ -101,6 +102,34 @@ internal class KotlinApiTest {
         ).use { handle ->
             handle.tools().find("t3").orElse(null) shouldNotBe null
         }
+    }
+
+    @Serializable
+    data class ReifiedToolRequest(
+        val q: String,
+    )
+
+    @Serializable
+    data class ReifiedToolReply(
+        val a: String,
+    )
+
+    @Test
+    fun `typedTool throws when no JsonSchemaFactory-Class is registered`() {
+        // tachyon-kotlin ships no JsonSchemaFactory<Class<?>> itself (see GeneratedJsonSchema.kt) —
+        // a consumer must register one (e.g. backed by kt-schema), as e2e's
+        // KtSchemaJsonSchemaFactory does. Here, absent any registration, the failure must be clear.
+        shouldThrow<IllegalStateException> {
+            TachyonServer(
+                port = 0,
+                {
+                    name("test")
+                    typedTool<ReifiedToolRequest, ReifiedToolReply>("t4") {
+                        ToolResult.text("ok")
+                    }
+                },
+            )
+        }.message shouldContain "JsonSchemaFactory"
     }
 
     // endregion
@@ -275,6 +304,19 @@ internal class KotlinApiTest {
         val args = Args.of(mapOf("name" to "Alice", "age" to 30), KxSerializationSerde.Default)
 
         args.decode<GreetingArgs>() shouldBe GreetingArgs("Alice", 30)
+    }
+
+    @Test
+    fun `ToolRequest arguments reified shorthand decodes via configured serde`() {
+        val args = Args.of(mapOf("name" to "Alice", "age" to 30), KxSerializationSerde.Default)
+        val request =
+            ToolRequest
+                .builder()
+                .name("greet")
+                .arguments(args)
+                .build()
+
+        request.arguments<GreetingArgs>() shouldBe GreetingArgs("Alice", 30)
     }
 
     @Test

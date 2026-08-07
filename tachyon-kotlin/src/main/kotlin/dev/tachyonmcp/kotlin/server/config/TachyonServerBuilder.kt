@@ -22,6 +22,7 @@ import dev.tachyonmcp.kotlin.server.DefaultKotlinTachyonServer
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
+import dev.tachyonmcp.kotlin.server.json.generatedJsonSchema
 import dev.tachyonmcp.kotlin.server.json.toJsonSchema
 import dev.tachyonmcp.kotlin.server.json.toJsonSchemaOrNull
 import io.netty.channel.ChannelPipeline
@@ -155,6 +156,36 @@ public class TachyonServerBuilder
                     handler,
                 )
             }
+
+        /**
+         * Registers a tool whose input/output schemas are derived from [In]/[Out] via
+         * [dev.tachyonmcp.api.json.JsonSchema.from], keyed by [Class]. Requires a
+         * `JsonSchemaFactory<Class<?>>` registered via
+         * `META-INF/services/dev.tachyonmcp.api.json.spi.JsonSchemaFactory` on the classpath (e.g.
+         * backed by [kt-schema](https://github.com/kpavlov/kt-schema)'s
+         * `ReflectionClassJsonSchemaGenerator`); throws [IllegalStateException] at registration
+         * time if none is found — no such factory ships with `tachyon-kotlin` itself.
+         *
+         * Named `typedTool` rather than an overload of `tool` because a same-named reified
+         * overload wins Kotlin's overload resolution for existing schema-less `tool(name) { }`
+         * calls too, then fails to infer [In]/[Out] there — breaking every such call site.
+         */
+        @ExperimentalApi
+        @JvmSynthetic
+        public inline fun <reified In : Any, reified Out : Any> typedTool(
+            name: String,
+            description: String? = null,
+            taskSupport: TaskSupport? = null,
+            noinline handler: suspend ToolScope.() -> ToolResult,
+        ): TachyonServerBuilder =
+            tool(
+                name = name,
+                description = description,
+                inputSchema = generatedJsonSchema<In>(),
+                outputSchema = generatedJsonSchema<Out>(),
+                taskSupport = taskSupport,
+                handler = handler,
+            )
 
         /**
          * Registers a prebuilt tool descriptor with a suspending handler block.

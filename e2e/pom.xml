@@ -112,6 +112,12 @@
             <version>${gson.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>me.kpavlov.kt.schema</groupId>
+            <artifactId>kt-schema-generator-json-jvm</artifactId>
+            <version>${kt-schema.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

@@ -45,6 +45,10 @@ public abstract class AbstractMcpE2eTest {
     }
 
     protected Mcp20251125Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    protected Mcp20251125Client createTestClient(int port) {
         return new Mcp20251125Client(port);
     }
 
