@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.extensions.skills;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -8,7 +9,7 @@ import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
 /** Combines multiple {@link SkillsRegistry} sources into one, rejecting duplicate skill paths. */
-final class CompositeSkillsRegistry implements SkillsRegistry {
+public class CompositeSkillsRegistry implements SkillsRegistry {
 
     private final List<Skill> skills;
     private final Map<String, SkillsRegistry> registryByUri;
@@ -32,13 +33,17 @@ final class CompositeSkillsRegistry implements SkillsRegistry {
         this.registryByUri = Map.copyOf(byUri);
     }
 
+    CompositeSkillsRegistry(SkillsRegistry... registries) {
+        this(Arrays.asList(registries));
+    }
+
     @Override
     public List<Skill> skills() {
         return skills;
     }
 
     @Override
-    public @Nullable byte[] readFile(String fileUri) {
+    public byte @Nullable [] readFile(String fileUri) {
         var registry = registryByUri.get(fileUri);
         return registry != null ? registry.readFile(fileUri) : null;
     }

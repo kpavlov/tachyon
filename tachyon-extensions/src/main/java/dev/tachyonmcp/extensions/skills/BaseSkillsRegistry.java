@@ -16,7 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Shared storage and scanning for the default {@link SkillsRegistry} implementations. */
-abstract class BaseSkillsRegistry implements SkillsRegistry {
+public abstract class BaseSkillsRegistry implements SkillsRegistry {
 
     private static final Logger logger = LoggerFactory.getLogger(BaseSkillsRegistry.class);
 
@@ -30,7 +30,7 @@ abstract class BaseSkillsRegistry implements SkillsRegistry {
     }
 
     @Override
-    public final @Nullable byte[] readFile(String fileUri) {
+    public final byte @Nullable [] readFile(String fileUri) {
         var cached = bytesByUri.get(fileUri);
         if (cached != null) {
             return cached;
@@ -94,7 +94,7 @@ abstract class BaseSkillsRegistry implements SkillsRegistry {
         try (var walk = Files.walk(skillDir)) {
             var relativePaths = new HashMap<String, Path>();
             var files = new HashMap<String, byte[]>();
-            walk.filter(Files::isRegularFile).forEach(file -> {
+            walk.filter(Files::isRegularFile).filter(Files::isReadable).forEach(file -> {
                 var relative = skillDir.relativize(file).toString().replace('\\', '/');
                 relativePaths.put(relative, file);
                 try {

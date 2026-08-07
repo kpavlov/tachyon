@@ -23,19 +23,19 @@ class ClasspathSkillsRegistryTest {
 
         assertThat(registry.skills())
                 .extracting(SkillsRegistry.Skill::skillPath)
-                .containsExactly("git-workflow", "pdf-processing");
+                .containsExactly("pdf-processing");
         assertThat(registry.readFile("skill://pdf-processing/templates/invoice.md"))
                 .isNotEmpty();
     }
 
     @Test
     void servesSingleClasspathSkillUnderNestedPath() {
-        var registry = new ClasspathSkillsRegistry("skills/git-workflow", "team/git-workflow");
+        var registry = new ClasspathSkillsRegistry("skills/pdf-processing", "team/pdf-processing");
 
         assertThat(registry.skills())
                 .extracting(SkillsRegistry.Skill::skillPath)
-                .containsExactly("team/git-workflow");
-        assertThat(registry.skills().get(0).frontmatter()).containsEntry("name", "git-workflow");
+                .containsExactly("team/pdf-processing");
+        assertThat(registry.skills().getFirst().frontmatter()).containsEntry("name", "pdf-processing");
     }
 
     @Test
@@ -55,7 +55,7 @@ class ClasspathSkillsRegistryTest {
             assertThat(registry.skills())
                     .extracting(SkillsRegistry.Skill::skillPath)
                     .containsExactly("demo");
-            assertThat(registry.skills().get(0).files())
+            assertThat(registry.skills().getFirst().files())
                     .extracting(SkillsRegistry.SkillFile::relativePath)
                     .containsExactly("SKILL.md", "guide.md");
             final var guide = registry.readFile("skill://demo/guide.md");

@@ -17,7 +17,7 @@ import org.jspecify.annotations.Nullable;
  * Default {@link SkillsRegistry} serving skills from classpath resources (a directory inside a
  * JAR or on the classpath). Pass an instance to {@link SkillsExtension.Builder#registry(SkillsRegistry)}.
  */
-public final class ClasspathSkillsRegistry extends BaseSkillsRegistry {
+public class ClasspathSkillsRegistry extends BaseSkillsRegistry {
 
     /**
      * Creates a registry from a classpath directory of skills: every subdirectory containing a

@@ -1,45 +1,43 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.extensions.skills;
 
+import static dev.tachyonmcp.extensions.skills.SkillTestFixtures.filesystemSkillsDir;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.io.IOException;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-class PathSkillsRegistryTest {
-
-    private static final Path FIXTURES = Path.of(
-            URI.create(PathSkillsRegistryTest.class.getResource("/skills").toString()));
+class FilesystemSkillsRegistryTest {
 
     @Test
-    void scansDirectoryOfSkills() throws Exception {
-        var registry = new PathSkillsRegistry(FIXTURES);
+    void scansDirectoryOfSkills() {
+        var registry = new FilesystemSkillsRegistry(filesystemSkillsDir);
 
         assertThat(registry.skills())
                 .extracting(SkillsRegistry.Skill::skillPath)
-                .containsExactly("git-workflow", "pdf-processing");
+                .containsExactlyInAnyOrder("git-workflow", "read-file");
 
-        var git = registry.skills().get(0);
+        var git = registry.skills().getFirst();
         assertThat(git.skillUri()).isEqualTo("skill://git-workflow/SKILL.md");
         assertThat(git.frontmatter()).containsEntry("name", "git-workflow");
         assertThat(git.files())
                 .extracting(SkillsRegistry.SkillFile::relativePath)
                 .containsExactly("SKILL.md", "references/BRANCHING.md");
-        assertThat(git.files().get(0).uri()).isEqualTo("skill://git-workflow/SKILL.md");
-        assertThat(git.files().get(0).mimeType()).isEqualTo("text/markdown");
-        assertThat(git.files().get(0).digest())
+
+        final var skillFile = git.files().getFirst();
+        assertThat(skillFile.uri()).isEqualTo("skill://git-workflow/SKILL.md");
+        assertThat(skillFile.mimeType()).isEqualTo("text/markdown");
+        assertThat(skillFile.digest())
                 .isEqualTo("sha256:b9de7cc1f03a390dd4ee3b2881a13eb5e39f02ec5f44ffb0ab9fb91e10c08d67");
     }
 
     @Test
-    void readsFileBytesByUri() throws Exception {
-        var registry = new PathSkillsRegistry(FIXTURES);
+    void readsFileBytesByUri() {
+        var registry = new FilesystemSkillsRegistry(filesystemSkillsDir);
 
         var content = new String(registry.readFile("skill://git-workflow/SKILL.md"), StandardCharsets.UTF_8);
         assertThat(content).contains("Follow this team's Git conventions");
@@ -52,7 +50,7 @@ class PathSkillsRegistryTest {
         Files.createDirectory(tempDir.resolve("not-a-skill"));
         Files.writeString(tempDir.resolve("not-a-skill/README.md"), "no skill here");
 
-        var registry = new PathSkillsRegistry(tempDir);
+        var registry = new FilesystemSkillsRegistry(tempDir);
 
         assertThat(registry.skills()).isEmpty();
     }
@@ -61,21 +59,21 @@ class PathSkillsRegistryTest {
     void rejectsDirectoryWithoutSkillMdWhenStrict(@TempDir Path tempDir) throws Exception {
         Files.writeString(tempDir.resolve("README.md"), "no skill here");
 
-        assertThatThrownBy(() -> new PathSkillsRegistry(tempDir, "git-workflow"))
+        assertThatThrownBy(() -> new FilesystemSkillsRegistry(tempDir, "git-workflow"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("SKILL.md");
     }
 
     @Test
-    void rejectsNameMismatchBetweenPathAndFrontmatter() throws Exception {
-        assertThatThrownBy(() -> new PathSkillsRegistry(FIXTURES.resolve("git-workflow"), "renamed"))
+    void rejectsNameMismatchBetweenPathAndFrontmatter() {
+        assertThatThrownBy(() -> new FilesystemSkillsRegistry(filesystemSkillsDir.resolve("git-workflow"), "renamed"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("must equal frontmatter 'name'");
     }
 
     @Test
-    void servesSingleSkillUnderNestedPath() throws Exception {
-        var registry = new PathSkillsRegistry(FIXTURES.resolve("git-workflow"), "team/git-workflow");
+    void servesSingleSkillUnderNestedPath() {
+        var registry = new FilesystemSkillsRegistry(filesystemSkillsDir.resolve("git-workflow"), "team/git-workflow");
 
         assertThat(registry.skills())
                 .extracting(SkillsRegistry.Skill::skillPath)
@@ -86,22 +84,22 @@ class PathSkillsRegistryTest {
     }
 
     @Test
-    void returnsBinaryBytesForNonTextFiles() throws IOException {
-        var registry = new PathSkillsRegistry(FIXTURES);
+    void returnsBinaryBytesForNonTextFiles() {
+        var registry = new FilesystemSkillsRegistry(filesystemSkillsDir);
 
         var script = registry.skills().stream()
-                .filter(skill -> skill.skillPath().equals("pdf-processing"))
+                .filter(skill -> skill.skillPath().equals("git-workflow"))
                 .findFirst()
                 .orElseThrow()
                 .files()
                 .stream()
-                .filter(file -> file.relativePath().equals("scripts/extract.py"))
+                .filter(file -> file.relativePath().equals("references/BRANCHING.md"))
                 .findFirst()
                 .orElseThrow();
-        assertThat(script.mimeType()).isEqualTo("text/plain");
+        assertThat(script.mimeType()).isEqualTo("text/markdown");
         assertThat(script.digest())
-                .isEqualTo("sha256:f05fea0e15cb5f951049570d4cebb3a84b272fd3390c85e8be7586f84f0b68f8");
+                .isEqualTo("sha256:c23e5f309d54105cc561675ce4384fa62971e00919fe9bd297a37e443746c24e");
         assertThat(new String(registry.readFile(script.uri()), StandardCharsets.UTF_8))
-                .contains("extract");
+                .contains("Branching Guide");
     }
 }

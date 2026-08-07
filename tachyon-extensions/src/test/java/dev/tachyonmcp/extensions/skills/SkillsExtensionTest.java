@@ -4,43 +4,35 @@ package dev.tachyonmcp.extensions.skills;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.domain.RequestId;
+import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.core.protocol.Protocols;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.core.server.McpDispatcher;
-import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.server.session.DefaultDispatchContext;
-import java.net.URI;
-import java.nio.file.Path;
 import java.util.Map;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.JsonNodeFactory;
 
 class SkillsExtensionTest {
 
-    private static final Path FIXTURES =
-            Path.of(URI.create(SkillsExtensionTest.class.getResource("/skills").toString()));
-
     private ServerEngine server;
-    private TachyonServer tachyon;
     private McpDispatcher dispatcher;
 
     @BeforeEach
     void setUp() {
-        tachyon = TachyonServer.builder()
-                .extension(SkillsExtension.builder()
-                        .registry(new PathSkillsRegistry(FIXTURES))
-                        .build())
-                .build();
-        server = (ServerEngine) tachyon;
+        server = (ServerEngine) SkillTestFixtures.startServer(SkillsExtension.builder()
+                .registry(new FilesystemSkillsRegistry(SkillTestFixtures.classpathSkillsDir))
+                .build());
         dispatcher = new McpDispatcher(server, server.executor());
     }
 
     @Test
     void advertisesExtensionAndDirectoryRead() {
-        var extension = (SkillsExtension) server.extensions().get(0);
+        var extension = (SkillsExtension) server.extensions().getFirst();
         assertThat(extension.extensionId()).isEqualTo(SkillsExtension.ID);
         assertThat(extension.serverSettings().values().boolValue("directoryRead"))
                 .isTrue();
@@ -50,18 +42,14 @@ class SkillsExtensionTest {
     void registersEverySkillFileAsExtensionOwnedResource() {
         var descriptors = server.resources().descriptors();
         assertThat(descriptors)
-                .extracting(descriptor -> descriptor.uri())
-                .contains(
-                        "skill://git-workflow/SKILL.md",
-                        "skill://git-workflow/references/BRANCHING.md",
-                        "skill://pdf-processing/scripts/extract.py",
-                        "skill://pdf-processing/templates/invoice.md");
+                .extracting(ResourceDescriptor::uri)
+                .contains("skill://pdf-processing/scripts/extract.py", "skill://pdf-processing/templates/invoice.md");
         assertThat(descriptors)
                 .allSatisfy(descriptor -> assertThat(descriptor.extensionId()).isEqualTo(SkillsExtension.ID));
-        assertThat(server.resources().findByUri("skill://git-workflow/SKILL.md"))
+        assertThat(server.resources().findByUri("skill://pdf-processing/SKILL.md"))
                 .get()
-                .extracting(descriptor -> descriptor.description())
-                .isEqualTo("Follow this team's Git conventions for branching and commits");
+                .extracting(ResourceDescriptor::description)
+                .isEqualTo("Extract, fill, and assemble PDF documents");
     }
 
     @Test
@@ -84,9 +72,8 @@ class SkillsExtensionTest {
         var body = dispatch("skills/list", Map.of("_meta", Map.of(SkillsExtension.ID, Map.of())));
 
         assertThat(body)
-                .contains("\"skill://git-workflow/SKILL.md\"")
                 .contains("\"skill://pdf-processing/SKILL.md\"")
-                .contains("\"sha256:c23e5f309d54105cc561675ce4384fa62971e00919fe9bd297a37e443746c24e\"");
+                .contains("\"sha256:f05fea0e15cb5f951049570d4cebb3a84b272fd3390c85e8be7586f84f0b68f8\"");
     }
 
     @Test
@@ -122,9 +109,9 @@ class SkillsExtensionTest {
     void readsSkillFileContent() throws Exception {
         var body = dispatch(
                 "resources/read",
-                Map.of("uri", "skill://git-workflow/SKILL.md", "_meta", Map.of(SkillsExtension.ID, Map.of())));
+                Map.of("uri", "skill://pdf-processing/SKILL.md", "_meta", Map.of(SkillsExtension.ID, Map.of())));
 
-        assertThat(body).contains("Follow this team's Git conventions");
+        assertThat(body).contains("assemble PDF");
     }
 
     private String dispatch(String method, Map<String, Object> rawParams) throws Exception {
@@ -132,7 +119,7 @@ class SkillsExtensionTest {
     }
 
     private String dispatch(String method, Map<String, Object> rawParams, boolean negotiate) throws Exception {
-        var context = DefaultDispatchContext.create(Protocols.list().get(0), server);
+        var context = DefaultDispatchContext.create(Protocols.list().getFirst(), server);
         var session = server.createSession("sess_skills");
         context.setSession(session);
         if (negotiate) {
@@ -144,6 +131,7 @@ class SkillsExtensionTest {
                     .protocolVersion("2025-11-25")
                     .capabilities(caps)
                     .build();
+            Assertions.assertNotNull(handler);
             handler.handle(context, params);
         }
         session.activate();

@@ -9,7 +9,7 @@ import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.SafeConstructor;
 
 /** Parses the YAML frontmatter block of a {@code SKILL.md} into a JSON-compatible map. */
-final class FrontmatterParser {
+class FrontmatterParser {
 
     private static final String DELIMITER = "---";
 

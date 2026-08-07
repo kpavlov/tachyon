@@ -6,11 +6,8 @@ import java.nio.file.Path;
 /**
  * Default {@link SkillsRegistry} serving skills from the filesystem. Pass an instance to
  * {@link SkillsExtension.Builder#registry(SkillsRegistry)}.
- *
- * @deprecated Use {@link FilesystemSkillsRegistry}
  */
-@Deprecated(forRemoval = true)
-public class PathSkillsRegistry extends FilesystemSkillsRegistry {
+public class FilesystemSkillsRegistry extends BaseSkillsRegistry {
 
     /**
      * Creates a registry from a directory of skills: every subdirectory containing a
@@ -18,8 +15,8 @@ public class PathSkillsRegistry extends FilesystemSkillsRegistry {
      *
      * @param skillsRoot the directory containing the skill directories
      */
-    public PathSkillsRegistry(Path skillsRoot) {
-        super(skillsRoot);
+    public FilesystemSkillsRegistry(Path skillsRoot) {
+        addSkillDir(skillsRoot);
     }
 
     /**
@@ -28,7 +25,7 @@ public class PathSkillsRegistry extends FilesystemSkillsRegistry {
      * @param skillDir the skill directory
      * @param skillPath the skill path; its final segment must equal the frontmatter {@code name}
      */
-    public PathSkillsRegistry(Path skillDir, String skillPath) {
-        super(skillDir, skillPath);
+    public FilesystemSkillsRegistry(Path skillDir, String skillPath) {
+        addSkill(skillDir, skillPath);
     }
 }

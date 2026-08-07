@@ -8,13 +8,13 @@ Tachyon's `SkillsExtension` (`tachyon-extensions`) implements SEP-2640: it scans
 
 ```java
 import dev.tachyonmcp.extensions.skills.ClasspathSkillsRegistry;
-import dev.tachyonmcp.extensions.skills.PathSkillsRegistry;
+import dev.tachyonmcp.extensions.skills.FilesystemSkillsRegistry;
 import dev.tachyonmcp.extensions.skills.SkillsExtension;
 import java.nio.file.Path;
 
 var server = TachyonServer.builder()
         .extension(SkillsExtension.builder()
-                .registry(new PathSkillsRegistry(Path.of("skills")))            // every subdirectory with a SKILL.md
+                .registry(new FilesystemSkillsRegistry(Path.of("skills")))            // every subdirectory with a SKILL.md
                 .registry(new ClasspathSkillsRegistry("bundled-skills"))        // same, packaged inside the jar
                 .build())
         .port(8080)
@@ -59,8 +59,8 @@ registry — not the builder — resolves where skills come from; the builder ju
 
 | Registry | Source | Skill path |
 |---|---|---|
-| `new PathSkillsRegistry(Path)` | filesystem directory of skills | each subdirectory name |
-| `new PathSkillsRegistry(Path, String)` | a single filesystem skill directory | explicit path |
+| `new FilesystemSkillsRegistry(Path)` | filesystem directory of skills | each subdirectory name |
+| `new FilesystemSkillsRegistry(Path, String)` | a single filesystem skill directory | explicit path |
 | `new ClasspathSkillsRegistry(String)` | classpath directory of skills (works inside a jar) | each subdirectory name |
 | `new ClasspathSkillsRegistry(String, String)` | a single classpath skill directory | explicit path |
 | a custom `SkillsRegistry` | anywhere | as returned by the registry |
@@ -69,7 +69,7 @@ The explicit-path constructors let you namespace skills instead of using the bar
 
 ```java
 SkillsExtension.builder()
-        .registry(new PathSkillsRegistry(Path.of("skills/git-workflow"), "team/git-workflow"))
+        .registry(new FilesystemSkillsRegistry(Path.of("skills/git-workflow"), "team/git-workflow"))
         .registry(new ClasspathSkillsRegistry("skills/pdf-processing", "acme/pdf-processing"))
         .build();
 ```
