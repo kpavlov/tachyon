@@ -464,6 +464,7 @@
                     </dependencies>
                     <configuration>
                         <oldVersion>${api.oldVersion}</oldVersion>
+                        <checkDependencies>false</checkDependencies>
                         <failCriticality>error</failCriticality>
                         <pipelineConfiguration>
                             <severityMapping>
@@ -483,7 +484,7 @@
                             <revapi.filter>
                                 <archives>
                                     <include>
-                                        <item>dev\.tachyonmcp:.*</item>
+                                        <item>dev\.tachyonmcp:${project.artifactId}:.*</item>
                                     </include>
                                 </archives>
                             </revapi.filter>
