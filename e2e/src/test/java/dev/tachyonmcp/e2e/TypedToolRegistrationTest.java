@@ -2,7 +2,6 @@
 package dev.tachyonmcp.e2e;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
@@ -35,8 +34,6 @@ class TypedToolRegistrationTest {
     record GreetRequest(String name) {}
 
     record GreetResponse(String greeting) {}
-
-    // GreetRequest/GreetResponse intentionally have no generated schema resource on the classpath.
 
     @Test
     void syncRegisterDecodesArgumentsAndWrapsTypedResult() throws Exception {
@@ -235,19 +232,5 @@ class TypedToolRegistrationTest {
                     """;
             assertThatJson(response.body()).isEqualTo(expected);
         }
-    }
-
-    @Test
-    void registrationThrowsWhenDescriptorOmitsSchemasAndNoneAreGenerated() {
-        assertThatThrownBy(() -> McpTestServers.start(
-                        b -> {},
-                        s -> s.tools()
-                                .register(
-                                        GreetRequest.class,
-                                        GreetResponse.class,
-                                        d -> d.name("greet-no-schema"),
-                                        (ctx, input) -> new GreetResponse("hi"))))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("META-INF/kt-schema/schemas/");
     }
 }

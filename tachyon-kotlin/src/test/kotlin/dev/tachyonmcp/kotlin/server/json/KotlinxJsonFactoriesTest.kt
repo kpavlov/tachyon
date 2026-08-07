@@ -19,6 +19,20 @@ internal class KotlinxJsonFactoriesTest {
     }
 
     @Test
+    fun `KotlinxJsonElementFactory handles JsonElement through the unified SPI`() {
+        val element = Json.parseToJsonElement("""{"type": "object"}""")
+
+        val schema =
+            KotlinxJsonElementFactory.INSTANCE
+                .toJsonSchema(
+                    element,
+                    JsonElement::class.java,
+                ).get()
+
+        schema.json() shouldEqualJson element.toString()
+    }
+
+    @Test
     fun `KotlinxJsonElementFactory retains the same element instance for unwrap`() {
         val element = Json.parseToJsonElement("""{"type": "object"}""")
 
@@ -38,10 +52,15 @@ internal class KotlinxJsonFactoriesTest {
     }
 
     @Test
-    fun `KotlinxJsonObjectFactory retains the same object instance for unwrap`() {
+    fun `KotlinxJsonObjectFactory handles JsonObject through the unified SPI`() {
         val obj = Json.parseToJsonElement("""{"a": 1}""") as JsonObject
 
-        val schema = KotlinxJsonObjectFactory.INSTANCE.toJsonSchema(obj)
+        val schema =
+            KotlinxJsonObjectFactory.INSTANCE
+                .toJsonSchema(
+                    obj,
+                    JsonObject::class.java,
+                ).get()
         val document = KotlinxJsonObjectFactory.INSTANCE.toJsonDocument(obj)
 
         assertSoftly {

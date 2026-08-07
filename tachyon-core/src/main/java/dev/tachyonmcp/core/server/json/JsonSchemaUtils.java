@@ -28,10 +28,15 @@ public class JsonSchemaUtils {
      * @throws IllegalArgumentException if the schema is not valid JSON, or its root is invalid
      */
     public static void validateSchemaRoot(
-            JsonSchemaFactory<String> factory, String schemaKind, String toolName, @Nullable JsonSchema schema) {
+            JsonSchemaFactory factory, String schemaKind, String toolName, @Nullable JsonSchema schema) {
         if (schema == null) return;
-        var validated = factory.toJsonSchema(schema.json());
-        var node = JsonUtils.parse(validated);
+        var validated = factory.toJsonSchema(schema.json(), String.class);
+        if (validated.isEmpty()) {
+            throw new IllegalStateException(
+                    "Configured schema factory does not handle String sources and cannot validate the schema of tool '"
+                            + toolName + "'.");
+        }
+        var node = JsonUtils.parse(validated.get());
         final String detail;
         if (!node.isObject()) {
             detail = "got: " + node.getNodeType();

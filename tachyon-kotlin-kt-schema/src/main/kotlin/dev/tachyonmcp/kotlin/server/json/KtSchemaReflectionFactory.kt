@@ -5,26 +5,24 @@ import dev.tachyonmcp.api.annotations.ExperimentalApi
 import dev.tachyonmcp.api.json.JsonSchema
 import dev.tachyonmcp.api.json.spi.JsonSchemaFactory
 import me.kpavlov.kt.schema.generator.json.ReflectionClassJsonSchemaGenerator
+import java.util.Optional
 
 /**
- * [JsonSchemaFactory] keyed by [Class], registered via `META-INF/services` so the reified
- * `typedTool<In, Out>(...)` DSL overload (which calls `JsonSchema.from(Class, Class::class)`)
- * resolves real generated schemas here, backed by kt-schema's
- * [ReflectionClassJsonSchemaGenerator].
+ * [JsonSchemaFactory] that generates a schema at runtime by reflecting on the class, backed by
+ * kt-schema's [ReflectionClassJsonSchemaGenerator]. Runs after the build-time resource factory
+ * (tachyon-core's `KtSchemaResourceFactory`): generates a schema whenever no codegen resource
+ * exists for the type.
  *
  * Ships in the dedicated `tachyon-kotlin-kt-schema` integration artifact, which declares
  * `kt-schema-generator-json-jvm` as a regular (non-optional) dependency. The provider therefore
  * always loads once that artifact is on the classpath — add it explicitly to use `typedTool`.
  */
 @ExperimentalApi
-internal class KtSchemaJsonSchemaFactory : JsonSchemaFactory<Class<*>> {
+internal class KtSchemaReflectionFactory : JsonSchemaFactory {
     private val generator = ReflectionClassJsonSchemaGenerator.Default
 
-    override fun sourceType(): Class<Class<*>> {
-        @Suppress("UNCHECKED_CAST")
-        return Class::class.java
-    }
+    override fun priority(): Int = 10
 
-    override fun toJsonSchema(source: Class<*>): JsonSchema =
-        JsonSchema.of(generator.generateSchemaString(source.kotlin))
+    override fun tryGenerate(type: Class<*>): Optional<JsonSchema> =
+        Optional.of(JsonSchema.of(generator.generateSchemaString(type.kotlin)))
 }

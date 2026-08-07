@@ -35,7 +35,7 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultToolRegistry.class);
 
-    private final JsonSchemaFactory<String> schemaFactory;
+    private final JsonSchemaFactory schemaFactory;
     private final FeatureConfig config;
 
     /**
@@ -47,7 +47,7 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
     /**
      * Creates a tool registry with the given schema validators and payload serde.
      */
-    public DefaultToolRegistry(JsonSchemaFactory<String> schemaFactory, FeatureConfig config) {
+    public DefaultToolRegistry(JsonSchemaFactory schemaFactory, FeatureConfig config) {
         super(config.pageSize());
         this.schemaFactory = schemaFactory;
         this.config = config;

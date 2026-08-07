@@ -6,6 +6,7 @@ import dev.tachyonmcp.api.json.JsonObject;
 import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.json.spi.JsonDocumentFactory;
 import dev.tachyonmcp.api.json.spi.JsonSchemaFactory;
+import java.util.Optional;
 
 /**
  * Jackson 3-backed {@link JsonDocumentFactory} and {@link JsonSchemaFactory} for {@link String}
@@ -15,13 +16,13 @@ import dev.tachyonmcp.api.json.spi.JsonSchemaFactory;
  * through its public no-arg constructor, not {@link #INSTANCE} — the module isn't an explicit
  * module, so {@code ServiceLoader} never looks for a {@code provider()} factory method). For
  * already-parsed Jackson {@code JsonNode} trees or tachyon's provider-neutral {@link JsonObject},
- * see {@link JacksonNodeJsonFactory} and {@link JacksonObjectJsonFactory} — a single class can't
- * implement {@code JsonSchemaFactory<String>} and {@code JsonSchemaFactory<JsonNode>} at once, since
- * Java forbids implementing the same generic interface twice with different type arguments.
+ * see {@link JacksonNodeJsonFactory} and {@link JacksonObjectJsonFactory}. The unified {@link
+ * JsonSchemaFactory} accepts any source type through {@link #toJsonSchema(Object, Class)}, so a
+ * single class can cover several source types.
  *
  * @author Konstantin Pavlov
  */
-public final class Jackson3JsonFactory implements JsonDocumentFactory<String>, JsonSchemaFactory<String> {
+public final class Jackson3JsonFactory implements JsonDocumentFactory<String>, JsonSchemaFactory {
 
     public static final Jackson3JsonFactory INSTANCE = new Jackson3JsonFactory();
 
@@ -39,6 +40,19 @@ public final class Jackson3JsonFactory implements JsonDocumentFactory<String>, J
     }
 
     @Override
+    public Optional<JsonSchema> toJsonSchema(Object source, Class<?> type) {
+        if (type != String.class) {
+            return Optional.empty();
+        }
+        var json = (String) source;
+        validate(json);
+        return Optional.of(JsonSchema.of(json));
+    }
+
+    /**
+     * Convenience overload parsing a schema directly from a JSON string, rejecting malformed
+     * input. Equivalent to {@code toJsonSchema(source, String.class).orElseThrow()}.
+     */
     public JsonSchema toJsonSchema(String json) {
         validate(json);
         return JsonSchema.of(json);

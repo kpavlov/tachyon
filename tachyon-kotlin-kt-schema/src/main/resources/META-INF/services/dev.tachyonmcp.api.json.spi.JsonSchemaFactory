@@ -1,1 +1,1 @@
-dev.tachyonmcp.kotlin.server.json.KtSchemaJsonSchemaFactory
+dev.tachyonmcp.kotlin.server.json.KtSchemaReflectionFactory

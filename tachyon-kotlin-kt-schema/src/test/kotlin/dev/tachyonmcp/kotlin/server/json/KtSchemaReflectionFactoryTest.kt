@@ -11,12 +11,13 @@ import org.junit.jupiter.api.Test
 import java.util.ServiceLoader
 
 /**
- * Verifies [KtSchemaJsonSchemaFactory] is discovered through [ServiceLoader] and that
- * `JsonSchema.from(Class, Class::class)` — the reified `typedTool` path — resolves a
- * kt-schema-generated schema. This is the dedicated `tachyon-kotlin-kt-schema` integration
- * artifact, so the provider must always be present once this module is on the classpath.
+ * Verifies [KtSchemaReflectionFactory] is discovered through [ServiceLoader] and that
+ * `JsonSchema.generated(Class)` — the reified `typedTool` path — resolves a kt-schema-generated
+ * schema via the reflection factory whenever no build-time codegen resource exists. This is the
+ * dedicated `tachyon-kotlin-kt-schema` integration artifact, so the provider must always be
+ * present once this module is on the classpath, chained after tachyon-core's resource factory.
  */
-internal class KtSchemaJsonSchemaFactoryTest {
+internal class KtSchemaReflectionFactoryTest {
     @Serializable
     @SerialName("Model")
     private data class Model(
@@ -25,20 +26,22 @@ internal class KtSchemaJsonSchemaFactoryTest {
     )
 
     @Test
-    fun `KtSchemaJsonSchemaFactory is registered via ServiceLoader`() {
-        val factory =
+    fun `KtSchemaReflectionFactory is chained after the resource factory via ServiceLoader`() {
+        val factories =
             ServiceLoader
                 .load(JsonSchemaFactory::class.java)
-                .single {
-                    it.sourceType() == Class::class.java
-                }
+                .sortedBy { it.priority() }
 
-        (factory is KtSchemaJsonSchemaFactory) shouldBe true
+        factories.map { it.javaClass.name }.filter { it.contains("KtSchema") } shouldBe
+            listOf(
+                "dev.tachyonmcp.core.server.json.KtSchemaResourceFactory",
+                "dev.tachyonmcp.kotlin.server.json.KtSchemaReflectionFactory",
+            )
     }
 
     @Test
-    fun `JsonSchema from Class resolves a kt-schema generated schema`() {
-        val schema = JsonSchema.from(Model::class.java, Class::class.java)
+    fun `JsonSchema generated from a class without a resource falls back to reflection`() {
+        val schema = JsonSchema.generated(Model::class.java)
 
         schema.json() shouldEqualJson
             $$"""

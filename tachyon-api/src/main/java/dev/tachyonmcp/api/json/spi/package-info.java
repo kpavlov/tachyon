@@ -3,14 +3,17 @@
  */
 
 /**
- * SPI for pluggable JSON document/schema parsing, loadable via {@link java.util.ServiceLoader}.
+ * SPI for pluggable JSON document/schema parsing and generation, loadable via {@link
+ * java.util.ServiceLoader}.
  *
- * <p>Implement {@link JsonDocumentFactory} and/or
- * {@link JsonSchemaFactory} and register the implementation in
- * {@code META-INF/services/dev.tachyonmcp.api.json.spi.JsonDocumentFactory} and/or
- * {@code META-INF/services/dev.tachyonmcp.api.json.spi.JsonSchemaFactory} to make it
- * discoverable by {@link JsonDocument#from(Object, Class)} and
- * {@link JsonSchema#from(Object, Class)}.
+ * <p>Implement {@link JsonDocumentFactory} to plug a document codec, and register the
+ * implementation in {@code META-INF/services/dev.tachyonmcp.api.json.spi.JsonDocumentFactory} to
+ * make it discoverable by {@link JsonDocument#from(Object, Class)}.
+ *
+ * <p>Implement {@link JsonSchemaFactory} to plug a schema factory for both parsed JSON sources
+ * ({@link JsonSchema#from(Object, Class)}) and generated class types
+ * ({@link JsonSchema#generated(Class)}), and register it in
+ * {@code META-INF/services/dev.tachyonmcp.api.json.spi.JsonSchemaFactory}.
  */
 @NullMarked
 package dev.tachyonmcp.api.json.spi;

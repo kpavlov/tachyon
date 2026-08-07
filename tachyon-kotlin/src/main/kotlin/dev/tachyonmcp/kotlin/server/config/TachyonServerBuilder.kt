@@ -22,7 +22,6 @@ import dev.tachyonmcp.kotlin.server.DefaultKotlinTachyonServer
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
-import dev.tachyonmcp.kotlin.server.json.generatedJsonSchema
 import dev.tachyonmcp.kotlin.server.json.toJsonSchema
 import dev.tachyonmcp.kotlin.server.json.toJsonSchemaOrNull
 import io.netty.channel.ChannelPipeline
@@ -157,14 +156,17 @@ public class TachyonServerBuilder
                 )
             }
 
-        /**
-         * Registers a tool whose input/output schemas are derived from [In]/[Out] via
-         * [dev.tachyonmcp.api.json.JsonSchema.from], keyed by [Class]. Resolved by a
-         * `JsonSchemaFactory<Class<?>>` shipped in the `tachyon-kotlin-kt-schema` integration
-         * artifact, backed by
-         * [kt-schema](https://github.com/kpavlov/kt-schema)'s `ReflectionClassJsonSchemaGenerator`.
-         * Add that artifact to the classpath to use `typedTool`; throws [IllegalStateException]
-         * at registration time if it's missing.
+/**
+         * Registers a tool whose input/output schemas are resolved from [In]/[Out] via
+         * [dev.tachyonmcp.api.json.JsonSchema.generated], through the [dev.tachyonmcp.api.json.spi.JsonSchemaFactory]
+         * resolution chain: a build-time codegen resource (tachyon-core's
+         * `KtSchemaResourceFactory`) wins when present, otherwise the runtime reflection
+         * generator in the `tachyon-kotlin-kt-schema` integration artifact (its
+         * `KtSchemaReflectionFactory`, registered via `META-INF/services`) back-fills. Add that
+         * artifact to the classpath to use `typedTool`; otherwise a codegen resource must
+         * exist. Throws
+         * [IllegalStateException] at registration time if neither a resource nor a factory
+         * produces a schema.
          *
          * Named `typedTool` rather than an overload of `tool` because a same-named reified
          * overload wins Kotlin's overload resolution for existing schema-less `tool(name) { }`
@@ -181,8 +183,8 @@ public class TachyonServerBuilder
             tool(
                 name = name,
                 description = description,
-                inputSchema = generatedJsonSchema<In>(),
-                outputSchema = generatedJsonSchema<Out>(),
+                inputSchema = JsonSchema.generated(In::class.java),
+                outputSchema = JsonSchema.generated(Out::class.java),
                 taskSupport = taskSupport,
                 handler = handler,
             )

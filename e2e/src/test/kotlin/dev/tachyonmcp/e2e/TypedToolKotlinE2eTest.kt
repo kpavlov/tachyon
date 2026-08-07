@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test
 
 /**
  * Exercises the reified `typedTool<In, Out>(...)` DSL overload, backed by the
- * `tachyon-kotlin-kt-schema` integration artifact's `KtSchemaJsonSchemaFactory` (registered via
+ * `tachyon-kotlin-kt-schema` integration artifact's `KtSchemaReflectionFactory` (registered via
  * `META-INF/services`; this module opts the artifact in as a test dependency). Split out from
  * [KotlinE2eTest] because this is the only test class in the module that needs it.
  */

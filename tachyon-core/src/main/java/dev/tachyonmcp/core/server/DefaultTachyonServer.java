@@ -250,7 +250,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
             @Nullable JsonSchemaValidator outputValidator,
             @Nullable PayloadSerializer payloadSerializer,
             @Nullable PayloadDeserializer payloadDeserializer,
-            @Nullable JsonSchemaFactory<String> schemaFactory,
+            @Nullable JsonSchemaFactory schemaFactory,
             @Nullable List<ServerExtension> extensions,
             @Nullable Consumer<ChannelPipeline> pipelineCustomizer) {
         this.executor = executor;
@@ -268,8 +268,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         final PayloadSerializer payloadSerializer1 = payloadSerializer != null ? payloadSerializer : defaultSerde;
         final PayloadDeserializer payloadDeserializer1 =
                 payloadDeserializer != null ? payloadDeserializer : defaultSerde;
-        final JsonSchemaFactory<String> schemaFactory1 =
-                schemaFactory != null ? schemaFactory : discoverSchemaFactory();
+        final JsonSchemaFactory schemaFactory1 = schemaFactory != null ? schemaFactory : discoverSchemaFactory();
         this.inputValidator = inputValidator1;
         this.outputValidator = outputValidator1;
         this.payloadSerializer = payloadSerializer1;
@@ -300,22 +299,22 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
                 Thread.ofVirtual().name("tachyon-", 0).factory());
     }
 
-    @SuppressWarnings("unchecked")
-    private static JsonSchemaFactory<String> discoverSchemaFactory() {
-        JsonSchemaFactory<String> found = null;
-        for (JsonSchemaFactory<?> provider : ServiceLoader.load(JsonSchemaFactory.class)) {
-            if (provider.sourceType() == String.class) {
+    private static JsonSchemaFactory discoverSchemaFactory() {
+        JsonSchemaFactory found = null;
+        for (JsonSchemaFactory provider : ServiceLoader.load(JsonSchemaFactory.class)) {
+            if (provider.toJsonSchema("{\"type\": \"object\"}", String.class).isPresent()) {
                 if (found != null) {
-                    throw new IllegalStateException("Duplicate JsonSchemaFactory<String> implementations found: "
-                            + found.getClass().getName() + " and "
-                            + provider.getClass().getName());
+                    throw new IllegalStateException(
+                            "Duplicate JsonSchemaFactory implementations handling String sources found: "
+                                    + found.getClass().getName() + " and "
+                                    + provider.getClass().getName());
                 }
-                found = (JsonSchemaFactory<String>) provider;
+                found = provider;
             }
         }
         if (found == null) {
             throw new IllegalStateException(
-                    "No JsonSchemaFactory<String> implementation registered via ServiceLoader.");
+                    "No JsonSchemaFactory implementation handling String sources registered via ServiceLoader.");
         }
         return found;
     }

@@ -12,6 +12,56 @@
           "attachments": {
             "since": "1.0.0-beta.19"
           }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method java.lang.Class<T> dev.tachyonmcp.api.json.spi.JsonSchemaFactory<T>::sourceType()",
+          "justification": "JsonSchemaFactory refactoring",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.numberOfParametersChanged",
+          "old": "method dev.tachyonmcp.api.json.JsonSchema dev.tachyonmcp.api.json.spi.JsonSchemaFactory<T>::toJsonSchema(T)",
+          "new": "method java.util.Optional<dev.tachyonmcp.api.json.JsonSchema> dev.tachyonmcp.api.json.spi.JsonSchemaFactory::toJsonSchema(java.lang.Object, java.lang.Class<?>)",
+          "justification": "JsonSchemaFactory refactoring",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method dev.tachyonmcp.api.json.JsonSchema dev.tachyonmcp.api.json.spi.JsonSchemaFactory<T>::toJsonSchema(T)",
+          "new": "method java.util.Optional<dev.tachyonmcp.api.json.JsonSchema> dev.tachyonmcp.api.json.spi.JsonSchemaFactory::toJsonSchema(java.lang.Object, java.lang.Class<?>)",
+          "justification": "JsonSchemaFactory refactoring",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.generics.formalTypeParameterRemoved",
+          "old": "interface dev.tachyonmcp.api.json.spi.JsonSchemaFactory<T>",
+          "new": "interface dev.tachyonmcp.api.json.spi.JsonSchemaFactory",
+          "typeParameter": "T",
+          "justification": "JsonSchemaFactory refactoring",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeTypeParametersChanged",
+          "old": "method dev.tachyonmcp.api.json.spi.JsonSchemaFactory<java.lang.String> dev.tachyonmcp.api.server.config.JsonConfig::schemaFactory()",
+          "new": "method dev.tachyonmcp.api.json.spi.JsonSchemaFactory dev.tachyonmcp.api.server.config.JsonConfig::schemaFactory()",
+          "justification": "JsonSchemaFactory refactoring",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
         }
       ]
     }

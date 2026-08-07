@@ -46,9 +46,9 @@ class Jackson3JsonFactoryTest {
 
     @Test
     void shouldBeDiscoverableAsServiceLoaderProviderForString() {
-        JsonSchemaFactory<?> discovered = null;
-        for (JsonSchemaFactory<?> candidate : ServiceLoader.load(JsonSchemaFactory.class)) {
-            if (candidate.sourceType() == String.class) {
+        JsonSchemaFactory discovered = null;
+        for (JsonSchemaFactory candidate : ServiceLoader.load(JsonSchemaFactory.class)) {
+            if (candidate.toJsonSchema("{\"a\":1}", String.class).isPresent()) {
                 discovered = candidate;
             }
         }
