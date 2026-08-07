@@ -1,11 +1,13 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.e2e
 
-import dev.tachyonmcp.api.server.features.tools.ToolResult
+import dev.tachyonmcp.api.json.JsonSchema
+import dev.tachyonmcp.api.server.features.tools.ToolResult.structured
 import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.kotlin.server.domain.decode
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
 import io.kotest.assertions.json.shouldEqualJson
+import io.kotest.matchers.equals.shouldEqual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Test
@@ -40,7 +42,8 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
                     """{"type":"object"}""",
                 ) {
                     val input = request.arguments().decode<GreetArgs>()
-                    ToolResult.structured(
+
+                    structured(
                         GreetReply("${input.greeting}, ${input.name}!"),
                         "greeting response",
                     )
@@ -83,7 +86,8 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
                     """{"type":"object"}""",
                 ) {
                     val input = request.arguments().decode<GreetArgs>()
-                    ToolResult.structured(GreetReply("${input.greeting}, ${input.name}!"))
+
+                    structured(GreetReply("${input.greeting}, ${input.name}!"))
                 }
             }
         port = sv.port()
@@ -120,13 +124,14 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
                     serde = KxSerializationSerde(Json { ignoreUnknownKeys = false })
                 }
                 tool(
-                    "strict-greet",
-                    "Strict typed greet tool",
-                    """{"type":"object"}""",
-                    """{"type":"object"}""",
+                    name = "strict-greet",
+                    description = "Strict typed greet tool",
+                    inputSchema = JsonSchema.objectSchema(),
+                    outputSchema = JsonSchema.objectSchema(),
                 ) {
                     val input = request.arguments().decode<GreetArgs>()
-                    ToolResult.structured(
+
+                    structured(
                         GreetReply("${input.greeting}, ${input.name}!"),
                         "greeting response",
                     )
@@ -144,7 +149,7 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
                 """.trimIndent(),
             )
 
-        assert(response.statusCode() == 200) { "Expected 200, got ${response.statusCode()}" }
+        response.statusCode() shouldEqual 200
         response.body() shouldEqualJson
             """
             {

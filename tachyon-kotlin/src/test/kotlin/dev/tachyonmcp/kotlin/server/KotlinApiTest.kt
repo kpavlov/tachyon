@@ -13,6 +13,7 @@ import dev.tachyonmcp.api.server.features.tools.ToolRequest
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.kotlin.server.config.PromptScope
 import dev.tachyonmcp.kotlin.server.config.ToolScope
+import dev.tachyonmcp.kotlin.server.domain.RpcMethodRequest
 import dev.tachyonmcp.kotlin.server.domain.arrayOrNull
 import dev.tachyonmcp.kotlin.server.domain.boolean
 import dev.tachyonmcp.kotlin.server.domain.booleanOrNull
@@ -474,6 +475,105 @@ internal class KotlinApiTest {
             val result = scope.fail("boom")
             result.shouldBeInstanceOf<ToolResult.Error>()
             (result.content().single() as TextContent).text() shouldBe "boom"
+        }
+    }
+
+    @Test
+    fun `ToolScope fail with content DSL builds a multi-block error ToolResult`() {
+        withStatelessContext { ctx ->
+            val request =
+                ToolRequest
+                    .builder()
+                    .name("t")
+                    .arguments(Args.of(null, null))
+                    .build()
+            val scope = ToolScope(ctx, request = request)
+            val result =
+                scope.fail {
+                    text("Validation failed")
+                    text("field 'email' is required")
+                }
+            result.shouldBeInstanceOf<ToolResult.Error>()
+            assertSoftly {
+                result.content() shouldHaveSize 2
+                (result.content()[0] as TextContent).text() shouldBe "Validation failed"
+                (result.content()[1] as TextContent).text() shouldBe "field 'email' is required"
+            }
+        }
+    }
+
+    @Test
+    fun `ToolScope raw returns a structured ToolResult with the pre-serialized JSON and text`() {
+        withStatelessContext { ctx ->
+            val request =
+                ToolRequest
+                    .builder()
+                    .name("t")
+                    .arguments(Args.of(null, null))
+                    .build()
+            val scope = ToolScope(ctx, request = request)
+            val result = scope.raw("""{"k":"v"}""", "raw text")
+            result.shouldBeInstanceOf<ToolResult.Success>()
+            (result.content().single() as TextContent).text() shouldBe "raw text"
+        }
+    }
+
+    @Test
+    fun `ToolScope empty returns a ToolResult with no structured value and no content`() {
+        withStatelessContext { ctx ->
+            val request =
+                ToolRequest
+                    .builder()
+                    .name("t")
+                    .arguments(Args.of(null, null))
+                    .build()
+            val scope = ToolScope(ctx, request = request)
+            val result = scope.empty()
+            result.shouldBeInstanceOf<ToolResult.Success>()
+            assertSoftly {
+                result.structured().isPresent shouldBe false
+                result.content() shouldHaveSize 0
+            }
+        }
+    }
+
+    @Test
+    fun `ToolScope inputRequired with a map returns an InputRequired ToolResult`() {
+        withStatelessContext { ctx ->
+            val request =
+                ToolRequest
+                    .builder()
+                    .name("t")
+                    .arguments(Args.of(null, null))
+                    .build()
+            val scope = ToolScope(ctx, request = request)
+            val ask = RpcMethodRequest("elicitation/create")
+            val result = scope.inputRequired(mapOf("confirm" to ask), state = "opaque")
+            result.shouldBeInstanceOf<ToolResult.InputRequired>()
+            assertSoftly {
+                result.inputRequests() shouldBe mapOf("confirm" to ask)
+                result.requestState() shouldBe "opaque"
+            }
+        }
+    }
+
+    @Test
+    fun `ToolScope inputRequired with vararg pairs returns an InputRequired ToolResult`() {
+        withStatelessContext { ctx ->
+            val request =
+                ToolRequest
+                    .builder()
+                    .name("t")
+                    .arguments(Args.of(null, null))
+                    .build()
+            val scope = ToolScope(ctx, request = request)
+            val ask = RpcMethodRequest("elicitation/create")
+            val result = scope.inputRequired("confirm" to ask)
+            result.shouldBeInstanceOf<ToolResult.InputRequired>()
+            assertSoftly {
+                result.inputRequests() shouldBe mapOf("confirm" to ask)
+                result.requestState() shouldBe null
+            }
         }
     }
 
