@@ -273,7 +273,7 @@ Register with `.extension(myExtension)`.
 
 ## Kotlin DSL
 
-Kotlin DSL supports **suspend** tool/resource/prompt handlers, `buildServer { }`, and `TachyonServer { }`. Handler lambdas are `suspend` receivers: call suspending APIs directly, without `it`. Prompt lambdas expose `arguments` (renamed from `it` in beta.5).
+Kotlin DSL supports **suspend** tool/resource/prompt handlers, `buildServer { }`, and `TachyonServer { }`. Handler lambdas are `suspend` receivers: call suspending APIs directly, without `it`. Prompt lambdas expose `arguments`.
 
 ```kotlin
 // buildServer {} → Kotlin TachyonServer without transport
