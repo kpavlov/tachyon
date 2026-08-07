@@ -63,11 +63,14 @@ public void bootstrap(ExtensionContext context) {
 
 ```java
 var server = TachyonServer.builder()
-    .extension(new AuditExtension())
+    .withExtensions(new AuditExtension())
     .port(8080)
     .build();
 server.start();
 ```
+
+`withExtensions` is a vararg — pass several in one call: `.withExtensions(new AuditExtension(), TasksExtension.instance())`.
+The older `.extension(ServerExtension)` still works but is deprecated.
 
 ## How negotiation works
 

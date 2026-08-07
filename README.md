@@ -143,7 +143,7 @@ See [docs/quickstart.md](docs/quickstart.md) for a full walkthrough with Java an
 
 ```java
 var server = TachyonServer.builder()
-    .extension(TasksExtension.instance())  // exposes create_task tool + task://{id} resource
+    .withExtensions(TasksExtension.instance())  // exposes create_task tool + task://{id} resource
     .port(8080)
     .build();
 server.start();

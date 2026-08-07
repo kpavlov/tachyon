@@ -46,7 +46,7 @@ server.start();
 | `.withResources(registrar)` | bootstrap resources/templates through their façade |
 | `.withPrompts(registrar)` | bootstrap through `Prompts.register/registerAsync` |
 | `.withCompletions(registrar)` | bootstrap completion functions |
-| `.extension(ext)` | `ServerExtension` plugin |
+| `.withExtensions(ext...)` | `ServerExtension` plugin(s), vararg — `.extension(ext)` still works but is deprecated |
 | `.json(cfg)` | serde + input/output schema validators |
 | ~~`.jsonSchemaValidator(v)`~~ | removed — use `.json(cfg -> cfg.inputSchemaValidator(v).outputSchemaValidator(v))` |
 | `.pipelineCustomizer(c)` | raw Netty pipeline escape hatch |
@@ -254,16 +254,17 @@ overloads have been removed, use `.name(...)` on the builder instead. `.tool(nam
 ## Extensions
 
 ```java
-public interface ServerExtension extends Extension<ChannelContext> {
-    default JsonNode serverSettings() { return JsonNodeFactory.instance.objectNode(); }
+public interface ServerExtension extends Extension<InteractionContext> {
+    String extensionId(); // reverse-DNS, e.g. "com.example/audit"
+    default ExtensionSettings serverSettings() { return ExtensionSettings.empty(); }
     default Set<String> methods() { return Set.of(); }
     default boolean requiresMetaEnvelope() { return true; }
-    default void bootstrap(ServerEngine server) {}
-    default void onConnectionInit(ChannelContext context, Map<String, JsonNode> clientSettings) {}
+    default void bootstrap(ExtensionContext context) {}
+    default void onConnectionInit(InteractionContext context, ExtensionSettings clientSettings) {}
 }
 ```
 
-Register with `.extension(myExtension)`.
+Register with `.withExtensions(myExtension)` (vararg — pass several in one call). `.extension(ext)` still works but is deprecated.
 
 ## Tests
 
@@ -299,6 +300,14 @@ val server = TachyonServer(8080) {
 ```
 
 `tool(inputSchema = ...)` accepts a `JsonSchema`, raw JSON `String`, or kotlinx `JsonObject`.
+
+Register `ServerExtension`s with `extensions(...)` (vararg — pass one or several):
+
+```kotlin
+val server = TachyonServer(8080) {
+    extensions(TasksExtension.instance(), MyAuditExtension())
+}
+```
 
 ### Typed decode/result (Kotlin)
 

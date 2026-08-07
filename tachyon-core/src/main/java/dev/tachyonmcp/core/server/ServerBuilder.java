@@ -71,8 +71,18 @@ public interface ServerBuilder {
     /** Registers completions through the server's completion façade at the end of {@link #build()}. */
     ServerBuilder withCompletions(Consumer<Completions> registrar);
 
-    /** Registers a server extension. */
+    /**
+     * Registers a server extension.
+     *
+     * @deprecated Use {@link #withExtensions(ServerExtension...)}
+     */
+    @Deprecated
     ServerBuilder extension(ServerExtension extension);
+
+    /**
+     * Registers one or more {@link ServerExtension}.
+     */
+    ServerBuilder withExtensions(ServerExtension... extensions);
 
     /**
      * Sets a caller-owned thread-per-task executor. The caller must close the executor after the

@@ -29,7 +29,7 @@ import org.jspecify.annotations.Nullable;
  *
  * <pre>{@code
  * TachyonServer.builder()
- *         .extension(SkillsExtension.builder()
+ *         .withExtensions(SkillsExtension.builder()
  *                 .registry(new PathSkillsRegistry(Path.of("skills")))
  *                 .registry(new ClasspathSkillsRegistry("bundled-skills"))
  *                 .build())

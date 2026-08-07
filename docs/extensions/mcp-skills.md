@@ -13,7 +13,7 @@ import dev.tachyonmcp.extensions.skills.SkillsExtension;
 import java.nio.file.Path;
 
 var server = TachyonServer.builder()
-        .extension(SkillsExtension.builder()
+        .withExtensions(SkillsExtension.builder()
                 .registry(new FilesystemSkillsRegistry(Path.of("skills")))            // every subdirectory with a SKILL.md
                 .registry(new ClasspathSkillsRegistry("bundled-skills"))        // same, packaged inside the jar
                 .build())

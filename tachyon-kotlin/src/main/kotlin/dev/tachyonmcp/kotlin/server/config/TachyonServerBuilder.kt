@@ -7,6 +7,7 @@ import dev.tachyonmcp.api.server.domain.Annotations
 import dev.tachyonmcp.api.server.domain.Icon
 import dev.tachyonmcp.api.server.domain.PromptMessage
 import dev.tachyonmcp.api.server.domain.ResourceContents
+import dev.tachyonmcp.api.server.extensions.ServerExtension
 import dev.tachyonmcp.api.server.features.completions.CompletionResult
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor
@@ -41,7 +42,7 @@ public class TachyonServerBuilder
         internal var networkPortExplicitlySet: Boolean = false
 
         private val coroutineRuntime: CoroutineRuntime =
-            CoroutineRuntime().also(delegate::extension)
+            CoroutineRuntime().also { delegate.withExtensions(it) }
 
         private val featureRegistrar: KotlinFeatureRegistrar =
             KotlinFeatureRegistrar(delegate, coroutineRuntime)
@@ -357,6 +358,10 @@ public class TachyonServerBuilder
             )
 
         public fun name(name: String): TachyonServerBuilder = this.also { delegate.name(name) }
+
+        /** Registers one or more [ServerExtension]s, e.g. from `tachyon-extensions`. */
+        public fun extensions(vararg extensions: ServerExtension): TachyonServerBuilder =
+            this.also { delegate.withExtensions(*extensions) }
 
         /** Configures the JSON payload boundary: serde and input/output schema validators. */
         @OptIn(ExperimentalContracts::class)

@@ -3,6 +3,8 @@ package dev.tachyonmcp.kotlin.server
 
 import dev.tachyonmcp.api.server.config.Mode
 import dev.tachyonmcp.api.server.domain.Role
+import dev.tachyonmcp.api.server.extensions.ExtensionContext
+import dev.tachyonmcp.api.server.extensions.ServerExtension
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.api.server.session.SessionIdGenerator
 import dev.tachyonmcp.core.server.session.InMemorySessionEventStore
@@ -210,6 +212,50 @@ internal class TachyonServerTest {
                 init.body() shouldContain appName
                 init.body() shouldContain "2.0.0"
             }
+        }
+    }
+
+    @Test
+    fun `extension is registered and bootstrapped`() {
+        var bootstrapped = false
+        val extension =
+            object : ServerExtension {
+                override fun extensionId(): String = "test.extension"
+
+                override fun bootstrap(context: ExtensionContext) {
+                    bootstrapped = true
+                }
+            }
+
+        buildServer {
+            name("extension-test")
+            extensions(extension)
+        }.use {
+            bootstrapped shouldBe true
+        }
+    }
+
+    @Test
+    fun `multiple extensions are all registered via a single vararg call`() {
+        val bootstrapped = mutableSetOf<String>()
+
+        fun extensionNamed(id: String) =
+            object : ServerExtension {
+                override fun extensionId(): String = id
+
+                override fun bootstrap(context: ExtensionContext) {
+                    bootstrapped += id
+                }
+            }
+
+        buildServer {
+            name("multi-extension-test")
+            extensions(
+                extensionNamed("one"),
+                extensionNamed("two"),
+            )
+        }.use {
+            bootstrapped shouldBe setOf("one", "two")
         }
     }
 

@@ -141,7 +141,7 @@ server-to-client `notifications/tasks` push (needs `subscriptions/listen` over t
 `TasksExtension` (`io.modelcontextprotocol/tasks`) serves double duty. Under 2025-11-25 it's a
 negotiable extension example: it exposes a `create_task` tool and a `task://{id}` resource
 template only to clients that opt in during `initialize`. Under 2026-07-28, its ID is exactly the
-SEP-2663 capability gate described above — registering it (`.extension(TasksExtension.instance())`)
+SEP-2663 capability gate described above — registering it (`.withExtensions(TasksExtension.instance())`)
 is what makes `context.isExtensionEnabled(TasksExtension.ID)` satisfiable for a client that
 declares it per request.
 
@@ -149,7 +149,7 @@ declares it per request.
 import dev.tachyonmcp.core.server.features.tasks.TasksExtension;
 
 var server = TachyonServer.builder()
-    .extension(TasksExtension.instance())
+    .withExtensions(TasksExtension.instance())
     .port(8080)
     .build();
 server.start();

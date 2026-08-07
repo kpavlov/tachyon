@@ -92,7 +92,7 @@ internal class ToolFnFactoryTest {
         val delegate =
             TachyonServer
                 .builder()
-                .extension(runtime)
+                .withExtensions(runtime)
                 .build() as ServerEngine
         val started = CountDownLatch(1)
         val cancelled = AtomicBoolean()
@@ -137,7 +137,7 @@ internal class ToolFnFactoryTest {
                         .builder()
                         .executor(executor)
                         .runtime { it.shutdownGracePeriod(Duration.ofMillis(50)) }
-                        .extension(runtime)
+                        .withExtensions(runtime)
                         .build() as ServerEngine
                 val fn =
                     toolFn("bounded-shutdown", runtime) {
@@ -252,7 +252,7 @@ internal class ToolFnFactoryTest {
                     TachyonServer
                         .builder()
                         .executor(executor)
-                        .extension(runtime)
+                        .withExtensions(runtime)
                         .build() as ServerEngine
                 delegate.use {
                     block(runtime, DefaultDispatchContext.stateless(delegate))

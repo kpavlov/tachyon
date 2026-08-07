@@ -227,12 +227,16 @@ final class DefaultServerBuilder implements ServerBuilder {
         return this;
     }
 
-    /**
-     * Registers a server extension.
-     */
     @Override
+    @Deprecated
     public ServerBuilder extension(ServerExtension extension) {
-        extensions.add(extension);
+        this.extensions.add(extension);
+        return this;
+    }
+
+    @Override
+    public ServerBuilder withExtensions(ServerExtension... extensions) {
+        this.extensions.addAll(List.of(extensions));
         return this;
     }
 
