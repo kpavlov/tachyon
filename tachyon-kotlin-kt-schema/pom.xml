@@ -180,6 +180,10 @@
                         <phase>package</phase>
                         <configuration>
                             <attach>true</attach>
+                            <documentedVisibilities>
+                                <visibility>PUBLIC</visibility>
+                                <visibility>INTERNAL</visibility>
+                            </documentedVisibilities>
                         </configuration>
                     </execution>
                 </executions>
