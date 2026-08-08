@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server
 
+import dev.tachyonmcp.api.json.JsonSchema
 import dev.tachyonmcp.api.server.domain.Args
 import dev.tachyonmcp.api.server.domain.AudioContent
 import dev.tachyonmcp.api.server.domain.ImageContent
@@ -74,12 +75,15 @@ internal class KotlinApiTest {
 
     @Test
     fun `String overload registers a tool with input and output schema`() {
-        val json = """{"type":"object"}"""
         TachyonServer(
             port = 0,
             {
                 name("test")
-                tool("t2", inputSchema = json, outputSchema = json) {
+                tool(
+                    "t2",
+                    inputSchema = JsonSchema.objectSchema(),
+                    outputSchema = JsonSchema.objectSchema(),
+                ) {
                     ToolResult.text("ok")
                 }
             },

@@ -20,11 +20,14 @@ import java.util.Optional;
  *       target type as the source (e.g. a build-time codegen resource or runtime reflection).</li>
  * </ul>
  *
- * <p>Factories of the same source type form a resolution chain: entry points try the registered
+ * <p>Factories of the same source type form a resolution chain on {@code JsonSchema.from(Object,
+ * Class)} and {@code JsonSchema.generated(Class)}: those entry points try the registered
  * factories in ascending {@link #priority()} order and use the first non-empty result. An
  * implementation returns {@link Optional#empty()} on sources it does not cover so resolution
  * continues with the next factory. Fabricating an empty result for a given target is what lets a
- * low-priority resource factory and a high-priority reflection generator coexist.
+ * low-priority resource factory and a high-priority reflection generator coexist. Server-level
+ * factory selection (e.g. the tool-schema validation factory) is not part of this chain — it
+ * requires exactly one factory for its source type and fails fast on ambiguity.
  *
  * <p>Discoverable via {@link java.util.ServiceLoader}: implementations register themselves in
  * {@code META-INF/services/dev.tachyonmcp.api.json.spi.JsonSchemaFactory}.
@@ -63,7 +66,5 @@ public interface JsonSchemaFactory<T> {
      * @throws IllegalArgumentException if this factory covers {@code source}'s type but {@code
      *     source} is not valid JSON
      */
-    default Optional<JsonSchema> toJsonSchema(T source) {
-        return Optional.empty();
-    }
+    Optional<JsonSchema> toJsonSchema(T source);
 }

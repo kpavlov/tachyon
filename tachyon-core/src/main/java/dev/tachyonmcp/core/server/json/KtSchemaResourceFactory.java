@@ -25,6 +25,10 @@ import java.util.Optional;
 @ExperimentalApi
 public final class KtSchemaResourceFactory implements JsonSchemaFactory<Class<?>> {
 
+    /**
+     * Creates the factory. Public no-arg constructor required for {@link
+     * java.util.ServiceLoader} discovery via {@code META-INF/services}.
+     */
     public KtSchemaResourceFactory() {}
 
     @Override

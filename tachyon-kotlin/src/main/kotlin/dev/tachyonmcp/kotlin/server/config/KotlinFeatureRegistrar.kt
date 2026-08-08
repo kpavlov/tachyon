@@ -2,7 +2,6 @@
 package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.api.json.JsonSchema
-import dev.tachyonmcp.api.json.spi.JsonSchemaFactory
 import dev.tachyonmcp.api.server.domain.Annotations
 import dev.tachyonmcp.api.server.domain.Icon
 import dev.tachyonmcp.api.server.domain.PromptMessage
@@ -127,35 +126,10 @@ internal class KotlinFeatureRegistrar(
         }
     }
 
-    fun typedTool(
-        inputType: Class<*>,
-        outputType: Class<*>,
-        name: String,
-        description: String?,
-        taskSupport: TaskSupport?,
-        schemaFactory: () -> JsonSchemaFactory<*>?,
-        handler: suspend ToolScope.() -> ToolResult,
-    ) {
-        delegate.withTools { tools ->
-            val factory = schemaFactory()
-            tools.registerAsync(
-                { descriptor ->
-                    descriptor
-                        .name(name)
-                        .description(description)
-                        .inputSchema(factory.generate(inputType))
-                        .outputSchema(factory.generate(outputType))
-                        .taskSupport(taskSupport)
-                },
-                toolFn(name, runtime, handler),
-            )
-        }
-    }
-
     fun tool(
         name: String,
         description: String?,
-        inputSchema: String,
+        inputSchema: String?,
         outputSchema: String?,
         taskSupport: TaskSupport?,
         handler: suspend ToolScope.() -> ToolResult,
@@ -215,17 +189,5 @@ internal class KotlinFeatureRegistrar(
                 resourceCompletionFn(uriOrTemplate, runtime, handler),
             )
         }
-    }
-}
-
-private fun JsonSchemaFactory<*>?.generate(type: Class<*>): JsonSchema {
-    val factory = this ?: return JsonSchema.generated(type)
-
-    @Suppress("UNCHECKED_CAST")
-    val generator = factory as JsonSchemaFactory<Any>
-    return generator.toJsonSchema(type).orElseThrow {
-        IllegalStateException(
-            "Configured JsonSchemaFactory ${factory.javaClass.name} did not generate a schema for ${type.name}",
-        )
     }
 }

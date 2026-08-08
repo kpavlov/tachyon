@@ -3,7 +3,6 @@ package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.api.annotations.ExperimentalApi
 import dev.tachyonmcp.api.json.JsonSchema
-import dev.tachyonmcp.api.json.spi.JsonSchemaFactory
 import dev.tachyonmcp.api.server.domain.Annotations
 import dev.tachyonmcp.api.server.domain.Icon
 import dev.tachyonmcp.api.server.domain.PromptMessage
@@ -41,9 +40,6 @@ public class TachyonServerBuilder
 
         @PublishedApi
         internal var networkPortExplicitlySet: Boolean = false
-
-        @PublishedApi
-        internal var schemaFactory: JsonSchemaFactory<*>? = null
 
         private val coroutineRuntime: CoroutineRuntime =
             CoroutineRuntime().also { delegate.withExtensions(it) }
@@ -141,6 +137,16 @@ public class TachyonServerBuilder
             }
 
         @JvmSynthetic
+        @Suppress("MaxLineLength")
+        @Deprecated(
+            level = DeprecationLevel.WARNING,
+            message = "Use tool(...) with explicit JsonSchema object",
+            replaceWith =
+                ReplaceWith(
+                    "tool(name, description, JsonSchema.parse(inputSchema), outputSchema?.let(JsonSchema::parse), taskSupport, handler)",
+                    "dev.tachyonmcp.api.json.JsonSchema",
+                ),
+        )
         public fun tool(
             name: String,
             description: String? = null,
@@ -161,17 +167,18 @@ public class TachyonServerBuilder
             }
 
         /**
-         * Registers a tool whose input/output schemas are resolved from [In]/[Out] through the
-         * server-configured [dev.tachyonmcp.api.json.spi.JsonSchemaFactory]. Without an explicit
-         * factory, [dev.tachyonmcp.api.json.JsonSchema.generated] uses the service-loaded resolution
-         * chain: a build-time codegen resource (tachyon-core's
-         * `KtSchemaResourceFactory`) wins when present, otherwise the runtime reflection
-         * generator in the `tachyon-kotlin-kt-schema` integration artifact (its
-         * `KtSchemaReflectionFactory`, registered via `META-INF/services`) back-fills. Add that
-         * artifact to the classpath to use `typedTool`; otherwise a codegen resource must
-         * exist. Throws
-         * [IllegalStateException] at registration time if neither a resource nor a factory
-         * produces a schema.
+         * Registers a tool whose input/output schemas are resolved from [In]/[Out] via
+         * [dev.tachyonmcp.api.json.JsonSchema.generated], which tries the service-loaded
+         * [dev.tachyonmcp.api.json.spi.JsonSchemaFactory] chain in ascending priority order: a
+         * build-time codegen resource (tachyon-core's `KtSchemaResourceFactory`) wins when
+         * present, otherwise the runtime reflection generator in the `tachyon-kotlin-kt-schema`
+         * integration artifact (its `KtSchemaReflectionFactory`, registered via
+         * `META-INF/services`) back-fills. Add that artifact to the classpath to use `typedTool`
+         * without a codegen resource. To use a different generator, register your own
+         * `JsonSchemaFactory<Class<?>>` via `META-INF/services` — `json { schemaFactory = ... }`
+         * configures the unrelated *validation* factory (`sourceType() == String`) and has no
+         * effect here. Throws [IllegalStateException] at registration time if no factory in the
+         * chain produces a schema.
          *
          * Named `typedTool` rather than an overload of `tool` because a same-named reified
          * overload wins Kotlin's overload resolution for existing schema-less `tool(name) { }`
@@ -204,13 +211,12 @@ public class TachyonServerBuilder
             handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
             this.also {
-                featureRegistrar.typedTool(
-                    inputType,
-                    outputType,
+                featureRegistrar.tool(
                     name,
                     description,
+                    JsonSchema.generated(inputType),
+                    JsonSchema.generated(outputType),
                     taskSupport,
-                    { schemaFactory },
                     handler,
                 )
             }
@@ -428,9 +434,7 @@ public class TachyonServerBuilder
             crossinline configure: (@TachyonDsl JsonScope).() -> Unit,
         ): TachyonServerBuilder {
             contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
-            val scope = JsonScope().apply(configure)
-            scope.schemaFactory?.let { schemaFactory = it }
-            scope.applyTo(delegate)
+            JsonScope().apply(configure).applyTo(delegate)
             return this
         }
 

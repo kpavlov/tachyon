@@ -73,6 +73,14 @@ public record JsonConfig(
             return this;
         }
 
+        /**
+         * Sets the factory used to parse/validate encoded tool schemas; must accept {@link
+         * String} sources ({@code sourceType() == String.class}), since the server hands it raw
+         * schema JSON. {@code null} keeps the server default.
+         *
+         * @param schemaFactory the {@code String}-sourced schema factory, or {@code null}
+         * @return this builder
+         */
         public Builder schemaFactory(@Nullable JsonSchemaFactory<?> schemaFactory) {
             this.schemaFactory = schemaFactory;
             return this;

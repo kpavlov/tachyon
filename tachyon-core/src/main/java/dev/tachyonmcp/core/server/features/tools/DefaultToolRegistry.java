@@ -45,7 +45,10 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
     public static final int MAX_DESCRIPTION_LENGTH = 2048;
 
     /**
-     * Creates a tool registry with the given schema validators and payload serde.
+     * Creates a tool registry.
+     *
+     * @param schemaFactory validates registered tool schemas; must accept {@link String} sources
+     * @param config        feature configuration, e.g. page size and mode
      */
     public DefaultToolRegistry(JsonSchemaFactory<?> schemaFactory, FeatureConfig config) {
         super(config.pageSize());

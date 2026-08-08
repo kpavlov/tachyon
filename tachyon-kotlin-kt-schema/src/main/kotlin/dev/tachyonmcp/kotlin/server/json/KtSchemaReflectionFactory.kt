@@ -21,8 +21,7 @@ import java.util.Optional
 internal class KtSchemaReflectionFactory : JsonSchemaFactory<Class<*>> {
     private val generator = ReflectionClassJsonSchemaGenerator.Default
 
-    @Suppress("UNCHECKED_CAST")
-    override fun sourceType(): Class<Class<*>> = Class::class.java as Class<Class<*>>
+    override fun sourceType(): Class<Class<*>> = Class::class.java
 
     override fun priority(): Int = 10
 

@@ -40,7 +40,12 @@ public class JsonScope
         /** Output schema validator, or `null` to keep the server default. */
         public var outputValidator: JsonSchemaValidator? = null
 
-        /** Schema factory, or `null` to keep the server default. */
+        /**
+         * Parses/validates encoded tool schemas; must handle `String` sources. `null` keeps the
+         * server default (`Jackson3JsonFactory`). Unrelated to `typedTool`'s schema generation,
+         * which always resolves through the [dev.tachyonmcp.api.json.spi.JsonSchemaFactory]
+         * `META-INF/services` chain — see `TachyonServerBuilder.typedTool`.
+         */
         public var schemaFactory: JsonSchemaFactory<*>? = null
 
         @PublishedApi
