@@ -17,6 +17,8 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class DnsRebindingProtectionHandlerTest {
 
@@ -51,12 +53,23 @@ class DnsRebindingProtectionHandlerTest {
         }
     }
 
-    @Test
-    void allowsLocalhostHostByDefault() {
+    @ParameterizedTest
+    @ValueSource(strings = {"localhost:8096", "localhost.:8096", "127.0.0.1:8096", "[::1]:8096"})
+    void allowsLoopbackHostByDefault(String host) {
         channel = new EmbeddedChannel(new DnsRebindingProtectionHandler());
-        assertThat(channel.writeInbound(requestWithHost("localhost:8096")))
-                .as("localhost Host must pass through")
+        assertThat(channel.writeInbound(requestWithHost(host)))
+                .as("loopback Host must pass through")
                 .isTrue();
+        assertThat(rejectionStatus(channel)).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"http://localhost.:3000", "http://[::1]:3000"})
+    void allowsLoopbackOriginByDefault(String origin) {
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler());
+        var req = requestWithHost("localhost:8096");
+        req.headers().set(HttpHeaderNames.ORIGIN, origin);
+        assertThat(channel.writeInbound(req)).isTrue();
         assertThat(rejectionStatus(channel)).isNull();
     }
 
@@ -93,7 +106,7 @@ class DnsRebindingProtectionHandlerTest {
     @Test
     void stillRejectsHostsNotOnTheAllowlist() {
         channel = new EmbeddedChannel(new DnsRebindingProtectionHandler(List.of("host.docker.internal:8096")));
-        channel.writeInbound(requestWithHost("evil.example:80"));
+        channel.writeInbound(requestWithHost("evil.host.docker.internal:8096"));
         assertThat(rejectionStatus(channel)).isEqualTo(HttpResponseStatus.FORBIDDEN);
     }
 
@@ -121,6 +134,38 @@ class DnsRebindingProtectionHandlerTest {
                 .as("a rejected inbound request must be released, not leaked")
                 .isZero();
         assertThat(rejectionStatus(channel)).isEqualTo(HttpResponseStatus.FORBIDDEN);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"localhost:garbage", "[::1]evil", "[::1]:80x"})
+    void rejectsMalformedPortSuffix(String host) {
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler());
+        channel.writeInbound(requestWithHost(host));
+        assertThat(rejectionStatus(channel)).isEqualTo(HttpResponseStatus.FORBIDDEN);
+    }
+
+    @Test
+    void rejectsMultipleOriginHeaders() {
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler());
+        var req = requestWithHost("localhost:8096");
+        req.headers().add(HttpHeaderNames.ORIGIN, "http://localhost:3000");
+        req.headers().add(HttpHeaderNames.ORIGIN, "http://evil.example");
+        channel.writeInbound(req);
+        assertThat(rejectionStatus(channel)).isEqualTo(HttpResponseStatus.FORBIDDEN);
+    }
+
+    @Test
+    void dropsContentChunksAfterRejection() {
+        channel = new EmbeddedChannel(new DnsRebindingProtectionHandler());
+        channel.writeInbound(request(HttpVersion.HTTP_1_1, "evil.example"));
+        assertThat(rejectionStatus(channel)).isEqualTo(HttpResponseStatus.FORBIDDEN);
+        var chunk = new io.netty.handler.codec.http.DefaultHttpContent(
+                io.netty.buffer.Unpooled.wrappedBuffer(new byte[] {1}));
+        channel.writeInbound(chunk);
+        assertThat(channel.inboundMessages())
+                .as("orphan content must not propagate")
+                .isEmpty();
+        assertThat(chunk.refCnt()).as("dropped chunk must be released").isZero();
     }
 
     @Test
