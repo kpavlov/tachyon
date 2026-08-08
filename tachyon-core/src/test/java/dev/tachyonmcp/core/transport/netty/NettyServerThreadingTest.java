@@ -10,9 +10,7 @@ import dev.tachyonmcp.core.server.McpDispatcher;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
@@ -83,20 +81,15 @@ class NettyServerThreadingTest {
     }
 
     @Test
-    void callerSuppliedExecutorIsNotShutDownByServerClose() throws Exception {
-        var executor = Executors.newVirtualThreadPerTaskExecutor();
-        var closed = new AtomicBoolean(false);
-
+    void serverOwnedExecutorIsShutDownByServerClose() {
         var server = newEngine(
-                b -> b.executor(executor),
+                b -> b.threadFactory(Thread.ofVirtual().name("tenant-", 0).factory()),
                 s -> s.tools().register(builder -> builder.name("exec_probe"), (ctx, request) -> ToolResult.empty()));
+        var executor = server.executor();
         server.close();
 
-        // The executor should still be usable (not shut down)
-        executor.submit(() -> closed.set(true)).get(5, TimeUnit.SECONDS);
-        assertThat(closed)
-                .as("caller-owned executor must remain active after server.close()")
+        assertThat(executor.isShutdown())
+                .as("server-owned executor must be shut down by server.close()")
                 .isTrue();
-        executor.shutdown();
     }
 }

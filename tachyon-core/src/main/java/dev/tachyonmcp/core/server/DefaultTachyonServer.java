@@ -105,7 +105,6 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     final Map<String, LoggingLevel> loggingLevels = new ConcurrentHashMap<>();
     final ConcurrentHashMap<RequestId, CompletableFuture<String>> pendingRequests = new ConcurrentHashMap<>();
     private final ExecutorService executor;
-    private final boolean ownsExecutor;
     private final List<ServerExtension> extensions;
     private final @Nullable Consumer<ChannelPipeline> pipelineCustomizer;
     private final Map<String, String> extensionMethodOwners = new ConcurrentHashMap<>();
@@ -242,7 +241,6 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
 
     DefaultTachyonServer(
             ExecutorService executor,
-            boolean ownsExecutor,
             SessionEventStore sessionEventStore,
             SessionStore sessionStore,
             ServerConfig config,
@@ -254,7 +252,6 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
             @Nullable List<ServerExtension> extensions,
             @Nullable Consumer<ChannelPipeline> pipelineCustomizer) {
         this.executor = executor;
-        this.ownsExecutor = ownsExecutor;
         this.config = Objects.requireNonNull(config, "config cannot be null");
         this.sessionEventStore = Objects.requireNonNull(sessionEventStore, "sessionEventStore cannot be null");
         this.port = config.network().port();
@@ -807,17 +804,15 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         try {
             logger.info("Shutting down TachyonMCP Server");
             shutdownExtensions();
-            if (ownsExecutor) {
-                executor.shutdown();
-                try {
-                    var grace = config.runtime().shutdownGracePeriod();
-                    if (!executor.awaitTermination(grace.toMillis(), TimeUnit.MILLISECONDS)) {
-                        executor.shutdownNow();
-                    }
-                } catch (InterruptedException e) {
+            executor.shutdown();
+            try {
+                var grace = config.runtime().shutdownGracePeriod();
+                if (!executor.awaitTermination(grace.toMillis(), TimeUnit.MILLISECONDS)) {
                     executor.shutdownNow();
-                    Thread.currentThread().interrupt();
                 }
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
             }
             taskRegistry.stopTtlJanitor();
             sessionManager.close();

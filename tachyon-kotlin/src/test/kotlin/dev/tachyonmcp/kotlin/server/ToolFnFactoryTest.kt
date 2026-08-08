@@ -24,7 +24,6 @@ import tools.jackson.databind.ObjectMapper
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
-import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -128,43 +127,38 @@ internal class ToolFnFactoryTest {
         val runtime = CoroutineRuntime()
         val release = CompletableDeferred<Unit>()
         val started = CountDownLatch(1)
-        Executors
-            .newThreadPerTaskExecutor(
-                Thread.ofVirtual().name("bounded-shutdown-", 0).factory(),
-            ).use { executor ->
-                val server =
-                    TachyonServer
-                        .builder()
-                        .executor(executor)
-                        .runtime { it.shutdownGracePeriod(Duration.ofMillis(50)) }
-                        .withExtensions(runtime)
-                        .build() as ServerEngine
-                val fn =
-                    toolFn("bounded-shutdown", runtime) {
-                        started.countDown()
-                        withContext(NonCancellable) {
-                            release.await()
-                        }
-                        ToolResult.text("done")
-                    }
-
-                fn.apply(
-                    DefaultDispatchContext.stateless(server),
-                    ToolRequest.builder().name("bounded-shutdown").build(),
-                )
-                try {
-                    started.await(5, TimeUnit.SECONDS) shouldBe true
-
-                    val before = System.nanoTime()
-                    server.close()
-                    val elapsed = Duration.ofNanos(System.nanoTime() - before)
-
-                    (elapsed < Duration.ofSeconds(2)) shouldBe true
-                } finally {
-                    release.complete(Unit)
-                    server.close()
+        val server =
+            TachyonServer
+                .builder()
+                .threadFactory(Thread.ofVirtual().name("bounded-shutdown-", 0).factory())
+                .runtime { it.shutdownGracePeriod(Duration.ofMillis(50)) }
+                .withExtensions(runtime)
+                .build() as ServerEngine
+        val fn =
+            toolFn("bounded-shutdown", runtime) {
+                started.countDown()
+                withContext(NonCancellable) {
+                    release.await()
                 }
+                ToolResult.text("done")
             }
+
+        fn.apply(
+            DefaultDispatchContext.stateless(server),
+            ToolRequest.builder().name("bounded-shutdown").build(),
+        )
+        try {
+            started.await(5, TimeUnit.SECONDS) shouldBe true
+
+            val before = System.nanoTime()
+            server.close()
+            val elapsed = Duration.ofNanos(System.nanoTime() - before)
+
+            (elapsed < Duration.ofSeconds(2)) shouldBe true
+        } finally {
+            release.complete(Unit)
+            server.close()
+        }
     }
 
     @Test
@@ -244,19 +238,14 @@ internal class ToolFnFactoryTest {
 
     private fun withCoroutineRuntime(block: (CoroutineRuntime, InteractionContext) -> Unit) {
         val runtime = CoroutineRuntime()
-        Executors
-            .newThreadPerTaskExecutor(
-                Thread.ofVirtual().name("kotlin-handler-", 0).factory(),
-            ).use { executor ->
-                val delegate =
-                    TachyonServer
-                        .builder()
-                        .executor(executor)
-                        .withExtensions(runtime)
-                        .build() as ServerEngine
-                delegate.use {
-                    block(runtime, DefaultDispatchContext.stateless(delegate))
-                }
-            }
+        val delegate =
+            TachyonServer
+                .builder()
+                .threadFactory(Thread.ofVirtual().name("kotlin-handler-", 0).factory())
+                .withExtensions(runtime)
+                .build() as ServerEngine
+        delegate.use {
+            block(runtime, DefaultDispatchContext.stateless(delegate))
+        }
     }
 }

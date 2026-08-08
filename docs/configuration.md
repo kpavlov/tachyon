@@ -344,8 +344,7 @@ equivalents) — they mutate the same nested sub-config, so chaining still works
 
 | Option | Description |
 |---|---|
-| `executor(ExecutorService)` | Handler executor; default runs handlers on virtual threads |
-| `threadFactory(ThreadFactory)` | Thread factory for the default executor |
+| `threadFactory(ThreadFactory)` | Thread factory for the server-owned virtual-thread-per-task executor (default: `Thread.ofVirtual().name("tachyon-", 0)`) |
 | `pipelineCustomizer(Consumer<ChannelPipeline>)` | Hook to mutate the Netty pipeline after MCP handlers are installed |
 | `json(cfg -> cfg.inputSchemaValidator(...).outputSchemaValidator(...))` | Custom JSON Schema validators |
 

@@ -4,7 +4,6 @@ package dev.tachyonmcp.core.server;
 import dev.tachyonmcp.api.json.JsonSchemaValidator;
 import dev.tachyonmcp.api.json.PayloadDeserializer;
 import dev.tachyonmcp.api.json.PayloadSerializer;
-import dev.tachyonmcp.api.json.spi.JsonSchemaFactory;
 import dev.tachyonmcp.api.server.config.JsonConfig;
 import dev.tachyonmcp.api.server.config.MonitoringConfig;
 import dev.tachyonmcp.api.server.config.RuntimeConfig;
@@ -25,11 +24,9 @@ import dev.tachyonmcp.core.server.session.InMemorySessionStore;
 import io.netty.channel.ChannelPipeline;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 
@@ -51,12 +48,10 @@ final class DefaultServerBuilder implements ServerBuilder {
     private JsonSchemaValidator outputSchemaValidator = new NetworkntJsonSchemaValidator();
     private PayloadSerializer payloadSerializer = new JacksonPayloadSerde();
     private PayloadDeserializer payloadDeserializer = new JacksonPayloadSerde();
-    private @Nullable JsonSchemaFactory<?> schemaFactory;
 
     @Nullable
     private Consumer<ChannelPipeline> pipelineCustomizer;
 
-    private @Nullable ExecutorService executor;
     private @Nullable ThreadFactory threadFactory;
 
     DefaultServerBuilder() {}
@@ -238,60 +233,13 @@ final class DefaultServerBuilder implements ServerBuilder {
     }
 
     /**
-     * Sets a caller-owned executor for handler dispatch. The server will not shut it down on close.
-     * Must be thread-per-task (each task starts on a new thread); bounded pools deadlock with
-     * the blocking-first dispatch contract. Mutually exclusive with {@link #threadFactory}.
-     */
-    @Override
-    public ServerBuilder executor(ExecutorService executor) {
-        if (threadFactory != null) {
-            throw new IllegalStateException("executor() and threadFactory() are mutually exclusive");
-        }
-        this.executor = executor;
-        return this;
-    }
-
-    /**
      * Sets a thread factory for virtual-thread-per-task executor creation. The server owns this
-     * executor and will shut it down on close. Mutually exclusive with {@link #executor}.
+     * executor and will shut it down on close.
      */
     @Override
     public ServerBuilder threadFactory(ThreadFactory threadFactory) {
-        if (executor != null) {
-            throw new IllegalStateException("executor() and threadFactory() are mutually exclusive");
-        }
         this.threadFactory = threadFactory;
         return this;
-    }
-
-    static void validateExecutor(ExecutorService executor) {
-        var thread1 = new Thread[1];
-        var thread2 = new Thread[1];
-        var latch = new CountDownLatch(1);
-        try {
-            var f1 = executor.submit(() -> {
-                thread1[0] = Thread.currentThread();
-                try {
-                    latch.await(10, TimeUnit.SECONDS);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            });
-            var f2 = executor.submit(() -> thread2[0] = Thread.currentThread());
-            f2.get(2, TimeUnit.SECONDS);
-            latch.countDown();
-            f1.get(10, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            throw new IllegalArgumentException(
-                    "executor must create a new (virtual) thread per task; bounded pools deadlock with blocking-first dispatch",
-                    e);
-        } finally {
-            latch.countDown();
-        }
-        if (thread1[0] == thread2[0]) {
-            throw new IllegalArgumentException(
-                    "executor must create a new (virtual) thread per task; bounded pools deadlock with blocking-first dispatch");
-        }
     }
 
     // === Transport escape hatch ===
@@ -325,22 +273,14 @@ final class DefaultServerBuilder implements ServerBuilder {
         var store = sessionConfig.sessionStore() != null ? sessionConfig.sessionStore() : new InMemorySessionStore();
         var allExtensions = List.copyOf(extensions);
         var serverConfig = buildConfig();
-        ExecutorService resolvedExecutor;
-        boolean ownsExecutor;
-        if (executor != null) {
-            validateExecutor(executor);
-            resolvedExecutor = executor;
-            ownsExecutor = false;
-        } else if (threadFactory != null) {
+        final ExecutorService resolvedExecutor;
+        if (threadFactory != null) {
             resolvedExecutor = Executors.newThreadPerTaskExecutor(threadFactory);
-            ownsExecutor = true;
         } else {
             resolvedExecutor = DefaultTachyonServer.defaultExecutorForBuilder();
-            ownsExecutor = true;
         }
         var server = new DefaultTachyonServer(
                 resolvedExecutor,
-                ownsExecutor,
                 sessionEventStore,
                 store,
                 serverConfig,
@@ -348,7 +288,7 @@ final class DefaultServerBuilder implements ServerBuilder {
                 outputSchemaValidator,
                 payloadSerializer,
                 payloadDeserializer,
-                schemaFactory,
+                null,
                 allExtensions,
                 pipelineCustomizer);
         bootstrapRegistrations.forEach(registrar -> registrar.accept(server));

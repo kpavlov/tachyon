@@ -16,7 +16,6 @@ import dev.tachyonmcp.core.server.config.NetworkConfig;
 import dev.tachyonmcp.core.server.config.ServerConfig;
 import dev.tachyonmcp.core.server.config.SessionConfig;
 import io.netty.channel.ChannelPipeline;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
@@ -84,14 +83,7 @@ public interface ServerBuilder {
      */
     ServerBuilder withExtensions(ServerExtension... extensions);
 
-    /**
-     * Sets a caller-owned thread-per-task executor. The caller must close the executor after the
-     * server is closed. {@link #build()} rejects bounded executors with an
-     * {@link IllegalArgumentException}.
-     */
-    ServerBuilder executor(ExecutorService executor);
-
-    /** Sets the thread factory used by the server-owned thread-per-task executor. */
+    /** Sets the thread factory used by the server-owned virtual-thread-per-task executor. */
     ServerBuilder threadFactory(ThreadFactory threadFactory);
 
     /** Customizes each Netty channel pipeline. */
@@ -101,8 +93,6 @@ public interface ServerBuilder {
     /**
      * Constructs the configured server without starting its transport, then executes the configured
      * feature-registration callbacks.
-     *
-     * @throws IllegalArgumentException if the configured executor is bounded
      */
     TachyonServer build();
 

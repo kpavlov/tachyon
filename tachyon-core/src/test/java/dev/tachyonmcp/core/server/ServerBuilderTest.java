@@ -2,7 +2,6 @@
 package dev.tachyonmcp.core.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import dev.tachyonmcp.api.server.domain.PromptMessage;
@@ -15,12 +14,10 @@ import dev.tachyonmcp.api.server.features.prompts.PromptResult;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import org.junit.jupiter.api.Test;
 
 /**
- * Verifies {@link ServerBuilder} enforces the thread-per-task executor contract required by
+ * Verifies {@link ServerBuilder} configures a server-owned virtual-thread-per-task executor for
  * blocking-first dispatch.
  *
  * @author Konstantin Pavlov
@@ -33,18 +30,9 @@ class ServerBuilderTest {
     }
 
     @Test
-    void rejectsBoundedPool() {
-        try (ExecutorService executor = Executors.newFixedThreadPool(1)) {
-            assertThatIllegalArgumentException()
-                    .isThrownBy(() -> TachyonServer.builder().executor(executor).build())
-                    .withMessageContaining("thread per task");
-        }
-    }
-
-    @Test
     void acceptsVirtualThreadPerTaskExecutor() {
         try (var server = TachyonServer.builder()
-                .executor(Executors.newVirtualThreadPerTaskExecutor())
+                .threadFactory(Thread.ofVirtual().name("test-", 0).factory())
                 .build()) {
             assertThat(server).isNotNull();
         }
