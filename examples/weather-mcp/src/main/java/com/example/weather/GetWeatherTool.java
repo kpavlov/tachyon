@@ -26,9 +26,9 @@ import java.util.Optional;
 
 class GetWeatherTool {
     private static final Logger log = LoggerFactory.getLogger(GetWeatherTool.class);
-    private static final JsonSchema CITY_SCHEMA = JsonSchema.generated(CityInput.class);
-    private static final JsonSchema INPUT_SCHEMA = JsonSchema.generated(GetWeatherRequest.class);
-    private static final JsonSchema OUTPUT_SCHEMA = JsonSchema.generated(GetWeatherResponse.class);
+    private static final JsonSchema CITY_SCHEMA = JsonSchema.generate(CityInput.class);
+    private static final JsonSchema INPUT_SCHEMA = JsonSchema.generate(GetWeatherRequest.class);
+    private static final JsonSchema OUTPUT_SCHEMA = JsonSchema.generate(GetWeatherResponse.class);
 
     static final ToolDescriptor DESCRIPTOR = ToolDescriptor.builder()
         .name("get-weather")
@@ -45,7 +45,9 @@ class GetWeatherTool {
             var units = args.units();
             var progressToken = request.progressToken();
             try {
-                return ToolResult.structured(toResponse(city, fetchWithProgress(ctx, progressToken, weatherService, city), units));
+                return ToolResult.structured(
+                    toResponse(city, fetchWithProgress(ctx, progressToken, weatherService, city), units)
+                );
             } catch (CityNotFoundException e) {
                 var elicitedCity = elicitCity(ctx, city);
                 if (elicitedCity.isEmpty()) {
@@ -53,7 +55,9 @@ class GetWeatherTool {
                 }
                 try {
                     final var fetched = fetchWithProgress(ctx, progressToken, weatherService, elicitedCity.get());
-                    return ToolResult.structured(toResponse(elicitedCity.get(), fetched, units));
+                    return ToolResult.structured(
+                        toResponse(elicitedCity.get(), fetched, units)
+                    );
                 } catch (CityNotFoundException ignored) {
                     return ToolResult.error("City not found");
                 }

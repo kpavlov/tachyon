@@ -44,7 +44,7 @@ fun assembleServer(port: Int = 0): TachyonServer {
 }
 
 private fun buildEchoSchema() =
-    JsonSchema.of(
+    JsonSchema.unchecked(
         // language=json
         """
         {

@@ -115,7 +115,7 @@ public final class WeatherServer {
                                 .addArguments(
                                         PromptArgument.of("forecast", "Forecast", "Weather forecast to rewrite", true),
                                         PromptArgument.of("style", "Style", "plain, concise, or pirate", true))
-                                .inputSchema(JsonSchema.generated(RewriteForecastPromptRequest.class)),
+                                .inputSchema(JsonSchema.generate(RewriteForecastPromptRequest.class)),
                         (ctx, request) -> rewriteForecast(weatherService, request)))
 
                 .withResources(resources -> resources.registerTemplate(
