@@ -137,9 +137,6 @@ final class DefaultServerBuilder implements ServerBuilder {
         if (config.outputValidator() != null) {
             outputSchemaValidator = config.outputValidator();
         }
-        if (config.schemaFactory() != null) {
-            schemaFactory = config.schemaFactory();
-        }
         return this;
     }
 

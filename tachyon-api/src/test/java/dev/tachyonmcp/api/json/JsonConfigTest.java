@@ -49,14 +49,12 @@ class JsonConfigTest {
                 .deserializer(deser)
                 .inputSchemaValidator(validator)
                 .outputSchemaValidator(validator)
-                .schemaFactory(schemaFactory)
                 .build();
 
         assertThat(config.serializer()).isSameAs(ser);
         assertThat(config.deserializer()).isSameAs(deser);
         assertThat(config.inputValidator()).isSameAs(validator);
         assertThat(config.outputValidator()).isSameAs(validator);
-        assertThat(config.schemaFactory()).isSameAs(schemaFactory);
     }
 
     @Test

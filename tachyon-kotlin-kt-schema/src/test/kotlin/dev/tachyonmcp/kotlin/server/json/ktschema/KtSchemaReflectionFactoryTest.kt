@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
- */
+// Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.json.ktschema
 
 import dev.tachyonmcp.api.json.JsonSchema
@@ -14,7 +12,8 @@ import org.junit.jupiter.api.Test
 import java.util.ServiceLoader
 
 /**
- * Verifies [dev.tachyonmcp.kotlin.server.json.ktschema.KtSchemaReflectionFactory] is discovered through [ServiceLoader] and that
+ * Verifies [dev.tachyonmcp.kotlin.server.json.ktschema.KtSchemaReflectionFactory]
+ * is discovered through [ServiceLoader] and that
  * `JsonSchema.generated(Class)` — the reified `typedTool` path — resolves a kt-schema-generated
  * schema via the reflection factory whenever no build-time codegen resource exists. This is the
  * dedicated `tachyon-kotlin-kt-schema` integration artifact, so the provider must always be

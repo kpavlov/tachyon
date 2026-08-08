@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
- */
+// Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.json.ktschema
 
 import dev.tachyonmcp.api.annotations.ExperimentalApi

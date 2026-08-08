@@ -56,7 +56,6 @@ public class JsonScope
                 deserializer?.let { config.deserializer(it) }
                 inputValidator?.let { config.inputSchemaValidator(it) }
                 outputValidator?.let { config.outputSchemaValidator(it) }
-                schemaFactory?.let { config.schemaFactory(it) }
             }
         }
     }
