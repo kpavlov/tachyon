@@ -201,10 +201,10 @@ public record NetworkConfig(
         }
 
         /**
-         * Sets additional {@code Host} authorities the DNS-rebinding guard accepts beyond
-         * {@code localhost}/{@code 127.0.0.1} — e.g. {@code "host.docker.internal:8096"} for a
-         * sanctioned server reached over a Docker bridge. Entries match the request's full authority
-         * ({@code host} or {@code host:port}) and its host part, case-insensitively.
+         * Sets additional {@code Host} authorities the DNS-rebinding guard accepts beyond its built-in
+         * loopback hosts — e.g. {@code "host.docker.internal:8096"} for a sanctioned server reached
+         * over a Docker bridge. Entries match the request's full authority ({@code host} or {@code
+         * host:port}) and its host part, case-insensitively.
          */
         public Builder allowedHosts(String... hosts) {
             this.allowedHosts = List.of(hosts);

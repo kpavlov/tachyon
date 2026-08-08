@@ -10,6 +10,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import java.util.List;
 import java.util.Locale;
@@ -21,17 +22,21 @@ import java.util.stream.Collectors;
  * Guards against DNS-rebinding attacks by validating the {@code Host} and {@code Origin} headers.
  * Rejected requests receive {@code 403 Forbidden} and the connection is closed.
  *
- * <p><b>Host.</b> A request's {@code Host} authority must be {@code localhost}/{@code 127.0.0.1} or
- * match one of the configured {@link #DnsRebindingProtectionHandler(List) allowedHosts}. The guard
- * fails closed: a request carrying <em>multiple</em> {@code Host} headers is rejected (RFC&nbsp;7230
- * §5.4), and a missing/blank {@code Host} is rejected on HTTP/1.1+ (where {@code Host} is mandatory).
- * HTTP/1.0, where {@code Host} is optional, is exempt from the missing-Host rule.
+ * <p><b>Host.</b> A request's {@code Host} authority must be {@code localhost}, {@code localhost.},
+ * {@code 127.0.0.1}, {@code [::1]}, or match one of the configured {@link
+ * #DnsRebindingProtectionHandler(List) allowedHosts}. The guard fails closed: a request carrying
+ * <em>multiple</em> {@code Host} headers is rejected (RFC&nbsp;7230 §5.4), and a missing/blank {@code
+ * Host} is rejected on HTTP/1.1+ (where {@code Host} is mandatory). HTTP/1.0, where {@code Host} is
+ * optional, is exempt from the missing-Host rule.
  *
- * <p><b>Origin.</b> When present, {@code Origin} must be localhost/{@code 127.0.0.1}. {@code
- * allowedHosts} does <em>not</em> widen this: a browser page whose {@code Origin} is a non-local host
- * (e.g. {@code http://host.docker.internal:3000}) is still rejected. {@code allowedHosts} only helps
- * non-browser clients — which send no {@code Origin} — reach a server whose {@code Host} is non-local
- * (e.g. a container reaching the host via {@code host.docker.internal}).
+ * <p><b>Origin.</b> When present, {@code Origin} must use one of the loopback hosts accepted above.
+ * A request carrying multiple {@code Origin} headers is rejected, and the opaque {@code Origin: null}
+ * (sent by sandboxed iframes and some {@code file://}/Electron clients) is rejected — the guard fails
+ * closed on any origin it cannot positively identify as loopback.
+ * {@code allowedHosts} does <em>not</em> widen this: a browser page whose {@code Origin} is a non-local
+ * host (e.g. {@code http://host.docker.internal:3000}) is still rejected. {@code allowedHosts} only
+ * helps non-browser clients — which send no {@code Origin} — reach a server whose {@code Host} is
+ * non-local (e.g. a container reaching the host via {@code host.docker.internal}).
  *
  * <p><b>{@code allowedHosts} semantics.</b> Each entry is a bare <em>authority</em> (a host, or
  * {@code host:port}) — not a URL. Matching is case-insensitive.
@@ -42,21 +47,21 @@ import java.util.stream.Collectors;
  * </ul>
  * Entries are trimmed; an entry that is blank, or contains whitespace, control characters, or URL
  * syntax (scheme, path, user-info, query, or fragment) is rejected with {@link
- * IllegalArgumentException}. The default (empty allowlist) preserves the localhost-only behaviour.
+ * IllegalArgumentException}. The default (empty allowlist) preserves the loopback-only behaviour.
  */
 @ChannelHandler.Sharable
 public class DnsRebindingProtectionHandler extends ChannelInboundHandlerAdapter {
 
     private final Set<String> allowedHosts;
 
-    /** Localhost-only protection (no additional allowed hosts). */
+    /** Loopback-only protection (no additional allowed hosts). */
     public DnsRebindingProtectionHandler() {
         this(List.of());
     }
 
     /**
-     * @param allowedHosts additional {@code Host} authorities to accept beyond localhost/127.0.0.1
-     *     (see the class documentation for entry syntax and matching rules)
+     * @param allowedHosts additional {@code Host} authorities to accept beyond the built-in loopback
+     *     hosts (see the class documentation for entry syntax and matching rules)
      * @throws IllegalArgumentException if an entry is not a bare host/{@code host:port} authority
      */
     public DnsRebindingProtectionHandler(List<String> allowedHosts) {
@@ -69,10 +74,24 @@ public class DnsRebindingProtectionHandler extends ChannelInboundHandlerAdapter 
                 .collect(Collectors.toUnmodifiableSet());
     }
 
+    private static final AttributeKey<Boolean> REJECTED = AttributeKey.valueOf("tachyonDnsRebindingRejected");
+
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        if (Boolean.TRUE.equals(ctx.channel().attr(REJECTED).get())) {
+            // The request was rejected; drop its trailing content chunks instead of forwarding
+            // headerless content downstream while the close is in flight.
+            ReferenceCountUtil.release(msg);
+            return;
+        }
         if (msg instanceof HttpRequest req) {
-            var origin = req.headers().getAsString(HttpHeaderNames.ORIGIN);
+            var origins = req.headers().getAll(HttpHeaderNames.ORIGIN);
+            if (origins.size() > 1) {
+                // Multiple Origin headers are as ambiguous as multiple Host headers — reject.
+                reject(ctx, msg);
+                return;
+            }
+            var origin = origins.isEmpty() ? null : origins.get(0);
             if (origin != null && !origin.isEmpty() && !isLocalhostOrigin(origin)) {
                 reject(ctx, msg);
                 return;
@@ -104,6 +123,7 @@ public class DnsRebindingProtectionHandler extends ChannelInboundHandlerAdapter 
      * message first: it is not forwarded down the pipeline, so nothing else will free its buffers.
      */
     private static void reject(ChannelHandlerContext ctx, Object msg) {
+        ctx.channel().attr(REJECTED).set(Boolean.TRUE);
         ReferenceCountUtil.release(msg);
         sendPlainTextAndClose(ctx, HttpResponseStatus.FORBIDDEN, "Forbidden");
     }
@@ -117,7 +137,7 @@ public class DnsRebindingProtectionHandler extends ChannelInboundHandlerAdapter 
         return allowedHosts.contains(lower) || allowedHosts.contains(stripPort(lower));
     }
 
-    /** Returns {@code true} when the origin's host part is {@code localhost} or {@code 127.0.0.1}. */
+    /** Returns {@code true} when the origin's host part is a loopback host accepted by the guard. */
     static boolean isLocalhostOrigin(String origin) {
         int sep = origin.indexOf("//");
         if (sep < 0) return false;
@@ -128,24 +148,40 @@ public class DnsRebindingProtectionHandler extends ChannelInboundHandlerAdapter 
         return isLocalhostAuthority(authority);
     }
 
-    /** Returns {@code true} when {@code authority} ({@code host} or {@code host:port}) is localhost. */
+    /** Returns {@code true} when {@code authority} ({@code host} or {@code host:port}) is loopback. */
     static boolean isLocalhostAuthority(String authority) {
         if (authority.isEmpty()) return false;
         var host = stripPort(authority);
-        return host.equalsIgnoreCase("localhost") || host.equals("127.0.0.1");
+        return host.equalsIgnoreCase("localhost")
+                || host.equalsIgnoreCase("localhost.")
+                || host.equals("127.0.0.1")
+                || host.equals("[::1]");
     }
 
     /**
-     * Strips a trailing {@code :port} from an authority, leaving the host. Handles bracketed IPv6
-     * literals ({@code [::1]:8096} -> {@code [::1]}); the colons inside the brackets are not ports.
+     * Strips a trailing {@code :port} (digits only) from an authority, leaving the host. Handles
+     * bracketed IPv6 literals ({@code [::1]:8096} -> {@code [::1]}); the colons inside the brackets
+     * are not ports. A malformed suffix (non-numeric port, junk after {@code ]}) is left in place so
+     * the authority matches nothing and the guard fails closed.
      */
     private static String stripPort(String authority) {
         if (authority.startsWith("[")) {
             int close = authority.indexOf(']');
-            return close >= 0 ? authority.substring(0, close + 1) : authority;
+            if (close < 0) return authority;
+            var rest = authority.substring(close + 1);
+            return rest.isEmpty() || isPortSuffix(rest) ? authority.substring(0, close + 1) : authority;
         }
         int colon = authority.lastIndexOf(':');
-        return colon >= 0 ? authority.substring(0, colon) : authority;
+        return colon >= 0 && isPortSuffix(authority.substring(colon)) ? authority.substring(0, colon) : authority;
+    }
+
+    /** Returns {@code true} when {@code suffix} is {@code :digits}. */
+    private static boolean isPortSuffix(String suffix) {
+        if (suffix.length() < 2 || suffix.charAt(0) != ':') return false;
+        for (int i = 1; i < suffix.length(); i++) {
+            if (!Character.isDigit(suffix.charAt(i))) return false;
+        }
+        return true;
     }
 
     /** Validates a trimmed, non-empty allowlist entry is a bare authority; throws otherwise. */
