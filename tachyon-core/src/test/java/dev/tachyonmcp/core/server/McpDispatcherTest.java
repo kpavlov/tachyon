@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
+import dev.tachyonmcp.core.server.session.SessionEvent;
 import java.util.Map;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
@@ -106,22 +107,29 @@ class McpDispatcherTest {
     }
 
     @Test
-    void cancelsPendingRequestWithMatchingId() {
+    void cancellationFromAnotherSessionDoesNotFailPendingRequest() {
         try (ServerEngine server = (ServerEngine)
                 TachyonServer.builder().session(s -> s.enabled(true)).build()) {
-            var session = server.createSession("sess_cancel-pending");
-            session.activate();
+            var owner = server.createSession("sess_cancel-owner");
+            owner.activate();
+            var other = server.createSession("sess_cancel-other");
+            other.activate();
             var dispatcher = new McpDispatcher(server, server.executor());
 
-            var requestId = "test-req-1";
-            var pending = new java.util.concurrent.CompletableFuture<String>();
-            server.registerPendingRequest(RequestId.of(requestId), pending);
+            var pending = server.sendRequest(owner, "sampling/createMessage", Map.of());
+            var requestId = server.replay(owner.id(), -1).stream()
+                    .filter(SessionEvent.OutboundRequestEvent.class::isInstance)
+                    .map(SessionEvent.OutboundRequestEvent.class::cast)
+                    .map(SessionEvent.OutboundRequestEvent::requestId)
+                    .findFirst()
+                    .orElseThrow();
 
-            var params = Map.of("requestId", requestId, "reason", "User cancelled");
-            var result = dispatcher.dispatchNotification("notifications/cancelled", params, "sess_cancel-pending");
+            var params = Map.of("requestId", requestId.toString(), "reason", "User cancelled");
+            var result = dispatcher.dispatchNotification("notifications/cancelled", params, other.id());
             assertThat(result).isInstanceOf(McpDispatcher.DispatchResult.Accepted.class);
-            assertThat(pending).isCompletedExceptionally();
-            assertThat(pending.exceptionNow().getMessage()).contains("Cancelled: User cancelled");
+            assertThat(pending).isNotDone();
+            assertThat(server.completePendingRequest(requestId, owner.id(), null, "{}"))
+                    .isTrue();
         }
     }
 

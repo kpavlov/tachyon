@@ -3,9 +3,11 @@ package dev.tachyonmcp.core.transport.netty;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.core.server.McpDispatcher;
 import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
+import dev.tachyonmcp.core.server.session.SessionEvent;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -19,6 +21,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.ReferenceCountUtil;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,6 +78,43 @@ class McpOperationHandlerTest {
         var response = readResponse();
         assertThat(response.status()).isEqualTo(HttpResponseStatus.ACCEPTED);
         response.release();
+    }
+
+    @Test
+    void responseCannotCompleteRequestOwnedByAnotherSession() {
+        // MCP 2025-11-25 Streamable HTTP session ownership.
+        var owner = server.createSession("sess-response-owner");
+        owner.activate();
+        server.createSession("sess-response-other").activate();
+        var pending = server.sendRequest(owner, "sampling/createMessage", Map.of());
+        var requestId = outboundRequestId(owner.id());
+        var body = """
+                {"jsonrpc":"2.0","id":"%s","result":{"answer":42}}""".formatted(requestId);
+
+        assertAccepted(postJsonRpc("sess-response-other", body));
+        assertThat(pending).isNotDone();
+
+        assertAccepted(postJsonRpc(owner.id(), body));
+        assertThat(pending).isCompletedWithValue("{\"answer\":42}");
+    }
+
+    @Test
+    void errorCannotFailRequestOwnedByAnotherSession() {
+        // MCP 2025-11-25 Streamable HTTP session ownership.
+        var owner = server.createSession("sess-error-owner");
+        owner.activate();
+        server.createSession("sess-error-other").activate();
+        var pending = server.sendRequest(owner, "elicitation/create", Map.of());
+        var requestId = outboundRequestId(owner.id());
+        var body = """
+                {"jsonrpc":"2.0","id":"%s","error":{"code":-32000,"message":"Rejected"}}""".formatted(requestId);
+
+        assertAccepted(postJsonRpc("sess-error-other", body));
+        assertThat(pending).isNotDone();
+
+        assertAccepted(postJsonRpc(owner.id(), body));
+        assertThat(pending).isCompletedExceptionally();
+        assertThat(pending.exceptionNow()).hasMessage("-32000: Rejected");
     }
 
     @Test
@@ -233,6 +273,34 @@ class McpOperationHandlerTest {
             request.headers().set(HttpHeaderNames.ORIGIN, origin);
         }
         channel.writeInbound(request);
+    }
+
+    private FullHttpResponse postJsonRpc(String sessionId, String body) {
+        var request = new DefaultFullHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.POST, "/mcp", Unpooled.copiedBuffer(body, StandardCharsets.UTF_8));
+        request.headers()
+                .set(HttpHeaderNames.ORIGIN, "http://localhost:3000")
+                .set("MCP-Session-Id", sessionId)
+                .set(HttpHeaderNames.ACCEPT, "application/json, text/event-stream");
+        channel.writeInbound(request);
+        return readResponse();
+    }
+
+    private RequestId outboundRequestId(String sessionId) {
+        return server.replay(sessionId, -1).stream()
+                .filter(SessionEvent.OutboundRequestEvent.class::isInstance)
+                .map(SessionEvent.OutboundRequestEvent.class::cast)
+                .map(SessionEvent.OutboundRequestEvent::requestId)
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private static void assertAccepted(FullHttpResponse response) {
+        try {
+            assertThat(response.status()).isEqualTo(HttpResponseStatus.ACCEPTED);
+        } finally {
+            response.release();
+        }
     }
 
     private FullHttpResponse readResponse() {

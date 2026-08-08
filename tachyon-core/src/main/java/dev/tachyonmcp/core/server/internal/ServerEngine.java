@@ -106,14 +106,30 @@ public interface ServerEngine extends TachyonServer {
     CompletableFuture<String> sendRequest(
             Session session, String method, Object params, @Nullable OutboundSseStream stream);
 
-    /** Completes a pending client request with the given result JSON. {@code null} requestId is a no-op. */
-    boolean completePendingRequest(@Nullable RequestId requestId, String resultJson);
+    /**
+     * Completes a pending server-to-client request when {@code sessionId} owns it in stateful mode
+     * or {@code channelId} owns it in stateless mode. Missing or mismatched ownership is ignored.
+     *
+     * @return {@code true} when the matching pending request was completed
+     */
+    boolean completePendingRequest(
+            @Nullable RequestId requestId, @Nullable String sessionId, @Nullable String channelId, String resultJson);
 
-    /** Fails a pending client request with the given error message. {@code null} requestId is a no-op. */
-    boolean failPendingRequest(@Nullable RequestId requestId, String message);
+    /**
+     * Fails a pending server-to-client request when {@code sessionId} owns it in stateful mode or
+     * {@code channelId} owns it in stateless mode. Missing or mismatched ownership is ignored.
+     *
+     * @return {@code true} when the matching pending request was failed
+     */
+    boolean failPendingRequest(
+            @Nullable RequestId requestId, @Nullable String sessionId, @Nullable String channelId, String message);
 
-    /** Registers a pending request with a timeout. */
-    void registerPendingRequest(RequestId requestId, CompletableFuture<String> future);
+    /** Registers a pending request with its stateful session or stateless transport owner. */
+    void registerPendingRequest(
+            RequestId requestId,
+            @Nullable String sessionId,
+            @Nullable OutboundSseStream stream,
+            CompletableFuture<String> future);
 
     /** Appends an event to the session log. */
     void appendEvent(SessionEvent event);

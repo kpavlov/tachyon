@@ -168,8 +168,10 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         }
         switch (message) {
             case JsonRpcMessage.Request<?> reqMsg -> handlePostRequest(ctx, sessionId, reqMsg, origin);
-            case JsonRpcMessage.Response resp -> handlePostResponse(ctx, resp, origin);
-            case JsonRpcMessage.Error err -> handlePostError(ctx, err, origin);
+            case JsonRpcMessage.Response resp ->
+                handlePostResponse(ctx, sessionId, ctx.channel().id().asLongText(), resp, origin);
+            case JsonRpcMessage.Error err ->
+                handlePostError(ctx, sessionId, ctx.channel().id().asLongText(), err, origin);
             case JsonRpcMessage.Notification<?> not -> {
                 var channelContext = ChannelHandlerUtils.getInteractionContext(ctx);
                 if (McpDispatcher.NOTIFICATIONS_INITIALIZED.equals(not.method())) {
@@ -203,20 +205,30 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void handlePostResponse(ChannelHandlerContext ctx, JsonRpcMessage.Response resp, @Nullable String origin) {
+    private void handlePostResponse(
+            ChannelHandlerContext ctx,
+            @Nullable String sessionId,
+            String channelId,
+            JsonRpcMessage.Response resp,
+            @Nullable String origin) {
         ctx.executor().execute(() -> sendAccepted(ctx, origin));
         executor.execute(() -> {
-            if (!server.completePendingRequest(resp.id(), resp.resultJson())) {
-                logger.warn("No pending request for response id: {}", resp.id());
+            if (!server.completePendingRequest(resp.id(), sessionId, channelId, resp.resultJson())) {
+                logger.debug("No matching pending request for response id: {}", resp.id());
             }
         });
     }
 
-    private void handlePostError(ChannelHandlerContext ctx, JsonRpcMessage.Error err, @Nullable String origin) {
+    private void handlePostError(
+            ChannelHandlerContext ctx,
+            @Nullable String sessionId,
+            String channelId,
+            JsonRpcMessage.Error err,
+            @Nullable String origin) {
         ctx.executor().execute(() -> sendAccepted(ctx, origin));
         executor.execute(() -> {
-            if (!server.failPendingRequest(err.id(), err.code() + ": " + err.message())) {
-                logger.warn("No pending request for error id: {}", err.id());
+            if (!server.failPendingRequest(err.id(), sessionId, channelId, err.code() + ": " + err.message())) {
+                logger.debug("No matching pending request for error id: {}", err.id());
             }
         });
     }

@@ -72,6 +72,11 @@ public final class PostSseStream implements OutboundSseStream {
     }
 
     @Override
+    public String channelId() {
+        return channel.id().asLongText();
+    }
+
+    @Override
     public String streamKey() {
         return streamKey;
     }

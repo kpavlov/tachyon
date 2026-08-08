@@ -22,6 +22,14 @@ import org.jspecify.annotations.Nullable;
 public interface OutboundSseStream {
 
     /**
+     * Returns the transport-channel identity backing this stream, or {@code null} when the
+     * transport has no channel identity.
+     */
+    default @Nullable String channelId() {
+        return null;
+    }
+
+    /**
      * A stable key identifying this stream within its session, used to tag event-log entries and
      * to suffix SSE event ids ({@code <n>#<key>}) so a {@code Last-Event-ID} can be correlated
      * back to the originating stream for per-stream replay. {@code null} identifies the session's

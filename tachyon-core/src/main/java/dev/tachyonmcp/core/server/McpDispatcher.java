@@ -376,20 +376,14 @@ public class McpDispatcher {
                 .ifPresentOrElse(
                         session -> {
                             var reasonMsg = cancellation.reason() != null ? ": " + cancellation.reason() : "";
-                            var cancelled =
-                                    server.failPendingRequest(cancellation.requestId(), "Cancelled" + reasonMsg);
-                            if (cancelled) {
-                                logger.debug(
-                                        "Cancelled pending request: requestId={}, sessionId={}, reason={}",
-                                        cancellation.requestId(),
-                                        sessionId,
-                                        cancellation.reason());
-                            } else {
-                                logger.debug(
-                                        "No pending request found for cancellation: requestId={}, sessionId={}",
-                                        cancellation.requestId(),
-                                        sessionId);
-                            }
+                            var cancelled = server.failPendingRequest(
+                                    cancellation.requestId(), sessionId, null, "Cancelled" + reasonMsg);
+                            logger.debug(
+                                    "Cancellation received: requestId={}, sessionId={}, reason={}, pending={}",
+                                    cancellation.requestId(),
+                                    sessionId,
+                                    cancellation.reason(),
+                                    cancelled);
                             server.appendEvent(new SessionEvent.CancelEvent(
                                     sessionId, cancellation.requestId(), System.currentTimeMillis()));
                         },

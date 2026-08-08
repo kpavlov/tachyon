@@ -87,6 +87,9 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultTachyonServer.class);
 
+    private record PendingRequestEntry(
+            @Nullable String sessionId, @Nullable String channelId, CompletableFuture<String> future) {}
+
     private final ServerConfig config;
     private final SessionEventStore sessionEventStore;
     private final SessionManager sessionManager;
@@ -103,7 +106,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     private final PayloadDeserializer payloadDeserializer;
     private final Map<String, RpcMethodHandler> methodHandlers = new ConcurrentHashMap<>();
     final Map<String, LoggingLevel> loggingLevels = new ConcurrentHashMap<>();
-    final ConcurrentHashMap<RequestId, CompletableFuture<String>> pendingRequests = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<RequestId, PendingRequestEntry> pendingRequests = new ConcurrentHashMap<>();
     private final ExecutorService executor;
     private final List<ServerExtension> extensions;
     private final @Nullable Consumer<ChannelPipeline> pipelineCustomizer;
@@ -665,10 +668,10 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         final var paramsStr = JsonRpcCodec.toJsonParams(params);
         final var requestId = RequestId.of(UUID.randomUUID().toString());
         final var future = new CompletableFuture<String>();
-        registerPendingRequest(requestId, future);
 
         final var requestJson = JsonRpcCodec.serializeRequestAsString(requestId, method, paramsStr);
         final var target = stream != null ? stream : outboundStreamResolver.resolve(session);
+        registerPendingRequest(requestId, session.id(), target, future);
         final var streamKey = target != null ? target.streamKey() : null;
         final var sseEventId = nextEventId();
 
@@ -693,43 +696,57 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     }
 
     @Override
-    public boolean completePendingRequest(@Nullable RequestId requestId, String resultJson) {
-        // ConcurrentHashMap#remove throws NPE on a null key; a null id (malformed client
-        // response, no JSON-RPC id) can never match a pending request, since registered ids are
-        // always server-generated and non-null.
-        if (requestId == null) {
-            return false;
-        }
-        var future = pendingRequests.remove(requestId);
-        if (future != null) {
-            future.complete(resultJson);
-            return true;
-        }
-        return false;
+    public boolean completePendingRequest(
+            @Nullable RequestId requestId, @Nullable String sessionId, @Nullable String channelId, String resultJson) {
+        var entry = removePendingRequest(requestId, sessionId, channelId);
+        return entry != null && entry.future().complete(resultJson);
     }
 
     @Override
-    public boolean failPendingRequest(@Nullable RequestId requestId, String message) {
+    public boolean failPendingRequest(
+            @Nullable RequestId requestId, @Nullable String sessionId, @Nullable String channelId, String message) {
+        var entry = removePendingRequest(requestId, sessionId, channelId);
+        return entry != null && entry.future().completeExceptionally(new RuntimeException(message));
+    }
+
+    private DefaultTachyonServer.@Nullable PendingRequestEntry removePendingRequest(
+            @Nullable RequestId requestId, @Nullable String sessionId, @Nullable String channelId) {
         if (requestId == null) {
-            return false;
+            return null;
         }
-        var future = pendingRequests.remove(requestId);
-        if (future != null) {
-            future.completeExceptionally(new RuntimeException(message));
-            return true;
+        var entry = pendingRequests.get(requestId);
+        if (entry == null) {
+            return null;
         }
-        return false;
+        var expectedOwner = isStateless() ? entry.channelId() : entry.sessionId();
+        var actualOwner = isStateless() ? channelId : sessionId;
+        var matches = expectedOwner != null && actualOwner != null && expectedOwner.equals(actualOwner);
+        if (!matches) {
+            logger.warn(
+                    "Pending request ownership mismatch: id={}, expectedSession={}, actualSession={}, expectedChannel={}, actualChannel={}",
+                    requestId,
+                    entry.sessionId(),
+                    sessionId,
+                    entry.channelId(),
+                    channelId);
+            return null;
+        }
+        return pendingRequests.remove(requestId, entry) ? entry : null;
     }
 
     @Override
-    public void registerPendingRequest(RequestId requestId, CompletableFuture<String> future) {
-        pendingRequests.put(requestId, future);
+    public void registerPendingRequest(
+            RequestId requestId,
+            @Nullable String sessionId,
+            @Nullable OutboundSseStream stream,
+            CompletableFuture<String> future) {
+        var entry = new PendingRequestEntry(sessionId, stream != null ? stream.channelId() : null, future);
+        pendingRequests.put(requestId, entry);
         var timeout = config.runtime().requestTimeout();
         future.orTimeout(timeout.toMillis(), TimeUnit.MILLISECONDS);
         future.whenComplete((res, ex) -> {
             if (ex instanceof TimeoutException) {
-                var removed = pendingRequests.remove(requestId);
-                if (removed != null) {
+                if (pendingRequests.remove(requestId, entry)) {
                     logger.debug(
                             "Pending request timed out after {}s: id={}, pendingCount={}",
                             timeout.toSeconds(),

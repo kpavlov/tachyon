@@ -643,6 +643,36 @@
           "attachments": {
             "since": "1.0.0-beta.19"
           }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.numberOfParametersChanged",
+          "old": "method boolean dev.tachyonmcp.core.server.internal.ServerEngine::completePendingRequest(dev.tachyonmcp.api.server.domain.RequestId, java.lang.String)",
+          "new": "method boolean dev.tachyonmcp.core.server.internal.ServerEngine::completePendingRequest(dev.tachyonmcp.api.server.domain.RequestId, java.lang.String, java.lang.String, java.lang.String)",
+          "justification": "Session or channel ownership prevents one client from completing another client's pending request",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.numberOfParametersChanged",
+          "old": "method boolean dev.tachyonmcp.core.server.internal.ServerEngine::failPendingRequest(dev.tachyonmcp.api.server.domain.RequestId, java.lang.String)",
+          "new": "method boolean dev.tachyonmcp.core.server.internal.ServerEngine::failPendingRequest(dev.tachyonmcp.api.server.domain.RequestId, java.lang.String, java.lang.String, java.lang.String)",
+          "justification": "Session or channel ownership prevents one client from failing another client's pending request",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.numberOfParametersChanged",
+          "old": "method void dev.tachyonmcp.core.server.internal.ServerEngine::registerPendingRequest(dev.tachyonmcp.api.server.domain.RequestId, java.util.concurrent.CompletableFuture<java.lang.String>)",
+          "new": "method void dev.tachyonmcp.core.server.internal.ServerEngine::registerPendingRequest(dev.tachyonmcp.api.server.domain.RequestId, java.lang.String, dev.tachyonmcp.core.server.OutboundSseStream, java.util.concurrent.CompletableFuture<java.lang.String>)",
+          "justification": "Pending requests retain their session and transport ownership for completion checks",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
         }
       ]
     }

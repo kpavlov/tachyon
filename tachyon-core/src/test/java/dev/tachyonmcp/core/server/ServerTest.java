@@ -15,14 +15,20 @@ import dev.tachyonmcp.core.runtime.SseConnection;
 import dev.tachyonmcp.core.runtime.SseEvent;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.server.session.SessionEvent;
+import dev.tachyonmcp.core.transport.netty.sse.PostSseStream;
+import io.netty.channel.embedded.EmbeddedChannel;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class ServerTest {
 
@@ -138,6 +144,51 @@ class ServerTest {
             assertThat(outbound).hasSize(1);
             assertThat(outbound.getFirst().method()).isEqualTo("sampling/createMessage");
             assertThat(outbound.getFirst().sseEventId()).isGreaterThan(0L);
+        }
+    }
+
+    @Test
+    void statelessPendingRequestIsBoundToOutboundChannel() {
+        try (DefaultTachyonServer server =
+                (DefaultTachyonServer) TachyonServer.builder().build()) {
+            var channel = new EmbeddedChannel();
+            try {
+                var session = server.createSession("stateless-request");
+                session.activate();
+                var stream = new PostSseStream(channel, null, server::nextEventId, Duration.ofSeconds(30));
+                var pending = server.sendRequest(session, "sampling/createMessage", Map.of(), stream);
+                var requestId = server.replay(session.id(), -1).stream()
+                        .filter(SessionEvent.OutboundRequestEvent.class::isInstance)
+                        .map(SessionEvent.OutboundRequestEvent.class::cast)
+                        .map(SessionEvent.OutboundRequestEvent::requestId)
+                        .findFirst()
+                        .orElseThrow();
+
+                assertThat(server.failPendingRequest(requestId, null, "other-channel", "Rejected"))
+                        .isFalse();
+                assertThat(pending).isNotDone();
+                assertThat(server.completePendingRequest(requestId, null, stream.channelId(), "{}"))
+                        .isTrue();
+                assertThat(pending).isCompletedWithValue("{}");
+            } finally {
+                channel.finishAndReleaseAll();
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void pendingRequestRejectsMissingOwner(boolean sessionsEnabled) {
+        try (DefaultTachyonServer server = (DefaultTachyonServer) TachyonServer.builder()
+                .session(session -> session.enabled(sessionsEnabled))
+                .build()) {
+            var requestId = RequestId.of("missing-owner");
+            var pending = new CompletableFuture<String>();
+            server.registerPendingRequest(requestId, null, null, pending);
+
+            assertThat(server.completePendingRequest(requestId, null, null, "{}"))
+                    .isFalse();
+            assertThat(pending).isNotDone();
         }
     }
 
