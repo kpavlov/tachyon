@@ -8,6 +8,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,7 +24,7 @@ public class EndpointValidatorHandler extends ChannelInboundHandlerAdapter {
     private final String mcpEndpoint;
 
     public EndpointValidatorHandler(String mcpEndpoint) {
-        this.mcpEndpoint = mcpEndpoint;
+        this.mcpEndpoint = normalizedPath(mcpEndpoint);
     }
 
     @Override
@@ -31,12 +32,19 @@ public class EndpointValidatorHandler extends ChannelInboundHandlerAdapter {
         if (msg instanceof HttpRequest req) {
             var uri = req.uri();
 
-            if (!uri.startsWith(mcpEndpoint)) {
+            if (!normalizedPath(uri).equals(mcpEndpoint)) {
                 LOGGER.warn("Unknown endpoint: {}", uri);
+                ReferenceCountUtil.release(msg);
                 sendPlainTextAndClose(ctx, HttpResponseStatus.NOT_FOUND, "Not Found");
                 return;
             }
         }
         ctx.fireChannelRead(msg);
+    }
+
+    private static String normalizedPath(String uri) {
+        var queryStart = uri.indexOf('?');
+        var path = queryStart < 0 ? uri : uri.substring(0, queryStart);
+        return path.length() > 1 && path.endsWith("/") ? path.substring(0, path.length() - 1) : path;
     }
 }
