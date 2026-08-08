@@ -110,7 +110,7 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor, Ha
         /** Sets the icons for resources matching this template. */
         Builder icons(Iterable<? extends Icon> elements);
 
-        /** Sets the optional icons for resources matching this template. */
+        /** Sets the icons for resources matching this template; an empty array means no icons. */
         default Builder icons(Icon... elements) {
             return icons(List.of(elements));
         }

@@ -90,7 +90,7 @@ final class McpTaskMapper {
         // SEP-2663 types Task.ttlMs as `number | null` (required, nullable) but
         // Task.pollIntervalMs as `number?` (optional) -- ttlMs is always written, even when null;
         // pollIntervalMs is omitted rather than written as null.
-        fields.put("ttlMs", ttlMillis(entry.ttl()));
+        fields.put("ttlMs", entry.ttlMillis());
         putIfPresent(fields, "pollIntervalMs", pollIntervalMillis(entry.pollInterval()));
         return fields;
     }
@@ -110,9 +110,5 @@ final class McpTaskMapper {
 
     private static @Nullable Long pollIntervalMillis(@Nullable Duration pollInterval) {
         return pollInterval != null ? pollInterval.toMillis() : null;
-    }
-
-    private static @Nullable Long ttlMillis(@Nullable Duration ttl) {
-        return ttl != null ? ttl.toMillis() : null;
     }
 }

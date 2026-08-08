@@ -25,6 +25,7 @@ import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ListPromptsResult;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ListResourceTemplatesResult;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ListResourcesResult;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ListToolsResult;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -164,11 +165,19 @@ class McpResponseMapperTest {
         var resourceResult = (ListResourcesResult) mapper.listResourcesResult(List.of(resource), null);
         var promptResult = (ListPromptsResult) mapper.listPromptsResult(List.of(prompt), null);
 
-        assertThat(toolResult.tools().getFirst().icons()).isNull();
-        assertThat(resourceResult.resources().getFirst().annotations().audience())
-                .isNull();
-        assertThat(resourceResult.resources().getFirst().icons().getFirst().sizes())
-                .isNull();
-        assertThat(promptResult.prompts().getFirst().arguments()).isNull();
+        var toolJson = new String(
+                CodecRegistry.codecFor(ListToolsResult.class).encodeToBytes(toolResult), StandardCharsets.UTF_8);
+        var resourceJson = new String(
+                CodecRegistry.codecFor(ListResourcesResult.class).encodeToBytes(resourceResult),
+                StandardCharsets.UTF_8);
+        var promptJson = new String(
+                CodecRegistry.codecFor(ListPromptsResult.class).encodeToBytes(promptResult), StandardCharsets.UTF_8);
+
+        assertThat(toolJson).doesNotContain("\"icons\"");
+        assertThat(resourceJson)
+                .contains("\"icons\"")
+                .doesNotContain("\"audience\"")
+                .doesNotContain("\"sizes\"");
+        assertThat(promptJson).doesNotContain("\"arguments\"");
     }
 }

@@ -244,6 +244,14 @@ class McpToolMapperTest {
     }
 
     @Test
+    void toDomainAnnotationsConvertsAbsentAudienceToEmptyList() {
+        var protocol = new dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Annotations(null, 0.5, null);
+        var domain = McpToolMapper.toDomainAnnotations(protocol);
+        assertThat(domain.audience()).isEmpty();
+        assertThat(domain.priority()).isEqualTo(0.5);
+    }
+
+    @Test
     void toDomainContentBlockConvertsTextContent() {
         var protocol = new dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TextContent("text", "hello", null, null);
         var domain = McpToolMapper.toDomainContentBlock(protocol);

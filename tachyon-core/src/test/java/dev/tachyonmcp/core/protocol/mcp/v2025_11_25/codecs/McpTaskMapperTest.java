@@ -48,4 +48,32 @@ class McpTaskMapperTest {
         assertThatThrownBy(() -> McpTaskMapper.toGetTaskResult(entry(TaskState.UNKNOWN)))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
+
+    @Test
+    void ttlIsConvertedToMillisAcrossAllResponseShapes() {
+        var withTtl = new TaskEntry(
+                TaskDescriptor.builder().id("task-1").build(),
+                "task-1",
+                TaskState.WORKING,
+                Duration.ofSeconds(90),
+                null,
+                null,
+                null);
+
+        assertThat(McpTaskMapper.toTaskProto(withTtl).ttl()).isEqualTo(90_000L);
+        assertThat(McpTaskMapper.toGetTaskResult(withTtl).ttl()).isEqualTo(90_000L);
+        assertThat(McpTaskMapper.toCancelTaskResult(withTtl).ttl()).isEqualTo(90_000L);
+        assertThat(McpTaskMapper.toStatusNotification(withTtl).ttl()).isEqualTo(90_000L);
+    }
+
+    @Test
+    void nullTtlIsPreservedAcrossAllResponseShapes() {
+        var withoutTtl = new TaskEntry(
+                TaskDescriptor.builder().id("task-1").build(), "task-1", TaskState.WORKING, null, null, null, null);
+
+        assertThat(McpTaskMapper.toTaskProto(withoutTtl).ttl()).isNull();
+        assertThat(McpTaskMapper.toGetTaskResult(withoutTtl).ttl()).isNull();
+        assertThat(McpTaskMapper.toCancelTaskResult(withoutTtl).ttl()).isNull();
+        assertThat(McpTaskMapper.toStatusNotification(withoutTtl).ttl()).isNull();
+    }
 }

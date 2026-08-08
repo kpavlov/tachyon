@@ -126,7 +126,7 @@ public interface ToolDescriptor extends ServerFeature.Descriptor, HasMeta {
         /** Sets the icons for this tool. */
         Builder icons(Iterable<? extends Icon> icons);
 
-        /** Sets the optional icons for this tool. */
+        /** Sets the icons for this tool; an empty array means no icons. */
         default Builder icons(Icon... icons) {
             return icons(List.of(icons));
         }

@@ -148,7 +148,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         this.status = new AtomicReference<>(status);
         this.createdAt = System.currentTimeMillis();
         this.lastUpdatedAt = this.createdAt;
-        this.ttl = ttl;
+        this.ttl = normalizeTtl(ttl);
         this.keepAlive = Objects.requireNonNull(keepAlive, "keepAlive");
         this.pollInterval = pollInterval;
         this.progressToken = progressToken;
@@ -199,6 +199,26 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     @Override
     public @Nullable Duration ttl() {
         return ttl;
+    }
+
+    /**
+     * The normalized TTL in milliseconds, or {@code null} if this task never expires. Clamped to
+     * {@link Long#MAX_VALUE} rather than throwing if {@code ttl} overflows {@link Duration#toMillis()}.
+     */
+    public @Nullable Long ttlMillis() {
+        if (ttl == null) {
+            return null;
+        }
+        try {
+            return ttl.toMillis();
+        } catch (ArithmeticException e) {
+            return Long.MAX_VALUE;
+        }
+    }
+
+    /** Zero and negative durations mean "never expires", same as {@code null}. */
+    private static @Nullable Duration normalizeTtl(@Nullable Duration ttl) {
+        return ttl == null || ttl.isZero() || ttl.isNegative() ? null : ttl;
     }
 
     /**
@@ -376,10 +396,8 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     }
 
     public boolean isExpired() {
-        if (ttl == null || ttl.isZero() || ttl.isNegative()) {
-            return false;
-        }
-        return System.currentTimeMillis() - lastUpdatedAt > ttl.toMillis();
+        var millis = ttlMillis();
+        return millis != null && System.currentTimeMillis() - lastUpdatedAt > millis;
     }
 
     /**

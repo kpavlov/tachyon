@@ -14,11 +14,15 @@ description: Apply Tachyon MCP project rules when designing, implementing, revie
   MCP features, metadata, behavior, and coverage functionally identical when changing either one.
 - Keep Kotlin source files focused. At more than 300 lines, consider splitting by owned
   responsibility before adding code.
+- A public API change (new/changed method, param, wire field, or behavior contract like TTL/null
+  semantics) is not done until its docs are done: update the relevant file under `docs/`, this
+  skill, and/or `docs/architecture/guidance.md` in the same change. Don't defer it to a follow-up.
 
 # Test Rules 🧪
 
 - AssertJ fluent. Short spec ref comment in method. JUnit6+JUnit Pioneer annotations. Prefer parametrized tests.
 - Handlers that throw: test with a real checked exception thrown directly from the lambda (no try/catch) — exercises the `throws Exception` SAM contract, not just unchecked paths.
+- "Omitted/null on wire" claims: serialize through the real codec (`CodecRegistry.codecFor(X.class).encodeToBytes(value)`, or `JsonRpcCodec.writeValueAsString`) and assert on the resulting JSON. Asserting a domain/model field is `null` only proves the mapper produced `null` — it trusts, but doesn't verify, that the codec omits it.
 
 ## E2E
 
