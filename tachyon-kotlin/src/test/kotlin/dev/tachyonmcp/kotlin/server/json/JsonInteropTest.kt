@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.json
 
+import dev.tachyonmcp.api.json.JsonArray
+import dev.tachyonmcp.api.json.JsonObject
 import dev.tachyonmcp.core.server.json.JsonUtils
 import io.kotest.assertions.assertSoftly
 import io.kotest.matchers.shouldBe
@@ -8,6 +10,15 @@ import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Test
 
 internal class JsonInteropTest {
+    @Test
+    fun `JSON container views retain nullable entries`() {
+        val objectValues: Map<String, Any?> = JsonObject.of(mapOf("nothing" to null)).asMap()
+        val arrayValues: List<Any?> = JsonArray.of(listOf(null)).asList()
+
+        objectValues["nothing"] shouldBe null
+        arrayValues shouldBe listOf(null)
+    }
+
     @Test
     fun `toJacksonNode converts all JSON kinds without a parse round-trip`() {
         val source =

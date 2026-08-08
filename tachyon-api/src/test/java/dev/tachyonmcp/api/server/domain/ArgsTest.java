@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 class ArgsTest {
@@ -219,7 +220,7 @@ class ArgsTest {
         }
 
         @Override
-        public Map<String, Object> asMap() {
+        public Map<String, @Nullable Object> asMap() {
             return delegate.asMap();
         }
 

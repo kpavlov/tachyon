@@ -18,14 +18,14 @@ final class DefaultJsonArray implements JsonArray {
 
     static final JsonArray EMPTY = new DefaultJsonArray(List.of());
 
-    private final List<Object> values;
+    private final List<@Nullable Object> values;
     private final String json;
     private final Map<Integer, JsonObject> objects = new ConcurrentHashMap<>();
     private final Map<Integer, JsonArray> arrays = new ConcurrentHashMap<>();
 
-    DefaultJsonArray(List<?> values) {
+    DefaultJsonArray(List<? extends @Nullable Object> values) {
         Objects.requireNonNull(values, "values");
-        var copy = new ArrayList<>(values.size());
+        var copy = new ArrayList<@Nullable Object>(values.size());
         for (var item : values) {
             copy.add(JsonValues.copyValue(item, "[" + copy.size() + "]"));
         }
@@ -100,7 +100,7 @@ final class DefaultJsonArray implements JsonArray {
     }
 
     @Override
-    public List<Object> asList() {
+    public List<@Nullable Object> asList() {
         return values;
     }
 

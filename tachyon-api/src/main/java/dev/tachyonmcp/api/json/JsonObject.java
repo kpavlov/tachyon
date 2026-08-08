@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import org.jspecify.annotations.Nullable;
 
 /**
  * An immutable, provider-neutral view of a JSON object.
@@ -281,18 +282,18 @@ public interface JsonObject extends JsonDocument {
     /**
      * Returns an immutable map representation.
      *
-     * @return the map view
+     * @return the map view; values may be {@code null} for JSON {@code null}
      */
     @ExperimentalApi
-    Map<String, Object> asMap();
+    Map<String, @Nullable Object> asMap();
 
     /**
      * Creates an immutable object by recursively snapshotting JSON-compatible values.
      *
-     * @param values the source map
+     * @param values the source map; values may be {@code null} for JSON {@code null}
      * @return a new JSON object
      */
-    static JsonObject of(Map<String, ?> values) {
+    static JsonObject of(Map<String, ? extends @Nullable Object> values) {
         return new DefaultJsonObject(values);
     }
 

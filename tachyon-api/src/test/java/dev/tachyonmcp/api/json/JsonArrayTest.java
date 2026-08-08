@@ -84,6 +84,7 @@ class JsonArrayTest {
         assertThatThrownBy(() -> array.valuesAs(String.class))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("[1]");
+        assertThat(array.asList()).containsExactly("a", null, "c");
     }
 
     @Test

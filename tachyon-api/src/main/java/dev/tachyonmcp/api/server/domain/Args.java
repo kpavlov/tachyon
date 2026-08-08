@@ -31,10 +31,10 @@ public final class Args implements JsonObject {
     /**
      * Creates arguments from a map of values.
      *
-     * @param values the argument values, or {@code null} for empty
+     * @param values the argument values, whose values may be {@code null}, or {@code null} for empty
      * @return a new Args instance
      */
-    public static Args of(@Nullable Map<String, ?> values) {
+    public static Args of(@Nullable Map<String, ? extends @Nullable Object> values) {
         return new Args(values == null ? JsonObject.empty() : JsonObject.of(values), null);
     }
 
@@ -50,11 +50,12 @@ public final class Args implements JsonObject {
     /**
      * Creates arguments from a map of values with a deserializer.
      *
-     * @param values      the argument values, or {@code null} for empty
+     * @param values      the argument values, whose values may be {@code null}, or {@code null} for empty
      * @param deserializer the payload deserializer, or {@code null}
      * @return a new Args instance
      */
-    public static Args of(@Nullable Map<String, ?> values, @Nullable PayloadDeserializer deserializer) {
+    public static Args of(
+            @Nullable Map<String, ? extends @Nullable Object> values, @Nullable PayloadDeserializer deserializer) {
         return new Args(values == null ? JsonObject.empty() : JsonObject.of(values), deserializer);
     }
 
@@ -124,7 +125,7 @@ public final class Args implements JsonObject {
     }
 
     @Override
-    public Map<String, Object> asMap() {
+    public Map<String, @Nullable Object> asMap() {
         return values.asMap();
     }
 

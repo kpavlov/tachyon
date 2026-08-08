@@ -82,7 +82,7 @@ final class JsonValues {
     static JsonObject object(Object value, String location) {
         if (value instanceof Map<?, ?> map) {
             @SuppressWarnings("unchecked")
-            var object = (Map<String, Object>) map;
+            var object = (Map<String, @Nullable Object>) map;
             return DefaultJsonObject.fromImmutableValues(object, null);
         }
         throw wrongType(location, "object", value);
@@ -137,7 +137,7 @@ final class JsonValues {
                 return number;
             }
             case Map<?, ?> map -> {
-                var copy = new LinkedHashMap<String, Object>(map.size());
+                var copy = new LinkedHashMap<String, @Nullable Object>(map.size());
                 map.forEach((key, nested) -> {
                     if (!(key instanceof String name)) {
                         throw invalidValue(path, "object property name is not a string");
@@ -147,7 +147,7 @@ final class JsonValues {
                 return Collections.unmodifiableMap(copy);
             }
             case List<?> list -> {
-                var copy = new ArrayList<>(list.size());
+                var copy = new ArrayList<@Nullable Object>(list.size());
                 for (var index = 0; index < list.size(); index++) {
                     copy.add(copyValue(list.get(index), path + "[" + index + "]"));
                 }

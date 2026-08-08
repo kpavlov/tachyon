@@ -17,14 +17,14 @@ final class DefaultJsonObject implements JsonObject {
 
     static final JsonObject EMPTY = new DefaultJsonObject(Map.of());
 
-    private final Map<String, Object> values;
+    private final Map<String, @Nullable Object> values;
     private volatile @Nullable String json;
     private final Map<String, JsonObject> objects = new ConcurrentHashMap<>();
     private final Map<String, JsonArray> arrays = new ConcurrentHashMap<>();
 
-    DefaultJsonObject(Map<String, ?> values) {
+    DefaultJsonObject(Map<String, ? extends @Nullable Object> values) {
         Objects.requireNonNull(values, "values");
-        var copy = new LinkedHashMap<String, Object>(values.size());
+        var copy = new LinkedHashMap<String, @Nullable Object>(values.size());
         values.forEach((name, value) -> {
             if (name == null) {
                 throw new IllegalArgumentException("JSON object property name must not be null");
@@ -34,12 +34,12 @@ final class DefaultJsonObject implements JsonObject {
         this.values = Collections.unmodifiableMap(copy);
     }
 
-    private DefaultJsonObject(Map<String, Object> values, @Nullable String json) {
+    private DefaultJsonObject(Map<String, @Nullable Object> values, @Nullable String json) {
         this.values = values;
         this.json = json;
     }
 
-    static DefaultJsonObject fromImmutableValues(Map<String, Object> values, @Nullable String json) {
+    static DefaultJsonObject fromImmutableValues(Map<String, @Nullable Object> values, @Nullable String json) {
         return new DefaultJsonObject(values, json);
     }
 
@@ -110,7 +110,7 @@ final class DefaultJsonObject implements JsonObject {
     }
 
     @Override
-    public Map<String, Object> asMap() {
+    public Map<String, @Nullable Object> asMap() {
         return values;
     }
 

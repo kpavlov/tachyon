@@ -54,6 +54,7 @@ class JsonObjectTest {
         assertThat(object.stringOpt("missing")).isEmpty();
         assertThat(object.boolOpt("null")).isEmpty();
         assertThat(object.objectOpt("missing")).isEmpty();
+        assertThat(object.asMap()).containsEntry("null", null);
     }
 
     @Test

@@ -45,12 +45,12 @@ public record JsonConfig(
             return serializer(serde).deserializer(serde);
         }
 
-        public Builder serializer(PayloadSerializer serializer) {
+        public Builder serializer(@Nullable PayloadSerializer serializer) {
             this.serializer = serializer;
             return this;
         }
 
-        public Builder deserializer(PayloadDeserializer deserializer) {
+        public Builder deserializer(@Nullable PayloadDeserializer deserializer) {
             this.deserializer = deserializer;
             return this;
         }

@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import org.jspecify.annotations.Nullable;
 
 /**
  * An immutable, provider-neutral view of a JSON array.
@@ -329,18 +330,18 @@ public interface JsonArray extends JsonDocument {
     /**
      * Returns an immutable list representation.
      *
-     * @return the list view
+     * @return the list view; elements may be {@code null} for JSON {@code null}
      */
     @ExperimentalApi
-    List<Object> asList();
+    List<@Nullable Object> asList();
 
     /**
      * Creates an immutable array by recursively snapshotting JSON-compatible values.
      *
-     * @param values the source list
+     * @param values the source list; elements may be {@code null} for JSON {@code null}
      * @return a new JSON array
      */
-    static JsonArray of(List<?> values) {
+    static JsonArray of(List<? extends @Nullable Object> values) {
         return new DefaultJsonArray(values);
     }
 

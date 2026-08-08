@@ -95,8 +95,8 @@ record JacksonObjectJsonDocument(ObjectNode node) implements JsonObject, Jackson
     }
 
     @Override
-    public Map<String, Object> asMap() {
-        var copy = new LinkedHashMap<String, Object>();
+    public Map<String, @Nullable Object> asMap() {
+        var copy = new LinkedHashMap<String, @Nullable Object>();
         for (var entry : node.properties()) {
             copy.put(entry.getKey(), JsonUtils.mapper().treeToValue(entry.getValue(), Object.class));
         }
@@ -109,8 +109,8 @@ record JacksonObjectJsonDocument(ObjectNode node) implements JsonObject, Jackson
     }
 
     @SuppressWarnings("unchecked")
-    private static List<Object> treeToList(JsonNode arrayNode) {
-        return (List<Object>) JsonUtils.mapper().treeToValue(arrayNode, List.class);
+    private static List<@Nullable Object> treeToList(JsonNode arrayNode) {
+        return (List<@Nullable Object>) JsonUtils.mapper().treeToValue(arrayNode, List.class);
     }
 
     private static IllegalArgumentException wrongType(String name, String expected, JsonNode actual) {
