@@ -279,8 +279,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
 
     // ---- JSON schemas ----
 
-    private static final JsonSchema OUTPUT_SCHEMA =
-            JsonSchema.of(buildOutputSchema().toString());
+    private static final JsonSchema OUTPUT_SCHEMA = JsonSchema.from(buildOutputSchema(), JsonNode.class);
 
     private static JsonNode buildOutputSchema() {
         var schema = JsonNodeFactory.instance.objectNode();
@@ -292,8 +291,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
         return schema;
     }
 
-    private static final JsonSchema INPUT_SCHEMA =
-            JsonSchema.of(buildInputSchema().toString());
+    private static final JsonSchema INPUT_SCHEMA = JsonSchema.from(buildInputSchema(), JsonNode.class);
 
     private static final ToolFn OK = (ctx, request) -> ToolResult.text("ok");
 

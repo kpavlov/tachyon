@@ -120,7 +120,7 @@ public interface PromptDescriptor extends ServerFeature.Descriptor, HasMeta {
 
         /** Sets the optional JSON schema describing the prompt's arguments, parsed from a string. */
         default Builder inputSchema(@Nullable String inputSchema) {
-            return inputSchema(inputSchema != null ? JsonSchema.of(inputSchema) : null);
+            return inputSchema(inputSchema != null ? JsonSchema.unchecked(inputSchema) : null);
         }
 
         /** Sets the optional icons for this prompt. */

@@ -149,7 +149,7 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
     @Test
     void taskResultValidatesStructuredOutput() throws Exception {
         // language=json
-        var outputSchema = JsonSchema.of("""
+        var outputSchema = JsonSchema.unchecked("""
             {"type":"object","properties":{"result":{"type":"string"}},"required":["result"]}
             """);
         var validationCalls = new AtomicInteger();

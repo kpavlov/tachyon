@@ -19,7 +19,7 @@ import java.util.concurrent.CompletionStage
 import kotlin.time.Duration.Companion.seconds
 
 private val GREET_SCHEMA =
-    JsonSchema.of(
+    JsonSchema.unchecked(
         """
     {"type":"object","properties":{"name":{"type":"string","description":"Name to greet"}},"required":["name"]}
 """,

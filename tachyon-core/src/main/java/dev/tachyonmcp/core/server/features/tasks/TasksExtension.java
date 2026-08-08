@@ -44,7 +44,7 @@ public class TasksExtension implements ServerExtension {
     }
 
     // language=json
-    private static final JsonSchema CREATE_TASK_SCHEMA = JsonSchema.of("""
+    private static final JsonSchema CREATE_TASK_SCHEMA = JsonSchema.unchecked("""
         {
           "type": "object",
           "properties": {

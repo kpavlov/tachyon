@@ -13,10 +13,10 @@ your application to a specific JSON library. Most applications need four types f
 
 ## Define a schema
 
-Use `JsonSchema.of` for schema literals you control:
+Use `JsonSchema.unchecked` for schema literals you control:
 
 ```java
-var inputSchema = JsonSchema.of("""
+var inputSchema = JsonSchema.unchecked("""
     {
       "type": "object",
       "properties": {

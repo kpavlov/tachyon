@@ -17,7 +17,8 @@ class JsonSpiDiscoveryTest {
 
     @Test
     void shouldParseValidJsonStringIntoSchemaViaDiscoveredFactory() {
-        assertThatJson(JsonSchema.parse("{\"type\":\"object\"}").json()).isEqualTo("{\"type\":\"object\"}");
+        assertThatJson(JsonSchema.from("{\"type\":\"object\"}", String.class).json())
+                .isEqualTo("{\"type\":\"object\"}");
     }
 
     @Test
@@ -27,7 +28,8 @@ class JsonSpiDiscoveryTest {
 
     @Test
     void shouldRejectMalformedJsonStringForSchema() {
-        assertThatThrownBy(() -> JsonSchema.parse("not-json")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> JsonSchema.from("not-json", String.class))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

@@ -16,7 +16,7 @@ import org.jspecify.annotations.NonNull;
  */
 final class ToolHandlerExample {
 
-    private static final JsonSchema GREET_SCHEMA = JsonSchema.of("""
+    private static final JsonSchema GREET_SCHEMA = JsonSchema.unchecked("""
         {
           "type": "object",
           "properties": {

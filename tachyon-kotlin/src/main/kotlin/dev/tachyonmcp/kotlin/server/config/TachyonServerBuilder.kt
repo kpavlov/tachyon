@@ -168,7 +168,7 @@ public class TachyonServerBuilder
 
         /**
          * Registers a tool whose input/output schemas are resolved from [In]/[Out] via
-         * [dev.tachyonmcp.api.json.JsonSchema.generated], which tries the service-loaded
+         * [dev.tachyonmcp.api.json.JsonSchema.generate], which tries the service-loaded
          * [dev.tachyonmcp.api.json.spi.JsonSchemaFactory] chain in ascending priority order: a
          * build-time codegen resource (tachyon-core's `KtSchemaResourceFactory`) wins when
          * present, otherwise the runtime reflection generator in the `tachyon-kotlin-kt-schema`
@@ -214,8 +214,8 @@ public class TachyonServerBuilder
                 featureRegistrar.tool(
                     name,
                     description,
-                    JsonSchema.generated(inputType),
-                    JsonSchema.generated(outputType),
+                    JsonSchema.generate(inputType),
+                    JsonSchema.generate(outputType),
                     taskSupport,
                     handler,
                 )

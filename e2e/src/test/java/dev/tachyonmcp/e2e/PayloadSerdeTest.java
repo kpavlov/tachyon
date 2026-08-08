@@ -16,6 +16,7 @@ import java.lang.reflect.Type;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
 
@@ -108,7 +109,7 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
                                 ToolDescriptor.builder()
                                         .name("validated-output")
                                         .description("Validated output")
-                                        .outputSchema(JsonSchema.of(outputSchema.toString()))
+                                        .outputSchema(JsonSchema.from(outputSchema, ObjectNode.class))
                                         .build(),
                                 (ctx, request) ->
                                         ToolResult.structured(Map.of("message", "valid", "extra", 42), "ok")));

@@ -28,7 +28,7 @@ public final class ChainPriorityHighFactory implements JsonSchemaFactory<Class<?
     @Override
     public Optional<JsonSchema> toJsonSchema(Class<?> type) {
         if (type == HighTarget.class) {
-            return Optional.of(JsonSchema.of("{\"title\":\"high\"}"));
+            return Optional.of(JsonSchema.unchecked("{\"title\":\"high\"}"));
         }
         return Optional.empty();
     }

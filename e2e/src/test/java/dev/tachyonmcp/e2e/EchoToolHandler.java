@@ -9,7 +9,7 @@ import java.util.concurrent.CompletableFuture;
 
 class EchoToolHandler {
 
-    static final JsonSchema ECHO_INPUT_SCHEMA = JsonSchema.of("""
+    static final JsonSchema ECHO_INPUT_SCHEMA = JsonSchema.unchecked("""
         {
           "type": "object",
           "properties": {

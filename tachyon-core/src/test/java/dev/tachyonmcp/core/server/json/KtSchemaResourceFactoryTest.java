@@ -10,20 +10,20 @@ import org.junit.jupiter.api.Test;
 /**
  * Exercises {@link KtSchemaResourceFactory} as the {@code JsonSchemaFactory} chain registered for
  * this module: build-time resources resolve, types without a resource resolve to nothing, and
- * {@link JsonSchema#generated(Class)} fails once the chain is exhausted.
+ * {@link JsonSchema#generate(Class)} fails once the chain is exhausted.
  */
 class KtSchemaResourceFactoryTest {
 
     @Test
     void resolvesBuildTimeGeneratedSchemaResource() {
-        var schema = JsonSchema.generated(GeneratedSchemaFixture.class);
+        var schema = JsonSchema.generate(GeneratedSchemaFixture.class);
 
         assertThat(schema.json()).contains("\"title\": \"fixture\"", "\"name\"");
     }
 
     @Test
     void generatedFailsWhenChainExhausted() {
-        assertThatThrownBy(() -> JsonSchema.generated(String.class))
+        assertThatThrownBy(() -> JsonSchema.generate(String.class))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("META-INF/services")
                 .hasMessageContaining("META-INF/kt-schema/schemas");

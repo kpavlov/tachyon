@@ -12,7 +12,7 @@
  *
  * <p>Implement {@link JsonSchemaFactory} to plug a schema factory for both parsed JSON sources
  * ({@link JsonSchema#from(Object, Class)}) and generated class types
- * ({@link JsonSchema#generated(Class)}), and register it in
+ * ({@link JsonSchema#generate(Class)}), and register it in
  * {@code META-INF/services/dev.tachyonmcp.api.json.spi.JsonSchemaFactory}.
  */
 @NullMarked

@@ -23,10 +23,8 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
 
     private static final JsonSchemaValidator VALIDATOR = new NetworkntJsonSchemaValidator();
 
-    private static final JsonSchema TOOL_SCHEMA =
-            JsonSchema.of(buildToolSchema().toString());
-    private static final JsonSchema PROMPT_SCHEMA =
-            JsonSchema.of(buildPromptSchema().toString());
+    private static final JsonSchema TOOL_SCHEMA = JsonSchema.from(buildToolSchema(), JsonNode.class);
+    private static final JsonSchema PROMPT_SCHEMA = JsonSchema.from(buildPromptSchema(), JsonNode.class);
 
     // region: Tool input schema validation
 
@@ -214,7 +212,7 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
         return ToolDescriptor.builder()
                 .name("validated2")
                 .description("Another tool with a distinct input schema")
-                .inputSchema(JsonSchema.of(buildToolSchema2().toString()))
+                .inputSchema(JsonSchema.from(buildToolSchema2(), JsonNode.class))
                 .build();
     }
 

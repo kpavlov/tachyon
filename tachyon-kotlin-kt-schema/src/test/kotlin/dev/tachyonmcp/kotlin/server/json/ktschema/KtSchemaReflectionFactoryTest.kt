@@ -43,7 +43,7 @@ internal class KtSchemaReflectionFactoryTest {
 
     @Test
     fun `JsonSchema generated from a class without a resource falls back to reflection`() {
-        val schema = JsonSchema.generated(Model::class.java)
+        val schema = JsonSchema.generate(Model::class.java)
 
         schema.json() shouldEqualJson
             $$"""

@@ -10,7 +10,7 @@ import dev.tachyonmcp.api.server.features.tools.ToolResult;
 
 public class EchoToolHandler extends AbstractToolHandler {
 
-    static final JsonSchema ECHO_INPUT_SCHEMA = JsonSchema.of("""
+    static final JsonSchema ECHO_INPUT_SCHEMA = JsonSchema.unchecked("""
         {
           "type": "object",
           "properties": {

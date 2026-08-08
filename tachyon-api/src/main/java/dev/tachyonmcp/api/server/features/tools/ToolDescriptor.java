@@ -110,12 +110,12 @@ public interface ToolDescriptor extends ServerFeature.Descriptor, HasMeta {
 
         /** Sets the optional JSON schema describing the tool's input arguments, parsed from a string. */
         default Builder inputSchema(@Nullable String inputSchema) {
-            return inputSchema(inputSchema != null ? JsonSchema.of(inputSchema) : null);
+            return inputSchema(inputSchema != null ? JsonSchema.unchecked(inputSchema) : null);
         }
 
         /** Sets the optional JSON schema describing the tool's output, parsed from a string. */
         default Builder outputSchema(@Nullable String outputSchema) {
-            return outputSchema(outputSchema != null ? JsonSchema.of(outputSchema) : null);
+            return outputSchema(outputSchema != null ? JsonSchema.unchecked(outputSchema) : null);
         }
 
         /** Sets the optional declaration of this tool's support for long-running tasks. */

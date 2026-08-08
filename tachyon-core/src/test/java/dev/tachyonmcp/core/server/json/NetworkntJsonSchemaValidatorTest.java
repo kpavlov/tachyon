@@ -13,7 +13,7 @@ class NetworkntJsonSchemaValidatorTest {
 
     @Test
     void shouldReturnNoErrorsForValidArguments() {
-        var schema = JsonSchema.of("""
+        var schema = JsonSchema.unchecked("""
             {"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}
             """);
         var arguments = JsonDocument.of("""
@@ -25,7 +25,7 @@ class NetworkntJsonSchemaValidatorTest {
 
     @Test
     void shouldReturnErrorWithPathAndKeywordForMissingRequiredProperty() {
-        var schema = JsonSchema.of("""
+        var schema = JsonSchema.unchecked("""
             {"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}
             """);
         var arguments = JsonDocument.of("{}");
@@ -39,7 +39,7 @@ class NetworkntJsonSchemaValidatorTest {
 
     @Test
     void shouldReturnErrorForWrongType() {
-        var schema = JsonSchema.of("""
+        var schema = JsonSchema.unchecked("""
             {"type":"object","properties":{"age":{"type":"integer"}}}
             """);
         var arguments = JsonDocument.of("""
@@ -54,10 +54,10 @@ class NetworkntJsonSchemaValidatorTest {
 
     @Test
     void shouldValidateDistinctSchemasIndependently() {
-        var nameSchema = JsonSchema.of("""
+        var nameSchema = JsonSchema.unchecked("""
             {"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}
             """);
-        var emailSchema = JsonSchema.of("""
+        var emailSchema = JsonSchema.unchecked("""
             {"type":"object","properties":{"email":{"type":"string"}},"required":["email"]}
             """);
 
@@ -78,10 +78,10 @@ class NetworkntJsonSchemaValidatorTest {
 
     @Test
     void shouldReuseCompiledSchemaForRepeatedCallsWithEquivalentSchemaContent() {
-        var schema1 = JsonSchema.of("""
+        var schema1 = JsonSchema.unchecked("""
             {"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}
             """);
-        var schema2 = JsonSchema.of("""
+        var schema2 = JsonSchema.unchecked("""
             {"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}
             """);
 
@@ -91,9 +91,9 @@ class NetworkntJsonSchemaValidatorTest {
 
     @Test
     void shouldSupportBooleanSchemas() {
-        assertThat(validator.validate(JsonSchema.of("true"), JsonDocument.of("{\"value\":1}")))
+        assertThat(validator.validate(JsonSchema.unchecked("true"), JsonDocument.of("{\"value\":1}")))
                 .isEmpty();
-        assertThat(validator.validate(JsonSchema.of("false"), JsonDocument.of("{\"value\":1}")))
+        assertThat(validator.validate(JsonSchema.unchecked("false"), JsonDocument.of("{\"value\":1}")))
                 .hasSize(1);
     }
 }

@@ -18,16 +18,16 @@ import org.junit.jupiter.params.provider.MethodSource;
 /** Verifies {@code Tools.register(Class, Class, ...)} / {@code registerAsync(Class, Class, ...)} end to end. */
 class TypedToolRegistrationTest {
 
-    private static final JsonSchema GREET_REQUEST_SCHEMA = JsonSchema.of("""
+    private static final JsonSchema GREET_REQUEST_SCHEMA = JsonSchema.unchecked("""
             {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}
             """);
-    private static final JsonSchema GREET_RESPONSE_SCHEMA = JsonSchema.of("""
+    private static final JsonSchema GREET_RESPONSE_SCHEMA = JsonSchema.unchecked("""
             {"type": "object", "properties": {"greeting": {"type": "string"}}, "required": ["greeting"]}
             """);
-    private static final JsonSchema FAREWELL_REQUEST_SCHEMA = JsonSchema.of("""
+    private static final JsonSchema FAREWELL_REQUEST_SCHEMA = JsonSchema.unchecked("""
             {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}
             """);
-    private static final JsonSchema FAREWELL_RESPONSE_SCHEMA = JsonSchema.of("""
+    private static final JsonSchema FAREWELL_RESPONSE_SCHEMA = JsonSchema.unchecked("""
             {"type": "object", "properties": {"farewell": {"type": "string"}}, "required": ["farewell"]}
             """);
 

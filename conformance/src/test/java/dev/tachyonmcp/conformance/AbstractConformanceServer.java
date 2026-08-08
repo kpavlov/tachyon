@@ -70,7 +70,7 @@ abstract class AbstractConformanceServer {
     private static final String HMAC_SECRET = "conformance-test-hmac-secret";
 
     protected static JsonSchema parseJson(String json) {
-        return JsonSchema.of(json);
+        return JsonSchema.from(json, String.class);
     }
 
     protected static FormInputRequest buildFormElicitation(String message, String propName, String propType) {

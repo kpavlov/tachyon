@@ -24,21 +24,20 @@ public interface JsonSchema extends JsonDocument {
      *
      * @throws IllegalArgumentException when json is null or blank string
      */
-    static JsonSchema of(String json) {
+    static JsonSchema unchecked(String json) {
         return new DefaultJsonSchema(JsonDocuments.requireContent(json));
     }
 
     /**
-     * Creates a schema from encoded JSON, validating it via the {@link JsonSchemaFactory}
-     * chain discovered through {@link java.util.ServiceLoader}.
+     * Same as {@link #unchecked(String)}
      *
-     * @param json the JSON string
-     * @return the parsed schema
-     * @throws IllegalArgumentException if {@code json} is not valid JSON
-     * @throws IllegalStateException if no {@code JsonSchemaFactory} handles {@code String} sources
+     * @param json Json string
+     * @throws IllegalArgumentException when json is null or blank string
+     * @deprecated Use {@link #unchecked(String)}
      */
-    static JsonSchema parse(String json) {
-        return from(json, String.class);
+    @Deprecated
+    static JsonSchema of(String json) {
+        return unchecked(json);
     }
 
     /**
@@ -80,7 +79,35 @@ public interface JsonSchema extends JsonDocument {
      *     for {@code type}
      */
     @ExperimentalApi
-    static JsonSchema generated(Class<?> type) {
+    static JsonSchema generate(Class<?> type) {
         return JsonSchemas.generated(type);
+    }
+
+    /**
+     * Use {@link #generate(Class)} instead.
+     */
+    @ExperimentalApi
+    @Deprecated
+    static JsonSchema generated(Class<?> type) {
+        return JsonSchema.generate(type);
+    }
+
+    /**
+     * Resolves and validates a schema from encoded JSON, via the {@link JsonSchemaFactory} chain
+     * discovered through {@link java.util.ServiceLoader}: the registered factory whose {@link
+     * JsonSchemaFactory#sourceType()} is {@code String.class} validates {@code json} and produces
+     * the schema. Delegates to {@link #from(Object, Class)} ({@code from(json, String.class)}).
+     *
+     * <p>This API is {@link ExperimentalApi} and may change in a future release.
+     *
+     * @param json the encoded JSON schema
+     * @return the parsed schema
+     * @throws IllegalArgumentException when {@code json} is not valid JSON
+     * @throws IllegalStateException    if no {@code JsonSchemaFactory<String>} is registered for
+     *                                  {@code String} sources
+     */
+    @ExperimentalApi
+    static JsonSchema parse(String json) {
+        return JsonSchema.from(json, String.class);
     }
 }

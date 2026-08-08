@@ -316,7 +316,7 @@ internal class TachyonServerTest {
         ) {
             name("template-test")
             session { enabled = true }
-            tool("check", inputSchema = JsonSchema.of(schema)) { ToolResult.text("ok") }
+            tool("check", inputSchema = JsonSchema.unchecked(schema)) { ToolResult.text("ok") }
             resourceTemplate(
                 name = "user-profile",
                 uriTemplate = "user://{userId}/profile",
@@ -548,8 +548,8 @@ internal class TachyonServerTest {
             tool(
                 "with-output",
                 "Has output schema",
-                inputSchema = JsonSchema.of(schema),
-                outputSchema = JsonSchema.of(outputSchema),
+                inputSchema = JsonSchema.unchecked(schema),
+                outputSchema = JsonSchema.unchecked(outputSchema),
             ) {
                 ToolResult.text("done")
             }
@@ -571,7 +571,7 @@ internal class TachyonServerTest {
         ) {
             name("string-schema-test")
             session { enabled = true }
-            tool("string-schema", inputSchema = JsonSchema.of(schema)) {
+            tool("string-schema", inputSchema = JsonSchema.unchecked(schema)) {
                 ToolResult.text("ok")
             }
         }.use { handle ->

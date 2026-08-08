@@ -57,6 +57,16 @@
           "attachments": {
             "since": "1.0.0-beta.18"
           }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method dev.tachyonmcp.api.json.JsonSchema dev.tachyonmcp.api.json.JsonSchema::parse(java.lang.String)",
+          "new": "method dev.tachyonmcp.api.json.JsonDocument dev.tachyonmcp.api.json.JsonDocument::parse(java.lang.String) @ dev.tachyonmcp.api.json.JsonSchema",
+          "justification": "JsonSchemas refactored",
+          "attachments": {
+            "since": "1.0.0-beta.18"
+          }
         }
       ]
     }

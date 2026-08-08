@@ -87,7 +87,7 @@ class DefaultConformanceServer extends AbstractConformanceServer {
                             if (messageOpt.isPresent()) {
                                 var message = messageOpt.get();
                                 try {
-                                    var schema = JsonSchema.of(JsonRpcCodec.writeValueAsString(Map.of(
+                                    var schema = JsonSchema.unchecked(JsonRpcCodec.writeValueAsString(Map.of(
                                             "type",
                                             "object",
                                             "properties",
@@ -119,7 +119,7 @@ class DefaultConformanceServer extends AbstractConformanceServer {
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
                         (ctx, request) -> {
                             try {
-                                var schema = JsonSchema.of(JsonRpcCodec.writeValueAsString(Map.of(
+                                var schema = JsonSchema.unchecked(JsonRpcCodec.writeValueAsString(Map.of(
                                         "type",
                                         "object",
                                         "properties",
@@ -203,7 +203,7 @@ class DefaultConformanceServer extends AbstractConformanceServer {
                                                         List.of(
                                                                 Map.of("const", "item1", "title", "Item One"),
                                                                 Map.of("const", "item2", "title", "Item Two")))));
-                                var schema = JsonSchema.of(
+                                var schema = JsonSchema.unchecked(
                                         JsonRpcCodec.writeValueAsString(Map.of("type", "object", "properties", props)));
                                 var result = ctx.client()
                                         .elicitation()

@@ -24,7 +24,7 @@ public final class ChainPriorityLowFactory implements JsonSchemaFactory<Class<?>
     @Override
     public Optional<JsonSchema> toJsonSchema(Class<?> type) {
         if (type == LowTarget.class) {
-            return Optional.of(JsonSchema.of("{\"title\":\"low\"}"));
+            return Optional.of(JsonSchema.unchecked("{\"title\":\"low\"}"));
         }
         return Optional.empty();
     }

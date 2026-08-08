@@ -42,7 +42,7 @@ public final class Jackson3JsonFactory implements JsonDocumentFactory<String>, J
     @Override
     public Optional<JsonSchema> toJsonSchema(String json) {
         validate(json);
-        return Optional.of(JsonSchema.of(json));
+        return Optional.of(JsonSchema.unchecked(json));
     }
 
     private static void validate(String json) {

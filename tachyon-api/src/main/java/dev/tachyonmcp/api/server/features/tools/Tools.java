@@ -38,7 +38,7 @@ public interface Tools {
      * <p>{@code request.arguments()} is decoded into {@code inputType} before {@code fn} runs, and
      * {@code fn}'s return value is wrapped via {@code ToolResult.structured(Object)}. If {@code
      * descriptor} is missing {@link ToolDescriptor#inputSchema()} and/or {@link
-     * ToolDescriptor#outputSchema()}, they are filled in via {@link JsonSchema#generated(Class)}
+     * ToolDescriptor#outputSchema()}, they are filled in via {@link JsonSchema#generate(Class)}
      * for {@code inputType}/{@code outputType} respectively.
      *
      * @param <I> the type arguments are decoded into
@@ -154,8 +154,8 @@ public interface Tools {
             return descriptor;
         }
         var builder = ToolDescriptor.builder().from(descriptor);
-        if (descriptor.inputSchema() == null) builder.inputSchema(JsonSchema.generated(inputType));
-        if (descriptor.outputSchema() == null) builder.outputSchema(JsonSchema.generated(outputType));
+        if (descriptor.inputSchema() == null) builder.inputSchema(JsonSchema.generate(inputType));
+        if (descriptor.outputSchema() == null) builder.outputSchema(JsonSchema.generate(outputType));
         return builder.build();
     }
 

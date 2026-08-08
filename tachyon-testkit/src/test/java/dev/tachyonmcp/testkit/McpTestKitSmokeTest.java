@@ -17,7 +17,7 @@ import tools.jackson.databind.ObjectMapper;
 /** Verifies the testkit client/helpers against a real port-0 server. */
 class McpTestKitSmokeTest {
 
-    private static final JsonSchema ECHO_SCHEMA = JsonSchema.of("""
+    private static final JsonSchema ECHO_SCHEMA = JsonSchema.unchecked("""
             {
               "type": "object",
               "properties": {

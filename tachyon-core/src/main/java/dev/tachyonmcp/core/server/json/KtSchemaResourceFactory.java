@@ -44,7 +44,7 @@ public final class KtSchemaResourceFactory implements JsonSchemaFactory<Class<?>
             if (in == null) {
                 return Optional.empty();
             }
-            return Optional.of(JsonSchema.of(new String(in.readAllBytes(), StandardCharsets.UTF_8)));
+            return Optional.of(JsonSchema.unchecked(new String(in.readAllBytes(), StandardCharsets.UTF_8)));
         } catch (IOException e) {
             throw new UncheckedIOException("Could not read schema resource: " + path, e);
         }
