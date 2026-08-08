@@ -31,6 +31,9 @@ public interface Task extends HasMeta {
     /** Timestamp when this task was created. */
     Instant createdAt();
 
+    /** Timestamp when this task's status was last updated. */
+    Instant lastUpdatedAt();
+
     /** Time-to-live duration after which the task is eligible for eviction, or {@code null}. */
     @Nullable
     Duration ttl();

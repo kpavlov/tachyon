@@ -276,7 +276,8 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         var caps = config.capabilities();
         this.toolRegistry = new DefaultToolRegistry(schemaFactory1, caps.tools());
         this.resourceRegistry = new DefaultResourceRegistry(this, caps.resources());
-        this.taskRegistry = new DefaultTaskRegistry(this, caps.tasks());
+        this.taskRegistry =
+                new DefaultTaskRegistry(this, caps.tasks(), config.runtime().clock());
         this.promptRegistry = new DefaultPromptRegistry(caps.prompts());
         this.completionRegistry = new DefaultCompletionRegistry(caps.completions());
         registerDefaults();

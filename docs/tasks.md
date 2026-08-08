@@ -69,6 +69,8 @@ this task's result stays retrievable via `tasks/get`/`tasks/result` after it rea
 state, overriding the server-wide default (`TasksConfig.keepAlive`, 5 minutes).
 
 Status notifications are broadcast automatically on each transition.
+`Task.createdAt()` and `Task.lastUpdatedAt()` expose the creation and most recent status/message
+update timestamps as `Instant` values.
 
 ## MCP 2025-11-25 task-augmented tool calls
 

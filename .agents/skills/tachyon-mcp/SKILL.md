@@ -39,7 +39,7 @@ server.start();
 | `.capabilities(cfg)` | tools/resources/prompts/tasks/completions/logging |
 | `.session(cfg)` | enabled (off by default = stateless), sessionTtl, SessionEventStore, SessionStore, SessionIdGenerator |
 | `.network(cfg)` | host, port, endpointPath, timeouts, CORS, maxContentLength, ioEngine |
-| `.runtime(cfg)` | shutdownGracePeriod |
+| `.runtime(cfg)` | shutdownGracePeriod, requestTimeout, clock |
 | `.monitoring(cfg)` | slow-request diagnostics (off by default) |
 | `.name(s)` `.port(p)` | shorthands |
 | `.withTools(registrar)` | bootstrap through `Tools.register/registerAsync` |
@@ -224,6 +224,7 @@ handler's `InteractionContext` and needs no token.
 |---|---|
 | `.shutdownGracePeriod(d)` | 5s (drain in-flight handlers on close; `ZERO` = interrupt now) |
 | `.requestTimeout(d)` | 60s (timeout for pending requests sent to client) |
+| `.clock(Clock)` | `Clock.systemUTC()` (task timestamps and TTL/expiry checks; inject a fixed or controllable clock in tests) |
 
 ### Monitoring `monitoring(cfg -> ...)`
 

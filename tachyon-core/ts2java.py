@@ -1676,6 +1676,28 @@ class Generator:
                 out.append(f"                    {fname} = parser.getDoubleValue();\n")
             elif typ == "byte[]":
                 out.append(f"                    {fname} = parser.getBinaryValue();\n")
+            elif typ == "java.time.Instant":
+                if optional and not is_nullable_required:
+                    out.append(
+                        f"                    {fname} = parser.currentToken() == JsonToken.VALUE_NULL\n"
+                        f"                            ? null\n"
+                        f"                            : java.time.Instant.parse(parser.getString());\n"
+                    )
+                else:
+                    out.append(
+                        f"                    {fname} = java.time.Instant.parse(parser.getString());\n"
+                    )
+            elif typ == "java.time.Duration":
+                if optional and not is_nullable_required:
+                    out.append(
+                        f"                    {fname} = parser.currentToken() == JsonToken.VALUE_NULL\n"
+                        f"                            ? null\n"
+                        f"                            : java.time.Duration.ofMillis(parser.getLongValue());\n"
+                    )
+                else:
+                    out.append(
+                        f"                    {fname} = java.time.Duration.ofMillis(parser.getLongValue());\n"
+                    )
             elif "java.util.List" in typ:
                 item = typ.split("<")[1][:-1]
                 item_ref = self.ref_for_type(item, model_name)
@@ -1802,6 +1824,19 @@ class Generator:
                 out.append(f'        gen.writeName("{json_name}");\n')
                 out.append(f"        encodeValue(gen, {acc});\n")
                 continue
+            if (
+                json_name in self.nullable_required.get(model_name, set())
+                and typ == "java.time.Duration"
+            ):
+                # Required-but-nullable Duration: no generic encodeValue overload knows the
+                # millis wire representation, so null-check explicitly instead.
+                out.append(f'        gen.writeName("{json_name}");\n')
+                out.append(f"        if ({acc} != null) {{\n")
+                out.append(f"            gen.writeNumber({acc}.toMillis());\n")
+                out.append("        } else {\n")
+                out.append("            gen.writeNull();\n")
+                out.append("        }\n")
+                continue
             if optional and not is_primitive:
                 out.append(f"        if ({acc} != null) {{\n")
                 ind = "            "
@@ -1823,6 +1858,10 @@ class Generator:
                 out.append(f'{ind}gen.writeNumberProperty("{json_name}", {acc});\n')
             elif typ == "byte[]":
                 out.append(f'{ind}gen.writeBinaryProperty("{json_name}", {acc});\n')
+            elif typ == "java.time.Instant":
+                out.append(f'{ind}gen.writeStringProperty("{json_name}", {acc}.toString());\n')
+            elif typ == "java.time.Duration":
+                out.append(f'{ind}gen.writeNumberProperty("{json_name}", {acc}.toMillis());\n')
             elif "java.util.List" in typ:
                 out.append(f'{ind}gen.writeArrayPropertyStart("{json_name}");\n')
                 out.append(f"{ind}for (var item : {acc}) {{\n")

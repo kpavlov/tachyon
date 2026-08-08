@@ -10,8 +10,6 @@ import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams;
 import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.core.server.json.JsonUtils;
-import java.time.Duration;
-import org.jspecify.annotations.Nullable;
 
 final class McpTaskMapper {
 
@@ -28,19 +26,15 @@ final class McpTaskMapper {
         };
     }
 
-    private static @Nullable Long pollIntervalToMillis(@Nullable Duration pollInterval) {
-        return pollInterval != null ? pollInterval.toMillis() : null;
-    }
-
     static Task toTaskProto(TaskEntry entry) {
         return new Task(
                 entry.id(),
                 toWireStatus(entry.status()),
                 entry.statusMessage(),
-                entry.createdAtIso(),
-                entry.lastUpdatedAtIso(),
-                entry.ttlMillis(),
-                pollIntervalToMillis(entry.pollInterval()));
+                entry.createdAt(),
+                entry.lastUpdatedAt(),
+                entry.ttl(),
+                entry.pollInterval());
     }
 
     static GetTaskResult toGetTaskResult(TaskEntry entry) {
@@ -49,10 +43,10 @@ final class McpTaskMapper {
                 entry.id(),
                 toWireStatus(entry.status()),
                 entry.statusMessage(),
-                entry.createdAtIso(),
-                entry.lastUpdatedAtIso(),
-                entry.ttlMillis(),
-                pollIntervalToMillis(entry.pollInterval()));
+                entry.createdAt(),
+                entry.lastUpdatedAt(),
+                entry.ttl(),
+                entry.pollInterval());
     }
 
     public static CancelTaskResult toCancelTaskResult(TaskEntry entry) {
@@ -61,10 +55,10 @@ final class McpTaskMapper {
                 entry.id(),
                 toWireStatus(entry.status()),
                 entry.statusMessage(),
-                entry.createdAtIso(),
-                entry.lastUpdatedAtIso(),
-                entry.ttlMillis(),
-                pollIntervalToMillis(entry.pollInterval()));
+                entry.createdAt(),
+                entry.lastUpdatedAt(),
+                entry.ttl(),
+                entry.pollInterval());
     }
 
     static CreateTaskResult toCreateTaskResult(TaskEntry entry) {
@@ -77,9 +71,9 @@ final class McpTaskMapper {
                 entry.id(),
                 toWireStatus(entry.status()),
                 entry.statusMessage(),
-                entry.createdAtIso(),
-                entry.lastUpdatedAtIso(),
-                entry.ttlMillis(),
-                pollIntervalToMillis(entry.pollInterval()));
+                entry.createdAt(),
+                entry.lastUpdatedAt(),
+                entry.ttl(),
+                entry.pollInterval());
     }
 }

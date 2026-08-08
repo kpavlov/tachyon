@@ -85,8 +85,8 @@ final class McpTaskMapper {
         fields.put("taskId", entry.id());
         fields.put("status", wireStatus);
         putIfPresent(fields, "statusMessage", entry.statusMessage());
-        fields.put("createdAt", entry.createdAtIso());
-        fields.put("lastUpdatedAt", entry.lastUpdatedAtIso());
+        fields.put("createdAt", entry.createdAt());
+        fields.put("lastUpdatedAt", entry.lastUpdatedAt());
         // SEP-2663 types Task.ttlMs as `number | null` (required, nullable) but
         // Task.pollIntervalMs as `number?` (optional) -- ttlMs is always written, even when null;
         // pollIntervalMs is omitted rather than written as null.

@@ -19,28 +19,621 @@
           "code": "java.method.returnTypeChanged",
           "old": "method dev.tachyonmcp.api.json.JsonSchema dev.tachyonmcp.core.server.json.Jackson3JsonFactory::toJsonSchema(java.lang.String)",
           "new": "method java.util.Optional<dev.tachyonmcp.api.json.JsonSchema> dev.tachyonmcp.core.server.json.Jackson3JsonFactory::toJsonSchema(java.lang.String)",
-          "justification": "JsonSchemaFactory SPI returns Optional so factories decline sources and the resolution chain continues"
+          "justification": "JsonSchemaFactory SPI returns Optional so factories decline sources and the resolution chain continues",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
         },
         {
           "ignore": true,
           "code": "java.method.returnTypeChanged",
           "old": "method dev.tachyonmcp.api.json.JsonSchema dev.tachyonmcp.core.server.json.JacksonNodeJsonFactory::toJsonSchema(tools.jackson.databind.JsonNode)",
           "new": "method java.util.Optional<dev.tachyonmcp.api.json.JsonSchema> dev.tachyonmcp.core.server.json.JacksonNodeJsonFactory::toJsonSchema(tools.jackson.databind.JsonNode)",
-          "justification": "JsonSchemaFactory returns Optional to continue the resolution chain"
+          "justification": "JsonSchemaFactory returns Optional to continue the resolution chain",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
         },
         {
           "ignore": true,
           "code": "java.method.returnTypeChanged",
           "old": "method dev.tachyonmcp.api.json.JsonSchema dev.tachyonmcp.core.server.json.JacksonObjectJsonFactory::toJsonSchema(tools.jackson.databind.node.ObjectNode)",
           "new": "method java.util.Optional<dev.tachyonmcp.api.json.JsonSchema> dev.tachyonmcp.core.server.json.JacksonObjectJsonFactory::toJsonSchema(tools.jackson.databind.node.ObjectNode)",
-          "justification": "JsonSchemaFactory returns Optional to continue the resolution chain"
+          "justification": "JsonSchemaFactory returns Optional to continue the resolution chain",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
         },
         {
           "ignore": true,
           "code": "java.method.returnTypeChanged",
           "old": "method java.lang.Long dev.tachyonmcp.core.server.features.tasks.TaskEntry::ttl()",
           "new": "method java.time.Duration dev.tachyonmcp.core.server.features.tasks.TaskEntry::ttl()",
-          "justification": "Use idiomatic domain types"
+          "justification": "Use idiomatic domain types",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult.Builder::createdAt(===java.lang.String===)",
+          "new": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult.Builder::createdAt(===java.time.Instant===)",
+          "parameterIndex": "0",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult.Builder::lastUpdatedAt(===java.lang.String===)",
+          "new": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult.Builder::lastUpdatedAt(===java.time.Instant===)",
+          "parameterIndex": "0",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult.Builder::pollInterval(===java.lang.Long===)",
+          "new": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult.Builder::pollInterval(===java.time.Duration===)",
+          "parameterIndex": "0",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult.Builder::ttl(===java.lang.Long===)",
+          "new": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult.Builder::ttl(===java.time.Duration===)",
+          "parameterIndex": "0",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, ===java.lang.String===, java.lang.String, java.lang.Long, java.lang.Long)",
+          "new": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, ===java.time.Instant===, java.time.Instant, java.time.Duration, java.time.Duration)",
+          "parameterIndex": "4",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.lang.String, ===java.lang.String===, java.lang.Long, java.lang.Long)",
+          "new": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.time.Instant, ===java.time.Instant===, java.time.Duration, java.time.Duration)",
+          "parameterIndex": "5",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.lang.String, java.lang.String, ===java.lang.Long===, java.lang.Long)",
+          "new": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.time.Instant, java.time.Instant, ===java.time.Duration===, java.time.Duration)",
+          "parameterIndex": "6",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.lang.String, java.lang.String, java.lang.Long, ===java.lang.Long===)",
+          "new": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.time.Instant, java.time.Instant, java.time.Duration, ===java.time.Duration===)",
+          "parameterIndex": "7",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.String dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult::createdAt()",
+          "new": "method java.time.Instant dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult::createdAt()",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.String dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult::lastUpdatedAt()",
+          "new": "method java.time.Instant dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult::lastUpdatedAt()",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.Long dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult::pollInterval()",
+          "new": "method java.time.Duration dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult::pollInterval()",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.Long dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult::ttl()",
+          "new": "method java.time.Duration dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult::ttl()",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult.Builder::createdAt(===java.lang.String===)",
+          "new": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult.Builder::createdAt(===java.time.Instant===)",
+          "parameterIndex": "0",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult.Builder::lastUpdatedAt(===java.lang.String===)",
+          "new": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult.Builder::lastUpdatedAt(===java.time.Instant===)",
+          "parameterIndex": "0",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult.Builder::pollInterval(===java.lang.Long===)",
+          "new": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult.Builder::pollInterval(===java.time.Duration===)",
+          "parameterIndex": "0",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult.Builder::ttl(===java.lang.Long===)",
+          "new": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult.Builder::ttl(===java.time.Duration===)",
+          "parameterIndex": "0",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, ===java.lang.String===, java.lang.String, java.lang.Long, java.lang.Long)",
+          "new": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, ===java.time.Instant===, java.time.Instant, java.time.Duration, java.time.Duration)",
+          "parameterIndex": "4",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.lang.String, ===java.lang.String===, java.lang.Long, java.lang.Long)",
+          "new": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.time.Instant, ===java.time.Instant===, java.time.Duration, java.time.Duration)",
+          "parameterIndex": "5",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.lang.String, java.lang.String, ===java.lang.Long===, java.lang.Long)",
+          "new": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.time.Instant, java.time.Instant, ===java.time.Duration===, java.time.Duration)",
+          "parameterIndex": "6",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.lang.String, java.lang.String, java.lang.Long, ===java.lang.Long===)",
+          "new": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.time.Instant, java.time.Instant, java.time.Duration, ===java.time.Duration===)",
+          "parameterIndex": "7",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.String dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult::createdAt()",
+          "new": "method java.time.Instant dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult::createdAt()",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.String dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult::lastUpdatedAt()",
+          "new": "method java.time.Instant dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult::lastUpdatedAt()",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.Long dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult::pollInterval()",
+          "new": "method java.time.Duration dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult::pollInterval()",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.Long dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult::ttl()",
+          "new": "method java.time.Duration dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult::ttl()",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task.Builder::createdAt(===java.lang.String===)",
+          "new": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task.Builder::createdAt(===java.time.Instant===)",
+          "parameterIndex": "0",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task.Builder::lastUpdatedAt(===java.lang.String===)",
+          "new": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task.Builder::lastUpdatedAt(===java.time.Instant===)",
+          "parameterIndex": "0",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task.Builder::pollInterval(===java.lang.Long===)",
+          "new": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task.Builder::pollInterval(===java.time.Duration===)",
+          "parameterIndex": "0",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task.Builder::ttl(===java.lang.Long===)",
+          "new": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task.Builder::ttl(===java.time.Duration===)",
+          "parameterIndex": "0",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task::<init>(java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, ===java.lang.String===, java.lang.String, java.lang.Long, java.lang.Long)",
+          "new": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task::<init>(java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, ===java.time.Instant===, java.time.Instant, java.time.Duration, java.time.Duration)",
+          "parameterIndex": "3",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task::<init>(java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.lang.String, ===java.lang.String===, java.lang.Long, java.lang.Long)",
+          "new": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task::<init>(java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.time.Instant, ===java.time.Instant===, java.time.Duration, java.time.Duration)",
+          "parameterIndex": "4",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task::<init>(java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.lang.String, java.lang.String, ===java.lang.Long===, java.lang.Long)",
+          "new": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task::<init>(java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.time.Instant, java.time.Instant, ===java.time.Duration===, java.time.Duration)",
+          "parameterIndex": "5",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task::<init>(java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.lang.String, java.lang.String, java.lang.Long, ===java.lang.Long===)",
+          "new": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task::<init>(java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.time.Instant, java.time.Instant, java.time.Duration, ===java.time.Duration===)",
+          "parameterIndex": "6",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.String dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task::createdAt()",
+          "new": "method java.time.Instant dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task::createdAt()",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.String dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task::lastUpdatedAt()",
+          "new": "method java.time.Instant dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task::lastUpdatedAt()",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.Long dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task::pollInterval()",
+          "new": "method java.time.Duration dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task::pollInterval()",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.Long dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task::ttl()",
+          "new": "method java.time.Duration dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Task::ttl()",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskMetadata.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskMetadata.Builder::ttl(===java.lang.Long===)",
+          "new": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskMetadata.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskMetadata.Builder::ttl(===java.time.Duration===)",
+          "parameterIndex": "0",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskMetadata::<init>(===java.lang.Long===)",
+          "new": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskMetadata::<init>(===java.time.Duration===)",
+          "parameterIndex": "0",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.Long dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskMetadata::ttl()",
+          "new": "method java.time.Duration dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskMetadata::ttl()",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams.Builder::createdAt(===java.lang.String===)",
+          "new": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams.Builder::createdAt(===java.time.Instant===)",
+          "parameterIndex": "0",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams.Builder::lastUpdatedAt(===java.lang.String===)",
+          "new": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams.Builder::lastUpdatedAt(===java.time.Instant===)",
+          "parameterIndex": "0",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams.Builder::pollInterval(===java.lang.Long===)",
+          "new": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams.Builder::pollInterval(===java.time.Duration===)",
+          "parameterIndex": "0",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams.Builder::ttl(===java.lang.Long===)",
+          "new": "parameter dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams.Builder dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams.Builder::ttl(===java.time.Duration===)",
+          "parameterIndex": "0",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, ===java.lang.String===, java.lang.String, java.lang.Long, java.lang.Long)",
+          "new": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, ===java.time.Instant===, java.time.Instant, java.time.Duration, java.time.Duration)",
+          "parameterIndex": "4",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.lang.String, ===java.lang.String===, java.lang.Long, java.lang.Long)",
+          "new": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.time.Instant, ===java.time.Instant===, java.time.Duration, java.time.Duration)",
+          "parameterIndex": "5",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.lang.String, java.lang.String, ===java.lang.Long===, java.lang.Long)",
+          "new": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.time.Instant, java.time.Instant, ===java.time.Duration===, java.time.Duration)",
+          "parameterIndex": "6",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.lang.String, java.lang.String, java.lang.Long, ===java.lang.Long===)",
+          "new": "parameter void dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams::<init>(java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>, java.lang.String, dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus, java.lang.String, java.time.Instant, java.time.Instant, java.time.Duration, ===java.time.Duration===)",
+          "parameterIndex": "7",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.String dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams::createdAt()",
+          "new": "method java.time.Instant dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams::createdAt()",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.String dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams::lastUpdatedAt()",
+          "new": "method java.time.Instant dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams::lastUpdatedAt()",
+          "justification": "Use idiomatic domain types; ISO-8601 (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.Long dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams::pollInterval()",
+          "new": "method java.time.Duration dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams::pollInterval()",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.Long dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams::ttl()",
+          "new": "method java.time.Duration dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatusNotificationParams::ttl()",
+          "justification": "Use idiomatic domain types; millisecond (de)serialization moved to the wire codec, not the model",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method java.lang.String dev.tachyonmcp.core.server.features.tasks.TaskEntry::createdAtIso()",
+          "justification": "Superseded by createdAt() returning Instant; ISO-8601 formatting moved to the wire codec, not TaskEntry",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method long dev.tachyonmcp.core.server.features.tasks.TaskEntry::lastUpdatedAt()",
+          "new": "method java.time.Instant dev.tachyonmcp.core.server.features.tasks.TaskEntry::lastUpdatedAt()",
+          "justification": "Use idiomatic domain types",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method java.lang.String dev.tachyonmcp.core.server.features.tasks.TaskEntry::lastUpdatedAtIso()",
+          "justification": "Superseded by lastUpdatedAt() returning Instant; ISO-8601 formatting moved to the wire codec, not TaskEntry",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method long dev.tachyonmcp.core.server.features.tasks.TaskEntry::createdAtMillis()",
+          "justification": "No longer needed internal method",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
         }
       ]
     }

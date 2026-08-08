@@ -15,6 +15,7 @@ import dev.tachyonmcp.core.server.config.TasksConfig;
 import dev.tachyonmcp.core.server.features.AbstractRegistry;
 import dev.tachyonmcp.core.server.internal.AbstractJanitor;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
 
     private final ConcurrentHashMap<String, Future<?>> running = new ConcurrentHashMap<>();
     private final ServerEngine server;
+    private final Clock clock;
     private final TaskIdGenerator taskIdGenerator;
     private final Duration defaultKeepAlive;
     private final @Nullable Duration defaultPollInterval;
@@ -44,11 +46,16 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
     };
 
     public DefaultTaskRegistry(ServerEngine server, TasksConfig config) {
+        this(server, config, Clock.systemUTC());
+    }
+
+    public DefaultTaskRegistry(ServerEngine server, TasksConfig config, Clock clock) {
         super(config.pageSize());
         this.taskIdGenerator = DefaultTaskIdGenerator.INSTANCE;
         this.defaultKeepAlive = config.keepAlive();
         this.defaultPollInterval = config.pollInterval();
         this.server = server;
+        this.clock = Objects.requireNonNull(clock, "clock");
     }
 
     @Override
@@ -118,7 +125,8 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
                 meta,
                 keepAlive,
                 pollInterval,
-                this::fireStatusNotification);
+                this::fireStatusNotification,
+                clock);
         if (!addItemIfAbsent(entry)) {
             throw new IllegalArgumentException("Task '" + id + "' already exists");
         }

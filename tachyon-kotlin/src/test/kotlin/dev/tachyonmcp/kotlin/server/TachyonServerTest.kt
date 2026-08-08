@@ -25,6 +25,9 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import kotlinx.coroutines.delay
 import org.junit.jupiter.api.Test
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
@@ -287,6 +290,19 @@ internal class TachyonServerTest {
             }
         server.tools().find("build").orElse(null) shouldNotBe null
         server.close()
+    }
+
+    @Test
+    fun `runtime clock is wired through to the runtime config`() {
+        val fixedClock = Clock.fixed(Instant.parse("2025-01-01T00:00:00Z"), ZoneOffset.UTC)
+        buildServer {
+            name("runtime-clock-test")
+            runtime {
+                clock = fixedClock
+            }
+        }.use { server ->
+            server.config().runtime.clock() shouldBe fixedClock
+        }
     }
 
     @Test

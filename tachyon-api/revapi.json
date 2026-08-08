@@ -20,7 +20,7 @@
           "new": "method java.util.Optional<dev.tachyonmcp.api.json.JsonSchema> dev.tachyonmcp.api.json.spi.JsonSchemaFactory<T>::toJsonSchema(T)",
           "justification": "JsonSchemaFactory may cover only some sources; empty Optional continues the resolution chain",
           "attachments": {
-            "since": "1.0.0-beta.18"
+            "since": "1.0.0-beta.19"
           }
         },
         {
@@ -36,7 +36,7 @@
           "old": "method dev.tachyonmcp.api.server.config.JsonConfig.Builder dev.tachyonmcp.api.server.config.JsonConfig.Builder::schemaFactory(dev.tachyonmcp.api.json.spi.JsonSchemaFactory<java.lang.String>)",
           "justification": "JsonSchemas should be passed to Tachyon config",
           "attachments": {
-            "since": "1.0.0-beta.18"
+            "since": "1.0.0-beta.19"
           }
         },
         {
@@ -46,7 +46,7 @@
           "new": "method void dev.tachyonmcp.api.server.config.JsonConfig::<init>(dev.tachyonmcp.api.json.PayloadSerializer, dev.tachyonmcp.api.json.PayloadDeserializer, dev.tachyonmcp.api.json.JsonSchemaValidator, dev.tachyonmcp.api.json.JsonSchemaValidator)",
           "justification": "JsonSchemas should be passed to Tachyon config",
           "attachments": {
-            "since": "1.0.0-beta.18"
+            "since": "1.0.0-beta.19"
           }
         },
         {
@@ -55,7 +55,7 @@
           "old": "method dev.tachyonmcp.api.json.spi.JsonSchemaFactory<java.lang.String> dev.tachyonmcp.api.server.config.JsonConfig::schemaFactory()",
           "justification": "JsonSchemas should be passed to Tachyon config",
           "attachments": {
-            "since": "1.0.0-beta.18"
+            "since": "1.0.0-beta.19"
           }
         },
         {
@@ -65,7 +65,7 @@
           "new": "method dev.tachyonmcp.api.json.JsonDocument dev.tachyonmcp.api.json.JsonDocument::parse(java.lang.String) @ dev.tachyonmcp.api.json.JsonSchema",
           "justification": "JsonSchemas refactored",
           "attachments": {
-            "since": "1.0.0-beta.18"
+            "since": "1.0.0-beta.19"
           }
         },
         {
@@ -73,7 +73,19 @@
           "code": "java.method.returnTypeChanged",
           "old": "method java.lang.Long dev.tachyonmcp.api.server.domain.Task::ttl()",
           "new": "method java.time.Duration dev.tachyonmcp.api.server.domain.Task::ttl()",
-          "justification": "Use idiomatic domain types"
+          "justification": "Use idiomatic domain types",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.abstractMethodAdded",
+          "new": "method dev.tachyonmcp.api.server.config.RuntimeConfig.Builder dev.tachyonmcp.api.server.config.RuntimeConfig.Builder::clock(java.time.Clock)",
+          "justification": "Better time api",
+          "attachments": {
+            "since": "1.0.0-beta.19"
+          }
         }
       ]
     }

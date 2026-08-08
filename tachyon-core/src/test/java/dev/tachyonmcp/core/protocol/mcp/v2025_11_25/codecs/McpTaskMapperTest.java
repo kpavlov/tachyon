@@ -50,7 +50,7 @@ class McpTaskMapperTest {
     }
 
     @Test
-    void ttlIsConvertedToMillisAcrossAllResponseShapes() {
+    void ttlIsPreservedAcrossAllResponseShapes() {
         var withTtl = new TaskEntry(
                 TaskDescriptor.builder().id("task-1").build(),
                 "task-1",
@@ -60,10 +60,10 @@ class McpTaskMapperTest {
                 null,
                 null);
 
-        assertThat(McpTaskMapper.toTaskProto(withTtl).ttl()).isEqualTo(90_000L);
-        assertThat(McpTaskMapper.toGetTaskResult(withTtl).ttl()).isEqualTo(90_000L);
-        assertThat(McpTaskMapper.toCancelTaskResult(withTtl).ttl()).isEqualTo(90_000L);
-        assertThat(McpTaskMapper.toStatusNotification(withTtl).ttl()).isEqualTo(90_000L);
+        assertThat(McpTaskMapper.toTaskProto(withTtl).ttl()).isEqualTo(Duration.ofSeconds(90));
+        assertThat(McpTaskMapper.toGetTaskResult(withTtl).ttl()).isEqualTo(Duration.ofSeconds(90));
+        assertThat(McpTaskMapper.toCancelTaskResult(withTtl).ttl()).isEqualTo(Duration.ofSeconds(90));
+        assertThat(McpTaskMapper.toStatusNotification(withTtl).ttl()).isEqualTo(Duration.ofSeconds(90));
     }
 
     @Test

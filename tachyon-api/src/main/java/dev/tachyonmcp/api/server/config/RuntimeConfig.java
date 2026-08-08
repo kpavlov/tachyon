@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.api.server.config;
 
+import java.time.Clock;
 import java.time.Duration;
 import org.immutables.value.Value;
 
@@ -34,8 +35,18 @@ public interface RuntimeConfig {
         return Duration.ofSeconds(60);
     }
 
+    /**
+     * Clock used for task timestamps ({@code createdAt}, {@code lastUpdatedAt}) and TTL/expiry
+     * checks (default {@link Clock#systemUTC()}). Override with a fixed or controllable clock in
+     * tests that need deterministic timing.
+     */
+    @Value.Default
+    default Clock clock() {
+        return Clock.systemUTC();
+    }
+
     Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(60);
-    RuntimeConfig DEFAULT = DefaultRuntimeConfig.of(Duration.ofSeconds(5), Duration.ofSeconds(60));
+    RuntimeConfig DEFAULT = DefaultRuntimeConfig.of(Duration.ofSeconds(5), Duration.ofSeconds(60), Clock.systemUTC());
 
     static Builder builder() {
         return DefaultRuntimeConfig.builder();
@@ -57,6 +68,9 @@ public interface RuntimeConfig {
          * Sets the timeout for pending requests sent to the client (default 60s).
          */
         public abstract Builder requestTimeout(Duration requestTimeout);
+
+        /** Sets the clock used for task timestamps and TTL/expiry checks. */
+        public abstract Builder clock(Clock clock);
 
         /** Builds the {@link RuntimeConfig}. */
         public abstract RuntimeConfig build();

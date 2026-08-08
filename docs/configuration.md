@@ -248,6 +248,7 @@ Configured via `runtime { }` / `RuntimeConfig.Builder`.
 |---|---|---|
 | `shutdownGracePeriod` | `5s` | Time in-flight handlers get to drain on `close()`; `ZERO` interrupts immediately |
 | `requestTimeout` | `60s` | Timeout for pending requests sent to the client |
+| `clock` | `Clock.systemUTC()` | Clock for task timestamps and TTL/expiry checks; set a fixed or controllable clock in tests |
 
 ## Monitoring
 

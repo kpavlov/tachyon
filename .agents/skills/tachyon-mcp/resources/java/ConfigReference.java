@@ -15,6 +15,7 @@ import dev.tachyonmcp.core.server.session.InMemorySessionEventStore;
 import dev.tachyonmcp.core.server.session.InMemorySessionStore;
 import dev.tachyonmcp.core.transport.netty.NettyIoEngine;
 
+import java.time.Clock;
 import java.time.Duration;
 
 /**
@@ -114,6 +115,7 @@ final class ConfigReference {
     static RuntimeConfig runtime() {
         return RuntimeConfig.builder()
             .shutdownGracePeriod(Duration.ofSeconds(5)) // drain in-flight handlers on close; ZERO = interrupt now
+            .clock(Clock.systemUTC()) // task timestamps and TTL/expiry checks; use Clock.fixed(...) in tests
             .build();
     }
 }
