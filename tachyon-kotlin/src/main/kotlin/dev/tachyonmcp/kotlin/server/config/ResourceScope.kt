@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
+@file:Suppress("FunctionName")
+
 package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.api.runtime.InteractionContext

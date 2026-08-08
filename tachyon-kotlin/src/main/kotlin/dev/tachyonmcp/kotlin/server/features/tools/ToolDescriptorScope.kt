@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
+@file:Suppress("FunctionName")
+
 package dev.tachyonmcp.kotlin.server.features.tools
 
 import dev.tachyonmcp.api.json.JsonSchema
