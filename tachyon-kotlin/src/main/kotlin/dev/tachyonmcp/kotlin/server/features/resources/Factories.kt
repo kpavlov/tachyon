@@ -21,7 +21,7 @@ import dev.tachyonmcp.core.server.features.resources.MimeTypes
  * @param title       human-readable title; null to omit
  * @param annotations optional presentation hints
  * @param size        estimated size hint in bytes; null = unknown
- * @param icons       list of associated icons; null to omit
+ * @param icons       list of associated icons, or empty
  * @param meta        protocol extension metadata; null to omit
  */
 public fun ResourceDescriptor(
@@ -32,7 +32,7 @@ public fun ResourceDescriptor(
     title: String? = null,
     annotations: Annotations? = null,
     size: Long? = null,
-    icons: List<Icon>? = null,
+    icons: List<Icon> = emptyList(),
     meta: Map<String, Any>? = null,
 ): ResourceDescriptor =
     ResourceDescriptor

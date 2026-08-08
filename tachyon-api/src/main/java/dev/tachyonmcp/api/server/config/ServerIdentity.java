@@ -38,7 +38,6 @@ public interface ServerIdentity {
     @Nullable
     String instructions();
 
-    @Nullable
     List<Icon> icons();
 
     ServerIdentity DEFAULT = DefaultServerIdentity.builder().build();
@@ -65,7 +64,7 @@ public interface ServerIdentity {
 
         Builder instructions(@Nullable String instructions);
 
-        Builder icons(@Nullable Iterable<? extends Icon> icons);
+        Builder icons(Iterable<? extends Icon> icons);
 
         default Builder icons(Icon... icons) {
             return icons(List.of(icons));

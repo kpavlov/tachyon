@@ -677,7 +677,7 @@ class DefaultResourceRegistryTest {
     @Test
     void shouldMapAllResourceDescriptorFieldsToProtocolModel() throws Exception {
         var annotations = Annotations.of(List.of(Role.USER), 0.9, "2026-01-01T00:00:00Z");
-        var icon = Icon.of("https://example.com/icon.png", "image/png", null, null);
+        var icon = Icon.of("https://example.com/icon.png", "image/png", List.of(), null);
         var descriptor = ResourceDescriptor.of(
                 "full-resource",
                 "test://full",
@@ -825,8 +825,8 @@ class DefaultResourceRegistryTest {
 
     @Test
     void shouldMapAllResourceTemplateFieldsToProtocolModel() throws Exception {
-        var annotations = Annotations.of(null, 0.5, null);
-        var icon = Icon.of("https://example.com/tmpl.png", null, null, null);
+        var annotations = Annotations.of(List.of(), 0.5, null);
+        var icon = Icon.of("https://example.com/tmpl.png", null, List.of(), null);
         registry.registerTemplate(
                 ResourceTemplateDescriptor.builder()
                         .name("tmpl")
@@ -860,7 +860,14 @@ class DefaultResourceRegistryTest {
     void shouldReportResourceSizeWithoutLoadingContent() throws Exception {
         // size is declared upfront; content is loaded lazily via handler only on resources/read
         var descriptor = ResourceDescriptor.of(
-                "sized-resource", "test://sized", "A resource", "application/octet-stream", null, null, 4096L, null);
+                "sized-resource",
+                "test://sized",
+                "A resource",
+                "application/octet-stream",
+                null,
+                null,
+                4096L,
+                List.of());
         var contentLoaded = new java.util.concurrent.atomic.AtomicBoolean(false);
         registry.register(descriptor, (ctx, request) -> {
             contentLoaded.set(true);

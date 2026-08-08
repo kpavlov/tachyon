@@ -306,7 +306,7 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
     }
 
     private static Prompt toPrompt(PromptDescriptor d) {
-        var arguments = d.arguments() == null
+        var arguments = d.arguments().isEmpty()
                 ? null
                 : d.arguments().stream()
                         .map(a -> new PromptArgument(a.description(), a.required(), a.name(), a.title()))
@@ -403,7 +403,7 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
     private static dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.Annotations toAnnotations(
             @Nullable Annotations domain) {
         if (domain == null) return null;
-        var audience = domain.audience() == null
+        var audience = domain.audience().isEmpty()
                 ? null
                 : domain.audience().stream()
                         .map(role -> switch (role) {
@@ -416,12 +416,15 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
     }
 
     private static @Nullable List<dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.Icon> toIcons(
-            @Nullable List<dev.tachyonmcp.api.server.domain.Icon> icons) {
-        return icons == null
+            List<dev.tachyonmcp.api.server.domain.Icon> icons) {
+        return icons.isEmpty()
                 ? null
                 : icons.stream()
                         .map(icon -> new dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.Icon(
-                                icon.src(), icon.mimeType(), icon.sizes(), icon.theme()))
+                                icon.src(),
+                                icon.mimeType(),
+                                icon.sizes().isEmpty() ? null : icon.sizes(),
+                                icon.theme()))
                         .toList();
     }
 

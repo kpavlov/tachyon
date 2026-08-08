@@ -49,8 +49,7 @@ public interface ResourceDescriptor extends ServerFeature.Descriptor, HasMeta {
     @Nullable
     Long size();
 
-    /** Optional icons for this resource. */
-    @Nullable
+    /** Icons for this resource, or an empty list. */
     List<Icon> icons();
 
     /** Optional identifier of the extension that owns this resource. */
@@ -94,7 +93,7 @@ public interface ResourceDescriptor extends ServerFeature.Descriptor, HasMeta {
             @Nullable String title,
             @Nullable Annotations annotations,
             @Nullable Long size,
-            @Nullable List<Icon> icons) {
+            List<Icon> icons) {
         return ResourceDescriptor.builder()
                 .name(name)
                 .uri(uri)
@@ -131,7 +130,7 @@ public interface ResourceDescriptor extends ServerFeature.Descriptor, HasMeta {
             return size((long) size);
         }
 
-        Builder icons(@Nullable Iterable<? extends Icon> elements);
+        Builder icons(Iterable<? extends Icon> elements);
 
         default Builder icons(Icon... elements) {
             return icons(List.of(elements));

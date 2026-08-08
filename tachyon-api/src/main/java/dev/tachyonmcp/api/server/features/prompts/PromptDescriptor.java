@@ -32,16 +32,14 @@ public interface PromptDescriptor extends ServerFeature.Descriptor, HasMeta {
     @Nullable
     String description();
 
-    /** Optional arguments accepted by this prompt. */
-    @Nullable
+    /** Arguments accepted by this prompt, or an empty list. */
     List<PromptArgument> arguments();
 
     /** Optional JSON schema describing the prompt's arguments. */
     @Nullable
     JsonSchema inputSchema();
 
-    /** Optional icons for this prompt. */
-    @Nullable
+    /** Icons for this prompt, or an empty list. */
     List<Icon> icons();
 
     /** Optional identifier of the extension that owns this prompt. */
@@ -73,9 +71,9 @@ public interface PromptDescriptor extends ServerFeature.Descriptor, HasMeta {
             String name,
             @Nullable String description,
             @Nullable String title,
-            @Nullable List<PromptArgument> arguments,
+            List<PromptArgument> arguments,
             @Nullable JsonSchema inputSchema) {
-        return DefaultPromptDescriptor.of(name, title, description, arguments, inputSchema, null, null, null);
+        return DefaultPromptDescriptor.of(name, title, description, arguments, inputSchema, List.of(), null, null);
     }
 
     /** Creates a prompt descriptor with the given fields, including icons. */
@@ -83,15 +81,15 @@ public interface PromptDescriptor extends ServerFeature.Descriptor, HasMeta {
             String name,
             @Nullable String description,
             @Nullable String title,
-            @Nullable List<PromptArgument> arguments,
+            List<PromptArgument> arguments,
             @Nullable JsonSchema inputSchema,
-            @Nullable List<Icon> icons) {
+            List<Icon> icons) {
         return DefaultPromptDescriptor.of(name, title, description, arguments, inputSchema, icons, null, null);
     }
 
     /** Creates a prompt descriptor with just a name and description. */
     static PromptDescriptor of(String name, String description) {
-        return DefaultPromptDescriptor.of(name, null, description, null, null, null, null, null);
+        return DefaultPromptDescriptor.of(name, null, description, List.of(), null, List.of(), null, null);
     }
 
     /** Builder for {@link PromptDescriptor}. */
@@ -113,7 +111,7 @@ public interface PromptDescriptor extends ServerFeature.Descriptor, HasMeta {
         Builder addArguments(PromptArgument... elements);
 
         /** Sets the arguments accepted by this prompt. */
-        Builder arguments(@Nullable Iterable<? extends PromptArgument> elements);
+        Builder arguments(Iterable<? extends PromptArgument> elements);
 
         /** Sets the optional JSON schema describing the prompt's arguments. */
         Builder inputSchema(@Nullable JsonSchema inputSchema);
@@ -123,8 +121,8 @@ public interface PromptDescriptor extends ServerFeature.Descriptor, HasMeta {
             return inputSchema(inputSchema != null ? JsonSchema.unchecked(inputSchema) : null);
         }
 
-        /** Sets the optional icons for this prompt. */
-        Builder icons(@Nullable Iterable<? extends Icon> elements);
+        /** Sets the icons for this prompt. */
+        Builder icons(Iterable<? extends Icon> elements);
 
         /** Sets the optional identifier of the extension that owns this prompt. */
         Builder extensionId(@Nullable String extensionId);

@@ -13,7 +13,7 @@ class ResourceTemplateDescriptorTest {
     @Test
     void shouldBuildWithAllParameters() {
         var annotations = Annotations.of(List.of(), 0.5, "2026-01-01T00:00:00Z");
-        var icons = List.of(Icon.of("https://example.com/icon.png", "image/png", null, null));
+        var icons = List.of(Icon.of("https://example.com/icon.png", "image/png", List.of(), null));
         var descriptor = ResourceTemplateDescriptor.builder()
                 .name("tmpl")
                 .uriTemplate("resource://{id}")

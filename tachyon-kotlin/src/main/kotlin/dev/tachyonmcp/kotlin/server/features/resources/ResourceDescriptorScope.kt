@@ -23,7 +23,7 @@ public class ResourceDescriptorScope
         public var title: String? = null
         public var annotations: Annotations? = null
         public var size: Long? = null
-        public var icons: List<Icon>? = null
+        public var icons: List<Icon> = emptyList()
         public var meta: Map<String, Any>? = null
 
         @PublishedApi

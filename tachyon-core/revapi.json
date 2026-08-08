@@ -34,6 +34,13 @@
           "old": "method dev.tachyonmcp.api.json.JsonSchema dev.tachyonmcp.core.server.json.JacksonObjectJsonFactory::toJsonSchema(tools.jackson.databind.node.ObjectNode)",
           "new": "method java.util.Optional<dev.tachyonmcp.api.json.JsonSchema> dev.tachyonmcp.core.server.json.JacksonObjectJsonFactory::toJsonSchema(tools.jackson.databind.node.ObjectNode)",
           "justification": "JsonSchemaFactory returns Optional to continue the resolution chain"
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.Long dev.tachyonmcp.core.server.features.tasks.TaskEntry::ttl()",
+          "new": "method java.time.Duration dev.tachyonmcp.core.server.features.tasks.TaskEntry::ttl()",
+          "justification": "Use idiomatic domain types"
         }
       ]
     }

@@ -38,9 +38,8 @@ public interface Icon {
     /**
      * Conventional size labels (e.g. {@code ["16x16", "32x32"]}).
      *
-     * @return the size labels, or {@code null} when unspecified
+     * @return the size labels, or an empty list when unspecified
      */
-    @Nullable
     List<String> sizes();
 
     /**
@@ -75,11 +74,11 @@ public interface Icon {
      *
      * @param src      image URL or data URI
      * @param mimeType image MIME type, or {@code null}
-     * @param sizes    conventional size labels, or {@code null}
+     * @param sizes    conventional size labels, or an empty list
      * @param theme    theme variant, or {@code null}
      * @return the new icon
      */
-    static Icon of(String src, @Nullable String mimeType, @Nullable List<String> sizes, @Nullable String theme) {
+    static Icon of(String src, @Nullable String mimeType, List<String> sizes, @Nullable String theme) {
         return DefaultIcon.of(src, mimeType, sizes, theme);
     }
 
@@ -108,10 +107,10 @@ public interface Icon {
         /**
          * Sets the conventional size labels.
          *
-         * @param elements size labels (e.g. "16x16"), or {@code null}
+         * @param elements size labels (e.g. "16x16")
          * @return this builder
          */
-        Builder sizes(@Nullable Iterable<String> elements);
+        Builder sizes(Iterable<String> elements);
 
         /**
          * Sets the conventional size labels.

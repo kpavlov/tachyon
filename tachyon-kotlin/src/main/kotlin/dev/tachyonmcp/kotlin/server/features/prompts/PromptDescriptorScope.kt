@@ -51,9 +51,9 @@ public class PromptDescriptorScope
                 .name(n)
                 .description(description)
                 .title(title)
-                .arguments(arguments)
+                .arguments(arguments.orEmpty())
                 .inputSchema(inputSchema)
-                .icons(icons)
+                .icons(icons.orEmpty())
                 .meta(meta)
                 .build()
         }

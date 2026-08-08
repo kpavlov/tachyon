@@ -53,11 +53,10 @@ public sealed interface PromptResult extends HasMeta permits PromptResult.Messag
     non-sealed interface Messages extends PromptResult {
 
         /**
-         * Returns the prompt messages, or {@code null} for an empty response.
+         * Returns the prompt messages.
          *
-         * @return the prompt messages, or {@code null}
+         * @return the prompt messages, or an empty list
          */
-        @Nullable
         List<PromptMessage> messages();
 
         @Override
@@ -82,10 +81,10 @@ public sealed interface PromptResult extends HasMeta permits PromptResult.Messag
         /**
          * Creates a message result with no {@code _meta}.
          *
-         * @param messages the prompt messages, or {@code null}
+         * @param messages the prompt messages
          * @return a new message result
          */
-        static Messages of(@Nullable List<PromptMessage> messages) {
+        static Messages of(List<PromptMessage> messages) {
             return builder().messages(messages).build();
         }
 
@@ -96,10 +95,10 @@ public sealed interface PromptResult extends HasMeta permits PromptResult.Messag
             /**
              * Sets the prompt messages.
              *
-             * @param messages the prompt messages, or {@code null}
+             * @param messages the prompt messages
              * @return this builder
              */
-            Builder messages(@Nullable Iterable<? extends PromptMessage> messages);
+            Builder messages(Iterable<? extends PromptMessage> messages);
 
             /**
              * Sets the prompt messages.
@@ -200,10 +199,10 @@ public sealed interface PromptResult extends HasMeta permits PromptResult.Messag
     /**
      * Creates a prompt result with the given messages.
      *
-     * @param messages the prompt messages, or {@code null}
+     * @param messages the prompt messages
      * @return the prompt result
      */
-    static PromptResult messages(@Nullable List<PromptMessage> messages) {
+    static PromptResult messages(List<PromptMessage> messages) {
         return Messages.of(messages);
     }
 

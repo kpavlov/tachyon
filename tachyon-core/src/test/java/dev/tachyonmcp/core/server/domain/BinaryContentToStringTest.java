@@ -8,6 +8,7 @@ import dev.tachyonmcp.api.server.domain.BlobResourceContents;
 import dev.tachyonmcp.api.server.domain.Icon;
 import dev.tachyonmcp.api.server.domain.ImageContent;
 import java.util.Base64;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class BinaryContentToStringTest {
@@ -17,7 +18,7 @@ class BinaryContentToStringTest {
 
     @Test
     void binaryResourceContainersDoNotExposePayloads() {
-        var icon = Icon.of("data:image/png;base64," + BINARY_PAYLOAD, "image/png", null, null);
+        var icon = Icon.of("data:image/png;base64," + BINARY_PAYLOAD, "image/png", List.of(), null);
         var image = ImageContent.of(BINARY_BYTES, "image/png");
         var audio = AudioContent.of(BINARY_BYTES, "audio/wav");
         var blob = BlobResourceContents.of("test://blob", BINARY_BYTES, "application/octet-stream");

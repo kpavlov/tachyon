@@ -146,4 +146,29 @@ class McpResponseMapperTest {
         assertThat(promptResult.prompts().getFirst()._meta())
                 .containsEntry("kind", JsonNodeFactory.instance.textNode("prompt"));
     }
+
+    @Test
+    void emptyDescriptorFieldsOmitIconsAudienceArgumentsAndSizesOnWire() {
+        var iconWithNoSizes = Icon.of("https://example.test/icon.png", "image/png", List.of(), null);
+        var annotations = Annotations.of(List.of(), 0.5, null);
+        var tool = ToolDescriptor.builder().name("bare-tool").build();
+        var resource = ResourceDescriptor.builder()
+                .name("bare-resource")
+                .uri("memory://bare")
+                .annotations(annotations)
+                .icons(iconWithNoSizes)
+                .build();
+        var prompt = PromptDescriptor.builder().name("bare-prompt").build();
+
+        var toolResult = (ListToolsResult) mapper.listToolsResult(List.of(tool), null);
+        var resourceResult = (ListResourcesResult) mapper.listResourcesResult(List.of(resource), null);
+        var promptResult = (ListPromptsResult) mapper.listPromptsResult(List.of(prompt), null);
+
+        assertThat(toolResult.tools().getFirst().icons()).isNull();
+        assertThat(resourceResult.resources().getFirst().annotations().audience())
+                .isNull();
+        assertThat(resourceResult.resources().getFirst().icons().getFirst().sizes())
+                .isNull();
+        assertThat(promptResult.prompts().getFirst().arguments()).isNull();
+    }
 }

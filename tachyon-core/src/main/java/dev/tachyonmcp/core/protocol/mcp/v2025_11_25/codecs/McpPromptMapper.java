@@ -25,7 +25,7 @@ final class McpPromptMapper {
 
     static List<dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.PromptArgument> toProtocolPromptArguments(
             List<PromptArgument> domain) {
-        if (domain == null) return null;
+        if (domain.isEmpty()) return null;
         return domain.stream()
                 .map(a -> new dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.PromptArgument(
                         a.description(), a.required(), a.name(), a.title()))

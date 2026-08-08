@@ -332,7 +332,7 @@ class DefaultToolRegistryTest {
     void shouldMapIconsFromDescriptorToProtocolModel() throws Exception {
         var handlers = new HashMap<String, RpcMethodHandler>();
         registerHandlers(registry, handlers);
-        var icon = Icon.of("https://example.com/tool-icon.png", "image/png", null, null);
+        var icon = Icon.of("https://example.com/tool-icon.png", "image/png", List.of(), null);
         registry.register(
                 ToolDescriptor.builder()
                         .name("icon-tool")

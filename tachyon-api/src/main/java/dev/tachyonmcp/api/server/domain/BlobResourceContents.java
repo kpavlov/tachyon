@@ -44,12 +44,11 @@ public non-sealed interface BlobResourceContents extends ResourceContents {
     /**
      * Validates that required fields are not blank.
      *
-     * @throws IllegalArgumentException if {@code uri} is blank or {@code blob} is empty
+     * @throws IllegalArgumentException if {@code uri} is blank
      */
     @Value.Check
     default void check() {
         if (uri().isBlank()) throw new IllegalArgumentException("uri must not be blank");
-        if (blob().length == 0) throw new IllegalArgumentException("blob must not be empty");
     }
 
     /**

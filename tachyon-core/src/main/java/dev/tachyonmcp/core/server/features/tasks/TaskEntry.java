@@ -32,7 +32,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     private final @Nullable Map<String, Object> meta;
     private final AtomicReference<TaskState> status;
     private final long createdAt;
-    private final @Nullable Long ttl;
+    private final @Nullable Duration ttl;
     private final Duration keepAlive;
     private final @Nullable Duration pollInterval;
     private volatile long lastUpdatedAt;
@@ -148,7 +148,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         this.status = new AtomicReference<>(status);
         this.createdAt = System.currentTimeMillis();
         this.lastUpdatedAt = this.createdAt;
-        this.ttl = ttl != null ? ttl.toMillis() : null;
+        this.ttl = ttl;
         this.keepAlive = Objects.requireNonNull(keepAlive, "keepAlive");
         this.pollInterval = pollInterval;
         this.progressToken = progressToken;
@@ -197,7 +197,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     }
 
     @Override
-    public @Nullable Long ttl() {
+    public @Nullable Duration ttl() {
         return ttl;
     }
 
@@ -376,10 +376,10 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     }
 
     public boolean isExpired() {
-        if (ttl == null || ttl <= 0) {
+        if (ttl == null || ttl.isZero() || ttl.isNegative()) {
             return false;
         }
-        return System.currentTimeMillis() - lastUpdatedAt > ttl;
+        return System.currentTimeMillis() - lastUpdatedAt > ttl.toMillis();
     }
 
     /**

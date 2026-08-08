@@ -244,7 +244,7 @@ public class TachyonServerBuilder
          * @param title optional human-readable title
          * @param annotations optional presentation hints
          * @param size optional raw content size in bytes
-         * @param icons optional associated icons
+         * @param icons associated icons, or an empty list
          * @param block handles reads of the registered resource
          * @return this builder
          */
@@ -257,7 +257,7 @@ public class TachyonServerBuilder
             title: String? = null,
             annotations: Annotations? = null,
             size: Long? = null,
-            icons: List<Icon>? = null,
+            icons: List<Icon> = emptyList(),
             block: suspend ResourceScope.() -> ResourceContents,
         ): TachyonServerBuilder =
             this.also {
@@ -302,7 +302,7 @@ public class TachyonServerBuilder
             handler: suspend PromptScope.() -> List<PromptMessage>,
         ): TachyonServerBuilder =
             this.also {
-                val descriptor = PromptDescriptor.of(name, description, null, null, null)
+                val descriptor = PromptDescriptor.of(name, description, null, emptyList(), null)
                 featureRegistrar.prompt(descriptor, handler)
             }
 
@@ -328,7 +328,7 @@ public class TachyonServerBuilder
          * @param mimeType The optional MIME type of the resources.
          * @param title The optional template title.
          * @param annotations The optional template annotations.
-         * @param icons The optional template icons.
+         * @param icons The template icons, or an empty list.
          * @param block Handles requests for resources matching the template.
          * @return This builder.
          */
@@ -340,7 +340,7 @@ public class TachyonServerBuilder
             mimeType: String? = null,
             title: String? = null,
             annotations: Annotations? = null,
-            icons: List<Icon>? = null,
+            icons: List<Icon> = emptyList(),
             block: suspend TemplateScope.() -> ResourceContents,
         ): TachyonServerBuilder =
             this.also {

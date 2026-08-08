@@ -67,6 +67,13 @@
           "attachments": {
             "since": "1.0.0-beta.18"
           }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.Long dev.tachyonmcp.api.server.domain.Task::ttl()",
+          "new": "method java.time.Duration dev.tachyonmcp.api.server.domain.Task::ttl()",
+          "justification": "Use idiomatic domain types"
         }
       ]
     }

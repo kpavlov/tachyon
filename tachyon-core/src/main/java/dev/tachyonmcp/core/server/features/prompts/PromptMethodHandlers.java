@@ -4,7 +4,6 @@ package dev.tachyonmcp.core.server.features.prompts;
 import dev.tachyonmcp.api.json.JsonDocument;
 import dev.tachyonmcp.api.json.JsonSchemaValidator;
 import dev.tachyonmcp.api.json.SchemaValidationError;
-import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.features.HandlerFutures;
 import dev.tachyonmcp.api.server.features.prompts.PromptResult;
@@ -12,7 +11,6 @@ import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.session.DispatchContext;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -110,12 +108,7 @@ public final class PromptMethodHandlers {
                         return switch (result) {
                             case PromptResult.Messages messages ->
                                 context.responseMapper()
-                                        .getPromptResult(
-                                                entry.descriptor().description(),
-                                                messages.messages() != null
-                                                        ? messages.messages()
-                                                        : List.<PromptMessage>of(),
-                                                meta);
+                                        .getPromptResult(entry.descriptor().description(), messages.messages(), meta);
                             case PromptResult.InputRequired inputRequired ->
                                 context.responseMapper()
                                         .inputRequiredResult(

@@ -22,7 +22,7 @@ class ServerInfoMapper {
                 .description(serverIdentity.description())
                 .title(serverIdentity.title())
                 .websiteUrl(serverIdentity.websiteUrl());
-        if (serverIdentity.icons() != null && !serverIdentity.icons().isEmpty()) {
+        if (!serverIdentity.icons().isEmpty()) {
             builder.icons(serverIdentity.icons().stream()
                     .map(ServerInfoMapper::toIcon)
                     .toList());
@@ -34,7 +34,7 @@ class ServerInfoMapper {
         return Icon.builder()
                 .src(icon.src())
                 .mimeType(icon.mimeType())
-                .sizes(icon.sizes())
+                .sizes(icon.sizes().isEmpty() ? null : icon.sizes())
                 .theme(icon.theme())
                 .build();
     }

@@ -52,8 +52,7 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor, Ha
     @Nullable
     String extensionId();
 
-    /** Optional icons for resources matching this template. */
-    @Nullable
+    /** Icons for resources matching this template, or an empty list. */
     List<Icon> icons();
 
     /** Optional protocol extension metadata. */
@@ -108,8 +107,8 @@ public interface ResourceTemplateDescriptor extends ServerFeature.Descriptor, Ha
         /** Sets the optional annotations shared by resources matching this template. */
         Builder annotations(@Nullable Annotations annotations);
 
-        /** Sets the optional icons for resources matching this template. */
-        Builder icons(@Nullable Iterable<? extends Icon> elements);
+        /** Sets the icons for resources matching this template. */
+        Builder icons(Iterable<? extends Icon> elements);
 
         /** Sets the optional icons for resources matching this template. */
         default Builder icons(Icon... elements) {

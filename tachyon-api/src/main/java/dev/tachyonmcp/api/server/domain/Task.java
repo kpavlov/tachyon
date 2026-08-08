@@ -33,7 +33,7 @@ public interface Task extends HasMeta {
 
     /** Time-to-live duration after which the task is eligible for eviction, or {@code null}. */
     @Nullable
-    Long ttl();
+    Duration ttl();
 
     /** Suggested polling interval for {@code tasks/get}, or {@code null} to not suggest one. */
     @Nullable

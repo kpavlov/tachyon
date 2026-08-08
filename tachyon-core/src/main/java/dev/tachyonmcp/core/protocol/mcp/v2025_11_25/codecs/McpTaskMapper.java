@@ -32,6 +32,10 @@ final class McpTaskMapper {
         return pollInterval != null ? pollInterval.toMillis() : null;
     }
 
+    private static @Nullable Long ttlToMillis(@Nullable Duration ttl) {
+        return ttl != null ? ttl.toMillis() : null;
+    }
+
     static Task toTaskProto(TaskEntry entry) {
         return new Task(
                 entry.id(),
@@ -39,7 +43,7 @@ final class McpTaskMapper {
                 entry.statusMessage(),
                 entry.createdAtIso(),
                 entry.lastUpdatedAtIso(),
-                entry.ttl(),
+                ttlToMillis(entry.ttl()),
                 pollIntervalToMillis(entry.pollInterval()));
     }
 
@@ -51,7 +55,7 @@ final class McpTaskMapper {
                 entry.statusMessage(),
                 entry.createdAtIso(),
                 entry.lastUpdatedAtIso(),
-                entry.ttl(),
+                ttlToMillis(entry.ttl()),
                 pollIntervalToMillis(entry.pollInterval()));
     }
 
@@ -63,7 +67,7 @@ final class McpTaskMapper {
                 entry.statusMessage(),
                 entry.createdAtIso(),
                 entry.lastUpdatedAtIso(),
-                entry.ttl(),
+                ttlToMillis(entry.ttl()),
                 pollIntervalToMillis(entry.pollInterval()));
     }
 
@@ -79,7 +83,7 @@ final class McpTaskMapper {
                 entry.statusMessage(),
                 entry.createdAtIso(),
                 entry.lastUpdatedAtIso(),
-                entry.ttl(),
+                ttlToMillis(entry.ttl()),
                 pollIntervalToMillis(entry.pollInterval()));
     }
 }

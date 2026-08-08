@@ -64,16 +64,15 @@ final class McpToolMapper {
 
     @Nullable
     public static List<dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Icon> toProtocolIcons(
-            @Nullable List<? extends dev.tachyonmcp.api.server.domain.Icon> domain) {
+            List<? extends dev.tachyonmcp.api.server.domain.Icon> domain) {
         return ContentBlockMappers.toProtocolIcons(domain);
     }
 
-    @Nullable
     public static List<Icon> toDomainIcons(
             @Nullable List<dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Icon> protocol) {
-        if (protocol == null) return null;
+        if (protocol == null) return List.of();
         return protocol.stream()
-                .map(i -> Icon.of(i.src(), i.mimeType(), i.sizes(), i.theme()))
+                .map(i -> Icon.of(i.src(), i.mimeType(), i.sizes() == null ? List.of() : i.sizes(), i.theme()))
                 .toList();
     }
 
@@ -121,7 +120,7 @@ final class McpToolMapper {
                                 ? Role.USER
                                 : Role.ASSISTANT)
                         .toList()
-                : null;
+                : List.<Role>of();
         return Annotations.of(audience, protocol.priority(), protocol.lastModified());
     }
 

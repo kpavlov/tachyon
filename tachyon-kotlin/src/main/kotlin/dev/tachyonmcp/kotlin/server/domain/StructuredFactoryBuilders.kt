@@ -33,7 +33,7 @@ public class AnnotationsBuilder
         @PublishedApi
         internal fun build(): Annotations =
             Annotations.of(
-                audience,
+                audience.orEmpty(),
                 priority,
                 lastModified,
             )
@@ -61,7 +61,7 @@ public class IconBuilder
             Icon.of(
                 requireNotNull(src) { "Icon.src is required" },
                 mimeType,
-                sizes,
+                sizes.orEmpty(),
                 theme,
             )
     }

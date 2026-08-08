@@ -49,8 +49,7 @@ public interface ToolDescriptor extends ServerFeature.Descriptor, HasMeta {
     @Nullable
     ToolAnnotations annotations();
 
-    /** Optional icons for this tool. */
-    @Nullable
+    /** Icons for this tool, or an empty list. */
     List<Icon> icons();
 
     /** Optional identifier of the extension that owns this tool. */
@@ -79,12 +78,12 @@ public interface ToolDescriptor extends ServerFeature.Descriptor, HasMeta {
 
     /** Creates a tool descriptor with just a name. */
     static ToolDescriptor of(String name) {
-        return DefaultToolDescriptor.of(name, null, null, null, null, null, null, null, null, null);
+        return DefaultToolDescriptor.of(name, null, null, null, null, null, null, List.of(), null, null);
     }
 
     /** Creates a tool descriptor with a name and description. */
     static ToolDescriptor of(String name, @Nullable String description) {
-        return DefaultToolDescriptor.of(name, null, description, null, null, null, null, null, null, null);
+        return DefaultToolDescriptor.of(name, null, description, null, null, null, null, List.of(), null, null);
     }
 
     /** Builder for {@link ToolDescriptor}. */
@@ -124,8 +123,8 @@ public interface ToolDescriptor extends ServerFeature.Descriptor, HasMeta {
         /** Sets the optional behavioral annotations (e.g. read-only, destructive) for this tool. */
         Builder annotations(@Nullable ToolAnnotations annotations);
 
-        /** Sets the optional icons for this tool. */
-        Builder icons(@Nullable Iterable<? extends Icon> icons);
+        /** Sets the icons for this tool. */
+        Builder icons(Iterable<? extends Icon> icons);
 
         /** Sets the optional icons for this tool. */
         default Builder icons(Icon... icons) {

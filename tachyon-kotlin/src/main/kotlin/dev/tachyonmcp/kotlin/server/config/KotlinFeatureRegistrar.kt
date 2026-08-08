@@ -34,7 +34,7 @@ internal class KotlinFeatureRegistrar(
         title: String?,
         annotations: Annotations?,
         size: Long?,
-        icons: List<Icon>?,
+        icons: List<Icon>,
         block: suspend ResourceScope.() -> ResourceContents,
     ) {
         delegate.withResources { resources ->
@@ -71,7 +71,7 @@ internal class KotlinFeatureRegistrar(
         mimeType: String?,
         title: String?,
         annotations: Annotations?,
-        icons: List<Icon>?,
+        icons: List<Icon>,
         block: suspend TemplateScope.() -> ResourceContents,
     ) {
         delegate.withResources { resources ->

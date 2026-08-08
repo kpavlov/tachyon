@@ -3,6 +3,7 @@ package dev.tachyonmcp.api.server.features.resources;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class ResourceDescriptorTest {
@@ -23,7 +24,7 @@ class ResourceDescriptorTest {
 
     @Test
     void shouldRejectNegativeSize() {
-        assertThatThrownBy(() -> ResourceDescriptor.of("res", "resource://x", null, null, null, null, -1L, null))
+        assertThatThrownBy(() -> ResourceDescriptor.of("res", "resource://x", null, null, null, null, -1L, List.of()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("size");
     }

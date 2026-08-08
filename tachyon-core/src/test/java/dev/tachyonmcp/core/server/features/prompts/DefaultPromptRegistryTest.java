@@ -220,7 +220,7 @@ class DefaultPromptRegistryTest {
 
     @Test
     void shouldMapAllDescriptorFieldsToProtocolModel() throws Exception {
-        var icon = Icon.of("https://example.com/prompt-icon.svg", "image/svg+xml", null, null);
+        var icon = Icon.of("https://example.com/prompt-icon.svg", "image/svg+xml", List.of(), null);
         var arg = PromptArgument.of("topic", null, "The topic", true);
         var descriptor =
                 PromptDescriptor.of("full-prompt", "Full description", "Full Title", List.of(arg), null, List.of(icon));

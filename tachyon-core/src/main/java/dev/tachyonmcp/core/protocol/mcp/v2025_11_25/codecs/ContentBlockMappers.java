@@ -20,13 +20,13 @@ public final class ContentBlockMappers {
     public static dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Annotations toProtocolAnnotations(
             Annotations domain) {
         if (domain == null) return null;
-        var audience = domain.audience() != null
-                ? domain.audience().stream()
+        var audience = domain.audience().isEmpty()
+                ? null
+                : domain.audience().stream()
                         .map(r -> r == Role.USER
                                 ? dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Role.USER
                                 : dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Role.ASSISTANT)
-                        .toList()
-                : null;
+                        .toList();
         return new dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Annotations(
                 audience, domain.priority(), domain.lastModified());
     }
@@ -34,16 +34,16 @@ public final class ContentBlockMappers {
     /**
      * Maps domain icons to the protocol shape.
      *
-     * @param domain the domain icons, or {@code null}
-     * @return the protocol icons, or {@code null} if {@code domain} is {@code null}
+     * @param domain the domain icons, never {@code null} but possibly empty
+     * @return the protocol icons, or {@code null} if {@code domain} is empty
      */
     @Nullable
     public static List<dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Icon> toProtocolIcons(
-            @Nullable List<? extends Icon> domain) {
-        if (domain == null) return null;
+            List<? extends Icon> domain) {
+        if (domain.isEmpty()) return null;
         return domain.stream()
                 .map(i -> new dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Icon(
-                        i.src(), i.mimeType(), i.sizes(), i.theme()))
+                        i.src(), i.mimeType(), i.sizes().isEmpty() ? null : i.sizes(), i.theme()))
                 .toList();
     }
 

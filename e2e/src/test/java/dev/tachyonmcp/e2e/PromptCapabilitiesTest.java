@@ -32,7 +32,7 @@ class PromptCapabilitiesTest extends AbstractStatelessMcpE2eTest {
         if (hasTitle) {
             server.prompts()
                     .register(
-                            PromptDescriptor.of(promptName, "A " + promptName + " prompt", title, null, null),
+                            PromptDescriptor.of(promptName, "A " + promptName + " prompt", title, List.of(), null),
                             List.of(of(Role.USER, TextContent.of("Hello"))));
         } else {
             server.prompts().register(PromptDescriptor.of(promptName, "A " + promptName + " prompt"), List.of());

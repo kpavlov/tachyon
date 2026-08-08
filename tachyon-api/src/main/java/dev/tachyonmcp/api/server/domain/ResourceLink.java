@@ -24,7 +24,6 @@ public non-sealed interface ResourceLink extends ContentBlock {
     @Nullable
     String title();
 
-    @Nullable
     List<Icon> icons();
 
     String uri();
@@ -91,7 +90,7 @@ public non-sealed interface ResourceLink extends ContentBlock {
 
         Builder title(@Nullable String title);
 
-        Builder icons(@Nullable Iterable<? extends Icon> elements);
+        Builder icons(Iterable<? extends Icon> elements);
 
         default Builder icons(Icon... elements) {
             return icons(List.of(elements));

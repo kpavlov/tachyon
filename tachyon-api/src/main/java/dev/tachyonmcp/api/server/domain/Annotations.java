@@ -10,19 +10,19 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>{@code audience} hints at the intended role (user/assistant), {@code priority} controls
  * ordering, and {@code lastModified} carries an RFC-3339 timestamp of the last modification.
- * All fields are {@code null} when absent — omit the annotation block entirely rather than
- * sending empty values.
+ * {@code audience} is an empty list when unrestricted; {@code priority} and {@code lastModified}
+ * are {@code null} when absent — omit the annotation block entirely rather than sending empty
+ * values.
  */
 @Value.Immutable
 @Value.Style(visibility = Value.Style.ImplementationVisibility.PACKAGE, typeImmutable = "Default*")
 public interface Annotations {
 
     /**
-     * Intended audience roles, or {@code null} when unrestricted.
+     * Intended audience roles, or an empty list when unrestricted.
      *
-     * @return the audience list, or {@code null}
+     * @return the audience list, or an empty list
      */
-    @Nullable
     List<Role> audience();
 
     /**
@@ -66,12 +66,12 @@ public interface Annotations {
     /**
      * Creates annotations with the given values.
      *
-     * @param audience     intended audience roles, or {@code null}
+     * @param audience     intended audience roles, or an empty list
      * @param priority     ordering hint, or {@code null}
      * @param lastModified RFC-3339 timestamp, or {@code null}
      * @return the new annotations
      */
-    static Annotations of(@Nullable List<Role> audience, @Nullable Double priority, @Nullable String lastModified) {
+    static Annotations of(List<Role> audience, @Nullable Double priority, @Nullable String lastModified) {
         return DefaultAnnotations.builder()
                 .audience(audience)
                 .priority(priority)
@@ -88,10 +88,10 @@ public interface Annotations {
         /**
          * Sets the intended audience.
          *
-         * @param elements the audience roles, or {@code null}
+         * @param elements the audience roles
          * @return this builder
          */
-        Builder audience(@Nullable Iterable<? extends Role> elements);
+        Builder audience(Iterable<? extends Role> elements);
 
         /**
          * Sets the intended audience.

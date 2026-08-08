@@ -40,7 +40,7 @@ public class ResourceTemplateDescriptorBuilder
         public var annotations: Annotations? = null
 
         /** Associated icons. */
-        public var icons: List<Icon>? = null
+        public var icons: List<Icon> = emptyList()
 
         /** Protocol extension metadata. */
         public var meta: Map<String, Any>? = null
