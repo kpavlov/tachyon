@@ -29,6 +29,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
+import java.util.HashSet;
 
 /**
  * Fluent builder for {@link TachyonServer} configuration.
@@ -266,6 +267,7 @@ final class DefaultServerBuilder implements ServerBuilder {
      */
     @Override
     public TachyonServer build() {
+        validateExtensions();
         var sessionConfig = sessionBuilder.build();
         var sessionEventStore = sessionConfig.sessionEventStore() != null
                 ? sessionConfig.sessionEventStore()
@@ -307,5 +309,15 @@ final class DefaultServerBuilder implements ServerBuilder {
                 networkBuilder.build(),
                 runtimeBuilder.build(),
                 monitoringBuilder.build());
+    }
+
+    private void validateExtensions() {
+        var ids = new HashSet<String>();
+        for (var extension : extensions) {
+            if (!ids.add(extension.extensionId())) {
+                throw new IllegalStateException(
+                    "Duplicate extension ID: " + extension.extensionId());
+            }
+        }
     }
 }
