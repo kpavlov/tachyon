@@ -40,15 +40,24 @@ class ExtensionsTest extends AbstractStatefulMcpE2eTest {
     }
 
     @Test
-    void extensionNotAdvertisedWhenClientDoesNotDeclare() throws Exception {
+    void extensionAdvertisedWhenClientDoesNotDeclare() throws Exception {
         startServer(it -> it.extension(new TestExtension()));
 
         try (var client = createTestClient()) {
             var initBody = buildInitializeJson(Map.of());
             var response = client.post(null, initBody);
             assertThatJson(response.body())
-                    .node("result.capabilities.extensions")
-                    .isAbsent();
+                    .when(Option.IGNORING_EXTRA_FIELDS)
+                    // language=JSON
+                    .isEqualTo("""
+                            {
+                              "result": {
+                                "capabilities": {
+                                  "extensions": {"com.example/test": {"version": "1.0"}}
+                                }
+                              }
+                            }
+                            """);
         }
     }
 

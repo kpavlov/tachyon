@@ -43,7 +43,7 @@ public final class InitializeHandler implements RpcMethodHandler {
         var capabilities = server.resolveCapabilities();
 
         negotiator.negotiate(context, initializeRequest.extensions());
-        var negotiatedExtensions = negotiator.negotiatedExtensions(context);
+        var registeredExtensions = negotiator.registeredExtensions();
 
         final var serverConfig = server.config();
         var domainResponse = new InitializeResponse(
@@ -51,7 +51,7 @@ public final class InitializeHandler implements RpcMethodHandler {
                 capabilities,
                 serverConfig.identity(),
                 serverConfig.identity().instructions(),
-                negotiatedExtensions.isEmpty() ? null : negotiatedExtensions);
+                registeredExtensions.isEmpty() ? null : registeredExtensions);
 
         return context.responseMapper().initializeResult(domainResponse);
     }

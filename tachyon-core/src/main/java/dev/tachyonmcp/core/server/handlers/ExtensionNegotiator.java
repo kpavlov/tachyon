@@ -21,8 +21,7 @@ import java.util.stream.Collectors;
  * <p>Shared by 2025-11-25's {@link InitializeHandler} (declared once via {@code initialize}, matches
  * {@link dev.tachyonmcp.core.protocol.ProtocolRequestMapper.InitializeRequest#extensions()}) and
  * 2026-07-28's {@code ExtensionNegotiationHandler} (declared per request, matches {@link
- * dev.tachyonmcp.core.protocol.ProtocolRequestMapper#declaredExtensions}) — both produce the same
- * {@code Map<String, JsonObject>} shape.
+ * dev.tachyonmcp.core.protocol.ProtocolRequestMapper#declaredExtensions}).
  */
 public final class ExtensionNegotiator {
 
@@ -43,10 +42,9 @@ public final class ExtensionNegotiator {
         }
     }
 
-    /** Returns the currently-enabled subset of registered extensions, for echoing back in a response. */
-    public Map<String, JsonObject> negotiatedExtensions(ChannelContext context) {
+    /** Returns every registered extension and its server settings for capability advertisement. */
+    public Map<String, JsonObject> registeredExtensions() {
         return extensions.stream()
-                .filter(e -> context.isExtensionEnabled(e.extensionId()))
                 .collect(Collectors.toMap(
                         Extension::extensionId, e -> e.serverSettings().values()));
     }

@@ -74,9 +74,9 @@ The older `.extension(ServerExtension)` still works but is deprecated.
 
 ## How negotiation works
 
-1. Client sends `initialize` with `"extensions": {"com.example/audit": {}}` in capabilities.
-2. Tachyon calls `onConnectionInit` for each negotiated extension.
-3. `serverSettings()` is returned to the client in `initialize` response under the extension key.
+1. Tachyon advertises every registered extension and its `serverSettings()` in the `initialize` response.
+2. The client sends `initialize` with the extensions it supports, such as `"extensions": {"com.example/audit": {}}`.
+3. Tachyon calls `onConnectionInit` for each extension declared by both client and server.
 4. Methods declared in `methods()` are only routed for sessions that negotiated the extension.
 
 ## Built-in: TasksExtension

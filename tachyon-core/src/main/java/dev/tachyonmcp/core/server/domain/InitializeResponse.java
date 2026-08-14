@@ -14,11 +14,11 @@ import org.jspecify.annotations.Nullable;
  * @param capabilities         the server's capabilities
  * @param serverIdentity       server identity metadata
  * @param instructions         optional server-level instructions for the client
- * @param negotiatedExtensions extension-specific negotiated data
+ * @param registeredExtensions every registered extension's server settings
  */
 public record InitializeResponse(
         String protocolVersion,
         ServerCapabilities capabilities,
         ServerIdentity serverIdentity,
         @Nullable String instructions,
-        @Nullable Map<String, JsonObject> negotiatedExtensions) {}
+        @Nullable Map<String, JsonObject> registeredExtensions) {}
