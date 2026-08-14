@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.api.server.domain.FormInputRequest;
 import dev.tachyonmcp.api.server.domain.InputRequest;
 import dev.tachyonmcp.api.server.domain.RpcMethodRequest;
+import dev.tachyonmcp.api.server.domain.UrlInputRequest;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
 import java.util.LinkedHashMap;
@@ -43,6 +44,13 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
 
     private static RpcMethodRequest rootsListRequest() {
         return RpcMethodRequest.of("roots/list", Map.of());
+    }
+
+    private static UrlInputRequest urlElicitation() {
+        return UrlInputRequest.of(
+                "Please authenticate via the provided URL.",
+                "auth-elicitation-1",
+                "https://example.com/auth");
     }
 
     @BeforeEach
@@ -87,6 +95,17 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                                     return ToolResult.text("roots received");
                                 }
                                 return ToolResult.inputRequired(Map.of("client_roots", rootsListRequest()), null);
+                            })
+                    .register(
+                            tool -> tool.name("ask_url")
+                                    .description("Requests URL-mode authentication")
+                                    .inputSchema(NO_ARGS_SCHEMA),
+                            (ctx, request) -> {
+                                var responses = request.inputResponses();
+                                if (responses != null && responses.containsKey("auth")) {
+                                    return ToolResult.text("authenticated");
+                                }
+                                return ToolResult.inputRequired(Map.of("auth", urlElicitation()), null);
                             })
                     .register(
                             tool -> tool.name("respect_capabilities")
@@ -201,6 +220,24 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
             assertThatJson(round1.body())
                     .inPath("$.result.inputRequests.client_roots.method")
                     .isEqualTo("roots/list");
+        }
+    }
+
+    @Test
+    void urlModeElicitationOmitsRemovedElicitationId() throws Exception {
+        try (var client = createModernTestClient()) {
+            var response = client.post(toolCallBody(8, "ask_url", ""));
+            assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+            assertThatJson(response.body()).inPath("$.result.resultType").isEqualTo("input_required");
+            assertThatJson(response.body())
+                    .inPath("$.result.inputRequests.auth.params.mode")
+                    .isEqualTo("url");
+            assertThatJson(response.body())
+                    .inPath("$.result.inputRequests.auth.params.url")
+                    .isEqualTo("https://example.com/auth");
+            assertThatJson(response.body())
+                    .inPath("$.result.inputRequests.auth.params.elicitationId")
+                    .isAbsent();
         }
     }
 
