@@ -50,6 +50,18 @@ class SkillsExtensionTest {
                 .get()
                 .extracting(ResourceDescriptor::description)
                 .isEqualTo("Extract, fill, and assemble PDF documents");
+        assertThat(server.resources().findByUri("skill://pdf-processing/SKILL.md"))
+                .get()
+                .extracting(ResourceDescriptor::mimeType)
+                .isEqualTo("text/markdown");
+        assertThat(server.resources().findByUri("skill://pdf-processing/scripts/extract.py"))
+                .get()
+                .extracting(ResourceDescriptor::mimeType)
+                .isEqualTo("text/plain");
+        assertThat(server.resources().findByUri("skill://pdf-processing/templates/invoice.md"))
+                .get()
+                .extracting(ResourceDescriptor::mimeType)
+                .isEqualTo("text/markdown");
     }
 
     @Test
