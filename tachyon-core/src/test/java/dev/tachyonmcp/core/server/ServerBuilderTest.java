@@ -2,6 +2,7 @@
 package dev.tachyonmcp.core.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import dev.tachyonmcp.api.server.domain.PromptMessage;
@@ -198,7 +199,7 @@ class ServerBuilderTest {
         var extension1 = new TestExtension("duplicate");
         var extension2 = new TestExtension("duplicate");
 
-        assertThatIllegalStateException()
+        assertThatIllegalArgumentException()
                 .isThrownBy(() -> TachyonServer.builder()
                         .withExtensions(extension1, extension2)
                         .build())

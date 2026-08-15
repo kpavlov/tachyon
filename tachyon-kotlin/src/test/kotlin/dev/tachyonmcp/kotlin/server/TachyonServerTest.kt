@@ -286,7 +286,7 @@ internal class TachyonServerTest {
                 override fun extensionId(): String = id
             }
 
-        shouldThrow<IllegalStateException> {
+        shouldThrow<IllegalArgumentException> {
             buildServer {
                 name("duplicate-extension-test")
                 extensions(
