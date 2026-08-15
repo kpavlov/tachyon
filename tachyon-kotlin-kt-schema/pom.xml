@@ -127,9 +127,9 @@
                                 <argument>--config</argument>
                                 <argument>${project.basedir}/../detekt.yml</argument>
                                 <argument>--input</argument>
-                                <argument>${project.basedir}/src/main/kotlin:${project.basedir}/src/test/kotlin</argument>
+                                <argument>${project.basedir}/src/main/kotlin;${project.basedir}/src/test/kotlin</argument>
                                 <argument>--excludes</argument>
-                                <argument>**/build/**:**/.gradle/**</argument>
+                                <argument>**/build/**;**/.gradle/**</argument>
                                 <argument>--jvm-target</argument>
                                 <argument>${java.version}</argument>
                                 <argument>--language-version</argument>
@@ -155,9 +155,9 @@
                                 <argument>--config</argument>
                                 <argument>${project.basedir}/../detekt.yml</argument>
                                 <argument>--input</argument>
-                                <argument>${project.basedir}/src/main/kotlin:${project.basedir}/src/test/kotlin</argument>
+                                <argument>${project.basedir}/src/main/kotlin;${project.basedir}/src/test/kotlin</argument>
                                 <argument>--excludes</argument>
-                                <argument>**/build/**:**/.gradle/**</argument>
+                                <argument>**/build/**;**/.gradle/**</argument>
                                 <argument>--jvm-target</argument>
                                 <argument>${java.version}</argument>
                                 <argument>--language-version</argument>
