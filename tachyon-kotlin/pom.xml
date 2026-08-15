@@ -175,6 +175,7 @@
                                 <argument>--build-upon-default-config</argument>
                                 <argument>--config</argument>
                                 <argument>${project.basedir}/../detekt.yml</argument>
+                                <!-- Detekt uses ';' to separate multiple input paths on Windows. -->
                                 <argument>--input</argument>
                                 <argument>${project.basedir}/src/main/kotlin;${project.basedir}/src/test/kotlin</argument>
                                 <argument>--excludes</argument>
@@ -203,6 +204,7 @@
                                 <argument>--build-upon-default-config</argument>
                                 <argument>--config</argument>
                                 <argument>${project.basedir}/../detekt.yml</argument>
+                                <!-- Detekt uses ';' to separate multiple input paths on Windows. -->
                                 <argument>--input</argument>
                                 <argument>${project.basedir}/src/main/kotlin;${project.basedir}/src/test/kotlin</argument>
                                 <argument>--excludes</argument>
