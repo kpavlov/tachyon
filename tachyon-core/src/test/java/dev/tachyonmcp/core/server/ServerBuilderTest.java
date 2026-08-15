@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
 import dev.tachyonmcp.api.server.domain.UriTemplateValue;
+import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.api.server.features.completions.AsyncCompletionFn;
 import dev.tachyonmcp.api.server.features.completions.CompletionFn;
 import dev.tachyonmcp.api.server.features.completions.CompletionResult;
@@ -15,7 +16,6 @@ import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
-import dev.tachyonmcp.api.server.extensions.ServerExtension;
 
 /**
  * Verifies {@link ServerBuilder} configures a server-owned virtual-thread-per-task executor for
@@ -192,17 +192,19 @@ class ServerBuilderTest {
             assertThatIllegalStateException().isThrownBy(server::port);
         }
     }
+
     @Test
     void rejectsDuplicateExtensionIds() {
         var extension1 = new TestExtension("duplicate");
         var extension2 = new TestExtension("duplicate");
 
         assertThatIllegalStateException()
-            .isThrownBy(() -> TachyonServer.builder()
-                .withExtensions(extension1, extension2)
-                .build())
-            .withMessageContaining("Duplicate extension ID: duplicate");
+                .isThrownBy(() -> TachyonServer.builder()
+                        .withExtensions(extension1, extension2)
+                        .build())
+                .withMessageContaining("Duplicate extension ID: duplicate");
     }
+
     private static class TestExtension implements ServerExtension {
         private final String id;
 

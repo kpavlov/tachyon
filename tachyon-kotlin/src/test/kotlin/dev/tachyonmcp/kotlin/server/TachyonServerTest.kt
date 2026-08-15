@@ -20,6 +20,7 @@ import dev.tachyonmcp.kotlin.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.kotlin.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.kotlin.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.kotlin.server.features.tools.ToolDescriptor
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
@@ -276,6 +277,24 @@ internal class TachyonServerTest {
         }.use {
             bootstrapped shouldBe setOf("one", "two")
         }
+    }
+
+    @Test
+    fun `duplicate extension IDs are rejected`() {
+        fun extensionNamed(id: String) =
+            object : ServerExtension {
+                override fun extensionId(): String = id
+            }
+
+        shouldThrow<IllegalStateException> {
+            buildServer {
+                name("duplicate-extension-test")
+                extensions(
+                    extensionNamed("duplicate"),
+                    extensionNamed("duplicate"),
+                )
+            }
+        }.message shouldContain "Duplicate extension ID: duplicate"
     }
 
     @Test
