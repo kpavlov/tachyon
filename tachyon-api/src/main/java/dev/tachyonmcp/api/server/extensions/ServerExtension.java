@@ -14,6 +14,9 @@ public interface ServerExtension extends Extension<InteractionContext> {
         return ExtensionSettings.empty();
     }
 
+    /** Controls whether this extension is listed in the {@code initialize} response. See {@link AdvertiseMode}. */
+    AdvertiseMode advertiseMode();
+
     /** Returns the set of JSON-RPC methods this extension handles. */
     default Set<String> methods() {
         return Set.of();

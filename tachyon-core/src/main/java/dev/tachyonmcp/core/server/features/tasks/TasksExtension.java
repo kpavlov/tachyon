@@ -5,6 +5,7 @@ import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.runtime.InteractionContext;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
+import dev.tachyonmcp.api.server.extensions.AdvertiseMode;
 import dev.tachyonmcp.api.server.extensions.ExtensionContext;
 import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
@@ -70,6 +71,11 @@ public class TasksExtension implements ServerExtension {
     @Override
     public String extensionId() {
         return ID;
+    }
+
+    @Override
+    public AdvertiseMode advertiseMode() {
+        return AdvertiseMode.ALWAYS;
     }
 
     /**

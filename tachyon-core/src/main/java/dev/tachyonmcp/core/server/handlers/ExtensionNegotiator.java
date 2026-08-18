@@ -3,6 +3,7 @@ package dev.tachyonmcp.core.server.handlers;
 
 import dev.tachyonmcp.api.json.JsonObject;
 import dev.tachyonmcp.api.runtime.Extension;
+import dev.tachyonmcp.api.server.extensions.AdvertiseMode;
 import dev.tachyonmcp.api.server.extensions.ExtensionSettings;
 import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.core.runtime.ChannelContext;
@@ -42,9 +43,10 @@ public final class ExtensionNegotiator {
         }
     }
 
-    /** Returns every registered extension and its server settings for capability advertisement. */
+    /** Returns every {@code ALWAYS}-mode registered extension and its server settings for capability advertisement. */
     public Map<String, JsonObject> registeredExtensions() {
         return extensions.stream()
+                .filter(e -> e.advertiseMode() == AdvertiseMode.ALWAYS)
                 .collect(Collectors.toMap(
                         Extension::extensionId, e -> e.serverSettings().values()));
     }

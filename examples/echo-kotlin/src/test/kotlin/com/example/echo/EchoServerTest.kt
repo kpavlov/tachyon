@@ -15,7 +15,6 @@ import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class EchoServerTest {
-
     private lateinit var server: TachyonServer
 
     private lateinit var client: McpClient
@@ -46,16 +45,18 @@ class EchoServerTest {
         val sessionId = client.initialize()
 
         // language=json
-        val response = client.post(
-            sessionId,
-            """
-                    {"jsonrpc":"2.0","id":1,"method":"tools/list"}
-                    """.trimIndent(),
-        )
+        val response =
+            client.post(
+                sessionId,
+                """
+                {"jsonrpc":"2.0","id":1,"method":"tools/list"}
+                """.trimIndent(),
+            )
 
         val json = response.body()
-        json shouldEqualJson """
-                {"jsonrpc":"2.0","id":1,"result":{"tools":[
+        json shouldEqualJson
+            """
+            {"jsonrpc":"2.0","id":1,"result":{"tools":[
                 {
                   "name":"echo",
                   "description":"Echo message",
@@ -81,7 +82,7 @@ class EchoServerTest {
                   }
                 }
                           ]}}
-                """.trimIndent()
+            """.trimIndent()
     }
 
     @Test
@@ -89,17 +90,19 @@ class EchoServerTest {
         val sessionId = client.initialize()
 
         // language=json
-        val response = client.post(
-            sessionId,
-            """
-                    {"jsonrpc":"2.0","id":1,"method":"tools/call",
+        val response =
+            client.post(
+                sessionId,
+                """
+                {"jsonrpc":"2.0","id":1,"method":"tools/call",
                      "params":{"name":"echo","arguments":{"message":"Hello, MCP!"}}}
-                    """.trimIndent(),
-        )
+                """.trimIndent(),
+            )
 
         val json = response.body()
-        json shouldEqualJson """
-                {
+        json shouldEqualJson
+            """
+            {
                   "jsonrpc": "2.0",
                   "id": 1,
                   "result": {
@@ -122,14 +125,19 @@ class EchoServerTest {
         val response = client.post(
             sessionId,
             """
-                    {"jsonrpc":"2.0","id":1,"method":"tools/call",
-                     "params":{"name":"reverse-echo","arguments":{"message":"stressed"}}}
-                    """.trimIndent(),
+            {
+                "jsonrpc":"2.0",
+                "id":1,
+                "method":"tools/call",
+                "params":{"name":"reverse-echo","arguments":{"message":"stressed"}}
+            }
+            """.trimIndent(),
         )
 
         val json = response.body()
-        json shouldEqualJson """
-                {
+        json shouldEqualJson
+            """
+            {
                   "jsonrpc": "2.0",
                   "id": 1,
                   "result": {
@@ -157,8 +165,9 @@ class EchoServerTest {
                     """.trimIndent(),
         )
 
-        response.body() shouldEqualJson """
-                {
+        response.body() shouldEqualJson
+            """
+            {
                   "jsonrpc": "2.0",
                   "id": 1,
                   "error": {
@@ -166,29 +175,31 @@ class EchoServerTest {
                     "message": "required property 'message' not found"
                   }
                 }
-                """.trimIndent()
+            """.trimIndent()
     }
 
     @Test
     fun `should respond to initialize`() {
         // language=json
-        val response = client.post(
-            null,
-            """
-                    {"jsonrpc":"2.0",
+        val response =
+            client.post(
+                null,
+                """
+                {"jsonrpc":"2.0",
                       "id":1,
                       "method":"initialize",
                       "params":{"protocolVersion":"2025-11-25","capabilities":{},
                                "clientInfo":{"name":"test","version":"1.0"}}}
-                    """.trimIndent(),
-        )
+                """.trimIndent(),
+            )
 
-        response.body() shouldEqualJson """
+        response.body() shouldEqualJson
+            """
                 {
                   "jsonrpc": "2.0",
                   "id": 1,
                   "result": {
-                    "protocolVersion": "2025-11-25",
+            "protocolVersion": "2025-11-25",
                     "capabilities": {
                       "tools": {}
                     },
@@ -200,6 +211,6 @@ class EchoServerTest {
                     }
                   }
                 }
-                """.trimIndent()
+            """.trimIndent()
     }
 }

@@ -4,6 +4,7 @@ package dev.tachyonmcp.e2e.mcp20260728;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.runtime.InteractionContext;
+import dev.tachyonmcp.api.server.extensions.AdvertiseMode;
 import dev.tachyonmcp.api.server.extensions.ExtensionSettings;
 import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
@@ -63,6 +64,11 @@ class ExtensionNegotiationTest extends AbstractStatelessMcpE2eTest {
         @Override
         public String extensionId() {
             return EXT_ID;
+        }
+
+        @Override
+        public AdvertiseMode advertiseMode() {
+            return AdvertiseMode.ALWAYS;
         }
 
         @Override

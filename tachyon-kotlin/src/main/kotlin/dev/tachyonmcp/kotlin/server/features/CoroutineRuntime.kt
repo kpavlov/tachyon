@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.features
 
+import dev.tachyonmcp.api.server.extensions.AdvertiseMode
 import dev.tachyonmcp.api.server.extensions.ExtensionContext
 import dev.tachyonmcp.api.server.extensions.ServerExtension
 import kotlinx.coroutines.CancellationException
@@ -24,6 +25,8 @@ internal class CoroutineRuntime : ServerExtension {
     private var shutdownGraceNanos: Long = 0
 
     override fun extensionId(): String = "dev.tachyonmcp/kotlin-coroutines"
+
+    override fun advertiseMode(): AdvertiseMode = AdvertiseMode.NEVER
 
     override fun bootstrap(server: ExtensionContext) {
         check(scope == null) { "Kotlin coroutine runtime already started" }

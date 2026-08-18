@@ -10,6 +10,7 @@ internals.
 
 ```java
 import dev.tachyonmcp.api.runtime.InteractionContext;
+import dev.tachyonmcp.api.server.extensions.AdvertiseMode;
 import dev.tachyonmcp.api.server.extensions.ExtensionContext;
 import dev.tachyonmcp.api.server.extensions.ExtensionSettings;
 import dev.tachyonmcp.api.server.extensions.ServerExtension;
@@ -22,6 +23,11 @@ public class AuditExtension implements ServerExtension {
     @Override
     public String extensionId() {
         return "com.example/audit";  // reverse-DNS format
+    }
+
+    @Override
+    public AdvertiseMode advertiseMode() {
+        return AdvertiseMode.ALWAYS;
     }
 
     @Override
@@ -74,9 +80,13 @@ The older `.extension(ServerExtension)` still works but is deprecated.
 
 ## How negotiation works
 
-1. Tachyon advertises every registered extension and its `serverSettings()` in the `initialize` response.
+1. Tachyon advertises every registered extension whose `advertiseMode()` is `AdvertiseMode.ALWAYS`, along with its
+   `serverSettings()`, in the `initialize` response. Extensions with `AdvertiseMode.NEVER` are omitted from
+   `capabilities.extensions` — useful for internal-only extensions, e.g. `tachyon-kotlin`'s coroutine runtime
+   (`dev.tachyonmcp/kotlin-coroutines`), that clients aren't expected to know about or negotiate directly.
 2. The client sends `initialize` with the extensions it supports, such as `"extensions": {"com.example/audit": {}}`.
-3. Tachyon calls `onConnectionInit` for each extension declared by both client and server.
+3. Tachyon calls `onConnectionInit` for each extension declared by both client and server — this still works for
+   `NEVER`-mode extensions if a client already knows the ID, since hiding only affects advertisement, not negotiation.
 4. Methods declared in `methods()` are only routed for sessions that negotiated the extension.
 
 ## Built-in: TasksExtension

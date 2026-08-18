@@ -4,6 +4,7 @@ package dev.tachyonmcp.kotlin.server
 import dev.tachyonmcp.api.json.JsonSchema
 import dev.tachyonmcp.api.server.config.Mode
 import dev.tachyonmcp.api.server.domain.Role
+import dev.tachyonmcp.api.server.extensions.AdvertiseMode
 import dev.tachyonmcp.api.server.extensions.ExtensionContext
 import dev.tachyonmcp.api.server.extensions.ServerExtension
 import dev.tachyonmcp.api.server.features.tools.ToolResult
@@ -242,6 +243,8 @@ internal class TachyonServerTest {
             object : ServerExtension {
                 override fun extensionId(): String = "test.extension"
 
+                override fun advertiseMode(): AdvertiseMode = AdvertiseMode.ALWAYS
+
                 override fun bootstrap(context: ExtensionContext) {
                     bootstrapped = true
                 }
@@ -262,6 +265,8 @@ internal class TachyonServerTest {
         fun extensionNamed(id: String) =
             object : ServerExtension {
                 override fun extensionId(): String = id
+
+                override fun advertiseMode(): AdvertiseMode = AdvertiseMode.ALWAYS
 
                 override fun bootstrap(context: ExtensionContext) {
                     bootstrapped += id
@@ -284,6 +289,8 @@ internal class TachyonServerTest {
         fun extensionNamed(id: String) =
             object : ServerExtension {
                 override fun extensionId(): String = id
+
+                override fun advertiseMode(): AdvertiseMode = AdvertiseMode.ALWAYS
             }
 
         shouldThrow<IllegalArgumentException> {

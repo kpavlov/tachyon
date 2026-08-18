@@ -5,6 +5,7 @@ import static dev.tachyonmcp.core.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.runtime.InteractionContext;
+import dev.tachyonmcp.api.server.extensions.AdvertiseMode;
 import dev.tachyonmcp.api.server.extensions.ExtensionSettings;
 import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.core.protocol.Protocols;
@@ -108,6 +109,11 @@ class ExtensionNegotiationTest {
         @Override
         public String extensionId() {
             return "com.test/ext1";
+        }
+
+        @Override
+        public AdvertiseMode advertiseMode() {
+            return AdvertiseMode.ALWAYS;
         }
 
         @Override

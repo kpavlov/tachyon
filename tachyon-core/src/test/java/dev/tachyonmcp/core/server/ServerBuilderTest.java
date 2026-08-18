@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
 import dev.tachyonmcp.api.server.domain.UriTemplateValue;
+import dev.tachyonmcp.api.server.extensions.AdvertiseMode;
 import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.api.server.features.completions.AsyncCompletionFn;
 import dev.tachyonmcp.api.server.features.completions.CompletionFn;
@@ -216,6 +217,11 @@ class ServerBuilderTest {
         @Override
         public String extensionId() {
             return id;
+        }
+
+        @Override
+        public AdvertiseMode advertiseMode() {
+            return AdvertiseMode.ALWAYS;
         }
     }
 }
