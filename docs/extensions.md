@@ -80,10 +80,12 @@ The older `.extension(ServerExtension)` still works but is deprecated.
 
 ## How negotiation works
 
-1. Tachyon advertises every registered extension whose `advertiseMode()` is `AdvertiseMode.ALWAYS`, along with its
-   `serverSettings()`, in the `initialize` response. Extensions with `AdvertiseMode.NEVER` are omitted from
-   `capabilities.extensions` — useful for internal-only extensions, e.g. `tachyon-kotlin`'s coroutine runtime
-   (`dev.tachyonmcp/kotlin-coroutines`), that clients aren't expected to know about or negotiate directly.
+1. Tachyon advertises each registered extension's `serverSettings()` in `capabilities.extensions` — in the `initialize` response (MCP 2025-11-25) and in the `server/discover` response (MCP 2026-07-28 and later) — subject to that extension's `AdvertiseMode advertiseMode()`:
+
+   - `ALWAYS` - Unconditionally.
+   - `NEVER` - useful for internal-only extensions, e.g. `tachyon-kotlin`'s coroutine runtime (`dev.tachyonmcp/kotlin-coroutines`), that clients aren't expected to know about or negotiate directly. |
+   - `NEGOTIATED` - Only if the client already declared the extension's ID in the same request — `capabilities.extensions` on `initialize`, or `_meta."io.modelcontextprotocol/clientCapabilities".extensions` on any 2026-07-28 request including `server/discover`. |
+
 2. The client sends `initialize` with the extensions it supports, such as `"extensions": {"com.example/audit": {}}`.
 3. Tachyon calls `onConnectionInit` for each extension declared by both client and server — this still works for
    `NEVER`-mode extensions if a client already knows the ID, since hiding only affects advertisement, not negotiation.

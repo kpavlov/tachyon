@@ -80,8 +80,9 @@ class ServerInfoMapper {
         }
 
         // Note: unlike 2025-11-25, this schema has no dedicated `tasks` capability field —
-        // task support is advertised generically via `extensions["io.modelcontextprotocol/tasks"]`.
-        // Not populated here; no caller currently threads task capability into a discover response.
+        // task support (and every other extension) is advertised generically via
+        // `extensions["<extension-id>"]`. Not populated here — McpResponseMapper#discoverResult applies
+        // the registered-extensions map to the builder this method returns.
 
         return builder;
     }

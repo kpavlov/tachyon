@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.protocol;
 
+import dev.tachyonmcp.api.json.JsonObject;
 import dev.tachyonmcp.api.server.config.ServerIdentity;
 import dev.tachyonmcp.api.server.domain.InputRequest;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
@@ -41,7 +42,10 @@ public interface ProtocolResponseMapper {
 
     /** Maps the server discovery response into a protocol-specific shape. */
     default Object discoverResult(
-            List<String> supportedVersions, ServerCapabilities capabilities, ServerIdentity serverIdentity) {
+            List<String> supportedVersions,
+            ServerCapabilities capabilities,
+            ServerIdentity serverIdentity,
+            Map<String, JsonObject> registeredExtensions) {
         throw new UnsupportedOperationException("server/discover is not supported by this protocol version");
     }
 

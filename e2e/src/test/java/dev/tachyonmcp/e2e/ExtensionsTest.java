@@ -23,6 +23,7 @@ class ExtensionsTest extends AbstractStatefulMcpE2eTest {
 
     private static final String TEST_EXT_ID = "com.example/test";
     private static final String INTERNAL_EXT_ID = "com.example/internal";
+    private static final String NEGOTIATED_EXT_ID = "com.example/negotiated";
 
     @Test
     void serverAdvertisesExtensionInCapabilities() throws Exception {
@@ -102,6 +103,35 @@ class ExtensionsTest extends AbstractStatefulMcpE2eTest {
                   "result": {"message": "Hi!"}
                 }
                 """);
+        }
+    }
+
+    @Test
+    void negotiatedExtensionAdvertisedWhenClientDeclaresIt() throws Exception {
+        startServer(it -> it.withExtensions(new NegotiatedTestExtension()));
+
+        try (var client = createTestClient()) {
+            var initBody = buildInitializeJson(Map.of(NEGOTIATED_EXT_ID, JsonNodeFactory.instance.objectNode()));
+            var response = client.post(null, initBody);
+            assertThatJson(response.body())
+                    .inPath("$.result.capabilities.extensions")
+                    // language=JSON
+                    .isEqualTo("""
+                            {"com.example/negotiated": {"version": "1.0"}}
+                            """);
+        }
+    }
+
+    @Test
+    void negotiatedExtensionNotAdvertisedWhenClientDoesNotDeclareIt() throws Exception {
+        startServer(it -> it.withExtensions(new NegotiatedTestExtension()));
+
+        try (var client = createTestClient()) {
+            var initBody = buildInitializeJson(Map.of());
+            var response = client.post(null, initBody);
+            assertThatJson(response.body())
+                    .node("result.capabilities.extensions")
+                    .isAbsent();
         }
     }
 
@@ -291,6 +321,24 @@ class ExtensionsTest extends AbstractStatefulMcpE2eTest {
         @Override
         public void bootstrap(ExtensionContext context) {
             context.registerHandler("internal/hello", (interaction, params) -> Map.of("message", "Hi!"));
+        }
+    }
+
+    private static class NegotiatedTestExtension implements ServerExtension {
+
+        @Override
+        public String extensionId() {
+            return NEGOTIATED_EXT_ID;
+        }
+
+        @Override
+        public AdvertiseMode advertiseMode() {
+            return AdvertiseMode.NEGOTIATED;
+        }
+
+        @Override
+        public ExtensionSettings serverSettings() {
+            return ExtensionSettings.of(Map.of("version", "1.0"));
         }
     }
 

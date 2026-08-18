@@ -12,9 +12,11 @@ import java.util.Comparator;
 public final class DiscoverHandler implements RpcMethodHandler {
 
     private final ServerEngine server;
+    private final ExtensionNegotiator negotiator;
 
     public DiscoverHandler(ServerEngine server) {
         this.server = server;
+        this.negotiator = new ExtensionNegotiator(server.extensions());
     }
 
     @Override
@@ -32,6 +34,7 @@ public final class DiscoverHandler implements RpcMethodHandler {
                 .discoverResult(
                         supportedVersions,
                         server.resolveCapabilities(),
-                        server.config().identity());
+                        server.config().identity(),
+                        negotiator.registeredExtensions(context));
     }
 }

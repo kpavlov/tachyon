@@ -2,6 +2,7 @@
 package dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs;
 
 import dev.tachyonmcp.api.json.JsonDocument;
+import dev.tachyonmcp.api.json.JsonObject;
 import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.server.config.ServerIdentity;
 import dev.tachyonmcp.api.server.domain.Annotations;
@@ -124,7 +125,16 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
 
     @Override
     public Object discoverResult(
-            List<String> supportedVersions, ServerCapabilities capabilities, ServerIdentity serverIdentity) {
+            List<String> supportedVersions,
+            ServerCapabilities capabilities,
+            ServerIdentity serverIdentity,
+            Map<String, JsonObject> registeredExtensions) {
+        var capsBuilder = ServerInfoMapper.toServerCapabilities(capabilities);
+        if (!registeredExtensions.isEmpty()) {
+            capsBuilder.extensions(registeredExtensions.entrySet().stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                            Map.Entry::getKey, entry -> JsonUtils.parse(entry.getValue()))));
+        }
         var implementation = ServerInfoMapper.toImplementation(serverIdentity);
         var meta = Map.of("io.modelcontextprotocol/serverInfo", encodeToTree(Implementation.class, implementation));
         // The schema models server identity only via the optional
@@ -135,7 +145,7 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
         var additionalProperties = Map.of("serverInfo", encodeToTree(Implementation.class, implementation));
         return new DiscoverResult(
                 supportedVersions,
-                ServerInfoMapper.toServerCapabilities(capabilities).build(),
+                capsBuilder.build(),
                 serverIdentity.instructions(),
                 meta,
                 COMPLETE,

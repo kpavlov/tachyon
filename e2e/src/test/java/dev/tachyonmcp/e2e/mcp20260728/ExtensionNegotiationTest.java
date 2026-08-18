@@ -24,7 +24,7 @@ class ExtensionNegotiationTest extends AbstractStatelessMcpE2eTest {
     @Test
     void onConnectionInitFiresForPerRequestDeclaration() throws Exception {
         var extension = new RecordingExtension();
-        startServer(builder -> builder.extension(extension), registrar -> {});
+        startServer(builder -> builder.withExtensions(extension), registrar -> {});
 
         try (var client = createModernTestClient()) {
             var response = client.post("""
@@ -43,7 +43,7 @@ class ExtensionNegotiationTest extends AbstractStatelessMcpE2eTest {
     @Test
     void onConnectionInitNotCalledWhenNotDeclared() throws Exception {
         var extension = new RecordingExtension();
-        startServer(builder -> builder.extension(extension), registrar -> {});
+        startServer(builder -> builder.withExtensions(extension), registrar -> {});
 
         try (var client = createModernTestClient()) {
             var response = client.post("""

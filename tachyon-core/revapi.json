@@ -691,6 +691,26 @@
           "attachments": {
             "since": "1.0.0-beta.20"
           }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.numberOfParametersChanged",
+          "old": "method java.lang.Object dev.tachyonmcp.core.protocol.ProtocolResponseMapper::discoverResult(java.util.List<java.lang.String>, dev.tachyonmcp.api.server.domain.ServerCapabilities, dev.tachyonmcp.api.server.config.ServerIdentity)",
+          "new": "method java.lang.Object dev.tachyonmcp.core.protocol.ProtocolResponseMapper::discoverResult(java.util.List<java.lang.String>, dev.tachyonmcp.api.server.domain.ServerCapabilities, dev.tachyonmcp.api.server.config.ServerIdentity, java.util.Map<java.lang.String, dev.tachyonmcp.api.json.JsonObject>)",
+          "justification": "server/discover must advertise registered extensions the same way initialize does",
+          "attachments": {
+            "since": "1.0.0-beta.20"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.numberOfParametersChanged",
+          "old": "method java.lang.Object dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs.McpResponseMapper::discoverResult(java.util.List<java.lang.String>, dev.tachyonmcp.api.server.domain.ServerCapabilities, dev.tachyonmcp.api.server.config.ServerIdentity)",
+          "new": "method java.lang.Object dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs.McpResponseMapper::discoverResult(java.util.List<java.lang.String>, dev.tachyonmcp.api.server.domain.ServerCapabilities, dev.tachyonmcp.api.server.config.ServerIdentity, java.util.Map<java.lang.String, dev.tachyonmcp.api.json.JsonObject>)",
+          "justification": "server/discover must advertise registered extensions the same way initialize does",
+          "attachments": {
+            "since": "1.0.0-beta.20"
+          }
         }
       ]
     }

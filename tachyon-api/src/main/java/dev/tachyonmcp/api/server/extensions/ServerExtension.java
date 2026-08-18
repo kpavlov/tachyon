@@ -9,12 +9,12 @@ import java.util.Set;
 /** Pluggable server extension that can add custom methods, capabilities, and lifecycle hooks. */
 @ExperimentalApi
 public interface ServerExtension extends Extension<InteractionContext> {
-    /** Returns the server settings to advertise in the initialize response. */
+    /** Returns the server settings to advertise for this extension, e.g. in {@code initialize} or {@code server/discover}. */
     default ExtensionSettings serverSettings() {
         return ExtensionSettings.empty();
     }
 
-    /** Controls whether this extension is listed in the {@code initialize} response. See {@link AdvertiseMode}. */
+    /** Controls whether this extension is advertised to clients (e.g. in {@code initialize} or {@code server/discover}). See {@link AdvertiseMode}. */
     AdvertiseMode advertiseMode();
 
     /** Returns the set of JSON-RPC methods this extension handles. */

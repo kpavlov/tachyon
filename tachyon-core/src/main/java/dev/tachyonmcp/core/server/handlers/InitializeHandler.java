@@ -43,7 +43,7 @@ public final class InitializeHandler implements RpcMethodHandler {
         var capabilities = server.resolveCapabilities();
 
         negotiator.negotiate(context, initializeRequest.extensions());
-        var registeredExtensions = negotiator.registeredExtensions();
+        var registeredExtensions = negotiator.registeredExtensions(context);
 
         final var serverConfig = server.config();
         var domainResponse = new InitializeResponse(

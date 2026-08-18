@@ -3,7 +3,6 @@ package dev.tachyonmcp.core.server.handlers;
 
 import dev.tachyonmcp.api.json.JsonObject;
 import dev.tachyonmcp.api.runtime.Extension;
-import dev.tachyonmcp.api.server.extensions.AdvertiseMode;
 import dev.tachyonmcp.api.server.extensions.ExtensionSettings;
 import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.core.runtime.ChannelContext;
@@ -43,10 +42,19 @@ public final class ExtensionNegotiator {
         }
     }
 
-    /** Returns every {@code ALWAYS}-mode registered extension and its server settings for capability advertisement. */
-    public Map<String, JsonObject> registeredExtensions() {
+    /**
+     * Returns every registered extension eligible for capability advertisement in this request's
+     * response, along with its server settings: {@code ALWAYS}-mode extensions unconditionally,
+     * {@code NEGOTIATED}-mode extensions only if this request already enabled them on {@code
+     * context} (see {@link #negotiate}), and never {@code NEVER}-mode extensions.
+     */
+    public Map<String, JsonObject> registeredExtensions(ChannelContext context) {
         return extensions.stream()
-                .filter(e -> e.advertiseMode() == AdvertiseMode.ALWAYS)
+                .filter(e -> switch (e.advertiseMode()) {
+                    case ALWAYS -> true;
+                    case NEVER -> false;
+                    case NEGOTIATED -> context.isExtensionEnabled(e.extensionId());
+                })
                 .collect(Collectors.toMap(
                         Extension::extensionId, e -> e.serverSettings().values()));
     }
