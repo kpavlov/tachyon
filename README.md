@@ -184,3 +184,8 @@ protocol version, only the internal mapper layer changes.
     style="display:inline-block; width: 256px; height: auto;"
   />
 </div>
+
+
+## [example] Add MCP SkillsExtension example project (Java)
+
+Documentation reference and guidelines for #245.
