@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.protocol.mcp.v2026_07_28.transport;
 
+import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.McpProtocol;
 import dev.tachyonmcp.core.server.handlers.ExtensionNegotiator;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
@@ -11,6 +12,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
+import java.util.List;
 
 /**
  * Negotiates MCP extensions for 2026-07-28: this revision removed {@code initialize} (no session to
@@ -32,10 +34,10 @@ import io.netty.handler.codec.http.HttpMethod;
 @Sharable
 public final class ExtensionNegotiationHandler extends ChannelInboundHandlerAdapter {
 
-    private final ExtensionNegotiator negotiator;
+    private final List<ServerExtension> extensions;
 
-    public ExtensionNegotiationHandler(ExtensionNegotiator negotiator) {
-        this.negotiator = negotiator;
+    public ExtensionNegotiationHandler(List<ServerExtension> extensions) {
+        this.extensions = extensions;
     }
 
     @Override
@@ -62,7 +64,7 @@ public final class ExtensionNegotiationHandler extends ChannelInboundHandlerAdap
         }
         if (message instanceof JsonRpcMessage.Request<?> request) {
             var declared = interaction.protocol().requestMapper().declaredExtensions(request.params());
-            negotiator.negotiate(interaction, declared);
+            ExtensionNegotiator.negotiate(extensions, interaction, declared);
         }
         ctx.fireChannelRead(msg);
     }

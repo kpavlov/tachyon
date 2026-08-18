@@ -19,20 +19,19 @@ import java.util.stream.Collectors;
  * {@code DispatchContext} exists.
  *
  * <p>Shared by 2025-11-25's {@link InitializeHandler} (declared once via {@code initialize}, matches
- * {@link dev.tachyonmcp.core.protocol.ProtocolRequestMapper.InitializeRequest#extensions()}) and
+ * {@link dev.tachyonmcp.core.protocol.ProtocolRequestMapper.InitializeRequest#extensions()}),
  * 2026-07-28's {@code ExtensionNegotiationHandler} (declared per request, matches {@link
- * dev.tachyonmcp.core.protocol.ProtocolRequestMapper#declaredExtensions}).
+ * dev.tachyonmcp.core.protocol.ProtocolRequestMapper#declaredExtensions}), and {@link
+ * DiscoverHandler}. Stateless — the registered extension list is a parameter, not instance state,
+ * since there's nothing per-caller to own.
  */
 public final class ExtensionNegotiator {
 
-    private final List<ServerExtension> extensions;
-
-    public ExtensionNegotiator(List<ServerExtension> extensions) {
-        this.extensions = extensions;
-    }
+    private ExtensionNegotiator() {}
 
     /** Enables each registered extension the client declared, and fires its {@code onConnectionInit}. */
-    public void negotiate(ChannelContext context, Map<String, JsonObject> declared) {
+    public static void negotiate(
+            List<ServerExtension> extensions, ChannelContext context, Map<String, JsonObject> declared) {
         for (var ext : extensions) {
             var clientSettings = declared.get(ext.extensionId());
             if (clientSettings != null) {
@@ -48,7 +47,8 @@ public final class ExtensionNegotiator {
      * {@code NEGOTIATED}-mode extensions only if this request already enabled them on {@code
      * context} (see {@link #negotiate}), and never {@code NEVER}-mode extensions.
      */
-    public Map<String, JsonObject> registeredExtensions(ChannelContext context) {
+    public static Map<String, JsonObject> registeredExtensions(
+            List<ServerExtension> extensions, ChannelContext context) {
         return extensions.stream()
                 .filter(e -> switch (e.advertiseMode()) {
                     case ALWAYS -> true;

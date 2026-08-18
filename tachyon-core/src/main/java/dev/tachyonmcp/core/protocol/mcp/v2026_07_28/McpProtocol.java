@@ -8,7 +8,6 @@ import dev.tachyonmcp.core.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs.McpResponseMapper;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.transport.ExtensionNegotiationHandler;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.transport.RequestValidationHandler;
-import dev.tachyonmcp.core.server.handlers.ExtensionNegotiator;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpMethod;
@@ -64,7 +63,6 @@ public final class McpProtocol implements Protocol {
 
     @Override
     public List<ChannelHandler> requestHandlers(ServerEngine server) {
-        var negotiator = new ExtensionNegotiator(server.extensions());
-        return List.of(new RequestValidationHandler(server), new ExtensionNegotiationHandler(negotiator));
+        return List.of(new RequestValidationHandler(server), new ExtensionNegotiationHandler(server.extensions()));
     }
 }

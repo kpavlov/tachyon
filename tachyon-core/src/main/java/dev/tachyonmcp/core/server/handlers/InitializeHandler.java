@@ -19,11 +19,9 @@ public final class InitializeHandler implements RpcMethodHandler {
 
     private static final String MCP_VERSION = McpProtocol.VERSION;
     private final ServerEngine server;
-    private final ExtensionNegotiator negotiator;
 
-    public InitializeHandler(ServerEngine server, ExtensionNegotiator negotiator) {
+    public InitializeHandler(ServerEngine server) {
         this.server = server;
-        this.negotiator = negotiator;
     }
 
     @Override
@@ -42,8 +40,9 @@ public final class InitializeHandler implements RpcMethodHandler {
 
         var capabilities = server.resolveCapabilities();
 
-        negotiator.negotiate(context, initializeRequest.extensions());
-        var registeredExtensions = negotiator.registeredExtensions(context);
+        var extensions = server.extensions();
+        ExtensionNegotiator.negotiate(extensions, context, initializeRequest.extensions());
+        var registeredExtensions = ExtensionNegotiator.registeredExtensions(extensions, context);
 
         final var serverConfig = server.config();
         var domainResponse = new InitializeResponse(

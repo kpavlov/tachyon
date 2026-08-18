@@ -42,7 +42,6 @@ import dev.tachyonmcp.core.server.features.tasks.TaskRegistry;
 import dev.tachyonmcp.core.server.features.tools.DefaultToolRegistry;
 import dev.tachyonmcp.core.server.features.tools.ToolMethodHandlers;
 import dev.tachyonmcp.core.server.handlers.DiscoverHandler;
-import dev.tachyonmcp.core.server.handlers.ExtensionNegotiator;
 import dev.tachyonmcp.core.server.handlers.InitializeHandler;
 import dev.tachyonmcp.core.server.handlers.LoggingHandlers;
 import dev.tachyonmcp.core.server.handlers.PingHandler;
@@ -420,7 +419,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     }
 
     private void registerDefaults() {
-        methodHandlers.put("initialize", new InitializeHandler(this, new ExtensionNegotiator(extensions)));
+        methodHandlers.put("initialize", new InitializeHandler(this));
         methodHandlers.put("server/discover", new DiscoverHandler(this));
         methodHandlers.put("ping", new PingHandler());
         ToolMethodHandlers.register(

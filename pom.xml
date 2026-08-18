@@ -494,6 +494,12 @@
                                     </include>
                                 </archives>
                             </revapi.filter>
+                            <revapi.java.filter.annotated>
+                                <regex>false</regex>
+                                <exclude>
+                                    <item>dev.tachyonmcp.api.annotations.InternalApi</item>
+                                </exclude>
+                            </revapi.java.filter.annotated>
                             <revapi.differences>
                                 <ignore>true</ignore>
                                 <differences>

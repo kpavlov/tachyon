@@ -711,6 +711,59 @@
           "attachments": {
             "since": "1.0.0-beta.20"
           }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.protocol.mcp.v2026_07_28.transport.ExtensionNegotiationHandler::<init>(===dev.tachyonmcp.core.server.handlers.ExtensionNegotiator===)",
+          "new": "parameter void dev.tachyonmcp.core.protocol.mcp.v2026_07_28.transport.ExtensionNegotiationHandler::<init>(===java.util.List<dev.tachyonmcp.api.server.extensions.ServerExtension>===)",
+          "parameterIndex": "0",
+          "justification": "ExtensionNegotiator became a stateless static utility; the handler now carries the extension list directly instead of holding an instance",
+          "attachments": {
+            "since": "1.0.0-beta.20"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.visibilityReduced",
+          "old": "method void dev.tachyonmcp.core.server.handlers.ExtensionNegotiator::<init>(java.util.List<dev.tachyonmcp.api.server.extensions.ServerExtension>)",
+          "new": "method void dev.tachyonmcp.core.server.handlers.ExtensionNegotiator::<init>()",
+          "oldVisibility": "public",
+          "newVisibility": "private",
+          "justification": "ExtensionNegotiator holds no state; it is now a non-instantiable static utility class",
+          "attachments": {
+            "since": "1.0.0-beta.20"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.numberOfParametersChanged",
+          "old": "method void dev.tachyonmcp.core.server.handlers.ExtensionNegotiator::negotiate(dev.tachyonmcp.core.runtime.ChannelContext, java.util.Map<java.lang.String, dev.tachyonmcp.api.json.JsonObject>)",
+          "new": "method void dev.tachyonmcp.core.server.handlers.ExtensionNegotiator::negotiate(java.util.List<dev.tachyonmcp.api.server.extensions.ServerExtension>, dev.tachyonmcp.core.runtime.ChannelContext, java.util.Map<java.lang.String, dev.tachyonmcp.api.json.JsonObject>)",
+          "justification": "ExtensionNegotiator became a stateless static utility; negotiate() now takes the extension list as a parameter instead of reading it from instance state",
+          "attachments": {
+            "since": "1.0.0-beta.20"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.nowStatic",
+          "old": "method void dev.tachyonmcp.core.server.handlers.ExtensionNegotiator::negotiate(dev.tachyonmcp.core.runtime.ChannelContext, java.util.Map<java.lang.String, dev.tachyonmcp.api.json.JsonObject>)",
+          "new": "method void dev.tachyonmcp.core.server.handlers.ExtensionNegotiator::negotiate(java.util.List<dev.tachyonmcp.api.server.extensions.ServerExtension>, dev.tachyonmcp.core.runtime.ChannelContext, java.util.Map<java.lang.String, dev.tachyonmcp.api.json.JsonObject>)",
+          "justification": "ExtensionNegotiator became a stateless static utility; negotiate() is now a static method",
+          "attachments": {
+            "since": "1.0.0-beta.20"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.numberOfParametersChanged",
+          "old": "method void dev.tachyonmcp.core.server.handlers.InitializeHandler::<init>(dev.tachyonmcp.core.server.internal.ServerEngine, dev.tachyonmcp.core.server.handlers.ExtensionNegotiator)",
+          "new": "method void dev.tachyonmcp.core.server.handlers.InitializeHandler::<init>(dev.tachyonmcp.core.server.internal.ServerEngine)",
+          "justification": "ExtensionNegotiator became a stateless static utility; InitializeHandler no longer needs an injected instance",
+          "attachments": {
+            "since": "1.0.0-beta.20"
+          }
         }
       ]
     }
