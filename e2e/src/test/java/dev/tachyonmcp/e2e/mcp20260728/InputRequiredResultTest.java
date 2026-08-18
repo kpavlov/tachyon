@@ -48,9 +48,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
 
     private static UrlInputRequest urlElicitation() {
         return UrlInputRequest.of(
-                "Please authenticate via the provided URL.",
-                "auth-elicitation-1",
-                "https://example.com/auth");
+                "Please authenticate via the provided URL.", "auth-elicitation-1", "https://example.com/auth");
     }
 
     @BeforeEach
