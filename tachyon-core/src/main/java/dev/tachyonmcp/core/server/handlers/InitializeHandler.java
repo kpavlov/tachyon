@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.handlers;
 
+import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.McpProtocol;
@@ -15,6 +16,7 @@ import dev.tachyonmcp.core.server.session.DispatchContext;
  * which redeclares extensions per request through {@code ExtensionNegotiationHandler}), and maps
  * the result back through the negotiated protocol's response mapper.
  */
+@InternalApi
 public final class InitializeHandler implements RpcMethodHandler {
 
     private static final String MCP_VERSION = McpProtocol.VERSION;
