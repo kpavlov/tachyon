@@ -1,6 +1,8 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.testkit;
 
+import java.net.URI;
+
 /**
  * {@link McpClient} for MCP protocol version 2025-11-25 (session-based, {@code initialize}
  * handshake).
@@ -17,6 +19,15 @@ public final class Mcp20251125Client extends McpClient {
      */
     public Mcp20251125Client(int port) {
         super(port);
+    }
+
+    /**
+     * Creates a client against an arbitrary MCP endpoint (local or remote, http or https).
+     *
+     * @param mcpEndpoint the MCP endpoint URI, e.g. {@code https://staging.example.com/mcp}
+     */
+    public Mcp20251125Client(URI mcpEndpoint) {
+        super(mcpEndpoint);
     }
 
     @Override

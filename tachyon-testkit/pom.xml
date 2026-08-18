@@ -14,8 +14,8 @@
 
     <artifactId>tachyon-testkit</artifactId>
 
-    <name>Tachyon MCP Testkit</name>
-    <description>Test harness: MCP clients with protocol request shaping and in-process port-0 server helpers</description>
+    <name>Tachyon MCP TestKit</name>
+    <description>Test harness: MCP clients with protocol request shaping and in-process server helpers</description>
 
     <dependencies>
         <dependency>
@@ -122,7 +122,7 @@
                     </execution>
                 </executions>
             </plugin>
-        <plugin>
+            <plugin>
                 <groupId>org.revapi</groupId>
                 <artifactId>revapi-maven-plugin</artifactId>
             </plugin>

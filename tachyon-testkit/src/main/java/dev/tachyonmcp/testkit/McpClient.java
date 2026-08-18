@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import me.kpavlov.finchly.queue.MessageAggregator;
+import org.intellij.lang.annotations.Language;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -35,15 +36,25 @@ public abstract class McpClient implements Closeable {
     private static final Duration DEFAULT_NOTIFICATION_TIMEOUT = Duration.ofSeconds(5);
     protected static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private final int serverPort;
+    private final URI mcpEndpoint;
     private final HttpClient httpClient;
     private final MessageAggregator<JsonNode> notifications = new MessageAggregator<>();
     private volatile @Nullable String sessionId;
     private volatile boolean closed;
 
+    /** Creates a client against a local, port-0-style Tachyon server ({@code http://localhost:<port>/mcp}). */
     protected McpClient(int port) {
-        this.serverPort = port;
+        this(localEndpoint(port));
+    }
+
+    /** Creates a client against an arbitrary MCP endpoint (local or remote, http or https). */
+    protected McpClient(URI mcpEndpoint) {
+        this.mcpEndpoint = mcpEndpoint;
         this.httpClient = HttpClient.newHttpClient();
+    }
+
+    static URI localEndpoint(int port) {
+        return URI.create("http://localhost:" + port + "/mcp");
     }
 
     /** The MCP protocol version this client speaks; sent as {@code MCP-Protocol-Version}. */
@@ -115,14 +126,14 @@ public abstract class McpClient implements Closeable {
     }
 
     /** POSTs an MCP request without a session. */
-    public HttpResponse<String> post(String body) throws Exception {
+    public HttpResponse<String> post(@Language("json") String body) throws Exception {
         return post(null, body);
     }
 
     /**
      * POSTs an MCP request carrying extra HTTP headers (e.g. {@code Mcp-Param-*} custom headers).
      */
-    public HttpResponse<String> post(String body, Map<String, String> extraHeaders) throws Exception {
+    public HttpResponse<String> post(@Language("json") String body, Map<String, String> extraHeaders) throws Exception {
         return post(null, body, extraHeaders);
     }
 
@@ -243,7 +254,8 @@ public abstract class McpClient implements Closeable {
     }
 
     /** POSTs a request and returns the raw response line stream (for SSE responses). */
-    public HttpResponse<Stream<String>> sendStreamingRequest(@Nullable String sessionId, String body) throws Exception {
+    public HttpResponse<Stream<String>> sendStreamingRequest(@Nullable String sessionId, @Language("json") String body)
+            throws Exception {
         body = requestBody(body);
         var builder = requestBuilder(body);
         if (sessionId != null) builder.header("MCP-Session-Id", sessionId);
@@ -335,7 +347,7 @@ public abstract class McpClient implements Closeable {
 
     private HttpRequest.Builder baseRequest() {
         return HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:" + serverPort + "/mcp"))
+                .uri(mcpEndpoint)
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json, text/event-stream")
                 .header("MCP-Protocol-Version", protocolVersion());

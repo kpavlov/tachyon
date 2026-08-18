@@ -2,6 +2,7 @@
 package dev.tachyonmcp.testkit;
 
 import dev.tachyonmcp.core.protocol.mcp.McpHeaderNames;
+import java.net.URI;
 import java.net.http.HttpRequest;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
@@ -31,6 +32,15 @@ public final class Mcp20260728Client extends McpClient {
      */
     public Mcp20260728Client(int port) {
         super(port);
+    }
+
+    /**
+     * Creates a client against an arbitrary MCP endpoint (local or remote, http or https).
+     *
+     * @param mcpEndpoint the MCP endpoint URI, e.g. {@code https://staging.example.com/mcp}
+     */
+    public Mcp20260728Client(URI mcpEndpoint) {
+        super(mcpEndpoint);
     }
 
     /**

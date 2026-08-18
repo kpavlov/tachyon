@@ -78,7 +78,7 @@ Opt into sessions for SSE resumability, `Last-Event-ID` replay, and TTL cleanup.
 - [FAQ](docs/faq.md) - Java, frameworks, concurrency, deployment, and compatibility
 - [Kotlin DSL](docs/kotlin.md) - Coroutine-first DSL, `TachyonServer { }`, scope reference
 - [Kotlin module](tachyon-kotlin/README.md) - `tachyon-kotlin` module overview
-- [Testkit](tachyon-testkit/README.md) - Test harness: shaping clients, dynamic-port servers
+- [Testkit](docs/testkit.md) - Test harness: shaping clients, dynamic-port servers, fluent JSON-RPC assertions
 - [Examples](examples/README.md) - Runnable Java & Kotlin example servers
 - [Migrate from Kotlin MCP SDK](docs/migrate-from-kotlin-mcp-to-tachyon.md) - Moving an existing Kotlin MCP SDK server
   to Tachyon

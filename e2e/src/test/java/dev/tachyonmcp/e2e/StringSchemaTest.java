@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e;
 
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -117,7 +118,7 @@ class StringSchemaTest extends AbstractStatelessMcpE2eTest {
                 """);
 
             assertThat(response.statusCode()).isEqualTo(200);
-            assertThatJson(response.body()).inPath("$.result.content[0].text").isEqualTo("called");
+            assertThat(response).hasTextContent("called");
         }
     }
 }

@@ -14,6 +14,10 @@
 - [Extensions](extensions.md)
 - [JSON and JSON Schema](json.md)
 
+## Testing
+
+- [Testkit](testkit.md)
+
 ## Kotlin
 
 - [Kotlin DSL](kotlin.md)
