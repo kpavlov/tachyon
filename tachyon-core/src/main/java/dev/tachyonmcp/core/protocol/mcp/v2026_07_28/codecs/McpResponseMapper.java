@@ -58,6 +58,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JsonEncoding;
 import tools.jackson.core.JsonGenerator;
@@ -72,6 +73,7 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
 
     private static final String COMPLETE = "complete";
     private static final String PUBLIC = "public";
+    private static final String INPUT_REQUIRED = "input_required";
 
     static {
         register(DiscoverResult.class, new DiscoverResultCodec());
@@ -190,11 +192,8 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
     @Override
     public Object callToolResult(ToolResult result) {
         return switch (result) {
-            case ToolResult.InputRequired ir -> {
-                var meta = resolveMeta(result);
-                yield inputRequiredResult(
-                        ir.inputRequests(), ir.requestState(), meta != null ? new LinkedHashMap<>(meta) : null);
-            }
+            case ToolResult.InputRequired ir ->
+                inputRequired(ir.inputRequests(), ir.requestState(), resolveMeta(result));
             case ToolResult.Error error -> buildCallToolResult(error.content(), null, true, resolveMeta(result));
             case ToolResult.Success success ->
                 buildCallToolResult(success.content(), success.structuredValue(), null, resolveMeta(result));
@@ -206,12 +205,14 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
             Map<String, ? extends InputRequest> inputRequests,
             @Nullable String requestState,
             @Nullable Map<String, Object> meta) {
-        return new InputRequiredResult(
-                encodedInputRequests(inputRequests),
-                requestState,
-                meta != null ? JsonUtils.toJsonNodeMap(meta) : null,
-                "input_required",
-                null);
+        return inputRequired(inputRequests, requestState, JsonUtils.toJsonNodeMap(meta));
+    }
+
+    private static Object inputRequired(
+            @Nullable Map<String, ? extends InputRequest> inputRequests,
+            @Nullable String requestState,
+            @Nullable Map<String, JsonNode> meta) {
+        return new InputRequiredResult(encodedInputRequests(inputRequests), requestState, meta, INPUT_REQUIRED, null);
     }
 
     /**
@@ -237,7 +238,7 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
             case RpcMethodRequest r -> {
                 var fields = new LinkedHashMap<String, Object>();
                 fields.put("method", r.method());
-                fields.put("params", r.params() != null ? r.params() : Map.of());
+                fields.put("params", Objects.requireNonNullElseGet(r.params(), Map::of));
                 yield JsonUtils.toObjectNode(fields);
             }
             case FormInputRequest f ->

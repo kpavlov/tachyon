@@ -4,6 +4,7 @@ package dev.tachyonmcp.e2e.mcp20260728;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.server.domain.FormInputRequest;
 import dev.tachyonmcp.api.server.domain.InputRequest;
 import dev.tachyonmcp.api.server.domain.RpcMethodRequest;
@@ -25,9 +26,6 @@ import org.junit.jupiter.api.Test;
  * tool (see {@code StatelessDispatchTest}).
  */
 class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
-
-    // language=JSON
-    private static final String NO_ARGS_SCHEMA = "{\"type\": \"object\", \"properties\": {}}";
 
     private static FormInputRequest elicitation(String message, String prop) {
         var schema = new LinkedHashMap<String, Object>();
@@ -58,7 +56,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                     .register(
                             tool -> tool.name("elicit_name")
                                     .description("Elicits a name")
-                                    .inputSchema(NO_ARGS_SCHEMA),
+                                    .inputSchema(JsonSchema.objectSchema()),
                             (ctx, request) -> {
                                 var responses = request.inputResponses();
                                 if (responses != null && responses.containsKey("user_name")) {
@@ -72,7 +70,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                     .register(
                             tool -> tool.name("ask_sampling")
                                     .description("Requests sampling")
-                                    .inputSchema(NO_ARGS_SCHEMA),
+                                    .inputSchema(JsonSchema.objectSchema()),
                             (ctx, request) -> {
                                 var responses = request.inputResponses();
                                 if (responses != null && responses.containsKey("capital_question")) {
@@ -86,7 +84,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                     .register(
                             tool -> tool.name("ask_roots")
                                     .description("Requests roots/list")
-                                    .inputSchema(NO_ARGS_SCHEMA),
+                                    .inputSchema(JsonSchema.objectSchema()),
                             (ctx, request) -> {
                                 var responses = request.inputResponses();
                                 if (responses != null && responses.containsKey("client_roots")) {
@@ -97,7 +95,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                     .register(
                             tool -> tool.name("ask_url")
                                     .description("Requests URL-mode authentication")
-                                    .inputSchema(NO_ARGS_SCHEMA),
+                                    .inputSchema(JsonSchema.objectSchema()),
                             (ctx, request) -> {
                                 var responses = request.inputResponses();
                                 if (responses != null && responses.containsKey("auth")) {
@@ -108,7 +106,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                     .register(
                             tool -> tool.name("respect_capabilities")
                                     .description("Only asks for declared capabilities")
-                                    .inputSchema(NO_ARGS_SCHEMA),
+                                    .inputSchema(JsonSchema.objectSchema()),
                             (ctx, request) -> {
                                 var meta = request.meta();
                                 var capabilities =
@@ -122,7 +120,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                     .register(
                             tool -> tool.name("ask_multiple")
                                     .description("Requests multiple inputs at once")
-                                    .inputSchema(NO_ARGS_SCHEMA),
+                                    .inputSchema(JsonSchema.objectSchema()),
                             (ctx, request) -> {
                                 var responses = request.inputResponses();
                                 if (responses != null
@@ -222,20 +220,28 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
     }
 
     @Test
-    void urlModeElicitationOmitsRemovedElicitationId() throws Exception {
+    void urlModeElicitationOmitsElicitationId() throws Exception {
         try (var client = createModernTestClient()) {
-            var response = client.post(toolCallBody(8, "ask_url", ""));
-            assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-            assertThatJson(response.body()).inPath("$.result.resultType").isEqualTo("input_required");
-            assertThatJson(response.body())
+            var round1 = client.post(toolCallBody(8, "ask_url", ""));
+            assertThat(round1.statusCode()).as(round1.body()).isEqualTo(200);
+            assertThatJson(round1.body()).inPath("$.result.resultType").isEqualTo("input_required");
+            assertThatJson(round1.body())
+                    .inPath("$.result.inputRequests.auth.method")
+                    .isEqualTo("elicitation/create");
+            assertThatJson(round1.body())
                     .inPath("$.result.inputRequests.auth.params.mode")
                     .isEqualTo("url");
-            assertThatJson(response.body())
+            assertThatJson(round1.body())
                     .inPath("$.result.inputRequests.auth.params.url")
                     .isEqualTo("https://example.com/auth");
-            assertThatJson(response.body())
+            assertThatJson(round1.body())
                     .inPath("$.result.inputRequests.auth.params.elicitationId")
                     .isAbsent();
+
+            var round2 =
+                    client.post(toolCallBody(9, "ask_url", "\"inputResponses\": {\"auth\": {\"action\": \"accept\"}}"));
+            assertThat(round2.statusCode()).as(round2.body()).isEqualTo(200);
+            assertThatJson(round2.body()).inPath("$.result.content[0].text").isEqualTo("authenticated");
         }
     }
 
