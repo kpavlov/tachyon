@@ -7,6 +7,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.api.json.JsonDocument;
 import dev.tachyonmcp.api.server.domain.Annotations;
 import dev.tachyonmcp.api.server.domain.Icon;
+import dev.tachyonmcp.api.server.domain.LoggingLevel;
+import dev.tachyonmcp.api.server.domain.ProgressToken;
 import dev.tachyonmcp.api.server.domain.PromptArgument;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.RequestId;
@@ -215,6 +217,26 @@ class McpResponseMapperTest {
         // language=JSON
         assertThatJson(graceful).isEqualTo("""
             {"_meta": {"io.modelcontextprotocol/subscriptionId": "sub-1"}, "resultType": "complete"}
+            """);
+    }
+
+    @Test
+    void loggingMessageParamsSerializesLevelLoggerAndData() {
+        var json = mapper.encode(mapper.loggingMessageParams(LoggingLevel.WARNING, "logger.x", "boom"));
+
+        // language=JSON
+        assertThatJson(json).isEqualTo("""
+            {"level":"warning","logger":"logger.x","data":"boom"}
+            """);
+    }
+
+    @Test
+    void progressNotificationParamsPreservesNumericTokenType() {
+        var json = mapper.encode(mapper.progressNotificationParams(ProgressToken.of(42), 1.0, 2.0, "working"));
+
+        // language=JSON
+        assertThatJson(json).isEqualTo("""
+            {"progressToken":42,"progress":1.0,"total":2.0,"message":"working"}
             """);
     }
 

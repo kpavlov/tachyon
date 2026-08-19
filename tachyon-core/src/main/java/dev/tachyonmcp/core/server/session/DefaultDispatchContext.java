@@ -18,7 +18,6 @@ import dev.tachyonmcp.core.server.OutboundSseStream;
 import dev.tachyonmcp.core.server.internal.NotificationLogSupport;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import org.jspecify.annotations.Nullable;
@@ -204,7 +203,10 @@ public class DefaultDispatchContext implements DispatchContext {
         @Override
         public void log(LoggingLevel level, @Nullable String logger, @Nullable Object data) {
             if (shouldEmit(level)) {
-                send(NotificationLogSupport.LOG_METHOD, NotificationLogSupport.logParams(level, logger, data));
+                var mapper = responseMapper();
+                send(
+                        NotificationLogSupport.LOG_METHOD,
+                        mapper.encode(mapper.loggingMessageParams(level, logger, data)));
             }
         }
 
@@ -214,17 +216,10 @@ public class DefaultDispatchContext implements DispatchContext {
                 logger.debug("Dropping progress notification: no progressToken (client did not opt into progress)");
                 return;
             }
-            Object wireToken =
-                    switch (progressToken) {
-                        case ProgressToken.StringValue(var v) -> v;
-                        case ProgressToken.NumericValue(var v) -> v;
-                    };
-            var paramsMap = Map.of(
-                    "progressToken", wireToken,
-                    "progress", progress,
-                    "total", total,
-                    "message", message);
-            send("notifications/progress", paramsMap);
+            var mapper = responseMapper();
+            send(
+                    "notifications/progress",
+                    mapper.encode(mapper.progressNotificationParams(progressToken, progress, total, message)));
         }
 
         @Override

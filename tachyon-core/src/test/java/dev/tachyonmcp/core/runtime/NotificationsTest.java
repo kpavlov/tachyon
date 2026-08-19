@@ -23,19 +23,8 @@ class NotificationsTest {
     }
 
     @Test
-    void logParamsBuildsWireShapeOmittingAbsentLogger() {
-        var params = NotificationLogSupport.logParams(LoggingLevel.NOTICE, null, null);
-
-        assertThat(params).containsEntry("level", "notice").containsEntry("data", null);
-        assertThat(params).doesNotContainKey("logger");
+    void logMethodConstantMatchesTheSpec() {
         assertThat(NotificationLogSupport.LOG_METHOD).isEqualTo("notifications/message");
-    }
-
-    @Test
-    void logParamsIncludesLoggerWhenPresent() {
-        var params = NotificationLogSupport.logParams(LoggingLevel.WARNING, "logger.x", "boom");
-
-        assertThat(params).containsEntry("level", "warning").containsEntry("logger", "logger.x");
     }
 
     private record Logged(LoggingLevel level, String logger, Object data) {}

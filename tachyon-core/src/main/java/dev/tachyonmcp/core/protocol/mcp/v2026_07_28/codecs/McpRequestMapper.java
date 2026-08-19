@@ -4,8 +4,8 @@ package dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs;
 import dev.tachyonmcp.api.json.PayloadDeserializer;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper.SubscriptionListenRequest;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper.ToolCallRequest;
-import java.util.List;
-import java.util.Map;
+import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.SubscriptionsListenRequestParams;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
@@ -35,20 +35,20 @@ public final class McpRequestMapper extends dev.tachyonmcp.core.protocol.mcp.v20
 
     @Override
     public SubscriptionListenRequest subscriptionsListen(@Nullable Object params) {
-        var map = asMap(params);
-        if (!(map.get("notifications") instanceof Map<?, ?> filter)) {
+        var listenParams = convert(asMap(params), SubscriptionsListenRequestParams.class);
+        var filter = listenParams.notifications();
+        if (filter == null) {
             return new SubscriptionListenRequest(false, false, false, Set.of());
         }
-        Set<String> resourceSubscriptions = filter.get("resourceSubscriptions") instanceof List<?> uris
-                ? uris.stream()
-                        .filter(String.class::isInstance)
-                        .map(String.class::cast)
+        var resourceSubscriptions = filter.resourceSubscriptions() != null
+                ? filter.resourceSubscriptions().stream()
+                        .filter(Objects::nonNull)
                         .collect(Collectors.toUnmodifiableSet())
-                : Set.of();
+                : Set.<String>of();
         return new SubscriptionListenRequest(
-                Boolean.TRUE.equals(filter.get("toolsListChanged")),
-                Boolean.TRUE.equals(filter.get("promptsListChanged")),
-                Boolean.TRUE.equals(filter.get("resourcesListChanged")),
+                Boolean.TRUE.equals(filter.toolsListChanged()),
+                Boolean.TRUE.equals(filter.promptsListChanged()),
+                Boolean.TRUE.equals(filter.resourcesListChanged()),
                 resourceSubscriptions);
     }
 }

@@ -440,7 +440,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         methodHandlers.put("initialize", new InitializeHandler(this));
         methodHandlers.put("server/discover", new DiscoverHandler(this));
         methodHandlers.put("ping", new PingHandler());
-        methodHandlers.put("subscriptions/listen", new SubscriptionsListenHandler(this, subscriptionRegistry));
+        methodHandlers.put("subscriptions/listen", new SubscriptionsListenHandler(subscriptionRegistry));
         ToolMethodHandlers.register(
                 methodHandlers, toolRegistry, inputValidator, outputValidator, payloadSerializer, payloadDeserializer);
         ResourceMethodHandlers.register(methodHandlers, resourceRegistry);
@@ -586,7 +586,8 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         if (!config.capabilities().logging()) {
             return;
         }
-        var paramsStr = JsonRpcCodec.toJsonParams(NotificationLogSupport.logParams(level, logger, data));
+        var mapper = Protocols.list().getFirst().responseMapper();
+        var paramsStr = mapper.encode(mapper.loggingMessageParams(level, logger, data));
         var notificationJson = JsonRpcCodec.serializeNotificationAsString(NotificationLogSupport.LOG_METHOD, paramsStr);
         for (var session : sessionManager.allSessions()) {
             if (session.state() != SessionState.ACTIVE) {

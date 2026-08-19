@@ -5,6 +5,8 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.domain.ContentBlock;
+import dev.tachyonmcp.api.server.domain.LoggingLevel;
+import dev.tachyonmcp.api.server.domain.ProgressToken;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.domain.TextContent;
@@ -194,6 +196,47 @@ class McpResponseMapperTest {
         var audience = ((List<?>) ann.get("audience"))
                 .stream().map(s -> Role.fromValue((String) s)).toList();
         assertThat(audience).containsExactly(Role.USER, Role.ASSISTANT);
+    }
+
+    @Test
+    void loggingMessageParamsSerializesLevelLoggerAndData() {
+        var json = mapper.encode(mapper.loggingMessageParams(LoggingLevel.WARNING, "logger.x", "boom"));
+
+        // language=JSON
+        assertThatJson(json).isEqualTo("""
+            {"level":"warning","logger":"logger.x","data":"boom"}
+            """);
+    }
+
+    @Test
+    void loggingMessageParamsOmitsAbsentLoggerAndRetainsNullData() {
+        var json = mapper.encode(mapper.loggingMessageParams(LoggingLevel.NOTICE, null, null));
+
+        // language=JSON
+        assertThatJson(json).isEqualTo("""
+            {"level":"notice","data":null}
+            """);
+        assertThat(json).doesNotContain("logger");
+    }
+
+    @Test
+    void progressNotificationParamsPreservesNumericTokenType() {
+        var json = mapper.encode(mapper.progressNotificationParams(ProgressToken.of(42), 1.0, 2.0, "working"));
+
+        // language=JSON
+        assertThatJson(json).isEqualTo("""
+            {"progressToken":42,"progress":1.0,"total":2.0,"message":"working"}
+            """);
+    }
+
+    @Test
+    void progressNotificationParamsPreservesStringToken() {
+        var json = mapper.encode(mapper.progressNotificationParams(ProgressToken.of("token-1"), 0.5, 1.0, "halfway"));
+
+        // language=JSON
+        assertThatJson(json).isEqualTo("""
+            {"progressToken":"token-1","progress":0.5,"total":1.0,"message":"halfway"}
+            """);
     }
 
     private static String relatedTaskId(CallToolResult payload) {

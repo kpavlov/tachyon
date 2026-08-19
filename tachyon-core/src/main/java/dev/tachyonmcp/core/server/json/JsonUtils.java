@@ -10,22 +10,30 @@ import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
+import tools.jackson.core.JacksonException;
 import tools.jackson.core.JsonParser;
+import tools.jackson.core.JsonToken;
 import tools.jackson.core.ObjectReadContext;
 import tools.jackson.core.TreeNode;
 import tools.jackson.core.json.JsonFactory;
+import tools.jackson.databind.DeserializationContext;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.deser.std.StdDeserializer;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.module.SimpleModule;
 import tools.jackson.databind.node.JsonNodeFactory;
 
 @InternalApi
 public final class JsonUtils {
 
-    private static final JsonMapper MAPPER = new JsonMapper();
+    private static final JsonMapper MAPPER = JsonMapper.builder()
+            .addModule(new SimpleModule().addDeserializer(Duration.class, new MillisDurationDeserializer()))
+            .build();
     public static final JsonFactory FACTORY = new JsonFactory();
 
     public static final ObjectReadContext TREE_READ_CONTEXT = new ObjectReadContext.Base() {
@@ -42,8 +50,26 @@ public final class JsonUtils {
 
     private JsonUtils() {}
 
-    static JsonMapper mapper() {
+    /**
+     * The shared Jackson mapper used for converting between raw JSON-ish values (maps, lists,
+     * scalars, trees) and generated protocol model records. Deserializes {@link Duration} from a
+     * bare wire number as milliseconds, matching the generated {@code Codec} classes' semantics
+     * (e.g. {@code TaskMetadata.ttl}) rather than jackson-databind's default (seconds).
+     */
+    public static JsonMapper mapper() {
         return MAPPER;
+    }
+
+    /** Deserializes a bare JSON number as milliseconds, matching the generated {@code Codec} classes. */
+    private static final class MillisDurationDeserializer extends StdDeserializer<Duration> {
+        MillisDurationDeserializer() {
+            super(Duration.class);
+        }
+
+        @Override
+        public @Nullable Duration deserialize(JsonParser p, DeserializationContext ctxt) throws JacksonException {
+            return p.currentToken() == JsonToken.VALUE_NULL ? null : Duration.ofMillis(p.getLongValue());
+        }
     }
 
     public static JsonNode parse(String json) {

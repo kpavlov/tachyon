@@ -2,14 +2,11 @@
 package dev.tachyonmcp.core.server.handlers;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
-import dev.tachyonmcp.core.runtime.SseEvent;
 import dev.tachyonmcp.core.server.McpDispatcher;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.features.subscriptions.SubscriptionRegistry;
-import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.server.session.DispatchContext;
-import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.jspecify.annotations.Nullable;
@@ -24,11 +21,9 @@ import org.jspecify.annotations.Nullable;
 @InternalApi
 public final class SubscriptionsListenHandler implements RpcMethodHandler {
 
-    private final ServerEngine server;
     private final SubscriptionRegistry registry;
 
-    public SubscriptionsListenHandler(ServerEngine server, SubscriptionRegistry registry) {
-        this.server = server;
+    public SubscriptionsListenHandler(SubscriptionRegistry registry) {
         this.registry = registry;
     }
 
@@ -56,16 +51,9 @@ public final class SubscriptionsListenHandler implements RpcMethodHandler {
                 .orElseThrow(() -> new IllegalStateException("subscriptions/listen dispatched without a request id"));
         var filter = requestMapper.subscriptionsListen(params);
 
-        final var responseMapper = context.responseMapper();
-        var ackParams = responseMapper.subscriptionsAcknowledgedParams(subscriptionId, filter);
-        var ackJson = JsonRpcCodec.serializeNotificationAsString(
-                "notifications/subscriptions/acknowledged", responseMapper.encode(ackParams));
         stream.start();
-        stream.writeEvent(
-                new SseEvent(ServerEngine.wireEventId(server.nextEventId(), stream.streamKey()), "message", ackJson));
-
         var pending = new CompletableFuture<>();
-        var key = registry.add(subscriptionId, stream, filter, responseMapper, pending);
+        var key = registry.activate(subscriptionId, stream, filter, context.responseMapper(), pending);
         stream.onClose(() -> {
             registry.remove(key);
             pending.cancel(false);

@@ -764,6 +764,15 @@
           "attachments": {
             "since": "1.0.0-beta.20"
           }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method java.util.Map<java.lang.String, java.lang.Object> dev.tachyonmcp.core.server.internal.NotificationLogSupport::logParams(dev.tachyonmcp.api.server.domain.LoggingLevel, java.lang.String, java.lang.Object)",
+          "justification": "Superseded by ProtocolResponseMapper.loggingMessageParams(), which builds the generated LoggingMessageNotificationParams model and serializes it through the protocol version's own codec instead of a hand-built Map",
+          "attachments": {
+            "since": "1.0.0-beta.20"
+          }
         }
       ]
     }

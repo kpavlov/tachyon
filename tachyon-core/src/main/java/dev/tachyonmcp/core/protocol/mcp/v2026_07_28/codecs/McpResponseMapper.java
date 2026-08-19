@@ -9,6 +9,7 @@ import dev.tachyonmcp.api.server.domain.Annotations;
 import dev.tachyonmcp.api.server.domain.ContentBlock;
 import dev.tachyonmcp.api.server.domain.FormInputRequest;
 import dev.tachyonmcp.api.server.domain.InputRequest;
+import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.api.server.domain.RpcMethodRequest;
@@ -42,6 +43,7 @@ import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ListPromptsResult;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ListResourceTemplatesResult;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ListResourcesResult;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ListToolsResult;
+import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.LoggingMessageNotificationParams;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.NotificationParams;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.Prompt;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.PromptArgument;
@@ -302,6 +304,15 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
     @Override
     public Object taskStatusNotificationParams(TaskEntry entry) {
         return McpTaskMapper.toStatusNotification(entry);
+    }
+
+    @Override
+    public Object loggingMessageParams(LoggingLevel level, @Nullable String logger, @Nullable Object data) {
+        return new LoggingMessageNotificationParams(
+                dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.LoggingLevel.valueOf(level.name()),
+                logger,
+                JsonUtils.parseJsonNode(JsonRpcCodec.writeValueAsString(data)),
+                null);
     }
 
     @Override

@@ -4,9 +4,11 @@ package dev.tachyonmcp.core.server.json;
 import static dev.tachyonmcp.core.test.TestUtils.parseJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import dev.tachyonmcp.api.json.JsonDocument;
 import dev.tachyonmcp.api.json.PayloadSerializer;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -17,6 +19,20 @@ import tools.jackson.databind.node.JsonNodeFactory;
 class JsonUtilsTest {
 
     private static final PayloadSerializer SERDE = new JacksonPayloadSerde();
+
+    @Test
+    void mapperConvertsBareMillisecondsNumberToDuration() {
+        var result = JsonUtils.mapper().convertValue(Map.of("ttl", 5000), WithTtl.class);
+
+        assertThat(result.ttl()).isEqualTo(Duration.ofMillis(5000));
+    }
+
+    @Test
+    void mapperConvertsAbsentTtlToNullDuration() {
+        var result = JsonUtils.mapper().convertValue(Map.of(), WithTtl.class);
+
+        assertThat(result.ttl()).isNull();
+    }
 
     @Test
     void valueToObjectNodeNullReturnsNull() {
@@ -144,6 +160,8 @@ class JsonUtilsTest {
     }
 
     public record SamplePojo(String name, int value) {}
+
+    private record WithTtl(@JsonProperty("ttl") Duration ttl) {}
 
     private record RetainedDocument(String json, JsonNode node) implements JsonDocument {
         @Override

@@ -14,32 +14,40 @@ import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.api.server.features.tools.ToolRequest;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.RequestMappingException;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CallToolRequestParams;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelledNotificationParams;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CompleteRequestParams;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetPromptRequestParams;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.PaginatedRequestParams;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ReadResourceRequestParams;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
+import dev.tachyonmcp.core.server.json.JsonUtils;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Request mapper for MCP 2025-11-25 and its backward-compatible request shapes.
  *
  * <p>Also parses the 2026-07-28 {@code inputResponses}/{@code requestState} fields (SEP-2322)
  * unconditionally: they're simply absent on 2025-11-25 wire payloads, so this is a no-op for that
- * version.
+ * version. Because these fields aren't part of this version's generated {@code *RequestParams}
+ * models, they're read from the raw params map rather than through {@link #convert}.
  */
 public class McpRequestMapper implements ProtocolRequestMapper {
 
     private static final String META_LOG_LEVEL_KEY = "io.modelcontextprotocol/logLevel";
     private static final String META_CLIENT_CAPABILITIES_KEY = "io.modelcontextprotocol/clientCapabilities";
-    private static final JsonMapper JSON = new JsonMapper();
 
     @Override
     public PageRequest page(@Nullable Object params) {
         var map = asMap(params);
         var limit = map.get("limit") instanceof Number number ? number.intValue() : 0;
-        var cursor = map.get("cursor") instanceof String text ? text : null;
-        return new PageRequest(limit, cursor);
+        var paginated = convert(map, PaginatedRequestParams.class);
+        return new PageRequest(limit, paginated.cursor());
     }
 
     @Override
@@ -47,20 +55,29 @@ public class McpRequestMapper implements ProtocolRequestMapper {
         return callTool(params, payloadDeserializer, true);
     }
 
-    /** Maps a tool call, optionally preserving MCP 2025-11-25's legacy task augmentation fields. */
+    /**
+     * Maps a tool call, optionally preserving MCP 2025-11-25's legacy task augmentation fields.
+     *
+     * <p>{@code task} is excluded before conversion and read from the raw params map instead, even
+     * though the generated record declares it: 2026-07-28 payloads may carry a garbage or
+     * differently-shaped {@code task} value there since that version ignores the field entirely
+     * (see the class javadoc), and converting it as part of {@link CallToolRequestParams} would
+     * fail on such payloads regardless of {@code legacyTaskAugmentation}.
+     */
     protected final ToolCallRequest callTool(
             @Nullable Object params, PayloadDeserializer payloadDeserializer, boolean legacyTaskAugmentation) {
         var map = asMap(params);
-        var name = requiredString(map, "name", "Missing tool name");
-        var arguments = optionalMap(map, "arguments", "Invalid arguments");
-        var meta = optionalMap(map, "_meta", "Invalid _meta");
+        var callToolMap = new LinkedHashMap<>(map);
+        callToolMap.remove("task");
+        var callParams = convert(callToolMap, CallToolRequestParams.class);
+        var meta = JsonUtils.toObjectMap(callParams._meta());
         var inputResponses = optionalMap(map, "inputResponses", "Invalid inputResponses");
         var requestState = optionalString(map, "requestState", "Invalid requestState");
         var task = legacyTaskAugmentation ? optionalMap(map, "task", "Invalid task metadata") : null;
         var ttl = task != null && task.get("ttl") instanceof Number value ? Duration.ofMillis(value.longValue()) : null;
         var request = ToolRequest.builder()
-                .name(name)
-                .arguments(Args.of(arguments, payloadDeserializer))
+                .name(required(callParams.name(), "Missing tool name"))
+                .arguments(Args.of(JsonUtils.toObjectMap(callParams.arguments()), payloadDeserializer))
                 .meta(meta)
                 .progressToken(progressToken(meta))
                 .payloadDeserializer(payloadDeserializer)
@@ -73,23 +90,26 @@ public class McpRequestMapper implements ProtocolRequestMapper {
     @Override
     public PromptCallRequest getPrompt(@Nullable Object params) {
         var map = asMap(params);
-        var name = requiredString(map, "name", "Missing prompt name");
-        var arguments = optionalMap(map, "arguments", "Invalid arguments");
+        var promptParams = convert(map, GetPromptRequestParams.class);
         var inputResponses = optionalMap(map, "inputResponses", "Invalid inputResponses");
         var requestState = optionalString(map, "requestState", "Invalid requestState");
-        var meta = optionalMap(map, "_meta", "Invalid _meta");
+        var arguments = JsonUtils.toObjectMap(promptParams.arguments());
         return new PromptCallRequest(
-                name,
+                required(promptParams.name(), "Missing prompt name"),
                 new PromptRequest(
-                        arguments != null ? Args.of(arguments) : Args.empty(), inputResponses, requestState, meta));
+                        arguments != null ? Args.of(arguments) : Args.empty(),
+                        inputResponses,
+                        requestState,
+                        JsonUtils.toObjectMap(promptParams._meta())));
     }
 
     @Override
     public ResourceRequest readResource(@Nullable Object params) {
         var map = asMap(params);
+        var resourceParams = convert(map, ReadResourceRequestParams.class);
         return ResourceRequest.builder()
-                .uri(requiredString(map, "uri", "Missing resource URI"))
-                .meta(optionalMap(map, "_meta", "Invalid _meta"))
+                .uri(required(resourceParams.uri(), "Missing resource URI"))
+                .meta(JsonUtils.toObjectMap(resourceParams._meta()))
                 .inputResponses(optionalMap(map, "inputResponses", "Invalid inputResponses"))
                 .requestState(optionalString(map, "requestState", "Invalid requestState"))
                 .build();
@@ -99,9 +119,10 @@ public class McpRequestMapper implements ProtocolRequestMapper {
     public CompletionCallRequest complete(@Nullable Object params) {
         var map = asMap(params);
         var ref = requiredMap(map, "ref", "Missing or invalid ref parameter");
-        var argument = requiredMap(map, "argument", "Missing or invalid argument parameter");
-        var argumentName = requiredString(argument, "name", "argument.name and argument.value are required");
-        var argumentValue = requiredString(argument, "value", "argument.name and argument.value are required");
+        var argumentMap = requiredMap(map, "argument", "argument.name and argument.value are required");
+        var argument = convert(argumentMap, CompleteRequestParams.Argument.class);
+        var argumentName = required(argument.name(), "argument.name and argument.value are required");
+        var argumentValue = required(argument.value(), "argument.name and argument.value are required");
         var refType = ref.get("type");
         final CompletionReference reference;
         if ("ref/prompt".equals(refType)) {
@@ -141,7 +162,8 @@ public class McpRequestMapper implements ProtocolRequestMapper {
     public LoggingLevel loggingLevel(@Nullable Object params) {
         var value = requiredString(asMap(params), "level", "Missing level parameter");
         try {
-            return LoggingLevel.fromValue(value);
+            return LoggingLevelMapper.toDomain(
+                    dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.LoggingLevel.fromValue(value));
         } catch (IllegalArgumentException e) {
             throw invalidParams("Invalid logging level: " + value);
         }
@@ -149,8 +171,9 @@ public class McpRequestMapper implements ProtocolRequestMapper {
 
     @Override
     public InitializeRequest initialize(@Nullable Object params) {
-        var capabilities = optionalMap(asMap(params), "capabilities", "Invalid capabilities");
-        var extensions = capabilities != null ? optionalMap(capabilities, "extensions", "Invalid extensions") : null;
+        var initParams = convert(asMap(params), InitializeRequestParams.class);
+        var capabilities = initParams.capabilities();
+        var extensions = capabilities != null ? JsonUtils.toObjectMap(capabilities.extensions()) : null;
         return new InitializeRequest(mapExtensions(extensions));
     }
 
@@ -195,35 +218,62 @@ public class McpRequestMapper implements ProtocolRequestMapper {
         var map = asMap(params);
         var rawId = map.get("requestId");
         if (!(rawId instanceof CharSequence) && !(rawId instanceof Number)) return null;
-        var reason = map.get("reason") instanceof String text ? text : null;
-        return new CancellationRequest(RequestId.of(rawId), reason);
+        var cancelParams = convert(map, CancelledNotificationParams.class);
+        return new CancellationRequest(RequestId.of(rawId), cancelParams.reason());
     }
 
     @Override
     public @Nullable TaskStatusRequest taskStatus(@Nullable Object params) {
         var map = asMap(params);
         if (!(map.get("taskId") instanceof String taskId)) return null;
-        var status = map.get("status");
-        var state = "input_required".equals(status)
-                ? TaskState.INPUT_REQUIRED
-                : "completed".equals(status)
-                        ? TaskState.COMPLETED
-                        : "failed".equals(status)
-                                ? TaskState.FAILED
-                                : "cancelled".equals(status) ? TaskState.CANCELLED : TaskState.WORKING;
+        var state = map.get("status") instanceof String text ? toTaskState(parseTaskStatus(text)) : TaskState.WORKING;
         var message = map.get("statusMessage") instanceof String text ? text : null;
         return new TaskStatusRequest(taskId, state, message);
+    }
+
+    /** Parses a {@code status} string via the generated enum, defaulting unknown values to {@code WORKING}. */
+    private static TaskStatus parseTaskStatus(String value) {
+        try {
+            return TaskStatus.fromValue(value);
+        } catch (IllegalArgumentException e) {
+            return TaskStatus.WORKING;
+        }
+    }
+
+    private static TaskState toTaskState(TaskStatus status) {
+        return switch (status) {
+            case INPUT_REQUIRED -> TaskState.INPUT_REQUIRED;
+            case COMPLETED -> TaskState.COMPLETED;
+            case FAILED -> TaskState.FAILED;
+            case CANCELLED -> TaskState.CANCELLED;
+            case WORKING -> TaskState.WORKING;
+        };
     }
 
     protected Map<String, Object> asMap(@Nullable Object params) {
         if (params == null) return Map.of();
         if (params instanceof Map<?, ?> map) return stringKeyed(map);
         try {
-            Map<?, ?> decoded = JSON.convertValue(params, Map.class);
+            Map<?, ?> decoded = JsonUtils.mapper().convertValue(params, Map.class);
             return stringKeyed(decoded);
         } catch (RuntimeException ignored) {
             return Map.of();
         }
+    }
+
+    /** Deserializes a normalized params map into a generated model, or throws {@code invalid_params}. */
+    protected static <T> T convert(Map<String, Object> map, Class<T> type) {
+        try {
+            return JsonUtils.mapper().convertValue(map, type);
+        } catch (RuntimeException e) {
+            throw invalidParams("Invalid " + type.getSimpleName());
+        }
+    }
+
+    /** Requires a field extracted from a generated model to be non-null, or throws {@code invalid_params}. */
+    private static <T> T required(@Nullable T value, String message) {
+        if (value == null) throw invalidParams(message);
+        return value;
     }
 
     private static Map<String, Object> stringKeyed(Map<?, ?> source) {

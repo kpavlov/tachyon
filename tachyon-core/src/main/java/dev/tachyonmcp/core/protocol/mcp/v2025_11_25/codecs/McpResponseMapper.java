@@ -5,6 +5,7 @@ import dev.tachyonmcp.api.json.JsonDocument;
 import dev.tachyonmcp.api.server.domain.ContentBlock;
 import dev.tachyonmcp.api.server.domain.FormInputRequest;
 import dev.tachyonmcp.api.server.domain.InputRequest;
+import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.ResourceContents;
 import dev.tachyonmcp.api.server.domain.RpcMethodRequest;
@@ -36,6 +37,7 @@ import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ListResourceTemplates
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ListResourcesResult;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ListTasksResult;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ListToolsResult;
+import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.LoggingMessageNotificationParams;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ReadResourceResult;
 import dev.tachyonmcp.core.server.domain.InitializeResponse;
 import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
@@ -256,6 +258,15 @@ public class McpResponseMapper implements ProtocolResponseMapper {
     @Override
     public Object taskStatusNotificationParams(TaskEntry entry) {
         return McpTaskMapper.toStatusNotification(entry);
+    }
+
+    @Override
+    public Object loggingMessageParams(LoggingLevel level, @Nullable String logger, @Nullable Object data) {
+        return new LoggingMessageNotificationParams(
+                LoggingLevelMapper.toProtocol(level),
+                logger,
+                JsonUtils.parseJsonNode(JsonRpcCodec.writeValueAsString(data)),
+                null);
     }
 
     @Override

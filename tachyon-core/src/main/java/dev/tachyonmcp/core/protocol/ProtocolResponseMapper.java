@@ -4,6 +4,8 @@ package dev.tachyonmcp.core.protocol;
 import dev.tachyonmcp.api.json.JsonObject;
 import dev.tachyonmcp.api.server.config.ServerIdentity;
 import dev.tachyonmcp.api.server.domain.InputRequest;
+import dev.tachyonmcp.api.server.domain.LoggingLevel;
+import dev.tachyonmcp.api.server.domain.ProgressToken;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.api.server.domain.ResourceContents;
@@ -20,8 +22,10 @@ import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper.SubscriptionListenRequest;
 import dev.tachyonmcp.core.server.domain.InitializeResponse;
 import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
+import dev.tachyonmcp.core.server.json.JsonUtils;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcError;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
@@ -116,6 +120,31 @@ public interface ProtocolResponseMapper {
 
     /** Builds the params object for a tasks/status notification from a task entry. */
     Object taskStatusNotificationParams(TaskEntry entry);
+
+    /** Builds the params for a {@code notifications/message} notification. */
+    Object loggingMessageParams(LoggingLevel level, @Nullable String logger, @Nullable Object data);
+
+    /**
+     * Builds the params for a {@code notifications/progress} notification. The same wire shape is
+     * shared by every protocol version, so this has one implementation for all of them, built with
+     * {@link JsonUtils#toObjectNode} rather than a generated model: the generated
+     * {@code ProgressNotificationParams.progressToken} field is typed {@code String}-only in every
+     * version's codegen output, narrower than the spec's {@code string | number} — converting a
+     * numeric token through it would silently turn a JSON number into a JSON string on the wire.
+     */
+    default Object progressNotificationParams(ProgressToken token, double progress, double total, String message) {
+        Object wireToken =
+                switch (token) {
+                    case ProgressToken.StringValue(var v) -> v;
+                    case ProgressToken.NumericValue(var v) -> v;
+                };
+        var fields = new LinkedHashMap<String, Object>(4);
+        fields.put("progressToken", wireToken);
+        fields.put("progress", progress);
+        fields.put("total", total);
+        fields.put("message", message);
+        return JsonUtils.toObjectNode(fields);
+    }
 
     /**
      * Builds the ack-first {@code notifications/subscriptions/acknowledged} params sent when a new
