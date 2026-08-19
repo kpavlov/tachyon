@@ -71,6 +71,15 @@ public class McpResponseMapper implements ProtocolResponseMapper {
     }
 
     @Override
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public String encode(Object value) {
+        var codec = (Codec) CodecRegistry.codecFor(value.getClass());
+        return codec == null
+                ? ProtocolResponseMapper.super.encode(value)
+                : JsonRpcCodec.writeAsString(gen -> codec.encode(gen, value));
+    }
+
+    @Override
     public Object emptyResult() {
         return EMPTY;
     }

@@ -91,7 +91,8 @@ public final class SubscriptionRegistry {
     }
 
     private void push(Entry entry, String method, Object params) {
-        var notificationJson = JsonRpcCodec.serializeNotificationAsString(method, JsonRpcCodec.toJsonParams(params));
+        var notificationJson = JsonRpcCodec.serializeNotificationAsString(
+                method, entry.responseMapper().encode(params));
         var sseEvent = new SseEvent(
                 ServerEngine.wireEventId(server.nextEventId(), entry.stream().streamKey()),
                 "message",

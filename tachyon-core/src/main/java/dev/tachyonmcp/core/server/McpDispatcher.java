@@ -462,7 +462,7 @@ public class McpDispatcher {
             return JsonRpcCodec.serializeResponse(id, s);
         }
         try {
-            var resultJson = JsonRpcCodec.writeValueAsString(result);
+            var resultJson = mapper.encode(result);
             return JsonRpcCodec.serializeResponse(id, resultJson);
         } catch (Exception e) {
             logger.error(

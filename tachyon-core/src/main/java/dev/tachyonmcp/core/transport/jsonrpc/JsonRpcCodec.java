@@ -4,8 +4,6 @@ package dev.tachyonmcp.core.transport.jsonrpc;
 import static dev.tachyonmcp.core.server.json.JsonUtils.FACTORY;
 
 import dev.tachyonmcp.api.server.domain.RequestId;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.Codec;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.CodecRegistry;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import java.io.ByteArrayOutputStream;
@@ -316,32 +314,21 @@ public final class JsonRpcCodec {
         };
     }
 
-    /** Serializes a Java object to a JSON string, using registered codecs when available. */
-    @Nullable
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    public static String writeValueAsString(@Nullable Object value) {
-        if (value == null) {
-            return "null";
-        }
-        if (value instanceof String
-                || value instanceof Number
-                || value instanceof Boolean
-                || value instanceof List
-                || value instanceof Map) {
-            return ValueSerializer.writeValueAsString(value);
-        }
-        var codec = CodecRegistry.codecFor(value.getClass());
-        if (codec != null) {
-            try (var out = new ByteArrayOutputStream(256);
-                    var gen = FACTORY.createGenerator(ObjectWriteContext.empty(), out, JsonEncoding.UTF8)) {
-                ((Codec) codec).encode(gen, value);
-                gen.flush();
-                return out.toString(StandardCharsets.UTF_8);
-            } catch (IOException e) {
-                throw new UncheckedIOException("Failed to write value via codec for " + value.getClass(), e);
-            }
-        }
+    /**
+     * Serializes a Java object to a JSON string generically — maps, lists, scalars and JSON trees.
+     * Protocol models carry no annotations here; they are serialized by the codecs of the protocol
+     * version that built them, via {@code ProtocolResponseMapper.encode}.
+     */
+    public static @Nullable String writeValueAsString(@Nullable Object value) {
         return ValueSerializer.writeValueAsString(value);
+    }
+
+    /**
+     * Serializes whatever {@code writer} emits into a JSON string, e.g. one protocol version's codec
+     * writing a generated model.
+     */
+    public static String writeAsString(JsonWriter writer) {
+        return new String(serialize(writer), StandardCharsets.UTF_8);
     }
 
     /** Writes a Java object as a JSON value via the given generator. */
@@ -362,8 +349,17 @@ public final class JsonRpcCodec {
         }
     }
 
+    /**
+     * Writes JSON into a generator; see {@link #writeAsString(JsonWriter)}.
+     */
     @FunctionalInterface
-    private interface JsonWriter {
+    public interface JsonWriter {
+        /**
+         * Writes one JSON value.
+         *
+         * @param gen the generator to write to
+         * @throws IOException on write failure
+         */
         void write(JsonGenerator gen) throws IOException;
     }
 }

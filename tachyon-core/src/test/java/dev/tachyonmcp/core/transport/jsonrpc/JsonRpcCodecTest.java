@@ -5,13 +5,6 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.domain.RequestId;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Annotations;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CallToolResult;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ListResourcesResult;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Resource;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Role;
-import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class JsonRpcCodecTest {
@@ -78,52 +71,5 @@ class JsonRpcCodecTest {
         assertThatJson(json).isEqualTo("""
             {"key":"value"}
             """);
-    }
-
-    @Test
-    void writeValueAsStringWithProtocolModelReturnsJsonNotToString() {
-        var result = CallToolResult.ofText("ok");
-
-        var json = JsonRpcCodec.writeValueAsString(result);
-
-        // language=JSON
-        assertThatJson(json).isEqualTo("""
-            {"content":[{"type":"text","text":"ok"}]}
-            """);
-    }
-
-    @Test
-    void writeValueAsStringSerializesEnumLists() {
-        var annotations = new Annotations(List.of(Role.USER, Role.ASSISTANT), 0.8, "2026-07-23T00:00:00Z");
-        var resource = Resource.builder()
-                .uri("weather://prediction/article")
-                .name("prediction-article")
-                .annotations(annotations)
-                .build();
-
-        var json = JsonRpcCodec.writeValueAsString(
-                ListResourcesResult.builder().resources(List.of(resource)).build());
-
-        // language=JSON
-        assertThatJson(json).isEqualTo("""
-            {
-              "resources": [{
-                "uri": "weather://prediction/article",
-                "name": "prediction-article",
-                "annotations": {
-                  "audience": ["user", "assistant"],
-                  "priority": 0.8,
-                  "lastModified": "2026-07-23T00:00:00Z"
-                }
-              }]
-            }
-            """);
-
-        var decoded = (Map<String, ?>) JsonRpcCodec.readValue(json);
-        var resources = (List<Map<String, ?>>) decoded.get("resources");
-        var ann = (Map<String, ?>) resources.get(0).get("annotations");
-        var audience = ((List<?>) ann.get("audience"))
-                .stream().map(s -> Role.fromValue((String) s)).toList();
-        assertThat(audience).containsExactly(Role.USER, Role.ASSISTANT);
     }
 }

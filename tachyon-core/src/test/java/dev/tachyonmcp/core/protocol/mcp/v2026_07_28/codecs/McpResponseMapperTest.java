@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs;
 
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.json.JsonDocument;
@@ -8,6 +9,7 @@ import dev.tachyonmcp.api.server.domain.Annotations;
 import dev.tachyonmcp.api.server.domain.Icon;
 import dev.tachyonmcp.api.server.domain.PromptArgument;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
+import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.api.server.domain.Role;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TextContent;
@@ -18,6 +20,7 @@ import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.protocol.ProtocolRequestMapper.SubscriptionListenRequest;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.CallToolResult;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.CompleteResult;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.GetPromptResult;
@@ -25,9 +28,11 @@ import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ListPromptsResult;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ListResourceTemplatesResult;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ListResourcesResult;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ListToolsResult;
+import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.NotificationParams;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.JsonNodeFactory;
 
@@ -179,5 +184,43 @@ class McpResponseMapperTest {
                 .doesNotContain("\"audience\"")
                 .doesNotContain("\"sizes\"");
         assertThat(promptJson).doesNotContain("\"arguments\"");
+    }
+
+    @Test
+    void subscriptionPayloadsSerializeThroughTheProtocolVersionsCodecs() {
+        var id = RequestId.of("sub-1");
+        var filter = new SubscriptionListenRequest(true, false, false, Set.of("memory://one"));
+
+        var ack = mapper.encode(mapper.subscriptionsAcknowledgedParams(id, filter));
+        var listChanged = mapper.encode(mapper.subscriptionListChangedParams(id));
+        var updated = mapper.encode(mapper.subscriptionResourceUpdatedParams(id, "memory://one"));
+        var graceful = mapper.encode(mapper.subscriptionsListenGracefulResult(id));
+
+        // language=JSON
+        assertThatJson(ack).isEqualTo("""
+            {
+              "notifications": {"toolsListChanged": true, "resourceSubscriptions": ["memory://one"]},
+              "_meta": {"io.modelcontextprotocol/subscriptionId": "sub-1"}
+            }
+            """);
+        assertThat(ack).doesNotContain("promptsListChanged").doesNotContain("resourcesListChanged");
+        // language=JSON
+        assertThatJson(listChanged).isEqualTo("""
+            {"_meta": {"io.modelcontextprotocol/subscriptionId": "sub-1"}}
+            """);
+        // language=JSON
+        assertThatJson(updated).isEqualTo("""
+            {"uri": "memory://one", "_meta": {"io.modelcontextprotocol/subscriptionId": "sub-1"}}
+            """);
+        // language=JSON
+        assertThatJson(graceful).isEqualTo("""
+            {"_meta": {"io.modelcontextprotocol/subscriptionId": "sub-1"}, "resultType": "complete"}
+            """);
+    }
+
+    @Test
+    void modelsReferencedByGeneratedCodecsAreRegistered() {
+        assertThat(CodecRegistry.codecFor(NotificationParams.class)).isNotNull();
+        assertThat(CodecRegistry.codecFor(ListToolsResult.class)).isNotNull();
     }
 }

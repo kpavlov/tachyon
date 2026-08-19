@@ -2,7 +2,6 @@
 package dev.tachyonmcp.core.server.handlers;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
-import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.runtime.SseEvent;
 import dev.tachyonmcp.core.server.McpDispatcher;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
@@ -60,7 +59,7 @@ public final class SubscriptionsListenHandler implements RpcMethodHandler {
         final var responseMapper = context.responseMapper();
         var ackParams = responseMapper.subscriptionsAcknowledgedParams(subscriptionId, filter);
         var ackJson = JsonRpcCodec.serializeNotificationAsString(
-                "notifications/subscriptions/acknowledged", JsonRpcCodec.toJsonParams(ackParams));
+                "notifications/subscriptions/acknowledged", responseMapper.encode(ackParams));
         stream.start();
         stream.writeEvent(
                 new SseEvent(ServerEngine.wireEventId(server.nextEventId(), stream.streamKey()), "message", ackJson));

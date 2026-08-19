@@ -42,16 +42,22 @@ import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ListPromptsResult;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ListResourceTemplatesResult;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ListResourcesResult;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ListToolsResult;
+import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.NotificationParams;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.Prompt;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.PromptArgument;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ReadResourceResult;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.Resource;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ResourceContents;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ResourceTemplate;
+import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ResourceUpdatedNotificationParams;
+import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.SubscriptionFilter;
+import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.SubscriptionsAcknowledgedNotificationParams;
+import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.SubscriptionsListenResult;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.TextResourceContents;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.Tool;
 import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.core.server.json.JsonUtils;
+import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcError;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -64,8 +70,6 @@ import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JsonEncoding;
-import tools.jackson.core.JsonGenerator;
-import tools.jackson.core.JsonParser;
 import tools.jackson.core.ObjectWriteContext;
 import tools.jackson.databind.JsonNode;
 
@@ -79,23 +83,21 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
     private static final String INPUT_REQUIRED = "input_required";
     private static final String SUBSCRIPTION_ID_META_KEY = "io.modelcontextprotocol/subscriptionId";
 
-    static {
-        register(DiscoverResult.class, new DiscoverResultCodec());
-        register(EmptyResult.class, new EmptyResultCodec());
-        register(ListToolsResult.class, new ListToolsResultCodec());
-        register(ListResourcesResult.class, new ListResourcesResultCodec());
-        register(ListResourceTemplatesResult.class, new ListResourceTemplatesResultCodec());
-        register(ReadResourceResult.class, new ReadResourceResultCodec());
-        register(ListPromptsResult.class, new ListPromptsResultCodec());
-        register(CompleteResult.class, new CompleteResultCodec());
-        register(CallToolResult.class, new CallToolResultCodec());
-        register(GetPromptResult.class, new GetPromptResultCodec());
-        register(InputRequiredResult.class, new InputRequiredResultCodec());
-    }
-
     @Override
     public boolean supports(String protocolName, String protocolVersion) {
         return "mcp".equalsIgnoreCase(protocolName) && McpProtocol.VERSION.equals(protocolVersion);
+    }
+
+    /**
+     * Encodes with this version's codecs, falling back to 2025-11-25's for the responses inherited
+     * unchanged from the superclass ({@code initialize}, {@code tasks/list}, {@code tasks/result}),
+     * which are still built from that version's models.
+     */
+    @Override
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public String encode(Object value) {
+        var codec = (Codec) CodecRegistry.codecFor(value.getClass());
+        return codec == null ? super.encode(value) : JsonRpcCodec.writeAsString(gen -> codec.encode(gen, value));
     }
 
     @Override
@@ -302,52 +304,41 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
         return McpTaskMapper.toStatusNotification(entry);
     }
 
-    // Hand-built via JsonUtils.toObjectNode rather than the generated Subscriptions* models: those
-    // models' generated codecs aren't wired into CodecRegistry (unlike DiscoverResult/EmptyResult/etc,
-    // which are explicitly `register`ed above), so returning them as plain Objects falls through
-    // ValueSerializer's generic path and serializes as their Java toString(). JsonNode sidesteps that
-    // — same approach McpTaskMapper already uses for hand-shaped 2026-07-28 payloads.
-
     @Override
     public Object subscriptionsAcknowledgedParams(RequestId subscriptionId, SubscriptionListenRequest filter) {
-        var notifications = new LinkedHashMap<String, Object>();
-        if (filter.toolsListChanged()) notifications.put("toolsListChanged", true);
-        if (filter.promptsListChanged()) notifications.put("promptsListChanged", true);
-        if (filter.resourcesListChanged()) notifications.put("resourcesListChanged", true);
-        if (!filter.resourceSubscriptions().isEmpty()) {
-            notifications.put("resourceSubscriptions", List.copyOf(filter.resourceSubscriptions()));
-        }
-        var fields = new LinkedHashMap<String, Object>();
-        fields.put("notifications", notifications);
-        fields.put("_meta", subscriptionIdMeta(subscriptionId));
-        return JsonUtils.toObjectNode(fields);
+        var uris = filter.resourceSubscriptions();
+        return new SubscriptionsAcknowledgedNotificationParams(
+                new SubscriptionFilter(
+                        trueOrNull(filter.toolsListChanged()),
+                        trueOrNull(filter.promptsListChanged()),
+                        trueOrNull(filter.resourcesListChanged()),
+                        uris.isEmpty() ? null : List.copyOf(uris)),
+                subscriptionIdMeta(subscriptionId));
     }
 
     @Override
     public Object subscriptionListChangedParams(RequestId subscriptionId) {
-        var fields = new LinkedHashMap<String, Object>();
-        fields.put("_meta", subscriptionIdMeta(subscriptionId));
-        return JsonUtils.toObjectNode(fields);
+        return new NotificationParams(subscriptionIdMeta(subscriptionId));
     }
 
     @Override
     public Object subscriptionResourceUpdatedParams(RequestId subscriptionId, String uri) {
-        var fields = new LinkedHashMap<String, Object>();
-        fields.put("uri", uri);
-        fields.put("_meta", subscriptionIdMeta(subscriptionId));
-        return JsonUtils.toObjectNode(fields);
+        return new ResourceUpdatedNotificationParams(uri, subscriptionIdMeta(subscriptionId));
     }
 
     @Override
     public Object subscriptionsListenGracefulResult(RequestId subscriptionId) {
-        var fields = new LinkedHashMap<String, Object>();
-        fields.put("_meta", subscriptionIdMeta(subscriptionId));
-        fields.put("resultType", COMPLETE);
-        return JsonUtils.toObjectNode(fields);
+        return new SubscriptionsListenResult(subscriptionIdMeta(subscriptionId), COMPLETE, null);
+    }
+
+    /** Opted-out filter flags are omitted from the wire, not sent as {@code false}. */
+    private static @Nullable Boolean trueOrNull(boolean requested) {
+        return requested ? Boolean.TRUE : null;
     }
 
     private static Map<String, JsonNode> subscriptionIdMeta(RequestId subscriptionId) {
-        return JsonUtils.toJsonNodeMap(Map.of(SUBSCRIPTION_ID_META_KEY, subscriptionId.toString()));
+        return Objects.requireNonNull(
+                JsonUtils.toJsonNodeMap(Map.of(SUBSCRIPTION_ID_META_KEY, subscriptionId.toString())));
     }
 
     /**
@@ -568,20 +559,5 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to encode " + type.getSimpleName(), e);
         }
-    }
-
-    private static <T> void register(Class<T> type, Codec<T> codec) {
-        dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.CodecRegistry.registerOverride(
-                type, new dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.Codec<>() {
-                    @Override
-                    public T decode(JsonParser parser) throws IOException {
-                        return codec.decode(parser);
-                    }
-
-                    @Override
-                    public void encode(JsonGenerator generator, T value) throws IOException {
-                        codec.encode(generator, value);
-                    }
-                });
     }
 }

@@ -20,6 +20,7 @@ import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper.SubscriptionListenRequest;
 import dev.tachyonmcp.core.server.domain.InitializeResponse;
 import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
+import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcError;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,19 @@ public interface ProtocolResponseMapper {
 
     /** Returns {@code true} when this mapper handles the given protocol family and version. */
     boolean supports(String protocolName, String protocolVersion);
+
+    /**
+     * Serializes a value this mapper produced into its JSON wire form. Values built from a protocol
+     * version's generated models are only encoded correctly by that version's codecs, so callers
+     * hand the value back to the mapper that produced it instead of serializing it themselves. The
+     * default handles JSON trees, maps, lists and scalars.
+     *
+     * @param value the mapped response, notification params or result
+     * @return the value's JSON representation
+     */
+    default String encode(Object value) {
+        return JsonRpcCodec.toJsonParams(value);
+    }
 
     /** Returns the protocol-specific empty result sent for methods that return no data. */
     Object emptyResult();
