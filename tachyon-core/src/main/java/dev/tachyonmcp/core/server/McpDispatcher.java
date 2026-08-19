@@ -67,14 +67,6 @@ public class McpDispatcher {
     public static final AttributeKey<HttpRequest> ATTR_INIT_REQUEST = AttributeKey.of("init.request");
 
     /**
-     * Interaction-context attribute key under which the current request's JSON-RPC {@code id} is
-     * stashed before dispatch, so a handler with no other access to it (e.g. {@code
-     * subscriptions/listen}, which must echo it back as {@code subscriptionId}) can read it back via
-     * {@code context.get(ATTR_REQUEST_ID)}.
-     */
-    public static final AttributeKey<RequestId> ATTR_REQUEST_ID = AttributeKey.of("request.id");
-
-    /**
      * Placeholder request for programmatic dispatch with no channel (the default generator ignores it).
      */
     private static final HttpRequest EMPTY_INIT_REQUEST =
@@ -98,10 +90,14 @@ public class McpDispatcher {
      * context (direct invocation, tests), fresh channel state is created for the default protocol.
      */
     private DispatchContext dispatchContext(@Nullable ChannelContext channelContext) {
+        return dispatchContext(channelContext, null);
+    }
+
+    private DispatchContext dispatchContext(@Nullable ChannelContext channelContext, @Nullable RequestId id) {
         var channel = channelContext != null
                 ? channelContext
                 : Protocols.list().getFirst().createInteractionContext();
-        return new DefaultDispatchContext(channel, server);
+        return new DefaultDispatchContext(channel, server, id);
     }
 
     public sealed interface DispatchResult
@@ -171,8 +167,7 @@ public class McpDispatcher {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(method, "method");
 
-        var requestCtx = dispatchContext(channelContext);
-        requestCtx.set(ATTR_REQUEST_ID, id);
+        var requestCtx = dispatchContext(channelContext, id);
         try {
             requestCtx.setPermittedLogLevel(requestCtx.requestMapper().permittedLogLevel(params));
         } catch (RequestMappingException e) {

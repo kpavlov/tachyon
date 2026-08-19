@@ -30,6 +30,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.timeout.IdleStateEvent;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
@@ -115,6 +116,13 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             // the operation phase); preserve the request for a custom SessionIdGenerator.
             captureInitRequest(ctx, req, server);
         }
+        // Captured synchronously, before the async hop below: a pipelined next request's
+        // channelRead cannot run until this method returns, so this pins the interaction
+        // context this request actually arrived on instead of racing a later re-fetch
+        // against ProtocolVersionHandler rebinding a fresh one for the next request. May be
+        // null (e.g. no InteractionHandler configured); enforced non-null only where the
+        // original code enforced it, in handlePostRequest.
+        final @Nullable ChannelContext ic = ChannelHandlerUtils.getInteractionContext(ctx);
         var body = req.content().retain();
         try {
             CompletableFuture.runAsync(
@@ -125,7 +133,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                                 } finally {
                                     body.release();
                                 }
-                                dispatchPostMessage(ctx, sessionId, message, origin);
+                                dispatchPostMessage(ctx, sessionId, message, origin, ic);
                             },
                             executor)
                     .exceptionally(ex -> {
@@ -135,7 +143,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                                         ctx,
                                         HttpResponseStatus.BAD_REQUEST,
                                         "application/json",
-                                        dispatcher.parseError(ChannelHandlerUtils.getInteractionContext(ctx)),
+                                        dispatcher.parseError(ic),
                                         origin));
                         return null;
                     });
@@ -149,47 +157,49 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             ChannelHandlerContext ctx,
             @Nullable String sessionId,
             @Nullable JsonRpcMessage message,
-            @Nullable String origin) {
+            @Nullable String origin,
+            @Nullable ChannelContext ic) {
+        final var executor = ctx.executor();
         if (message == null) {
-            ctx.executor()
-                    .execute(() -> sendResponseAndClose(
-                            ctx,
-                            HttpResponseStatus.BAD_REQUEST,
-                            "application/json",
-                            dispatcher.parseError(ChannelHandlerUtils.getInteractionContext(ctx)),
-                            origin));
+            executor.execute(() -> sendResponseAndClose(
+                    ctx, HttpResponseStatus.BAD_REQUEST, "application/json", dispatcher.parseError(ic), origin));
             return;
         }
         if (!server.isStateless() && sessionId == null && !(message instanceof JsonRpcMessage.Request<?>)) {
-            ctx.executor()
-                    .execute(() -> sendPlainTextAndClose(
-                            ctx, HttpResponseStatus.BAD_REQUEST, "Missing MCP-Session-Id header", origin));
+            executor.execute(() -> sendPlainTextAndClose(
+                    ctx, HttpResponseStatus.BAD_REQUEST, "Missing MCP-Session-Id header", origin));
             return;
         }
         switch (message) {
-            case JsonRpcMessage.Request<?> reqMsg -> handlePostRequest(ctx, sessionId, reqMsg, origin);
+            case JsonRpcMessage.Request<?> reqMsg ->
+                handlePostRequest(
+                        ctx,
+                        sessionId,
+                        reqMsg,
+                        origin,
+                        Objects.requireNonNull(
+                                ic,
+                                "InteractionContext is null. Check if InteractionHandler is configured correctly."));
             case JsonRpcMessage.Response resp ->
                 handlePostResponse(ctx, sessionId, ctx.channel().id().asLongText(), resp, origin);
             case JsonRpcMessage.Error err ->
                 handlePostError(ctx, sessionId, ctx.channel().id().asLongText(), err, origin);
             case JsonRpcMessage.Notification<?> not -> {
-                var channelContext = ChannelHandlerUtils.getInteractionContext(ctx);
                 if (McpDispatcher.NOTIFICATIONS_INITIALIZED.equals(not.method())) {
                     // Activate the session synchronously before acking so a client that waits
                     // for this 202 observes an ACTIVE session on its next request, closing the
                     // INITIALIZING race. Guarded so a handler failure still produces the ack.
                     try {
-                        dispatcher.dispatchNotification(not.method(), not.params(), sessionId, channelContext);
+                        dispatcher.dispatchNotification(not.method(), not.params(), sessionId, ic);
                     } catch (RuntimeException e) {
                         logger.warn("Failed to process {} notification", not.method(), e);
                     }
-                    ctx.executor().execute(() -> sendAccepted(ctx, origin));
+                    executor.execute(() -> sendAccepted(ctx, origin));
                 } else {
-                    ctx.executor().execute(() -> sendAccepted(ctx, origin));
+                    executor.execute(() -> sendAccepted(ctx, origin));
                     CompletableFuture.runAsync(
-                                    () -> dispatcher.dispatchNotification(
-                                            not.method(), not.params(), sessionId, channelContext),
-                                    executor)
+                                    () -> dispatcher.dispatchNotification(not.method(), not.params(), sessionId, ic),
+                                    this.executor)
                             .whenComplete((unused, e) -> {
                                 var cause = e instanceof CompletionException ce ? ce.getCause() : e;
                                 if (cause instanceof RuntimeException re) {
@@ -200,7 +210,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             }
             default -> {
                 logger.warn("Unexpected message type: {}", message);
-                ctx.executor().execute(() -> sendAccepted(ctx, origin));
+                executor.execute(() -> sendAccepted(ctx, origin));
             }
         }
     }
@@ -237,20 +247,29 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             ChannelHandlerContext ctx,
             @Nullable String sessionId,
             JsonRpcMessage.Request req,
-            @Nullable String origin) {
+            @Nullable String origin,
+            ChannelContext ic) {
         var heartbeatInterval = server.config().network().heartbeatInterval();
         var postStream = new PostSseStream(ctx.channel(), origin, server::nextEventId, heartbeatInterval);
         final var requestId = req.id();
         final var method = req.method();
         final var startNs = System.nanoTime();
-        final ChannelContext ic = ChannelHandlerUtils.requireInteractionContext(ctx);
         dispatcher
                 .dispatchRequestAsync(requestId, method, req.params(), sessionId, postStream, ic)
                 .whenComplete((result, ex) -> {
                     try {
                         ctx.executor()
                                 .execute(() -> completePostRequest(
-                                        ctx, requestId, method, sessionId, origin, postStream, startNs, result, ex));
+                                        ctx,
+                                        requestId,
+                                        method,
+                                        sessionId,
+                                        origin,
+                                        postStream,
+                                        startNs,
+                                        result,
+                                        ex,
+                                        ic));
                     } catch (RejectedExecutionException e) {
                         logger.debug(
                                 "Event loop rejected response marshal during shutdown: id={}, method={}",
@@ -269,7 +288,8 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             PostSseStream postStream,
             long startNs,
             McpDispatcher.@Nullable DispatchResult result,
-            @Nullable Throwable ex) {
+            @Nullable Throwable ex,
+            ChannelContext ic) {
         var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
         var m = server.config().monitoring();
         if (ex != null) {
@@ -280,13 +300,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                 // Neutralize the stream so a late server→client message cannot start a
                 // second HTTP response on this channel, then send the JSON error.
                 postStream.terminate();
-                sendInternalError(
-                        ctx,
-                        requestId,
-                        origin,
-                        ChannelHandlerUtils.requireInteractionContext(ctx)
-                                .protocol()
-                                .responseMapper());
+                sendInternalError(ctx, requestId, origin, ic.protocol().responseMapper());
             }
             return;
         }

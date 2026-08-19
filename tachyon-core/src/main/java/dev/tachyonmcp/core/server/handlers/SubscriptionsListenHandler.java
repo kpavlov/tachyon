@@ -2,7 +2,6 @@
 package dev.tachyonmcp.core.server.handlers;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
-import dev.tachyonmcp.core.server.McpDispatcher;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.features.subscriptions.SubscriptionRegistry;
@@ -47,8 +46,10 @@ public final class SubscriptionsListenHandler implements RpcMethodHandler {
         if (stream == null) {
             return CompletableFuture.completedFuture(ServerErrors.internalError("No SSE stream available"));
         }
-        var subscriptionId = context.get(McpDispatcher.ATTR_REQUEST_ID)
-                .orElseThrow(() -> new IllegalStateException("subscriptions/listen dispatched without a request id"));
+        var subscriptionId = context.requestId();
+        if (subscriptionId == null) {
+            throw new IllegalStateException("subscriptions/listen dispatched without a request id");
+        }
         var filter = requestMapper.subscriptionsListen(params);
 
         stream.start();

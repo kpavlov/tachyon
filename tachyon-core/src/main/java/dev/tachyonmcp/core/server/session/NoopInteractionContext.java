@@ -6,6 +6,7 @@ import dev.tachyonmcp.api.runtime.AttributeKey;
 import dev.tachyonmcp.api.runtime.ClientContext;
 import dev.tachyonmcp.api.runtime.ContextNotifications;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
+import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.core.protocol.Protocol;
 import dev.tachyonmcp.core.protocol.ProtocolMappers;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
@@ -101,6 +102,11 @@ public class NoopInteractionContext implements DispatchContext {
 
     @Override
     public @Nullable LoggingLevel getPermittedLogLevel() {
+        return null;
+    }
+
+    @Override
+    public @Nullable RequestId requestId() {
         return null;
     }
 

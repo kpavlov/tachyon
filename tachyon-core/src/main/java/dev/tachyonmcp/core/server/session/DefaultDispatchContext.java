@@ -7,6 +7,7 @@ import dev.tachyonmcp.api.runtime.ClientContext;
 import dev.tachyonmcp.api.runtime.ContextNotifications;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.api.server.domain.ProgressToken;
+import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.core.protocol.Protocol;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
@@ -31,13 +32,19 @@ public class DefaultDispatchContext implements DispatchContext {
 
     private final ChannelContext channel;
     private final ServerEngine server;
+    private final @Nullable RequestId requestId;
     private final ContextNotifications notifications = new NotificationsImpl();
     private volatile @Nullable OutboundSseStream outboundStream;
     private volatile @Nullable LoggingLevel permittedLogLevel;
 
     public DefaultDispatchContext(ChannelContext channel, ServerEngine server) {
+        this(channel, server, null);
+    }
+
+    public DefaultDispatchContext(ChannelContext channel, ServerEngine server, @Nullable RequestId requestId) {
         this.channel = channel;
         this.server = server;
+        this.requestId = requestId;
     }
 
     public static DispatchContext create(Protocol protocol, ServerEngine server) {
@@ -139,6 +146,12 @@ public class DefaultDispatchContext implements DispatchContext {
     @Nullable
     public LoggingLevel getPermittedLogLevel() {
         return permittedLogLevel;
+    }
+
+    @Override
+    @Nullable
+    public RequestId requestId() {
+        return requestId;
     }
 
     @Override

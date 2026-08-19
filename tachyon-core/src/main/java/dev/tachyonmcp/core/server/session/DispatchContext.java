@@ -3,6 +3,7 @@ package dev.tachyonmcp.core.server.session;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
+import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.runtime.ChannelContext;
@@ -32,6 +33,13 @@ public interface DispatchContext extends ChannelContext {
     /** Returns the log level this specific request permits, or {@code null} if it set none. */
     @Nullable
     LoggingLevel getPermittedLogLevel();
+
+    /**
+     * Returns the id of the request currently being dispatched, or {@code null} for dispatches with
+     * no request id (notifications, stateless helper contexts).
+     */
+    @Nullable
+    RequestId requestId();
 
     /** Returns the protocol response mapper for the current protocol version. */
     ProtocolResponseMapper responseMapper();
