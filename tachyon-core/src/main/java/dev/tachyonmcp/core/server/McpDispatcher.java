@@ -67,6 +67,14 @@ public class McpDispatcher {
     public static final AttributeKey<HttpRequest> ATTR_INIT_REQUEST = AttributeKey.of("init.request");
 
     /**
+     * Interaction-context attribute key under which the current request's JSON-RPC {@code id} is
+     * stashed before dispatch, so a handler with no other access to it (e.g. {@code
+     * subscriptions/listen}, which must echo it back as {@code subscriptionId}) can read it back via
+     * {@code context.get(ATTR_REQUEST_ID)}.
+     */
+    public static final AttributeKey<RequestId> ATTR_REQUEST_ID = AttributeKey.of("request.id");
+
+    /**
      * Placeholder request for programmatic dispatch with no channel (the default generator ignores it).
      */
     private static final HttpRequest EMPTY_INIT_REQUEST =
@@ -164,6 +172,7 @@ public class McpDispatcher {
         Objects.requireNonNull(method, "method");
 
         var requestCtx = dispatchContext(channelContext);
+        requestCtx.set(ATTR_REQUEST_ID, id);
         try {
             requestCtx.setPermittedLogLevel(requestCtx.requestMapper().permittedLogLevel(params));
         } catch (RequestMappingException e) {

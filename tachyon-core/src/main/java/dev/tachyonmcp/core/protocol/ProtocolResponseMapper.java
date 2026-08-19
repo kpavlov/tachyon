@@ -5,6 +5,7 @@ import dev.tachyonmcp.api.json.JsonObject;
 import dev.tachyonmcp.api.server.config.ServerIdentity;
 import dev.tachyonmcp.api.server.domain.InputRequest;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
+import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.api.server.domain.ResourceContents;
 import dev.tachyonmcp.api.server.domain.ServerCapabilities;
 import dev.tachyonmcp.api.server.domain.ServerError;
@@ -16,6 +17,7 @@ import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.protocol.ProtocolRequestMapper.SubscriptionListenRequest;
 import dev.tachyonmcp.core.server.domain.InitializeResponse;
 import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcError;
@@ -100,4 +102,36 @@ public interface ProtocolResponseMapper {
 
     /** Builds the params object for a tasks/status notification from a task entry. */
     Object taskStatusNotificationParams(TaskEntry entry);
+
+    /**
+     * Builds the ack-first {@code notifications/subscriptions/acknowledged} params sent when a new
+     * {@code subscriptions/listen} stream is opened.
+     */
+    default Object subscriptionsAcknowledgedParams(RequestId subscriptionId, SubscriptionListenRequest filter) {
+        throw new UnsupportedOperationException("subscriptions/listen is not supported by this protocol version");
+    }
+
+    /**
+     * Builds the params for a {@code notifications/tools|prompts|resources/list_changed} notification
+     * pushed on a {@code subscriptions/listen} stream.
+     */
+    default Object subscriptionListChangedParams(RequestId subscriptionId) {
+        throw new UnsupportedOperationException("subscriptions/listen is not supported by this protocol version");
+    }
+
+    /**
+     * Builds the params for a {@code notifications/resources/updated} notification pushed on a
+     * {@code subscriptions/listen} stream.
+     */
+    default Object subscriptionResourceUpdatedParams(RequestId subscriptionId, String uri) {
+        throw new UnsupportedOperationException("subscriptions/listen is not supported by this protocol version");
+    }
+
+    /**
+     * Builds the graceful-closure result sent when the server tears down a {@code
+     * subscriptions/listen} stream on its own initiative (e.g. shutdown).
+     */
+    default Object subscriptionsListenGracefulResult(RequestId subscriptionId) {
+        throw new UnsupportedOperationException("subscriptions/listen is not supported by this protocol version");
+    }
 }

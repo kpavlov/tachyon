@@ -10,6 +10,7 @@ import dev.tachyonmcp.api.server.domain.ContentBlock;
 import dev.tachyonmcp.api.server.domain.FormInputRequest;
 import dev.tachyonmcp.api.server.domain.InputRequest;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
+import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.api.server.domain.RpcMethodRequest;
 import dev.tachyonmcp.api.server.domain.ServerCapabilities;
 import dev.tachyonmcp.api.server.domain.ServerError;
@@ -23,6 +24,7 @@ import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.protocol.ProtocolRequestMapper.SubscriptionListenRequest;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.McpProtocol;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.BlobResourceContents;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.CallToolResult;
@@ -75,6 +77,7 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
     private static final String COMPLETE = "complete";
     private static final String PUBLIC = "public";
     private static final String INPUT_REQUIRED = "input_required";
+    private static final String SUBSCRIPTION_ID_META_KEY = "io.modelcontextprotocol/subscriptionId";
 
     static {
         register(DiscoverResult.class, new DiscoverResultCodec());
@@ -297,6 +300,54 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
     @Override
     public Object taskStatusNotificationParams(TaskEntry entry) {
         return McpTaskMapper.toStatusNotification(entry);
+    }
+
+    // Hand-built via JsonUtils.toObjectNode rather than the generated Subscriptions* models: those
+    // models' generated codecs aren't wired into CodecRegistry (unlike DiscoverResult/EmptyResult/etc,
+    // which are explicitly `register`ed above), so returning them as plain Objects falls through
+    // ValueSerializer's generic path and serializes as their Java toString(). JsonNode sidesteps that
+    // — same approach McpTaskMapper already uses for hand-shaped 2026-07-28 payloads.
+
+    @Override
+    public Object subscriptionsAcknowledgedParams(RequestId subscriptionId, SubscriptionListenRequest filter) {
+        var notifications = new LinkedHashMap<String, Object>();
+        if (filter.toolsListChanged()) notifications.put("toolsListChanged", true);
+        if (filter.promptsListChanged()) notifications.put("promptsListChanged", true);
+        if (filter.resourcesListChanged()) notifications.put("resourcesListChanged", true);
+        if (!filter.resourceSubscriptions().isEmpty()) {
+            notifications.put("resourceSubscriptions", List.copyOf(filter.resourceSubscriptions()));
+        }
+        var fields = new LinkedHashMap<String, Object>();
+        fields.put("notifications", notifications);
+        fields.put("_meta", subscriptionIdMeta(subscriptionId));
+        return JsonUtils.toObjectNode(fields);
+    }
+
+    @Override
+    public Object subscriptionListChangedParams(RequestId subscriptionId) {
+        var fields = new LinkedHashMap<String, Object>();
+        fields.put("_meta", subscriptionIdMeta(subscriptionId));
+        return JsonUtils.toObjectNode(fields);
+    }
+
+    @Override
+    public Object subscriptionResourceUpdatedParams(RequestId subscriptionId, String uri) {
+        var fields = new LinkedHashMap<String, Object>();
+        fields.put("uri", uri);
+        fields.put("_meta", subscriptionIdMeta(subscriptionId));
+        return JsonUtils.toObjectNode(fields);
+    }
+
+    @Override
+    public Object subscriptionsListenGracefulResult(RequestId subscriptionId) {
+        var fields = new LinkedHashMap<String, Object>();
+        fields.put("_meta", subscriptionIdMeta(subscriptionId));
+        fields.put("resultType", COMPLETE);
+        return JsonUtils.toObjectNode(fields);
+    }
+
+    private static Map<String, JsonNode> subscriptionIdMeta(RequestId subscriptionId) {
+        return JsonUtils.toJsonNodeMap(Map.of(SUBSCRIPTION_ID_META_KEY, subscriptionId.toString()));
     }
 
     /**

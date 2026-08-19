@@ -99,6 +99,9 @@ public interface ServerEngine extends TachyonServer {
     /** Maps and sends a task status notification. */
     void notifyTaskStatus(TaskEntry entry);
 
+    /** Pushes {@code notifications/resources/updated} to every stateless {@code subscriptions/listen} stream subscribed to {@code uri}. */
+    void notifyResourceSubscriptions(String uri);
+
     /** Sends a request to the client and returns a future that completes with the response. */
     CompletableFuture<String> sendRequest(Session session, String method, Object params);
 

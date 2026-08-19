@@ -65,9 +65,9 @@ class ServerInfoMapper {
             if (src.resources().listChanged()) {
                 resourcesBuilder.listChanged(true);
             }
-            if (src.resources().subscribe()) {
-                resourcesBuilder.subscribe(true);
-            }
+            // No `subscribe` flag here: `resources/subscribe` is a removed method under 2026-07-28
+            // (RequestValidationHandler.REMOVED_METHODS) — subscriptions/listen replaces it and isn't
+            // gated by a capability flag.
             builder.resources(resourcesBuilder.build());
         }
 

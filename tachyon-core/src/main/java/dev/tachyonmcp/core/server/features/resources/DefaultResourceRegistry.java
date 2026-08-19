@@ -436,6 +436,7 @@ public class DefaultResourceRegistry implements Resources {
      */
     @Override
     public void notifyResourceUpdated(String uri) {
+        server.notifyResourceSubscriptions(uri);
         var subscribedSessionIds = subscriptions.get(uri);
         if (subscribedSessionIds == null || subscribedSessionIds.isEmpty()) {
             return;

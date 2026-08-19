@@ -73,4 +73,14 @@ public interface OutboundSseStream {
      * Closes the SSE stream. Idempotent — subsequent calls are no-ops.
      */
     void close();
+
+    /**
+     * Registers a callback invoked when the underlying transport connection closes, however that
+     * happens — client disconnect, {@link #close()}, or a dead socket detected on write. Used by a
+     * long-lived handler (e.g. {@code subscriptions/listen}) to clean up stream-scoped state it
+     * cannot otherwise learn about. Default is a no-op for transports with no close signal.
+     *
+     * @param callback invoked at most once, on an unspecified thread
+     */
+    default void onClose(Runnable callback) {}
 }

@@ -12,6 +12,7 @@ import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.api.server.features.tools.ToolRequest;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -88,6 +89,19 @@ public interface ProtocolRequestMapper {
     /** Maps {@code tasks/status} notification params, or {@code null} if unparseable. */
     @Nullable
     TaskStatusRequest taskStatus(@Nullable Object params);
+
+    /**
+     * Whether this protocol supports {@code subscriptions/listen} (2026-07-28's replacement for
+     * {@code resources/subscribe} and the plain HTTP GET stream).
+     */
+    default boolean supportsSubscriptionsListen() {
+        return false;
+    }
+
+    /** Maps {@code subscriptions/listen} params into the requested notification filter. */
+    default SubscriptionListenRequest subscriptionsListen(@Nullable Object params) {
+        throw new UnsupportedOperationException("subscriptions/listen is not supported by this protocol version");
+    }
 
     /**
      * A page request.
@@ -168,4 +182,18 @@ public interface ProtocolRequestMapper {
      */
     record TaskStatusRequest(
             String taskId, TaskState state, @Nullable String message) {}
+
+    /**
+     * The notification filter requested on a {@code subscriptions/listen} call.
+     *
+     * @param toolsListChanged whether to receive {@code notifications/tools/list_changed}
+     * @param promptsListChanged whether to receive {@code notifications/prompts/list_changed}
+     * @param resourcesListChanged whether to receive {@code notifications/resources/list_changed}
+     * @param resourceSubscriptions resource URIs to receive {@code notifications/resources/updated} for
+     */
+    record SubscriptionListenRequest(
+            boolean toolsListChanged,
+            boolean promptsListChanged,
+            boolean resourcesListChanged,
+            Set<String> resourceSubscriptions) {}
 }

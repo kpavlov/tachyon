@@ -35,6 +35,7 @@ import dev.tachyonmcp.core.server.features.prompts.DefaultPromptRegistry;
 import dev.tachyonmcp.core.server.features.prompts.PromptMethodHandlers;
 import dev.tachyonmcp.core.server.features.resources.DefaultResourceRegistry;
 import dev.tachyonmcp.core.server.features.resources.ResourceMethodHandlers;
+import dev.tachyonmcp.core.server.features.subscriptions.SubscriptionRegistry;
 import dev.tachyonmcp.core.server.features.tasks.DefaultTaskRegistry;
 import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.core.server.features.tasks.TaskMethodHandlers;
@@ -45,6 +46,7 @@ import dev.tachyonmcp.core.server.handlers.DiscoverHandler;
 import dev.tachyonmcp.core.server.handlers.InitializeHandler;
 import dev.tachyonmcp.core.server.handlers.LoggingHandlers;
 import dev.tachyonmcp.core.server.handlers.PingHandler;
+import dev.tachyonmcp.core.server.handlers.SubscriptionsListenHandler;
 import dev.tachyonmcp.core.server.internal.NotificationLogSupport;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.server.json.JacksonPayloadSerde;
@@ -99,6 +101,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     private final DefaultTaskRegistry taskRegistry;
     private final DefaultPromptRegistry promptRegistry;
     private final DefaultCompletionRegistry completionRegistry;
+    private final SubscriptionRegistry subscriptionRegistry;
     private final JsonSchemaValidator inputValidator;
     private final JsonSchemaValidator outputValidator;
     private final PayloadSerializer payloadSerializer;
@@ -279,6 +282,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
                 new DefaultTaskRegistry(this, caps.tasks(), config.runtime().clock());
         this.promptRegistry = new DefaultPromptRegistry(caps.prompts());
         this.completionRegistry = new DefaultCompletionRegistry(caps.completions());
+        this.subscriptionRegistry = new SubscriptionRegistry(this);
         registerDefaults();
         bootstrapExtensions();
         setupChangeListeners(config);
@@ -366,13 +370,22 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     private void setupChangeListeners(ServerConfig config) {
         var caps = config.capabilities();
         if (caps.tools().listChanged()) {
-            toolRegistry.onChange(() -> broadcastNotification("notifications/tools/list_changed"));
+            toolRegistry.onChange(() -> {
+                broadcastNotification("notifications/tools/list_changed");
+                subscriptionRegistry.notifyToolsListChanged();
+            });
         }
         if (caps.resources().listChanged()) {
-            resourceRegistry.onChange(() -> broadcastNotification("notifications/resources/list_changed"));
+            resourceRegistry.onChange(() -> {
+                broadcastNotification("notifications/resources/list_changed");
+                subscriptionRegistry.notifyResourcesListChanged();
+            });
         }
         if (caps.prompts().listChanged()) {
-            promptRegistry.onChange(() -> broadcastNotification("notifications/prompts/list_changed"));
+            promptRegistry.onChange(() -> {
+                broadcastNotification("notifications/prompts/list_changed");
+                subscriptionRegistry.notifyPromptsListChanged();
+            });
         }
         if (caps.tasks().list()) {
             taskRegistry.onChange(() -> broadcastNotification("notifications/tasks/list_changed"));
@@ -409,6 +422,11 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         }
     }
 
+    @Override
+    public void notifyResourceSubscriptions(String uri) {
+        subscriptionRegistry.notifyResourceUpdated(uri);
+    }
+
     private void notifyTaskStatus(Session session, TaskEntry entry) {
         var protocol = session.protocol();
         var params =
@@ -422,6 +440,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         methodHandlers.put("initialize", new InitializeHandler(this));
         methodHandlers.put("server/discover", new DiscoverHandler(this));
         methodHandlers.put("ping", new PingHandler());
+        methodHandlers.put("subscriptions/listen", new SubscriptionsListenHandler(this, subscriptionRegistry));
         ToolMethodHandlers.register(
                 methodHandlers, toolRegistry, inputValidator, outputValidator, payloadSerializer, payloadDeserializer);
         ResourceMethodHandlers.register(methodHandlers, resourceRegistry);
@@ -819,6 +838,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         }
         try {
             logger.info("Shutting down TachyonMCP Server");
+            subscriptionRegistry.closeAll();
             shutdownExtensions();
             executor.shutdown();
             try {

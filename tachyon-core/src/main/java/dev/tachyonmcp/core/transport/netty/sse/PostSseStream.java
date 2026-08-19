@@ -134,6 +134,11 @@ public final class PostSseStream implements OutboundSseStream {
         runOnEventLoop(() -> doClose(false));
     }
 
+    @Override
+    public void onClose(Runnable callback) {
+        channel.closeFuture().addListener(f -> callback.run());
+    }
+
     private void runOnEventLoop(Runnable task) {
         var eventLoop = channel.eventLoop();
         if (eventLoop.inEventLoop()) {
