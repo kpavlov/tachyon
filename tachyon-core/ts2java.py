@@ -1215,9 +1215,9 @@ class Generator:
         out = []
         out.append(self.pkg(self.pkg_models))
         out.append("\n")
-        out.append("import javax.annotation.processing.Generated;\n")
         out.append("import com.fasterxml.jackson.annotation.JsonSubTypes;\n")
         out.append("import com.fasterxml.jackson.annotation.JsonTypeInfo;\n")
+        out.append("import javax.annotation.processing.Generated;\n")
         out.append("\n")
         class_desc = JavadocFormatter.format_jsdoc(jsdoc) if jsdoc else ""
         jd_block = JavadocFormatter.make_javadoc(class_desc)
@@ -1309,9 +1309,9 @@ class Generator:
         out = []
         out.append(self.pkg(self.pkg_models))
         out.append("\n")
-        out.append("import javax.annotation.processing.Generated;\n")
         out.append("import com.fasterxml.jackson.annotation.JsonSubTypes;\n")
         out.append("import com.fasterxml.jackson.annotation.JsonTypeInfo;\n")
+        out.append("import javax.annotation.processing.Generated;\n")
         out.append("\n")
         class_desc = JavadocFormatter.format_jsdoc(jsdoc) if jsdoc else ""
         jd_block = JavadocFormatter.make_javadoc(class_desc)
@@ -1339,8 +1339,8 @@ class Generator:
             return
         out = []
         out.append(self.pkg(self.pkg_models))
-        out.append("\nimport javax.annotation.processing.Generated;\n")
-        out.append("import com.fasterxml.jackson.annotation.JsonValue;\n\n")
+        out.append("\nimport com.fasterxml.jackson.annotation.JsonValue;\n")
+        out.append("import javax.annotation.processing.Generated;\n\n")
         class_desc = JavadocFormatter.format_jsdoc(jsdoc) if jsdoc else ""
         jd_block = JavadocFormatter.make_javadoc(class_desc)
         if jd_block:
@@ -1539,34 +1539,39 @@ class Generator:
         out = []
         out.append(self.pkg(self.pkg_codecs))
         out.append("\n")
-        out.append("import tools.jackson.core.JsonGenerator;\n")
-        out.append("import tools.jackson.core.JsonParser;\n")
-        out.append("import tools.jackson.core.JsonToken;\n")
-        out.append("import tools.jackson.databind.JsonNode;\n")
+
+        imported = set()
+
+        def emit_import(fqcn):
+            imported.add(fqcn)
+
+        emit_import("tools.jackson.core.JsonGenerator")
+        emit_import("tools.jackson.core.JsonParser")
+        emit_import("tools.jackson.core.JsonToken")
+        emit_import("tools.jackson.databind.JsonNode")
         if self.unknown_type == "TokenBuffer":
-            out.append("import tools.jackson.databind.util.TokenBuffer;\n")
+            emit_import("tools.jackson.databind.util.TokenBuffer")
         if self.unknown_type == "byte[]":
-            out.append("import tools.jackson.databind.util.TokenBuffer;\n")
-            out.append("import java.io.ByteArrayOutputStream;\n")
-            out.append("import java.io.ByteArrayInputStream;\n")
-            out.append("import tools.jackson.core.ObjectReadContext;\n")
-            out.append("import tools.jackson.core.ObjectWriteContext;\n")
-            out.append("import tools.jackson.core.json.JsonFactory;\n")
+            emit_import("tools.jackson.databind.util.TokenBuffer")
+            emit_import("java.io.ByteArrayOutputStream")
+            emit_import("java.io.ByteArrayInputStream")
+            emit_import("tools.jackson.core.ObjectReadContext")
+            emit_import("tools.jackson.core.ObjectWriteContext")
+            emit_import("tools.jackson.core.json.JsonFactory")
         if any("java.util.List" in c[0] for c in components):
-            out.append("import java.util.ArrayList;\n")
-            out.append("import java.util.List;\n")
+            emit_import("java.util.ArrayList")
+            emit_import("java.util.List")
         if has_additional or any("java.util.Map" in c[0] for c in components):
-            out.append("import java.util.LinkedHashMap;\n")
-            out.append("import java.util.Map;\n")
-        out.append("import java.io.IOException;\n")
-        out.append("import javax.annotation.processing.Generated;\n")
-        out.append("\n")
+            emit_import("java.util.LinkedHashMap")
+            emit_import("java.util.Map")
+        emit_import("java.io.IOException")
+        emit_import("javax.annotation.processing.Generated")
         if is_inner:
             owner = self.top_owner(model_name)
-            out.append(f"import {self.pkg_models}.{owner};\n")
+            emit_import(f"{self.pkg_models}.{owner}")
         else:
             owner = model_name
-            out.append(f"import {self.pkg_models}.{model_name};\n")
+            emit_import(f"{self.pkg_models}.{model_name}")
 
         # Imports for referenced model types and FQN from type mappings
         refs = set()
@@ -1603,9 +1608,12 @@ class Generator:
         refs.discard(self.pkg_models + "." + owner)
         for r in sorted(refs):
             if "." in r:
-                out.append(f"import {r};\n")
+                emit_import(r)
             else:
-                out.append(f"import {self.pkg_models}.{r};\n")
+                emit_import(f"{self.pkg_models}.{r}")
+
+        for i in sorted(imported):
+            out.append(f"import {i};\n")
 
         out.append("\n")
         out.append("/** Codec for {@link " + qname + "}. */\n")
@@ -2125,18 +2133,19 @@ class Generator:
         if codec_name in self.codec_files:
             return
         out = [self.pkg(self.pkg_codecs), "\n"]
-        out.append("import tools.jackson.core.JsonGenerator;\n")
-        out.append("import tools.jackson.core.JsonParser;\n")
-        out.append("import tools.jackson.core.JsonToken;\n")
-        out.append("import tools.jackson.databind.util.TokenBuffer;\n")
-        out.append("import java.io.IOException;\n")
-        out.append("import javax.annotation.processing.Generated;\n\n")
-        out.append(f"import {self.pkg_models}.{union_name};\n")
-        seen = set()
+        imported = {
+            "tools.jackson.core.JsonGenerator",
+            "tools.jackson.core.JsonParser",
+            "tools.jackson.core.JsonToken",
+            "tools.jackson.databind.util.TokenBuffer",
+            "java.io.IOException",
+            "javax.annotation.processing.Generated",
+            f"{self.pkg_models}.{union_name}",
+        }
         for vn, _ in variants:
-            if vn not in seen:
-                out.append(f"import {self.pkg_models}.{vn};\n")
-                seen.add(vn)
+            imported.add(f"{self.pkg_models}.{vn}")
+        for i in sorted(imported):
+            out.append(f"import {i};\n")
         out.append("\n")
         out.append("/** Codec for {@link " + union_name + "}. */\n")
         out.append('@Generated("ts2java")\n')
@@ -2191,18 +2200,19 @@ class Generator:
         if codec_name in self.codec_files:
             return
         out = [self.pkg(self.pkg_codecs), "\n"]
-        out.append("import tools.jackson.core.JsonGenerator;\n")
-        out.append("import tools.jackson.core.JsonParser;\n")
-        out.append("import tools.jackson.core.JsonToken;\n")
-        out.append("import tools.jackson.databind.util.TokenBuffer;\n")
-        out.append("import java.io.IOException;\n")
-        out.append("import javax.annotation.processing.Generated;\n\n")
-        out.append(f"import {self.pkg_models}.{union_name};\n")
-        seen = set()
+        imported = {
+            "tools.jackson.core.JsonGenerator",
+            "tools.jackson.core.JsonParser",
+            "tools.jackson.core.JsonToken",
+            "tools.jackson.databind.util.TokenBuffer",
+            "java.io.IOException",
+            "javax.annotation.processing.Generated",
+            f"{self.pkg_models}.{union_name}",
+        }
         for vn in variant_field_map:
-            if vn not in seen:
-                out.append(f"import {self.pkg_models}.{vn};\n")
-                seen.add(vn)
+            imported.add(f"{self.pkg_models}.{vn}")
+        for i in sorted(imported):
+            out.append(f"import {i};\n")
         out.append("/** Codec for {@link " + union_name + "}. */\n")
         out.append('@Generated("ts2java")\n')
         out.append(f"public class {codec_name} implements Codec<{union_name}> {{\n\n")
@@ -2255,16 +2265,22 @@ class Generator:
         if name in self.codec_files:
             return
         out = [self.pkg(self.pkg_codecs), "\n"]
-        out.append("import tools.jackson.core.JsonGenerator;\n")
-        out.append("import tools.jackson.core.JsonParser;\n")
-        out.append("import tools.jackson.core.JsonToken;\n")
-        out.append("import tools.jackson.core.ObjectReadContext;\n")
-        out.append("import tools.jackson.core.ObjectWriteContext;\n")
-        out.append("import tools.jackson.core.json.JsonFactory;\n")
-        out.append("import java.io.ByteArrayOutputStream;\n")
-        out.append("import java.io.IOException;\n")
-        out.append("import java.io.UncheckedIOException;\n")
-        out.append("import javax.annotation.processing.Generated;\n\n")
+        for i in sorted(
+            [
+                "tools.jackson.core.JsonGenerator",
+                "tools.jackson.core.JsonParser",
+                "tools.jackson.core.JsonToken",
+                "tools.jackson.core.ObjectReadContext",
+                "tools.jackson.core.ObjectWriteContext",
+                "tools.jackson.core.json.JsonFactory",
+                "java.io.ByteArrayOutputStream",
+                "java.io.IOException",
+                "java.io.UncheckedIOException",
+                "javax.annotation.processing.Generated",
+            ]
+        ):
+            out.append(f"import {i};\n")
+        out.append("\n")
         out.append('@Generated("ts2java")\n')
         out.append("/** Codec for serializing and deserializing model types. */\n")
         out.append("public interface Codec<T> {\n")

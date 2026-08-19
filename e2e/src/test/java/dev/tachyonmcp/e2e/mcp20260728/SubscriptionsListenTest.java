@@ -8,10 +8,13 @@ import static org.awaitility.Awaitility.await;
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -216,11 +219,16 @@ class SubscriptionsListenTest extends AbstractStatelessMcpE2eTest {
         }
     }
 
-    private static void awaitQuietly(CompletableFuture<Void> future) {
+    private static void awaitQuietly(CompletableFuture<Void> future) throws Exception {
         try {
             future.get(5, TimeUnit.SECONDS);
-        } catch (Exception ignored) {
-            // Expected: closing the client-side stream makes the background line reader fail.
+        } catch (ExecutionException e) {
+            // Expected: closing the client-side stream mid-read makes the background line reader
+            // fail with an I/O-shaped exception. Anything else is a real bug — let it fail the test.
+            var cause = e.getCause();
+            if (!(cause instanceof IOException) && !(cause instanceof UncheckedIOException)) {
+                throw e;
+            }
         }
     }
 
