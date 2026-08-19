@@ -221,6 +221,22 @@ class McpResponseMapperTest {
     }
 
     @Test
+    void subscriptionIdPreservesNumericTypeFromTheRequestId() {
+        var id = RequestId.of(1);
+        var filter = new SubscriptionListenRequest(true, false, false, Set.of());
+
+        var ack = mapper.encode(mapper.subscriptionsAcknowledgedParams(id, filter));
+
+        // language=JSON
+        assertThatJson(ack).isEqualTo("""
+            {
+              "notifications": {"toolsListChanged": true},
+              "_meta": {"io.modelcontextprotocol/subscriptionId": 1}
+            }
+            """);
+    }
+
+    @Test
     void loggingMessageParamsSerializesLevelLoggerAndData() {
         var json = mapper.encode(mapper.loggingMessageParams(LoggingLevel.WARNING, "logger.x", "boom"));
 

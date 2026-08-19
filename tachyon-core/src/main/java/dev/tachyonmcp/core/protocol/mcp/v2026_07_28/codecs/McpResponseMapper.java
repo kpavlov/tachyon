@@ -348,8 +348,12 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
     }
 
     private static Map<String, JsonNode> subscriptionIdMeta(RequestId subscriptionId) {
-        return Objects.requireNonNull(
-                JsonUtils.toJsonNodeMap(Map.of(SUBSCRIPTION_ID_META_KEY, subscriptionId.toString())));
+        Object rawId =
+                switch (subscriptionId) {
+                    case RequestId.StringValue(var v) -> v;
+                    case RequestId.NumericValue(var v) -> v;
+                };
+        return Objects.requireNonNull(JsonUtils.toJsonNodeMap(Map.of(SUBSCRIPTION_ID_META_KEY, rawId)));
     }
 
     /**

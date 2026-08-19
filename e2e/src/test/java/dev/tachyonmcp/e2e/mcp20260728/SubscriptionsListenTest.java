@@ -44,9 +44,26 @@ class SubscriptionsListenTest extends AbstractStatelessMcpE2eTest {
             await().atMost(Duration.ofSeconds(10))
                     .untilAsserted(() -> assertThat(payloads(lines)).isNotEmpty());
 
-            var first = payloads(lines).getFirst();
-            assertThat(first).contains("\"notifications/subscriptions/acknowledged\"");
-            assertThat(first).contains("\"io.modelcontextprotocol/subscriptionId\":\"1\"");
+            // Raw, unfiltered first "data:" line — proves the ack is the actual first SSE frame on
+            // the wire, not just the first non-blank one (payloads() strips blank data lines, which
+            // would hide a leading blank priming frame arriving before the ack).
+            var firstDataLine = lines.stream()
+                    .filter(l -> l.startsWith("data:"))
+                    .findFirst()
+                    .orElseThrow();
+            var firstPayload =
+                    firstDataLine.startsWith("data: ") ? firstDataLine.substring(6) : firstDataLine.substring(5);
+            // language=JSON
+            assertThatJson(firstPayload).isEqualTo("""
+                {
+                  "jsonrpc": "2.0",
+                  "method": "notifications/subscriptions/acknowledged",
+                  "params": {
+                    "notifications": {"toolsListChanged": true},
+                    "_meta": {"io.modelcontextprotocol/subscriptionId": 1}
+                  }
+                }
+                """);
 
             response.body().close();
             awaitQuietly(consume);
@@ -145,12 +162,31 @@ class SubscriptionsListenTest extends AbstractStatelessMcpE2eTest {
                             (ctx, req) -> ToolResult.text("x"));
 
             await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
-                assertThat(payloads(linesA))
-                        .anyMatch(l -> l.contains("notifications/tools/list_changed")
-                                && l.contains("\"io.modelcontextprotocol/subscriptionId\":\"10\""));
-                assertThat(payloads(linesB))
-                        .anyMatch(l -> l.contains("notifications/tools/list_changed")
-                                && l.contains("\"io.modelcontextprotocol/subscriptionId\":\"20\""));
+                var notifA = payloads(linesA).stream()
+                        .filter(l -> l.contains("notifications/tools/list_changed"))
+                        .findFirst();
+                assertThat(notifA).isPresent();
+                // language=JSON
+                assertThatJson(notifA.get()).isEqualTo("""
+                    {
+                      "jsonrpc": "2.0",
+                      "method": "notifications/tools/list_changed",
+                      "params": {"_meta": {"io.modelcontextprotocol/subscriptionId": 10}}
+                    }
+                    """);
+
+                var notifB = payloads(linesB).stream()
+                        .filter(l -> l.contains("notifications/tools/list_changed"))
+                        .findFirst();
+                assertThat(notifB).isPresent();
+                // language=JSON
+                assertThatJson(notifB.get()).isEqualTo("""
+                    {
+                      "jsonrpc": "2.0",
+                      "method": "notifications/tools/list_changed",
+                      "params": {"_meta": {"io.modelcontextprotocol/subscriptionId": 20}}
+                    }
+                    """);
             });
 
             responseA.body().close();
@@ -211,7 +247,7 @@ class SubscriptionsListenTest extends AbstractStatelessMcpE2eTest {
                     {"jsonrpc":"2.0",
                     "id":1,
                     "result":{
-                      "_meta": {"io.modelcontextprotocol/subscriptionId":"1"},
+                      "_meta": {"io.modelcontextprotocol/subscriptionId":1},
                       "resultType":"complete"
                       }
                     }

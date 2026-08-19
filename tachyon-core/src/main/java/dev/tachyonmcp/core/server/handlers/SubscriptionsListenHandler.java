@@ -52,9 +52,9 @@ public final class SubscriptionsListenHandler implements RpcMethodHandler {
         }
         var filter = requestMapper.subscriptionsListen(params);
 
-        stream.start();
         var pending = new CompletableFuture<>();
         var key = registry.activate(subscriptionId, stream, filter, context.responseMapper(), pending);
+        stream.start();
         stream.onClose(() -> {
             registry.remove(key);
             pending.cancel(false);
