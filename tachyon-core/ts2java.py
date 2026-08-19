@@ -2682,9 +2682,11 @@ class Generator:
                     self.add_discriminated_codec(model_name, disc, variants)
                     continue
                 if model_name in self.interface_extends:
-                    # Only generate deduction codecs for polymorphic extends parents
-                    # that are actually referenced as field types (e.g., ResourceContents).
-                    # Others (BaseMetadata, Icons) are not used polymorphically.
+                    # Polymorphic extends parents referenced as field types get a deduction codec
+                    # (e.g. ResourceContents). The rest are plain records that codecs still
+                    # reference by their declared type (NotificationParams, RequestParams, Result,
+                    # Error), so they fall through to a plain codec below — without one,
+                    # CodecRegistry.codecFor returns null and the caller NPEs.
                     if model_name == "ResourceContents":
                         children = self.interface_extends[model_name]
                         variant_field_map = OrderedDict()
@@ -2703,7 +2705,7 @@ class Generator:
                                         break
                         if variant_field_map:
                             self.add_deduction_codec(model_name, variant_field_map)
-                    continue
+                        continue
                 if model_name in (
                     "McpMessage",
                     "McpRequest",
