@@ -300,7 +300,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
 
     private static ExecutorService defaultExecutor() {
         return Executors.newThreadPerTaskExecutor(
-                Thread.ofVirtual().name("tachyon-", 0).factory());
+                Thread.ofVirtual().name("tachyon-vt-", 0).factory());
     }
 
     private static JsonSchemaFactory<?> discoverSchemaFactory() {

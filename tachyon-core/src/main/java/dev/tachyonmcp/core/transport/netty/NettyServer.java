@@ -86,7 +86,12 @@ public final class NettyServer implements Closeable {
         try {
             this.serverChannel =
                     bootstrap.bind(config.host(), config.port()).sync().channel();
-            logger.info("TachyonMCP Server (Netty I/O: {}) started on {}", engine, serverChannel.localAddress());
+            var version = NettyServer.class.getPackage().getImplementationVersion();
+            logger.info(
+                    "TachyonMCP Server {}(Netty I/O: {}) started on {}",
+                    version == null ? "" : "v" + version + " ",
+                    engine,
+                    serverChannel.localAddress());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Failed to start Netty server on " + config.host() + ":" + config.port(), e);
