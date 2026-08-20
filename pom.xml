@@ -511,6 +511,16 @@
                                     </exclude>
                                 </elements>
                             </revapi.filter>
+                            <revapi.filter>
+                                <elements>
+                                    <exclude>
+                                        <item>
+                                            <matcher>java</matcher>
+                                            <match>@dev.tachyonmcp.api.annotations.ExperimentalApi ^*;</match>
+                                        </item>
+                                    </exclude>
+                                </elements>
+                            </revapi.filter>
                             <revapi.differences>
                                 <ignore>true</ignore>
                                 <differences>
