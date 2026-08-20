@@ -183,7 +183,7 @@ public final class ToolMethodHandlers {
         private @Nullable Object dispatchTaskAugmented(
                 DispatchContext context, ToolHandler handler, ToolRequest request, @Nullable Duration taskTtl) {
             sendLogging(context, request.name(), "started");
-            final var engine = context.engine();
+            var engine = context.engine();
             var taskRegistry = engine.tasksRegistry();
             var task = taskRegistry.createSessionTask(
                     taskTtl,
@@ -191,8 +191,8 @@ public final class ToolMethodHandlers {
                     OutboundSseStreamMessageRouter.currentSessionId(),
                     request.progressToken());
             task.transitionTo(TaskState.WORKING);
-            final var taskResult = context.responseMapper().createTaskResult(task);
-            final var taskRequest = ToolRequest.builder()
+            var taskResult = context.responseMapper().createTaskResult(task);
+            var taskRequest = ToolRequest.builder()
                     .name(request.name())
                     .arguments(request.arguments())
                     .meta(request.meta())
@@ -203,6 +203,31 @@ public final class ToolMethodHandlers {
                     .task(task)
                     .build();
 
+            taskRegistry.registerResumer(task.id(), (responses, state) -> {
+                var resumedRequest = ToolRequest.builder()
+                        .from(taskRequest)
+                        .inputResponses(responses)
+                        .requestState(state)
+                        .build();
+                dispatchAndWire(context, handler, resumedRequest, taskRegistry, task);
+            });
+            dispatchAndWire(context, handler, taskRequest, taskRegistry, task);
+            return taskResult;
+        }
+
+        /**
+         * Runs {@code taskRequest} on the executor and wires its result through {@link
+         * #completeTask} -- shared by the first dispatch and every {@code tasks/update}-triggered
+         * resume, so a second/third/Nth {@code InputRequired} round reuses the same
+         * future/cancellation/completion plumbing as the initial call.
+         */
+        private void dispatchAndWire(
+                DispatchContext context,
+                ToolHandler handler,
+                ToolRequest taskRequest,
+                TaskRegistry taskRegistry,
+                TaskEntry task) {
+            var engine = context.engine();
             var future = new CompletableFuture<ToolResult>();
             var handlerFuture = new AtomicReference<@Nullable CompletableFuture<? extends ToolResult>>();
             var dispatchFuture = engine.executor().submit(() -> {
@@ -210,7 +235,7 @@ public final class ToolMethodHandlers {
                 try {
                     var stage = Objects.requireNonNull(
                             handler.handleAsync(context, taskRequest),
-                            "Tool '" + request.name() + "' returned a null CompletionStage");
+                            "Tool '" + taskRequest.name() + "' returned a null CompletionStage");
                     var actualFuture = stage.toCompletableFuture();
                     handlerFuture.set(actualFuture);
                     if (future.isCancelled()) {
@@ -247,7 +272,6 @@ public final class ToolMethodHandlers {
                 handleFutureFailure(taskRegistry, task, throwable);
                 return null;
             });
-            return taskResult;
         }
 
         private void completeTask(
@@ -261,9 +285,14 @@ public final class ToolMethodHandlers {
             result = prepareResult(outputSchema, result);
             var meta = result.meta();
             switch (result) {
-                case ToolResult.Error error -> task.fail(new TaskResult.Failed(error.content(), null, meta));
-                case ToolResult.Success success ->
+                case ToolResult.Error error -> {
+                    task.fail(new TaskResult.Failed(error.content(), null, meta));
+                    taskRegistry.unregisterResumer(task.id());
+                }
+                case ToolResult.Success success -> {
                     task.complete(new TaskResult.Completed(success.content(), success.structuredValue(), meta));
+                    taskRegistry.unregisterResumer(task.id());
+                }
                 case ToolResult.InputRequired inputRequired ->
                     task.requireInput(inputRequired.request(), "Input required");
             }
@@ -317,6 +346,7 @@ public final class ToolMethodHandlers {
                 handleTaskError(task, cause);
             }
             taskRegistry.unregisterRunning(task.id());
+            taskRegistry.unregisterResumer(task.id());
         }
 
         private void handleTaskError(TaskEntry task, Throwable exception) {

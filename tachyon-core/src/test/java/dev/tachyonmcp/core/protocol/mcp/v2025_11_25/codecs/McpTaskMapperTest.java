@@ -4,7 +4,6 @@ package dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import dev.tachyonmcp.api.server.features.tasks.TaskDescriptor;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus;
 import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
@@ -16,14 +15,12 @@ import tools.jackson.databind.node.JsonNodeFactory;
 class McpTaskMapperTest {
 
     private static TaskEntry entry(TaskState status) {
-        return new TaskEntry(
-                TaskDescriptor.builder().id("task-1").build(),
-                "task-1",
-                status,
-                Duration.ofMinutes(1),
-                "session-1",
-                null,
-                Map.of("trace", "abc"));
+        return TaskEntry.builder("task-1")
+                .status(status)
+                .ttl(Duration.ofMinutes(1))
+                .sessionId("session-1")
+                .meta(Map.of("trace", "abc"))
+                .build();
     }
 
     @Test
@@ -51,14 +48,10 @@ class McpTaskMapperTest {
 
     @Test
     void ttlIsPreservedAcrossAllResponseShapes() {
-        var withTtl = new TaskEntry(
-                TaskDescriptor.builder().id("task-1").build(),
-                "task-1",
-                TaskState.WORKING,
-                Duration.ofSeconds(90),
-                null,
-                null,
-                null);
+        var withTtl = TaskEntry.builder("task-1")
+                .status(TaskState.WORKING)
+                .ttl(Duration.ofSeconds(90))
+                .build();
 
         assertThat(McpTaskMapper.toTaskProto(withTtl).ttl()).isEqualTo(Duration.ofSeconds(90));
         assertThat(McpTaskMapper.toGetTaskResult(withTtl).ttl()).isEqualTo(Duration.ofSeconds(90));
@@ -68,8 +61,7 @@ class McpTaskMapperTest {
 
     @Test
     void nullTtlIsPreservedAcrossAllResponseShapes() {
-        var withoutTtl = new TaskEntry(
-                TaskDescriptor.builder().id("task-1").build(), "task-1", TaskState.WORKING, null, null, null, null);
+        var withoutTtl = TaskEntry.builder("task-1").status(TaskState.WORKING).build();
 
         assertThat(McpTaskMapper.toTaskProto(withoutTtl).ttl()).isNull();
         assertThat(McpTaskMapper.toGetTaskResult(withoutTtl).ttl()).isNull();

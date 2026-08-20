@@ -3,21 +3,36 @@ package dev.tachyonmcp.core.server.features.tasks;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.api.server.features.tasks.TaskDescriptor;
+import dev.tachyonmcp.api.json.JsonSchema;
+import dev.tachyonmcp.api.server.domain.FormInputRequest;
+import dev.tachyonmcp.api.server.domain.InputRequestBundle;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
-import dev.tachyonmcp.core.server.config.TasksConfig;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.Test;
 
 class TaskEntryTest {
 
     private static TaskEntry entry(Duration ttl) {
-        return new TaskEntry(
-                TaskDescriptor.builder().id("task-1").build(), "task-1", TaskState.WORKING, ttl, null, null);
+        return TaskEntry.builder("task-1").status(TaskState.WORKING).ttl(ttl).build();
+    }
+
+    private static TaskEntry workingEntry() {
+        return entry(null);
+    }
+
+    private static InputRequestBundle bundleOf(Map<String, String> requestedKeysToPrompts, String requestState) {
+        Map<String, dev.tachyonmcp.api.server.domain.InputRequest> requests = new HashMap<>();
+        requestedKeysToPrompts.forEach(
+                (key, prompt) -> requests.put(key, FormInputRequest.of(prompt, JsonSchema.objectSchema())));
+        return new InputRequestBundle(requests, requestState);
     }
 
     @Test
@@ -49,18 +64,11 @@ class TaskEntryTest {
     @Test
     void controllableClockFlipsExpiryAndMovesLastUpdatedAt() {
         var clock = new MutableClock(Instant.parse("2025-01-01T00:00:00Z"));
-        var entry = new TaskEntry(
-                TaskDescriptor.builder().id("clock-1").build(),
-                "clock-1",
-                TaskState.WORKING,
-                Duration.ofMinutes(10),
-                null,
-                null,
-                null,
-                TasksConfig.DEFAULT_TASK_KEEP_ALIVE,
-                null,
-                ignored -> {},
-                clock);
+        var entry = TaskEntry.builder("clock-1")
+                .status(TaskState.WORKING)
+                .ttl(Duration.ofMinutes(10))
+                .clock(clock)
+                .build();
         var lastUpdated = entry.lastUpdatedAt();
         assertThat(entry.createdAt()).isEqualTo(clock.instant());
         assertThat(entry.isExpired()).isFalse();
@@ -73,6 +81,124 @@ class TaskEntryTest {
 
         clock.advance(Duration.ofMinutes(11));
         assertThat(entry.isExpired()).isTrue();
+    }
+
+    @Test
+    void submitInputFiltersUnknownAndAlreadySatisfiedKeys() {
+        var entry = workingEntry();
+        entry.requireInput(bundleOf(Map.of("user_name", "What is your name?"), "state-1"), null);
+
+        var responses = new HashMap<String, Object>();
+        responses.put("user_name", "Alice");
+        responses.put("unknown_key", "ignored");
+        var result = entry.submitInput(responses);
+
+        assertThat(result).isNotNull();
+        assertThat(result.inputResponses()).isEqualTo(Map.of("user_name", "Alice"));
+        assertThat(result.requestState()).isEqualTo("state-1");
+        assertThat(entry.status()).isEqualTo(TaskState.WORKING);
+    }
+
+    @Test
+    void submitInputIsNoOpWhenNotAwaitingInput() {
+        var entry = workingEntry();
+
+        var result = entry.submitInput(Map.of("user_name", "Alice"));
+
+        assertThat(result).isNull();
+        assertThat(entry.status()).isEqualTo(TaskState.WORKING);
+    }
+
+    @Test
+    void submitInputAcceptsPartialResponsesAcrossMultipleCalls() {
+        var entry = workingEntry();
+        entry.requireInput(bundleOf(Map.of("name", "Your name?", "email", "Your email?"), null), null);
+
+        var first = entry.submitInput(Map.of("name", "Alice"));
+        assertThat(first).isNull();
+        assertThat(entry.status()).isEqualTo(TaskState.INPUT_REQUIRED);
+
+        var second = entry.submitInput(Map.of("email", "alice@example.com"));
+
+        assertThat(second).isNotNull();
+        assertThat(second.inputResponses()).isEqualTo(Map.of("name", "Alice", "email", "alice@example.com"));
+        assertThat(entry.status()).isEqualTo(TaskState.WORKING);
+    }
+
+    @Test
+    void submitInputAccumulatorResetsOnNewInputRequiredRound() {
+        var entry = workingEntry();
+        entry.requireInput(bundleOf(Map.of("key1", "Q1"), "round-1"), null);
+        entry.submitInput(Map.of("key1", "answer-1")); // resumes -> WORKING, clears the accumulator
+
+        entry.requireInput(bundleOf(Map.of("key2", "Q2"), "round-2"), null);
+        var result = entry.submitInput(Map.of("key2", "answer-2"));
+
+        assertThat(result).isNotNull();
+        assertThat(result.inputResponses()).isEqualTo(Map.of("key2", "answer-2"));
+        assertThat(result.requestState()).isEqualTo("round-2");
+    }
+
+    @Test
+    void submitInputForStaleRoundKeysCannotResumeANewerRound() {
+        var entry = workingEntry();
+        entry.requireInput(bundleOf(Map.of("key1", "Q1"), "round-1"), null);
+        entry.submitInput(Map.of("key1", "answer-1")); // resumes -> WORKING
+
+        entry.requireInput(bundleOf(Map.of("key2", "Q2"), "round-2"), null); // now parked on round 2
+
+        // A stale submission carrying round 1's key arrives after round 2 has already begun.
+        var result = entry.submitInput(Map.of("key1", "late-answer"));
+
+        assertThat(result).isNull();
+        assertThat(entry.status()).isEqualTo(TaskState.INPUT_REQUIRED);
+    }
+
+    @Test
+    void submitInputAcceptsNullResponseValue() {
+        var entry = workingEntry();
+        entry.requireInput(bundleOf(Map.of("optional", "Optional?"), null), null);
+
+        var responses = new HashMap<String, Object>();
+        responses.put("optional", null);
+        var result = entry.submitInput(responses);
+
+        assertThat(result).isNotNull();
+        assertThat(result.inputResponses()).containsKey("optional");
+        assertThat(result.inputResponses().get("optional")).isNull();
+    }
+
+    @Test
+    void concurrentSubmitInputResumesExactlyOnce() throws InterruptedException {
+        var entry = workingEntry();
+        entry.requireInput(bundleOf(Map.of("key1", "Q1", "key2", "Q2"), null), null);
+        entry.submitInput(Map.of("key1", "answer-1")); // one key satisfied, one outstanding
+
+        var ready = new CountDownLatch(2);
+        var go = new CountDownLatch(1);
+        var results = new CopyOnWriteArrayList<TaskEntry.ResumeInputs>();
+        Runnable submitLastKey = () -> {
+            ready.countDown();
+            try {
+                go.await();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            var result = entry.submitInput(Map.of("key2", "answer-2"));
+            if (result != null) results.add(result);
+        };
+        var t1 = new Thread(submitLastKey);
+        var t2 = new Thread(submitLastKey);
+        t1.start();
+        t2.start();
+        ready.await();
+        go.countDown();
+        t1.join();
+        t2.join();
+
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).inputResponses()).isEqualTo(Map.of("key1", "answer-1", "key2", "answer-2"));
+        assertThat(entry.status()).isEqualTo(TaskState.WORKING);
     }
 
     /** A tiny mutable {@link Clock} so TTL/expiry can be driven deterministically. */

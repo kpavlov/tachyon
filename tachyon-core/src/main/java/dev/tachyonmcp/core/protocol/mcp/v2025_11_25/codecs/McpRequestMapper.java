@@ -159,6 +159,14 @@ public class McpRequestMapper implements ProtocolRequestMapper {
     }
 
     @Override
+    public TaskUpdateRequest taskUpdate(@Nullable Object params) {
+        var map = asMap(params);
+        var responses = optionalMap(map, "inputResponses", "Invalid inputResponses");
+        return new TaskUpdateRequest(
+                requiredString(map, "taskId", "Missing taskId"), responses != null ? responses : Map.of());
+    }
+
+    @Override
     public LoggingLevel loggingLevel(@Nullable Object params) {
         var value = requiredString(asMap(params), "level", "Missing level parameter");
         try {

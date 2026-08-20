@@ -60,6 +60,9 @@ public interface ProtocolRequestMapper {
     /** Extracts the {@code taskId} from params. */
     String taskId(@Nullable Object params);
 
+    /** Maps {@code tasks/update} params into the target task id and its input responses. */
+    TaskUpdateRequest taskUpdate(@Nullable Object params);
+
     /** Extracts the requested {@link LoggingLevel} from {@code logging/setLevel} params. */
     LoggingLevel loggingLevel(@Nullable Object params);
 
@@ -182,6 +185,15 @@ public interface ProtocolRequestMapper {
      */
     record TaskStatusRequest(
             String taskId, TaskState state, @Nullable String message) {}
+
+    /**
+     * A {@code tasks/update} request.
+     *
+     * @param taskId the task's ID
+     * @param inputResponses the submitted responses, keyed to the task's outstanding {@code
+     *     inputRequests}; empty if none were submitted
+     */
+    record TaskUpdateRequest(String taskId, Map<String, Object> inputResponses) {}
 
     /**
      * The notification filter requested on a {@code subscriptions/listen} call.

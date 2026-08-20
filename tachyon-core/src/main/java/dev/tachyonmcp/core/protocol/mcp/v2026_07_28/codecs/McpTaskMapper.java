@@ -49,10 +49,15 @@ final class McpTaskMapper {
         return JsonUtils.toObjectNode(fields);
     }
 
-    static JsonNode toGetTaskResult(TaskEntry entry, @Nullable JsonNode inlineResult, @Nullable JsonNode inlineError) {
+    static JsonNode toGetTaskResult(
+            TaskEntry entry,
+            @Nullable JsonNode inlineResult,
+            @Nullable JsonNode inlineError,
+            @Nullable JsonNode inputRequests) {
         var fields = taskFields(entry, effectiveWireStatus(entry));
         putIfPresent(fields, "result", inlineResult);
         putIfPresent(fields, "error", inlineError);
+        putIfPresent(fields, "inputRequests", inputRequests);
         fields.put("resultType", RESULT_TYPE_COMPLETE);
         return JsonUtils.toObjectNode(fields);
     }

@@ -402,7 +402,15 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
     }
 
     @Test
-    void taskAugmentedToolInputRequiredThenClientAnswersAndTaskCompletes() throws Exception {
+    void legacyTaskAugmentedInputRequiredHasNoWireResumeAffordance() throws Exception {
+        // MCP 2025-11-25's task model predates SEP-2663's tasks extension and its `tasks/update`
+        // method (which doesn't exist on this wire schema at all -- no field for it on the
+        // generated Task/GetTaskResult models). A client with only this protocol version has no
+        // way to resume an input_required task by its taskId; it can only retry the original
+        // request with inputResponses + requestState, which -- since retrying tools/call always
+        // creates a fresh task -- mints an unrelated new task rather than resuming this one. This
+        // is a permanent limitation of the 2025-11-25 wire shape, not a bug: see
+        // dev.tachyonmcp.e2e.mcp20260728.TasksExtensionTest for the real fix under 2026-07-28.
         startServerWith(s -> s.tools()
                 .register(b -> b.name("greet").taskSupport(TaskSupport.OPTIONAL), (context, request) -> {
                     var inputResponses = request.inputResponses();
@@ -426,10 +434,8 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
             var firstTaskId = extractTaskId(round1);
             client.awaitTaskStatus(firstTaskId, "input_required");
 
-            // Round 2: client answers, re-issuing the call with inputResponses + requestState.
-            // Task-augmented tools/call has no "resume this task" wire affordance (task id isn't
-            // echoed back on input_required) -- resuming means a fresh task carries the answered
-            // call to completion, same as the non-task-augmented elicitation flow.
+            // Round 2: client answers, re-issuing the call with inputResponses + requestState --
+            // the only mechanism this protocol version has (no tasks/update method exists).
             var round2 = client.sendRpc("""
                 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{
                   "name":"greet","arguments":{},"task":{},
@@ -449,6 +455,20 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
                 {"jsonrpc":"2.0","id":5,"method":"tasks/get","params":{"taskId":"%s"}}
                 """.formatted(firstTaskId));
             assertThatJson(firstAfter).inPath("$.result.status").isEqualTo("input_required");
+        }
+    }
+
+    @Test
+    void tasksUpdateNotAvailableUnder20251125() throws Exception {
+        startServerWith(s -> {});
+        try (var client = createTestClient()) {
+            client.initialize();
+
+            var response = client.sendRpc("""
+                {"jsonrpc":"2.0","id":2,"method":"tasks/update","params":{"taskId":"task-1","inputResponses":{}}}
+                """);
+
+            assertThatJson(response).inPath("$.error.code").isEqualTo(-32601);
         }
     }
 

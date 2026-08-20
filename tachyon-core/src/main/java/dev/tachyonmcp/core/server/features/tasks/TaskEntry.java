@@ -15,12 +15,15 @@ import dev.tachyonmcp.core.server.config.TasksConfig;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 
@@ -42,130 +45,106 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     private volatile long expiredAt;
     private volatile @Nullable String statusMessage;
     private volatile @Nullable InputRequestBundle pendingInput;
+    private final ReentrantLock inputResponsesLock = new ReentrantLock();
+    /**
+     * @implNote guarded by {@link #inputResponsesLock}
+     */
+    private @Nullable Map<String, Object> pendingInputResponses;
+
     private final CompletableFuture<TaskResult> completionFuture = new CompletableFuture<>();
     private final @Nullable ProgressToken progressToken;
     private final Consumer<TaskEntry> statusListener;
     private final Clock clock;
 
-    TaskEntry(String id) {
-        this(
-                TaskDescriptor.builder().id(id).build(),
-                id,
-                TaskState.WORKING,
-                null,
-                null,
-                null,
-                null,
-                TasksConfig.DEFAULT_TASK_KEEP_ALIVE);
-    }
-
-    public TaskEntry(TaskDescriptor descriptor, String id, TaskState status, double ttl) {
-        this(
-                descriptor,
-                id,
-                status,
-                ttl > 0 ? Duration.ofSeconds((long) ttl) : null,
-                null,
-                null,
-                null,
-                TasksConfig.DEFAULT_TASK_KEEP_ALIVE);
-    }
-
-    public TaskEntry(TaskDescriptor descriptor, String id, TaskState status, double ttl, @Nullable String sessionId) {
-        this(
-                descriptor,
-                id,
-                status,
-                ttl > 0 ? Duration.ofSeconds((long) ttl) : null,
-                sessionId,
-                null,
-                null,
-                TasksConfig.DEFAULT_TASK_KEEP_ALIVE);
-    }
-
-    public TaskEntry(
-            TaskDescriptor descriptor,
-            String id,
-            TaskState status,
-            @Nullable Duration ttl,
-            @Nullable String sessionId,
-            @Nullable ProgressToken progressToken) {
-        this(descriptor, id, status, ttl, sessionId, progressToken, null, TasksConfig.DEFAULT_TASK_KEEP_ALIVE);
-    }
-
-    public TaskEntry(
-            TaskDescriptor descriptor,
-            String id,
-            TaskState status,
-            @Nullable Duration ttl,
-            @Nullable String sessionId,
-            @Nullable ProgressToken progressToken,
-            @Nullable Map<String, Object> meta) {
-        this(descriptor, id, status, ttl, sessionId, progressToken, meta, TasksConfig.DEFAULT_TASK_KEEP_ALIVE);
-    }
-
-    public TaskEntry(
-            TaskDescriptor descriptor,
-            String id,
-            TaskState status,
-            @Nullable Duration ttl,
-            @Nullable String sessionId,
-            @Nullable ProgressToken progressToken,
-            @Nullable Map<String, Object> meta,
-            Duration keepAlive) {
-        this(descriptor, id, status, ttl, sessionId, progressToken, meta, keepAlive, null);
-    }
-
-    public TaskEntry(
-            TaskDescriptor descriptor,
-            String id,
-            TaskState status,
-            @Nullable Duration ttl,
-            @Nullable String sessionId,
-            @Nullable ProgressToken progressToken,
-            @Nullable Map<String, Object> meta,
-            Duration keepAlive,
-            @Nullable Duration pollInterval) {
-        this(descriptor, id, status, ttl, sessionId, progressToken, meta, keepAlive, pollInterval, entry -> {});
+    /**
+     * Starts building a {@link TaskEntry}. {@code status} defaults to {@link TaskState#WORKING}
+     * and {@code keepAlive} to {@link TasksConfig#DEFAULT_TASK_KEEP_ALIVE}; every other field
+     * defaults to {@code null}/absent.
+     */
+    public static Builder builder(String id) {
+        return new Builder(id);
     }
 
     /**
-     * Full constructor; {@code statusListener} is invoked with {@code this} after every
-     * successful status/message mutation, regardless of which method the caller used to reach
-     * it. Package-private: only {@link DefaultTaskRegistry} wires a non-default listener.
+     * Builds a {@link TaskEntry}. See {@link #builder(String)}.
      */
-    TaskEntry(
-            TaskDescriptor descriptor,
-            String id,
-            TaskState status,
-            @Nullable Duration ttl,
-            @Nullable String sessionId,
-            @Nullable ProgressToken progressToken,
-            @Nullable Map<String, Object> meta,
-            Duration keepAlive,
-            @Nullable Duration pollInterval,
-            Consumer<TaskEntry> statusListener) {
-        this(
-                descriptor,
-                id,
-                status,
-                ttl,
-                sessionId,
-                progressToken,
-                meta,
-                keepAlive,
-                pollInterval,
-                statusListener,
-                Clock.systemUTC());
+    public static final class Builder {
+        private final String id;
+        private TaskState status = TaskState.WORKING;
+        private @Nullable Duration ttl;
+        private @Nullable String sessionId;
+        private @Nullable ProgressToken progressToken;
+        private @Nullable Map<String, Object> meta;
+        private Duration keepAlive = TasksConfig.DEFAULT_TASK_KEEP_ALIVE;
+        private @Nullable Duration pollInterval;
+        private Consumer<TaskEntry> statusListener = entry -> {};
+        private Clock clock = Clock.systemUTC();
+
+        private Builder(String id) {
+            this.id = Objects.requireNonNull(id, "id");
+        }
+
+        public Builder status(TaskState status) {
+            this.status = Objects.requireNonNull(status, "status");
+            return this;
+        }
+
+        public Builder ttl(@Nullable Duration ttl) {
+            this.ttl = ttl;
+            return this;
+        }
+
+        public Builder sessionId(@Nullable String sessionId) {
+            this.sessionId = sessionId;
+            return this;
+        }
+
+        public Builder progressToken(@Nullable ProgressToken progressToken) {
+            this.progressToken = progressToken;
+            return this;
+        }
+
+        public Builder meta(@Nullable Map<String, Object> meta) {
+            this.meta = meta;
+            return this;
+        }
+
+        public Builder keepAlive(Duration keepAlive) {
+            this.keepAlive = Objects.requireNonNull(keepAlive, "keepAlive");
+            return this;
+        }
+
+        public Builder pollInterval(@Nullable Duration pollInterval) {
+            this.pollInterval = pollInterval;
+            return this;
+        }
+
+        /**
+         * Invoked with the entry after every successful status/message mutation. Package-private:
+         * only {@link DefaultTaskRegistry} wires a non-default listener.
+         */
+        Builder statusListener(Consumer<TaskEntry> statusListener) {
+            this.statusListener = Objects.requireNonNull(statusListener, "statusListener");
+            return this;
+        }
+
+        /**
+         * Overrides the {@link Clock} used for {@code createdAt}/{@code lastUpdatedAt} and
+         * TTL/expiry checks. Package-private: only {@link DefaultTaskRegistry} wires a clock
+         * other than the system default.
+         */
+        Builder clock(Clock clock) {
+            this.clock = Objects.requireNonNull(clock, "clock");
+            return this;
+        }
+
+        public TaskEntry build() {
+            return new TaskEntry(
+                    id, status, ttl, sessionId, progressToken, meta, keepAlive, pollInterval, statusListener, clock);
+        }
     }
 
-    /**
-     * Full constructor with an injectable {@link Clock} for {@code createdAt}/{@code
-     * lastUpdatedAt} and TTL/expiry checks. Package-private: only {@link DefaultTaskRegistry}
-     * wires a clock other than the system default.
-     */
-    TaskEntry(
-            TaskDescriptor descriptor,
+    private TaskEntry(
             String id,
             TaskState status,
             @Nullable Duration ttl,
@@ -176,7 +155,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             @Nullable Duration pollInterval,
             Consumer<TaskEntry> statusListener,
             Clock clock) {
-        this.descriptor = descriptor;
+        this.descriptor = TaskDescriptor.builder().id(id).build();
         this.id = id;
         this.sessionId = sessionId;
         this.meta = meta;
@@ -315,6 +294,54 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         return status() == TaskState.INPUT_REQUIRED ? pendingInput : null;
     }
 
+    /**
+     * The merged, filtered input responses and opaque request state for a resumed round.
+     */
+    public record ResumeInputs(
+            Map<String, Object> inputResponses, @Nullable String requestState) {}
+
+    /**
+     * Merges {@code responses} into this {@link TaskState#INPUT_REQUIRED} pause's accumulated
+     * answers, filtered to keys present in {@link #pendingInput()}'s inputRequests and not already
+     * answered — unknown or already-satisfied keys are silently dropped (per the {@code
+     * tasks/update} spec). Per-round only: the accumulator is reset whenever a new {@code
+     * INPUT_REQUIRED} round begins (see {@link #transitionTo(TaskState, TaskResult, String,
+     * InputRequestBundle)}), so a later round's resumer never sees an earlier round's answers.
+     *
+     * <p>Returns the full merged set once every currently-outstanding key has an answer — this
+     * call has also atomically resumed the task to {@link TaskState#WORKING} at that point — or
+     * {@code null} when the task isn't awaiting input, or when outstanding keys remain.
+     */
+    public @Nullable ResumeInputs submitInput(Map<String, Object> responses) {
+        inputResponsesLock.lock();
+        try {
+            var pending = pendingInput();
+            if (pending == null) return null;
+            var next = pendingInputResponses == null
+                    ? new LinkedHashMap<String, Object>()
+                    : new LinkedHashMap<>(pendingInputResponses);
+            responses.forEach((key, value) -> {
+                if (pending.inputRequests().containsKey(key) && !next.containsKey(key)) {
+                    next.put(key, value);
+                }
+            });
+            pendingInputResponses = next;
+            if (!next.keySet().containsAll(pending.inputRequests().keySet())) {
+                return null; // still waiting on more
+            }
+            // Not Map.copyOf: JSON null is a legal response value and Map.copyOf rejects nulls.
+            var merged = Collections.unmodifiableMap(new LinkedHashMap<>(next));
+            // Resume while still holding the lock: transitionTo's pause bookkeeping is guarded by
+            // the same (reentrant) lock, so a new INPUT_REQUIRED round can't be installed between
+            // validating this round's answers and resuming it -- otherwise a late resume could
+            // clobber a fresher pause with a stale round's answers.
+            if (!resume("Input received")) return null;
+            return new ResumeInputs(merged, pending.requestState());
+        } finally {
+            inputResponsesLock.unlock();
+        }
+    }
+
     @Override
     public boolean resume(@Nullable String statusMessage) {
         return transitionTo(TaskState.WORKING, null, statusMessage);
@@ -412,7 +439,14 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             if (statusMessage != null) {
                 this.statusMessage = statusMessage;
             }
-            this.pendingInput = newStatus == TaskState.INPUT_REQUIRED ? pendingInput : null;
+            inputResponsesLock.lock();
+            try {
+                this.pendingInput = newStatus == TaskState.INPUT_REQUIRED ? pendingInput : null;
+                // Every transition starts a clean accumulator -- per-round, never cumulative.
+                this.pendingInputResponses = null;
+            } finally {
+                inputResponsesLock.unlock();
+            }
             if (newStatus.isTerminal()) {
                 this.expiredAt = computeExpiredAt(this.lastUpdatedAt);
                 if (result != null) {

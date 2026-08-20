@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TaskResult;
-import dev.tachyonmcp.api.server.features.tasks.TaskDescriptor;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
 import java.time.Duration;
@@ -22,19 +21,17 @@ import tools.jackson.databind.node.JsonNodeFactory;
 class McpTaskMapperTest {
 
     private static TaskEntry entry(TaskState status) {
-        return new TaskEntry(
-                TaskDescriptor.builder().id("task-1").build(),
-                "task-1",
-                status,
-                Duration.ofMinutes(1),
-                "session-1",
-                null,
-                Map.of("trace", "abc"));
+        return TaskEntry.builder("task-1")
+                .status(status)
+                .ttl(Duration.ofMinutes(1))
+                .sessionId("session-1")
+                .meta(Map.of("trace", "abc"))
+                .build();
     }
 
     @Test
     void submittedMapsToSubmittedWireString() {
-        var node = McpTaskMapper.toGetTaskResult(entry(TaskState.SUBMITTED), null, null);
+        var node = McpTaskMapper.toGetTaskResult(entry(TaskState.SUBMITTED), null, null, null);
         assertThat(node.get("status").asString()).isEqualTo("submitted");
         assertThat(node.get("taskId").asString()).isEqualTo("task-1");
         assertThat(node.get("createdAt").asString()).isNotEmpty();
@@ -44,7 +41,7 @@ class McpTaskMapperTest {
 
     @Test
     void unknownMapsToUnknownWireStringInsteadOfThrowing() {
-        var node = McpTaskMapper.toGetTaskResult(entry(TaskState.UNKNOWN), null, null);
+        var node = McpTaskMapper.toGetTaskResult(entry(TaskState.UNKNOWN), null, null, null);
         assertThat(node.get("status").asString()).isEqualTo("unknown");
     }
 
@@ -61,7 +58,7 @@ class McpTaskMapperTest {
 
     @Test
     void wireShapeOmitsNullFieldsButAlwaysWritesTtlMsAndMeta() {
-        var node = McpTaskMapper.toGetTaskResult(entry(TaskState.SUBMITTED), null, null);
+        var node = McpTaskMapper.toGetTaskResult(entry(TaskState.SUBMITTED), null, null, null);
         assertThat(node.has("ttlMs")).isTrue();
         assertThat(node.get("ttlMs").asLong()).isEqualTo(Duration.ofMinutes(1).toMillis());
         assertThat(node.has("statusMessage")).isFalse();
@@ -73,10 +70,9 @@ class McpTaskMapperTest {
     void ttlMsIsWrittenAsNullRatherThanOmittedWhenUnlimited() {
         // SEP-2663 types Task.ttlMs as `number | null` (required) unlike the optional
         // pollIntervalMs -- an unlimited task must still report the key, just with a null value.
-        var unlimited = new TaskEntry(
-                TaskDescriptor.builder().id("task-2").build(), "task-2", TaskState.SUBMITTED, null, null, null, null);
+        var unlimited = TaskEntry.builder("task-2").status(TaskState.SUBMITTED).build();
 
-        var node = McpTaskMapper.toGetTaskResult(unlimited, null, null);
+        var node = McpTaskMapper.toGetTaskResult(unlimited, null, null, null);
 
         assertThat(node.has("ttlMs")).isTrue();
         assertThat(node.get("ttlMs").isNull()).isTrue();
@@ -86,7 +82,7 @@ class McpTaskMapperTest {
     void getTaskResultInlinesTheGivenResultNode() {
         var resultNode = JsonNodeFactory.instance.objectNode().put("text", "done");
 
-        var node = McpTaskMapper.toGetTaskResult(entry(TaskState.COMPLETED), resultNode, null);
+        var node = McpTaskMapper.toGetTaskResult(entry(TaskState.COMPLETED), resultNode, null, null);
 
         assertThat(node.get("result").get("text").asString()).isEqualTo("done");
         assertThat(node.has("error")).isFalse();
@@ -96,10 +92,21 @@ class McpTaskMapperTest {
     void getTaskResultInlinesTheGivenErrorNode() {
         var errorNode = JsonNodeFactory.instance.objectNode().put("code", -32603);
 
-        var node = McpTaskMapper.toGetTaskResult(entry(TaskState.FAILED), null, errorNode);
+        var node = McpTaskMapper.toGetTaskResult(entry(TaskState.FAILED), null, errorNode, null);
 
         assertThat(node.get("error").get("code").asInt()).isEqualTo(-32603);
         assertThat(node.has("result")).isFalse();
+    }
+
+    @Test
+    void getTaskResultInlinesTheGivenInputRequestsNode() {
+        var inputRequestsNode = JsonNodeFactory.instance.objectNode();
+
+        var node = McpTaskMapper.toGetTaskResult(entry(TaskState.INPUT_REQUIRED), null, null, inputRequestsNode);
+
+        assertThat(node.get("inputRequests")).isEqualTo(inputRequestsNode);
+        assertThat(node.has("result")).isFalse();
+        assertThat(node.has("error")).isFalse();
     }
 
     @Test
@@ -107,7 +114,7 @@ class McpTaskMapperTest {
         var task = entry(TaskState.WORKING);
         task.fail(new TaskResult.Failed(List.of(), null, null));
 
-        var node = McpTaskMapper.toGetTaskResult(task, null, null);
+        var node = McpTaskMapper.toGetTaskResult(task, null, null, null);
 
         assertThat(node.get("status").asString()).isEqualTo("completed");
     }
@@ -117,7 +124,7 @@ class McpTaskMapperTest {
         var task = entry(TaskState.WORKING);
         task.fail(TaskResult.failed(new ServerError(ServerError.Kind.INTERNAL_ERROR, "boom")));
 
-        var node = McpTaskMapper.toGetTaskResult(task, null, null);
+        var node = McpTaskMapper.toGetTaskResult(task, null, null, null);
 
         assertThat(node.get("status").asString()).isEqualTo("failed");
     }

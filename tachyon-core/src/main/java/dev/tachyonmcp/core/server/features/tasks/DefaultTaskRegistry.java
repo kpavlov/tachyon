@@ -33,6 +33,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
     private static final long TTL_JANITOR_INTERVAL_SECONDS = 30;
 
     private final ConcurrentHashMap<String, Future<?>> running = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, TaskResumer> resumers = new ConcurrentHashMap<>();
     private final ServerEngine server;
     private final Clock clock;
     private final TaskIdGenerator taskIdGenerator;
@@ -81,6 +82,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
         if (!entry.status().isTerminal()) {
             getAndCancelTask(taskId);
         }
+        resumers.remove(taskId);
         return removeItem(taskId);
     }
 
@@ -114,19 +116,17 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
             Duration keepAlive,
             @Nullable Duration pollInterval) {
         var id = requestedId != null ? requestedId : taskIdGenerator.generateTaskId(meta, sessionId);
-        var descriptor = TaskDescriptor.builder().id(id).build();
-        var entry = new TaskEntry(
-                descriptor,
-                id,
-                TaskState.SUBMITTED,
-                ttl,
-                sessionId,
-                progressToken,
-                meta,
-                keepAlive,
-                pollInterval,
-                this::fireStatusNotification,
-                clock);
+        var entry = TaskEntry.builder(id)
+                .status(TaskState.SUBMITTED)
+                .ttl(ttl)
+                .sessionId(sessionId)
+                .progressToken(progressToken)
+                .meta(meta)
+                .keepAlive(keepAlive)
+                .pollInterval(pollInterval)
+                .statusListener(this::fireStatusNotification)
+                .clock(clock)
+                .build();
         if (!addItemIfAbsent(entry)) {
             throw new IllegalArgumentException("Task '" + id + "' already exists");
         }
@@ -142,6 +142,21 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
     @Override
     public void unregisterRunning(String taskId) {
         running.remove(taskId);
+    }
+
+    @Override
+    public void registerResumer(String taskId, TaskResumer resumer) {
+        resumers.put(taskId, resumer);
+    }
+
+    @Override
+    public void unregisterResumer(String taskId) {
+        resumers.remove(taskId);
+    }
+
+    @Override
+    public @Nullable TaskResumer getResumer(String taskId) {
+        return resumers.get(taskId);
     }
 
     public boolean completeTask(String taskId, @Nullable String resultJson) {
@@ -203,6 +218,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
         if (future != null) {
             future.cancel(true);
         }
+        resumers.remove(taskId);
         fireOnChange();
         return entry;
     }
@@ -257,6 +273,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
                 logger.info("Task expired: id={}", entry.id());
                 var failed = new TaskResult.Failed(List.of(TextContent.of("Task expired")), null, null);
                 if (entry.fail(failed)) {
+                    resumers.remove(entry.id());
                     fireOnChange();
                 }
             }

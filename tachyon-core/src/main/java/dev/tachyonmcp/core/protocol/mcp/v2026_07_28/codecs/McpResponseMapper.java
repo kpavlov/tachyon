@@ -288,7 +288,8 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
     @Override
     public Object getTaskResult(dev.tachyonmcp.api.server.domain.Task entry) {
         var taskEntry = (TaskEntry) entry;
-        return McpTaskMapper.toGetTaskResult(taskEntry, taskResultNode(taskEntry), taskErrorNode(taskEntry));
+        return McpTaskMapper.toGetTaskResult(
+                taskEntry, taskResultNode(taskEntry), taskErrorNode(taskEntry), inputRequestsNode(taskEntry));
     }
 
     @Override
@@ -377,6 +378,16 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
                                 f.content(), f.structuredContent(), true, JsonUtils.toJsonNodeMap(f.meta())));
             case null, default -> null;
         };
+    }
+
+    /**
+     * Inlines a paused task's outstanding {@code inputRequests} into {@code tasks/get} while it's
+     * {@code input_required}; {@code null} in every other state.
+     */
+    private @Nullable JsonNode inputRequestsNode(TaskEntry entry) {
+        var pending = entry.pendingInput();
+        var encoded = pending != null ? encodedInputRequests(pending.inputRequests()) : null;
+        return encoded != null ? encodeToTree(InputRequests.class, encoded) : null;
     }
 
     /** Inlines a genuine JSON-RPC protocol failure into {@code tasks/get}'s {@code error} field. */

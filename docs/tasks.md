@@ -134,10 +134,31 @@ value, well-formed or not), and clients instead declare readiness to receive a t
   error content inlined into `result`), not `failed` — `failed` is reserved for genuine JSON-RPC
   protocol errors.
 
-Not yet implemented: `tasks/update` (SEP-2663's replacement for submitting `inputResponses` to a
-task in `input_required` state), inlining `inputRequests` into `tasks/get` for that same state, and
-server-to-client `notifications/tasks` push (needs `subscriptions/listen` over the stateless
-2026-07-28 transport, which doesn't exist yet).
+### `tasks/update` — submitting input to a paused task
+
+When a task-augmented tool moves to `input_required`, `tasks/get` inlines the outstanding
+`inputRequests`. The client answers them with `tasks/update`, keyed to the same `taskId`:
+
+```json
+{"jsonrpc":"2.0","id":1,"method":"tasks/update","params":{
+  "taskId":"tid_...","inputResponses":{"user_name":{"name":"Alice"}}}}
+```
+
+The server always acknowledges immediately with an empty result (`{"resultType":"complete"}`) —
+resumption happens asynchronously afterward, not as part of the `tasks/update` response. The task
+resumes (re-invoking the same handler, `requestState` intact) only once every currently-outstanding
+`inputRequests` key has a response; a client may spread the answers across multiple `tasks/update`
+calls for a multi-key bundle, and the task stays `input_required` until the last one arrives.
+Unknown or already-satisfied keys in a submission are silently ignored, not rejected.
+
+`tasks/update` and `inputRequests`-on-`tasks/get` are **2026-07-28 only**. MCP 2025-11-25's task
+model predates SEP-2663 and has no wire field for either — an `input_required` task under that
+protocol version has no way to resume by `taskId` at all; a client on that version can only retry
+the original request with `inputResponses`/`requestState`, which creates an unrelated new task
+rather than resuming the original (see `TaskAugmentedToolTest` for this documented limitation).
+
+Not yet implemented: server-to-client `notifications/tasks` push (needs `subscriptions/listen` over
+the stateless 2026-07-28 transport, which doesn't exist yet).
 
 ## TasksExtension
 
@@ -178,9 +199,10 @@ A background janitor sweeps every 30s and does two independent things:
 | Method | Description | 2026-07-28 |
 |---|---|---|
 | `tasks/list` | List tasks, paginated | removed (`-32601`) |
-| `tasks/get` | Get a task by ID | kept, gated by the tasks extension |
+| `tasks/get` | Get a task by ID | kept, gated by the tasks extension; inlines `inputRequests` while `input_required` |
 | `tasks/cancel` | Cancel a running task | kept, gated by the tasks extension |
 | `tasks/result` | Get the task payload result | removed (`-32601`) unconditionally, even for a valid, unexpired task ID — outcome inlined into `tasks/get` instead |
+| `tasks/update` | Submit `inputResponses` to a paused task | not available under 2025-11-25 (`-32601` — predates SEP-2663's wire shape); gated by the tasks extension under 2026-07-28, same as `tasks/get`/`tasks/cancel` |
 
 Notifications: `notifications/tasks/list_changed`, `notifications/tasks/status` — 2025-11-25 only.
 Not implemented for 2026-07-28 (no session to push to; see "Not yet implemented" above).

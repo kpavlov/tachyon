@@ -3,12 +3,15 @@ package dev.tachyonmcp.core.server.features.tasks;
 
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
+import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** JSON-RPC adapters for task operations. */
 public final class TaskMethodHandlers {
@@ -20,6 +23,7 @@ public final class TaskMethodHandlers {
         handlers.put("tasks/get", new TasksGetHandler(registry));
         handlers.put("tasks/cancel", new TasksCancelHandler(registry));
         handlers.put("tasks/result", new TasksResultHandler(registry));
+        handlers.put("tasks/update", new TasksUpdateHandler(registry));
     }
 
     /**
@@ -32,6 +36,18 @@ public final class TaskMethodHandlers {
         return context.requestMapper().supportsLegacyTaskAugmentation()
                 ? null
                 : ServerErrors.methodNotFound("Method not found");
+    }
+
+    /**
+     * Inverse of {@link #legacyTasksUnavailable}: {@code tasks/update} is SEP-2663's ext-tasks
+     * method for submitting a paused task's input responses -- it has no wire shape under
+     * 2025-11-25's earlier, unrelated task model (no such field on that version's generated
+     * {@code Task}/{@code GetTaskResult} models), so it doesn't exist there at all.
+     */
+    private static @Nullable ServerError modernTasksOnly(DispatchContext context) {
+        return context.requestMapper().supportsLegacyTaskAugmentation()
+                ? ServerErrors.methodNotFound("Method not found")
+                : null;
     }
 
     private record TasksListHandler(DefaultTaskRegistry registry) implements RpcMethodHandler {
@@ -142,6 +158,51 @@ public final class TaskMethodHandlers {
             return result != null
                     ? context.responseMapper().getTaskPayloadResult(result, entry.id())
                     : ServerErrors.invalidParams("Task result not available");
+        }
+    }
+
+    private record TasksUpdateHandler(DefaultTaskRegistry registry) implements RpcMethodHandler {
+        private static final Logger logger = LoggerFactory.getLogger(TasksUpdateHandler.class);
+
+        @Override
+        public String method() {
+            return "tasks/update";
+        }
+
+        @Override
+        public Object handle(DispatchContext context, Object params) {
+            var versionGate = modernTasksOnly(context);
+            if (versionGate != null) return versionGate;
+            var missingCapability = TasksExtension.requireDeclared(context);
+            if (missingCapability != null) return missingCapability;
+
+            final ProtocolRequestMapper.TaskUpdateRequest request;
+            try {
+                request = context.requestMapper().taskUpdate(params);
+            } catch (RequestMappingException e) {
+                return e.error();
+            }
+            var entry = registry.getById(request.taskId());
+            if (entry == null) {
+                return ServerErrors.invalidParams("Failed to retrieve task: Task not found");
+            }
+
+            var resumeInputs = entry.submitInput(request.inputResponses());
+            if (resumeInputs != null) {
+                var resumer = registry.getResumer(entry.id());
+                if (resumer != null) {
+                    try {
+                        resumer.resume(resumeInputs.inputResponses(), resumeInputs.requestState());
+                    } catch (RuntimeException e) {
+                        logger.error("Task resumer failed for taskId={}", entry.id(), e);
+                    }
+                }
+                // else: a hand-created task (server.tasks().create() + task.requireInput(...)
+                // called directly by user code, no tool-augmented dispatch) has no resumer -- it's
+                // already resumed to WORKING by submitInput(); whoever owns the Task drives it
+                // forward themselves, same as if they'd called task.resume(...) directly.
+            }
+            return context.responseMapper().emptyResult();
         }
     }
 }
