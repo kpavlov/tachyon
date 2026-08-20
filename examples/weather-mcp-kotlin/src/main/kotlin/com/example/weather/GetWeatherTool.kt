@@ -19,6 +19,8 @@ import dev.tachyonmcp.api.runtime.InteractionContext
 import dev.tachyonmcp.api.server.domain.ProgressToken
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.kotlin.server.config.ToolScope
+import dev.tachyonmcp.kotlin.server.domain.Icon
+import dev.tachyonmcp.kotlin.server.domain.ToolAnnotations
 import dev.tachyonmcp.kotlin.server.domain.stringOrNull
 import dev.tachyonmcp.kotlin.server.features.tools.ToolDescriptor
 import me.kpavlov.kt.schema.generator.json.JsonSchemaConfig
@@ -53,6 +55,14 @@ val getWeatherToolDescriptor =
         description = "Get current weather for a city"
         inputSchema(schemaGenerator.generateSchemaString(GetWeatherRequest::class))
         outputSchema(schemaGenerator.generateSchemaString(GetWeatherResponse::class))
+        icons = listOf(Icon(SUN_AND_CLOUD, "image/png", listOf("128x128")))
+        annotations =
+            ToolAnnotations(
+                readOnlyHint = true,
+                destructiveHint = false,
+                idempotentHint = true,
+                openWorldHint = true,
+            )
     }
 
 fun ToolScope.getWeather(weatherService: WeatherService): ToolResult {

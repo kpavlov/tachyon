@@ -44,6 +44,7 @@ public final class WeatherServer {
     private static final Logger log = LoggerFactory.getLogger(WeatherServer.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final String LOGO = classpathDataUri("/images/logo.png", "image/png");
+    static final String SUN_AND_CLOUD = classpathDataUri("/images/sun-and-cloud.png", "image/png");
 
     private static final WeatherService weatherService;
 

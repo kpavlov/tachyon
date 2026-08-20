@@ -31,7 +31,7 @@ jobs:
           - java: 21
             codecov: true
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v7

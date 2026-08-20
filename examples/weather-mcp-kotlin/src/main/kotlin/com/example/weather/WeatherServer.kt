@@ -36,7 +36,8 @@ import java.util.concurrent.Executors
 
 private val log = LoggerFactory.getLogger("com.example.weather.WeatherServer")
 private val MAPPER = ObjectMapper()
-private val LOGO by lazy { classpathDataUri("/images/logo.png", "image/png") }
+internal val LOGO by lazy { classpathDataUri("/images/logo.png", "image/png") }
+internal val SUN_AND_CLOUD by lazy { classpathDataUri("/images/sun-and-cloud.png", "image/png") }
 
 private val schemaGenerator =
     ReflectionClassJsonSchemaGenerator(

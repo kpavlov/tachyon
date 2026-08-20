@@ -14,7 +14,9 @@ import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.runtime.ElicitationRequest;
 import dev.tachyonmcp.api.runtime.ElicitationResult;
 import dev.tachyonmcp.api.runtime.InteractionContext;
+import dev.tachyonmcp.api.server.domain.Icon;
 import dev.tachyonmcp.api.server.domain.ProgressToken;
+import dev.tachyonmcp.api.server.domain.ToolAnnotations;
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolFn;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
@@ -22,6 +24,7 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Optional;
 
 class GetWeatherTool {
@@ -36,6 +39,8 @@ class GetWeatherTool {
         .description("Get current weather for a city")
         .inputSchema(INPUT_SCHEMA)
         .outputSchema(OUTPUT_SCHEMA)
+        .icons(Icon.of(WeatherServer.SUN_AND_CLOUD, "image/png", List.of("128x128"), null))
+        .annotations(ToolAnnotations.of(null, true, false, true, true))
         .build();
 
     static ToolFn fn(WeatherService weatherService) {
