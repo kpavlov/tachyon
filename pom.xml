@@ -501,12 +501,16 @@
                                     </include>
                                 </archives>
                             </revapi.filter>
-                            <revapi.java.filter.annotated>
-                                <regex>false</regex>
-                                <exclude>
-                                    <item>dev.tachyonmcp.api.annotations.InternalApi</item>
-                                </exclude>
-                            </revapi.java.filter.annotated>
+                            <revapi.filter>
+                                <elements>
+                                    <exclude>
+                                        <item>
+                                            <matcher>java</matcher>
+                                            <match>@dev.tachyonmcp.api.annotations.InternalApi ^*;</match>
+                                        </item>
+                                    </exclude>
+                                </elements>
+                            </revapi.filter>
                             <revapi.differences>
                                 <ignore>true</ignore>
                                 <differences>
