@@ -71,7 +71,7 @@
         <immutables.version>2.12.2</immutables.version>
         <jackson.version>3.2.2</jackson.version>
         <java-mcp-sdk.version>2.0.1</java-mcp-sdk.version>
-        <json-schema-validator.version>3.0.6</json-schema-validator.version>
+        <json-schema-validator.version>3.0.7</json-schema-validator.version>
         <json-unit.version>6.2.0</json-unit.version>
         <jspecify.version>1.0.1</jspecify.version>
         <junit.pioneer.version>2.3.0</junit.pioneer.version>
