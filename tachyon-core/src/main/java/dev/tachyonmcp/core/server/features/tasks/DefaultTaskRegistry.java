@@ -155,7 +155,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
     }
 
     @Override
-    public @Nullable TaskResumer getResumer(String taskId) {
+    public @Nullable TaskResumer findResumer(String taskId) {
         return resumers.get(taskId);
     }
 

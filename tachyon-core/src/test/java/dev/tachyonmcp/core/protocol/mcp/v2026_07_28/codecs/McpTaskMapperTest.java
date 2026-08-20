@@ -100,7 +100,7 @@ class McpTaskMapperTest {
 
     @Test
     void getTaskResultInlinesTheGivenInputRequestsNode() {
-        var inputRequestsNode = JsonNodeFactory.instance.objectNode();
+        var inputRequestsNode = JsonNodeFactory.instance.objectNode().put("field", "value");
 
         var node = McpTaskMapper.toGetTaskResult(entry(TaskState.INPUT_REQUIRED), null, null, inputRequestsNode);
 

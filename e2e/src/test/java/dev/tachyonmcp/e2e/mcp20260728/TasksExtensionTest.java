@@ -34,7 +34,7 @@ import tools.jackson.databind.node.JsonNodeFactory;
 class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
 
     private void startTasksServer() {
-        startServer(builder -> builder.extension(TasksExtension.instance()), registrar -> {});
+        startServer(builder -> builder.withExtensions(TasksExtension.instance()), registrar -> {});
     }
 
     @Test
@@ -329,7 +329,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
     @Test
     void acceptsTaskAugmentedRequiredToolWhenDeclaredPerRequest() throws Exception {
         startServer(
-                builder -> builder.extension(TasksExtension.instance()),
+                builder -> builder.withExtensions(TasksExtension.instance()),
                 registrar -> registrar
                         .tools()
                         .register(
@@ -461,10 +461,21 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
     @Test
     void tasksUpdateResumesTaskAndItCompletes() throws Exception {
         startServer(
-                builder -> builder.extension(TasksExtension.instance()),
+                builder -> builder.withExtensions(TasksExtension.instance()),
                 registrar -> registrar
                         .tools()
-                        .register(b -> b.name("greet").taskSupport(TaskSupport.REQUIRED), greetHandler()));
+                        .register(b -> b.name("greet").taskSupport(TaskSupport.REQUIRED), (context, request) -> {
+                            var inputResponses = request.inputResponses();
+                            if (inputResponses == null || !inputResponses.containsKey("user_name")) {
+                                return ToolResult.inputRequired(
+                                        Map.of(
+                                                "user_name",
+                                                FormInputRequest.of("What is your name?", JsonSchema.objectSchema())),
+                                        "greet-state");
+                            }
+                            var name = stringField(inputResponses.get("user_name"), "name", "World");
+                            return ToolResult.text("Hello, " + name + "!");
+                        }));
 
         try (var client = createModernTestClient()) {
             client.withExtensions(Map.of(TasksExtension.ID, JsonNodeFactory.instance.objectNode()));
@@ -495,7 +506,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
     @Test
     void tasksUpdateSupportsMultipleRoundsOfInputRequired() throws Exception {
         startServer(
-                builder -> builder.extension(TasksExtension.instance()),
+                builder -> builder.withExtensions(TasksExtension.instance()),
                 registrar -> registrar
                         .tools()
                         .register(b -> b.name("multi-round").taskSupport(TaskSupport.REQUIRED), (context, request) -> {
@@ -551,10 +562,25 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
     @Test
     void tasksUpdateIgnoresUnknownAndAlreadySatisfiedKeys() throws Exception {
         startServer(
-                builder -> builder.extension(TasksExtension.instance()),
+                builder -> builder.withExtensions(TasksExtension.instance()),
                 registrar -> registrar
                         .tools()
-                        .register(b -> b.name("greet").taskSupport(TaskSupport.REQUIRED), greetHandler()));
+                        .register(b -> b.name("greet").taskSupport(TaskSupport.REQUIRED), (context, request) -> {
+                            var inputResponses = request.inputResponses();
+                            if (inputResponses == null
+                                    || !inputResponses.containsKey("user_name")
+                                    || !inputResponses.containsKey("email")) {
+                                return ToolResult.inputRequired(
+                                        Map.of(
+                                                "user_name",
+                                                FormInputRequest.of("What is your name?", JsonSchema.objectSchema()),
+                                                "email",
+                                                FormInputRequest.of("What is your email?", JsonSchema.objectSchema())),
+                                        "greet-state");
+                            }
+                            return ToolResult.text(
+                                    "Hello, " + stringField(inputResponses.get("user_name"), "name", "World") + "!");
+                        }));
 
         try (var client = createModernTestClient()) {
             client.withExtensions(Map.of(TasksExtension.ID, JsonNodeFactory.instance.objectNode()));
@@ -567,11 +593,20 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
 
             var updateResponse = client.post("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/update","params":{\
-                    "taskId":"%s","inputResponses":{\
-                    "user_name":{"name":"Alice"},"unknown_key":"ignored","user_name":{"name":"Alice"}}}}
+                    "taskId":"%s","inputResponses":{"user_name":{"name":"Alice"},"unknown_key":"ignored"}}}
                     """.formatted(taskId));
 
             assertThat(updateResponse.statusCode()).as(updateResponse.body()).isEqualTo(200);
+
+            var stillWaiting = client.getTask(null, taskId);
+            assertThatJson(stillWaiting).inPath("$.result.status").isEqualTo("input_required");
+
+            var secondUpdate = client.post("""
+                    {"jsonrpc":"2.0","id":3,"method":"tasks/update","params":{\
+                    "taskId":"%s","inputResponses":{"user_name":{"name":"Bob"},"email":"alice@example.com"}}}
+                    """.formatted(taskId));
+
+            assertThat(secondUpdate.statusCode()).as(secondUpdate.body()).isEqualTo(200);
             var completedTask = client.awaitTaskStatus(taskId, "completed");
             assertThatJson(completedTask)
                     .inPath("$.result.result.content[0].text")
@@ -582,7 +617,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
     @Test
     void tasksUpdateAcceptsPartialResponsesAcrossMultipleCalls() throws Exception {
         startServer(
-                builder -> builder.extension(TasksExtension.instance()),
+                builder -> builder.withExtensions(TasksExtension.instance()),
                 registrar -> registrar
                         .tools()
                         .register(b -> b.name("two-fields").taskSupport(TaskSupport.REQUIRED), (context, request) -> {

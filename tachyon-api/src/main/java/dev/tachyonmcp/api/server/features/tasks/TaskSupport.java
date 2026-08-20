@@ -19,7 +19,10 @@ public enum TaskSupport {
     /** The tool never runs as a task; a task-augmented call is rejected. This is the default. */
     FORBIDDEN,
 
-    /** The tool may run either synchronously or as a task, at the caller's discretion. */
+    /**
+     * Under MCP 2025-11-25, the caller may run the tool synchronously or as a task. MCP
+     * 2026-07-28 always runs this tool synchronously.
+     */
     OPTIONAL,
 
     /**

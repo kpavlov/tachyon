@@ -203,13 +203,13 @@ public final class ToolMethodHandlers {
                     .task(task)
                     .build();
 
-            taskRegistry.registerResumer(task.id(), (responses, state) -> {
+            taskRegistry.registerResumer(task.id(), (resumeContext, responses, state) -> {
                 var resumedRequest = ToolRequest.builder()
                         .from(taskRequest)
                         .inputResponses(responses)
                         .requestState(state)
                         .build();
-                dispatchAndWire(context, handler, resumedRequest, taskRegistry, task);
+                dispatchAndWire(resumeContext, handler, resumedRequest, taskRegistry, task);
             });
             dispatchAndWire(context, handler, taskRequest, taskRegistry, task);
             return taskResult;

@@ -12,6 +12,7 @@ import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.features.tasks.TaskOptions;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
+import dev.tachyonmcp.core.protocol.Protocols;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CallToolResult;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult;
@@ -282,6 +283,34 @@ class DefaultTaskRegistryTest {
         assertThat(task.status()).isEqualTo(TaskState.INPUT_REQUIRED);
         assertThat(task.statusMessage()).isEqualTo("need more info");
         assertThat(registry.getById(task.id()).pendingInput()).isEqualTo(bundle);
+    }
+
+    @Test
+    void taskUpdateFailureMarksTaskFailedAndUnregistersResumer() throws Exception {
+        var task = (TaskEntry) registry.create();
+        assertThat(registry.updateStatus(task.id(), TaskState.WORKING, null)).isTrue();
+        task.requireInput(
+                new InputRequestBundle(
+                        Map.of("user_name", FormInputRequest.of("What is your name?", JsonSchema.objectSchema())),
+                        null),
+                null);
+        registry.registerResumer(task.id(), (context, responses, state) -> {
+            throw new IllegalStateException("boom");
+        });
+        var context = DefaultDispatchContext.create(
+                Protocols.list().stream()
+                        .filter(protocol -> protocol.versionString().equals("2026-07-28"))
+                        .findFirst()
+                        .orElseThrow(),
+                engine);
+        context.enableExtension(TasksExtension.ID);
+
+        var result = handlers.get("tasks/update")
+                .handle(context, Map.of("taskId", task.id(), "inputResponses", Map.of("user_name", "Alice")));
+
+        assertThat(result).isNotInstanceOf(ServerError.class);
+        assertThat(task.status()).isEqualTo(TaskState.FAILED);
+        assertThat(registry.findResumer(task.id())).isNull();
     }
 
     @Test

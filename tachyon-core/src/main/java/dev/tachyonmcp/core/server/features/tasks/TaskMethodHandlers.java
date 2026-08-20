@@ -2,6 +2,7 @@
 package dev.tachyonmcp.core.server.features.tasks;
 
 import dev.tachyonmcp.api.server.domain.ServerError;
+import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.RequestMappingException;
@@ -189,12 +190,14 @@ public final class TaskMethodHandlers {
 
             var resumeInputs = entry.submitInput(request.inputResponses());
             if (resumeInputs != null) {
-                var resumer = registry.getResumer(entry.id());
+                var resumer = registry.findResumer(entry.id());
                 if (resumer != null) {
                     try {
-                        resumer.resume(resumeInputs.inputResponses(), resumeInputs.requestState());
+                        resumer.resume(context, resumeInputs.inputResponses(), resumeInputs.requestState());
                     } catch (RuntimeException e) {
                         logger.error("Task resumer failed for taskId={}", entry.id(), e);
+                        entry.fail(TaskResult.failed("Task resumer failed"));
+                        registry.unregisterResumer(entry.id());
                     }
                 }
                 // else: a hand-created task (server.tasks().create() + task.requireInput(...)
