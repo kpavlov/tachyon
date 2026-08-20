@@ -6,6 +6,7 @@
 
 package dev.tachyonmcp.kotlin.server.domain
 
+import dev.tachyonmcp.api.json.JsonSchema
 import dev.tachyonmcp.api.server.domain.FormInputRequest
 import dev.tachyonmcp.api.server.domain.RpcMethodRequest
 import dev.tachyonmcp.api.server.domain.UrlInputRequest
@@ -44,12 +45,32 @@ public fun RpcMethodRequest(
  * @param message         prompt shown to the user
  * @param requestedSchema JSON schema describing the expected form fields
  */
+@Deprecated(
+    message = "use `FormInputRequest` with JsonSchema instead",
+    replaceWith =
+        ReplaceWith(
+            "FormInputRequest.of(message, JsonSchema.from(requestedSchema, Map::class.java))",
+            "dev.tachyonmcp.api.server.domain.FormInputRequest",
+            "dev.tachyonmcp.api.json.JsonSchema",
+        ),
+)
 public fun FormInputRequest(
     message: String,
     requestedSchema: Map<String, Any>,
 ): FormInputRequest =
     FormInputRequest
-        .of(message, requestedSchema)
+        .of(message, JsonSchema.from(requestedSchema, Map::class.java))
+
+/**
+ * Creates a [FormInputRequest] — requests user input via a form described by a JSON schema.
+ *
+ * @param message         prompt shown to the user
+ * @param requestedSchema JSON schema describing the expected form fields
+ */
+public fun FormInputRequest(
+    message: String,
+    requestedSchema: JsonSchema,
+): FormInputRequest = FormInputRequest.of(message, requestedSchema)
 
 /**
  * Creates a [UrlInputRequest] — requests user input by opening a URL.

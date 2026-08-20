@@ -31,7 +31,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
         var schema = new LinkedHashMap<String, Object>();
         schema.put("type", "object");
         schema.put("properties", Map.of(prop, Map.of("type", "string")));
-        return FormInputRequest.of(message, schema);
+        return FormInputRequest.of(message, JsonSchema.from(schema));
     }
 
     private static RpcMethodRequest samplingRequest() {

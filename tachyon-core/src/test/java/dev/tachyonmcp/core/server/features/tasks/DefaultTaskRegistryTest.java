@@ -5,6 +5,7 @@ import static dev.tachyonmcp.core.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.server.domain.FormInputRequest;
 import dev.tachyonmcp.api.server.domain.InputRequestBundle;
 import dev.tachyonmcp.api.server.domain.ServerError;
@@ -276,7 +277,8 @@ class DefaultTaskRegistryTest {
         // per the FSM, so it's the server-facing way to leave SUBMITTED before requireInput().
         task.resume(null);
         var bundle = new InputRequestBundle(
-                Map.of("user_name", FormInputRequest.of("What is your name?", Map.of())), "state-token");
+                Map.of("user_name", FormInputRequest.of("What is your name?", JsonSchema.objectSchema())),
+                "state-token");
 
         assertThat(task.requireInput(bundle, "need more info")).isTrue();
 
@@ -289,8 +291,8 @@ class DefaultTaskRegistryTest {
     void pendingInputClearsOnceTaskLeavesInputRequired() {
         var task = registry.create();
         task.resume(null);
-        var bundle =
-                new InputRequestBundle(Map.of("user_name", FormInputRequest.of("What is your name?", Map.of())), null);
+        var bundle = new InputRequestBundle(
+                Map.of("user_name", FormInputRequest.of("What is your name?", JsonSchema.objectSchema())), null);
         task.requireInput(bundle, null);
 
         assertThat(task.resume(null)).isTrue();
@@ -301,8 +303,8 @@ class DefaultTaskRegistryTest {
     @Test
     void requireInputFailsFromSubmittedWithoutReachingWorkingFirst() {
         var task = registry.create();
-        var bundle =
-                new InputRequestBundle(Map.of("user_name", FormInputRequest.of("What is your name?", Map.of())), null);
+        var bundle = new InputRequestBundle(
+                Map.of("user_name", FormInputRequest.of("What is your name?", JsonSchema.objectSchema())), null);
 
         assertThat(task.requireInput(bundle, null)).isFalse();
 

@@ -264,7 +264,7 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
                         new ElicitRequest(
                                 "elicitation/create",
                                 new ElicitRequestFormParams(
-                                        null, f.message(), JsonUtils.writeString(f.requestedSchema()))));
+                                        null, f.message(), f.requestedSchema().json())));
             case UrlInputRequest u ->
                 encodeToTree(
                         ElicitRequest.class,

@@ -4,6 +4,7 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.runtime.InteractionContext;
 import dev.tachyonmcp.api.server.domain.FormInputRequest;
 import dev.tachyonmcp.api.server.domain.InputRequest;
@@ -214,7 +215,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
         schemaMap.put("type", "object");
         schemaMap.put("properties", Map.of(propName, Map.of("type", propType)));
         schemaMap.put("required", List.of(propName));
-        return FormInputRequest.of(message, schemaMap);
+        return FormInputRequest.of(message, JsonSchema.from(schemaMap));
     }
 
     private static UrlInputRequest buildUrlElicitation(String message, String elicitationId, String url) {

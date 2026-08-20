@@ -5,7 +5,9 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.json.JsonDocument;
+import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.server.domain.Annotations;
+import dev.tachyonmcp.api.server.domain.FormInputRequest;
 import dev.tachyonmcp.api.server.domain.Icon;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.api.server.domain.ProgressToken;
@@ -71,6 +73,23 @@ class McpResponseMapperTest {
         assertThat(result.completion().values()).containsExactly("one");
         assertThat(result.completion().total()).isEqualTo(100500);
         assertThat(result._meta()).containsEntry("trace", JsonNodeFactory.instance.textNode("complete-1"));
+    }
+
+    @Test
+    void inputRequiredEncodesRequestedSchemaAsRawJsonNotWrappedInJsonSchemaObject() {
+        var schema = JsonSchema.unchecked("""
+                {"type":"object","properties":{"name":{"type":"string"}}}
+                """);
+        var request = FormInputRequest.of("What is your name?", schema);
+
+        var payload = mapper.inputRequiredResult(Map.of("user_name", request), null, null);
+        var json = mapper.encode(payload);
+
+        assertThatJson(json)
+                .inPath("$.inputRequests.user_name.params.requestedSchema")
+                .isEqualTo("""
+                        {"type":"object","properties":{"name":{"type":"string"}}}
+                        """);
     }
 
     @Test

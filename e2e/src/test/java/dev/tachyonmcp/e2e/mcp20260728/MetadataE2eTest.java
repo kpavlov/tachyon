@@ -5,6 +5,7 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.json.JsonDocument;
+import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.server.domain.FormInputRequest;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
@@ -35,7 +36,7 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest {
         var schema = new LinkedHashMap<String, Object>();
         schema.put("type", "object");
         schema.put("properties", Map.of(prop, Map.of("type", "string")));
-        return FormInputRequest.of(message, schema);
+        return FormInputRequest.of(message, JsonSchema.from(schema));
     }
 
     private static Object field(Object value, String name) {

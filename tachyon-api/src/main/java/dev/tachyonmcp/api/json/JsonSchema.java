@@ -3,6 +3,7 @@ package dev.tachyonmcp.api.json;
 
 import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import dev.tachyonmcp.api.json.spi.JsonSchemaFactory;
+import java.util.Map;
 
 /**
  * An immutable, encoded JSON Schema.
@@ -53,6 +54,14 @@ public interface JsonSchema extends JsonDocument {
     @ExperimentalApi
     static <T> JsonSchema from(T source, Class<T> type) {
         return JsonSchemas.from(source, type);
+    }
+
+    /**
+     * Creates a schema from Map representing
+     */
+    @ExperimentalApi(since = "1.0.0-beta.21")
+    static <T> JsonSchema from(Map<String, Object> source) {
+        return JsonSchemas.from(source, Map.class);
     }
 
     /**

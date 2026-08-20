@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.api.server.domain;
 
+import dev.tachyonmcp.api.json.JsonSchema;
 import java.util.Map;
 import org.immutables.value.Value;
 
@@ -16,7 +17,7 @@ public non-sealed interface FormInputRequest extends InputRequest {
     String message();
 
     /** JSON schema describing the expected form fields. */
-    Map<String, Object> requestedSchema();
+    JsonSchema requestedSchema();
 
     @Value.Check
     default void check() {
@@ -27,8 +28,19 @@ public non-sealed interface FormInputRequest extends InputRequest {
         return DefaultFormInputRequest.builder();
     }
 
+    @Deprecated
     static FormInputRequest of(String message, Map<String, Object> requestedSchema) {
-        return DefaultFormInputRequest.of(message, requestedSchema);
+        return DefaultFormInputRequest.builder()
+                .message(message)
+                .requestedSchema(requestedSchema)
+                .build();
+    }
+
+    static FormInputRequest of(String message, JsonSchema requestedSchema) {
+        return DefaultFormInputRequest.builder()
+                .message(message)
+                .requestedSchema(requestedSchema)
+                .build();
     }
 
     interface Builder {
@@ -37,7 +49,15 @@ public non-sealed interface FormInputRequest extends InputRequest {
 
         Builder message(String message);
 
-        Builder requestedSchema(Map<String, ?> entries);
+        /**
+         * @deprecated use {@link #requestedSchema(JsonSchema)} instead
+         */
+        @Deprecated
+        default Builder requestedSchema(Map<String, ?> entries) {
+            return requestedSchema(JsonSchema.from(entries, Map.class));
+        }
+
+        Builder requestedSchema(JsonSchema jsonSchema);
 
         FormInputRequest build();
     }

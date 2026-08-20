@@ -367,7 +367,10 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
                 .register(
                         b -> b.name("needs-input").taskSupport(TaskSupport.OPTIONAL),
                         (context, request) -> ToolResult.inputRequired(
-                                Map.of("user_name", FormInputRequest.of("What is your name?", Map.of())), null)));
+                                Map.of(
+                                        "user_name",
+                                        FormInputRequest.of("What is your name?", JsonSchema.objectSchema())),
+                                null)));
         try (var client = createTestClient()) {
             client.initialize();
 
@@ -405,7 +408,9 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
                     var inputResponses = request.inputResponses();
                     if (inputResponses == null || !inputResponses.containsKey("user_name")) {
                         return ToolResult.inputRequired(
-                                Map.of("user_name", FormInputRequest.of("What is your name?", Map.of())),
+                                Map.of(
+                                        "user_name",
+                                        FormInputRequest.of("What is your name?", JsonSchema.objectSchema())),
                                 "greet-state");
                     }
                     var name = stringField(inputResponses.get("user_name"), "name", "World");
