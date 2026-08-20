@@ -84,14 +84,6 @@ public interface Task extends HasMeta {
     boolean requireInput(InputRequestBundle request, @Nullable String statusMessage);
 
     /**
-     * Resumes a task that was waiting for input.
-     *
-     * @param statusMessage optional status message
-     * @return {@code true} if the state transition was applied
-     */
-    boolean resume(@Nullable String statusMessage);
-
-    /**
      * Updates the status message of this task.
      *
      * @param statusMessage the new status message

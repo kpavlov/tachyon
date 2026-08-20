@@ -38,12 +38,12 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
 
     @Override
     protected void startDefaultServer() {
-        startServer(it -> it.extension(TasksExtension.instance()));
+        startServer(it -> it.withExtensions(TasksExtension.instance()));
     }
 
     @Test
     void advertisesTasksExtensionWhenNegotiated() throws Exception {
-        startServer(it -> it.capabilities(CapabilitiesConfig.Builder::tasks).extension(TasksExtension.instance()));
+        startServer(it -> it.capabilities(CapabilitiesConfig.Builder::tasks).withExtensions(TasksExtension.instance()));
         try (var client = createTestClient()) {
             var initBody = buildInitializeJson(Map.of(TASKS_EXTENSION_ID, JsonNodeFactory.instance.objectNode()));
             var response = client.post(null, initBody);
@@ -162,7 +162,7 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
         // through POST-SSE (ThreadLocal not inherited by ForkJoin threads).
         // This test uses a synchronous tool to verify notification delivery.
         startServer(
-                b -> b.extension(TasksExtension.instance()),
+                b -> b.withExtensions(TasksExtension.instance()),
                 s -> s.tools().register(tool -> tool.name("create-sync"), (ctx, req) -> {
                     ((DispatchContext) ctx).engine().tasks().create();
                     return ToolResult.text("ok");
@@ -188,7 +188,7 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
     @Test
     void shouldNotifyTaskStatusWithCallerSuppliedMessage() throws Exception {
         startServer(
-                b -> b.extension(TasksExtension.instance()),
+                b -> b.withExtensions(TasksExtension.instance()),
                 s -> s.tools().register(tool -> tool.name("update-status-sync"), (ctx, req) -> {
                     var task = ((DispatchContext) ctx).engine().tasks().create();
                     ((DefaultTaskRegistry) ((DispatchContext) ctx).engine().tasks())
@@ -208,15 +208,13 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
     }
 
     @Test
-    void shouldNotifyOnEveryFacadeDrivenMutation() throws Exception {
-        // Regression test: a caller holding only the public `Task` reference (never
-        // touching DefaultTaskRegistry's taskId-keyed methods) must still get a
-        // notification for every mutation, not just the initial creation push.
+    void shouldNotifyOnEveryTaskMutation() throws Exception {
         startServer(
-                b -> b.extension(TasksExtension.instance()),
+                b -> b.withExtensions(TasksExtension.instance()),
                 s -> s.tools().register(tool -> tool.name("drive-task-sync"), (ctx, req) -> {
-                    var task = ((DispatchContext) ctx).engine().tasks().create();
-                    task.resume("step 1");
+                    final var engine = ((DispatchContext) ctx).engine();
+                    var task = engine.tasks().create();
+                    engine.tasksRegistry().updateStatus(task.id(), TaskState.WORKING, "step 1");
                     task.updateMessage("step 2");
                     task.complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"done\"}")));
                     return ToolResult.text("ok");
@@ -234,19 +232,19 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
             assertThat(response.body()).contains("\"status\":\"completed\"");
             var notificationCount = response.body().split("notifications/tasks/status", -1).length - 1;
             assertThat(notificationCount)
-                    .as("one notification each for create, resume, updateMessage, complete")
+                    .as("one notification each for create, start, updateMessage, complete")
                     .isEqualTo(4);
         }
     }
 
     @Test
-    void shouldCancelAndNotifyBeforeRemovingActiveTask() throws Exception {
+    void shouldCancelAndNotifyBeforeRemovingNonTerminalTask() throws Exception {
         startServer(
-                b -> b.extension(TasksExtension.instance()),
+                b -> b.withExtensions(TasksExtension.instance()),
                 s -> s.tools().register(tool -> tool.name("remove-active-sync"), (ctx, req) -> {
-                    var task = ((DispatchContext) ctx).engine().tasks().create();
-                    task.resume(null);
-                    ((DispatchContext) ctx).engine().tasks().remove(task.id());
+                    final var engine = ((DispatchContext) ctx).engine();
+                    var task = engine.tasks().create();
+                    engine.tasks().remove(task.id());
                     return ToolResult.text(task.id());
                 }));
 
@@ -269,11 +267,12 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
     @Test
     void shouldRemoveTerminalTaskSilently() throws Exception {
         startServer(
-                b -> b.extension(TasksExtension.instance()),
+                b -> b.withExtensions(TasksExtension.instance()),
                 s -> s.tools().register(tool -> tool.name("remove-terminal-sync"), (ctx, req) -> {
-                    var task = ((DispatchContext) ctx).engine().tasks().create();
+                    final var engine = ((DispatchContext) ctx).engine();
+                    var task = engine.tasks().create();
                     task.complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"done\"}")));
-                    ((DispatchContext) ctx).engine().tasks().remove(task.id());
+                    engine.tasks().remove(task.id());
                     return ToolResult.text(task.id());
                 }));
 

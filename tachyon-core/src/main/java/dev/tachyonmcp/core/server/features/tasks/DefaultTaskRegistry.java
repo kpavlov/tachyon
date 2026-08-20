@@ -232,13 +232,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
             logger.debug("Task not found for client notification: {}", taskId);
             return false;
         }
-        if (statusMessage != null) {
-            if (newStatus == TaskState.WORKING && entry.resume(statusMessage)) {
-                return true;
-            }
-            return entry.transitionTo(newStatus, null, statusMessage);
-        }
-        if (!entry.transitionTo(newStatus)) {
+        if (!entry.transitionTo(newStatus, null, statusMessage)) {
             logger.debug("Invalid status transition from {} to {} for task {}", entry.status(), newStatus, taskId);
             return false;
         }

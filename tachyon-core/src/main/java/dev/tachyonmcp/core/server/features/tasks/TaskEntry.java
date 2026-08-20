@@ -331,20 +331,15 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             }
             // Not Map.copyOf: JSON null is a legal response value and Map.copyOf rejects nulls.
             var merged = Collections.unmodifiableMap(new LinkedHashMap<>(next));
-            // Resume while still holding the lock: transitionTo's pause bookkeeping is guarded by
+            // Transition while still holding the lock: transitionTo's pause bookkeeping is guarded by
             // the same (reentrant) lock, so a new INPUT_REQUIRED round can't be installed between
             // validating this round's answers and resuming it -- otherwise a late resume could
             // clobber a fresher pause with a stale round's answers.
-            if (!resume("Input received")) return null;
+            if (!transitionTo(TaskState.WORKING, null, "Input received")) return null;
             return new ResumeInputs(merged, pending.requestState());
         } finally {
             inputResponsesLock.unlock();
         }
-    }
-
-    @Override
-    public boolean resume(@Nullable String statusMessage) {
-        return transitionTo(TaskState.WORKING, null, statusMessage);
     }
 
     @Override

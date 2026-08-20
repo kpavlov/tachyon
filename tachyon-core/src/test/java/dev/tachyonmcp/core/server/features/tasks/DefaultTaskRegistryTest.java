@@ -272,9 +272,7 @@ class DefaultTaskRegistryTest {
     @Test
     void requireInputTransitionsToInputRequiredAndStoresPendingRequest() {
         var task = registry.create();
-        // Task has no public "start" method; resume() also legally moves SUBMITTED -> WORKING
-        // per the FSM, so it's the server-facing way to leave SUBMITTED before requireInput().
-        task.resume(null);
+        assertThat(registry.updateStatus(task.id(), TaskState.WORKING, null)).isTrue();
         var bundle = new InputRequestBundle(
                 Map.of("user_name", FormInputRequest.of("What is your name?", JsonSchema.objectSchema())),
                 "state-token");
@@ -289,12 +287,12 @@ class DefaultTaskRegistryTest {
     @Test
     void pendingInputClearsOnceTaskLeavesInputRequired() {
         var task = registry.create();
-        task.resume(null);
+        assertThat(registry.updateStatus(task.id(), TaskState.WORKING, null)).isTrue();
         var bundle = new InputRequestBundle(
                 Map.of("user_name", FormInputRequest.of("What is your name?", JsonSchema.objectSchema())), null);
         task.requireInput(bundle, null);
 
-        assertThat(task.resume(null)).isTrue();
+        assertThat(registry.updateStatus(task.id(), TaskState.WORKING, null)).isTrue();
 
         assertThat(registry.getById(task.id()).pendingInput()).isNull();
     }

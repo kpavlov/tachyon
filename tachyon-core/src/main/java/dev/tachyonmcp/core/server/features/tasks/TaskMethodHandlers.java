@@ -199,8 +199,7 @@ public final class TaskMethodHandlers {
                 }
                 // else: a hand-created task (server.tasks().create() + task.requireInput(...)
                 // called directly by user code, no tool-augmented dispatch) has no resumer -- it's
-                // already resumed to WORKING by submitInput(); whoever owns the Task drives it
-                // forward themselves, same as if they'd called task.resume(...) directly.
+                // already transitioned to WORKING by submitInput(); its owner drives it forward.
             }
             return context.responseMapper().emptyResult();
         }
