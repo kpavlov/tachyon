@@ -26,5 +26,9 @@ internal class KtSchemaReflectionFactory : JsonSchemaFactory<Class<*>> {
     override fun priority(): Int = 10
 
     override fun toJsonSchema(type: Class<*>): Optional<JsonSchema> =
-        Optional.of(JsonSchema.unchecked(generator.generateSchemaString(type.kotlin)))
+        Optional.of(
+            JsonSchema.unchecked(
+                generator.generateSchemaString(type.kotlin),
+            ),
+        )
 }

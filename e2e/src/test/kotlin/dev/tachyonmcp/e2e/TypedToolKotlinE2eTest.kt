@@ -4,9 +4,12 @@ package dev.tachyonmcp.e2e
 import dev.tachyonmcp.api.server.features.tools.ToolResult.structured
 import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.kotlin.server.domain.arguments
+import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
+import dev.tachyonmcp.kotlin.server.json.ktschema.ktSchemaGenerator
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.matchers.equals.shouldEqual
 import kotlinx.serialization.Serializable
+import me.kpavlov.kt.schema.generator.json.JsonSchemaConfig
 import org.junit.jupiter.api.Test
 
 /**
@@ -117,6 +120,61 @@ internal class TypedToolKotlinE2eTest : AbstractStatelessMcpE2eTest() {
                   "error": {
                     "code": -32602,
                     "message": "property 'unknownKey' is not defined in the schema and the schema does not allow additional properties"
+                  }
+                }
+                """.trimIndent()
+        }
+    }
+
+    @Test
+    fun `typedTool with a custom schemaGenerator allows omitting a defaulted argument`() {
+        TachyonServer(port = 0) {
+            // KxSerializationSerde honors kotlinx.serialization defaults on decode; the default
+            // Jackson serde does not (no jackson-module-kotlin registered), which is an unrelated,
+            // pre-existing gap independent of schemaGenerator.
+            json {
+                serde = KxSerializationSerde.Default
+            }
+            typedTool<GreetArgs, GreetReply>(
+                name = "lenient-greet",
+                description = "Typed greet tool with a non-strict schema",
+                schemaGenerator = ktSchemaGenerator(JsonSchemaConfig.Default),
+            ) {
+                val input = request.arguments<GreetArgs>()
+
+                structured(
+                    GreetReply("${input.greeting}, ${input.name}!"),
+                    "greeting response",
+                )
+            }
+        }.use { server ->
+
+            val client = createTestClient(server.port())
+            client.initialize()
+            val response =
+                client.post(
+                    // language=json
+                    """
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"lenient-greet","arguments":{"name":"World"}}}
+                    """.trimIndent(),
+                )
+
+            response.statusCode() shouldEqual 200
+            response.body() shouldEqualJson
+                """
+                {
+                  "jsonrpc": "2.0",
+                  "id": 2,
+                  "result": {
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "greeting response"
+                      }
+                    ],
+                    "structuredContent": {
+                      "message": "Hello, World!"
+                    }
                   }
                 }
                 """.trimIndent()

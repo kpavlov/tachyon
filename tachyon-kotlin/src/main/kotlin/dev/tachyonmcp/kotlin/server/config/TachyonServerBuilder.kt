@@ -168,17 +168,16 @@ public class TachyonServerBuilder
 
         /**
          * Registers a tool whose input/output schemas are resolved from [In]/[Out] via
-         * [dev.tachyonmcp.api.json.JsonSchema.generate], which tries the service-loaded
+         * [schemaGenerator], which defaults to
+         * [dev.tachyonmcp.api.json.JsonSchema.generate] — the service-loaded
          * [dev.tachyonmcp.api.json.spi.JsonSchemaFactory] chain in ascending priority order: a
          * build-time codegen resource (tachyon-core's `KtSchemaResourceFactory`) wins when
          * present, otherwise the runtime reflection generator in the `tachyon-kotlin-kt-schema`
          * integration artifact (its `KtSchemaReflectionFactory`, registered via
          * `META-INF/services`) back-fills. Add that artifact to the classpath to use `typedTool`
-         * without a codegen resource. To use a different generator, register your own
-         * `JsonSchemaFactory<Class<?>>` via `META-INF/services` — `json { schemaFactory = ... }`
-         * configures the unrelated *validation* factory (`sourceType() == String`) and has no
-         * effect here. Throws [IllegalStateException] at registration time if no factory in the
-         * chain produces a schema.
+         * without a codegen resource.
+         *
+         * Pass [schemaGenerator] to control generation for this call only.
          *
          * Named `typedTool` rather than an overload of `tool` because a same-named reified
          * overload wins Kotlin's overload resolution for existing schema-less `tool(name) { }`
@@ -190,6 +189,7 @@ public class TachyonServerBuilder
             name: String,
             description: String? = null,
             taskSupport: TaskSupport? = null,
+            noinline schemaGenerator: (Class<*>) -> JsonSchema = JsonSchema::generate,
             noinline handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
             typedToolFor(
@@ -198,6 +198,7 @@ public class TachyonServerBuilder
                 name = name,
                 description = description,
                 taskSupport = taskSupport,
+                schemaGenerator = schemaGenerator,
                 handler = handler,
             )
 
@@ -208,14 +209,15 @@ public class TachyonServerBuilder
             name: String,
             description: String?,
             taskSupport: TaskSupport?,
+            schemaGenerator: (Class<*>) -> JsonSchema,
             handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
             this.also {
                 featureRegistrar.tool(
                     name,
                     description,
-                    JsonSchema.generate(inputType),
-                    JsonSchema.generate(outputType),
+                    schemaGenerator(inputType),
+                    schemaGenerator(outputType),
                     taskSupport,
                     handler,
                 )
