@@ -56,6 +56,20 @@ internal class TachyonServerTest {
     }
 
     @Test
+    fun `post-build typed tool resolves schemas and adapts the handler`() {
+        buildServer {}.use { server ->
+            server.registerTool<TypedInput, TypedOutput>("typed-post-build", "Post-build") {
+                TypedOutput()
+            }
+
+            val descriptor = server.tools().find("typed-post-build").orElseThrow()
+            descriptor.description() shouldBe "Post-build"
+            descriptor.inputSchema()?.json() shouldBe """{"type":"object","title":"TypedInput"}"""
+            descriptor.outputSchema()?.json() shouldBe """{"type":"object","title":"TypedOutput"}"""
+        }
+    }
+
+    @Test
     fun `Kotlin DSL retains Jackson serde by default`() {
         TachyonServer(port = 0) {
             name("jackson-default-test")

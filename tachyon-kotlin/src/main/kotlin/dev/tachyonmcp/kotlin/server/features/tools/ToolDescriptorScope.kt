@@ -102,3 +102,33 @@ public inline fun ToolDescriptor(block: ToolDescriptorScope.() -> Unit): ToolDes
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
     return ToolDescriptorScope().apply(block).build()
 }
+
+/**
+ * Builds a [ToolDescriptor] from the full set of optional attributes exposed by
+ * [ToolDescriptor.Builder]. Shared by the flat `tool(...)` / `registerTool(...)` overloads so
+ * every one of them accepts the same attributes.
+ */
+@PublishedApi
+internal fun toolDescriptorOf(
+    name: String,
+    description: String?,
+    title: String?,
+    inputSchema: JsonSchema?,
+    outputSchema: JsonSchema?,
+    taskSupport: TaskSupport?,
+    annotations: ToolAnnotations?,
+    icons: List<Icon>?,
+    extensionId: String?,
+    meta: Map<String, Any>?,
+): ToolDescriptor =
+    toolDescriptor(name) {
+        this.title = title
+        this.description = description
+        this.inputSchema = inputSchema
+        this.outputSchema = outputSchema
+        this.taskSupport = taskSupport
+        this.annotations = annotations
+        this.icons = icons
+        this.extensionId = extensionId
+        this.meta = meta
+    }

@@ -3,7 +3,6 @@ package dev.tachyonmcp.kotlin.server.json
 
 import dev.tachyonmcp.api.json.JsonSchema
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor
-import dev.tachyonmcp.core.server.json.Jackson3JsonFactory
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -24,10 +23,10 @@ internal fun ToolDescriptor.Builder.schemas(
     outputSchema: String? = null,
 ): ToolDescriptor.Builder {
     if (inputSchema != null) {
-        inputSchema(Jackson3JsonFactory.INSTANCE.toJsonSchema(inputSchema).orElseThrow())
+        inputSchema(JsonSchema.parse(inputSchema))
     }
     if (outputSchema != null) {
-        outputSchema(Jackson3JsonFactory.INSTANCE.toJsonSchema(outputSchema).orElseThrow())
+        outputSchema(JsonSchema.parse(outputSchema))
     }
     return this
 }

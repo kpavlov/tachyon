@@ -6,8 +6,10 @@ import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.kotlin.server.domain.arguments
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
 import dev.tachyonmcp.kotlin.server.json.ktschema.ktSchemaGenerator
+import dev.tachyonmcp.kotlin.server.registerTool
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.matchers.equals.shouldEqual
+import io.kotest.matchers.string.shouldContain
 import kotlinx.serialization.Serializable
 import me.kpavlov.kt.schema.generator.json.JsonSchemaConfig
 import org.junit.jupiter.api.Test
@@ -74,6 +76,194 @@ internal class TypedToolKotlinE2eTest : AbstractStatelessMcpE2eTest() {
                     ],
                     "structuredContent": {
                       "message": "Hi, World!"
+                    }
+                  }
+                }
+                """.trimIndent()
+        }
+    }
+
+    @Test
+    fun `typed registerTool decodes input and wraps output post-build`() {
+        TachyonServer(port = 0).use { server ->
+            server.registerTool<GreetArgs, GreetReply>(
+                name = "greet",
+                description = "Typed greet tool",
+            ) { input ->
+                GreetReply("${input.greeting}, ${input.name}!")
+            }
+
+            val client = createTestClient(server.port())
+            client.initialize()
+            val response =
+                client.post(
+                    // language=json
+                    """
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"greet","arguments":{"name":"World","greeting":"Hi"}}}
+                    """.trimIndent(),
+                )
+
+            response.statusCode() shouldEqual 200
+            response.body() shouldEqualJson
+                """
+                {
+                  "jsonrpc": "2.0",
+                  "id": 2,
+                  "result": {
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "{\"message\":\"Hi, World!\"}"
+                      }
+                    ],
+                    "structuredContent": {
+                      "message": "Hi, World!"
+                    }
+                  }
+                }
+                """.trimIndent()
+        }
+    }
+
+    @Test
+    fun `typed registerTool passes a returned ToolResult through untouched`() {
+        TachyonServer(port = 0).use { server ->
+            server.registerTool<GreetArgs, GreetReply>("greet") { input ->
+                success(GreetReply("${input.greeting}, ${input.name}!"), text = "greeting response")
+                    .withMeta("cached", false)
+            }
+
+            val client = createTestClient(server.port())
+            client.initialize()
+            val response =
+                client.post(
+                    // language=json
+                    """
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"greet","arguments":{"name":"World","greeting":"Hi"}}}
+                    """.trimIndent(),
+                )
+
+            response.statusCode() shouldEqual 200
+            response.body() shouldEqualJson
+                """
+                {
+                  "jsonrpc": "2.0",
+                  "id": 2,
+                  "result": {
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "greeting response"
+                      }
+                    ],
+                    "structuredContent": {
+                      "message": "Hi, World!"
+                    },
+                    "_meta": {
+                      "cached": false
+                    }
+                  }
+                }
+                """.trimIndent()
+        }
+    }
+
+    @Test
+    fun `typed registerTool rejects a handler value that is neither Out nor ToolResult`() {
+        TachyonServer(port = 0).use { server ->
+            @Suppress("USELESS_CAST")
+            server.registerTool<GreetArgs, GreetReply>("greet") { "not a GreetReply" as Any }
+
+            val client = createTestClient(server.port())
+            client.initialize()
+            val response =
+                client.post(
+                    // language=json
+                    """
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"greet","arguments":{"name":"World","greeting":"Hi"}}}
+                    """.trimIndent(),
+                )
+
+            response.statusCode() shouldEqual 200
+            response.body() shouldContain "error"
+        }
+    }
+
+    @Test
+    fun `typedTool returns a plain Out value, wrapped into structuredContent`() {
+        TachyonServer(port = 0) {
+            typedTool<GreetArgs, GreetReply>(name = "greet") { input ->
+                GreetReply("${input.greeting}, ${input.name}!")
+            }
+        }.use { server ->
+            val client = createTestClient(server.port())
+            client.initialize()
+            val response =
+                client.post(
+                    // language=json
+                    """
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"greet","arguments":{"name":"World","greeting":"Hi"}}}
+                    """.trimIndent(),
+                )
+
+            response.statusCode() shouldEqual 200
+            response.body() shouldEqualJson
+                """
+                {
+                  "jsonrpc": "2.0",
+                  "id": 2,
+                  "result": {
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "{\"message\":\"Hi, World!\"}"
+                      }
+                    ],
+                    "structuredContent": {
+                      "message": "Hi, World!"
+                    }
+                  }
+                }
+                """.trimIndent()
+        }
+    }
+
+    @Test
+    fun `typedTool passes a returned ToolResult through untouched`() {
+        TachyonServer(port = 0) {
+            typedTool<GreetArgs, GreetReply>(name = "greet") { input ->
+                success(GreetReply("${input.greeting}, ${input.name}!"), text = "greeting response")
+                    .withMeta("cached", false)
+            }
+        }.use { server ->
+            val client = createTestClient(server.port())
+            client.initialize()
+            val response =
+                client.post(
+                    // language=json
+                    """
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"greet","arguments":{"name":"World","greeting":"Hi"}}}
+                    """.trimIndent(),
+                )
+
+            response.statusCode() shouldEqual 200
+            response.body() shouldEqualJson
+                """
+                {
+                  "jsonrpc": "2.0",
+                  "id": 2,
+                  "result": {
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "greeting response"
+                      }
+                    ],
+                    "structuredContent": {
+                      "message": "Hi, World!"
+                    },
+                    "_meta": {
+                      "cached": false
                     }
                   }
                 }

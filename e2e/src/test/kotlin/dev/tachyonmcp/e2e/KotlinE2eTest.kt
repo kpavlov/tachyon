@@ -32,14 +32,16 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
                     serde = KxSerializationSerde.Default
                 }
                 tool(
-                    "greet",
-                    "Typed greet tool",
-                    //language=json
-                    """
-                    {"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}
-                    """.trimIndent(),
-                    // language=json
-                    """{"type":"object"}""",
+                    name = "greet",
+                    description = "Typed greet tool",
+                    inputSchema =
+                        JsonSchema.unchecked(
+                            //language=json
+                            """
+                            {"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}
+                            """.trimIndent(),
+                        ),
+                    outputSchema = JsonSchema.objectSchema(),
                 ) {
                     val input = request.arguments<GreetArgs>()
 
@@ -76,14 +78,15 @@ internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
                     serde = KxSerializationSerde.Default
                 }
                 tool(
-                    "greet",
-                    "Typed greet tool",
-                    //language=json
-                    """
-                    {"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}
-                    """.trimIndent(),
-                    // language=json
-                    """{"type":"object"}""",
+                    name = "greet",
+                    description = "Typed greet tool",
+                    inputSchema =
+                        JsonSchema.unchecked( //language=json
+                            """
+                            {"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}
+                            """.trimIndent(),
+                        ),
+                    outputSchema = JsonSchema.objectSchema(),
                 ) {
                     val input = request.arguments<GreetArgs>()
 

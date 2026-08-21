@@ -7,6 +7,7 @@ import dev.tachyonmcp.api.server.domain.Annotations
 import dev.tachyonmcp.api.server.domain.Icon
 import dev.tachyonmcp.api.server.domain.PromptMessage
 import dev.tachyonmcp.api.server.domain.ResourceContents
+import dev.tachyonmcp.api.server.domain.ToolAnnotations
 import dev.tachyonmcp.api.server.extensions.ServerExtension
 import dev.tachyonmcp.api.server.features.completions.CompletionResult
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor
@@ -22,6 +23,7 @@ import dev.tachyonmcp.kotlin.server.DefaultKotlinTachyonServer
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
+import dev.tachyonmcp.kotlin.server.features.tools.toolDescriptorOf
 import dev.tachyonmcp.kotlin.server.json.toJsonSchema
 import dev.tachyonmcp.kotlin.server.json.toJsonSchemaOrNull
 import io.netty.channel.ChannelPipeline
@@ -116,25 +118,41 @@ public class TachyonServerBuilder
             return this
         }
 
+        /**
+         * Registers a tool, accepting every optional attribute of [ToolDescriptor.Builder]; pass
+         * a prebuilt [ToolDescriptor] instead when a descriptor is already at hand.
+         */
         @JvmSynthetic
+        @Suppress("LongParameterList")
         public fun tool(
             name: String,
             description: String? = null,
+            title: String? = null,
             inputSchema: JsonSchema? = null,
             outputSchema: JsonSchema? = null,
             taskSupport: TaskSupport? = null,
+            annotations: ToolAnnotations? = null,
+            icons: List<Icon>? = null,
+            extensionId: String? = null,
+            meta: Map<String, Any>? = null,
             handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
-            this.also {
-                featureRegistrar.tool(
-                    name,
-                    description,
-                    inputSchema,
-                    outputSchema,
-                    taskSupport,
-                    handler,
-                )
-            }
+            tool(
+                descriptor =
+                    toolDescriptorOf(
+                        name = name,
+                        description = description,
+                        title = title,
+                        inputSchema = inputSchema,
+                        outputSchema = outputSchema,
+                        taskSupport = taskSupport,
+                        annotations = annotations,
+                        icons = icons,
+                        extensionId = extensionId,
+                        meta = meta,
+                    ),
+                handler = handler,
+            )
 
         @JvmSynthetic
         @Suppress("MaxLineLength")
@@ -143,7 +161,7 @@ public class TachyonServerBuilder
             message = "Use tool(...) with explicit JsonSchema object",
             replaceWith =
                 ReplaceWith(
-                    "tool(name, description, JsonSchema.parse(inputSchema), outputSchema?.let(JsonSchema::parse), taskSupport, handler)",
+                    "tool(name = name, description = description, inputSchema = JsonSchema.parse(inputSchema), outputSchema = outputSchema?.let(JsonSchema::parse), taskSupport = taskSupport, handler = handler)",
                     "dev.tachyonmcp.api.json.JsonSchema",
                 ),
         )
@@ -179,49 +197,59 @@ public class TachyonServerBuilder
          *
          * Pass [schemaGenerator] to control generation for this call only.
          *
-         * Named `typedTool` rather than an overload of `tool` because a same-named reified
-         * overload wins Kotlin's overload resolution for existing schema-less `tool(name) { }`
-         * calls too, then fails to infer [In]/[Out] there — breaking every such call site.
+         * The call arguments are decoded into [In] by the configured serde, and the handler may
+         * return **either** shape:
+         *  - an [Out] — wrapped into a success result carrying it as `structuredContent`;
+         *  - a [ToolResult] — passed through untouched, for results that also need `_meta`, a
+         *    custom text block, extra content blocks, [ToolScope.fail] or
+         *    [ToolScope.inputRequired].
+         *
+         * The two never collide: [ToolResult] is a sealed interface, so no [Out] can also be
+         * one. A value that is neither fails with [ClassCastException] naming the expected type.
+         *
+         * Both type arguments must be given explicitly — neither is inferable from the handler.
+         * The name stays `typedTool` for symmetry with the rest of the build-time DSL; the
+         * original reason (a reified `tool` overload hijacking schema-less `tool(name) { }`
+         * calls) no longer applies, since an explicit type argument list excludes every untyped
+         * overload.
          */
         @ExperimentalApi
         @JvmSynthetic
+        @Suppress("LongParameterList")
         public inline fun <reified In : Any, reified Out : Any> typedTool(
             name: String,
             description: String? = null,
+            title: String? = null,
             taskSupport: TaskSupport? = null,
             noinline schemaGenerator: (Class<*>) -> JsonSchema = JsonSchema::generate,
-            noinline handler: suspend ToolScope.() -> ToolResult,
-        ): TachyonServerBuilder =
-            typedToolFor(
-                inputType = In::class.java,
-                outputType = Out::class.java,
-                name = name,
-                description = description,
-                taskSupport = taskSupport,
-                schemaGenerator = schemaGenerator,
-                handler = handler,
-            )
-
-        @PublishedApi
-        internal fun typedToolFor(
-            inputType: Class<*>,
-            outputType: Class<*>,
-            name: String,
-            description: String?,
-            taskSupport: TaskSupport?,
-            schemaGenerator: (Class<*>) -> JsonSchema,
-            handler: suspend ToolScope.() -> ToolResult,
-        ): TachyonServerBuilder =
-            this.also {
-                featureRegistrar.tool(
-                    name,
-                    description,
-                    schemaGenerator(inputType),
-                    schemaGenerator(outputType),
-                    taskSupport,
-                    handler,
+            annotations: ToolAnnotations? = null,
+            icons: List<Icon>? = null,
+            extensionId: String? = null,
+            meta: Map<String, Any>? = null,
+            noinline handler: suspend ToolScope.(In) -> Any,
+        ): TachyonServerBuilder {
+            val inputType = In::class.java
+            val outputType = Out::class.java
+            val descriptor =
+                toolDescriptorOf(
+                    name = name,
+                    description = description,
+                    title = title,
+                    inputSchema = schemaGenerator(inputType),
+                    outputSchema = schemaGenerator(outputType),
+                    taskSupport = taskSupport,
+                    annotations = annotations,
+                    icons = icons,
+                    extensionId = extensionId,
+                    meta = meta,
                 )
+            return tool(descriptor) {
+                when (val produced = handler(arguments.decode(inputType))) {
+                    is ToolResult -> produced
+                    else -> success(outputType.cast(produced))
+                }
             }
+        }
 
         /**
          * Registers a prebuilt tool descriptor with a suspending handler block.
@@ -407,20 +435,31 @@ public class TachyonServerBuilder
          * Registers a tool using a [JsonObject] input schema.
          */
         @JvmSynthetic
+        @Suppress("LongParameterList")
         public fun tool(
             name: String,
             description: String? = null,
+            title: String? = null,
             inputSchema: JsonObject,
             outputSchema: JsonObject? = null,
             taskSupport: TaskSupport? = null,
+            annotations: ToolAnnotations? = null,
+            icons: List<Icon>? = null,
+            extensionId: String? = null,
+            meta: Map<String, Any>? = null,
             handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
             this.tool(
                 name = name,
                 description = description,
+                title = title,
                 inputSchema = inputSchema.toJsonSchema(),
                 outputSchema = outputSchema.toJsonSchemaOrNull(),
                 taskSupport = taskSupport,
+                annotations = annotations,
+                icons = icons,
+                extensionId = extensionId,
+                meta = meta,
                 handler = handler,
             )
 
