@@ -5,6 +5,7 @@ import dev.tachyonmcp.api.server.domain.ResourceContents;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.features.HandlerFutures;
 import dev.tachyonmcp.api.server.features.resources.ResourceRequest;
+import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.session.DispatchContext;
@@ -13,6 +14,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +23,7 @@ public final class ResourceMethodHandlers {
 
     private ResourceMethodHandlers() {}
 
-    public static void register(Map<String, RpcMethodHandler> handlers, DefaultResourceRegistry registry) {
+    public static void register(Map<String, RpcMethodHandler<?, ?>> handlers, DefaultResourceRegistry registry) {
         handlers.put("resources/list", new ResourcesListHandler(registry));
         handlers.put("resources/templates/list", new ResourcesTemplatesListHandler(registry));
         handlers.put("resources/read", new ResourcesReadHandler(registry));
@@ -29,7 +31,8 @@ public final class ResourceMethodHandlers {
         handlers.put("resources/unsubscribe", new ResourcesUnsubscribeHandler(registry));
     }
 
-    private record ResourcesListHandler(DefaultResourceRegistry registry) implements RpcMethodHandler {
+    private record ResourcesListHandler(DefaultResourceRegistry registry)
+            implements RpcMethodHandler<ProtocolRequestMapper.PageRequest, Object> {
 
         @Override
         public String method() {
@@ -37,8 +40,12 @@ public final class ResourceMethodHandlers {
         }
 
         @Override
-        public Object handle(DispatchContext context, Object params) {
-            var page = context.requestMapper().page(params);
+        public ProtocolRequestMapper.PageRequest decode(DispatchContext context, @Nullable Object rawParams) {
+            return context.requestMapper().page(rawParams);
+        }
+
+        @Override
+        public Object handle(DispatchContext context, ProtocolRequestMapper.PageRequest page) {
             var paginated = registry.list(page.limit(), page.cursor(), descriptor -> {
                 var extensionId = descriptor.extensionId();
                 return extensionId == null || context.isExtensionEnabled(extensionId);
@@ -48,7 +55,8 @@ public final class ResourceMethodHandlers {
         }
     }
 
-    private record ResourcesTemplatesListHandler(DefaultResourceRegistry registry) implements RpcMethodHandler {
+    private record ResourcesTemplatesListHandler(DefaultResourceRegistry registry)
+            implements RpcMethodHandler<ProtocolRequestMapper.PageRequest, Object> {
 
         @Override
         public String method() {
@@ -56,15 +64,21 @@ public final class ResourceMethodHandlers {
         }
 
         @Override
-        public Object handle(DispatchContext context, Object params) {
-            if (context.requestMapper().page(params).cursor() != null) {
+        public ProtocolRequestMapper.PageRequest decode(DispatchContext context, @Nullable Object rawParams) {
+            return context.requestMapper().page(rawParams);
+        }
+
+        @Override
+        public Object handle(DispatchContext context, ProtocolRequestMapper.PageRequest page) {
+            if (page.cursor() != null) {
                 return ServerErrors.invalidParams("Invalid cursor");
             }
             return context.responseMapper().listResourceTemplatesResult(registry.templateDescriptors(), null);
         }
     }
 
-    private record ResourcesReadHandler(DefaultResourceRegistry registry) implements RpcMethodHandler {
+    private record ResourcesReadHandler(DefaultResourceRegistry registry)
+            implements RpcMethodHandler<ResourceRequest, Object> {
 
         private static final Logger logger = LoggerFactory.getLogger(ResourcesReadHandler.class);
 
@@ -74,13 +88,17 @@ public final class ResourceMethodHandlers {
         }
 
         @Override
-        public Object handle(DispatchContext context, Object params) throws Exception {
-            return HandlerFutures.joinInterruptibly(handleAsync(context, params));
+        public ResourceRequest decode(DispatchContext context, @Nullable Object rawParams) {
+            return context.requestMapper().readResource(rawParams);
         }
 
         @Override
-        public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
-            var mapped = context.requestMapper().readResource(params);
+        public Object handle(DispatchContext context, ResourceRequest mapped) throws Exception {
+            return HandlerFutures.joinInterruptibly(handleAsync(context, mapped));
+        }
+
+        @Override
+        public CompletionStage<Object> handleAsync(DispatchContext context, ResourceRequest mapped) {
             if (!DefaultResourceRegistry.isValidResourceUri(mapped.uri())) {
                 return CompletableFuture.completedFuture(ServerErrors.invalidParams("Invalid resource URI"));
             }
@@ -129,7 +147,8 @@ public final class ResourceMethodHandlers {
         }
     }
 
-    private record ResourcesSubscribeHandler(DefaultResourceRegistry registry) implements RpcMethodHandler {
+    private record ResourcesSubscribeHandler(DefaultResourceRegistry registry)
+            implements RpcMethodHandler<String, Object> {
 
         @Override
         public String method() {
@@ -137,8 +156,12 @@ public final class ResourceMethodHandlers {
         }
 
         @Override
-        public Object handle(DispatchContext context, Object params) {
-            var uri = context.requestMapper().resourceUri(params);
+        public String decode(DispatchContext context, @Nullable Object rawParams) {
+            return context.requestMapper().resourceUri(rawParams);
+        }
+
+        @Override
+        public Object handle(DispatchContext context, String uri) {
             if (!DefaultResourceRegistry.isValidResourceUri(uri)) {
                 return ServerErrors.invalidParams("Invalid resource URI");
             }
@@ -151,7 +174,8 @@ public final class ResourceMethodHandlers {
         }
     }
 
-    private record ResourcesUnsubscribeHandler(DefaultResourceRegistry registry) implements RpcMethodHandler {
+    private record ResourcesUnsubscribeHandler(DefaultResourceRegistry registry)
+            implements RpcMethodHandler<String, Object> {
 
         @Override
         public String method() {
@@ -159,8 +183,12 @@ public final class ResourceMethodHandlers {
         }
 
         @Override
-        public Object handle(DispatchContext context, Object params) {
-            var uri = context.requestMapper().resourceUri(params);
+        public String decode(DispatchContext context, @Nullable Object rawParams) {
+            return context.requestMapper().resourceUri(rawParams);
+        }
+
+        @Override
+        public Object handle(DispatchContext context, String uri) {
             if (!DefaultResourceRegistry.isValidResourceUri(uri)) {
                 return ServerErrors.invalidParams("Invalid resource URI");
             }

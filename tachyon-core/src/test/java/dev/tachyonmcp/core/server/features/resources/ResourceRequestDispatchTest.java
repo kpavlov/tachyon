@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.features.resources;
 
+import static dev.tachyonmcp.core.test.TestUtils.decodeAndHandle;
 import static dev.tachyonmcp.core.test.TestUtils.newEngine;
 import static dev.tachyonmcp.core.test.VirtualThreads.runInVirtualThread;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,7 +28,7 @@ class ResourceRequestDispatchTest {
         var server = newEngine(builder -> {});
         var registry =
                 new DefaultResourceRegistry(server, ResourcesConfig.builder().build());
-        var handlers = new HashMap<String, RpcMethodHandler>();
+        var handlers = new HashMap<String, RpcMethodHandler<?, ?>>();
         ResourceMethodHandlers.register(handlers, registry);
         var captured = new AtomicReference<@Nullable ResourceRequest>();
         registry.register(
@@ -37,13 +38,13 @@ class ResourceRequestDispatchTest {
                 });
         Map<String, JsonNode> meta = Map.of("trace-id", new ObjectMapper().readTree("\"trace-42\""));
 
-        runInVirtualThread(() -> handlers.get("resources/read")
-                .handle(
-                        DefaultDispatchContext.stateless(server),
-                        ReadResourceRequestParams.builder()
-                                .uri("test://meta-request")
-                                ._meta(meta)
-                                .build()));
+        runInVirtualThread(() -> decodeAndHandle(
+                handlers.get("resources/read"),
+                DefaultDispatchContext.stateless(server),
+                ReadResourceRequestParams.builder()
+                        .uri("test://meta-request")
+                        ._meta(meta)
+                        .build()));
 
         assertThat(captured.get().uri()).isEqualTo("test://meta-request");
         assertThat(captured.get().params()).isEmpty();

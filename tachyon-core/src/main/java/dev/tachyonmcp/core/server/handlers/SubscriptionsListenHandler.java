@@ -2,6 +2,8 @@
 package dev.tachyonmcp.core.server.handlers;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
+import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
+import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.features.subscriptions.SubscriptionRegistry;
@@ -18,7 +20,8 @@ import org.jspecify.annotations.Nullable;
  * resultType: "complete"} response) — see {@link SubscriptionRegistry#closeAll()}.
  */
 @InternalApi
-public final class SubscriptionsListenHandler implements RpcMethodHandler {
+public final class SubscriptionsListenHandler
+        implements RpcMethodHandler<ProtocolRequestMapper.SubscriptionListenRequest, Object> {
 
     private final SubscriptionRegistry registry;
 
@@ -32,16 +35,22 @@ public final class SubscriptionsListenHandler implements RpcMethodHandler {
     }
 
     @Override
-    public Object handle(DispatchContext context, @Nullable Object params) {
+    public ProtocolRequestMapper.SubscriptionListenRequest decode(DispatchContext context, @Nullable Object rawParams) {
+        var requestMapper = context.requestMapper();
+        if (!requestMapper.supportsSubscriptionsListen()) {
+            throw new RequestMappingException(ServerErrors.methodNotFound("Method not found"));
+        }
+        return requestMapper.subscriptionsListen(rawParams);
+    }
+
+    @Override
+    public Object handle(DispatchContext context, ProtocolRequestMapper.SubscriptionListenRequest filter) {
         throw new UnsupportedOperationException("subscriptions/listen is stream-based; see handleAsync");
     }
 
     @Override
-    public CompletionStage<Object> handleAsync(DispatchContext context, @Nullable Object params) {
-        var requestMapper = context.requestMapper();
-        if (!requestMapper.supportsSubscriptionsListen()) {
-            return CompletableFuture.completedFuture(ServerErrors.methodNotFound("Method not found"));
-        }
+    public CompletionStage<Object> handleAsync(
+            DispatchContext context, ProtocolRequestMapper.SubscriptionListenRequest filter) {
         var stream = context.outboundStream();
         if (stream == null) {
             return CompletableFuture.completedFuture(ServerErrors.internalError("No SSE stream available"));
@@ -50,7 +59,6 @@ public final class SubscriptionsListenHandler implements RpcMethodHandler {
         if (subscriptionId == null) {
             throw new IllegalStateException("subscriptions/listen dispatched without a request id");
         }
-        var filter = requestMapper.subscriptionsListen(params);
 
         var pending = new CompletableFuture<>();
         var key = registry.activate(subscriptionId, stream, filter, context.responseMapper(), pending);

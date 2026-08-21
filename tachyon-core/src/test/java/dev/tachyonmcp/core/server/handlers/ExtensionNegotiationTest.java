@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.handlers;
 
+import static dev.tachyonmcp.core.test.TestUtils.decodeAndHandle;
 import static dev.tachyonmcp.core.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -40,7 +41,7 @@ class ExtensionNegotiationTest {
         var handler = server.getHandler("initialize");
         var params = buildInitParams(Map.of("com.test/ext1", JsonNodeFactory.instance.objectNode()));
         var context = context(session, server);
-        handler.handle(context, params);
+        decodeAndHandle(handler, context, params);
 
         assertThat(context.isExtensionEnabled("com.test/ext1")).isTrue();
     }
@@ -50,7 +51,7 @@ class ExtensionNegotiationTest {
         var handler = server.getHandler("initialize");
         var params = buildInitParams(Map.of());
         var context = context(session, server);
-        handler.handle(context, params);
+        decodeAndHandle(handler, context, params);
 
         assertThat(context.isExtensionEnabled("com.test/ext1")).isFalse();
     }
@@ -61,7 +62,7 @@ class ExtensionNegotiationTest {
         var params = buildInitParams(
                 Map.of("com.test/ext1", JsonNodeFactory.instance.objectNode().put("client", "test")));
         var context = context(session, server);
-        handler.handle(context, params);
+        decodeAndHandle(handler, context, params);
 
         assertThat(testExtension.initCalled.get()).isTrue();
         assertThat(testExtension.clientSettings.values().stringValue("client")).isEqualTo("test");
@@ -72,7 +73,7 @@ class ExtensionNegotiationTest {
         var handler = server.getHandler("initialize");
         var params = buildInitParams(Map.of());
         var context = context(session, server);
-        handler.handle(context, params);
+        decodeAndHandle(handler, context, params);
 
         assertThat(testExtension.initCalled.get()).isFalse();
     }

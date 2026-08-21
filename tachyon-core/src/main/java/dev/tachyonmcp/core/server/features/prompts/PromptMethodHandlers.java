@@ -7,12 +7,14 @@ import dev.tachyonmcp.api.json.SchemaValidationError;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.features.HandlerFutures;
 import dev.tachyonmcp.api.server.features.prompts.PromptResult;
+import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,12 +24,15 @@ public final class PromptMethodHandlers {
     private PromptMethodHandlers() {}
 
     public static void register(
-            Map<String, RpcMethodHandler> handlers, DefaultPromptRegistry registry, JsonSchemaValidator validator) {
+            Map<String, RpcMethodHandler<?, ?>> handlers,
+            DefaultPromptRegistry registry,
+            JsonSchemaValidator validator) {
         handlers.put("prompts/list", new PromptsListHandler(registry));
         handlers.put("prompts/get", new PromptsGetHandler(registry, validator));
     }
 
-    private record PromptsListHandler(DefaultPromptRegistry registry) implements RpcMethodHandler {
+    private record PromptsListHandler(DefaultPromptRegistry registry)
+            implements RpcMethodHandler<ProtocolRequestMapper.PageRequest, Object> {
 
         @Override
         public String method() {
@@ -35,8 +40,12 @@ public final class PromptMethodHandlers {
         }
 
         @Override
-        public Object handle(DispatchContext context, Object params) {
-            var page = context.requestMapper().page(params);
+        public ProtocolRequestMapper.PageRequest decode(DispatchContext context, @Nullable Object rawParams) {
+            return context.requestMapper().page(rawParams);
+        }
+
+        @Override
+        public Object handle(DispatchContext context, ProtocolRequestMapper.PageRequest page) {
             var paginated = registry.list(page.limit(), page.cursor(), descriptor -> {
                 var extensionId = descriptor.extensionId();
                 return extensionId == null || context.isExtensionEnabled(extensionId);
@@ -47,7 +56,7 @@ public final class PromptMethodHandlers {
     }
 
     private record PromptsGetHandler(DefaultPromptRegistry registry, JsonSchemaValidator validator)
-            implements RpcMethodHandler {
+            implements RpcMethodHandler<ProtocolRequestMapper.PromptCallRequest, Object> {
 
         private static final Logger logger = LoggerFactory.getLogger(PromptsGetHandler.class);
 
@@ -57,13 +66,18 @@ public final class PromptMethodHandlers {
         }
 
         @Override
-        public Object handle(DispatchContext context, Object params) throws Exception {
-            return HandlerFutures.joinInterruptibly(handleAsync(context, params));
+        public ProtocolRequestMapper.PromptCallRequest decode(DispatchContext context, @Nullable Object rawParams) {
+            return context.requestMapper().getPrompt(rawParams);
         }
 
         @Override
-        public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
-            var mapped = context.requestMapper().getPrompt(params);
+        public Object handle(DispatchContext context, ProtocolRequestMapper.PromptCallRequest mapped) throws Exception {
+            return HandlerFutures.joinInterruptibly(handleAsync(context, mapped));
+        }
+
+        @Override
+        public CompletionStage<Object> handleAsync(
+                DispatchContext context, ProtocolRequestMapper.PromptCallRequest mapped) {
             var entry = registry.get(mapped.name());
             if (entry == null) {
                 return CompletableFuture.completedFuture(ServerErrors.invalidParams("Prompt not found"));

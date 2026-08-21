@@ -226,7 +226,7 @@ public class McpDispatcher {
         return invokeHandlerAsync(id, method, params, outboundSseStream, requestCtx, session, handler);
     }
 
-    private @Nullable RpcMethodHandler lookupHandler(String method, Object params, DispatchContext ic) {
+    private @Nullable RpcMethodHandler<?, ?> lookupHandler(String method, Object params, DispatchContext ic) {
         var owningExtensionId = server.extensionForMethod(method);
         if (owningExtensionId != null) {
             if (!ic.isExtensionEnabled(owningExtensionId)) return null;
@@ -239,14 +239,14 @@ public class McpDispatcher {
     private <I, O> CompletableFuture<DispatchResult> invokeHandlerAsync(
             RequestId id,
             String method,
-            I params,
+            Object rawParams,
             @Nullable OutboundSseStream outboundSseStream,
             DispatchContext context,
             @Nullable Session session,
             RpcMethodHandler<I, O> handler) {
-        var paramsStr = params instanceof Map || params instanceof List
-                ? JsonRpcCodec.writeValueAsString(params)
-                : params instanceof String s ? s : null;
+        var paramsStr = rawParams instanceof Map || rawParams instanceof List
+                ? JsonRpcCodec.writeValueAsString(rawParams)
+                : rawParams instanceof String s ? s : null;
 
         return CompletableFuture.supplyAsync(
                         () -> {
@@ -268,13 +268,9 @@ public class McpDispatcher {
                                     : CompletableFuture.completedFuture(null);
                             try {
                                 CompletionStage<O> stage = OutboundSseStreamMessageRouter.withDispatchContext(
-                                        session != null ? session.id() : null, outboundSseStream, () -> {
-                                            try {
-                                                return handler.handleAsync(context, params);
-                                            } catch (Exception e) {
-                                                return CompletableFuture.failedFuture(e);
-                                            }
-                                        });
+                                        session != null ? session.id() : null,
+                                        outboundSseStream,
+                                        () -> decodeAndHandleAsync(handler, context, rawParams));
                                 return stage.whenComplete((r, e) -> watchdog.cancel(false));
                             } catch (Exception e) {
                                 watchdog.cancel(false);
@@ -291,6 +287,20 @@ public class McpDispatcher {
                     }
                     return handleSuccessOrError(id, method, result, null, context);
                 });
+    }
+
+    /**
+     * Fixed decode-then-handle skeleton every dispatch path shares -- the single call site each
+     * routes through, and the seam a future interceptor/chain wraps around.
+     */
+    private <I, O> CompletionStage<O> decodeAndHandleAsync(
+            RpcMethodHandler<I, O> handler, DispatchContext context, @Nullable Object rawParams) {
+        try {
+            I decoded = handler.decode(context, rawParams);
+            return handler.handleAsync(context, decoded);
+        } catch (Exception e) {
+            return CompletableFuture.failedFuture(e);
+        }
     }
 
     private DispatchResult handleHandlerError(RequestId id, String method, Throwable ex, DispatchContext context) {
@@ -424,7 +434,7 @@ public class McpDispatcher {
                                 if (!server.isStateless()) {
                                     ic.setSession(server.createSession(generateSessionId(channelContext)));
                                 }
-                                return (CompletionStage<Object>) handler.handleAsync(ic, rawParams);
+                                return (CompletionStage<Object>) decodeAndHandleAsync(handler, ic, rawParams);
                             } catch (Exception e) {
                                 return CompletableFuture.failedFuture(e);
                             }

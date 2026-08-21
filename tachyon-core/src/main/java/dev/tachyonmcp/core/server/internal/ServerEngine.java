@@ -60,14 +60,14 @@ public interface ServerEngine extends TachyonServer {
     void broadcastNotification(String method, Object params);
 
     /** Registers a method handler keyed by its own method name. */
-    void registerHandler(RpcMethodHandler handler);
+    void registerHandler(RpcMethodHandler<?, ?> handler);
 
     /** Registers a method handler with an explicit method name. */
-    void registerHandler(String method, RpcMethodHandler handler);
+    void registerHandler(String method, RpcMethodHandler<?, ?> handler);
 
     /** Returns the handler for a method, or {@code null} if not registered. */
     @Nullable
-    RpcMethodHandler getHandler(String method);
+    RpcMethodHandler<?, ?> getHandler(String method);
 
     /** Returns the extension ID that owns the given method, or {@code null} if none. */
     @Nullable

@@ -2,11 +2,13 @@
 package dev.tachyonmcp.core.server.handlers;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
+import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.InitializeResponse;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.server.session.DispatchContext;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Handles MCP 2025-11-25's {@code initialize} handshake: maps the request, resolves server
@@ -15,7 +17,7 @@ import dev.tachyonmcp.core.server.session.DispatchContext;
  * the result back through the negotiated protocol's response mapper.
  */
 @InternalApi
-public final class InitializeHandler implements RpcMethodHandler {
+public final class InitializeHandler implements RpcMethodHandler<ProtocolRequestMapper.InitializeRequest, Object> {
 
     private static final String MCP_VERSION = McpProtocol.VERSION;
     private final ServerEngine server;
@@ -30,9 +32,12 @@ public final class InitializeHandler implements RpcMethodHandler {
     }
 
     @Override
-    public Object handle(DispatchContext context, Object params) {
-        var initializeRequest = context.requestMapper().initialize(params);
+    public ProtocolRequestMapper.InitializeRequest decode(DispatchContext context, @Nullable Object rawParams) {
+        return context.requestMapper().initialize(rawParams);
+    }
 
+    @Override
+    public Object handle(DispatchContext context, ProtocolRequestMapper.InitializeRequest initializeRequest) {
         var capabilities = server.resolveCapabilities();
 
         var extensions = server.extensions();

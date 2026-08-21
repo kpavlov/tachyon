@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.features.prompts;
 
+import static dev.tachyonmcp.core.test.TestUtils.decodeAndHandle;
 import static dev.tachyonmcp.core.test.TestUtils.newEngine;
 import static dev.tachyonmcp.core.test.VirtualThreads.runInVirtualThread;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,7 +35,7 @@ class DefaultPromptRegistryTest {
     private final ServerEngine server = newEngine(b -> {});
     private final DefaultPromptRegistry registry =
             new DefaultPromptRegistry(FeatureConfig.builder().build());
-    private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
+    private final HashMap<String, RpcMethodHandler<?, ?>> handlers = new HashMap<>();
 
     private static PromptDescriptor prompt(String name) {
         return PromptDescriptor.of(name, null);
@@ -47,12 +48,12 @@ class DefaultPromptRegistryTest {
 
     private Object getPrompt(Object params) throws Exception {
         return runInVirtualThread(
-                () -> handlers.get("prompts/get").handle(DefaultDispatchContext.stateless(server), params));
+                () -> decodeAndHandle(handlers.get("prompts/get"), DefaultDispatchContext.stateless(server), params));
     }
 
     @Test
     void shouldReturnEmptyListWhenNoPromptsRegistered() throws Exception {
-        var result = handlers.get("prompts/list").handle(DefaultDispatchContext.stateless(server), null);
+        var result = decodeAndHandle(handlers.get("prompts/list"), DefaultDispatchContext.stateless(server), null);
 
         assertThat(result).isInstanceOf(ListPromptsResult.class);
         assertThat(((ListPromptsResult) result).prompts()).isEmpty();
@@ -163,8 +164,8 @@ class DefaultPromptRegistryTest {
         registry.register(PromptDescriptor.of("prompt-1", "First prompt"), List.of());
         registry.register(PromptDescriptor.of("prompt-2", "Second prompt"), List.of());
 
-        var result =
-                (ListPromptsResult) handlers.get("prompts/list").handle(DefaultDispatchContext.stateless(server), null);
+        var result = (ListPromptsResult)
+                decodeAndHandle(handlers.get("prompts/list"), DefaultDispatchContext.stateless(server), null);
 
         assertThat(result.prompts()).hasSize(2);
     }
@@ -227,7 +228,7 @@ class DefaultPromptRegistryTest {
         registry.register(descriptor, List.of(PromptMessage.user("Hello")));
 
         var result = (dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ListPromptsResult)
-                handlers.get("prompts/list").handle(DefaultDispatchContext.stateless(server), null);
+                decodeAndHandle(handlers.get("prompts/list"), DefaultDispatchContext.stateless(server), null);
         var prompt = result.prompts().getFirst();
 
         assertThat(prompt.name()).isEqualTo("full-prompt");

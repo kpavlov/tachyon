@@ -1,10 +1,14 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.handlers;
 
+import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
+import dev.tachyonmcp.core.server.RpcMethodHandler.NoParams;
 import dev.tachyonmcp.core.server.session.DispatchContext;
+import org.jspecify.annotations.Nullable;
 
-public class EmptyResultHandler implements RpcMethodHandler<Object, Object> {
+@InternalApi
+public class EmptyResultHandler implements RpcMethodHandler<NoParams, Object> {
 
     private final String methodName;
 
@@ -18,7 +22,12 @@ public class EmptyResultHandler implements RpcMethodHandler<Object, Object> {
     }
 
     @Override
-    public Object handle(DispatchContext context, Object params) {
+    public NoParams decode(DispatchContext context, @Nullable Object rawParams) {
+        return NoParams.INSTANCE;
+    }
+
+    @Override
+    public Object handle(DispatchContext context, NoParams params) {
         return context.responseMapper().emptyResult();
     }
 }

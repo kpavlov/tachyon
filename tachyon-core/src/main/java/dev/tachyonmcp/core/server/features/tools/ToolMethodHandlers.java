@@ -21,6 +21,7 @@ import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.api.server.features.tools.ToolHandler;
 import dev.tachyonmcp.api.server.features.tools.ToolRequest;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.server.OutboundSseStreamMessageRouter;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
@@ -46,7 +47,7 @@ public final class ToolMethodHandlers {
     private ToolMethodHandlers() {}
 
     public static void register(
-            Map<String, RpcMethodHandler> handlers,
+            Map<String, RpcMethodHandler<?, ?>> handlers,
             DefaultToolRegistry registry,
             JsonSchemaValidator inputValidator,
             JsonSchemaValidator outputValidator,
@@ -59,7 +60,8 @@ public final class ToolMethodHandlers {
                         registry, inputValidator, outputValidator, payloadSerializer, payloadDeserializer));
     }
 
-    private record ToolsListHandler(DefaultToolRegistry registry) implements RpcMethodHandler {
+    private record ToolsListHandler(DefaultToolRegistry registry)
+            implements RpcMethodHandler<ProtocolRequestMapper.PageRequest, Object> {
 
         @Override
         public String method() {
@@ -67,8 +69,12 @@ public final class ToolMethodHandlers {
         }
 
         @Override
-        public Object handle(DispatchContext context, Object params) {
-            var page = context.requestMapper().page(params);
+        public ProtocolRequestMapper.PageRequest decode(DispatchContext context, @Nullable Object rawParams) {
+            return context.requestMapper().page(rawParams);
+        }
+
+        @Override
+        public Object handle(DispatchContext context, ProtocolRequestMapper.PageRequest page) {
             var paginated = registry.list(page.limit(), page.cursor(), descriptor -> {
                 var extensionId = descriptor.extensionId();
                 return extensionId == null || context.isExtensionEnabled(extensionId);
@@ -84,7 +90,7 @@ public final class ToolMethodHandlers {
             JsonSchemaValidator outputValidator,
             PayloadSerializer payloadSerializer,
             PayloadDeserializer payloadDeserializer)
-            implements RpcMethodHandler {
+            implements RpcMethodHandler<ProtocolRequestMapper.ToolCallRequest, Object> {
 
         private static final Logger logger = LoggerFactory.getLogger(ToolsCallHandler.class);
 
@@ -94,13 +100,19 @@ public final class ToolMethodHandlers {
         }
 
         @Override
-        public @Nullable Object handle(DispatchContext context, Object params) throws Exception {
-            return HandlerFutures.joinInterruptibly(handleAsync(context, params));
+        public ProtocolRequestMapper.ToolCallRequest decode(DispatchContext context, @Nullable Object rawParams) {
+            return context.requestMapper().callTool(rawParams, payloadDeserializer);
         }
 
         @Override
-        public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
-            var mapped = context.requestMapper().callTool(params, payloadDeserializer);
+        public @Nullable Object handle(DispatchContext context, ProtocolRequestMapper.ToolCallRequest mapped)
+                throws Exception {
+            return HandlerFutures.joinInterruptibly(handleAsync(context, mapped));
+        }
+
+        @Override
+        public CompletionStage<Object> handleAsync(
+                DispatchContext context, ProtocolRequestMapper.ToolCallRequest mapped) {
             var request = mapped.request();
             if (request.name().length() > DefaultToolRegistry.MAX_NAME_LENGTH) {
                 return CompletableFuture.completedFuture(invalidParams("Tool name exceeds maximum length (SEP-986)"));
@@ -147,7 +159,7 @@ public final class ToolMethodHandlers {
                 DispatchContext context,
                 ToolHandler handler,
                 ToolRequest request,
-                dev.tachyonmcp.core.protocol.ProtocolRequestMapper.ToolCallRequest mapped,
+                ProtocolRequestMapper.ToolCallRequest mapped,
                 TaskSupport taskSupport) {
             if (context.requestMapper().supportsLegacyTaskAugmentation()) {
                 if (taskSupport == TaskSupport.FORBIDDEN && mapped.taskAugmented()) {

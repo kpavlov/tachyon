@@ -145,7 +145,7 @@ public final class SkillsExtension implements ServerExtension {
         if (skill == null) {
             return ServerErrors.invalidParams("Unknown skill: " + uri);
         }
-        return Map.of("skill", skillEntry(skill));
+        return Map.of("skill", skillEntry(skill), "resultType", "complete");
     }
 
     private Object readDirectory(InteractionContext interaction, @Nullable JsonObject params) {
@@ -160,7 +160,7 @@ public final class SkillsExtension implements ServerExtension {
         if (children == null) {
             return ServerErrors.invalidParams("Unknown skill directory: " + uri);
         }
-        return Map.of("resources", toResourceEntries(uri, children));
+        return Map.of("resources", toResourceEntries(uri, children), "resultType", "complete");
     }
 
     /** Returns the immediate children of {@code dirPath}, or {@code null} when it names no known directory. */
@@ -250,7 +250,7 @@ public final class SkillsExtension implements ServerExtension {
         private String cacheScope = "public";
 
         /**
-         * Adds a skill registry. Construct {@link PathSkillsRegistry} or
+         * Adds a skill registry. Construct {@link FilesystemSkillsRegistry} or
          * {@link ClasspathSkillsRegistry} directly, or supply a custom {@link SkillsRegistry} —
          * the registry itself resolves skills from its source.
          *

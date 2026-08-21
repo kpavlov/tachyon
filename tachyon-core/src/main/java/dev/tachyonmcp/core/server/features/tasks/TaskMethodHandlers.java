@@ -4,6 +4,8 @@ package dev.tachyonmcp.core.server.features.tasks;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
+import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
+import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.session.DispatchContext;
@@ -17,7 +19,7 @@ public final class TaskMethodHandlers {
 
     private TaskMethodHandlers() {}
 
-    public static void register(Map<String, RpcMethodHandler> handlers, DefaultTaskRegistry registry) {
+    public static void register(Map<String, RpcMethodHandler<?, ?>> handlers, DefaultTaskRegistry registry) {
         handlers.put("tasks/list", new TasksListHandler(registry));
         handlers.put("tasks/get", new TasksGetHandler(registry));
         handlers.put("tasks/cancel", new TasksCancelHandler(registry));
@@ -49,17 +51,22 @@ public final class TaskMethodHandlers {
                 : null;
     }
 
-    private record TasksListHandler(DefaultTaskRegistry registry) implements RpcMethodHandler {
+    private record TasksListHandler(DefaultTaskRegistry registry)
+            implements RpcMethodHandler<ProtocolRequestMapper.PageRequest, Object> {
         @Override
         public String method() {
             return "tasks/list";
         }
 
         @Override
-        public Object handle(DispatchContext context, Object params) {
+        public ProtocolRequestMapper.PageRequest decode(DispatchContext context, @Nullable Object rawParams) {
             var unavailable = legacyTasksUnavailable(context);
-            if (unavailable != null) return unavailable;
-            var page = context.requestMapper().page(params);
+            if (unavailable != null) throw new RequestMappingException(unavailable);
+            return context.requestMapper().page(rawParams);
+        }
+
+        @Override
+        public Object handle(DispatchContext context, ProtocolRequestMapper.PageRequest page) {
             var paginated = registry.listEntries(page.limit(), page.cursor());
             if (!paginated.cursorValid()) {
                 return ServerErrors.invalidParams("Invalid cursor");
@@ -68,17 +75,21 @@ public final class TaskMethodHandlers {
         }
     }
 
-    private record TasksGetHandler(DefaultTaskRegistry registry) implements RpcMethodHandler {
+    private record TasksGetHandler(DefaultTaskRegistry registry) implements RpcMethodHandler<String, Object> {
         @Override
         public String method() {
             return "tasks/get";
         }
 
         @Override
-        public Object handle(DispatchContext context, Object params) {
+        public String decode(DispatchContext context, @Nullable Object rawParams) {
             var missingCapability = TasksExtension.requireDeclared(context);
-            if (missingCapability != null) return missingCapability;
-            var taskId = context.requestMapper().taskId(params);
+            if (missingCapability != null) throw new RequestMappingException(missingCapability);
+            return context.requestMapper().taskId(rawParams);
+        }
+
+        @Override
+        public Object handle(DispatchContext context, String taskId) {
             var entry = registry.getById(taskId);
             return entry != null
                     ? context.responseMapper().getTaskResult(entry)
@@ -86,17 +97,21 @@ public final class TaskMethodHandlers {
         }
     }
 
-    private record TasksCancelHandler(DefaultTaskRegistry registry) implements RpcMethodHandler {
+    private record TasksCancelHandler(DefaultTaskRegistry registry) implements RpcMethodHandler<String, Object> {
         @Override
         public String method() {
             return "tasks/cancel";
         }
 
         @Override
-        public Object handle(DispatchContext context, Object params) {
+        public String decode(DispatchContext context, @Nullable Object rawParams) {
             var missingCapability = TasksExtension.requireDeclared(context);
-            if (missingCapability != null) return missingCapability;
-            var taskId = context.requestMapper().taskId(params);
+            if (missingCapability != null) throw new RequestMappingException(missingCapability);
+            return context.requestMapper().taskId(rawParams);
+        }
+
+        @Override
+        public Object handle(DispatchContext context, String taskId) {
             var task = registry.getAndCancelTask(taskId);
             if (task == null) {
                 return ServerErrors.invalidParams("Failed to retrieve task: Task not found");
@@ -108,17 +123,21 @@ public final class TaskMethodHandlers {
         }
     }
 
-    private record TasksResultHandler(DefaultTaskRegistry registry) implements RpcMethodHandler {
+    private record TasksResultHandler(DefaultTaskRegistry registry) implements RpcMethodHandler<String, Object> {
         @Override
         public String method() {
             return "tasks/result";
         }
 
         @Override
-        public Object handle(DispatchContext context, Object params) {
+        public String decode(DispatchContext context, @Nullable Object rawParams) {
             var unavailable = legacyTasksUnavailable(context);
-            if (unavailable != null) return unavailable;
-            var taskId = context.requestMapper().taskId(params);
+            if (unavailable != null) throw new RequestMappingException(unavailable);
+            return context.requestMapper().taskId(rawParams);
+        }
+
+        @Override
+        public Object handle(DispatchContext context, String taskId) {
             var entry = registry.getById(taskId);
             if (entry == null) {
                 return ServerErrors.invalidParams("Task not found");
@@ -145,7 +164,8 @@ public final class TaskMethodHandlers {
         }
     }
 
-    private record TasksUpdateHandler(DefaultTaskRegistry registry) implements RpcMethodHandler {
+    private record TasksUpdateHandler(DefaultTaskRegistry registry)
+            implements RpcMethodHandler<ProtocolRequestMapper.TaskUpdateRequest, Object> {
         private static final Logger logger = LoggerFactory.getLogger(TasksUpdateHandler.class);
 
         @Override
@@ -154,13 +174,16 @@ public final class TaskMethodHandlers {
         }
 
         @Override
-        public Object handle(DispatchContext context, Object params) {
+        public ProtocolRequestMapper.TaskUpdateRequest decode(DispatchContext context, @Nullable Object rawParams) {
             var versionGate = modernTasksOnly(context);
-            if (versionGate != null) return versionGate;
+            if (versionGate != null) throw new RequestMappingException(versionGate);
             var missingCapability = TasksExtension.requireDeclared(context);
-            if (missingCapability != null) return missingCapability;
+            if (missingCapability != null) throw new RequestMappingException(missingCapability);
+            return context.requestMapper().taskUpdate(rawParams);
+        }
 
-            var request = context.requestMapper().taskUpdate(params);
+        @Override
+        public Object handle(DispatchContext context, ProtocolRequestMapper.TaskUpdateRequest request) {
             var entry = registry.getById(request.taskId());
             if (entry == null) {
                 return ServerErrors.invalidParams("Failed to retrieve task: Task not found");

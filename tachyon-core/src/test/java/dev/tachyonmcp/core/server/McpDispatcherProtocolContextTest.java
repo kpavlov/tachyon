@@ -89,6 +89,11 @@ class McpDispatcherProtocolContextTest {
                 }
 
                 @Override
+                public Object decode(DispatchContext context, Object rawParams) {
+                    return rawParams;
+                }
+
+                @Override
                 public Object handle(DispatchContext context, Object params) {
                     handlerContext.set(context);
                     return Map.of("ok", true);
@@ -140,6 +145,11 @@ class McpDispatcherProtocolContextTest {
                 @Override
                 public String method() {
                     return "test/capture";
+                }
+
+                @Override
+                public Object decode(DispatchContext context, Object rawParams) {
+                    return rawParams;
                 }
 
                 @Override

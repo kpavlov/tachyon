@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.transport.netty;
 
+import static dev.tachyonmcp.core.test.TestUtils.decodeAndHandle;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.domain.RequestId;
@@ -81,7 +82,7 @@ class ExtensionMethodRoutingTest {
                 .build();
         var ctx = DefaultDispatchContext.create(Protocols.list().get(0), server);
         ctx.setSession(session);
-        handler.handle(ctx, params);
+        decodeAndHandle(handler, ctx, params);
         this.context = ctx;
     }
 

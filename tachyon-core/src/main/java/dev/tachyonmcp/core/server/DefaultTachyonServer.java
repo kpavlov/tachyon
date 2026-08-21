@@ -107,7 +107,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     private final JsonSchemaValidator outputValidator;
     private final PayloadSerializer payloadSerializer;
     private final PayloadDeserializer payloadDeserializer;
-    private final Map<String, RpcMethodHandler> methodHandlers = new ConcurrentHashMap<>();
+    private final Map<String, RpcMethodHandler<?, ?>> methodHandlers = new ConcurrentHashMap<>();
     final Map<String, LoggingLevel> loggingLevels = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<RequestId, PendingRequestEntry> pendingRequests = new ConcurrentHashMap<>();
     private final ExecutorService executor;
@@ -454,20 +454,20 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     }
 
     @Override
-    public void registerHandler(RpcMethodHandler handler) {
+    public void registerHandler(RpcMethodHandler<?, ?> handler) {
         methodHandlers.put(handler.method(), handler);
         logger.debug("Handler registered: {}", handler.method());
     }
 
     @Override
-    public void registerHandler(String method, RpcMethodHandler handler) {
+    public void registerHandler(String method, RpcMethodHandler<?, ?> handler) {
         methodHandlers.put(method, handler);
         logger.debug("Handler registered: {}", method);
     }
 
     @Override
     @Nullable
-    public RpcMethodHandler getHandler(String method) {
+    public RpcMethodHandler<?, ?> getHandler(String method) {
         return methodHandlers.get(method);
     }
 
@@ -477,15 +477,20 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         if (ownerId != null) {
             extensionMethodOwners.putIfAbsent(method, ownerId);
         }
-        registerHandler(method, new RpcMethodHandler() {
+        registerHandler(method, new RpcMethodHandler<JsonObject, Object>() {
             @Override
             public String method() {
                 return method;
             }
 
             @Override
-            public Object handle(DispatchContext context, @Nullable Object params) throws Exception {
-                var result = handler.handle(context, toJsonObject(params));
+            public JsonObject decode(DispatchContext context, @Nullable Object rawParams) {
+                return toJsonObject(rawParams);
+            }
+
+            @Override
+            public Object handle(DispatchContext context, JsonObject params) throws Exception {
+                var result = handler.handle(context, params);
                 return result != null ? result : context.responseMapper().emptyResult();
             }
         });

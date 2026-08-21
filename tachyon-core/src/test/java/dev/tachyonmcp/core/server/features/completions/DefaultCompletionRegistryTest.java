@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.features.completions;
 
+import static dev.tachyonmcp.core.test.TestUtils.decodeAndHandle;
 import static dev.tachyonmcp.core.test.TestUtils.newEngine;
 import static dev.tachyonmcp.core.test.VirtualThreads.runInVirtualThread;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,7 +28,7 @@ class DefaultCompletionRegistryTest {
     private final ServerEngine server = newEngine(b -> {});
     private final CompletionRegistry registry = new DefaultCompletionRegistry();
     private final Completions completions = registry;
-    private final HashMap<String, RpcMethodHandler> handlers = new HashMap<>();
+    private final HashMap<String, RpcMethodHandler<?, ?>> handlers = new HashMap<>();
 
     public DefaultCompletionRegistryTest() {
         CompletionMethodHandlers.register(handlers, (DefaultCompletionRegistry) registry);
@@ -45,9 +46,9 @@ class DefaultCompletionRegistryTest {
         return result;
     }
 
-    private Object complete(HashMap<String, RpcMethodHandler> handlers, Object params) throws Exception {
-        return runInVirtualThread(
-                () -> handlers.get("completion/complete").handle(DefaultDispatchContext.stateless(server), params));
+    private Object complete(HashMap<String, RpcMethodHandler<?, ?>> handlers, Object params) throws Exception {
+        return runInVirtualThread(() ->
+                decodeAndHandle(handlers.get("completion/complete"), DefaultDispatchContext.stateless(server), params));
     }
 
     @Test

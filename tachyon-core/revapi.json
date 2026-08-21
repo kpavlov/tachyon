@@ -676,6 +676,33 @@
           "attachments": {
             "since": "1.0.0-beta.21"
           }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.removed",
+          "old": "class dev.tachyonmcp.core.server.handlers.AbstractAsyncMethodHandler",
+          "justification": "Deleted; async handling folded into RpcMethodHandler.handleAsync() default, so async handlers implement RpcMethodHandler directly",
+          "attachments": {
+            "since": "1.0.0-beta.21"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.removed",
+          "old": "class dev.tachyonmcp.core.server.handlers.DiscoverHandler",
+          "justification": "Now @InternalApi; excluded from the published API by the revapi element filter",
+          "attachments": {
+            "since": "1.0.0-beta.21"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.removed",
+          "old": "class dev.tachyonmcp.core.server.handlers.EmptyResultHandler",
+          "justification": "Now @InternalApi; excluded from the published API by the revapi element filter",
+          "attachments": {
+            "since": "1.0.0-beta.21"
+          }
         }
       ]
     }

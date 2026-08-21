@@ -136,7 +136,8 @@ class SkillsExtensionE2eTest {
                         {"uri":"skill://pdf-processing/scripts/extract.py","digest":"sha256:f05fea0e15cb5f951049570d4cebb3a84b272fd3390c85e8be7586f84f0b68f8"},
                         {"uri":"skill://pdf-processing/templates/invoice.md","digest":"sha256:cd1a5be9eb7a5a46feea259ca26620f73dbd3587cc5111da44fff6489993c643"}
                       ]
-                    }
+                    },
+                    "resultType":"complete"
                   }
                 }
                 """);
@@ -191,7 +192,8 @@ class SkillsExtensionE2eTest {
                       {"uri":"skill://pdf-processing/SKILL.md","name":"SKILL.md","mimeType":"text/markdown"},
                       {"uri":"skill://pdf-processing/scripts","name":"scripts","mimeType":"inode/directory"},
                       {"uri":"skill://pdf-processing/templates","name":"templates","mimeType":"inode/directory"}
-                    ]
+                    ],
+                    "resultType":"complete"
                   }
                 }
                 """);
@@ -216,7 +218,8 @@ class SkillsExtensionE2eTest {
                   "result":{
                     "resources":[
                       {"uri":"skill://pdf-processing/scripts/extract.py","name":"extract.py","mimeType":"text/plain"}
-                    ]
+                    ],
+                    "resultType":"complete"
                   }
                 }
                 """);
@@ -350,7 +353,8 @@ class SkillsExtensionE2eTest {
                     "resources":[
                       {"uri":"skill://acme","name":"acme","mimeType":"inode/directory"},
                       {"uri":"skill://team","name":"team","mimeType":"inode/directory"}
-                    ]
+                    ],
+                    "resultType":"complete"
                   }
                 }
                 """);
@@ -367,7 +371,8 @@ class SkillsExtensionE2eTest {
                   "result":{
                     "resources":[
                       {"uri":"skill://team/git-workflow","name":"git-workflow","mimeType":"inode/directory"}
-                    ]
+                    ],
+                    "resultType":"complete"
                   }
                 }
                 """);

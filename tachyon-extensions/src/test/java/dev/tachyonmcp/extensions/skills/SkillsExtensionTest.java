@@ -9,8 +9,10 @@ import dev.tachyonmcp.core.protocol.Protocols;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import dev.tachyonmcp.core.server.McpDispatcher;
+import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.server.session.DefaultDispatchContext;
+import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -94,7 +96,10 @@ class SkillsExtensionTest {
                 "skills/get",
                 Map.of("uri", "skill://pdf-processing/SKILL.md", "_meta", Map.of(SkillsExtension.ID, Map.of())));
 
-        assertThat(body).contains("\"frontmatter\"").contains("\"name\":\"pdf-processing\"");
+        assertThat(body)
+                .contains("\"frontmatter\"")
+                .contains("\"name\":\"pdf-processing\"")
+                .contains("\"resultType\":\"complete\"");
     }
 
     @Test
@@ -114,7 +119,8 @@ class SkillsExtensionTest {
         assertThat(body)
                 .contains("\"skill://pdf-processing/scripts\"")
                 .contains("\"inode/directory\"")
-                .contains("\"skill://pdf-processing/SKILL.md\"");
+                .contains("\"skill://pdf-processing/SKILL.md\"")
+                .contains("\"resultType\":\"complete\"");
     }
 
     @Test
@@ -144,12 +150,18 @@ class SkillsExtensionTest {
                     .capabilities(caps)
                     .build();
             Assertions.assertNotNull(handler);
-            handler.handle(context, params);
+            decodeAndHandle(handler, context, params);
         }
         session.activate();
         var result = (McpDispatcher.DispatchResult.Response) dispatcher
                 .dispatchRequestAsync(RequestId.of(1), method, rawParams, session.id(), null, context)
                 .join();
         return result.responseBodyString();
+    }
+
+    private static <I, O> O decodeAndHandle(RpcMethodHandler<I, O> handler, DispatchContext context, Object rawParams)
+            throws Exception {
+        I decoded = handler.decode(context, rawParams);
+        return handler.handle(context, decoded);
     }
 }

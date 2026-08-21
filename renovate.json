@@ -20,7 +20,8 @@
         "patch",
         "digest"
       ],
-      "automerge": true
+      "automerge": true,
+      "minimumReleaseAge": "3 days"
     }
   ]
 }

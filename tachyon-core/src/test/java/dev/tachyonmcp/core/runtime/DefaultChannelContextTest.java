@@ -68,6 +68,11 @@ class DefaultChannelContextTest {
                 }
 
                 @Override
+                public Object decode(DispatchContext context, Object rawParams) {
+                    return rawParams;
+                }
+
+                @Override
                 public Object handle(DispatchContext context, Object params) {
                     before.set(context.get(key));
                     context.set(key, "hello");
@@ -97,6 +102,11 @@ class DefaultChannelContextTest {
                 @Override
                 public String method() {
                     return "test/attributes";
+                }
+
+                @Override
+                public Object decode(DispatchContext context, Object rawParams) {
+                    return rawParams;
                 }
 
                 @Override

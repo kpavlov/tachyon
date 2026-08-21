@@ -24,7 +24,13 @@ import org.jspecify.annotations.Nullable;
  * }</pre>
  */
 @InternalApi
-public interface RpcMethodHandler<@Nullable I, O> {
+public interface RpcMethodHandler<I, O> {
+
+    /** Non-null decoded parameter for methods that take no parameters. */
+    enum NoParams {
+        /** The only no-parameters value. */
+        INSTANCE
+    }
 
     /**
      * The JSON-RPC method name this handler dispatches to.
@@ -34,25 +40,40 @@ public interface RpcMethodHandler<@Nullable I, O> {
     String method();
 
     /**
+     * Decodes the raw JSON-RPC {@code params} (a {@code Map}/{@code List}/scalar from the wire, or
+     * {@code null}) into this handler's typed request. Invoked once by the dispatcher before {@link
+     * #handle}/{@link #handleAsync}, so the decode step is a single, uniform seam the dispatcher
+     * controls regardless of what each handler needs from its {@link
+     * dev.tachyonmcp.core.protocol.ProtocolRequestMapper}.
+     *
+     * @param context   the dispatch context (for protocol/session-dependent gating before decoding)
+     * @param rawParams the raw wire params, or {@code null}
+     * @return the decoded, protocol-neutral request
+     * @throws dev.tachyonmcp.core.protocol.RequestMappingException if {@code rawParams} cannot be
+     *     mapped, or a precondition gating this method fails
+     */
+    I decode(DispatchContext context, @Nullable Object rawParams);
+
+    /**
      * Handles the method and returns the result to serialize as JSON-RPC response.
      *
      * @param context the dispatch context with server and outbound stream access
-     * @param params  the method parameters, or {@code null}
+     * @param params  the decoded method parameters
      * @return the result to serialize
      * @throws Exception on handler failure
      */
-    O handle(DispatchContext context, @Nullable I params) throws Exception;
+    O handle(DispatchContext context, I params) throws Exception;
 
     /**
      * Handles the method asynchronously. Default delegates to {@link #handle}.
      * Override for async handlers that return a future directly.
      *
      * @param context the dispatch context
-     * @param params  the method parameters, or {@code null}
+     * @param params  the decoded method parameters
      * @return a completion stage yielding the result
      * @throws Exception on handler failure
      */
-    default CompletionStage<O> handleAsync(DispatchContext context, @Nullable I params) throws Exception {
+    default CompletionStage<O> handleAsync(DispatchContext context, I params) throws Exception {
         return CompletableFuture.completedStage(handle(context, params));
     }
 }
