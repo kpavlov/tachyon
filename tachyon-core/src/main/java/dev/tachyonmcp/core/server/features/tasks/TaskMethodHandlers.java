@@ -4,8 +4,6 @@ package dev.tachyonmcp.core.server.features.tasks;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
-import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
-import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.session.DispatchContext;
@@ -80,12 +78,7 @@ public final class TaskMethodHandlers {
         public Object handle(DispatchContext context, Object params) {
             var missingCapability = TasksExtension.requireDeclared(context);
             if (missingCapability != null) return missingCapability;
-            final String taskId;
-            try {
-                taskId = context.requestMapper().taskId(params);
-            } catch (RequestMappingException e) {
-                return e.error();
-            }
+            var taskId = context.requestMapper().taskId(params);
             var entry = registry.getById(taskId);
             return entry != null
                     ? context.responseMapper().getTaskResult(entry)
@@ -103,12 +96,7 @@ public final class TaskMethodHandlers {
         public Object handle(DispatchContext context, Object params) {
             var missingCapability = TasksExtension.requireDeclared(context);
             if (missingCapability != null) return missingCapability;
-            final String taskId;
-            try {
-                taskId = context.requestMapper().taskId(params);
-            } catch (RequestMappingException e) {
-                return e.error();
-            }
+            var taskId = context.requestMapper().taskId(params);
             var task = registry.getAndCancelTask(taskId);
             if (task == null) {
                 return ServerErrors.invalidParams("Failed to retrieve task: Task not found");
@@ -130,12 +118,7 @@ public final class TaskMethodHandlers {
         public Object handle(DispatchContext context, Object params) {
             var unavailable = legacyTasksUnavailable(context);
             if (unavailable != null) return unavailable;
-            final String taskId;
-            try {
-                taskId = context.requestMapper().taskId(params);
-            } catch (RequestMappingException e) {
-                return e.error();
-            }
+            var taskId = context.requestMapper().taskId(params);
             var entry = registry.getById(taskId);
             if (entry == null) {
                 return ServerErrors.invalidParams("Task not found");
@@ -177,12 +160,7 @@ public final class TaskMethodHandlers {
             var missingCapability = TasksExtension.requireDeclared(context);
             if (missingCapability != null) return missingCapability;
 
-            final ProtocolRequestMapper.TaskUpdateRequest request;
-            try {
-                request = context.requestMapper().taskUpdate(params);
-            } catch (RequestMappingException e) {
-                return e.error();
-            }
+            var request = context.requestMapper().taskUpdate(params);
             var entry = registry.getById(request.taskId());
             if (entry == null) {
                 return ServerErrors.invalidParams("Failed to retrieve task: Task not found");

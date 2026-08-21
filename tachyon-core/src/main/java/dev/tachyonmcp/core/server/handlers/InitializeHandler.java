@@ -2,8 +2,6 @@
 package dev.tachyonmcp.core.server.handlers;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
-import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
-import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.InitializeResponse;
@@ -33,12 +31,7 @@ public final class InitializeHandler implements RpcMethodHandler {
 
     @Override
     public Object handle(DispatchContext context, Object params) {
-        final ProtocolRequestMapper.InitializeRequest initializeRequest;
-        try {
-            initializeRequest = context.requestMapper().initialize(params);
-        } catch (RequestMappingException e) {
-            return e.error();
-        }
+        var initializeRequest = context.requestMapper().initialize(params);
 
         var capabilities = server.resolveCapabilities();
 

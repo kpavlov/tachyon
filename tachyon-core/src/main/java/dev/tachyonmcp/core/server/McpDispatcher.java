@@ -26,10 +26,6 @@ import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +36,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
-import java.util.function.Function;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Orchestrates the MCP server's per-request flow: parses JSON-RPC messages, establishes the session on
@@ -253,10 +251,7 @@ public class McpDispatcher {
         return CompletableFuture.supplyAsync(
                         () -> {
                             var startNs = System.nanoTime();
-                            logger.debug(
-                                "Handler start: method={}, id={}",
-                                    method,
-                                id);
+                            logger.debug("Handler start: method={}, id={}", method, id);
 
                             if (session != null) {
                                 server.appendEvent(new SessionEvent.RequestEvent(
@@ -303,6 +298,10 @@ public class McpDispatcher {
         if (unwrapped instanceof CancellationException) {
             logger.debug("Handler cancelled: method={}, id={}", method, id);
             return errorResult(id, ServerErrors.internalError("Internal error"), context);
+        }
+        if (unwrapped instanceof RequestMappingException rme) {
+            logger.debug("Request mapping failed: method={}, id={}: {}", method, id, rme.getMessage());
+            return errorResult(id, rme.error(), context);
         }
         logger.warn("Handler exception: method={}, id={}: {}", method, id, unwrapped.getMessage(), unwrapped);
         return errorResult(id, ServerErrors.internalError("Internal error"), context);
@@ -419,23 +418,22 @@ public class McpDispatcher {
         // Stateful init creates the session before invoking the handler; stateless skips it. Both
         // then share one async pipeline — the response sessionId falls out of ic.session() (null
         // when stateless, since no session was set).
-        return CompletableFuture.<CompletionStage<Object>>supplyAsync(
+        return CompletableFuture.supplyAsync(
                         () -> {
                             try {
                                 if (!server.isStateless()) {
                                     ic.setSession(server.createSession(generateSessionId(channelContext)));
                                 }
-                                return handler.handleAsync(ic, rawParams);
+                                return (CompletionStage<Object>) handler.handleAsync(ic, rawParams);
                             } catch (Exception e) {
                                 return CompletableFuture.failedFuture(e);
                             }
                         },
                         executor)
-                .thenCompose(Function.identity())
+                .thenCompose(stage -> stage)
                 .handle((result, ex) -> {
                     if (ex != null) {
-                        logger.warn("Initialize handler exception", ex);
-                        return errorResult(id, ServerErrors.internalError("Internal error"), ic);
+                        return handleHandlerError(id, "initialize", ex, ic);
                     }
                     final var session = ic.session();
                     var sessionId = session != null ? session.id() : null;

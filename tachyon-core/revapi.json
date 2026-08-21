@@ -634,6 +634,48 @@
           "attachments": {
             "since": "1.0.0-beta.20"
           }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.removed",
+          "old": "class dev.tachyonmcp.core.server.handlers.PingHandler",
+          "justification": "Now internal api",
+          "attachments": {
+            "since": "1.0.0-beta.21"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.noLongerImplementsInterface",
+          "old": "class dev.tachyonmcp.core.server.handlers.DiscoverHandler",
+          "new": "class dev.tachyonmcp.core.server.handlers.DiscoverHandler",
+          "interface": "dev.tachyonmcp.core.server.RpcMethodHandler",
+          "justification": "Raw RpcMethodHandler parameterized to RpcMethodHandler<Object, Object>; erasure-identical, no behavior change",
+          "attachments": {
+            "since": "1.0.0-beta.21"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.noLongerImplementsInterface",
+          "old": "class dev.tachyonmcp.core.server.handlers.EmptyResultHandler",
+          "new": "class dev.tachyonmcp.core.server.handlers.EmptyResultHandler",
+          "interface": "dev.tachyonmcp.core.server.RpcMethodHandler",
+          "justification": "Raw RpcMethodHandler parameterized to RpcMethodHandler<Object, Object>; erasure-identical, no behavior change",
+          "attachments": {
+            "since": "1.0.0-beta.21"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.noLongerImplementsInterface",
+          "old": "class dev.tachyonmcp.core.server.handlers.PingHandler",
+          "new": "class dev.tachyonmcp.core.server.handlers.PingHandler",
+          "interface": "dev.tachyonmcp.core.server.RpcMethodHandler",
+          "justification": "Inherits EmptyResultHandler's raw-to-parameterized RpcMethodHandler<Object, Object> change; erasure-identical, no behavior change",
+          "attachments": {
+            "since": "1.0.0-beta.21"
+          }
         }
       ]
     }

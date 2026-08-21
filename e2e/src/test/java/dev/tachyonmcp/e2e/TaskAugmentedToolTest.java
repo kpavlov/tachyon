@@ -203,7 +203,7 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
                 b -> b.json(j -> j.serializer(new PayloadSerializer() {
                     @Override
                     public <T> String serialize(T value) {
-                        throw new RuntimeException("boom-unserializable");
+                        throw new RuntimeException("🔥boom-unserializable");
                     }
                 })),
                 s -> s.tools()

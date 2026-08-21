@@ -21,7 +21,6 @@ import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.api.server.features.tools.ToolHandler;
 import dev.tachyonmcp.api.server.features.tools.ToolRequest;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
-import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.server.OutboundSseStreamMessageRouter;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
@@ -101,12 +100,7 @@ public final class ToolMethodHandlers {
 
         @Override
         public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
-            final dev.tachyonmcp.core.protocol.ProtocolRequestMapper.ToolCallRequest mapped;
-            try {
-                mapped = context.requestMapper().callTool(params, payloadDeserializer);
-            } catch (RequestMappingException e) {
-                return CompletableFuture.completedFuture(e.error());
-            }
+            var mapped = context.requestMapper().callTool(params, payloadDeserializer);
             var request = mapped.request();
             if (request.name().length() > DefaultToolRegistry.MAX_NAME_LENGTH) {
                 return CompletableFuture.completedFuture(invalidParams("Tool name exceeds maximum length (SEP-986)"));

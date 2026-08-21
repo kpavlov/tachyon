@@ -18,6 +18,7 @@ import dev.tachyonmcp.api.server.features.resources.ResourceFn;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.api.server.features.resources.Resources;
 import dev.tachyonmcp.core.protocol.Protocols;
+import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.EmptyResult;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ListResourceTemplatesResult;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ListResourcesResult;
@@ -264,10 +265,10 @@ class DefaultResourceRegistryTest {
     }
 
     @Test
-    void shouldReturnErrorWhenUriMissing() throws Exception {
-        var result = handlers.get("resources/read").handle(DefaultDispatchContext.stateless(server), Map.of());
-
-        assertThat(result).isInstanceOf(ServerError.class);
+    void shouldReturnErrorWhenUriMissing() {
+        assertThatThrownBy(
+                        () -> handlers.get("resources/read").handle(DefaultDispatchContext.stateless(server), Map.of()))
+                .isInstanceOf(RequestMappingException.class);
     }
 
     @ParameterizedTest

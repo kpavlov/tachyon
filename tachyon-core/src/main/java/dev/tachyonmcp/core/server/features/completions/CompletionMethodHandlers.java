@@ -6,7 +6,6 @@ import dev.tachyonmcp.api.server.features.HandlerFutures;
 import dev.tachyonmcp.api.server.features.completions.AsyncCompletionFn;
 import dev.tachyonmcp.api.server.features.completions.CompletionResult;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper.CompletionReference;
-import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.session.DispatchContext;
@@ -43,12 +42,7 @@ public final class CompletionMethodHandlers {
 
         @Override
         public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
-            final dev.tachyonmcp.core.protocol.ProtocolRequestMapper.CompletionCallRequest request;
-            try {
-                request = context.requestMapper().complete(params);
-            } catch (RequestMappingException e) {
-                return CompletableFuture.completedFuture(e.error());
-            }
+            var request = context.requestMapper().complete(params);
             Optional<AsyncCompletionFn> fn =
                     switch (request.reference()) {
                         case CompletionReference.Prompt prompt -> registry.findForPrompt(prompt.name());

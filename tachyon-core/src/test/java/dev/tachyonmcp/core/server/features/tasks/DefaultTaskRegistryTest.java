@@ -13,6 +13,7 @@ import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.features.tasks.TaskOptions;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.core.protocol.Protocols;
+import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CallToolResult;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CancelTaskResult;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetTaskResult;
@@ -134,10 +135,10 @@ class DefaultTaskRegistryTest {
     }
 
     @Test
-    void getTaskMissingId() throws Exception {
+    void getTaskMissingId() {
         var getHandler = handlers.get("tasks/get");
-        var result = getHandler.handle(DefaultDispatchContext.noop(), Map.of());
-        assertThat(result).isInstanceOf(ServerError.class);
+        assertThatThrownBy(() -> getHandler.handle(DefaultDispatchContext.noop(), Map.of()))
+                .isInstanceOf(RequestMappingException.class);
     }
 
     @Test

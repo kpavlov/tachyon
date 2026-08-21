@@ -5,7 +5,6 @@ import dev.tachyonmcp.api.server.domain.ResourceContents;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.features.HandlerFutures;
 import dev.tachyonmcp.api.server.features.resources.ResourceRequest;
-import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.session.DispatchContext;
@@ -81,12 +80,7 @@ public final class ResourceMethodHandlers {
 
         @Override
         public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
-            final ResourceRequest mapped;
-            try {
-                mapped = context.requestMapper().readResource(params);
-            } catch (RequestMappingException e) {
-                return CompletableFuture.completedFuture(e.error());
-            }
+            var mapped = context.requestMapper().readResource(params);
             if (!DefaultResourceRegistry.isValidResourceUri(mapped.uri())) {
                 return CompletableFuture.completedFuture(ServerErrors.invalidParams("Invalid resource URI"));
             }
@@ -144,12 +138,7 @@ public final class ResourceMethodHandlers {
 
         @Override
         public Object handle(DispatchContext context, Object params) {
-            final String uri;
-            try {
-                uri = context.requestMapper().resourceUri(params);
-            } catch (RequestMappingException e) {
-                return e.error();
-            }
+            var uri = context.requestMapper().resourceUri(params);
             if (!DefaultResourceRegistry.isValidResourceUri(uri)) {
                 return ServerErrors.invalidParams("Invalid resource URI");
             }
@@ -171,12 +160,7 @@ public final class ResourceMethodHandlers {
 
         @Override
         public Object handle(DispatchContext context, Object params) {
-            final String uri;
-            try {
-                uri = context.requestMapper().resourceUri(params);
-            } catch (RequestMappingException e) {
-                return e.error();
-            }
+            var uri = context.requestMapper().resourceUri(params);
             if (!DefaultResourceRegistry.isValidResourceUri(uri)) {
                 return ServerErrors.invalidParams("Invalid resource URI");
             }

@@ -22,6 +22,7 @@ import dev.tachyonmcp.api.server.features.tools.ToolRequest;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.api.server.features.tools.Tools;
 import dev.tachyonmcp.core.protocol.Protocols;
+import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.CallToolResult;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ListToolsResult;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TextContent;
@@ -149,29 +150,29 @@ class DefaultToolRegistryTest {
     }
 
     @Test
-    void callToolMissingName() throws Exception {
+    void callToolMissingName() {
         var handlers = new HashMap<String, RpcMethodHandler>();
         registerHandlers(registry, handlers);
 
         var callHandler = handlers.get("tools/call");
 
-        var result = callHandler.handle(DefaultDispatchContext.noop(), Map.of());
-        assertThat(result).isInstanceOf(ServerError.class);
-        var err = (ServerError) result;
-        assertThat(err.kind()).isEqualTo(ServerError.Kind.INVALID_PARAMS);
+        assertThatThrownBy(() -> callHandler.handle(DefaultDispatchContext.noop(), Map.of()))
+                .isInstanceOf(RequestMappingException.class)
+                .extracting(e -> ((RequestMappingException) e).error().kind())
+                .isEqualTo(ServerError.Kind.INVALID_PARAMS);
     }
 
     @Test
-    void callToolWithNullParams() throws Exception {
+    void callToolWithNullParams() {
         var handlers = new HashMap<String, RpcMethodHandler>();
         registerHandlers(registry, handlers);
 
         var callHandler = handlers.get("tools/call");
 
-        var result = callHandler.handle(DefaultDispatchContext.noop(), null);
-        assertThat(result).isInstanceOf(ServerError.class);
-        var err = (ServerError) result;
-        assertThat(err.kind()).isEqualTo(ServerError.Kind.INVALID_PARAMS);
+        assertThatThrownBy(() -> callHandler.handle(DefaultDispatchContext.noop(), null))
+                .isInstanceOf(RequestMappingException.class)
+                .extracting(e -> ((RequestMappingException) e).error().kind())
+                .isEqualTo(ServerError.Kind.INVALID_PARAMS);
     }
 
     @Test

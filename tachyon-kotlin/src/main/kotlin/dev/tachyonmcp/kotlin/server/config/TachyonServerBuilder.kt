@@ -16,7 +16,6 @@ import dev.tachyonmcp.api.server.features.tasks.TaskSupport
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.core.server.ServerBuilder
-import dev.tachyonmcp.core.server.config.NetworkConfig
 import dev.tachyonmcp.core.server.features.resources.MimeTypes
 import dev.tachyonmcp.kotlin.server.DefaultKotlinTachyonServer
 import dev.tachyonmcp.kotlin.server.TachyonDsl
@@ -442,16 +441,6 @@ public class TachyonServerBuilder
         public fun pipelineCustomizer(
             customizer: (@TachyonDsl ChannelPipeline).() -> Unit,
         ): TachyonServerBuilder = this.also { delegate.pipelineCustomizer { it.customizer() } }
-
-        @PublishedApi
-        internal fun applyPort(port: Int?): TachyonServerBuilder =
-            this.also {
-                if (port != null) {
-                    delegate.port(port)
-                } else if (!networkPortExplicitlySet) {
-                    delegate.port(NetworkConfig.UNSET_PORT)
-                }
-            }
 
         @PublishedApi
         internal fun start(): TachyonServer = build().also { it.start() }

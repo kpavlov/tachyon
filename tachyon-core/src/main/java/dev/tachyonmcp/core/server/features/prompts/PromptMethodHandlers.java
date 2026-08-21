@@ -7,7 +7,6 @@ import dev.tachyonmcp.api.json.SchemaValidationError;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.features.HandlerFutures;
 import dev.tachyonmcp.api.server.features.prompts.PromptResult;
-import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.session.DispatchContext;
@@ -64,12 +63,7 @@ public final class PromptMethodHandlers {
 
         @Override
         public CompletionStage<Object> handleAsync(DispatchContext context, Object params) {
-            final dev.tachyonmcp.core.protocol.ProtocolRequestMapper.PromptCallRequest mapped;
-            try {
-                mapped = context.requestMapper().getPrompt(params);
-            } catch (RequestMappingException e) {
-                return CompletableFuture.completedFuture(e.error());
-            }
+            var mapped = context.requestMapper().getPrompt(params);
             var entry = registry.get(mapped.name());
             if (entry == null) {
                 return CompletableFuture.completedFuture(ServerErrors.invalidParams("Prompt not found"));

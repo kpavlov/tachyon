@@ -4,6 +4,7 @@ package dev.tachyonmcp.core.server.features.prompts;
 import static dev.tachyonmcp.core.test.TestUtils.newEngine;
 import static dev.tachyonmcp.core.test.VirtualThreads.runInVirtualThread;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.tachyonmcp.api.json.JsonSchemaValidator;
 import dev.tachyonmcp.api.server.domain.Icon;
@@ -13,6 +14,7 @@ import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.api.server.features.prompts.PromptResult;
 import dev.tachyonmcp.api.server.features.prompts.Prompts;
+import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.GetPromptResult;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ListPromptsResult;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
@@ -142,10 +144,8 @@ class DefaultPromptRegistryTest {
     }
 
     @Test
-    void shouldReturnErrorWhenPromptNameMissing() throws Exception {
-        var result = getPrompt(Map.of());
-
-        assertThat(result).isInstanceOf(ServerError.class);
+    void shouldReturnErrorWhenPromptNameMissing() {
+        assertThatThrownBy(() -> getPrompt(Map.of())).isInstanceOf(RequestMappingException.class);
     }
 
     @Test
@@ -241,13 +241,13 @@ class DefaultPromptRegistryTest {
     }
 
     @Test
-    void shouldReturnInvalidParamsForBadArgumentsWithoutSchema() throws Exception {
+    void shouldReturnInvalidParamsForBadArgumentsWithoutSchema() {
         registry.register(PromptDescriptor.of("no-schema", "No schema prompt"), List.of(PromptMessage.user("Hi")));
 
-        var result = getPrompt(Map.of("name", "no-schema", "arguments", List.of(1, 2, 3)));
-
-        assertThat(result).isInstanceOf(ServerError.class);
-        assertThat(((ServerError) result).kind()).isEqualTo(ServerError.Kind.INVALID_PARAMS);
+        assertThatThrownBy(() -> getPrompt(Map.of("name", "no-schema", "arguments", List.of(1, 2, 3))))
+                .isInstanceOf(RequestMappingException.class)
+                .extracting(e -> ((RequestMappingException) e).error().kind())
+                .isEqualTo(ServerError.Kind.INVALID_PARAMS);
     }
 
     @Test
