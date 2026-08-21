@@ -51,6 +51,13 @@ public final class TaskMethodHandlers {
                 : null;
     }
 
+    /** Fails decoding with {@code gate}'s error when a handler's precondition isn't met. */
+    private static void requireGate(@Nullable ServerError gate) {
+        if (gate != null) {
+            throw new RequestMappingException(gate);
+        }
+    }
+
     private record TasksListHandler(DefaultTaskRegistry registry)
             implements RpcMethodHandler<ProtocolRequestMapper.PageRequest, Object> {
         @Override
@@ -60,8 +67,7 @@ public final class TaskMethodHandlers {
 
         @Override
         public ProtocolRequestMapper.PageRequest decode(DispatchContext context, @Nullable Object rawParams) {
-            var unavailable = legacyTasksUnavailable(context);
-            if (unavailable != null) throw new RequestMappingException(unavailable);
+            requireGate(legacyTasksUnavailable(context));
             return context.requestMapper().page(rawParams);
         }
 
@@ -83,8 +89,7 @@ public final class TaskMethodHandlers {
 
         @Override
         public String decode(DispatchContext context, @Nullable Object rawParams) {
-            var missingCapability = TasksExtension.requireDeclared(context);
-            if (missingCapability != null) throw new RequestMappingException(missingCapability);
+            requireGate(TasksExtension.requireDeclared(context));
             return context.requestMapper().taskId(rawParams);
         }
 
@@ -105,8 +110,7 @@ public final class TaskMethodHandlers {
 
         @Override
         public String decode(DispatchContext context, @Nullable Object rawParams) {
-            var missingCapability = TasksExtension.requireDeclared(context);
-            if (missingCapability != null) throw new RequestMappingException(missingCapability);
+            requireGate(TasksExtension.requireDeclared(context));
             return context.requestMapper().taskId(rawParams);
         }
 
@@ -131,8 +135,7 @@ public final class TaskMethodHandlers {
 
         @Override
         public String decode(DispatchContext context, @Nullable Object rawParams) {
-            var unavailable = legacyTasksUnavailable(context);
-            if (unavailable != null) throw new RequestMappingException(unavailable);
+            requireGate(legacyTasksUnavailable(context));
             return context.requestMapper().taskId(rawParams);
         }
 
@@ -175,10 +178,8 @@ public final class TaskMethodHandlers {
 
         @Override
         public ProtocolRequestMapper.TaskUpdateRequest decode(DispatchContext context, @Nullable Object rawParams) {
-            var versionGate = modernTasksOnly(context);
-            if (versionGate != null) throw new RequestMappingException(versionGate);
-            var missingCapability = TasksExtension.requireDeclared(context);
-            if (missingCapability != null) throw new RequestMappingException(missingCapability);
+            requireGate(modernTasksOnly(context));
+            requireGate(TasksExtension.requireDeclared(context));
             return context.requestMapper().taskUpdate(rawParams);
         }
 

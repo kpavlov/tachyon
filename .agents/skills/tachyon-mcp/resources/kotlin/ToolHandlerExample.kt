@@ -13,6 +13,7 @@ import dev.tachyonmcp.kotlin.server.config.TachyonServerBuilder
 import dev.tachyonmcp.kotlin.server.domain.decode
 import dev.tachyonmcp.kotlin.server.features.tools.toolDescriptor
 import kotlinx.coroutines.delay
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
@@ -26,12 +27,14 @@ private val GREET_SCHEMA =
     )
 
 @Serializable
-data class GreetArgs(
+@SerialName("Request")
+data class GreetRequest(
     val name: String,
     val greeting: String = "Hello",
 )
 
 @Serializable
+@SerialName("Reply")
 data class GreetReply(
     val message: String,
 )
@@ -68,7 +71,7 @@ fun TachyonServerBuilder.registerTypedGreeting() {
         description = "Typed greet via configured serde",
         inputSchema = GREET_SCHEMA,
     ) {
-        val input = request.arguments().decode<GreetArgs>()
+        val input = request.arguments().decode<GreetRequest>()
         success(GreetReply("${input.greeting}, ${input.name}!"), "greeting response")
     }
 }

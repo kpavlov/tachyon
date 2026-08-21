@@ -7,6 +7,7 @@ import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
+/** JSON-RPC adapter for logging operations. */
 public final class LoggingHandlers {
 
     private LoggingHandlers() {}

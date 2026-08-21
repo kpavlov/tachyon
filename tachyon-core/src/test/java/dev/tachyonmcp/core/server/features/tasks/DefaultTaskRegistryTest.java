@@ -139,7 +139,9 @@ class DefaultTaskRegistryTest {
     void getTaskMissingId() {
         var getHandler = handlers.get("tasks/get");
         assertThatThrownBy(() -> decodeAndHandle(getHandler, DefaultDispatchContext.noop(), Map.of()))
-                .isInstanceOf(RequestMappingException.class);
+                .isInstanceOf(RequestMappingException.class)
+                .extracting(e -> ((RequestMappingException) e).error().kind())
+                .isEqualTo(ServerError.Kind.INVALID_PARAMS);
     }
 
     @Test

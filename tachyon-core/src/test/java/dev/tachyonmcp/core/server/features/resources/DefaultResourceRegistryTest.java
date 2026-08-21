@@ -274,7 +274,9 @@ class DefaultResourceRegistryTest {
     void shouldReturnErrorWhenUriMissing() {
         assertThatThrownBy(() -> decodeAndHandle(
                         handlers.get("resources/read"), DefaultDispatchContext.stateless(server), Map.of()))
-                .isInstanceOf(RequestMappingException.class);
+                .isInstanceOf(RequestMappingException.class)
+                .extracting(e -> ((RequestMappingException) e).error().kind())
+                .isEqualTo(ServerError.Kind.INVALID_PARAMS);
     }
 
     @ParameterizedTest
