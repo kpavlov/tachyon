@@ -7,6 +7,7 @@ import dev.tachyonmcp.api.json.PayloadDeserializer;
 import dev.tachyonmcp.api.json.PayloadSerializer;
 import dev.tachyonmcp.api.json.spi.JsonSchemaFactory;
 import dev.tachyonmcp.api.runtime.Notifications;
+import dev.tachyonmcp.api.server.config.RuntimeConfig;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.api.server.domain.ServerCapabilities;
@@ -163,7 +164,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     }
 
     @Override
-    public dev.tachyonmcp.api.server.config.RuntimeConfig runtime() {
+    public RuntimeConfig runtime() {
         return config.runtime();
     }
 

@@ -26,6 +26,10 @@ import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -37,9 +41,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Orchestrates the MCP server's per-request flow: parses JSON-RPC messages, establishes the session on
@@ -237,14 +238,14 @@ public class McpDispatcher {
         return server.getHandler(method);
     }
 
-    private CompletableFuture<DispatchResult> invokeHandlerAsync(
+    private <I, O> CompletableFuture<DispatchResult> invokeHandlerAsync(
             RequestId id,
             String method,
-            Object params,
+            I params,
             @Nullable OutboundSseStream outboundSseStream,
             DispatchContext context,
             @Nullable Session session,
-            RpcMethodHandler handler) {
+            RpcMethodHandler<I, O> handler) {
         var paramsStr = params instanceof Map || params instanceof List
                 ? JsonRpcCodec.writeValueAsString(params)
                 : params instanceof String s ? s : null;
@@ -252,14 +253,10 @@ public class McpDispatcher {
         return CompletableFuture.supplyAsync(
                         () -> {
                             var startNs = System.nanoTime();
-                            var thread = Thread.currentThread();
                             logger.debug(
-                                    "Handler start: method={}, id={}, thread={}#{} virtual={}",
+                                "Handler start: method={}, id={}",
                                     method,
-                                    id,
-                                    thread.getName(),
-                                    thread.threadId(),
-                                    thread.isVirtual());
+                                id);
 
                             if (session != null) {
                                 server.appendEvent(new SessionEvent.RequestEvent(
@@ -275,7 +272,7 @@ public class McpDispatcher {
                                             m.slowRequestThreshold().toMillis())
                                     : CompletableFuture.completedFuture(null);
                             try {
-                                CompletionStage<Object> stage = OutboundSseStreamMessageRouter.withDispatchContext(
+                                CompletionStage<O> stage = OutboundSseStreamMessageRouter.withDispatchContext(
                                         session != null ? session.id() : null, outboundSseStream, () -> {
                                             try {
                                                 return handler.handleAsync(context, params);
@@ -290,7 +287,7 @@ public class McpDispatcher {
                             }
                         },
                         executor)
-                .thenCompose(Function.identity())
+                .thenCompose(stage -> stage)
                 // handle(), not handleAsync(executor): encoding is a cheap ByteBuf serialize and the
                 // completing thread is never the event loop — no need to burn a VT per request on it.
                 .handle((result, ex) -> {
@@ -311,8 +308,8 @@ public class McpDispatcher {
         return errorResult(id, ServerErrors.internalError("Internal error"), context);
     }
 
-    private DispatchResult handleSuccessOrError(
-            RequestId id, String method, Object result, @Nullable String sessionId, DispatchContext context) {
+    private <O> DispatchResult handleSuccessOrError(
+            RequestId id, String method, O result, @Nullable String sessionId, DispatchContext context) {
         if (result instanceof ServerError error) {
             logger.debug("Handler error for {}: {}", method, error.message());
             return errorResult(id, error, context);
@@ -422,7 +419,7 @@ public class McpDispatcher {
         // Stateful init creates the session before invoking the handler; stateless skips it. Both
         // then share one async pipeline — the response sessionId falls out of ic.session() (null
         // when stateless, since no session was set).
-        return CompletableFuture.supplyAsync(
+        return CompletableFuture.<CompletionStage<Object>>supplyAsync(
                         () -> {
                             try {
                                 if (!server.isStateless()) {

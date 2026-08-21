@@ -4,7 +4,7 @@ package dev.tachyonmcp.core.server.handlers;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.session.DispatchContext;
 
-public class EmptyResultHandler implements RpcMethodHandler {
+public class EmptyResultHandler implements RpcMethodHandler<Object, Object> {
 
     private final String methodName;
 

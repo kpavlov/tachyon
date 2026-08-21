@@ -9,7 +9,7 @@ import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.util.Comparator;
 
 /** Handles the mandatory modern MCP {@code server/discover} request. */
-public final class DiscoverHandler implements RpcMethodHandler {
+public final class DiscoverHandler implements RpcMethodHandler<Object, Object> {
 
     private final ServerEngine server;
 

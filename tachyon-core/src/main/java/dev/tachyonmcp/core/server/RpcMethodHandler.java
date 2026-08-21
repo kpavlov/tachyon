@@ -3,9 +3,10 @@ package dev.tachyonmcp.core.server;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.core.server.session.DispatchContext;
+import org.jspecify.annotations.Nullable;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import org.jspecify.annotations.Nullable;
 
 /**
  * Handles a single JSON-RPC method. Internal/advanced SPI — receives the rich
@@ -24,7 +25,7 @@ import org.jspecify.annotations.Nullable;
  * }</pre>
  */
 @InternalApi
-public interface RpcMethodHandler {
+public interface RpcMethodHandler<@Nullable I, O> {
 
     /**
      * The JSON-RPC method name this handler dispatches to.
@@ -41,7 +42,7 @@ public interface RpcMethodHandler {
      * @return the result to serialize
      * @throws Exception on handler failure
      */
-    Object handle(DispatchContext context, @Nullable Object params) throws Exception;
+    O handle(DispatchContext context, @Nullable I params) throws Exception;
 
     /**
      * Handles the method asynchronously. Default delegates to {@link #handle}.
@@ -52,7 +53,7 @@ public interface RpcMethodHandler {
      * @return a completion stage yielding the result
      * @throws Exception on handler failure
      */
-    default CompletionStage<Object> handleAsync(DispatchContext context, @Nullable Object params) throws Exception {
+    default CompletionStage<O> handleAsync(DispatchContext context, @Nullable I params) throws Exception {
         return CompletableFuture.completedFuture(handle(context, params));
     }
 }
