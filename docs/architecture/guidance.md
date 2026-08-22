@@ -114,7 +114,7 @@ those same façade APIs; do not add feature-specific registration overloads to `
 - Do not reimplement Java builder validation, defaulting, or registration collections in Kotlin. Add missing reusable behavior to Java first, then expose it through the Kotlin DSL.
 - Expose one Kotlin server-construction surface: `TachyonServerBuilder`. Do not publish Kotlin extensions on the Java `ServerBuilder`; they bypass Kotlin defaults and duplicate autocomplete. Use an internal owned collaborator when thin adaptation would make the public builder too large.
 - Keep Kotlin files focused. Once a file exceeds 300 lines, consider splitting it by owned responsibility. Do not split member DSLs into global extensions merely to reduce line count; prefer composition with an internal class.
-- Keep required values first and flexible metadata as defaulted named parameters on the common call. Named arguments remove ambiguity; do not hide useful descriptor fields in a registration sub-DSL.
+- Keep required values first and flexible metadata as defaulted named parameters on the common call. Named arguments remove ambiguity; do not hide useful descriptor fields in a registration sub-DSL. Exception: `extensionId` — see the note below the reference shape.
 - Keep a value overload accepting the prebuilt descriptor for reuse, testing, and advanced construction.
 - Name a trailing behavioral lambda `block`. Do not add a ceremonial `handler {}` or `read {}` wrapper inside another configuration lambda.
 - Use a result DSL when it removes repeated request data. Seed contextual defaults such as the requested resource URI and registered MIME type, while allowing explicit overrides.
@@ -131,6 +131,7 @@ resourceTemplate(
     title = "User profile",
     annotations = annotations,
     icons = icons,
+    meta = mapOf("owner" to "team-x"),
 ) {
     TextResourceContents {
         text = """{"id":"${param("userId")}"}"""
@@ -148,7 +149,8 @@ fun resourceTemplate(
     mimeType: String? = null,
     title: String? = null,
     annotations: Annotations? = null,
-    icons: List<Icon>? = null,
+    icons: List<Icon> = emptyList(),
+    meta: Map<String, Any>? = null,
     block: suspend TemplateScope.() -> ResourceContents,
 )
 
@@ -157,6 +159,23 @@ fun resourceTemplate(
     block: suspend TemplateScope.() -> ResourceContents,
 )
 ```
+
+Every field here maps directly onto the corresponding `*Descriptor.Builder` field — add a new
+flat param the moment the Java builder gains one, don't let the Kotlin overload drift behind it.
+
+⚠️ **`extensionId` is the one deliberate exception** — never add it as a flat named parameter on
+`tool`/`resource`/`resourceTemplate`/`prompt`/`registerTool`. It marks extension-owned features:
+`ResourceMethodHandlers`/`PromptMethodHandlers`/`ToolMethodHandlers` filter both `*/list` results
+and direct reads to only the extensions the current session negotiated
+(`context.isExtensionEnabled`), so a feature carrying an `extensionId` with no matching negotiated
+extension becomes silently invisible — a footgun for ordinary server authors who'd never touch it
+otherwise. It never appears on the wire either way. The one real caller
+(`TasksExtension.java`) sets it via the raw Java `*Descriptor.Builder` in its own bootstrap code —
+extension implementations are the intended and only audience. Kotlin still exposes it, but only
+on the `*DescriptorScope`/`*Builder` DSL classes (`ToolDescriptorScope`, `ResourceDescriptorScope`,
+`ResourceTemplateDescriptorBuilder`, `PromptDescriptorScope`), marked `@ExperimentalApi` to signal
+it's for advanced/extension use: `resourceDescriptor(name, uri) { extensionId = MY_EXT_ID }` then
+`resource(descriptor) { }` — never `resource(name, uri, extensionId = ...) { }`.
 
 ## ⚠️ `_meta` stays out of the ergonomic surface
 

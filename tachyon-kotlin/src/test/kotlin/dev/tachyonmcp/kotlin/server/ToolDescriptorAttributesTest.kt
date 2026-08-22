@@ -5,6 +5,7 @@ import dev.tachyonmcp.api.json.JsonSchema
 import dev.tachyonmcp.api.server.domain.ToolAnnotations
 import dev.tachyonmcp.api.server.features.tasks.TaskSupport
 import dev.tachyonmcp.kotlin.server.domain.Icon
+import dev.tachyonmcp.kotlin.server.features.tools.toolDescriptor
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -34,7 +35,6 @@ internal class ToolDescriptorAttributesTest {
                 taskSupport = TaskSupport.OPTIONAL,
                 annotations = toolAnnotations,
                 icons = listOf(icon),
-                extensionId = "ext",
                 meta = mapOf("k" to "v"),
             ) { text("ok") }
         }.use { server ->
@@ -47,7 +47,6 @@ internal class ToolDescriptorAttributesTest {
                 taskSupport = TaskSupport.OPTIONAL,
                 annotations = toolAnnotations,
                 icons = listOf(icon),
-                extensionId = "ext",
                 meta = mapOf("k" to "v"),
             ) { text("ok") }
 
@@ -58,7 +57,6 @@ internal class ToolDescriptorAttributesTest {
                 taskSupport = TaskSupport.OPTIONAL,
                 annotations = toolAnnotations,
                 icons = listOf(icon),
-                extensionId = "ext",
                 meta = mapOf("k" to "v"),
             ) { _: TypedInput -> TypedOutput() }
 
@@ -70,12 +68,18 @@ internal class ToolDescriptorAttributesTest {
                     descriptor.taskSupport() shouldBe TaskSupport.OPTIONAL
                     descriptor.annotations() shouldBe toolAnnotations
                     descriptor.icons() shouldBe listOf(icon)
-                    descriptor.extensionId() shouldBe "ext"
                     descriptor.meta() shouldBe mapOf("k" to "v")
                     descriptor.inputSchema() shouldNotBe null
                     descriptor.outputSchema() shouldNotBe null
                 }
             }
         }
+    }
+
+    @Test
+    fun `extensionId is not a flat tool attribute, only settable via the descriptor scope`() {
+        val descriptor = toolDescriptor("extension-owned") { extensionId = "ext" }
+
+        descriptor.extensionId() shouldBe "ext"
     }
 }

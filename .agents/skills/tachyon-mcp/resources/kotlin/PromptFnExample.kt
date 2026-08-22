@@ -33,6 +33,8 @@ fun argDescriptor(): PromptDescriptor =
             required = false
         }
         // inputSchema also settable
+        extensionId = "com.example/rewrite"
+        meta = mapOf("version" to 2)
     }
 
 /** Receiver factory with required and optional properties. */

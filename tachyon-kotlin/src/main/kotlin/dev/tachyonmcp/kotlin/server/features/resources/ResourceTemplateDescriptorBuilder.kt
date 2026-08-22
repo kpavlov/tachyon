@@ -5,6 +5,7 @@
 
 package dev.tachyonmcp.kotlin.server.features.resources
 
+import dev.tachyonmcp.api.annotations.ExperimentalApi
 import dev.tachyonmcp.api.server.domain.Annotations
 import dev.tachyonmcp.api.server.domain.Icon
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor
@@ -33,7 +34,8 @@ public class ResourceTemplateDescriptorBuilder
         /** Human-readable title. */
         public var title: String? = null
 
-        /** Extension ID. */
+        /** Extension-ownership marker; set by extension implementations only, not by ordinary templates. */
+        @ExperimentalApi
         public var extensionId: String? = null
 
         /** Optional presentation hints. */

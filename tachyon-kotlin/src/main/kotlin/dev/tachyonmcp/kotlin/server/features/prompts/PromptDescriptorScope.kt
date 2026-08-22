@@ -3,6 +3,7 @@
 
 package dev.tachyonmcp.kotlin.server.features.prompts
 
+import dev.tachyonmcp.api.annotations.ExperimentalApi
 import dev.tachyonmcp.api.json.JsonSchema
 import dev.tachyonmcp.api.server.domain.Icon
 import dev.tachyonmcp.api.server.domain.PromptArgument
@@ -26,6 +27,10 @@ public class PromptDescriptorScope
         public var arguments: List<PromptArgument>? = null
         public var inputSchema: JsonSchema? = null
         public var icons: List<Icon>? = null
+
+        /** Extension-ownership marker; set by extension implementations only, not by ordinary prompts. */
+        @ExperimentalApi
+        public var extensionId: String? = null
         public var meta: Map<String, Any>? = null
 
         /** Sets the input schema from a kotlinx-serialization [JsonObject]. */
@@ -56,6 +61,7 @@ public class PromptDescriptorScope
                 .arguments(arguments.orEmpty())
                 .inputSchema(inputSchema)
                 .icons(icons.orEmpty())
+                .extensionId(extensionId)
                 .meta(meta)
                 .build()
         }

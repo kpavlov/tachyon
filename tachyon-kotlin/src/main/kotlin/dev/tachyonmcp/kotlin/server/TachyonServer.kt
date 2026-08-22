@@ -40,7 +40,6 @@ public sealed interface TachyonServer : CoreTachyonServer {
         taskSupport: TaskSupport? = null,
         annotations: ToolAnnotations? = null,
         icons: List<Icon>? = null,
-        extensionId: String? = null,
         meta: Map<String, Any>? = null,
         block: suspend ToolScope.() -> ToolResult,
     ): TachyonServer =
@@ -55,7 +54,6 @@ public sealed interface TachyonServer : CoreTachyonServer {
                     taskSupport = taskSupport,
                     annotations = annotations,
                     icons = icons,
-                    extensionId = extensionId,
                     meta = meta,
                 ),
             block = block,
@@ -73,7 +71,6 @@ public sealed interface TachyonServer : CoreTachyonServer {
         taskSupport: TaskSupport? = null,
         annotations: ToolAnnotations? = null,
         icons: List<Icon>? = null,
-        extensionId: String? = null,
         meta: Map<String, Any>? = null,
         block: suspend ToolScope.() -> ToolResult,
     ): TachyonServer =
@@ -86,7 +83,6 @@ public sealed interface TachyonServer : CoreTachyonServer {
             taskSupport = taskSupport,
             annotations = annotations,
             icons = icons,
-            extensionId = extensionId,
             meta = meta,
             block = block,
         )
@@ -134,7 +130,6 @@ public sealed interface TachyonServer : CoreTachyonServer {
         taskSupport: TaskSupport? = null,
         annotations: ToolAnnotations? = null,
         icons: List<Icon>? = null,
-        extensionId: String? = null,
         meta: Map<String, Any>? = null,
         block: suspend ToolScope.() -> ToolResult,
     ): TachyonServer =
@@ -147,7 +142,6 @@ public sealed interface TachyonServer : CoreTachyonServer {
             taskSupport = taskSupport,
             annotations = annotations,
             icons = icons,
-            extensionId = extensionId,
             meta = meta,
             block = block,
         )
@@ -228,7 +222,6 @@ public inline fun <reified In : Any, reified Out : Any> TachyonServer.registerTo
     taskSupport: TaskSupport? = null,
     annotations: ToolAnnotations? = null,
     icons: List<Icon>? = null,
-    extensionId: String? = null,
     meta: Map<String, Any>? = null,
     noinline handler: suspend ToolScope.(In) -> Any,
 ): TachyonServer {
@@ -244,7 +237,6 @@ public inline fun <reified In : Any, reified Out : Any> TachyonServer.registerTo
             taskSupport = taskSupport,
             annotations = annotations,
             icons = icons,
-            extensionId = extensionId,
             meta = meta,
         )
     return registerTool(descriptor) {

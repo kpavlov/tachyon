@@ -5,6 +5,7 @@ import dev.tachyonmcp.api.annotations.ExperimentalApi
 import dev.tachyonmcp.api.json.JsonSchema
 import dev.tachyonmcp.api.server.domain.Annotations
 import dev.tachyonmcp.api.server.domain.Icon
+import dev.tachyonmcp.api.server.domain.PromptArgument
 import dev.tachyonmcp.api.server.domain.PromptMessage
 import dev.tachyonmcp.api.server.domain.ResourceContents
 import dev.tachyonmcp.api.server.domain.ToolAnnotations
@@ -133,7 +134,6 @@ public class TachyonServerBuilder
             taskSupport: TaskSupport? = null,
             annotations: ToolAnnotations? = null,
             icons: List<Icon>? = null,
-            extensionId: String? = null,
             meta: Map<String, Any>? = null,
             handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
@@ -148,7 +148,6 @@ public class TachyonServerBuilder
                         taskSupport = taskSupport,
                         annotations = annotations,
                         icons = icons,
-                        extensionId = extensionId,
                         meta = meta,
                     ),
                 handler = handler,
@@ -224,7 +223,6 @@ public class TachyonServerBuilder
             noinline schemaGenerator: (Class<*>) -> JsonSchema = JsonSchema::generate,
             annotations: ToolAnnotations? = null,
             icons: List<Icon>? = null,
-            extensionId: String? = null,
             meta: Map<String, Any>? = null,
             noinline handler: suspend ToolScope.(In) -> Any,
         ): TachyonServerBuilder {
@@ -240,7 +238,6 @@ public class TachyonServerBuilder
                     taskSupport = taskSupport,
                     annotations = annotations,
                     icons = icons,
-                    extensionId = extensionId,
                     meta = meta,
                 )
             return tool(descriptor) {
@@ -275,10 +272,12 @@ public class TachyonServerBuilder
          * @param annotations optional presentation hints
          * @param size optional raw content size in bytes
          * @param icons associated icons, or an empty list
+         * @param meta optional protocol extension metadata
          * @param block handles reads of the registered resource
          * @return this builder
          */
         @JvmSynthetic
+        @Suppress("LongParameterList")
         public fun resource(
             name: String,
             uri: String,
@@ -288,21 +287,25 @@ public class TachyonServerBuilder
             annotations: Annotations? = null,
             size: Long? = null,
             icons: List<Icon> = emptyList(),
+            meta: Map<String, Any>? = null,
             block: suspend ResourceScope.() -> ResourceContents,
         ): TachyonServerBuilder =
-            this.also {
-                featureRegistrar.resource(
-                    name = name,
-                    uri = uri,
-                    description = description,
-                    mimeType = mimeType,
-                    title = title,
-                    annotations = annotations,
-                    size = size,
-                    icons = icons,
-                    block = block,
-                )
-            }
+            resource(
+                descriptor =
+                    ResourceDescriptor
+                        .builder()
+                        .name(name)
+                        .uri(uri)
+                        .description(description)
+                        .mimeType(mimeType)
+                        .title(title)
+                        .annotations(annotations)
+                        .size(size)
+                        .icons(icons)
+                        .meta(meta)
+                        .build(),
+                block = block,
+            )
 
         /**
          * Registers a prebuilt static-resource descriptor.
@@ -322,19 +325,40 @@ public class TachyonServerBuilder
          *
          * @param name The prompt name.
          * @param description An optional description of the prompt.
+         * @param title The optional human-readable title.
+         * @param arguments The arguments accepted by this prompt, or an empty list.
+         * @param inputSchema The optional JSON schema describing the prompt's arguments.
+         * @param icons The prompt icons, or an empty list.
+         * @param meta The optional protocol extension metadata.
          * @param handler The handler that generates the prompt messages.
          * @return This builder.
          */
         @JvmSynthetic
+        @Suppress("LongParameterList")
         public fun prompt(
             name: String,
             description: String? = null,
+            title: String? = null,
+            arguments: List<PromptArgument> = emptyList(),
+            inputSchema: JsonSchema? = null,
+            icons: List<Icon> = emptyList(),
+            meta: Map<String, Any>? = null,
             handler: suspend PromptScope.() -> List<PromptMessage>,
         ): TachyonServerBuilder =
-            this.also {
-                val descriptor = PromptDescriptor.of(name, description, null, emptyList(), null)
-                featureRegistrar.prompt(descriptor, handler)
-            }
+            prompt(
+                descriptor =
+                    PromptDescriptor
+                        .builder()
+                        .name(name)
+                        .description(description)
+                        .title(title)
+                        .arguments(arguments)
+                        .inputSchema(inputSchema)
+                        .icons(icons)
+                        .meta(meta)
+                        .build(),
+                handler = handler,
+            )
 
         /**
          * Registers a prebuilt prompt descriptor with a suspending handler block.
@@ -359,10 +383,12 @@ public class TachyonServerBuilder
          * @param title The optional template title.
          * @param annotations The optional template annotations.
          * @param icons The template icons, or an empty list.
+         * @param meta The optional protocol extension metadata.
          * @param block Handles requests for resources matching the template.
          * @return This builder.
          */
         @JvmSynthetic
+        @Suppress("LongParameterList")
         public fun resourceTemplate(
             name: String,
             uriTemplate: String,
@@ -371,20 +397,24 @@ public class TachyonServerBuilder
             title: String? = null,
             annotations: Annotations? = null,
             icons: List<Icon> = emptyList(),
+            meta: Map<String, Any>? = null,
             block: suspend TemplateScope.() -> ResourceContents,
         ): TachyonServerBuilder =
-            this.also {
-                featureRegistrar.resourceTemplate(
-                    name = name,
-                    uriTemplate = uriTemplate,
-                    description = description,
-                    mimeType = mimeType,
-                    title = title,
-                    annotations = annotations,
-                    icons = icons,
-                    block = block,
-                )
-            }
+            resourceTemplate(
+                descriptor =
+                    ResourceTemplateDescriptor
+                        .builder()
+                        .name(name)
+                        .uriTemplate(uriTemplate)
+                        .description(description)
+                        .mimeType(mimeType)
+                        .title(title)
+                        .annotations(annotations)
+                        .icons(icons)
+                        .meta(meta)
+                        .build(),
+                block = block,
+            )
 
         /**
          * Registers a prebuilt resource-template descriptor.
@@ -445,7 +475,6 @@ public class TachyonServerBuilder
             taskSupport: TaskSupport? = null,
             annotations: ToolAnnotations? = null,
             icons: List<Icon>? = null,
-            extensionId: String? = null,
             meta: Map<String, Any>? = null,
             handler: suspend ToolScope.() -> ToolResult,
         ): TachyonServerBuilder =
@@ -458,7 +487,6 @@ public class TachyonServerBuilder
                 taskSupport = taskSupport,
                 annotations = annotations,
                 icons = icons,
-                extensionId = extensionId,
                 meta = meta,
                 handler = handler,
             )

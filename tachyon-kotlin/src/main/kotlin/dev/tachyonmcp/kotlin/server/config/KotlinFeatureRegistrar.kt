@@ -2,8 +2,6 @@
 package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.api.json.JsonSchema
-import dev.tachyonmcp.api.server.domain.Annotations
-import dev.tachyonmcp.api.server.domain.Icon
 import dev.tachyonmcp.api.server.domain.PromptMessage
 import dev.tachyonmcp.api.server.domain.ResourceContents
 import dev.tachyonmcp.api.server.features.completions.CompletionResult
@@ -27,67 +25,11 @@ internal class KotlinFeatureRegistrar(
     private val runtime: CoroutineRuntime,
 ) {
     fun resource(
-        name: String,
-        uri: String,
-        description: String?,
-        mimeType: String?,
-        title: String?,
-        annotations: Annotations?,
-        size: Long?,
-        icons: List<Icon>,
-        block: suspend ResourceScope.() -> ResourceContents,
-    ) {
-        delegate.withResources { resources ->
-            resources.registerAsync(
-                { descriptor ->
-                    descriptor
-                        .name(name)
-                        .uri(uri)
-                        .description(description)
-                        .mimeType(mimeType)
-                        .title(title)
-                        .annotations(annotations)
-                        .size(size)
-                        .icons(icons)
-                },
-                resourceFn(name, mimeType, runtime, block),
-            )
-        }
-    }
-
-    fun resource(
         descriptor: ResourceDescriptor,
         block: suspend ResourceScope.() -> ResourceContents,
     ) {
         delegate.withResources {
             it.registerAsync(descriptor, resourceFn(descriptor, runtime, block))
-        }
-    }
-
-    fun resourceTemplate(
-        name: String,
-        uriTemplate: String,
-        description: String?,
-        mimeType: String?,
-        title: String?,
-        annotations: Annotations?,
-        icons: List<Icon>,
-        block: suspend TemplateScope.() -> ResourceContents,
-    ) {
-        delegate.withResources { resources ->
-            resources.registerTemplateAsync(
-                { descriptor ->
-                    descriptor
-                        .name(name)
-                        .uriTemplate(uriTemplate)
-                        .description(description)
-                        .mimeType(mimeType)
-                        .title(title)
-                        .annotations(annotations)
-                        .icons(icons)
-                },
-                templateFn(name, mimeType, runtime, block),
-            )
         }
     }
 
