@@ -130,6 +130,7 @@ resource(
     annotations = Annotations { priority = 0.8 },
     size = 1024,
     icons = listOf(Icon { src = "https://example.com/config.svg" }),
+    meta = mapOf("owner" to "team-x"),
 ) {
     // this: ResourceScope — ctx, uri, params, uriTemplate
     val config = fetchConfig()  // suspend call
@@ -141,6 +142,36 @@ prompt(name = "greet", description = "Greeting prompt") {
     listOf(PromptMessage.user("Hello, ${arguments ?: "world"}"))
 }
 ```
+
+`prompt(...)` accepts the full `PromptDescriptor` attribute set as named params too:
+
+```kotlin
+prompt(
+    name = "rewrite",
+    description = "Rewrites text in a style",
+    title = "Rewrite Tool",
+    arguments =
+        listOf(
+            PromptArgument {
+                name = "style"
+                required = false
+            },
+        ),
+    inputSchema = schema,
+    icons = listOf(Icon { src = "https://example.com/rewrite.svg" }),
+    meta = mapOf("owner" to "team-x"),
+) {
+    val style = arguments.stringOrNull("style") ?: "a neutral"
+    listOf(PromptMessage.user("Rewrite this in $style style"))
+}
+```
+
+`extensionId` is deliberately not one of these named params — it marks a resource/tool/prompt as
+owned by a specific extension (gating its visibility to sessions that negotiated that extension;
+see [Extensions](extensions.md)) and is meant for extension implementations, not ordinary server
+code. Set it through the descriptor scope instead, e.g. `resourceDescriptor(name, uri) {
+extensionId = MY_EXTENSION_ID }`, then pass the built descriptor to the `resource(descriptor) { }`
+overload.
 
 Inside a resource handler, `TextResourceContents { }` and `BlobResourceContents { }` default `uri`
 to the requested URI and `mimeType` to the registered resource MIME type. You can override either

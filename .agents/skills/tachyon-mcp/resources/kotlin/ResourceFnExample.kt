@@ -37,6 +37,8 @@ fun richDescriptor(): ResourceDescriptor =
                     theme = "dark",
                 ),
             )
+        extensionId = "com.example/profiles"
+        meta = mapOf("cacheable" to true)
     }
 
 /** URI template — {param} segments captured at runtime. */

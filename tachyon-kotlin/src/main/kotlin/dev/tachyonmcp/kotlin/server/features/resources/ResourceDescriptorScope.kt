@@ -3,6 +3,7 @@
 
 package dev.tachyonmcp.kotlin.server.features.resources
 
+import dev.tachyonmcp.api.annotations.ExperimentalApi
 import dev.tachyonmcp.api.server.domain.Annotations
 import dev.tachyonmcp.api.server.domain.Icon
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor
@@ -26,23 +27,29 @@ public class ResourceDescriptorScope
         public var annotations: Annotations? = null
         public var size: Long? = null
         public var icons: List<Icon> = emptyList()
+
+        /** Extension-ownership marker; set by extension implementations only, not by ordinary resources. */
+        @ExperimentalApi
+        public var extensionId: String? = null
         public var meta: Map<String, Any>? = null
 
         @PublishedApi
         internal fun build(): ResourceDescriptor {
             val n = requireNotNull(name) { "ResourceDescriptor.name is required" }
             val u = requireNotNull(uri) { "ResourceDescriptor.uri is required" }
-            return ResourceDescriptor(
-                name = n,
-                uri = u,
-                description = description,
-                mimeType = mimeType ?: MimeTypes.guess(u),
-                title = title,
-                annotations = annotations,
-                size = size,
-                icons = icons,
-                meta = meta,
-            )
+            return ResourceDescriptor
+                .builder()
+                .name(n)
+                .uri(u)
+                .description(description)
+                .mimeType(mimeType ?: MimeTypes.guess(u))
+                .title(title)
+                .annotations(annotations)
+                .size(size)
+                .icons(icons)
+                .extensionId(extensionId)
+                .meta(meta)
+                .build()
         }
     }
 

@@ -3,6 +3,7 @@
 
 package dev.tachyonmcp.kotlin.server.features.tools
 
+import dev.tachyonmcp.api.annotations.ExperimentalApi
 import dev.tachyonmcp.api.json.JsonSchema
 import dev.tachyonmcp.api.server.domain.Icon
 import dev.tachyonmcp.api.server.domain.ToolAnnotations
@@ -28,6 +29,9 @@ public class ToolDescriptorScope
         public var taskSupport: TaskSupport? = null
         public var annotations: ToolAnnotations? = null
         public var icons: List<Icon>? = null
+
+        /** Extension-ownership marker; set by extension implementations only, not by ordinary tools. */
+        @ExperimentalApi
         public var extensionId: String? = null
         public var meta: Map<String, Any>? = null
 
@@ -118,7 +122,6 @@ internal fun toolDescriptorOf(
     taskSupport: TaskSupport?,
     annotations: ToolAnnotations?,
     icons: List<Icon>?,
-    extensionId: String?,
     meta: Map<String, Any>?,
 ): ToolDescriptor =
     toolDescriptor(name) {
@@ -129,6 +132,5 @@ internal fun toolDescriptorOf(
         this.taskSupport = taskSupport
         this.annotations = annotations
         this.icons = icons
-        this.extensionId = extensionId
         this.meta = meta
     }
