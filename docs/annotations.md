@@ -91,6 +91,13 @@ that aren't one of the three request-context types it actually emulates (`McpSyn
 `McpAsyncRequestContext`, `MetaProvider`) — e.g. `McpMeta` or `McpTransportContext` — instead of
 silently resolving them to `null` at invocation.
 
+Return-value conversion mirrors this across all three providers: a `@Tool`/`@McpTool` method
+returning anything other than a `ToolResult`, `String`, `ContentBlock`, `List<...>` (in
+`McpJavaAnnotationProvider` and `LangChain4jAnnotationProvider`), or scalar (a `Number`, `Boolean`,
+or `Character`) is wrapped with `ToolResult.structured(result)`, so a composite return type (a
+record or POJO) comes back as real `structuredContent`, not a stringified `toString()` dump. See
+the [`langchain4j-mcp`](../examples/langchain4j-mcp) example for a full round trip.
+
 ### Spring AI prompt arguments
 
 `SpringAiAnnotationProvider` reads `@McpArg`'s `name`, `description`, and `required` for

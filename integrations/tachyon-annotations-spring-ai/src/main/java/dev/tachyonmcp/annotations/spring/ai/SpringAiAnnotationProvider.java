@@ -262,7 +262,10 @@ public class SpringAiAnnotationProvider implements AnnotationProvider {
             case ToolResult tr -> tr;
             case String s -> ToolResult.text(s);
             case ContentBlock cb -> ToolResult.content(cb);
-            default -> ToolResult.text(result.toString());
+            case Number n -> ToolResult.text(n.toString());
+            case Boolean b -> ToolResult.text(b.toString());
+            case Character c -> ToolResult.text(c.toString());
+            default -> ToolResult.structured(result);
         };
     }
 

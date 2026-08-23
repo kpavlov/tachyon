@@ -110,9 +110,9 @@ public class LangChain4jAnnotationProvider implements AnnotationProvider {
             ToolRequest req,
             PayloadSerializer serializer,
             PayloadDeserializer deserializer) {
-        Parameter[] params = method.getParameters();
-        Object[] args = new Object[params.length];
-        Map<String, Object> values = req.arguments().asMap();
+        final Parameter[] params = method.getParameters();
+        final Object[] args = new Object[params.length];
+        final Map<String, Object> values = req.arguments().asMap();
         for (int i = 0; i < params.length; i++) {
             Class<?> type = params[i].getType();
             if (InteractionContext.class.isAssignableFrom(type)) {
@@ -169,7 +169,10 @@ public class LangChain4jAnnotationProvider implements AnnotationProvider {
             }
             return ToolResult.content(blocks.toArray(new ContentBlock[0]));
         }
-        return ToolResult.text(result.toString());
+        if (result instanceof Number || result instanceof Boolean || result instanceof Character) {
+            return ToolResult.text(result.toString());
+        }
+        return ToolResult.structured(result);
     }
 
     private static String resolveParamName(Parameter param) {

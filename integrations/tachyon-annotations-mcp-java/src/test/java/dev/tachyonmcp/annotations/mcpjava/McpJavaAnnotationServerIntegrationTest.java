@@ -318,4 +318,34 @@ class McpJavaAnnotationServerIntegrationTest {
             assertThatJson(call.body()).isEqualTo(expected);
         }
     }
+
+    record Point(int x, int y) {}
+
+    @SuppressWarnings("unused")
+    static class CompositeResultFixture {
+        @Tool(name = "makePoint")
+        Point makePoint() {
+            return new Point(3, 4);
+        }
+    }
+
+    @Test
+    void compositeReturnValueBecomesStructuredContentNotAToStringDumpOverWire() throws Exception {
+        try (var server = startServer(new CompositeResultFixture());
+                var client = McpTestClients.latest(server.port())) {
+            var call = client.post("""
+                    {"jsonrpc":"2.0","id":1,"method":"tools/call",
+                     "params":{"name":"makePoint","arguments":{}}}
+                    """);
+
+            // language=json
+            var expected = """
+                    {"jsonrpc":"2.0","id":1,"result":{
+                        "structuredContent":{"x":3,"y":4},
+                        "resultType":"complete"}
+                    }
+                    """;
+            assertThatJson(call.body()).whenIgnoringPaths("result.content").isEqualTo(expected);
+        }
+    }
 }

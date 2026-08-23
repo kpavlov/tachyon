@@ -18,5 +18,6 @@
         <module>echo-kotlin</module>
         <module>weather-mcp</module>
         <module>weather-mcp-kotlin</module>
+        <module>langchain4j-mcp</module>
     </modules>
 </project>

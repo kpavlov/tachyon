@@ -7,6 +7,10 @@ the Maven wrapper build in, so you can run it without installing anything else �
 - [**weather-mcp**](weather-mcp) — Java. Full MCP surface: tools, resources, resource templates,
   prompts, completions and elicitation.
 - [**weather-mcp-kotlin**](weather-mcp-kotlin) — Kotlin port of `weather-mcp`
+- [**langchain4j-mcp**](langchain4j-mcp) — Java. A plain LangChain4j `@Tool` method, with no
+  Tachyon imports, scanned by `LangChain4jAnnotationProvider` into a running server. Depends on
+  `tachyon-annotations-langchain4j`, unreleased — build the Tachyon SNAPSHOT locally first (see
+  its own README).
 
 Start with **echo-kotlin** to see the smallest viable server, then move to **weather-mcp** (or its
 Kotlin twin) for a realistic feature-rich example backed by the Open-Meteo API.

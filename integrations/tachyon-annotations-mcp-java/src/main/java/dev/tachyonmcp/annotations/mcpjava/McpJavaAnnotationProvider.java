@@ -189,7 +189,10 @@ public class McpJavaAnnotationProvider implements AnnotationProvider {
             }
             return ToolResult.content(blocks.toArray(new dev.tachyonmcp.api.server.domain.ContentBlock[0]));
         }
-        return ToolResult.text(result.toString());
+        if (result instanceof Number || result instanceof Boolean || result instanceof Character) {
+            return ToolResult.text(result.toString());
+        }
+        return ToolResult.structured(result);
     }
 
     /**
