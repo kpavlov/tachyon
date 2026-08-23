@@ -20,19 +20,18 @@ description: Apply Tachyon MCP project rules when designing, implementing, revie
 
 # Test Rules 🧪
 
-- AssertJ fluent. Short spec ref comment in method. JUnit6+JUnit Pioneer annotations. Prefer parametrized tests.
+- Java: AssertJ fluent. Short spec ref comment in method. JUnit6+JUnit Pioneer annotations. Prefer parametrized tests.
 - Handlers that throw: test with a real checked exception thrown directly from the lambda (no try/catch) — exercises the `throws Exception` SAM contract, not just unchecked paths.
 - "Omitted/null on wire" claims: serialize through the real codec (`CodecRegistry.codecFor(X.class).encodeToBytes(value)`, or `JsonRpcCodec.writeValueAsString`) and assert on the resulting JSON. Asserting a domain/model field is `null` only proves the mapper produced `null` — it trusts, but doesn't verify, that the codec omits it.
-
-## E2E
-
-- Java MCP SDK client. Raw HTTP only for edge cases.
 - `JsonUnit` + AssertJ for JSON. Assert full JSON via `assertThatJson(actual).isEqualTo(expected)`, dynamic values (IDs etc.) via `.formatted(...)` — not `inPath(...)` fragments, which can hide a wrong response shape behind passing checks. `whenIgnoringPaths`, `IGNORING_ARRAY_ORDER`, `IGNORING_EXTRA_FIELDS`, `TREATING_NULL_AS_ABSENT` for partial tolerance.
 - `// language=json` before JSON strings.
-- Awaitility for polling.
-- Kotlin: use kotest-assertions
+- Kotlin: kotest-assertions, kotest-assertions-json for json payload testing. Assert full JSON
 
-### Shared E2E servers
+## E2E
+- Use mcp client and assertions from tachyon-testkit
+- Test for full payload(all attributes) and minimal set of attributes
+
+## Shared E2E servers
 
 - Treat shared stateful/stateless singleton servers as production-parity SUTs, not just suite optimizations.
 - Keep shared server config/registries immutable after startup. Tests that register or replace features use an isolated `startServer(...)`.
@@ -42,12 +41,13 @@ description: Apply Tachyon MCP project rules when designing, implementing, revie
 - For stateless concurrency, verify: parallel initialization returns no session ID, concurrent requests never cross responses or client data.
 - Test observable server behavior through real clients. Don't add tests for test helpers.
 
-## JSON Schemas
+# JSON/JSON Schemas
 
+- Avoid creating new helpers for parsing json/schemas, reuse `dev.tachyonmcp.api.json`
 - Static schema → parse text block. `ObjectMapper.readTree("""...""")` or shared `parseJson(String)` helper. `// language=json` for IDE.
 - Imperative `JsonNodeFactory` only for runtime-computed schemas.
 
-## Logging
+# Logging
 
 [Logging policy](https://kpavlov.me/blog/logging-policy/)
 
