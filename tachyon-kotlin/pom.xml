@@ -153,70 +153,6 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <dependencies>
-                    <dependency>
-                        <groupId>dev.detekt</groupId>
-                        <artifactId>detekt-cli</artifactId>
-                        <version>${detekt.version}</version>
-                        <classifier>all</classifier>
-                    </dependency>
-                </dependencies>
-                <executions>
-                    <execution>
-                        <id>detekt</id>
-                        <phase>process-test-classes</phase>
-                        <goals>
-                            <goal>java</goal>
-                        </goals>
-                        <configuration>
-                            <blockSystemExit>true</blockSystemExit>
-                            <mainClass>dev.detekt.cli.Main</mainClass>
-                            <arguments>
-                                <argument>--build-upon-default-config</argument>
-                                <argument>--config</argument>
-                                <argument>${project.basedir}/../detekt.yml</argument>
-                                <argument>--input</argument>
-                                <argument>${project.basedir}/src/main/kotlin:${project.basedir}/src/test/kotlin</argument>
-                                <argument>--excludes</argument>
-                                <argument>**/build/**:**/.gradle/**</argument>
-                                <argument>--jvm-target</argument>
-                                <argument>${java.version}</argument>
-                                <argument>--language-version</argument>
-                                <argument>${kotlin-language.version}</argument>
-                                <argument>--report</argument>
-                                <argument>html:${project.build.directory}/detekt/detekt.html</argument>
-                                <argument>--report</argument>
-                                <argument>checkstyle:${project.build.directory}/detekt/detekt.xml</argument>
-                            </arguments>
-                            <includePluginDependencies>true</includePluginDependencies>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>detekt-format</id>
-                        <goals>
-                            <goal>java</goal>
-                        </goals>
-                        <configuration>
-                            <blockSystemExit>true</blockSystemExit>
-                            <mainClass>dev.detekt.cli.Main</mainClass>
-                            <arguments>
-                                <argument>--build-upon-default-config</argument>
-                                <argument>--config</argument>
-                                <argument>${project.basedir}/../detekt.yml</argument>
-                                <argument>--input</argument>
-                                <argument>${project.basedir}/src/main/kotlin:${project.basedir}/src/test/kotlin</argument>
-                                <argument>--excludes</argument>
-                                <argument>**/build/**:**/.gradle/**</argument>
-                                <argument>--jvm-target</argument>
-                                <argument>${java.version}</argument>
-                                <argument>--language-version</argument>
-                                <argument>${kotlin-language.version}</argument>
-                                <argument>--auto-correct</argument>
-                            </arguments>
-                            <includePluginDependencies>true</includePluginDependencies>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <groupId>org.jetbrains.dokka</groupId>
@@ -235,4 +171,41 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>lint</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>detekt</id>
+                                <phase>process-test-classes</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>format</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>detekt-format</id>
+                                <phase>process-sources</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

@@ -15,9 +15,9 @@ MAVEN_TEST_ARGS := -Dsurefire.forkCount=$(SUREFIRE_FORK_COUNT) $(NETTY_ARGS)
 help: ## List available targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-22s %s\n", $$1, $$2}'
 
-all: clean install-server revapi examples-snapshot examples ## Full build: clean, live examples, build+install, SNAPSHOT examples
+all: clean format lint install-server revapi examples-snapshot examples ## Full build: clean, format, lint, live examples, build+install, SNAPSHOT examples
 
-ci: clean build revapi ## CI pipeline: clean + build
+ci: clean lint build revapi ## CI pipeline: clean + lint + build
 
 build: ## Compile, test, verify (mvn verify)
 	@echo " 🏗️ Building..."
@@ -30,8 +30,7 @@ test: ## Run unit + e2e tests
 
 revapi: ## Check API compatibility against baseline (oldVersion) + write report
 	@echo " 🔄  Checking API compatibility..."
-	@./mvnw revapi:check -pl tachyon-api,tachyon-core,tachyon-extensions,tachyon-testkit -DskipTests --no-transfer-progress
-	@./mvnw revapi:report -pl tachyon-api,tachyon-core,tachyon-extensions,tachyon-testkit -DskipTests --no-transfer-progress
+	@./mvnw revapi:check revapi:report -pl tachyon-api,tachyon-core,tachyon-extensions,tachyon-testkit -DskipTests --no-transfer-progress
 	@echo " ✅  Done!"
 
 install-server: ## Build with tests and install to local Maven repo
@@ -78,16 +77,15 @@ clean: ## Remove all build artifacts
 
 format: ## Auto-format code (Spotless + Detekt)
 	@echo " 🎨  Formatting code..."
-	@./mvnw spotless:apply -q
+	@./mvnw spotless:apply -Pformat,tests -q
 	@./mvnw install -pl tachyon-api,tachyon-core,tachyon-kotlin -DskipTests -Dspotbugs.skip -Dspotless.skip -q
-	@./mvnw exec:java@detekt-format -pl tachyon-kotlin-kt-schema -am -q
+	@./mvnw exec:java@detekt-format -pl tachyon-kotlin-kt-schema -am -Pformat,tests -q
 	@echo " ✅  Done..."
 
-lint: ## Check code style and bugs (Spotless + Detekt + SpotBugs)
+lint: ## Check code style (Spotless + Detekt); SpotBugs runs automatically during build
 	@echo " 🔍  Linting code..."
-	@./mvnw spotless:check -pl !reports
-	@./mvnw exec:java@detekt -pl tachyon-kotlin-kt-schema -am
-	@./mvnw spotbugs:check -pl !reports,!e2e
+	@./mvnw spotless:check -pl !reports -Plint,tests
+	@./mvnw process-test-classes -pl tachyon-kotlin-kt-schema -am -Plint,tests
 	@echo " ✅  Done..."
 
 mcp-inspector: ## Launch MCP Inspector UI

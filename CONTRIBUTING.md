@@ -7,14 +7,22 @@
 
 ## Build & test
 
+Use the `Makefile` targets (run `make help` for the full list):
+
 ```bash
-mvn test            # unit + e2e tests
-mvn verify           # + conformance
-mvn spotless:check   # format check
-mvn spotless:apply   # auto-fix formatting
+make build   # compile, test, verify (mvn verify)
+make test    # unit + e2e tests
+make lint    # check style: Spotless + Detekt (SpotBugs runs automatically during build)
+make format  # auto-fix style: Spotless + Detekt
+make ci      # what CI runs: clean + lint + build + revapi
+make all     # everything: clean + format + lint + full install + examples
 ```
 
+`lint`/`format` are Maven profiles (`-Plint`/`-Pformat`) kept out of the default
+build so `make build`/`make test` stay fast; `make ci`/`make all` wire them back
+in explicitly. Prefer the IDE MCP for building/running tests when available.
+
 Coding conventions (TDD, SOLID, nullability, module layout, Kotlin DSL
-patterns) live in [CONTRIBUTING.md](CONTRIBUTING.md), [tachyon-development](.agents/skills/tachyon-development), [guidance.md](docs/architecture/guidance.md) -- read it before opening a PR.
+patterns) live in [AGENTS.md](AGENTS.md), [tachyon-development](.agents/skills/tachyon-development), [guidance.md](docs/architecture/guidance.md) -- read it before opening a PR.
 
 Security issues: see [SECURITY.md](SECURITY.md), not a public issue.

@@ -15,14 +15,9 @@ Java 21+Kotlin 2.2 MCP server. Java first, Kotlin adapts.
 
 ## Fast Commands
 
-Use IDE MCP for building/running tests if available. Otherwise:
-
-```bash
-mvn test            # unit + e2e tests
-mvn verify          # + conformance
-mvn spotless:check  # format check
-mvn spotless:apply  # auto-fix
-```
+Use IDE MCP for building/running tests if available. Otherwise see
+[CONTRIBUTING.md](CONTRIBUTING.md) for `make` targets (`build`, `test`, `lint`,
+`format`, `ci`, `all`).
 
 ## Parts
 

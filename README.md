@@ -77,7 +77,6 @@ Opt into sessions for SSE resumability, `Last-Event-ID` replay, and TTL cleanup.
 - [Extensions](docs/extensions.md) - Custom protocol extensions, negotiation
 - [FAQ](docs/faq.md) - Java, frameworks, concurrency, deployment, and compatibility
 - [Kotlin DSL](docs/kotlin.md) - Coroutine-first DSL, `TachyonServer { }`, scope reference
-- [Kotlin module](tachyon-kotlin/README.md) - `tachyon-kotlin` module overview
 - [Testkit](docs/testkit.md) - Test harness: shaping clients, dynamic-port servers, fluent JSON-RPC assertions
 - [Examples](examples/README.md) - Runnable Java & Kotlin example servers
 - [Migrate from Kotlin MCP SDK](docs/migrate-from-kotlin-mcp-to-tachyon.md) - Moving an existing Kotlin MCP SDK server
@@ -166,12 +165,6 @@ protocol version, only the internal mapper layer changes.
 - **Sharable handlers** — `@Sharable` pipeline handlers, no per-request allocation
 - **Virtual threads** — handlers offloaded from the event loop, no manual pools
 - **Streaming JSON-RPC** — Jackson streaming codec, no or limited `ObjectMapper` tree round-trips
-
-## Not yet supported
-
-- **HTTP/2** — transport is HTTP/1.1
-- **Rate limiting**
-- **Telemetry**
 
 ## License
 
