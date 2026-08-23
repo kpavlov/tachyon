@@ -97,17 +97,23 @@ internal class ResourcePromptAttributesE2eTest : AbstractStatelessMcpE2eTest() {
 
         TachyonServer(port = 0) {
             resourceTemplate(
+                name = "full-template",
+                uriTemplate = "test://full-template/{id}",
+                description = "Full template",
+                mimeType = "application/json",
+                title = "Full Template Title",
+                annotations = annotations,
+                icons = listOf(icon),
+                meta = mapOf("owner" to "team-y"),
+            ) {
+                TextResourceContents { text = """{"id":"${param("id")}"}""" }
+            }
+            resourceTemplate(
                 descriptor =
                     ResourceTemplateDescriptor {
-                        name = "full-template"
-                        uriTemplate = "test://full-template/{id}"
-                        description = "Full template"
-                        mimeType = "application/json"
-                        title = "Full Template Title"
-                        this.annotations = annotations
-                        icons = listOf(icon)
+                        name = "gated-template"
+                        uriTemplate = "test://gated-template/{id}"
                         extensionId = "com.example/template-ext"
-                        meta = mapOf("owner" to "team-y")
                     },
             ) {
                 TextResourceContents { text = """{"id":"${param("id")}"}""" }
@@ -115,7 +121,7 @@ internal class ResourcePromptAttributesE2eTest : AbstractStatelessMcpE2eTest() {
         }.use { server ->
             server
                 .resources()
-                .findTemplate("full-template")
+                .findTemplate("gated-template")
                 .orElseThrow()
                 .extensionId() shouldEqual "com.example/template-ext"
 
@@ -135,6 +141,9 @@ internal class ResourcePromptAttributesE2eTest : AbstractStatelessMcpE2eTest() {
             body shouldContain """"priority":0.7"""
             body shouldContain """"src":"https://example.com/template-icon.png""""
             body shouldContain """"owner":"team-y""""
+            // extensionId gates visibility: no negotiated extension for "com.example/template-ext"
+            // means this session never sees the template, not even without the field.
+            body shouldNotContain """"uriTemplate":"test://gated-template/{id}""""
         }
     }
 

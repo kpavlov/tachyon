@@ -73,7 +73,13 @@ public final class ResourceMethodHandlers {
             if (page.cursor() != null) {
                 return ServerErrors.invalidParams("Invalid cursor");
             }
-            return context.responseMapper().listResourceTemplatesResult(registry.templateDescriptors(), null);
+            final var visible = registry.templateDescriptors().stream()
+                    .filter(descriptor -> {
+                        var extensionId = descriptor.extensionId();
+                        return extensionId == null || context.isExtensionEnabled(extensionId);
+                    })
+                    .toList();
+            return context.responseMapper().listResourceTemplatesResult(visible, null);
         }
     }
 

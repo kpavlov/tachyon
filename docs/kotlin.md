@@ -166,12 +166,13 @@ prompt(
 }
 ```
 
-`extensionId` is deliberately not one of these named params — it marks a resource/tool/prompt as
-owned by a specific extension (gating its visibility to sessions that negotiated that extension;
-see [Extensions](extensions.md)) and is meant for extension implementations, not ordinary server
-code. Set it through the descriptor scope instead, e.g. `resourceDescriptor(name, uri) {
-extensionId = MY_EXTENSION_ID }`, then pass the built descriptor to the `resource(descriptor) { }`
-overload.
+`extensionId` is deliberately not one of these named params — it marks a
+resource/resourceTemplate/tool/prompt as owned by a specific extension (gating its visibility to
+sessions that negotiated that extension; see [Extensions](extensions.md)) and is meant for
+extension implementations, not ordinary server code. Set it through the descriptor scope instead,
+e.g. `resourceDescriptor(name, uri) { extensionId = MY_EXTENSION_ID }` or
+`ResourceTemplateDescriptor { extensionId = MY_EXTENSION_ID }`, then pass the built descriptor to
+the `resource(descriptor) { }` or `resourceTemplate(descriptor) { }` overload.
 
 Inside a resource handler, `TextResourceContents { }` and `BlobResourceContents { }` default `uri`
 to the requested URI and `mimeType` to the registered resource MIME type. You can override either

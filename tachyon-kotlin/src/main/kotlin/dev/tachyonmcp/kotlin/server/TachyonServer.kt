@@ -163,7 +163,7 @@ internal class DefaultKotlinTachyonServer(
 
 /**
  * Registers a suspend tool on an already-built server, resolving its input/output schemas from
- * [In]/[Out] and adapting the handler to those types.
+ * [In]/[Out] and adapting the block to those types.
  *
  * The post-build twin of
  * [typedTool][dev.tachyonmcp.kotlin.server.config.TachyonServerBuilder.typedTool] — see its
@@ -173,11 +173,11 @@ internal class DefaultKotlinTachyonServer(
  *
  * Two behaviours go beyond the build-time overload, mirroring
  * [dev.tachyonmcp.api.server.features.tools.TypedToolFn]: the call arguments are decoded into
- * [In] by the serde configured in server config, and the handler's return value is wrapped with
- * [ToolResult.structured]. The handler runs with a [ToolScope] receiver, so `ctx` and `task`
+ * [In] by the serde configured in server config, and the block's return value is wrapped with
+ * [ToolResult.structured]. The block runs with a [ToolScope] receiver, so `ctx` and `task`
  * stay reachable.
  *
- * The handler may return **either** shape:
+ * The block may return **either** shape:
  *  - an [Out] — wrapped into a success result carrying it as `structuredContent`;
  *  - a [ToolResult] — passed through untouched, for results that also need `_meta`, a custom
  *    text block, extra content blocks, [ToolScope.fail], or [ToolScope.inputRequired].
@@ -187,7 +187,7 @@ internal class DefaultKotlinTachyonServer(
  * expected type.
  *
  * Unlike the build-time `typedTool`, this can safely share the `registerTool` name: both type
- * arguments must always be given explicitly (neither is inferable from the handler), and an
+ * arguments must always be given explicitly (neither is inferable from the block), and an
  * explicit type argument list excludes every untyped overload, which declares none. Existing
  * schema-less `registerTool(name) { }` calls therefore never resolve here, and omitting the type
  * arguments is a compile error rather than a silent fallback.
@@ -209,7 +209,7 @@ internal class DefaultKotlinTachyonServer(
  * @param name tool name
  * @param description optional tool description
  * @param taskSupport optional task-augmentation support level
- * @param handler handler receiving the decoded [In], returning an [Out] or a [ToolResult]
+ * @param block block receiving the decoded [In], returning an [Out] or a [ToolResult]
  * @return this server
  */
 @ExperimentalApi
@@ -223,7 +223,7 @@ public inline fun <reified In : Any, reified Out : Any> TachyonServer.registerTo
     annotations: ToolAnnotations? = null,
     icons: List<Icon>? = null,
     meta: Map<String, Any>? = null,
-    noinline handler: suspend ToolScope.(In) -> Any,
+    noinline block: suspend ToolScope.(In) -> Any,
 ): TachyonServer {
     val inputType = In::class.java
     val outputType = Out::class.java
@@ -240,7 +240,7 @@ public inline fun <reified In : Any, reified Out : Any> TachyonServer.registerTo
             meta = meta,
         )
     return registerTool(descriptor) {
-        when (val produced = handler(arguments.decode(inputType))) {
+        when (val produced = block(arguments.decode(inputType))) {
             is ToolResult -> produced
             else -> success(outputType.cast(produced))
         }
