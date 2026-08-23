@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2026 Konstantin Pavlov and contributors.
+ * Copyright (c) Konstantin Pavlov/IT Staff and contributors
  */
 
 /**
- * mcp-java annotation provider for Tachyon.
+ * mcp-java annotation withProvider for Tachyon.
  */
 @NullMarked
 @ExperimentalApi

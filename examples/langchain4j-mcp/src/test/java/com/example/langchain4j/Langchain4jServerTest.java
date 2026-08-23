@@ -12,13 +12,15 @@ import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
 
-import java.util.List;
 import java.util.Map;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
 class Langchain4jServerTest {
+
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     private static TachyonServer server;
     private static HttpClientStreamableHttpTransport clientTransport;
@@ -45,28 +47,42 @@ class Langchain4jServerTest {
     void listsPlaceOrderToolWithCompositeInputSchema() {
         final var result = client.listTools();
 
-        assertThat(result.tools()).hasSize(1);
-        McpSchema.Tool tool = result.tools().getFirst();
-        assertThat(tool.name()).isEqualTo("placeOrder");
-        assertThat(tool.description())
-            .isEqualTo("Places an order for a customer and returns a confirmation with computed totals");
-        assertThat(tool.inputSchema()).isEqualTo(Map.of(
-            "type", "object",
-            "properties", Map.of(
-                "request", Map.of(
-                    "type", "object",
-                    "properties", Map.of(
-                        "customer", Map.of("type", "string"),
-                        "items", Map.of(
-                            "type", "array",
-                            "items", Map.of(
-                                "type", "object",
-                                "properties", Map.of(
-                                    "name", Map.of("type", "string"),
-                                    "quantity", Map.of("type", "integer")),
-                                "required", List.of("name", "quantity")))),
-                    "required", List.of("customer", "items"))),
-            "required", List.of("request")));
+        // language=JSON
+        var expected = """
+            {
+              "tools": [
+                {
+                  "name": "placeOrder",
+                  "description": "Places an order for a customer and returns a confirmation with computed totals",
+                  "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                      "request": {
+                        "type": "object",
+                        "properties": {
+                          "customer": { "type": "string" },
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "name": { "type": "string" },
+                                "quantity": { "type": "integer" }
+                              },
+                              "required": ["name", "quantity"]
+                            }
+                          }
+                        },
+                        "required": ["customer", "items"]
+                      }
+                    },
+                    "required": ["request"]
+                  }
+                }
+              ]
+            }
+            """;
+        assertThatJson(JSON.writeValueAsString(result)).isEqualTo(expected);
     }
 
     @Test
@@ -77,17 +93,28 @@ class Langchain4jServerTest {
                 Map.of(
                     "customer", "Ada",
                     "items",
-                    List.of(
+                    java.util.List.of(
                         Map.of("name", "Widget", "quantity", 2),
                         Map.of("name", "Gadget", "quantity", 3)))))
             .build());
 
-        assertThat(result.isError()).isNotEqualTo(true);
-        assertThat(result.structuredContent())
-            .isEqualTo(Map.of(
-                "orderId", "ORD-ADA-5",
-                "customer", "Ada",
-                "totalItems", 5,
-                "totalPrice", 49.95));
+        // language=JSON
+        var expected = """
+            {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "{\\"orderId\\":\\"ORD-ADA-5\\",\\"customer\\":\\"Ada\\",\\"totalItems\\":5,\\"totalPrice\\":49.95}"
+                }
+              ],
+              "structuredContent": {
+                "orderId": "ORD-ADA-5",
+                "customer": "Ada",
+                "totalItems": 5,
+                "totalPrice": 49.95
+              }
+            }
+            """;
+        assertThatJson(JSON.writeValueAsString(result)).isEqualTo(expected);
     }
 }

@@ -5,11 +5,15 @@ import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.json.PayloadDeserializer;
 import dev.tachyonmcp.api.json.PayloadSerializer;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,10 +35,14 @@ import org.jspecify.annotations.Nullable;
  * coercion can't actually produce, and {@link #requireBindable} rejects everything else at
  * registration time instead of silently misdescribing it.
  *
- * <p>{@link Method#invoke} is caller-sensitive: whether it may reach a non-public annotated
- * method depends on the package of the code that calls it. Providers must therefore call {@code
- * method.invoke(...)} themselves rather than through this class, and pass the caught {@link
- * InvocationTargetException} to {@link #unwrap} to rethrow the annotated method's real exception.
+ * <p>{@link #discoverMethods} already calls {@link Method#setAccessible} on every method it
+ * returns, so a provider that discovers methods through it (mcp-java, LangChain4j) may call
+ * {@code method.invoke(...)} directly afterward regardless of the method's visibility or which
+ * package the provider lives in. Spring AI discovers methods through Spring's own {@code
+ * ReflectionUtils} instead and makes them accessible itself the same way, but still calls {@link
+ * #requireNotPrivate} to apply the same private-method policy. Either way, providers should pass
+ * the caught {@link InvocationTargetException} to {@link #unwrap} to rethrow the annotated
+ * method's real exception.
  */
 @ExperimentalApi
 public final class AnnotationInvocationSupport {
@@ -152,6 +160,25 @@ public final class AnnotationInvocationSupport {
      */
     public static @Nullable Object coerce(
             @Nullable Object raw, Type type, PayloadSerializer serializer, PayloadDeserializer deserializer) {
+        if (type == OptionalInt.class) {
+            return raw == null
+                    ? OptionalInt.empty()
+                    : OptionalInt.of((Integer) coerce(raw, int.class, serializer, deserializer));
+        }
+        if (type == OptionalLong.class) {
+            return raw == null
+                    ? OptionalLong.empty()
+                    : OptionalLong.of((Long) coerce(raw, long.class, serializer, deserializer));
+        }
+        if (type == OptionalDouble.class) {
+            return raw == null
+                    ? OptionalDouble.empty()
+                    : OptionalDouble.of((Double) coerce(raw, double.class, serializer, deserializer));
+        }
+        if (type instanceof ParameterizedType pt && pt.getRawType() == Optional.class) {
+            Type inner = pt.getActualTypeArguments()[0];
+            return raw == null ? Optional.empty() : Optional.ofNullable(coerce(raw, inner, serializer, deserializer));
+        }
         if (raw == null) return null;
         if (type instanceof Class<?> cls && cls.isInstance(raw)) return raw;
         return deserializer.deserialize(serializer.serialize(raw), type);
@@ -169,5 +196,76 @@ public final class AnnotationInvocationSupport {
         if (cause instanceof Exception ex) return ex;
         if (cause instanceof Error err) throw err;
         return e;
+    }
+
+    /**
+     * Returns {@code clazz}'s methods annotated with one of {@code annotationTypes} — package-
+     * private, protected, and public alike, mirroring the discovery rules Spring itself uses for
+     * annotated-bean-method scanning (see {@code org.springframework.util.ReflectionUtils}) —
+     * including those inherited from superclasses and public interfaces, excluding synthetic and
+     * bridge methods. Only {@code private} is rejected, as a matter of policy rather than a JVM
+     * limitation — see {@link #requireNotPrivate}. Every accepted method has {@code
+     * setAccessible(true)} already applied, so providers can call {@link Method#invoke} on it
+     * directly regardless of which package they live in.
+     *
+     * @throws IllegalStateException if an annotated method (or its declaring class) is private
+     */
+    @SafeVarargs
+    public static List<Method> discoverMethods(Class<?> clazz, Class<? extends Annotation>... annotationTypes) {
+        Map<List<Object>, Method> methods = new LinkedHashMap<>();
+        for (Class<?> c = clazz; c != null; c = c.getSuperclass()) {
+            collectAnnotated(c.getDeclaredMethods(), annotationTypes, methods);
+        }
+        collectAnnotated(clazz.getMethods(), annotationTypes, methods);
+        return new ArrayList<>(methods.values());
+    }
+
+    private static void collectAnnotated(
+            Method[] candidates, Class<? extends Annotation>[] annotationTypes, Map<List<Object>, Method> methods) {
+        for (Method method : candidates) {
+            if (method.isSynthetic() || method.isBridge() || !hasAnyAnnotation(method, annotationTypes)) continue;
+            requireNotPrivate(method);
+            method.setAccessible(true);
+            methods.putIfAbsent(signature(method), method);
+        }
+    }
+
+    private static List<Object> signature(Method method) {
+        List<Object> key = new ArrayList<>();
+        key.add(method.getName());
+        key.addAll(Arrays.asList(method.getParameterTypes()));
+        return key;
+    }
+
+    private static boolean hasAnyAnnotation(Method method, Class<? extends Annotation>[] annotationTypes) {
+        for (Class<? extends Annotation> annotationType : annotationTypes) {
+            if (method.isAnnotationPresent(annotationType)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Rejects {@code method} if it (or its declaring class, or any class it's nested in) is
+     * {@code private}. This is a deliberate API-surface policy, not a JVM limitation: {@link
+     * Method#setAccessible} can make a private method invocable from outside its declaring class
+     * just as well as a package-private one, so Tachyon simply declines to treat a private method
+     * as part of an object's annotated MCP surface. Package-private, protected, and public
+     * methods are all otherwise discoverable.
+     *
+     * @throws IllegalStateException if {@code method} or a declaring/enclosing class is private
+     */
+    public static void requireNotPrivate(Method method) {
+        if (Modifier.isPrivate(method.getModifiers()) || isDeclaredInPrivateClass(method)) {
+            throw new IllegalStateException(
+                    "Annotated MCP method must not be private, and must not be declared in a private (nested)"
+                            + " class: " + method);
+        }
+    }
+
+    private static boolean isDeclaredInPrivateClass(Method method) {
+        for (Class<?> c = method.getDeclaringClass(); c != null; c = c.getEnclosingClass()) {
+            if (Modifier.isPrivate(c.getModifiers())) return true;
+        }
+        return false;
     }
 }

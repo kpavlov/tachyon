@@ -34,7 +34,7 @@ class LangChain4jAnnotationServerIntegrationTest {
     private static TachyonServer startServer(Object fixture) {
         return McpTestServers.start(
                 b -> b.annotations(annotations -> {
-                    annotations.provider(new LangChain4jAnnotationProvider());
+                    annotations.withProvider(LangChain4jAnnotationProvider.instance());
                     annotations.register(fixture);
                 }),
                 server -> {});

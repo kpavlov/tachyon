@@ -26,9 +26,9 @@ class AnnotationsBuilderWiringTest {
     void annotationsComposesAcrossMultipleCalls() {
         try (var server = TachyonServer.builder()
                 .annotations(
-                        a -> a.provider(toolProvider("first", "from-first")).register(new Object()))
-                .annotations(
-                        a -> a.provider(toolProvider("second", "from-second")).register(new Object()))
+                        a -> a.withProvider(toolProvider("first", "from-first")).register(new Object()))
+                .annotations(a ->
+                        a.withProvider(toolProvider("second", "from-second")).register(new Object()))
                 .build()) {
             assertThat(server.tools().find("first")).isPresent();
             assertThat(server.tools().find("second")).isPresent();
@@ -38,9 +38,9 @@ class AnnotationsBuilderWiringTest {
     @Test
     void providerSwitchingWithinOneCallDispatchesEachRegistrationToItsOwnProvider() {
         try (var server = TachyonServer.builder()
-                .annotations(a -> a.provider(toolProvider("from-first", "first-provider"))
+                .annotations(a -> a.withProvider(toolProvider("from-first", "first-provider"))
                         .register(new Object())
-                        .provider(toolProvider("from-second", "second-provider"))
+                        .withProvider(toolProvider("from-second", "second-provider"))
                         .register(new Object()))
                 .build()) {
             assertThat(server.tools().find("from-first").orElseThrow().description())
@@ -55,8 +55,8 @@ class AnnotationsBuilderWiringTest {
         try (var server = TachyonServer.builder()
                 .withTools(tools -> tools.register(
                         tool -> tool.name("shared").description("bootstrap"), (ctx, req) -> ToolResult.empty()))
-                .annotations(
-                        a -> a.provider(toolProvider("shared", "annotation")).register(new Object()))
+                .annotations(a ->
+                        a.withProvider(toolProvider("shared", "annotation")).register(new Object()))
                 .build()) {
             assertThat(server.tools().find("shared").orElseThrow().description())
                     .isEqualTo("annotation");

@@ -5,9 +5,14 @@ import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.json.PayloadDeserializer;
 import dev.tachyonmcp.api.json.PayloadSerializer;
 import dev.tachyonmcp.api.runtime.InteractionContext;
+import dev.tachyonmcp.api.server.domain.Annotations;
 import dev.tachyonmcp.api.server.domain.BlobResourceContents;
+import dev.tachyonmcp.api.server.domain.ContentBlock;
 import dev.tachyonmcp.api.server.domain.PromptArgument;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
+import dev.tachyonmcp.api.server.domain.ResourceContents;
+import dev.tachyonmcp.api.server.domain.Role;
+import dev.tachyonmcp.api.server.domain.TextContent;
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
 import dev.tachyonmcp.api.server.domain.ToolAnnotations;
 import dev.tachyonmcp.api.server.features.annotations.AnnotationInvocationSupport;
@@ -29,10 +34,12 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -43,7 +50,7 @@ import org.jspecify.annotations.Nullable;
  * <p>Usage:
  * <pre>{@code
  * serverBuilder.annotations(ctx -> {
- *     ctx.provider(new McpJavaAnnotationProvider());
+ *     ctx.withProvider(new McpJavaAnnotationProvider());
  *     ctx.register(new MyToolClass());
  * });
  * }</pre>
@@ -51,13 +58,24 @@ import org.jspecify.annotations.Nullable;
 public class McpJavaAnnotationProvider implements AnnotationProvider {
 
     private static final String ELEMENT_NAME = "<<element name>>";
+    private static final McpJavaAnnotationProvider INSTANCE = new McpJavaAnnotationProvider();
+
+    public static McpJavaAnnotationProvider instance() {
+        return INSTANCE;
+    }
 
     @Override
     public void register(Object instance, AnnotationRegistrationContext context) {
         Class<?> clazz = instance.getClass();
         PayloadSerializer serializer = context.payloadSerializer();
         PayloadDeserializer deserializer = context.payloadDeserializer();
-        for (Method method : clazz.getDeclaredMethods()) {
+        List<Method> methods = AnnotationInvocationSupport.discoverMethods(
+                clazz,
+                org.mcpjava.server.tools.Tool.class,
+                org.mcpjava.server.resources.Resource.class,
+                org.mcpjava.server.resources.ResourceTemplate.class,
+                org.mcpjava.server.prompts.Prompt.class);
+        for (Method method : methods) {
             registerTools(instance, method, context, serializer, deserializer);
             registerResources(instance, method, context, serializer, deserializer);
             registerResourceTemplates(instance, method, context, serializer, deserializer);
@@ -113,14 +131,11 @@ public class McpJavaAnnotationProvider implements AnnotationProvider {
         Object[] args = resolveArgs(
                 method, ctx, req.arguments().asMap(), org.mcpjava.server.tools.ToolArg.class, serializer, deserializer);
         Object result = invoke(method, instance, args);
-        return convertToolResult(result);
+        return convertToolResult(result, serializer);
     }
 
     /**
-     * Invokes {@code method} on {@code instance}, unwrapping {@link InvocationTargetException} to
-     * its cause. Must call {@link Method#invoke} directly (not via a shared helper in another
-     * package) since it's caller-sensitive: reflective access to a non-public annotated method
-     * depends on the package of the code that calls it.
+     * Invokes {@code method} on {@code instance}, unwrapping {@link InvocationTargetException} to its cause.
      */
     private Object invoke(Method method, Object instance, Object... args) throws Exception {
         try {
@@ -146,48 +161,49 @@ public class McpJavaAnnotationProvider implements AnnotationProvider {
                 continue;
             }
             String paramName = resolveParamName(params[i], argAnnotation);
+            Type parameterizedType = params[i].getParameterizedType();
             if (values.containsKey(paramName)) {
                 args[i] = AnnotationInvocationSupport.coerce(
-                        values.get(paramName), params[i].getParameterizedType(), serializer, deserializer);
+                        values.get(paramName), parameterizedType, serializer, deserializer);
             } else {
                 Annotation ann = params[i].getAnnotation(argAnnotation);
                 String defaultVal = ann != null ? getStringAttribute(ann, "defaultValue") : null;
-                args[i] = (defaultVal != null && !defaultVal.isEmpty()) ? parseDefaultLiteral(defaultVal, type) : null;
+                Object literal = (defaultVal != null && !defaultVal.isEmpty())
+                        ? parseDefaultLiteral(defaultVal, parameterizedType)
+                        : null;
+                args[i] = AnnotationInvocationSupport.coerce(literal, parameterizedType, serializer, deserializer);
             }
         }
         return args;
     }
 
     /** Parses an annotation's {@code defaultValue} string literal as the parameter's declared type. */
-    private static @Nullable Object parseDefaultLiteral(String literal, Class<?> type) {
-        if (type == int.class || type == Integer.class) return Integer.valueOf(literal);
-        if (type == long.class || type == Long.class) return Long.valueOf(literal);
-        if (type == short.class || type == Short.class) return Short.valueOf(literal);
-        if (type == byte.class || type == Byte.class) return Byte.valueOf(literal);
-        if (type == double.class || type == Double.class) return Double.valueOf(literal);
-        if (type == float.class || type == Float.class) return Float.valueOf(literal);
-        if (type == boolean.class || type == Boolean.class) return Boolean.valueOf(literal);
+    private static @Nullable Object parseDefaultLiteral(String literal, Type type) {
+        Type effective = AnnotationInvocationSupport.unwrapOptional(type);
+        if (effective == int.class || effective == Integer.class) return Integer.valueOf(literal);
+        if (effective == long.class || effective == Long.class) return Long.valueOf(literal);
+        if (effective == short.class || effective == Short.class) return Short.valueOf(literal);
+        if (effective == byte.class || effective == Byte.class) return Byte.valueOf(literal);
+        if (effective == double.class || effective == Double.class) return Double.valueOf(literal);
+        if (effective == float.class || effective == Float.class) return Float.valueOf(literal);
+        if (effective == boolean.class || effective == Boolean.class) return Boolean.valueOf(literal);
         return literal;
     }
 
-    private ToolResult convertToolResult(Object result) {
+    private ToolResult convertToolResult(Object result, PayloadSerializer serializer) {
         if (result == null) return ToolResult.empty();
         if (result instanceof ToolResult tr) return tr;
         if (result instanceof org.mcpjava.server.tools.ToolResponse tr) return convertMcpJavaToolResponse(tr);
         if (result instanceof String s) return ToolResult.text(s);
-        if (result instanceof dev.tachyonmcp.api.server.domain.ContentBlock cb) {
+        if (result instanceof ContentBlock cb) {
             return ToolResult.content(cb);
         }
         if (result instanceof List<?> list) {
-            List<dev.tachyonmcp.api.server.domain.ContentBlock> blocks = new ArrayList<>();
+            List<ContentBlock> blocks = new ArrayList<>();
             for (Object item : list) {
-                if (item instanceof dev.tachyonmcp.api.server.domain.ContentBlock cb) {
-                    blocks.add(cb);
-                } else {
-                    blocks.add(dev.tachyonmcp.api.server.domain.TextContent.of(item.toString()));
-                }
+                blocks.add(toContentBlock(item, serializer));
             }
-            return ToolResult.content(blocks.toArray(new dev.tachyonmcp.api.server.domain.ContentBlock[0]));
+            return ToolResult.content(blocks.toArray(new ContentBlock[0]));
         }
         if (result instanceof Number || result instanceof Boolean || result instanceof Character) {
             return ToolResult.text(result.toString());
@@ -196,12 +212,27 @@ public class McpJavaAnnotationProvider implements AnnotationProvider {
     }
 
     /**
+     * Converts one {@code List} item from an annotated method's return value to a content block:
+     * an existing {@link ContentBlock} passes through, a scalar
+     * becomes its text form, and anything else (a record, POJO, etc.) is JSON-serialized rather
+     * than rendered via {@code toString()}.
+     */
+    private static ContentBlock toContentBlock(@Nullable Object item, PayloadSerializer serializer) {
+        if (item instanceof ContentBlock cb) return cb;
+        if (item instanceof String s) return TextContent.of(s);
+        if (item instanceof Number || item instanceof Boolean || item instanceof Character) {
+            return TextContent.of(String.valueOf(item));
+        }
+        return TextContent.of(serializer.serialize(item));
+    }
+
+    /**
      * Translates mcp-java's native {@link org.mcpjava.server.tools.ToolResponse}, preserving its
      * content blocks, structured content, and error status rather than falling back to {@code
      * toString()}.
      */
     private ToolResult convertMcpJavaToolResponse(org.mcpjava.server.tools.ToolResponse response) {
-        List<dev.tachyonmcp.api.server.domain.ContentBlock> blocks = response.content().stream()
+        List<ContentBlock> blocks = response.content().stream()
                 .map(this::convertMcpJavaContentBlock)
                 .toList();
         if (response.isError()) {
@@ -213,12 +244,55 @@ public class McpJavaAnnotationProvider implements AnnotationProvider {
                 .build();
     }
 
-    private dev.tachyonmcp.api.server.domain.ContentBlock convertMcpJavaContentBlock(
-            org.mcpjava.server.content.ContentBlock block) {
+    private ContentBlock convertMcpJavaContentBlock(org.mcpjava.server.content.ContentBlock block) {
         if (block instanceof org.mcpjava.server.content.TextContent tc) {
-            return dev.tachyonmcp.api.server.domain.TextContent.of(tc.text());
+            return TextContent.of(tc.text());
         }
-        return dev.tachyonmcp.api.server.domain.TextContent.of(block.toString());
+        if (block instanceof org.mcpjava.server.content.ImageContent ic) {
+            return dev.tachyonmcp.api.server.domain.ImageContent.of(
+                    ic.data(), ic.mimeType(), convertMcpJavaAnnotations(ic.annotations()));
+        }
+        if (block instanceof org.mcpjava.server.content.AudioContent ac) {
+            return dev.tachyonmcp.api.server.domain.AudioContent.of(
+                    ac.data(), ac.mimeType(), convertMcpJavaAnnotations(ac.annotations()));
+        }
+        if (block instanceof org.mcpjava.server.content.ResourceLink rl) {
+            return dev.tachyonmcp.api.server.domain.ResourceLink.builder(rl.uri(), rl.name())
+                    .title(rl.title())
+                    .description(rl.description().orElse(null))
+                    .mimeType(rl.mimeType().orElse(null))
+                    .annotations(convertMcpJavaAnnotations(rl.annotations()))
+                    .size(rl.size().isPresent() ? rl.size().getAsLong() : null)
+                    .build();
+        }
+        if (block instanceof org.mcpjava.server.content.EmbeddedResource er) {
+            return dev.tachyonmcp.api.server.domain.EmbeddedResource.of(
+                    convertMcpJavaResourceContents(er.resource()), convertMcpJavaAnnotations(er.annotations()));
+        }
+        // Escape hatch for a future mcp-java ContentBlock subtype this mapping doesn't know about yet.
+        return TextContent.of(block.toString());
+    }
+
+    private static ResourceContents convertMcpJavaResourceContents(org.mcpjava.server.resources.ResourceContents rc) {
+        if (rc instanceof org.mcpjava.server.resources.TextResourceContents trc) {
+            return TextResourceContents.of(trc.uri(), trc.text(), trc.mimeType().orElse(null));
+        }
+        if (rc instanceof org.mcpjava.server.resources.BlobResourceContents brc) {
+            return BlobResourceContents.of(brc.uri(), brc.blob(), brc.mimeType().orElse(null));
+        }
+        throw new IllegalStateException("Unsupported mcp-java resource contents type: " + rc.getClass());
+    }
+
+    private static @Nullable Annotations convertMcpJavaAnnotations(
+            Optional<org.mcpjava.server.content.Annotations> maybeAnnotations) {
+        if (maybeAnnotations.isEmpty()) return null;
+        org.mcpjava.server.content.Annotations ann = maybeAnnotations.get();
+        List<Role> audience = ann.audience()
+                .map(roles -> roles.stream().map(r -> Role.valueOf(r.name())).toList())
+                .orElse(List.of());
+        Double priority = ann.priority().isPresent() ? ann.priority().getAsDouble() : null;
+        String lastModified = ann.lastModified().map(Object::toString).orElse(null);
+        return Annotations.of(audience, priority, lastModified);
     }
 
     private void registerResources(
@@ -251,17 +325,18 @@ public class McpJavaAnnotationProvider implements AnnotationProvider {
                 .size(size)
                 .build();
 
-        ResourceFn fn = (ctx, req) -> invokeResource(instance, method, ctx, req, serializer, deserializer);
+        ResourceFn fn = (ctx, req) -> invokeResource(instance, method, ctx, req, serializer, deserializer, mimeType);
         context.resources().register(descriptor, fn);
     }
 
-    private dev.tachyonmcp.api.server.domain.ResourceContents invokeResource(
+    private ResourceContents invokeResource(
             Object instance,
             Method method,
             InteractionContext ctx,
             ResourceRequest req,
             PayloadSerializer serializer,
-            PayloadDeserializer deserializer)
+            PayloadDeserializer deserializer,
+            @Nullable String mimeType)
             throws Exception {
         Object[] args = resolveArgs(
                 method,
@@ -271,18 +346,22 @@ public class McpJavaAnnotationProvider implements AnnotationProvider {
                 serializer,
                 deserializer);
         Object result = invoke(method, instance, args);
-        return convertResourceContents(result, req.uri());
+        return convertResourceContents(result, req.uri(), mimeType, serializer);
     }
 
-    private dev.tachyonmcp.api.server.domain.ResourceContents convertResourceContents(Object result, String uri) {
-        if (result instanceof dev.tachyonmcp.api.server.domain.ResourceContents rc) return rc;
+    private ResourceContents convertResourceContents(
+            @Nullable Object result, String uri, @Nullable String mimeType, PayloadSerializer serializer) {
+        if (result instanceof ResourceContents rc) return rc;
+        if (result == null) {
+            throw new IllegalStateException("@Resource method for uri '" + uri + "' returned null");
+        }
         if (result instanceof String s) {
-            return TextResourceContents.of(uri, s, null);
+            return TextResourceContents.of(uri, s, mimeType);
         }
         if (result instanceof byte[] bytes) {
-            return BlobResourceContents.of(uri, bytes, null);
+            return BlobResourceContents.of(uri, bytes, mimeType);
         }
-        return TextResourceContents.of(uri, result.toString(), null);
+        return TextResourceContents.of(uri, serializer.serialize(result), mimeType);
     }
 
     private void registerResourceTemplates(
@@ -313,24 +392,26 @@ public class McpJavaAnnotationProvider implements AnnotationProvider {
                 .mimeType(mimeType)
                 .build();
 
-        ResourceFn fn = (ctx, req) -> invokeResourceTemplate(instance, method, ctx, req, serializer, deserializer);
+        ResourceFn fn =
+                (ctx, req) -> invokeResourceTemplate(instance, method, ctx, req, serializer, deserializer, mimeType);
         context.resources().registerTemplate(descriptor, fn);
     }
 
-    private dev.tachyonmcp.api.server.domain.ResourceContents invokeResourceTemplate(
+    private ResourceContents invokeResourceTemplate(
             Object instance,
             Method method,
             InteractionContext ctx,
             ResourceRequest req,
             PayloadSerializer serializer,
-            PayloadDeserializer deserializer)
+            PayloadDeserializer deserializer,
+            @Nullable String mimeType)
             throws Exception {
         Map<String, Object> values = new LinkedHashMap<>();
         req.params().forEach((name, value) -> values.put(name, value.scalarValue()));
         Object[] args = resolveArgs(
                 method, ctx, values, org.mcpjava.server.resources.ResourceTemplateArg.class, serializer, deserializer);
         Object result = invoke(method, instance, args);
-        return convertResourceContents(result, req.uri());
+        return convertResourceContents(result, req.uri(), mimeType, serializer);
     }
 
     private void registerPrompts(
@@ -396,10 +477,10 @@ public class McpJavaAnnotationProvider implements AnnotationProvider {
                 serializer,
                 deserializer);
         Object result = invoke(method, instance, args);
-        return convertPromptResult(result);
+        return convertPromptResult(result, serializer);
     }
 
-    private PromptResult convertPromptResult(Object result) {
+    private PromptResult convertPromptResult(Object result, PayloadSerializer serializer) {
         if (result instanceof PromptResult pr) return pr;
         if (result instanceof String s) {
             return PromptResult.messages(List.of(PromptMessage.user(s)));
@@ -412,13 +493,15 @@ public class McpJavaAnnotationProvider implements AnnotationProvider {
             for (Object item : list) {
                 if (item instanceof PromptMessage pm) {
                     messages.add(pm);
+                } else if (item instanceof String s) {
+                    messages.add(PromptMessage.user(s));
                 } else {
-                    messages.add(PromptMessage.user(item.toString()));
+                    messages.add(PromptMessage.user(serializer.serialize(item)));
                 }
             }
             return PromptResult.messages(messages);
         }
-        return PromptResult.messages(List.of(PromptMessage.user(result.toString())));
+        return PromptResult.messages(List.of(PromptMessage.user(serializer.serialize(result))));
     }
 
     private static String resolveName(String annotationValue, Method method) {

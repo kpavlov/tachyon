@@ -21,6 +21,7 @@
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
             <artifactId>tachyon-core</artifactId>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
@@ -38,10 +39,15 @@
             <artifactId>finchly-core</artifactId>
         </dependency>
 
-        <!-- The client relies on AssertJ/Awaitility internally for its waiting/state assertions. -->
+        <!-- The client relies on AssertJ/Awaitility/JsonJunit internally for its waiting/assertions. -->
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.javacrumbs.json-unit</groupId>
+            <artifactId>json-unit-assertj</artifactId>
             <scope>compile</scope>
         </dependency>
         <dependency>

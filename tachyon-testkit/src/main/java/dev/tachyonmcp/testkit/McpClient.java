@@ -27,8 +27,7 @@ import tools.jackson.databind.ObjectMapper;
  * <p>A subclass fixes the protocol version via {@link #protocolVersion()} and may override {@link
  * #requestBody(String)} / {@link #configureRequest(HttpRequest.Builder, String)} to shape requests
  * for that revision. Instantiate via {@link McpTestClients} or directly with the server's bound
- * port (use {@code port()} on a {@code port(0)}-started {@link
- * dev.tachyonmcp.core.server.TachyonServer}).
+ * port. Use {@code port()} on a {@code port(0)}-started MCP Server.
  */
 public abstract class McpClient implements Closeable {
 

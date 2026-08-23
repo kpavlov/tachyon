@@ -222,7 +222,7 @@ class ServerBuilderTest {
 
         assertThatThrownBy(() -> TachyonServer.builder()
                         .session(s -> s.enabled(true).sessionEventStore(eventStore))
-                        .annotations(a -> a.provider((instance, context) -> {
+                        .annotations(a -> a.withProvider((instance, context) -> {
                                     throw failure;
                                 })
                                 .register(new Object()))

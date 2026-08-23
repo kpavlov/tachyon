@@ -3,7 +3,7 @@
  */
 
 /**
- * LangChain4j annotation provider for Tachyon.
+ * LangChain4j annotation withProvider for Tachyon.
  */
 @NullMarked
 @ExperimentalApi

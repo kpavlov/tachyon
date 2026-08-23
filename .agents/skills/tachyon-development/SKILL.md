@@ -6,6 +6,17 @@ description: Apply Tachyon MCP project rules when designing, implementing, revie
 # Prime directives
 
 - ATDD: prefer E2E, unit only for edge cases E2E can't cover. Start e2e tests before prod code.
+- No `toString()` as a serialization shortcut for structured/wire-facing content (resource
+  results, prompt results, content-block mapping, anything that ends up in a JSON response).
+  `toString()` on a record/POJO produces its debug form (`Foo[bar=1]`), not JSON — it silently
+  corrupts the payload instead of failing loudly. Route structured values through the configured
+  `PayloadSerializer`/codec, or through a proper domain-to-domain mapping (e.g. one content-block
+  type to its counterpart), even for the "shouldn't normally happen" fallback branch. Reserve
+  `toString()` for values it's actually correct for: `String` passthrough, numeric/boolean
+  scalars, and well-specified formats like `Instant#toString()` (RFC-3339).
+- Prefer an `import` over a fully-qualified name. Fall back to FQN only where two same-named
+  types are genuinely both referenced in one file, and then prefer FQN-ing just the side that isn't
+  this module's own domain type, importing the other, rather than FQN-ing both out of caution.
 - Kotlin API refactors follow the adapter shapes in
   [`docs/architecture/guidance.md`](../../../docs/architecture/guidance.md#kotlin-adapter-shape).
 - Java `ServerBuilder` is the implementation source of truth. Kotlin adds only thin adaptation for
@@ -23,13 +34,16 @@ description: Apply Tachyon MCP project rules when designing, implementing, revie
 - Java: AssertJ fluent. Short spec ref comment in method. JUnit6+JUnit Pioneer annotations. Prefer parametrized tests.
 - Handlers that throw: test with a real checked exception thrown directly from the lambda (no try/catch) — exercises the `throws Exception` SAM contract, not just unchecked paths.
 - "Omitted/null on wire" claims: serialize through the real codec (`CodecRegistry.codecFor(X.class).encodeToBytes(value)`, or `JsonRpcCodec.writeValueAsString`) and assert on the resulting JSON. Asserting a domain/model field is `null` only proves the mapper produced `null` — it trusts, but doesn't verify, that the codec omits it.
-- `JsonUnit` + AssertJ for JSON. Assert full JSON via `assertThatJson(actual).isEqualTo(expected)`, dynamic values (IDs etc.) via `.formatted(...)` — not `inPath(...)` fragments, which can hide a wrong response shape behind passing checks. `whenIgnoringPaths`, `IGNORING_ARRAY_ORDER`, `IGNORING_EXTRA_FIELDS`, `TREATING_NULL_AS_ABSENT` for partial tolerance.
+- `JsonUnit` + AssertJ for JSON, in every module that emits or receives JSON — core, integrations, and examples alike, whichever MCP client the test uses (tachyon-testkit's raw client, the official `io.modelcontextprotocol.sdk` client, or any other). MUST assert the full payload via `assertThatJson(actual).isEqualTo(expected)`, `actual` being either a raw JSON string or the response object itself (JsonUnit serializes it), `expected` a complete `// language=JSON` text block covering every field the real response carries, dynamic values (IDs etc.) via `.formatted(...)`. Field-by-field getter assertions (`assertThat(x.field()).isEqualTo(...)`) and `inPath(...)` fragments are NOT a substitute — both let an extra, missing, or wrong-shaped field in the rest of the payload pass silently. Derive `expected` from a real run (fail once against a trivial placeholder, read the actual value JsonUnit reports, verify it's actually correct, then lock it in) rather than hand-typing a guess. Reach for `inPath(...)`/`whenIgnoringPaths`/`IGNORING_ARRAY_ORDER`/`IGNORING_EXTRA_FIELDS`/`TREATING_NULL_AS_ABSENT` only for the specific parts of a large payload that are genuinely non-deterministic — not as the default assertion style.
 - `// language=json` before JSON strings.
 - Kotlin: kotest-assertions, kotest-assertions-json for json payload testing. Assert full JSON
 
 ## E2E
+
 - Use mcp client and assertions from tachyon-testkit
-- Test for full payload(all attributes) and minimal set of attributes
+- MUST test the full payload (every attribute a response can carry) as well as the minimal set of
+  attributes (defaults/omitted-when-absent case) — one asserted attribute in isolation doesn't
+  catch a sibling field that's missing, extra, or wrong.
 
 ## Shared E2E servers
 

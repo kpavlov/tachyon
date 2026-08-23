@@ -20,17 +20,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-/**
- * Verifies {@link AnnotationInvocationSupport}'s schema-type/coercion invariant — every numeric
- * type {@link AnnotationInvocationSupport#jsonSchemaType} advertises as {@code "integer"} or
- * {@code "number"} is a type {@link AnnotationInvocationSupport#coerce} can actually produce —
- * that unsupported types are rejected at registration rather than misdescribed, that {@code
- * Optional}-family parameters coerce correctly, and that {@link AnnotationInvocationSupport#unwrap}
- * recovers an annotated method's real exception from the {@link InvocationTargetException}
- * wrapper.
- *
- * @author Konstantin Pavlov
- */
 class AnnotationInvocationSupportTest {
 
     private static final JacksonPayloadSerde SERDE = new JacksonPayloadSerde();

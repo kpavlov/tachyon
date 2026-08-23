@@ -4,6 +4,7 @@ package dev.tachyonmcp.annotations.langchain4j;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolSpecifications;
+import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.json.PayloadDeserializer;
 import dev.tachyonmcp.api.json.PayloadSerializer;
@@ -20,6 +21,7 @@ import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,19 +37,26 @@ import org.jspecify.annotations.Nullable;
  * <p>Usage:
  * <pre>{@code
  * serverBuilder.annotations(ctx -> {
- *     ctx.provider(new LangChain4jAnnotationProvider());
+ *     ctx.withProvider(new LangChain4jAnnotationProvider());
  *     ctx.register(new MyToolClass());
  * });
  * }</pre>
  */
+@ExperimentalApi
 public class LangChain4jAnnotationProvider implements AnnotationProvider {
+
+    private static final LangChain4jAnnotationProvider INSTANCE = new LangChain4jAnnotationProvider();
+
+    public static LangChain4jAnnotationProvider instance() {
+        return INSTANCE;
+    }
 
     @Override
     public void register(Object instance, AnnotationRegistrationContext context) {
         Class<?> clazz = instance.getClass();
         PayloadSerializer serializer = context.payloadSerializer();
         PayloadDeserializer deserializer = context.payloadDeserializer();
-        for (Method method : clazz.getDeclaredMethods()) {
+        for (Method method : AnnotationInvocationSupport.discoverMethods(clazz, Tool.class)) {
             Tool annotation = method.getAnnotation(Tool.class);
             if (annotation == null) continue;
             registerTool(instance, method, annotation, context, serializer, deserializer);
@@ -87,16 +96,11 @@ public class LangChain4jAnnotationProvider implements AnnotationProvider {
             throws Exception {
         Object[] args = resolveArgs(method, ctx, req, serializer, deserializer);
         Object result = invoke(method, instance, args);
-        return convertResult(result);
+        return convertResult(result, serializer);
     }
 
-    /**
-     * Invokes {@code method} on {@code instance}, unwrapping {@link InvocationTargetException} to
-     * its cause. Must call {@link Method#invoke} directly (not via a shared helper in another
-     * package) since it's caller-sensitive: reflective access to a non-public annotated method
-     * depends on the package of the code that calls it.
-     */
-    private Object invoke(Method method, Object instance, Object... args) throws Exception {
+    /** Invokes {@code method} on {@code instance}, unwrapping {@link InvocationTargetException} to its cause. */
+    private @Nullable Object invoke(Method method, Object instance, Object... args) throws Exception {
         try {
             return method.invoke(instance, args);
         } catch (InvocationTargetException e) {
@@ -120,32 +124,35 @@ public class LangChain4jAnnotationProvider implements AnnotationProvider {
                 continue;
             }
             String paramName = resolveParamName(params[i]);
+            Type parameterizedType = params[i].getParameterizedType();
             if (values.containsKey(paramName)) {
                 args[i] = AnnotationInvocationSupport.coerce(
-                        values.get(paramName), params[i].getParameterizedType(), serializer, deserializer);
+                        values.get(paramName), parameterizedType, serializer, deserializer);
             } else {
                 P pAnn = params[i].getAnnotation(P.class);
                 String defaultVal =
                         (pAnn != null && !P.NO_DEFAULT.equals(pAnn.defaultValue())) ? pAnn.defaultValue() : null;
-                args[i] = defaultVal != null ? parseDefaultLiteral(defaultVal, type) : null;
+                Object literal = defaultVal != null ? parseDefaultLiteral(defaultVal, parameterizedType) : null;
+                args[i] = AnnotationInvocationSupport.coerce(literal, parameterizedType, serializer, deserializer);
             }
         }
         return args;
     }
 
     /** Parses an annotation's {@code defaultValue} string literal as the parameter's declared type. */
-    private static @Nullable Object parseDefaultLiteral(String literal, Class<?> type) {
-        if (type == int.class || type == Integer.class) return Integer.valueOf(literal);
-        if (type == long.class || type == Long.class) return Long.valueOf(literal);
-        if (type == short.class || type == Short.class) return Short.valueOf(literal);
-        if (type == byte.class || type == Byte.class) return Byte.valueOf(literal);
-        if (type == double.class || type == Double.class) return Double.valueOf(literal);
-        if (type == float.class || type == Float.class) return Float.valueOf(literal);
-        if (type == boolean.class || type == Boolean.class) return Boolean.valueOf(literal);
+    private static @Nullable Object parseDefaultLiteral(String literal, Type type) {
+        Type effective = AnnotationInvocationSupport.unwrapOptional(type);
+        if (effective == int.class || effective == Integer.class) return Integer.valueOf(literal);
+        if (effective == long.class || effective == Long.class) return Long.valueOf(literal);
+        if (effective == short.class || effective == Short.class) return Short.valueOf(literal);
+        if (effective == byte.class || effective == Byte.class) return Byte.valueOf(literal);
+        if (effective == double.class || effective == Double.class) return Double.valueOf(literal);
+        if (effective == float.class || effective == Float.class) return Float.valueOf(literal);
+        if (effective == boolean.class || effective == Boolean.class) return Boolean.valueOf(literal);
         return literal;
     }
 
-    private ToolResult convertResult(Object result) {
+    private ToolResult convertResult(@Nullable Object result, PayloadSerializer serializer) {
         if (result == null) {
             return ToolResult.text("Success");
         }
@@ -161,11 +168,7 @@ public class LangChain4jAnnotationProvider implements AnnotationProvider {
         if (result instanceof List<?> list) {
             List<ContentBlock> blocks = new ArrayList<>();
             for (Object item : list) {
-                if (item instanceof ContentBlock cb) {
-                    blocks.add(cb);
-                } else {
-                    blocks.add(TextContent.of(item.toString()));
-                }
+                blocks.add(toContentBlock(item, serializer));
             }
             return ToolResult.content(blocks.toArray(new ContentBlock[0]));
         }
@@ -173,6 +176,21 @@ public class LangChain4jAnnotationProvider implements AnnotationProvider {
             return ToolResult.text(result.toString());
         }
         return ToolResult.structured(result);
+    }
+
+    /**
+     * Converts one {@code List} item from an annotated method's return value to a content block:
+     * an existing {@link ContentBlock} passes through, a scalar becomes its text form, and
+     * anything else (a record, POJO, etc.) is JSON-serialized rather than rendered via {@code
+     * toString()}.
+     */
+    private static ContentBlock toContentBlock(@Nullable Object item, PayloadSerializer serializer) {
+        if (item instanceof ContentBlock cb) return cb;
+        if (item instanceof String s) return TextContent.of(s);
+        if (item instanceof Number || item instanceof Boolean || item instanceof Character) {
+            return TextContent.of(String.valueOf(item));
+        }
+        return TextContent.of(serializer.serialize(item));
     }
 
     private static String resolveParamName(Parameter param) {

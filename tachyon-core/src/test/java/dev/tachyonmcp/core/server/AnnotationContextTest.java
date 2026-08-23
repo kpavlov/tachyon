@@ -30,14 +30,14 @@ class AnnotationContextTest {
 
     @Test
     void nullProviderRejected() {
-        assertThatIllegalArgumentException().isThrownBy(() -> new AnnotationContext().provider(null));
+        assertThatIllegalArgumentException().isThrownBy(() -> new AnnotationContext().withProvider(null));
     }
 
     @Test
     void nullInstanceRejected() {
         assertThatIllegalArgumentException()
-                .isThrownBy(
-                        () -> new AnnotationContext().provider(NOOP_PROVIDER).register(null));
+                .isThrownBy(() ->
+                        new AnnotationContext().withProvider(NOOP_PROVIDER).register(null));
     }
 
     @Test
@@ -49,11 +49,11 @@ class AnnotationContextTest {
         var c = new Object();
 
         var context = new AnnotationContext()
-                .provider(first)
+                .withProvider(first)
                 .register(a)
-                .provider(second)
+                .withProvider(second)
                 .register(b)
-                .provider(first)
+                .withProvider(first)
                 .register(c);
 
         assertThat(context.registrations())

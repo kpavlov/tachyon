@@ -31,13 +31,13 @@ objects.
 ```java
 var server = TachyonServer.builder()
     .annotations(a -> a
-        .provider(new McpJavaAnnotationProvider())
+        .withProvider(new McpJavaAnnotationProvider())
         .register(new WeatherService())
         .register(new CalculatorService()))
     .build();
 ```
 
-- Each call to `provider(...)` sets the active provider; subsequent `register(...)` calls dispatch
+- Each call to `withProvider(...)` sets the active provider; subsequent `register(...)` calls dispatch
   through that provider until a new one is set. Multiple providers and multiple objects are
   supported in one chain.
 - Calling `.annotations(...)` more than once composes — every configurer runs against the same
@@ -45,7 +45,7 @@ var server = TachyonServer.builder()
 - Registrations execute after the server is constructed but after `withTools`/`withResources`/
   `withPrompts`/`withCompletions` bootstrap registrations, so an annotated method registered under
   the same name as a bootstrap registration wins.
-- `register(...)` throws `IllegalStateException` if called before any `provider(...)`.
+- `register(...)` throws `IllegalStateException` if called before any `withProvider(...)`.
 
 ## Built-in providers
 

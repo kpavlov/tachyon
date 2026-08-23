@@ -3,7 +3,7 @@
  */
 
 /**
- * Spring AI MCP annotation provider for Tachyon.
+ * Spring AI MCP annotation withProvider for Tachyon.
  */
 @NullMarked
 @ExperimentalApi

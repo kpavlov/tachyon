@@ -7,9 +7,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.testkit.McpTestClients;
 import dev.tachyonmcp.testkit.McpTestServers;
+import io.modelcontextprotocol.common.McpTransportContext;
+import io.modelcontextprotocol.server.McpSyncServerExchange;
+import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.mcp.annotation.McpArg;
 import org.springframework.ai.mcp.annotation.McpMeta;
+import org.springframework.ai.mcp.annotation.McpProgressToken;
 import org.springframework.ai.mcp.annotation.McpPrompt;
 import org.springframework.ai.mcp.annotation.McpResource;
 import org.springframework.ai.mcp.annotation.McpTool;
@@ -54,7 +58,7 @@ class SpringAiAnnotationServerIntegrationTest {
     private static TachyonServer startServer(Object fixture) {
         return McpTestServers.start(
                 b -> b.annotations(annotations -> {
-                    annotations.provider(new SpringAiAnnotationProvider());
+                    annotations.withProvider(new SpringAiAnnotationProvider());
                     annotations.register(fixture);
                 }),
                 server -> {});
@@ -115,7 +119,7 @@ class SpringAiAnnotationServerIntegrationTest {
             // language=json
             var expectedRead = """
                     {"jsonrpc":"2.0","id":1,"result":{
-                        "contents":[{"uri":"test://config","text":"static-config"}],
+                        "contents":[{"uri":"test://config","mimeType":"text/plain","text":"static-config"}],
                         "resultType":"complete","ttlMs":0,"cacheScope":"public"}
                     }
                     """;
@@ -129,7 +133,7 @@ class SpringAiAnnotationServerIntegrationTest {
             // language=json
             var expectedTemplated = """
                     {"jsonrpc":"2.0","id":2,"result":{
-                        "contents":[{"uri":"test://item/42","text":"item-42"}],
+                        "contents":[{"uri":"test://item/42","mimeType":"text/plain","text":"item-42"}],
                         "resultType":"complete","ttlMs":0,"cacheScope":"public"}
                     }
                     """;
@@ -160,31 +164,19 @@ class SpringAiAnnotationServerIntegrationTest {
     }
 
     @SuppressWarnings("unused")
-    static class KnownContextFixture {
-        @McpTool(name = "withKnownContext")
-        String withKnownContext(McpSyncRequestContext requestContext) {
-            return requestContext == null ? "null-ctx" : "real-ctx";
+    static class SyncRequestContextFixture {
+        @McpTool(name = "withSyncRequestContext")
+        String withSyncRequestContext(McpSyncRequestContext requestContext) {
+            return "unreachable";
         }
     }
 
     @Test
-    void knownInjectedContextTypeRegistersAndResolvesToNullOverWire() throws Exception {
-        try (var server = startServer(new KnownContextFixture());
-                var client = McpTestClients.latest(server.port())) {
-            var call = client.post("""
-                    {"jsonrpc":"2.0","id":1,"method":"tools/call",
-                     "params":{"name":"withKnownContext","arguments":{}}}
-                    """);
-
-            // language=json
-            var expected = """
-                    {"jsonrpc":"2.0","id":1,"result":{
-                        "content":[{"type":"text","text":"null-ctx"}],
-                        "resultType":"complete"}
-                    }
-                    """;
-            assertThatJson(call.body()).isEqualTo(expected);
-        }
+    void syncRequestContextParameterFailsServerStartupNotInvocation() {
+        assertThatThrownBy(() -> startServer(new SyncRequestContextFixture()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("McpSyncRequestContext")
+                .hasMessageContaining("withSyncRequestContext");
     }
 
     @SuppressWarnings("unused")
@@ -270,11 +262,92 @@ class SpringAiAnnotationServerIntegrationTest {
             // language=json
             var expected = """
                     {"jsonrpc":"2.0","id":1,"result":{
+                        "content":[{"type":"text","text":"{\\"x\\":3,\\"y\\":4}"}],
                         "structuredContent":{"x":3,"y":4},
                         "resultType":"complete"}
                     }
                     """;
-            assertThatJson(call.body()).whenIgnoringPaths("result.content").isEqualTo(expected);
+            assertThatJson(call.body()).isEqualTo(expected);
         }
+    }
+
+    @SuppressWarnings("unused")
+    static class TransportContextFixture {
+        @McpTool(name = "withTransportContext")
+        String withTransportContext(McpTransportContext ctx) {
+            return "unreachable";
+        }
+    }
+
+    @Test
+    void transportContextParameterFailsServerStartupNotInvocation() {
+        assertThatThrownBy(() -> startServer(new TransportContextFixture()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("McpTransportContext")
+                .hasMessageContaining("withTransportContext");
+    }
+
+    @SuppressWarnings("unused")
+    static class ServerExchangeFixture {
+        @McpTool(name = "withExchange")
+        String withExchange(McpSyncServerExchange exchange) {
+            return "unreachable";
+        }
+    }
+
+    @Test
+    void serverExchangeParameterFailsServerStartupNotInvocation() {
+        assertThatThrownBy(() -> startServer(new ServerExchangeFixture()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("McpSyncServerExchange")
+                .hasMessageContaining("withExchange");
+    }
+
+    @SuppressWarnings("unused")
+    static class CallToolRequestFixture {
+        @McpTool(name = "withCallToolRequest")
+        String withCallToolRequest(McpSchema.CallToolRequest request) {
+            return "unreachable";
+        }
+    }
+
+    @Test
+    void callToolRequestParameterFailsServerStartupNotInvocation() {
+        assertThatThrownBy(() -> startServer(new CallToolRequestFixture()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("CallToolRequest")
+                .hasMessageContaining("withCallToolRequest");
+    }
+
+    @SuppressWarnings("unused")
+    static class ProgressTokenFixture {
+        @McpTool(name = "withProgressToken")
+        String withProgressToken(@McpProgressToken String token) {
+            return "unreachable";
+        }
+    }
+
+    @Test
+    void progressTokenParameterFailsServerStartupNotInvocation() {
+        assertThatThrownBy(() -> startServer(new ProgressTokenFixture()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("McpProgressToken")
+                .hasMessageContaining("withProgressToken");
+    }
+
+    @SuppressWarnings("unused")
+    static class PrivateMethodFixture {
+        @McpTool(name = "privateTool")
+        private String privateTool() {
+            return "unreachable";
+        }
+    }
+
+    @Test
+    void privateAnnotatedMethodFailsServerStartupNotInvocation() {
+        assertThatThrownBy(() -> startServer(new PrivateMethodFixture()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("private")
+                .hasMessageContaining("privateTool");
     }
 }

@@ -10,7 +10,7 @@ import java.util.List;
  * DSL entry point for registering annotated application objects through {@link
  * AnnotationProvider}s. Passed to the {@link ServerBuilder#annotations} configurer.
  *
- * <p>Each call to {@link #provider} sets the active provider; subsequent {@link #register}
+ * <p>Each call to {@link #withProvider} sets the active provider; subsequent {@link #register}
  * calls dispatch through that provider until a new one is set. Multiple providers and multiple
  * objects are supported.
  *
@@ -19,7 +19,7 @@ import java.util.List;
  * <pre>{@code
  * TachyonServer.builder()
  *     .annotations(a -> a
- *         .provider(new McpJavaAnnotationProvider())
+ *         .withProvider(new McpJavaAnnotationProvider())
  *         .register(new WeatherService())
  *         .register(new CalculatorService()))
  *     .build();
@@ -31,14 +31,14 @@ public final class AnnotationContext {
     private final List<Registration> registrations = new ArrayList<>();
 
     /** Sets the active annotation provider for subsequent {@link #register} calls. */
-    public AnnotationContext provider(AnnotationProvider provider) {
+    public AnnotationContext withProvider(AnnotationProvider provider) {
         if (provider == null) throw new IllegalArgumentException("provider must not be null");
         currentProvider = provider;
         return this;
     }
 
     /**
-     * Registers {@code instance} using the current {@link #provider}. The provider inspects
+     * Registers {@code instance} using the current {@link #withProvider}. The provider inspects
      * the object for annotated methods and registers the resulting features through the
      * server's feature façades.
      *
@@ -49,7 +49,7 @@ public final class AnnotationContext {
     public AnnotationContext register(Object instance) {
         if (instance == null) throw new IllegalArgumentException("instance must not be null");
         if (currentProvider == null) {
-            throw new IllegalStateException("No annotation provider set. Call provider(...) before register(...).");
+            throw new IllegalStateException("No annotation provider set. Call withProvider(...) before register(...).");
         }
         registrations.add(new Registration(currentProvider, instance));
         return this;

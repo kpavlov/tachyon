@@ -61,7 +61,7 @@ class McpJavaAnnotationServerIntegrationTest {
     private static TachyonServer startServer(Object fixture) {
         return McpTestServers.start(
                 b -> b.annotations(annotations -> {
-                    annotations.provider(new McpJavaAnnotationProvider());
+                    annotations.withProvider(McpJavaAnnotationProvider.instance());
                     annotations.register(fixture);
                 }),
                 server -> {});
@@ -122,7 +122,7 @@ class McpJavaAnnotationServerIntegrationTest {
             // language=json
             var expectedRead = """
                     {"jsonrpc":"2.0","id":1,"result":{
-                        "contents":[{"uri":"test://config","text":"{\\"env\\":\\"test\\"}"}],
+                        "contents":[{"uri":"test://config","mimeType":"application/json","text":"{\\"env\\":\\"test\\"}"}],
                         "resultType":"complete","ttlMs":0,"cacheScope":"public"}
                     }
                     """;
@@ -341,11 +341,12 @@ class McpJavaAnnotationServerIntegrationTest {
             // language=json
             var expected = """
                     {"jsonrpc":"2.0","id":1,"result":{
+                        "content":[{"type":"text","text":"{\\"x\\":3,\\"y\\":4}"}],
                         "structuredContent":{"x":3,"y":4},
                         "resultType":"complete"}
                     }
                     """;
-            assertThatJson(call.body()).whenIgnoringPaths("result.content").isEqualTo(expected);
+            assertThatJson(call.body()).isEqualTo(expected);
         }
     }
 }
