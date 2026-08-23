@@ -86,6 +86,24 @@ public interface ServerBuilder {
     /** Sets the thread factory used by the server-owned virtual-thread-per-task executor. */
     ServerBuilder threadFactory(ThreadFactory threadFactory);
 
+    /**
+     * Configures annotation-based feature registration. The configurer receives an {@link
+     * AnnotationContext} through which {@link dev.tachyonmcp.api.server.features.annotations.AnnotationProvider}s
+     * and application objects are registered.
+     *
+     * <p>Registrations are executed after the server is constructed but before {@link #build()}
+     * returns. Annotated features are registered through the same Tachyon feature façades as
+     * manual registrations.
+     *
+     * <p>Calling this method more than once composes: every configurer runs against the same
+     * {@link AnnotationContext}, in call order.
+     *
+     * @param configurer the annotation context configurer
+     * @return this builder
+     */
+    @ExperimentalApi
+    ServerBuilder annotations(Consumer<AnnotationContext> configurer);
+
     /** Customizes each Netty channel pipeline. */
     @ExperimentalApi
     ServerBuilder pipelineCustomizer(@Nullable Consumer<ChannelPipeline> customizer);

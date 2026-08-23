@@ -12,6 +12,7 @@
 - [Resources](resources.md)
 - [Tasks](tasks.md)
 - [Extensions](extensions.md)
+- [Annotations](annotations.md)
 - [JSON and JSON Schema](json.md)
 
 ## Testing

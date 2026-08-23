@@ -54,6 +54,7 @@
         <module>tachyon-kotlin-kt-schema</module>
         <module>tachyon-extensions</module>
         <module>tachyon-testkit</module>
+        <module>integrations</module>
     </modules>
 
     <properties>
