@@ -269,8 +269,13 @@ final class DefaultServerBuilder implements ServerBuilder {
         if (annotationConfigurers.isEmpty()) return;
         var ctx = new AnnotationContext();
         annotationConfigurers.forEach(configurer -> configurer.accept(ctx));
-        var registrationContext = new ServerAnnotationRegistrationContext(
-                server.tools(), server.resources(), server.prompts(), server.completions());
+        var registrationContext = new DefaultAnnotationRegistrationContext(
+                server.tools(),
+                server.resources(),
+                server.prompts(),
+                server.completions(),
+                payloadSerializer,
+                payloadDeserializer);
         for (var reg : ctx.registrations()) {
             reg.provider().register(reg.instance(), registrationContext);
         }
@@ -325,8 +330,13 @@ final class DefaultServerBuilder implements ServerBuilder {
                 null,
                 allExtensions,
                 pipelineCustomizer);
-        bootstrapRegistrations.forEach(registrar -> registrar.accept(server));
-        applyAnnotationRegistrations(server);
+        try {
+            bootstrapRegistrations.forEach(registrar -> registrar.accept(server));
+            applyAnnotationRegistrations(server);
+        } catch (Throwable t) {
+            server.close();
+            throw t;
+        }
         return server;
     }
 

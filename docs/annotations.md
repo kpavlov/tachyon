@@ -65,9 +65,38 @@ Add the module you need as a dependency; each is independent of the other two. A
 </dependency>
 ```
 
-All three coerce numeric JSON-RPC arguments (`int`/`long`/`short`/`byte`/`double`/`float`, boxed or
-primitive) to the annotated method's declared parameter type, and inject a method parameter of
-type `InteractionContext` when the annotated method declares one.
+All three coerce JSON-RPC arguments to the annotated method's declared parameter type by routing
+through the server's configured `PayloadSerializer`/`PayloadDeserializer` (`AnnotationRegistrationContext.payloadSerializer()`/`payloadDeserializer()`), and inject a method parameter of type
+`InteractionContext` when the annotated method declares one. A parameter annotated with a
+`defaultValue` (e.g. `@P(defaultValue = "10")`, `@ToolArg(defaultValue = "10")`) that's absent from
+the incoming arguments is bound to that default, parsed as the parameter's declared type, rather
+than `null`.
+
+## Schema generation
+
+`McpJavaAnnotationProvider` describes tool/resource-template/prompt parameters with a scalar-only
+mapping (`String`, numeric/boolean primitives and wrappers, and `Optional`/`OptionalInt`/
+`OptionalLong`/`OptionalDouble` wrapping one of those) and rejects anything else — a `record`,
+`enum`, `List<T>`, or nested POJO parameter — at registration time with a clear exception, rather
+than silently misdescribing it as `"string"` or failing only on first invocation.
+
+`LangChain4jAnnotationProvider` and `SpringAiAnnotationProvider` instead delegate tool input-schema
+generation to their own framework's schema generator (`dev.langchain4j.agent.tool.ToolSpecifications`
+and `org.springframework.ai.mcp.annotation.method.tool.utils.McpJsonSchemaGenerator`, respectively),
+so records, enums, `List<T>`, and nested POJOs are described — and bound — correctly, not rejected.
+Both providers still strip parameters neither framework knows about (Tachyon's own
+`InteractionContext`) from the generated schema themselves. `SpringAiAnnotationProvider`
+additionally rejects, at registration, parameter types under `org.springframework.ai.mcp.annotation`
+that aren't one of the three request-context types it actually emulates (`McpSyncRequestContext`,
+`McpAsyncRequestContext`, `MetaProvider`) — e.g. `McpMeta` or `McpTransportContext` — instead of
+silently resolving them to `null` at invocation.
+
+### Spring AI prompt arguments
+
+`SpringAiAnnotationProvider` reads `@McpArg`'s `name`, `description`, and `required` for
+`@McpPrompt` parameters — a renamed argument (`@McpArg(name = "topicName")`) is looked up under
+that name both in the advertised `PromptArgument` and when resolving the incoming
+`prompts/get` arguments, so the two stay in agreement.
 
 ### Spring AI proxies
 

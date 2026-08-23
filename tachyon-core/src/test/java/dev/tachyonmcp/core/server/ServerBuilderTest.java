@@ -4,6 +4,7 @@ package dev.tachyonmcp.core.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
@@ -15,8 +16,11 @@ import dev.tachyonmcp.api.server.features.completions.CompletionFn;
 import dev.tachyonmcp.api.server.features.completions.CompletionResult;
 import dev.tachyonmcp.api.server.features.prompts.PromptResult;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.server.session.SessionEvent;
+import dev.tachyonmcp.core.server.session.SessionEventStore;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -192,6 +196,56 @@ class ServerBuilderTest {
     void portThrowsBeforeStart() {
         try (var server = TachyonServer.builder().build()) {
             assertThatIllegalStateException().isThrownBy(server::port);
+        }
+    }
+
+    @Test
+    void closesServerWhenBootstrapRegistrationThrowsSoResourcesDontLeak() {
+        var eventStore = new TrackingSessionEventStore();
+        var failure = new RuntimeException("boom");
+
+        assertThatThrownBy(() -> TachyonServer.builder()
+                        .session(s -> s.enabled(true).sessionEventStore(eventStore))
+                        .withTools(tools -> {
+                            throw failure;
+                        })
+                        .build())
+                .isSameAs(failure);
+
+        assertThat(eventStore.closed).isTrue();
+    }
+
+    @Test
+    void closesServerWhenAnnotationRegistrationThrowsSoResourcesDontLeak() {
+        var eventStore = new TrackingSessionEventStore();
+        var failure = new RuntimeException("boom");
+
+        assertThatThrownBy(() -> TachyonServer.builder()
+                        .session(s -> s.enabled(true).sessionEventStore(eventStore))
+                        .annotations(a -> a.provider((instance, context) -> {
+                                    throw failure;
+                                })
+                                .register(new Object()))
+                        .build())
+                .isSameAs(failure);
+
+        assertThat(eventStore.closed).isTrue();
+    }
+
+    private static final class TrackingSessionEventStore implements SessionEventStore {
+        private boolean closed;
+
+        @Override
+        public void append(SessionEvent event) {}
+
+        @Override
+        public long drain(String sessionId, long cursor, Predicate<SessionEvent> processor) {
+            return cursor;
+        }
+
+        @Override
+        public void close() {
+            closed = true;
         }
     }
 

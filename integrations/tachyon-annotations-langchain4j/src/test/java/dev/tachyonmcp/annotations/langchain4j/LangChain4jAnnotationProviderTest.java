@@ -17,6 +17,7 @@ import dev.tachyonmcp.api.server.features.tools.ToolFn;
 import dev.tachyonmcp.api.server.features.tools.ToolRequest;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.api.server.features.tools.Tools;
+import dev.tachyonmcp.core.server.json.JacksonPayloadSerde;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,6 +56,9 @@ class LangChain4jAnnotationProviderTest {
     void setUp() {
         tools = mock(Tools.class);
         org.mockito.Mockito.when(context.tools()).thenReturn(tools);
+        var serde = new JacksonPayloadSerde();
+        org.mockito.Mockito.when(context.payloadSerializer()).thenReturn(serde);
+        org.mockito.Mockito.when(context.payloadDeserializer()).thenReturn(serde);
         new LangChain4jAnnotationProvider().register(new Fixture(), context);
 
         descriptors = ArgumentCaptor.forClass(ToolDescriptor.class);

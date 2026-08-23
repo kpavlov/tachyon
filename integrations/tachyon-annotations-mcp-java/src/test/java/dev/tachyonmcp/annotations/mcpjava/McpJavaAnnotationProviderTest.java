@@ -31,6 +31,7 @@ import dev.tachyonmcp.api.server.features.tools.ToolFn;
 import dev.tachyonmcp.api.server.features.tools.ToolRequest;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.api.server.features.tools.Tools;
+import dev.tachyonmcp.core.server.json.JacksonPayloadSerde;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -103,6 +104,9 @@ class McpJavaAnnotationProviderTest {
         org.mockito.Mockito.when(context.tools()).thenReturn(tools);
         org.mockito.Mockito.when(context.resources()).thenReturn(resources);
         org.mockito.Mockito.when(context.prompts()).thenReturn(prompts);
+        var serde = new JacksonPayloadSerde();
+        org.mockito.Mockito.when(context.payloadSerializer()).thenReturn(serde);
+        org.mockito.Mockito.when(context.payloadDeserializer()).thenReturn(serde);
         new McpJavaAnnotationProvider().register(new Fixture(), context);
     }
 

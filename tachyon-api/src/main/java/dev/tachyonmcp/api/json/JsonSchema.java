@@ -57,10 +57,18 @@ public interface JsonSchema extends JsonDocument {
     }
 
     /**
-     * Creates a schema from Map representing
+     * Creates a schema from a {@link Map} representation of the schema, resolving it through the
+     * {@link JsonSchemaFactory} registered for {@code Map} sources. Nested objects are themselves
+     * {@code Map}s; pass a {@link java.util.LinkedHashMap} to keep key order stable in the encoded
+     * schema.
+     *
+     * @param source the schema as a map, e.g. {@code {"type": "object", "properties": {...}}}
+     * @return the resolved schema
+     * @throws IllegalStateException if no {@code JsonSchemaFactory} is registered for {@code Map}
+     *     sources
      */
     @ExperimentalApi(since = "1.0.0-beta.21")
-    static <T> JsonSchema from(Map<String, Object> source) {
+    static JsonSchema from(Map<String, Object> source) {
         return JsonSchemas.from(source, Map.class);
     }
 

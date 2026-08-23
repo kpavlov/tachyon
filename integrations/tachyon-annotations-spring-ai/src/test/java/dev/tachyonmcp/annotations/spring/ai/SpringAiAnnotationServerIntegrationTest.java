@@ -2,15 +2,19 @@
 package dev.tachyonmcp.annotations.spring.ai;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.testkit.McpTestClients;
 import dev.tachyonmcp.testkit.McpTestServers;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.mcp.annotation.McpArg;
+import org.springframework.ai.mcp.annotation.McpMeta;
 import org.springframework.ai.mcp.annotation.McpPrompt;
 import org.springframework.ai.mcp.annotation.McpResource;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
+import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 
 /**
  * Starts a real Tachyon server (Netty transport, port 0) with {@link SpringAiAnnotationProvider}
@@ -44,10 +48,14 @@ class SpringAiAnnotationServerIntegrationTest {
     }
 
     private static TachyonServer startServer() {
+        return startServer(new Fixture());
+    }
+
+    private static TachyonServer startServer(Object fixture) {
         return McpTestServers.start(
                 b -> b.annotations(annotations -> {
                     annotations.provider(new SpringAiAnnotationProvider());
-                    annotations.register(new Fixture());
+                    annotations.register(fixture);
                 }),
                 server -> {});
     }
@@ -148,6 +156,95 @@ class SpringAiAnnotationServerIntegrationTest {
                     }
                     """;
             assertThatJson(get.body()).isEqualTo(expected);
+        }
+    }
+
+    @SuppressWarnings("unused")
+    static class KnownContextFixture {
+        @McpTool(name = "withKnownContext")
+        String withKnownContext(McpSyncRequestContext requestContext) {
+            return requestContext == null ? "null-ctx" : "real-ctx";
+        }
+    }
+
+    @Test
+    void knownInjectedContextTypeRegistersAndResolvesToNullOverWire() throws Exception {
+        try (var server = startServer(new KnownContextFixture());
+                var client = McpTestClients.latest(server.port())) {
+            var call = client.post("""
+                    {"jsonrpc":"2.0","id":1,"method":"tools/call",
+                     "params":{"name":"withKnownContext","arguments":{}}}
+                    """);
+
+            // language=json
+            var expected = """
+                    {"jsonrpc":"2.0","id":1,"result":{
+                        "content":[{"type":"text","text":"null-ctx"}],
+                        "resultType":"complete"}
+                    }
+                    """;
+            assertThatJson(call.body()).isEqualTo(expected);
+        }
+    }
+
+    @SuppressWarnings("unused")
+    static class UnsupportedContextFixture {
+        @McpTool
+        String needsMeta(McpMeta meta) {
+            return "unreachable";
+        }
+    }
+
+    @Test
+    void unsupportedSpecialParameterTypeFailsServerStartupNotInvocation() {
+        assertThatThrownBy(() -> startServer(new UnsupportedContextFixture()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("McpMeta")
+                .hasMessageContaining("needsMeta");
+    }
+
+    @SuppressWarnings("unused")
+    static class McpArgFixture {
+        @McpPrompt(name = "storyWithArg")
+        String storyWithArg(@McpArg(name = "topicName", description = "the topic", required = false) String topic) {
+            return "Story: " + topic;
+        }
+    }
+
+    @Test
+    void mcpArgOverridesArgumentNameDescriptionAndRequiredOverWire() throws Exception {
+        try (var server = startServer(new McpArgFixture());
+                var client = McpTestClients.latest(server.port())) {
+            var list = client.post("""
+                    {"jsonrpc":"2.0","id":1,"method":"prompts/list"}
+                    """);
+
+            // language=json
+            var expectedList = """
+                    {"jsonrpc":"2.0","id":1,"result":{
+                        "prompts":[{
+                            "name":"storyWithArg",
+                            "arguments":[{"name":"topicName","description":"the topic","required":false}]
+                        }],
+                        "resultType":"complete","ttlMs":0,"cacheScope":"public"}
+                    }
+                    """;
+            assertThatJson(list.body()).isEqualTo(expectedList);
+
+            var get = client.post("""
+                    {"jsonrpc":"2.0","id":2,"method":"prompts/get",
+                     "params":{"name":"storyWithArg","arguments":{"topicName":"dragons"}}}
+                    """);
+
+            // language=json
+            var expectedGet = """
+                    {"jsonrpc":"2.0","id":2,"result":{
+                        "messages":[{"role":"user",
+                            "content":{"type":"text","text":"Story: dragons"}}],
+                        "resultType":"complete"}
+                    }
+                    """;
+            assertThatJson(get.body()).isEqualTo(expectedGet);
         }
     }
 }
