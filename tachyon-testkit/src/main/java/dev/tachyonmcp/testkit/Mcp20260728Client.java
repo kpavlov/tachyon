@@ -54,6 +54,18 @@ public final class Mcp20260728Client extends McpClient {
         return this;
     }
 
+    /**
+     * Sends {@code server/discover} and returns staged assertions for its response.
+     *
+     * @return discover response assertions
+     * @throws Exception when the request cannot be sent
+     */
+    public DiscoverResponseAssert discover() throws Exception {
+        return new DiscoverResponseAssert(post("""
+                {"jsonrpc":"2.0","id":1,"method":"server/discover"}
+                """));
+    }
+
     @Override
     public @Nullable String initialize() {
         throw new UnsupportedOperationException(

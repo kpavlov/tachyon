@@ -1,15 +1,11 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp20260728;
 
-import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
-import static org.assertj.core.api.Assertions.assertThat;
-
 import dev.tachyonmcp.api.server.extensions.AdvertiseMode;
 import dev.tachyonmcp.api.server.extensions.ExtensionSettings;
 import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
 import java.util.Map;
-import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.JsonNodeFactory;
 
@@ -25,17 +21,9 @@ class DiscoverExtensionsTest extends AbstractStatelessMcpE2eTest {
         startServer(it -> it.withExtensions(new TestExtension(ALWAYS_EXT_ID, AdvertiseMode.ALWAYS)));
 
         try (var client = createModernTestClient()) {
-            var response = client.post("""
-                    {"jsonrpc": "2.0", "id": 1, "method": "server/discover"}
+            client.discover().isSuccess().hasCapabilities("""
+                    {"extensions":{"com.example/always":{"version":"1.0"}}}
                     """);
-
-            assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-            assertThatJson(response.body())
-                    .inPath("$.result.capabilities.extensions")
-                    // language=JSON
-                    .isEqualTo("""
-                            {"com.example/always": {"version": "1.0"}}
-                            """);
         }
     }
 
@@ -46,23 +34,9 @@ class DiscoverExtensionsTest extends AbstractStatelessMcpE2eTest {
                 new TestExtension(NEVER_EXT_ID, AdvertiseMode.NEVER)));
 
         try (var client = createModernTestClient()) {
-            var response = client.post("""
-                    {"jsonrpc": "2.0", "id": 1, "method": "server/discover"}
+            client.discover().isSuccess().hasCapabilities("""
+                    {"extensions":{"com.example/always":{"version":"1.0"}}}
                     """);
-
-            assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-            assertThatJson(response.body())
-                    .when(Option.IGNORING_EXTRA_FIELDS)
-                    // language=JSON
-                    .isEqualTo("""
-                            {
-                              "result": {
-                                "capabilities": {
-                                  "extensions": {"com.example/always": {"version": "1.0"}}
-                                }
-                              }
-                            }
-                            """);
         }
     }
 
@@ -72,17 +46,9 @@ class DiscoverExtensionsTest extends AbstractStatelessMcpE2eTest {
 
         try (var client = createModernTestClient()) {
             client.withExtensions(Map.of(NEGOTIATED_EXT_ID, JsonNodeFactory.instance.objectNode()));
-            var response = client.post("""
-                    {"jsonrpc": "2.0", "id": 1, "method": "server/discover"}
+            client.discover().isSuccess().hasCapabilities("""
+                    {"extensions":{"com.example/negotiated":{"version":"1.0"}}}
                     """);
-
-            assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-            assertThatJson(response.body())
-                    .inPath("$.result.capabilities.extensions")
-                    // language=JSON
-                    .isEqualTo("""
-                            {"com.example/negotiated": {"version": "1.0"}}
-                            """);
         }
     }
 
@@ -91,14 +57,7 @@ class DiscoverExtensionsTest extends AbstractStatelessMcpE2eTest {
         startServer(it -> it.withExtensions(new TestExtension(NEGOTIATED_EXT_ID, AdvertiseMode.NEGOTIATED)));
 
         try (var client = createModernTestClient()) {
-            var response = client.post("""
-                    {"jsonrpc": "2.0", "id": 1, "method": "server/discover"}
-                    """);
-
-            assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-            assertThatJson(response.body())
-                    .node("result.capabilities.extensions")
-                    .isAbsent();
+            client.discover().isSuccess().hasCapabilities("{}");
         }
     }
 

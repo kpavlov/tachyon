@@ -20,13 +20,9 @@ class DiscoverCapabilitiesMatchHandlersTest extends AbstractStatelessMcpE2eTest 
     @Test
     void toolsCapabilityAdvertisedInDiscoverActuallyWorks() throws Exception {
         try (var client = createModernTestClient()) {
-            var discover = client.post("""
-                    {"jsonrpc": "2.0", "id": 1, "method": "server/discover"}
+            client.discover().isSuccess().hasCapabilities("""
+                    {"logging":{},"tools":{}}
                     """);
-            assertThat(discover.statusCode()).as(discover.body()).isEqualTo(200);
-            assertThatJson(discover.body())
-                    .inPath("$.result.capabilities.tools")
-                    .isPresent();
 
             var toolsList = client.post("""
                     {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}

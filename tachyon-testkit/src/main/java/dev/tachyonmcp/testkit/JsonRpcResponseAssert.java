@@ -29,6 +29,17 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
         return assertThatJsonRpcResponse(response.body());
     }
 
+    /**
+     * Creates assertions for one JSON-RPC envelope within an SSE HTTP response.
+     *
+     * @param response SSE HTTP response
+     * @param requestId JSON-RPC request id
+     * @return assertions for the matching JSON-RPC response
+     */
+    public static JsonRpcResponseAssert assertThat(HttpResponse<String> response, String requestId) {
+        return assertThatJsonRpcResponse(McpClient.extractJsonRpcResponse(response.body(), requestId));
+    }
+
     /** Creates assertions for a raw JSON-RPC response body. */
     public static JsonRpcResponseAssert assertThatJsonRpcResponse(String json) {
         return new JsonRpcResponseAssert(MAPPER.readTree(json));

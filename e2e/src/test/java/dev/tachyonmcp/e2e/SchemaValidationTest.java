@@ -163,7 +163,6 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
                 }}
                 """;
             assertThatJson(response.body()).isEqualTo(expected);
-            assertThatJson(response.body()).inPath("$.result").isObject().containsKey("messages");
         }
     }
 

@@ -2,7 +2,6 @@
 package dev.tachyonmcp.e2e;
 
 import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
-import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.gson.Gson;
@@ -56,10 +55,13 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
                 """);
 
             assertThat(response.statusCode()).isEqualTo(200);
-            assertThatJson(response.body())
-                    .inPath("$.result.structuredContent.message")
-                    .isEqualTo("hello from Gson");
-            assertThat(response).isSuccess().hasTextContent("text fallback");
+            assertThat(response)
+                    .isSuccess()
+                    .hasId(2)
+                    .hasTextContent("text fallback")
+                    .hasStructuredContent("""
+                            {"message":"hello from Gson"}
+                            """);
         }
     }
 
@@ -81,10 +83,13 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
                 """);
 
             assertThat(response.statusCode()).isEqualTo(200);
-            assertThatJson(response.body())
-                    .inPath("$.result.structuredContent.echo")
-                    .isEqualTo("exact");
-            assertThat(response).isSuccess().hasTextContent("raw fallback");
+            assertThat(response)
+                    .isSuccess()
+                    .hasId(2)
+                    .hasTextContent("raw fallback")
+                    .hasStructuredContent("""
+                            {"echo":"exact"}
+                            """);
         }
     }
 
@@ -122,9 +127,9 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
                 """);
 
             assertThat(response.statusCode()).isEqualTo(200);
-            assertThatJson(response.body())
-                    .inPath("$.result.structuredContent.message")
-                    .isEqualTo("valid");
+            assertThat(response).isSuccess().hasId(2).hasTextContent("ok").hasStructuredContent("""
+                            {"message":"valid","extra":42}
+                            """);
         }
     }
 

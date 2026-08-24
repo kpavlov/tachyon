@@ -37,14 +37,26 @@ class StringSchemaTest extends AbstractStatelessMcpE2eTest {
                 """);
 
             assertThat(response.statusCode()).isEqualTo(200);
-            assertThatJson(response.body())
-                    .inPath("$.result.tools[0].inputSchema")
-                    .isObject()
-                    .containsKey("properties");
-            assertThatJson(response.body())
-                    .inPath("$.result.tools[0].outputSchema")
-                    .isObject()
-                    .containsKey("properties");
+            assertThatJson(response.body()).isEqualTo("""
+                    {
+                      "jsonrpc":"2.0",
+                      "id":2,
+                      "result":{"tools":[{
+                        "name":"string-schema-tool",
+                        "description":"Tool with string schemas",
+                        "inputSchema":{
+                          "type":"object",
+                          "properties":{"x":{"type":"string"}},
+                          "required":["x"]
+                        },
+                        "outputSchema":{
+                          "type":"object",
+                          "properties":{"y":{"type":"integer"}},
+                          "required":["y"]
+                        }
+                      }]}
+                    }
+                    """);
         }
     }
 
