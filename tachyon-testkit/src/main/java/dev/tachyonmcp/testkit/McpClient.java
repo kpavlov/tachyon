@@ -231,8 +231,13 @@ public abstract class McpClient implements Closeable {
 
     /** Sends a notification with the given params. */
     public HttpResponse<String> notify(String method, @Nullable Object params) throws Exception {
-        var paramsJson = params == null ? "" : "," + MAPPER.writeValueAsString(params);
-        return post(sessionId, "{\"jsonrpc\":\"2.0\",\"method\":\"%s\"%s}".formatted(method, paramsJson));
+        return post(sessionId, notificationEnvelope(method, params));
+    }
+
+    /** Builds the JSON-RPC notification envelope sent by {@link #notify(String, Object)}. */
+    static String notificationEnvelope(String method, @Nullable Object params) {
+        var paramsJson = params == null ? "" : ",\"params\":" + MAPPER.writeValueAsString(params);
+        return "{\"jsonrpc\":\"2.0\",\"method\":\"%s\"%s}".formatted(method, paramsJson);
     }
 
     /**
@@ -253,7 +258,7 @@ public abstract class McpClient implements Closeable {
             if (closed) {
                 throw new IllegalStateException("McpClient closed while awaiting " + method);
             }
-            return method.equals(node.path("method").asString()) && predicate.test(node);
+            return method.equals(node.path("method").asString()) && predicate.test(node.path("params"));
         });
         return Notification.from(message);
     }

@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.testkit;
 
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -132,6 +133,27 @@ class McpTestKitSmokeTest {
         }
     }
 
+    @Test
+    void awaitNotificationPredicateReceivesParamsAndSkipsNonMatchingNotifications() throws Exception {
+        try (var client = McpTestClients.latest(port)) {
+            client.post("""
+                    {"jsonrpc":"2.0","id":7,"method":"tools/call",
+                     "params":{"name":"slow-progress","arguments":{},"_meta":{"progressToken":"skip"}}}
+                    """);
+            client.post("""
+                {"jsonrpc":"2.0","id":8,"method":"tools/call",
+                 "params":{"name":"slow-progress","arguments":{},"_meta":{"progressToken":"match"}}}
+                """);
+
+            var notification = client.awaitNotification(
+                    "notifications/progress",
+                    params -> params.path("progressToken").asString().equals("match"),
+                    Duration.ofMillis(100));
+
+            assertThat(notification.params().path("progressToken").asString()).isEqualTo("match");
+        }
+    }
+
     /** Notifications received so far are listed in arrival order and can be cleared. */
     @Test
     void notificationsSnapshotAndClear() throws Exception {
@@ -148,13 +170,33 @@ class McpTestKitSmokeTest {
 
     /** A client-side notification is accepted (2025 session, initialized client). */
     @Test
-    void notifySendsNotification() throws Exception {
+    void notifySerializesParams() throws Exception {
         try (var client = McpTestClients.forVersion(port, "2025-11-25")) {
             client.initialize();
-            var response = client.notify("notifications/initialized");
+            var response = client.notify("notifications/initialized", Map.of("ready", true));
             assertThat(response.statusCode()).as(response.body()).isEqualTo(202);
             assertThat(response.body()).isEmpty();
         }
+    }
+
+    /** The notification envelope carries params under a {@code params} key when given. */
+    @Test
+    void notificationEnvelopeIncludesParamsWhenPresent() {
+        var json = McpClient.notificationEnvelope("notifications/initialized", Map.of("ready", true));
+        // language=JSON
+        assertThatJson(json).isEqualTo("""
+                {"jsonrpc":"2.0","method":"notifications/initialized","params":{"ready":true}}
+                """);
+    }
+
+    /** The notification envelope omits the {@code params} key entirely when there are no params. */
+    @Test
+    void notificationEnvelopeOmitsParamsWhenAbsent() {
+        var json = McpClient.notificationEnvelope("notifications/initialized", null);
+        // language=JSON
+        assertThatJson(json).isEqualTo("""
+                {"jsonrpc":"2.0","method":"notifications/initialized"}
+                """);
     }
 
     @Test
