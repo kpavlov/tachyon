@@ -1,6 +1,8 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e;
 
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThatJsonRpcResponse;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -68,7 +70,7 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
             var callJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create_task","arguments":{"name":"my-task","description":"from tool"}}}
                     """);
-            assertThatJson(callJson).inPath("$.result.content[0].text").isString();
+            assertThatJsonRpcResponse(callJson).isSuccess().hasTextContent();
             var taskId = extractText(callJson);
 
             var getJson = client.sendRpc("""
@@ -100,8 +102,7 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
 
             assertThat(response.statusCode()).isEqualTo(200);
             assertThat(response.headers().firstValue("content-type").orElse("")).startsWith("application/json");
-            assertThat(response.body()).contains("not yet active");
-            assertThatJson(response.body()).inPath("$.error").isObject();
+            assertThat(response).isJsonRpcError().hasErrorMessageContaining("not yet active");
         }
     }
 
@@ -260,7 +261,7 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
             var getAfterRemove = client.sendRpc("""
                     {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
                     """.formatted(taskId));
-            assertThatJson(getAfterRemove).inPath("$.error").isObject();
+            assertThatJsonRpcResponse(getAfterRemove).isJsonRpcError();
         }
     }
 
@@ -292,7 +293,7 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
             var getAfterRemove = client.sendRpc("""
                     {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
                     """.formatted(taskId));
-            assertThatJson(getAfterRemove).inPath("$.error").isObject();
+            assertThatJsonRpcResponse(getAfterRemove).isJsonRpcError();
         }
     }
 

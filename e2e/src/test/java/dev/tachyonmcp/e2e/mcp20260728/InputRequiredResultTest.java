@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp20260728;
 
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -161,7 +162,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
         try (var client = createModernTestClient()) {
             var round1 = client.post(toolCallBody(1, "elicit_name", ""));
             assertThat(round1.statusCode()).as(round1.body()).isEqualTo(200);
-            assertThatJson(round1.body()).inPath("$.result.resultType").isEqualTo("input_required");
+            assertThat(round1).isSuccess().hasResultType("input_required");
             assertThatJson(round1.body())
                     .inPath("$.result.inputRequests.user_name.method")
                     .isEqualTo("elicitation/create");
@@ -172,7 +173,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                             "elicit_name",
                             "\"inputResponses\": {\"user_name\": {\"action\": \"accept\", \"content\": {\"name\": \"Alice\"}}}"));
             assertThat(round2.statusCode()).as(round2.body()).isEqualTo(200);
-            assertThatJson(round2.body()).inPath("$.result.content[0].text").isEqualTo("Hello, Alice!");
+            assertThat(round2).isSuccess().hasTextContent("Hello, Alice!");
         }
     }
 
@@ -181,7 +182,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
         try (var client = createModernTestClient()) {
             var round1 = client.post(toolCallBody(3, "ask_sampling", ""));
             assertThat(round1.statusCode()).as(round1.body()).isEqualTo(200);
-            assertThatJson(round1.body()).inPath("$.result.resultType").isEqualTo("input_required");
+            assertThat(round1).isSuccess().hasResultType("input_required");
             assertThatJson(round1.body())
                     .inPath("$.result.inputRequests.capital_question.method")
                     .isEqualTo("sampling/createMessage");
@@ -212,7 +213,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
         try (var client = createModernTestClient()) {
             var round1 = client.post(toolCallBody(4, "ask_roots", ""));
             assertThat(round1.statusCode()).as(round1.body()).isEqualTo(200);
-            assertThatJson(round1.body()).inPath("$.result.resultType").isEqualTo("input_required");
+            assertThat(round1).isSuccess().hasResultType("input_required");
             assertThatJson(round1.body())
                     .inPath("$.result.inputRequests.client_roots.method")
                     .isEqualTo("roots/list");
@@ -224,7 +225,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
         try (var client = createModernTestClient()) {
             var round1 = client.post(toolCallBody(8, "ask_url", ""));
             assertThat(round1.statusCode()).as(round1.body()).isEqualTo(200);
-            assertThatJson(round1.body()).inPath("$.result.resultType").isEqualTo("input_required");
+            assertThat(round1).isSuccess().hasResultType("input_required");
             assertThatJson(round1.body())
                     .inPath("$.result.inputRequests.auth.method")
                     .isEqualTo("elicitation/create");
@@ -241,7 +242,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
             var round2 =
                     client.post(toolCallBody(9, "ask_url", "\"inputResponses\": {\"auth\": {\"action\": \"accept\"}}"));
             assertThat(round2.statusCode()).as(round2.body()).isEqualTo(200);
-            assertThatJson(round2.body()).inPath("$.result.content[0].text").isEqualTo("authenticated");
+            assertThat(round2).isSuccess().hasTextContent("authenticated");
         }
     }
 
@@ -250,7 +251,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
         try (var client = createModernTestClient()) {
             var round1 = client.post(toolCallBody(5, "ask_multiple", ""));
             assertThat(round1.statusCode()).as(round1.body()).isEqualTo(200);
-            assertThatJson(round1.body()).inPath("$.result.resultType").isEqualTo("input_required");
+            assertThat(round1).isSuccess().hasResultType("input_required");
             assertThatJson(round1.body())
                     .inPath("$.result.inputRequests.user_name.method")
                     .isEqualTo("elicitation/create");
@@ -296,7 +297,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
         var response = postMcpRequest(body, Map.of("Mcp-Method", "tools/call", "Mcp-Name", "respect_capabilities"));
 
         assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-        assertThatJson(response.body()).inPath("$.result.resultType").isEqualTo("input_required");
+        assertThat(response).isSuccess().hasResultType("input_required");
         assertThatJson(response.body())
                 .inPath("$.result.inputRequests.capital_question.method")
                 .isEqualTo("sampling/createMessage");

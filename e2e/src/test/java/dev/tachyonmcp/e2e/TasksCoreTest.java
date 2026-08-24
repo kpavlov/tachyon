@@ -126,9 +126,9 @@ class TasksCoreTest extends AbstractStatefulMcpE2eTest {
             var resultJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":3,"method":"tasks/result","params":{"taskId":"%s"}}
                     """.formatted(task.id()));
-            assertThatJsonRpcResponse(resultJson)
-                    .hasContent()
-                    .hasStructuredContent(JsonNodeFactory.instance.objectNode().put("output", "success"));
+            assertThatJsonRpcResponse(resultJson).isSuccess().hasContent().hasStructuredContent("""
+                            {"output":"success"}
+                            """);
         }
     }
 
@@ -141,7 +141,7 @@ class TasksCoreTest extends AbstractStatefulMcpE2eTest {
             var getJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"nonexistent-id"}}
                     """);
-            assertThatJson(getJson).inPath("$.error.code").isEqualTo(-32602);
+            assertThatJsonRpcResponse(getJson).isJsonRpcError().hasErrorCode(-32602);
         }
     }
 

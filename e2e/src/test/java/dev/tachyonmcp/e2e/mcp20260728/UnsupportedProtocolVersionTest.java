@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp20260728;
 
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -49,13 +50,12 @@ class UnsupportedProtocolVersionTest extends AbstractStatelessMcpE2eTest {
         var response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
 
         assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-        assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32022);
+        assertThat(response).isJsonRpcError().hasId(301).hasErrorCode(-32022);
         assertThatJson(response.body()).inPath("$.error.data.requested").isEqualTo("v999.0.0");
         assertThatJson(response.body())
                 .inPath("$.error.data.supported")
                 .isArray()
                 .contains("2026-07-28", "2025-11-25");
-        assertThatJson(response.body()).inPath("$.id").isEqualTo(301);
         assertThat(response.headers().firstValue("Access-Control-Allow-Origin")).contains("http://localhost:3000");
     }
 
@@ -72,6 +72,6 @@ class UnsupportedProtocolVersionTest extends AbstractStatelessMcpE2eTest {
         var response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
 
         assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-        assertThat(response.body()).contains("\"id\":null");
+        assertThat(response).isJsonRpcError().hasId(null);
     }
 }

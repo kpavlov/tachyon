@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp20260728;
 
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -49,8 +50,7 @@ class MissingCapabilityTest extends AbstractStatelessMcpE2eTest {
                     """);
 
             assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-            assertThatJson(response.body()).inPath("$.id").isEqualTo(1);
-            assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32021);
+            assertThat(response).isJsonRpcError().hasId(1).hasErrorCode(-32021);
             assertThatJson(response.body())
                     .inPath("$.error.data.requiredCapabilities.sampling")
                     .isEqualTo(Map.of());
@@ -79,6 +79,6 @@ class MissingCapabilityTest extends AbstractStatelessMcpE2eTest {
         var response = postMcpRequest(body, Map.of("Mcp-Method", "tools/call", "Mcp-Name", "test_missing_capability"));
 
         assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-        assertThatJson(response.body()).inPath("$.result.content[0].text").isEqualTo("sampling capability present");
+        assertThat(response).isSuccess().hasTextContent("sampling capability present");
     }
 }

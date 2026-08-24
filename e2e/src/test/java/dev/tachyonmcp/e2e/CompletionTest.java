@@ -95,7 +95,10 @@ class CompletionTest extends AbstractStatelessMcpE2eTest {
                 }}
                 """);
 
-            assertThat(response).hasErrorCode(-32602);
+            assertThat(response)
+                    .isJsonRpcError()
+                    .hasErrorCode(-32602)
+                    .hasErrorMessage("Missing or invalid ref parameter");
         }
     }
 

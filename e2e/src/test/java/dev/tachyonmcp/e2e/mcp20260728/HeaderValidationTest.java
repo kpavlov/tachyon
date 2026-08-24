@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp20260728;
 
-import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
@@ -47,8 +47,7 @@ class HeaderValidationTest extends AbstractStatelessMcpE2eTest {
 
     private void assertHeaderMismatch(HttpResponse<String> response) {
         assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-        assertThatJson(response.body()).inPath("$.id").isEqualTo(9);
-        assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32020);
+        assertThat(response).isJsonRpcError().hasId(9).hasErrorCode(-32020);
     }
 
     @Test
@@ -70,7 +69,7 @@ class HeaderValidationTest extends AbstractStatelessMcpE2eTest {
     void acceptsWhitespacePaddedNameHeader() throws Exception {
         var response = post("tools/call", "  echo  ");
         assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-        assertThatJson(response.body()).inPath("$.result.content[0].text").isEqualTo("hi");
+        assertThat(response).isSuccess().hasTextContent("hi");
     }
 
     @Test
@@ -78,7 +77,7 @@ class HeaderValidationTest extends AbstractStatelessMcpE2eTest {
         var encoded = Base64.getEncoder().encodeToString("echo".getBytes(StandardCharsets.UTF_8));
         var response = post("tools/call", "=?base64?" + encoded + "?=");
         assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-        assertThatJson(response.body()).inPath("$.result.content[0].text").isEqualTo("hi");
+        assertThat(response).isSuccess().hasTextContent("hi");
     }
 
     @Test
@@ -103,7 +102,6 @@ class HeaderValidationTest extends AbstractStatelessMcpE2eTest {
         var response = postMcpRequest(body, Map.of("Mcp-Method", "tools/call", "Mcp-Name", "echo"));
 
         assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-        assertThatJson(response.body()).inPath("$.id").isEqualTo(11);
-        assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32020);
+        assertThat(response).isJsonRpcError().hasId(11).hasErrorCode(-32020);
     }
 }

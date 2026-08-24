@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp20260728;
 
-import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
@@ -41,8 +41,7 @@ class MetaValidationTest extends AbstractStatelessMcpE2eTest {
 
     private void assertRejected(HttpResponse<String> response) {
         assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-        assertThatJson(response.body()).inPath("$.id").isEqualTo(7);
-        assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32602);
+        assertThat(response).isJsonRpcError().hasId(7).hasErrorCode(-32602);
     }
 
     @Test
@@ -65,7 +64,7 @@ class MetaValidationTest extends AbstractStatelessMcpE2eTest {
                 "io.modelcontextprotocol/clientCapabilities": {}
                 """);
         assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-        assertThatJson(response.body()).inPath("$.result.content[0].text").isEqualTo("hi");
+        assertThat(response).isSuccess().hasTextContent("hi");
     }
 
     @Test
@@ -116,6 +115,6 @@ class MetaValidationTest extends AbstractStatelessMcpE2eTest {
     void acceptsCompleteMeta() throws Exception {
         var response = postToolsCall(VALID_META);
         assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-        assertThatJson(response.body()).inPath("$.result.content[0].text").isEqualTo("hi");
+        assertThat(response).isSuccess().hasTextContent("hi");
     }
 }

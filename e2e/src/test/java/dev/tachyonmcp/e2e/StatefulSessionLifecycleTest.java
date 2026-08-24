@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e;
 
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -51,7 +52,7 @@ class StatefulSessionLifecycleTest extends AbstractStatefulMcpE2eTest {
 
             var response = clientB.ping(sessionB, 1);
             assertThat(response.statusCode()).isEqualTo(200);
-            assertThat(response.body()).contains("result");
+            assertThat(response).isSuccess();
         }
     }
 
@@ -113,7 +114,7 @@ class StatefulSessionLifecycleTest extends AbstractStatefulMcpE2eTest {
             // session2 should still work
             var response = client.ping(session2, 1);
             assertThat(response.statusCode()).isEqualTo(200);
-            assertThat(response.body()).contains("result");
+            assertThat(response).isSuccess();
         }
     }
 

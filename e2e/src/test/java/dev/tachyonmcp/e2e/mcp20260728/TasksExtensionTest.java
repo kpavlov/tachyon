@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp20260728;
 
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -102,7 +103,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
                     """.formatted(task.id()));
 
             assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-            assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32021);
+            assertThat(response).isJsonRpcError().hasErrorCode(-32021);
             assertThatJson(response.body())
                     .inPath("$.error.data.requiredCapabilities.extensions")
                     .isObject()
@@ -128,7 +129,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
                     {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"%s"}}
                     """.formatted(task.id()));
             assertThat(undeclared.statusCode()).as(undeclared.body()).isEqualTo(400);
-            assertThatJson(undeclared.body()).inPath("$.error.code").isEqualTo(-32021);
+            assertThat(undeclared).isJsonRpcError().hasErrorCode(-32021);
         }
     }
 
@@ -268,7 +269,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
                     """.formatted(task.id()));
 
             assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-            assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32021);
+            assertThat(response).isJsonRpcError().hasErrorCode(-32021);
         }
     }
 
@@ -318,7 +319,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
                     """);
 
             assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-            assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32021);
+            assertThat(response).isJsonRpcError().hasErrorCode(-32021);
             assertThatJson(response.body())
                     .inPath("$.error.data.requiredCapabilities.extensions")
                     .isObject()
@@ -367,8 +368,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
                     """);
 
             assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-            assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32602);
-            assertThatJson(response.body()).inPath("$.error.message").isEqualTo("Unknown tool: create_task");
+            assertThat(response).isJsonRpcError().hasErrorCode(-32602).hasErrorMessage("Unknown tool: create_task");
         }
     }
 
@@ -383,7 +383,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
                     """.formatted(TasksExtension.ID));
 
             assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-            assertThatJson(response.body()).inPath("$.result.content[0].text").isString();
+            assertThat(response).isSuccess().hasTextContent();
         }
     }
 
@@ -680,7 +680,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
                     """);
 
             assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-            assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32602);
+            assertThat(response).isJsonRpcError().hasErrorCode(-32602);
         }
     }
 
@@ -719,7 +719,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
                     """.formatted(task.id()));
 
             assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-            assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32021);
+            assertThat(response).isJsonRpcError().hasErrorCode(-32021);
         }
     }
 }

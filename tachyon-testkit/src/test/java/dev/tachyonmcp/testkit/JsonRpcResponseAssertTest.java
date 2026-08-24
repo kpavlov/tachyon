@@ -1,129 +1,106 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.testkit;
 
-import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThatJsonRpcResponse;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import dev.tachyonmcp.api.server.features.tools.ToolResult;
-import dev.tachyonmcp.core.server.TachyonServer;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 
-/**
- * Verifies {@link JsonRpcResponseAssert} against a real port-0 server and inline JSON-RPC envelopes.
- */
+/** Verifies JSON-RPC envelope branch assertions. */
 class JsonRpcResponseAssertTest {
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
-    private static TachyonServer server;
-    private static int port;
-
-    @BeforeAll
-    static void startServer() {
-        server = McpTestServers.start(b -> b.session(c -> c.enabled(true)), s -> {
-            s.tools()
-                    .register(
-                            d -> d.name("echo").description("Echo back the input"),
-                            (ctx, request) -> ToolResult.text(
-                                    "echo:" + request.arguments().stringOr("message", "")));
-            s.tools()
-                    .register(
-                            d -> d.name("boom").description("Always fails"),
-                            (ctx, request) -> ToolResult.error("boom"));
-            s.tools()
-                    .register(
-                            d -> d.name("structured").description("Returns structured content"),
-                            (ctx, request) -> ToolResult.structured(
-                                    JSON.createObjectNode().put("output", "success"), "done"));
-        });
-        port = server.port();
-    }
-
-    @AfterAll
-    static void stopServer() {
-        server.close();
+    @Test
+    void identifiesSuccessEnvelope() {
+        assertThatJsonRpcResponse("""
+                {"jsonrpc":"2.0","id":1,"result":{"content":[]}}
+                """).isSuccess();
     }
 
     @Test
-    void toolCallSuccessExposesTextContent() throws Exception {
-        try (var client =
-                McpTestClients.builder(port).protocolVersion("2025-11-25").build()) {
-            var response = client.sendRpc("""
-                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"echo","arguments":{"message":"hi"}}}
-                """);
-
-            assertThatJsonRpcResponse(response).isSuccess().hasContent().hasTextContent("echo:hi");
-        }
+    void identifiesErrorEnvelope() {
+        assertThatJsonRpcResponse("""
+                {"jsonrpc":"2.0","id":1,"error":{"code":-32602,"message":"Invalid params"}}
+                """).isJsonRpcError();
     }
 
     @Test
-    void toolExecutionFailureIsToolErrorNotJsonRpcError() throws Exception {
-        try (var client =
-                McpTestClients.builder(port).protocolVersion("2025-11-25").build()) {
-            var response = client.sendRpc("""
-                {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"boom","arguments":{}}}
-                """);
+    void successBranchExposesContentAssertions() {
+        var text = JSON.readTree("{\"type\":\"text\",\"text\":\"done\"}");
 
-            assertThatJsonRpcResponse(response).isSuccess().isToolError();
-        }
+        assertThatJsonRpcResponse("""
+                {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"done"}],"resultType":"complete",
+                "structuredContent":{"output":"success"}}}
+                """)
+                .isSuccess()
+                .hasId(1)
+                .hasContent()
+                .hasContentExactly(text)
+                .hasTextContent("done")
+                .hasResultType("complete")
+                .hasStructuredContent(JSON.readTree("{\"output\":\"success\"}"))
+                .hasResult(JSON.readTree("""
+                        {"content":[{"type":"text","text":"done"}],"resultType":"complete",
+                         "structuredContent":{"output":"success"}}
+                        """));
     }
 
     @Test
-    void jsonRpcErrorForUnknownMethodExposesCodeAndMessage() throws Exception {
-        try (var client =
-                McpTestClients.builder(port).protocolVersion("2025-11-25").build()) {
-            var raw = client.sendRpc("""
-                {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"missing","arguments":{}}}
-                """);
-
-            assertThatJsonRpcResponse(raw).isJsonRpcError().hasErrorCode(-32602).hasErrorMessageContaining("missing");
-        }
-    }
-
-    @Test
-    void structuredContentIsExposedAsJsonNode() throws Exception {
-        try (var client =
-                McpTestClients.builder(port).protocolVersion("2025-11-25").build()) {
-            var response = client.sendRpc("""
-                {"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"structured","arguments":{}}}
-                """);
-
-            assertThatJsonRpcResponse(response)
-                    .hasStructuredContent(JSON.createObjectNode().put("output", "success"));
-        }
-    }
-
-    @Test
-    void isSuccessFailsOnAnErrorEnvelope() {
-        var envelope = JSON.readTree("""
-            {"jsonrpc":"2.0","id":1,"error":{"code":-32602,"message":"Invalid params"}}
-            """);
-
-        assertThatThrownBy(() -> assertThat(envelope).isSuccess()).isInstanceOf(AssertionError.class);
-    }
-
-    @Test
-    void hasErrorCodeFailsOnASuccessEnvelope() {
-        var envelope = JSON.readTree("""
-            {"jsonrpc":"2.0","id":1,"result":{"content":[]}}
-            """);
-
-        assertThatThrownBy(() -> assertThat(envelope).hasErrorCode(-32602)).isInstanceOf(AssertionError.class);
-    }
-
-    @Test
-    void hasErrorDataSatisfyingRunsTheGivenAssertionAgainstErrorData() {
-        var envelope = JSON.readTree("""
-            {"jsonrpc":"2.0","id":1,"error":{"code":-32602,"message":"Invalid params","data":{"field":"name"}}}
-            """);
-
-        assertThat(envelope)
+    void errorBranchExposesErrorAssertions() {
+        assertThatJsonRpcResponse("""
+                {"jsonrpc":"2.0","id":1,"error":{"code":-32602,"message":"Invalid params: name",
+                "data":{"field":"name"}}}
+                """)
+                .isJsonRpcError()
+                .hasId(1)
+                .hasErrorCode(-32602)
+                .hasErrorMessageContaining("Invalid params")
                 .hasErrorDataSatisfying(
-                        data -> assertThat(data.path("field").asString()).isEqualTo("name"));
+                        data -> assertThat(data.path("field").asString()).isEqualTo("name"))
+                .hasError(JSON.readTree("""
+                        {"code":-32602,"message":"Invalid params: name","data":{"field":"name"}}
+                        """));
+    }
+
+    @Test
+    void rejectsErrorEnvelopeAsSuccess() {
+        assertThatThrownBy(() -> assertThatJsonRpcResponse("""
+                            {"jsonrpc":"2.0","id":1,"error":{"code":-32602,"message":"Invalid params"}}
+                            """).isSuccess()).isInstanceOf(AssertionError.class);
+    }
+
+    @Test
+    void rejectsSuccessEnvelopeAsError() {
+        assertThatThrownBy(() -> assertThatJsonRpcResponse("""
+                            {"jsonrpc":"2.0","id":1,"result":{"content":[]}}
+                            """).isJsonRpcError())
+                .isInstanceOf(AssertionError.class);
+    }
+
+    @Test
+    void rejectsEnvelopeContainingResultAndError() {
+        assertThatThrownBy(() -> assertThatJsonRpcResponse("""
+                            {"jsonrpc":"2.0","id":1,"result":{},"error":{"code":-32603,"message":"error"}}
+                            """).isJsonRpcError())
+                .isInstanceOf(AssertionError.class);
+    }
+
+    @Test
+    void rejectsNullError() {
+        assertThatThrownBy(() -> assertThatJsonRpcResponse("""
+                            {"jsonrpc":"2.0","id":1,"error":null}
+                            """).isJsonRpcError())
+                .isInstanceOf(AssertionError.class);
+    }
+
+    @Test
+    void hasContentRejectsEmptyArray() {
+        assertThatThrownBy(() -> assertThatJsonRpcResponse("""
+                            {"jsonrpc":"2.0","id":1,"result":{"content":[]}}
+                            """).isSuccess().hasContent())
+                .isInstanceOf(AssertionError.class);
     }
 }

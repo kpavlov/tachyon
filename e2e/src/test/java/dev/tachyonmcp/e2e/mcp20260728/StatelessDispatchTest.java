@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp20260728;
 
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,7 +30,7 @@ class StatelessDispatchTest extends AbstractStatelessMcpE2eTest {
 
             assertThat(response.statusCode()).isEqualTo(200);
             assertThat(response.headers().firstValue("MCP-Session-Id")).isEmpty();
-            assertThatJson(response.body()).inPath("$.result.content[0].text").isEqualTo("hi");
+            assertThat(response).isSuccess().hasTextContent("hi");
         }
     }
 

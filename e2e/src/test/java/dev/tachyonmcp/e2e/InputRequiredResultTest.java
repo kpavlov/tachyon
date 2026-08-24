@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e;
 
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,7 +39,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"test_elicitation","arguments":{}}}
                 """);
 
-            assertThatJson(round1.body()).inPath("$.result.resultType").isEqualTo("input_required");
+            assertThat(round1).isSuccess().hasResultType("input_required");
             assertThatJson(round1.body())
                     .inPath("$.result.inputRequests.user_name.method")
                     .isEqualTo("elicitation/create");
@@ -51,7 +52,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"test_elicitation","arguments":{},"inputResponses":{"user_name":{"name":"Alice"}}}}
                 """);
 
-            assertThatJson(round2.body()).inPath("$.result.content[0].text").isEqualTo("Hello, Alice!");
+            assertThat(round2).isSuccess().hasTextContent("Hello, Alice!");
         }
     }
 
@@ -68,7 +69,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"test_multi_round","arguments":{}}}
                 """);
 
-            assertThatJson(round1.body()).inPath("$.result.resultType").isEqualTo("input_required");
+            assertThat(round1).isSuccess().hasResultType("input_required");
             assertThatJson(round1.body())
                     .inPath("$.result.inputRequests.step1.params.message")
                     .isEqualTo("Step 1: What is your name?");
@@ -80,7 +81,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"test_multi_round","arguments":{},"inputResponses":{"step1":{"name":"Bob"}},"requestState":"state-round-1"}}
                 """);
 
-            assertThatJson(round2.body()).inPath("$.result.resultType").isEqualTo("input_required");
+            assertThat(round2).isSuccess().hasResultType("input_required");
             assertThatJson(round2.body())
                     .inPath("$.result.inputRequests.step2.params.message")
                     .isEqualTo("Step 2: What is your favorite color?");
@@ -110,7 +111,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"test_meta_elicitation","arguments":{}}}
                 """);
 
-            assertThatJson(response.body()).inPath("$.result.resultType").isEqualTo("input_required");
+            assertThat(response).isSuccess().hasResultType("input_required");
             assertThatJson(response.body()).inPath("$.result._meta.trace-id").isEqualTo("abc-123");
         }
     }
@@ -128,7 +129,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"test_elicitation","arguments":{},"inputResponses":{"wrong_key":{"name":"Alice"}}}}
                 """);
 
-            assertThatJson(response.body()).inPath("$.result.resultType").isEqualTo("input_required");
+            assertThat(response).isSuccess().hasResultType("input_required");
             assertThatJson(response.body())
                     .inPath("$.result.inputRequests.user_name.method")
                     .isEqualTo("elicitation/create");
@@ -151,7 +152,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"test_url_elicitation","arguments":{}}}
                 """);
 
-            assertThatJson(round1.body()).inPath("$.result.resultType").isEqualTo("input_required");
+            assertThat(round1).isSuccess().hasResultType("input_required");
             assertThatJson(round1.body())
                     .inPath("$.result.inputRequests.auth.method")
                     .isEqualTo("elicitation/create");
@@ -173,7 +174,7 @@ class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
                 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"test_url_elicitation","arguments":{},"inputResponses":{"auth":{"action":"accept"}}}}
                 """);
 
-            assertThatJson(round2.body()).inPath("$.result.content[0].text").isEqualTo("Authenticated successfully!");
+            assertThat(round2).isSuccess().hasTextContent("Authenticated successfully!");
         }
     }
 

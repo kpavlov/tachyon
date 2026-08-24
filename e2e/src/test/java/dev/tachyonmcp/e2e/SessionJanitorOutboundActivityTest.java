@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e;
 
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -68,7 +69,7 @@ class SessionJanitorOutboundActivityTest {
                     {"jsonrpc":"2.0","id":1,"method":"ping"}
                     """);
             assertThat(ping.statusCode()).isEqualTo(200);
-            assertThat(ping.body()).contains("result");
+            assertThat(ping).isSuccess();
         }
     }
 

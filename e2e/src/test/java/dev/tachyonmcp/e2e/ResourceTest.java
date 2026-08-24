@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e;
 
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -206,7 +207,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://failing"}}
                 """);
 
-            assertThatJson(response.body()).inPath("$.error.message").isEqualTo("Resource handler failed");
+            assertThat(response).isJsonRpcError().hasErrorMessage("Resource handler failed");
         }
     }
 
@@ -298,7 +299,7 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
             var readResponse = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://alpha"}}
                 """);
-            assertThatJson(readResponse.body()).inPath("$.error.code").isEqualTo(-32002);
+            assertThat(readResponse).isJsonRpcError().hasErrorCode(-32002);
 
             var listResponse = client.post(sessionId, """
                 {"jsonrpc":"2.0","id":3,"method":"resources/list"}

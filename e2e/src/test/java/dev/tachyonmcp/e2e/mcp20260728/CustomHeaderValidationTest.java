@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp20260728;
 
-import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
@@ -73,23 +73,21 @@ class CustomHeaderValidationTest extends AbstractStatelessMcpE2eTest {
     void acceptsMatchingParamHeader() throws Exception {
         var response = post(toolCallBody(1, "us-west1"), "us-west1");
         assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-        assertThatJson(response.body()).inPath("$.result.content[0].text").isEqualTo("region=us-west1 query=SELECT 1");
+        assertThat(response).isSuccess().hasTextContent("region=us-west1 query=SELECT 1");
     }
 
     @Test
     void rejectsMissingParamHeaderWhenBodyHasValue() throws Exception {
         var response = post(toolCallBody(2, "us-west1"), null);
         assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-        assertThatJson(response.body()).inPath("$.id").isEqualTo(2);
-        assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32020);
+        assertThat(response).isJsonRpcError().hasId(2).hasErrorCode(-32020);
     }
 
     @Test
     void rejectsMismatchedParamHeader() throws Exception {
         var response = post(toolCallBody(3, "us-west1"), "eu-west1");
         assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-        assertThatJson(response.body()).inPath("$.id").isEqualTo(3);
-        assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32020);
+        assertThat(response).isJsonRpcError().hasId(3).hasErrorCode(-32020);
     }
 
     @Test
@@ -98,15 +96,14 @@ class CustomHeaderValidationTest extends AbstractStatelessMcpE2eTest {
                 .encodeToString("us-west1".getBytes(java.nio.charset.StandardCharsets.UTF_8));
         var response = post(toolCallBody(4, "us-west1"), "=?base64?" + encoded + "?=");
         assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-        assertThatJson(response.body()).inPath("$.result.content[0].text").isEqualTo("region=us-west1 query=SELECT 1");
+        assertThat(response).isSuccess().hasTextContent("region=us-west1 query=SELECT 1");
     }
 
     @Test
     void rejectsInvalidBase64ParamHeader() throws Exception {
         var response = post(toolCallBody(5, "us-west1"), "=?base64?not-valid-base64!!?=");
         assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-        assertThatJson(response.body()).inPath("$.id").isEqualTo(5);
-        assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32020);
+        assertThat(response).isJsonRpcError().hasId(5).hasErrorCode(-32020);
     }
 
     @Test
@@ -115,8 +112,7 @@ class CustomHeaderValidationTest extends AbstractStatelessMcpE2eTest {
         // character; the server must not throw while extracting the (empty) encoded segment.
         var response = post(toolCallBody(7, "us-west1"), "=?base64?=");
         assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-        assertThatJson(response.body()).inPath("$.id").isEqualTo(7);
-        assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32020);
+        assertThat(response).isJsonRpcError().hasId(7).hasErrorCode(-32020);
     }
 
     @Test
@@ -128,7 +124,6 @@ class CustomHeaderValidationTest extends AbstractStatelessMcpE2eTest {
                 .replace("=", "");
         var response = post(toolCallBody(6, "Hello"), "=?base64?" + encoded + "?=");
         assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-        assertThatJson(response.body()).inPath("$.id").isEqualTo(6);
-        assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32020);
+        assertThat(response).isJsonRpcError().hasId(6).hasErrorCode(-32020);
     }
 }

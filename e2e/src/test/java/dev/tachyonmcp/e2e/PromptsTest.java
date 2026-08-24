@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e;
 
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -95,7 +96,7 @@ class PromptsTest extends AbstractStatelessMcpE2eTest {
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"unknown"}}
                 """);
 
-            assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32602);
+            assertThat(response).isJsonRpcError().hasErrorCode(-32602);
         }
     }
 

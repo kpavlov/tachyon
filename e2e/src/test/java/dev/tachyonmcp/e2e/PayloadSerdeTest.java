@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e;
 
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -58,7 +59,7 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
             assertThatJson(response.body())
                     .inPath("$.result.structuredContent.message")
                     .isEqualTo("hello from Gson");
-            assertThatJson(response.body()).inPath("$.result.content[0].text").isEqualTo("text fallback");
+            assertThat(response).isSuccess().hasTextContent("text fallback");
         }
     }
 
@@ -83,7 +84,7 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
             assertThatJson(response.body())
                     .inPath("$.result.structuredContent.echo")
                     .isEqualTo("exact");
-            assertThatJson(response.body()).inPath("$.result.content[0].text").isEqualTo("raw fallback");
+            assertThat(response).isSuccess().hasTextContent("raw fallback");
         }
     }
 
@@ -161,7 +162,7 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
                 """);
 
             assertThat(response.statusCode()).isEqualTo(200);
-            assertThatJson(response.body()).inPath("$.result.content[0].text").isEqualTo("decoded: {key=value}");
+            assertThat(response).isSuccess().hasTextContent("decoded: {key=value}");
         }
     }
 

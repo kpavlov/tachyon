@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e;
 
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThatJsonRpcResponse;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -448,7 +449,7 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
             var resultJson = client.sendRpc("""
                 {"jsonrpc":"2.0","id":4,"method":"tasks/result","params":{"taskId":"%s"}}
                 """.formatted(secondTaskId));
-            assertThatJson(resultJson).inPath("$.result.content[0].text").isEqualTo("Hello, Alice!");
+            assertThatJsonRpcResponse(resultJson).isSuccess().hasTextContent("Hello, Alice!");
 
             // The original task was never resumed -- still parked, exactly where round 1 left it.
             var firstAfter = client.sendRpc("""
@@ -468,7 +469,7 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
                 {"jsonrpc":"2.0","id":2,"method":"tasks/update","params":{"taskId":"task-1","inputResponses":{}}}
                 """);
 
-            assertThatJson(response).inPath("$.error.code").isEqualTo(-32601);
+            assertThatJsonRpcResponse(response).isJsonRpcError().hasErrorCode(-32601);
         }
     }
 

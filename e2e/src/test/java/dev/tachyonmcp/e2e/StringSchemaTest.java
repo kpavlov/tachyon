@@ -118,7 +118,7 @@ class StringSchemaTest extends AbstractStatelessMcpE2eTest {
                 """);
 
             assertThat(response.statusCode()).isEqualTo(200);
-            assertThat(response).hasTextContent("called");
+            assertThat(response).isSuccess().hasTextContent("called");
         }
     }
 }

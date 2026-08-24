@@ -50,8 +50,8 @@ to drive a remote server instead of a local one.
 
 ## Assertions
 
-`JsonRpcResponseAssert` gives AssertJ-style assertions over a JSON-RPC response envelope —
-success/error branch, tool content, and JSON-RPC error code/message:
+`JsonRpcResponseAssert` first selects the JSON-RPC branch, then exposes only assertions valid for
+that branch:
 
 ```java
 import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
@@ -60,18 +60,23 @@ var response = client.post("""
     {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"echo","arguments":{"message":"hi"}}}
     """);
 
-assertThat(response).hasTextContent("echo:hi");
+assertThat(response).isSuccess().hasTextContent("echo:hi");
 ```
 
-For raw JSON-RPC error responses, use `assertThatJsonRpcResponse(String)` (avoids an ambiguous
-overload against AssertJ's own `assertThat(String)`):
+Use `hasResult(expected)` or `hasContentExactly(blocks...)` when the complete result or content
+array is stable. `hasContent()` requires at least one content block.
+
+Error assertions follow the same staged shape:
 
 ```java
 import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThatJsonRpcResponse;
 
 var raw = client.sendRpc("""{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"missing","arguments":{}}}""");
 
-assertThatJsonRpcResponse(raw).hasErrorCode(-32602).hasErrorMessageContaining("missing");
+assertThatJsonRpcResponse(raw)
+    .isJsonRpcError()
+    .hasErrorCode(-32602)
+    .hasErrorMessage("Invalid params");
 ```
 
 ## Notifications

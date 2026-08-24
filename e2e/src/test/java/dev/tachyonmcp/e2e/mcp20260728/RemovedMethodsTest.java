@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp20260728;
 
-import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
@@ -37,7 +37,6 @@ class RemovedMethodsTest extends AbstractStatelessMcpE2eTest {
         assertThat(response.statusCode())
                 .as("status for removed method '%s': %s", method, response.body())
                 .isEqualTo(404);
-        assertThatJson(response.body()).inPath("$.id").isEqualTo(42);
-        assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32601);
+        assertThat(response).isJsonRpcError().hasId(42).hasErrorCode(-32601);
     }
 }

@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp20260728;
 
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,7 +30,7 @@ class ResourceNotFoundTest extends AbstractStatelessMcpE2eTest {
                     """);
 
             assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-            assertThatJson(response.body()).inPath("$.error.code").isEqualTo(-32602);
+            assertThat(response).isJsonRpcError().hasErrorCode(-32602);
             assertThatJson(response.body()).inPath("$.error.data.uri").isEqualTo("test://does-not-exist");
         }
     }
