@@ -10,11 +10,7 @@ import dev.tachyonmcp.core.runtime.SessionState;
 import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.testkit.Mcp20251125Client;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -56,8 +52,11 @@ class SessionJanitorOutboundActivityTest {
     @Test
     void silentListeningStreamStaysAlive() throws Exception {
         var sessionId = initializeAndActivate(port);
-        try (var sseSocket = openRawSse(port, sessionId);
-                var reader = drainInBackground(sseSocket, 6000)) {
+        try (var client = new Mcp20251125Client(port)) {
+            var subscriber = client.openGetStream(sessionId, null);
+            var opened = subscriber.awaitRawResponse(body -> body.contains("\r\n\r\n"), ofSeconds(5));
+            assertThat(opened).contains("200 OK");
+
             // Well past the 2s TTL: the session must survive on heartbeats alone.
             await().atMost(ofSeconds(6)).pollInterval(ofMillis(200)).untilAsserted(() -> {
                 var session = ((ServerEngine) serverHandle).getSession(sessionId);
@@ -65,13 +64,11 @@ class SessionJanitorOutboundActivityTest {
                 assertThat(session.get().state()).isEqualTo(SessionState.ACTIVE);
             });
 
-            try (var client = new Mcp20251125Client(port)) {
-                var ping = client.post(sessionId, """
+            var ping = client.post(sessionId, """
                     {"jsonrpc":"2.0","id":1,"method":"ping"}
                     """);
-                assertThat(ping.statusCode()).isEqualTo(200);
-                assertThat(ping.body()).contains("result");
-            }
+            assertThat(ping.statusCode()).isEqualTo(200);
+            assertThat(ping.body()).contains("result");
         }
     }
 
@@ -86,8 +83,10 @@ class SessionJanitorOutboundActivityTest {
         try (noHbServer) {
             var noHbPort = noHbServer.port();
             var sessionId = initializeAndActivate(noHbPort);
-            try (var sseSocket = openRawSse(noHbPort, sessionId);
-                    var reader = drainInBackground(sseSocket, 6000)) {
+            try (var client = new Mcp20251125Client(noHbPort)) {
+                var subscriber = client.openGetStream(sessionId, null);
+                subscriber.awaitRawResponse(body -> body.contains("\r\n\r\n"), ofSeconds(5));
+
                 await().atMost(ofSeconds(6))
                         .pollInterval(ofMillis(200))
                         .untilAsserted(() -> assertThat(((ServerEngine) noHbServer).getSession(sessionId))
@@ -98,49 +97,9 @@ class SessionJanitorOutboundActivityTest {
 
     // ---- helpers ----
 
-    /** Keeps reading the socket in a background thread until {@code durationMs} elapses. */
-    private static AutoCloseable drainInBackground(Socket socket, long durationMs) {
-        var deadline = System.currentTimeMillis() + durationMs;
-        var future = CompletableFuture.runAsync(() -> {
-            var buf = new byte[4096];
-            while (System.currentTimeMillis() < deadline) {
-                try {
-                    socket.setSoTimeout(100);
-                    if (socket.getInputStream().read(buf) < 0) break;
-                } catch (SocketTimeoutException e) {
-                    // expected — poll until deadline
-                } catch (Exception e) {
-                    break;
-                }
-            }
-        });
-        return () -> future.cancel(true);
-    }
-
     private String initializeAndActivate(int targetPort) throws Exception {
         try (var client = new Mcp20251125Client(targetPort)) {
             return client.initialize();
         }
-    }
-
-    static Socket openRawSse(int targetPort, String sessionId) throws Exception {
-        var socket = new Socket("localhost", targetPort);
-        var req = ("GET /mcp HTTP/1.1\r\n"
-                        + "Host: localhost:" + targetPort + "\r\n"
-                        + "MCP-Session-Id: " + sessionId + "\r\n"
-                        + "Accept: text/event-stream\r\n"
-                        + "\r\n")
-                .getBytes(StandardCharsets.UTF_8);
-        socket.getOutputStream().write(req);
-        socket.getOutputStream().flush();
-        var sb = new StringBuilder();
-        var buf = new byte[1];
-        socket.setSoTimeout(5000);
-        while (!sb.toString().endsWith("\r\n\r\n")) {
-            if (socket.getInputStream().read(buf) < 0) break;
-            sb.append((char) buf[0]);
-        }
-        assertThat(sb.toString()).contains("200 OK");
-        return socket;
     }
 }

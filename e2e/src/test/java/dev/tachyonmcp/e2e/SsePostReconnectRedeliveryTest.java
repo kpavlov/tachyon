@@ -5,10 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.OutboundSseStreamMessageRouter;
-import java.io.IOException;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
-import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
@@ -68,45 +65,14 @@ class SsePostReconnectRedeliveryTest extends AbstractStatefulMcpE2eTest {
             // Resume that exact POST stream. The tool is still sleeping, so its response has not
             // been appended yet: the one-shot replay finds nothing, and only live re-delivery on
             // resume can hand the client its result.
-            try (var socket = openGetStream(sessionId, lastEventId)) {
-                var received = readStream(socket, body -> body.contains("resumed-payload"), 5000);
+            try (var subscriber = client.openGetStream(lastEventId)) {
+                var received =
+                        subscriber.awaitRawResponse(body -> body.contains("resumed-payload"), Duration.ofSeconds(5));
                 assertThat(received)
                         .as("resumed POST stream must receive the final response delivered after reconnect")
                         .contains("\"id\":9")
                         .contains("resumed-payload");
             }
         }
-    }
-
-    private Socket openGetStream(String sessionId, String lastEventId) throws IOException {
-        var socket = new Socket("localhost", port);
-        var req = "GET /mcp HTTP/1.1\r\n"
-                + "Host: localhost:" + port + "\r\n"
-                + "MCP-Session-Id: " + sessionId + "\r\n"
-                + "MCP-Protocol-Version: 2025-11-25\r\n"
-                + "Accept: text/event-stream\r\n"
-                + "Last-Event-ID: " + lastEventId + "\r\n"
-                + "\r\n";
-        socket.getOutputStream().write(req.getBytes(StandardCharsets.UTF_8));
-        socket.getOutputStream().flush();
-        socket.setSoTimeout(50);
-        return socket;
-    }
-
-    private static String readStream(Socket socket, java.util.function.Predicate<String> until, long timeoutMs)
-            throws IOException {
-        var sb = new StringBuilder();
-        var buf = new byte[1024];
-        var deadline = System.currentTimeMillis() + timeoutMs;
-        while (System.currentTimeMillis() < deadline && !until.test(sb.toString())) {
-            try {
-                var n = socket.getInputStream().read(buf);
-                if (n < 0) break;
-                if (n > 0) sb.append(new String(buf, 0, n, StandardCharsets.UTF_8));
-            } catch (SocketTimeoutException e) {
-                // No data this poll; keep reading until the deadline.
-            }
-        }
-        return sb.toString();
     }
 }

@@ -1,11 +1,9 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e;
 
+import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.net.Socket;
-import java.net.SocketTimeoutException;
-import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -20,30 +18,9 @@ class SseRetryTest extends AbstractStatefulMcpE2eTest {
             sessionId = client.initialize();
         }
 
-        try (var socket = new Socket("localhost", port)) {
-            var req = ("GET /mcp HTTP/1.1\r\n"
-                            + "Host: localhost:" + port + "\r\n"
-                            + "MCP-Session-Id: " + sessionId + "\r\n"
-                            + "Accept: text/event-stream\r\n"
-                            + "\r\n")
-                    .getBytes(StandardCharsets.UTF_8);
-            socket.getOutputStream().write(req);
-            socket.getOutputStream().flush();
-            socket.setSoTimeout(50);
-
-            var sb = new StringBuilder();
-            var buf = new byte[512];
-            var deadline = System.currentTimeMillis() + 5000;
-            while (System.currentTimeMillis() < deadline) {
-                try {
-                    var n = socket.getInputStream().read(buf);
-                    if (n < 0) break;
-                    if (n > 0) sb.append(new String(buf, 0, n, StandardCharsets.UTF_8));
-                } catch (SocketTimeoutException e) {
-                    // No data this poll; keep reading until the deadline.
-                }
-            }
-            var raw = sb.toString();
+        try (var client = createTestClient();
+                var subscriber = client.openGetStream(sessionId, null)) {
+            var raw = subscriber.awaitRawResponse(body -> body.contains("\r\n\r\n"), ofSeconds(5));
             assertThat(raw).contains("retry: 3000");
             assertThat(raw).contains("X-Accel-Buffering: no");
         }
