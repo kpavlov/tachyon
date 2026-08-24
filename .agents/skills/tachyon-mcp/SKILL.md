@@ -37,7 +37,7 @@ server.start();
 |---|---|
 | `.info(cfg)` | name, version, description, title, websiteUrl, instructions |
 | `.capabilities(cfg)` | tools/resources/prompts/tasks/completions/logging |
-| `.session(cfg)` | enabled (off by default = stateless), sessionTtl, SessionEventStore, SessionStore, SessionIdGenerator |
+| `.session(cfg)` | enabled (off by default = stateless), sessionTtl, SessionEventStore, SessionIdGenerator, onSessionClosed |
 | `.network(cfg)` | host, port, endpointPath, timeouts, CORS, maxContentLength, ioEngine |
 | `.runtime(cfg)` | shutdownGracePeriod, requestTimeout, clock |
 | `.monitoring(cfg)` | slow-request diagnostics (off by default) |
@@ -216,7 +216,8 @@ handler's `InteractionContext` and needs no token.
 | `.sessionTtl(d)` | 30s |
 | `.janitorInterval(d)` | 5s |
 | `.sessionIdGenerator(g)` | `sess_<uuid8>` (derives id from initialize `HttpRequest`) |
-| `.sessionEventStore(r)` / `.sessionStore(s)` | null (in-memory) |
+| `.sessionEventStore(r)` | null (in-memory) |
+| `.onSessionClosed(l)` | null (no callback); invoked with the session id on removal (explicit termination or TTL expiry) |
 
 ### Runtime `runtime(cfg -> ...)`
 

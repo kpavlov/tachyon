@@ -57,7 +57,6 @@ import dev.tachyonmcp.core.server.session.DispatchContext;
 import dev.tachyonmcp.core.server.session.SessionEvent;
 import dev.tachyonmcp.core.server.session.SessionEventStore;
 import dev.tachyonmcp.core.server.session.SessionManager;
-import dev.tachyonmcp.core.server.session.SessionStore;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.core.transport.netty.NettyServer;
 import dev.tachyonmcp.core.transport.netty.NettyServerConfig;
@@ -248,7 +247,6 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     DefaultTachyonServer(
             ExecutorService executor,
             SessionEventStore sessionEventStore,
-            SessionStore sessionStore,
             ServerConfig config,
             @Nullable JsonSchemaValidator inputValidator,
             @Nullable JsonSchemaValidator outputValidator,
@@ -263,7 +261,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         this.port = config.network().port();
         this.extensions = extensions != null ? extensions : List.of();
         this.pipelineCustomizer = pipelineCustomizer;
-        this.sessionManager = new SessionManager(sessionStore);
+        this.sessionManager = new SessionManager(config.session().onSessionClosed());
         final JsonSchemaValidator inputValidator1 =
                 inputValidator != null ? inputValidator : new NetworkntJsonSchemaValidator();
         final JsonSchemaValidator outputValidator1 = outputValidator != null ? outputValidator : inputValidator1;
@@ -615,6 +613,11 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     @Override
     public Optional<Session> getSession(String sessionId) {
         return sessionManager.getSession(sessionId);
+    }
+
+    @Override
+    public Optional<Session> resumeSession(String sessionId) {
+        return sessionManager.getOrResumeSession(sessionId, () -> sessionEventStore.exists(sessionId));
     }
 
     @Override

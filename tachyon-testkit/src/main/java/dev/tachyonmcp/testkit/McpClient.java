@@ -12,6 +12,8 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -38,6 +40,7 @@ public abstract class McpClient implements Closeable {
     private final URI mcpEndpoint;
     private final HttpClient httpClient;
     private final MessageAggregator<JsonNode> notifications = new MessageAggregator<>();
+    private final List<SseSocketSubscriber> openGetStreams = new CopyOnWriteArrayList<>();
     private volatile @Nullable String sessionId;
     private volatile boolean closed;
 
@@ -62,7 +65,27 @@ public abstract class McpClient implements Closeable {
     @Override
     public void close() {
         closed = true;
+        openGetStreams.forEach(SseSocketSubscriber::close);
         httpClient.close();
+    }
+
+    /**
+     * Opens a raw GET stream against this client's session, for reconnect / {@code Last-Event-ID}
+     * testing. Requires {@link #initialize()} (or {@link #sendInitialized}) to have set a session
+     * id first. Closed automatically when this client is {@link #close() closed}, in addition to
+     * whatever the caller does with it directly.
+     */
+    public SseSocketSubscriber openGetStream(@Nullable String lastEventId) {
+        return openGetStream(
+                Objects.requireNonNull(sessionId, "call initialize() before openGetStream()"), lastEventId);
+    }
+
+    /** {@link #openGetStream(String)} against an explicit session id rather than this client's stored one. */
+    public SseSocketSubscriber openGetStream(String sessionId, @Nullable String lastEventId) {
+        var subscriber = new SseSocketSubscriber(mcpEndpoint.getPort(), sessionId, lastEventId, protocolVersion());
+        openGetStreams.add(subscriber);
+        subscriber.start();
+        return subscriber;
     }
 
     /**

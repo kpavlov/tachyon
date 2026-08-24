@@ -237,8 +237,8 @@ them on a stateless server fails at construction.
 | `sessionTtl` | `30s` | Idle sessions are evicted after this duration |
 | `janitorInterval` | `5s` | Janitor sweep interval; controls how often expired sessions are checked |
 | `sessionEventStore` | in-memory | Custom session event store |
-| `sessionStore` | in-memory | Custom session store |
 | `sessionIdGenerator` | `sess_<uuid>` | Custom hook for deriving session ids from the initialize `HttpRequest` (headers/URI) |
+| `onSessionClosed` | none | Callback invoked with the session id whenever a session is removed (explicit termination or TTL expiry) |
 
 ## Runtime
 

@@ -3,11 +3,10 @@ package dev.tachyonmcp.core.server.config;
 
 import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.server.session.InMemorySessionEventStore;
-import dev.tachyonmcp.core.server.session.InMemorySessionStore;
 import dev.tachyonmcp.core.server.session.SessionEventStore;
-import dev.tachyonmcp.core.server.session.SessionStore;
 import io.netty.handler.codec.http.HttpRequest;
 import java.time.Duration;
+import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -17,18 +16,19 @@ import org.jspecify.annotations.Nullable;
  *                           created and no TTL tracking occurs; set {@code true} to enable sessions
  * @param sessionTtl         duration after which idle sessions are evicted (default 30s)
  * @param sessionEventStore   optional custom event store; {@code null} uses in-memory default
- * @param sessionStore       optional custom session store; {@code null} uses in-memory default
  * @param sessionIdGenerator session id generator; defaults to {@link SessionIdGenerator#DEFAULT}
  * @param janitorInterval    interval between janitor sweeps (default 5s);
  *                           {@code null} uses the default
+ * @param onSessionClosed    optional callback invoked with the session id whenever a session is
+ *                           removed (explicit termination or TTL expiry); {@code null} for none
  */
 public record SessionConfig(
         boolean enabled,
         @Nullable Duration sessionTtl,
         @Nullable SessionEventStore sessionEventStore,
-        @Nullable SessionStore sessionStore,
         @Nullable SessionIdGenerator<? super HttpRequest> sessionIdGenerator,
-        @Nullable Duration janitorInterval) {
+        @Nullable Duration janitorInterval,
+        @Nullable Consumer<String> onSessionClosed) {
 
     public static final Duration DEFAULT_SESSION_TTL = Duration.ofSeconds(30);
     public static final Duration DEFAULT_JANITOR_INTERVAL = Duration.ofSeconds(5);
@@ -38,10 +38,10 @@ public record SessionConfig(
     public SessionConfig {
         if (!enabled) {
             if (sessionIdGenerator != null
-                    || sessionStore != null
                     || sessionEventStore != null
                     || sessionTtl != null
-                    || janitorInterval != null) {
+                    || janitorInterval != null
+                    || onSessionClosed != null) {
                 throw new IllegalStateException("Session options require sessions to be enabled — call enabled(true)");
             }
         } else {
@@ -63,8 +63,8 @@ public record SessionConfig(
         private @Nullable Duration sessionTtl;
         private @Nullable Duration janitorInterval;
         private @Nullable SessionEventStore sessionEventStore;
-        private @Nullable SessionStore sessionStore;
         private @Nullable SessionIdGenerator<? super HttpRequest> sessionIdGenerator;
+        private @Nullable Consumer<String> onSessionClosed;
 
         private Builder() {}
 
@@ -102,14 +102,6 @@ public record SessionConfig(
         }
 
         /**
-         * Sets a custom session store implementation.
-         */
-        public Builder sessionStore(@Nullable SessionStore store) {
-            this.sessionStore = store;
-            return this;
-        }
-
-        /**
          * Sets a custom session id generator (derives the id from the initialize request).
          * {@code null} restores {@link SessionIdGenerator#DEFAULT}.
          */
@@ -119,15 +111,24 @@ public record SessionConfig(
         }
 
         /**
+         * Sets a callback invoked with the session id whenever a session is removed (explicit
+         * termination or TTL expiry).
+         */
+        public Builder onSessionClosed(@Nullable Consumer<String> listener) {
+            this.onSessionClosed = listener;
+            return this;
+        }
+
+        /**
          * Builds the {@link SessionConfig}.
          */
         public SessionConfig build() {
             if (!enabled) {
                 if (sessionIdGenerator != null
-                        || sessionStore != null
                         || sessionEventStore != null
                         || sessionTtl != null
-                        || janitorInterval != null) {
+                        || janitorInterval != null
+                        || onSessionClosed != null) {
                     throw new IllegalStateException(
                             "Session options require sessions to be enabled — call enabled(true)");
                 }
@@ -138,9 +139,9 @@ public record SessionConfig(
                         enabled,
                         sessionTtl,
                         sessionEventStore != null ? sessionEventStore : new InMemorySessionEventStore(),
-                        sessionStore != null ? sessionStore : new InMemorySessionStore(),
                         sessionIdGenerator,
-                        janitorInterval);
+                        janitorInterval,
+                        onSessionClosed);
             }
         }
     }

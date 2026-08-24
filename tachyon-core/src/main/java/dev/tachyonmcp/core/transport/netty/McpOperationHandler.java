@@ -413,12 +413,12 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             sendPlainTextAndClose(ctx, HttpResponseStatus.BAD_REQUEST, "Missing MCP-Session-Id header", origin);
             return;
         }
-        var sessionOpt = server.getSession(sessionId);
-        if (sessionOpt.isEmpty()) {
+        var session = server.resumeSession(sessionId);
+        if (session.isEmpty()) {
             sendPlainTextAndClose(ctx, HttpResponseStatus.NOT_FOUND, "Unknown session", origin);
             return;
         }
-        sseManager.openStream(ctx, sessionOpt.get(), req.headers().get(McpHeaderNames.LAST_EVENT_ID), origin);
+        sseManager.openStream(ctx, session.get(), req.headers().get(McpHeaderNames.LAST_EVENT_ID), origin);
     }
 
     private void handleDelete(ChannelHandlerContext ctx, FullHttpRequest req, @Nullable String origin) {

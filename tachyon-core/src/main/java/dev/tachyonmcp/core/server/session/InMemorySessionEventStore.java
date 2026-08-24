@@ -93,6 +93,29 @@ public final class InMemorySessionEventStore implements SessionEventStore {
         return lastIndex;
     }
 
+    /**
+     * Scans the retained window directly instead of going through {@link #drain}'s snapshot copy
+     * and cursor bookkeeping — pointless overhead for a plain boolean check. Held under the lock
+     * rather than snapshot-then-release like {@link #drain}: unlike a caller-supplied
+     * {@code Predicate} (which {@code drain} must assume can block, e.g. on I/O), the comparison
+     * here is a fixed, cheap {@code String.equals}, so it doesn't hold up concurrent appends
+     * meaningfully longer than copying the snapshot array already would have.
+     */
+    @Override
+    public boolean exists(String sessionId) {
+        lock.lock();
+        try {
+            for (var event : events) {
+                if (event.sessionId().equals(sessionId)) {
+                    return true;
+                }
+            }
+            return false;
+        } finally {
+            lock.unlock();
+        }
+    }
+
     @Override
     public void close() {
         lock.lock();

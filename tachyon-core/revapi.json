@@ -703,6 +703,66 @@
           "attachments": {
             "since": "1.0.0-beta.21"
           }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method dev.tachyonmcp.core.server.config.SessionConfig.Builder dev.tachyonmcp.core.server.config.SessionConfig.Builder::sessionStore(dev.tachyonmcp.core.server.session.SessionStore)",
+          "justification": "SessionStore persisted the live runtime Session (Netty connection, negotiated Protocol instance, process-local activity timestamp) through a public SPI no implementation could honor durably. Removed in favor of SessionEventStore, which was already a persistence-safe boundary and now also recognizes a resumable session from event history when no live record exists (e.g. after a restart)",
+          "attachments": {
+            "since": "1.0.0-beta.21"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.server.config.SessionConfig::<init>(boolean, java.time.Duration, dev.tachyonmcp.core.server.session.SessionEventStore, ===dev.tachyonmcp.core.server.session.SessionStore===, dev.tachyonmcp.api.server.session.SessionIdGenerator<? super io.netty.handler.codec.http.HttpRequest>, java.time.Duration)",
+          "new": "parameter void dev.tachyonmcp.core.server.config.SessionConfig::<init>(boolean, java.time.Duration, dev.tachyonmcp.core.server.session.SessionEventStore, ===dev.tachyonmcp.api.server.session.SessionIdGenerator<? super io.netty.handler.codec.http.HttpRequest>===, java.time.Duration, java.util.function.Consumer<java.lang.String>)",
+          "parameterIndex": "3",
+          "justification": "SessionStore record component removed (see Builder.sessionStore removal); the remaining components shift left and onSessionClosed is appended, so revapi reports this as three positional type changes rather than a removal plus an addition",
+          "attachments": {
+            "since": "1.0.0-beta.21"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.server.config.SessionConfig::<init>(boolean, java.time.Duration, dev.tachyonmcp.core.server.session.SessionEventStore, dev.tachyonmcp.core.server.session.SessionStore, ===dev.tachyonmcp.api.server.session.SessionIdGenerator<? super io.netty.handler.codec.http.HttpRequest>===, java.time.Duration)",
+          "new": "parameter void dev.tachyonmcp.core.server.config.SessionConfig::<init>(boolean, java.time.Duration, dev.tachyonmcp.core.server.session.SessionEventStore, dev.tachyonmcp.api.server.session.SessionIdGenerator<? super io.netty.handler.codec.http.HttpRequest>, ===java.time.Duration===, java.util.function.Consumer<java.lang.String>)",
+          "parameterIndex": "4",
+          "justification": "SessionStore record component removed (see Builder.sessionStore removal); the remaining components shift left and onSessionClosed is appended, so revapi reports this as three positional type changes rather than a removal plus an addition",
+          "attachments": {
+            "since": "1.0.0-beta.21"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter void dev.tachyonmcp.core.server.config.SessionConfig::<init>(boolean, java.time.Duration, dev.tachyonmcp.core.server.session.SessionEventStore, dev.tachyonmcp.core.server.session.SessionStore, dev.tachyonmcp.api.server.session.SessionIdGenerator<? super io.netty.handler.codec.http.HttpRequest>, ===java.time.Duration===)",
+          "new": "parameter void dev.tachyonmcp.core.server.config.SessionConfig::<init>(boolean, java.time.Duration, dev.tachyonmcp.core.server.session.SessionEventStore, dev.tachyonmcp.api.server.session.SessionIdGenerator<? super io.netty.handler.codec.http.HttpRequest>, java.time.Duration, ===java.util.function.Consumer<java.lang.String>===)",
+          "parameterIndex": "5",
+          "justification": "SessionStore record component removed (see Builder.sessionStore removal); onSessionClosed(String) is a new callback invoked when a session is removed (explicit termination or TTL expiry), appended as the record's last component",
+          "attachments": {
+            "since": "1.0.0-beta.21"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method dev.tachyonmcp.core.server.session.SessionStore dev.tachyonmcp.core.server.config.SessionConfig::sessionStore()",
+          "justification": "SessionStore accessor removed along with the record component (see Builder.sessionStore removal)",
+          "attachments": {
+            "since": "1.0.0-beta.21"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.removed",
+          "old": "interface dev.tachyonmcp.core.server.session.SessionStore",
+          "justification": "SessionStore's contract required implementations to persist the live runtime Session, including its Netty connection and negotiated Protocol instance, and a System.nanoTime() timestamp meaningless outside this JVM's uptime. No implementation could honor that contract; the live session table is now an internal, non-pluggable detail of SessionManager, and SessionEventStore (already persistence-safe) is the only remaining pluggable session-related store",
+          "attachments": {
+            "since": "1.0.0-beta.21"
+          }
         }
       ]
     }

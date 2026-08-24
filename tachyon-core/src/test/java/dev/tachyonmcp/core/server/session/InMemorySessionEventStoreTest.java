@@ -53,6 +53,18 @@ class InMemorySessionEventStoreTest {
     }
 
     @Test
+    void existsReflectsRecordedHistory() {
+        try (var store = new InMemorySessionEventStore()) {
+            assertThat(store.exists("s1")).isFalse();
+
+            store.append(requestEvent("s1", 1));
+
+            assertThat(store.exists("s1")).isTrue();
+            assertThat(store.exists("unknown")).isFalse();
+        }
+    }
+
+    @Test
     void closeClears() {
         var store = new InMemorySessionEventStore();
         store.append(requestEvent("s1", 1));

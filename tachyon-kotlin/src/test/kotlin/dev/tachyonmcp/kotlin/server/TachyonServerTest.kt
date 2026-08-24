@@ -10,7 +10,6 @@ import dev.tachyonmcp.api.server.extensions.ServerExtension
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.api.server.session.SessionIdGenerator
 import dev.tachyonmcp.core.server.session.InMemorySessionEventStore
-import dev.tachyonmcp.core.server.session.InMemorySessionStore
 import dev.tachyonmcp.kotlin.server.domain.Annotations
 import dev.tachyonmcp.kotlin.server.domain.Icon
 import dev.tachyonmcp.kotlin.server.domain.PromptArgument
@@ -148,7 +147,6 @@ internal class TachyonServerTest {
                 session {
                     enabled = true
                     sessionTtl = 15.seconds
-                    sessionStore = InMemorySessionStore()
                     sessionEventStore = InMemorySessionEventStore()
                     sessionIdGenerator { _, req -> req?.headers()?.get("X-Tenant-Id") ?: "anon" }
                 }

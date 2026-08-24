@@ -6,9 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.server.session.InMemorySessionEventStore;
-import dev.tachyonmcp.core.server.session.InMemorySessionStore;
 import io.netty.handler.codec.http.HttpRequest;
 import java.time.Duration;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -27,7 +27,6 @@ class SessionConfigTest {
 
         assertThat(config.enabled()).isFalse();
         assertThat(config.sessionIdGenerator()).isNull();
-        assertThat(config.sessionStore()).isNull();
         assertThat(config.sessionEventStore()).isNull();
     }
 
@@ -69,13 +68,6 @@ class SessionConfigTest {
         assertThatIllegalStateException()
                 .isThrownBy(() -> SessionConfig.builder()
                         .enabled(false)
-                        .sessionStore(new InMemorySessionStore())
-                        .build())
-                .withMessage(expectedMessage);
-
-        assertThatIllegalStateException()
-                .isThrownBy(() -> SessionConfig.builder()
-                        .enabled(false)
                         .sessionEventStore(new InMemorySessionEventStore())
                         .build())
                 .withMessage(expectedMessage);
@@ -86,20 +78,28 @@ class SessionConfigTest {
                         .sessionTtl(Duration.ofSeconds(42))
                         .build())
                 .withMessage(expectedMessage);
+
+        assertThatIllegalStateException()
+                .isThrownBy(() -> SessionConfig.builder()
+                        .enabled(false)
+                        .onSessionClosed(sessionId -> {})
+                        .build())
+                .withMessage(expectedMessage);
     }
 
     @Test
     void sessionOptionsWithEnabledAreAccepted() {
         SessionIdGenerator<HttpRequest> custom = (channelContext, request) -> "custom";
+        Consumer<String> onClosed = sessionId -> {};
 
         var config = SessionConfig.builder()
                 .enabled(true)
                 .sessionIdGenerator(custom)
-                .sessionStore(new InMemorySessionStore())
+                .onSessionClosed(onClosed)
                 .build();
 
         assertThat(config.enabled()).isTrue();
         assertThat(config.sessionIdGenerator()).isSameAs(custom);
-        assertThat(config.sessionStore()).isNotNull();
+        assertThat(config.onSessionClosed()).isSameAs(onClosed);
     }
 }

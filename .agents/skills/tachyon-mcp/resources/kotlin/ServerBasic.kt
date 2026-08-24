@@ -69,7 +69,6 @@ fun assembleServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer =
             enabled = true
             sessionTtl = 5.minutes
             janitorInterval = 5.seconds
-            sessionStore = null // default: InMemorySessionStore
             sessionEventStore = null // default: InMemorySessionEventStore
             // lambda DSL
             sessionIdGenerator { _, request -> request?.headers()?.get("X-Tenant-Id") ?: "anon" }

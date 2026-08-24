@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.core.runtime.Session;
 import dev.tachyonmcp.core.runtime.SessionState;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
 class StatefulSessionLifecycleTest extends AbstractStatefulMcpE2eTest {
@@ -141,6 +142,34 @@ class StatefulSessionLifecycleTest extends AbstractStatefulMcpE2eTest {
 
             assertThat(response.statusCode()).isEqualTo(400);
             assertThat(response.body()).isEqualTo("Missing MCP-Session-Id header");
+        }
+    }
+
+    /**
+     * A DELETE'd session's events remain in the durable SessionEventStore (DELETE never touches
+     * it) — a reconnect must still be rejected as unknown, not resurrected and replayed, the same
+     * way postWithDeletedSessionReturns404 already proves for the POST path.
+     */
+    @Test
+    void reconnectAfterDeleteIsNotResurrected() throws Exception {
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+
+            String lastEventId;
+            try (var subscriber = client.openGetStream(null)) {
+                lastEventId = subscriber.awaitFirstEventId(Duration.ofSeconds(5));
+            }
+
+            client.delete(sessionId);
+            assertThat(engine().getSession(sessionId)).isEmpty();
+
+            try (var subscriber = client.openGetStream(lastEventId)) {
+                var response = subscriber.awaitRawResponse(body -> body.contains("\r\n\r\n"), Duration.ofSeconds(2));
+                assertThat(response)
+                        .as("a reconnect for an explicitly DELETE'd session must not be resurrected")
+                        .contains("404")
+                        .doesNotContain("text/event-stream");
+            }
         }
     }
 }

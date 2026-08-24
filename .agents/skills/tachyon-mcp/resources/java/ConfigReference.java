@@ -12,7 +12,6 @@ import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.server.config.SessionConfig;
 import dev.tachyonmcp.core.server.config.TasksConfig;
 import dev.tachyonmcp.core.server.session.InMemorySessionEventStore;
-import dev.tachyonmcp.core.server.session.InMemorySessionStore;
 import dev.tachyonmcp.core.transport.netty.NettyIoEngine;
 
 import java.time.Clock;
@@ -103,7 +102,6 @@ final class ConfigReference {
             .enabled(true) // stateless by default; enable server-side sessions explicitly
             .sessionIdGenerator(SessionIdGenerator.DEFAULT)
             .sessionEventStore(new InMemorySessionEventStore())
-            .sessionStore(new InMemorySessionStore())
             .sessionTtl(Duration.ofMinutes(10))
             .janitorInterval(Duration.ofSeconds(5))
             .build();

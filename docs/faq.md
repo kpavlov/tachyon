@@ -58,7 +58,7 @@ Yes, by default. Stateless mode avoids server-side session affinity and is the s
 
 ### When should I enable sessions?
 
-Enable sessions when you need resumable SSE streams, `Last-Event-ID` replay, or session-scoped state. The defaults store sessions and events in memory; clustered deployments need sticky routing or shared `SessionStore` and `SessionEventStore` implementations. See
+Enable sessions when you need resumable SSE streams, `Last-Event-ID` replay, or session-scoped state. The defaults keep sessions and events in memory. See
 [session configuration](configuration.md#session).
 
 ### How should I deploy long-running tools?

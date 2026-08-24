@@ -82,6 +82,14 @@ public interface ServerEngine extends TachyonServer {
     /** Returns the session with the given ID, if present. */
     Optional<Session> getSession(String sessionId);
 
+    /**
+     * Returns the live session for {@code sessionId} if present; otherwise, unless it was
+     * explicitly removed, atomically recreates it if the configured {@code SessionEventStore}
+     * has recorded event history for it (e.g. after a restart). Concurrent callers for the same
+     * id observe the same instance.
+     */
+    Optional<Session> resumeSession(String sessionId);
+
     /** Removes and closes the session with the given ID. */
     void removeSession(String sessionId);
 

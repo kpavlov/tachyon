@@ -5,7 +5,6 @@ import dev.tachyonmcp.api.runtime.InteractionContext
 import dev.tachyonmcp.api.server.session.SessionIdGenerator
 import dev.tachyonmcp.core.server.config.SessionConfig
 import dev.tachyonmcp.core.server.session.SessionEventStore
-import dev.tachyonmcp.core.server.session.SessionStore
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import io.netty.handler.codec.http.HttpRequest
 import kotlin.time.Duration
@@ -24,11 +23,11 @@ public class SessionScope
         /** Janitor sweep interval. */
         public var janitorInterval: Duration? = null
 
-        /** Custom session store implementation. */
-        public var sessionStore: SessionStore? = null
-
         /** Custom session event store. */
         public var sessionEventStore: SessionEventStore? = null
+
+        /** Called with the session id whenever a session is removed (explicit termination or TTL expiry). */
+        public var onSessionClosed: ((String) -> Unit)? = null
 
         /** Session ID generator;
          * defaults to [dev.tachyonmcp.api.server.session.SessionIdGenerator.DEFAULT]
@@ -57,8 +56,10 @@ public class SessionScope
             builder.enabled(enabled)
             sessionTtl?.let { builder.sessionTtl(it.toJavaDuration()) }
             janitorInterval?.let { builder.janitorInterval(it.toJavaDuration()) }
-            sessionStore?.let(builder::sessionStore)
             sessionEventStore?.let(builder::sessionEventStore)
+            onSessionClosed?.let { listener ->
+                builder.onSessionClosed { sessionId -> listener(sessionId) }
+            }
             if (enabled) builder.sessionIdGenerator(sessionIdGenerator)
         }
     }
