@@ -178,21 +178,22 @@ public class McpResponseMapper implements ProtocolResponseMapper {
                         case JsonNode n -> n;
                         default -> JsonUtils.parse(JsonUtils.writeString(structuredValue));
                     };
-            if (!node.isObject()) {
-                throw new IllegalArgumentException(
-                        "structuredContent must serialize to a JSON object, got " + node.getNodeType() + ": " + node);
+            // 2025-11-25's structuredContent is object-only on the wire; array/scalar values (only
+            // representable from 2026-07-28 onward) fall back to the backwards-compat text block
+            // below instead of being encoded as structuredContent.
+            if (node.isObject()) {
+                var objNode = (ObjectNode) node;
+                var map = new LinkedHashMap<String, JsonNode>();
+                for (var entry : objNode.properties()) {
+                    map.put(entry.getKey(), entry.getValue());
+                }
+                structured = map;
             }
-            var objNode = (ObjectNode) node;
-            var map = new LinkedHashMap<String, JsonNode>();
-            for (var entry : objNode.properties()) {
-                map.put(entry.getKey(), entry.getValue());
-            }
-            structured = map;
             // MCP: a tool returning structured content SHOULD also return the serialized JSON in a
             // text block (backwards-compat). Inject it when the handler supplied no text block.
             var hasText = content.stream().anyMatch(c -> c instanceof TextContent);
-            if (!hasText) {
-                blocks.add(McpToolMapper.toProtocolContentBlock(TextContent.of(objNode.toString())));
+            if (!hasText || !node.isObject()) {
+                blocks.add(McpToolMapper.toProtocolContentBlock(TextContent.of(node.toString())));
             }
         }
         return new CallToolResult(blocks, structured, isError, meta, null);

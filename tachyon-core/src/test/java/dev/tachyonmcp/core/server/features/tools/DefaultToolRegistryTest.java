@@ -688,10 +688,36 @@ class DefaultToolRegistryTest {
     }
 
     @Test
-    void shouldRejectOutputSchemaWithWrongRootType() {
+    void shouldAcceptOutputSchemaWithScalarRootType() {
         var outputSchema = parseJson("""
             {"type":"string"}
             """);
+        registry.register(
+                ToolDescriptor.builder()
+                        .name("scalar-output")
+                        .outputSchema(outputSchema.toString())
+                        .build(),
+                (context, request) -> ToolResult.text("x"));
+        assertThat(registry.find("scalar-output")).isPresent();
+    }
+
+    @Test
+    void shouldAcceptOutputSchemaWithArrayRootType() {
+        var outputSchema = parseJson("""
+            {"type":"array","items":{"type":"integer"}}
+            """);
+        registry.register(
+                ToolDescriptor.builder()
+                        .name("array-output")
+                        .outputSchema(outputSchema.toString())
+                        .build(),
+                (context, request) -> ToolResult.text("x"));
+        assertThat(registry.find("array-output")).isPresent();
+    }
+
+    @Test
+    void shouldRejectOutputSchemaThatIsNotAnObject() {
+        var outputSchema = parseJson("\"just a string\"");
         assertThatThrownBy(() -> registry.register(
                         ToolDescriptor.builder()
                                 .name("bad-output")
@@ -700,7 +726,7 @@ class DefaultToolRegistryTest {
                         (context, request) -> ToolResult.text("x")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("outputSchema")
-                .hasMessageContaining("\"type\": \"object\"");
+                .hasMessageContaining("must be a JSON Schema object");
     }
 
     @Test
@@ -784,6 +810,10 @@ class DefaultToolRegistryTest {
             assertThat(((CallToolResult) result).structuredContent()).containsOnlyKeys("jsonField", "plainField");
         }
     }
+
+    // Rejecting output that fails outputSchema validation is covered end-to-end by
+    // SchemaValidationTest.shouldRejectToolCallWithInvalidStructuredOutput (e2e) -- no unit test
+    // here per this project's "drop unit if E2E already covers it" rule.
 
     // endregion
 

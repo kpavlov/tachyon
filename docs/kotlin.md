@@ -263,10 +263,12 @@ tool(
 tool("c", inputSchema = buildJsonObject { put("type", "object") }) { /* ... */ }
 ```
 
-Schema roots are validated at registration time: a schema whose root does not declare
-`"type": "object"` fails fast with `IllegalArgumentException` instead of surfacing later
-in the MCP client. Tool descriptions longer than 2048 characters log a warning —
-clients may truncate them.
+Schema roots are validated at registration time: `inputSchema` must declare `"type": "object"`
+(tool-call arguments are always an object) or registration fails fast with
+`IllegalArgumentException` instead of surfacing later in the MCP client. `outputSchema` accepts
+any JSON Schema root — object, array, or scalar (see [ToolResult factories](#toolresult-factories)
+for the per-protocol-version wire behavior). Tool descriptions longer than 2048 characters log a
+warning — clients may truncate them.
 
 ## kotlinx.serialization integration
 
@@ -298,9 +300,10 @@ tool(
 The Kotlin DSL retains Tachyon's Jackson serde by default. Select kotlinx serialization explicitly:
 `json { serde = KxSerializationSerde.Default }`. Configure a strict `Json` via
 `json { serde = KxSerializationSerde(Json { ignoreUnknownKeys = false }) }`.
-`success(value)` encodes via the configured serde; the value must encode to a JSON
-object and pairs with the declared `outputSchema`. For a pre-serialized JSON payload
-that bypasses the serde, use `ToolResult.raw(json, text)`.
+`success(value)` encodes via the configured serde and pairs with the declared `outputSchema` —
+the resulting JSON must match whatever shape that schema declares (object, array, or scalar; see
+[ToolResult factories](#toolresult-factories) below for the per-protocol-version wire behavior).
+For a pre-serialized JSON payload that bypasses the serde, use `ToolResult.raw(json, text)`.
 
 ### Typed decode/result via configured serde
 
@@ -392,7 +395,9 @@ Inside a tool lambda, prefer the `ToolScope` shortcuts: `text(t)`, `success(v)`,
 `fail`, not `error` — a member `error(String)` would shadow Kotlin's stdlib `error()`, silently
 turning a thrown `IllegalStateException` into a returned value.
 
-`structuredContent` requires a JSON object shape. Tachyon rejects primitives and arrays at runtime.
+Under MCP 2026-07-28, `structuredContent` may be any JSON shape (object, array, or scalar). Under
+2025-11-25, non-object values fall back to the serialized-JSON text block instead of
+`structuredContent`, since that protocol version's wire shape is object-only.
 
 With kotlinx-serialization on the classpath, prefer `success(value)` inside a tool lambda —
 the configured serde encodes the value into `structuredContent`. Without an explicit `text`

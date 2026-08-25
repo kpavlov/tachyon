@@ -18,33 +18,20 @@ public class JsonSchemaUtils {
     }
 
     /**
-     * Validates that a tool schema is well-formed JSON with an object root declaring
-     * {@code "type": "object"}.
+     * Validates that a tool's {@code inputSchema} is well-formed JSON with an object root
+     * declaring {@code "type": "object"}. Tool-call arguments are always a JSON object, so this
+     * restriction is unconditional across every MCP protocol version.
      *
-     * @param factory    parses and validates the schema's raw JSON; must handle {@link String}
+     * @param factory  parses and validates the schema's raw JSON; must handle {@link String}
      *     sources, otherwise schemas cannot be validated
-     * @param schemaKind the kind of schema being validated
-     * @param toolName   the name of the tool owning the schema
-     * @param schema     the schema to validate, or {@code null}
+     * @param toolName the name of the tool owning the schema
+     * @param schema   the schema to validate, or {@code null}
      * @throws IllegalArgumentException if the schema is not valid JSON, or its root is invalid
      */
-    public static void validateSchemaRoot(
-            JsonSchemaFactory<?> factory, String schemaKind, String toolName, @Nullable JsonSchema schema) {
+    public static void validateInputSchemaRoot(
+            JsonSchemaFactory<?> factory, String toolName, @Nullable JsonSchema schema) {
         if (schema == null) return;
-        if (factory.sourceType() != String.class) {
-            throw new IllegalStateException(
-                    "Configured schema factory '" + factory.getClass().getName()
-                            + "' does not handle String sources and cannot validate the schema of tool '"
-                            + toolName + "'.");
-        }
-        @SuppressWarnings("unchecked")
-        var validated = ((JsonSchemaFactory<String>) factory).toJsonSchema(schema.json());
-        if (validated.isEmpty()) {
-            throw new IllegalStateException(
-                    "Configured schema factory does not handle String sources and cannot validate the schema of tool '"
-                            + toolName + "'.");
-        }
-        var node = JsonUtils.parse(validated.get());
+        var node = parseSchemaRoot(factory, "inputSchema", toolName, schema);
         final String detail;
         if (!node.isObject()) {
             detail = "got: " + node.getNodeType();
@@ -56,7 +43,48 @@ public class JsonSchemaUtils {
             return;
         }
         throw new IllegalArgumentException(
-                "Tool '" + toolName + "' " + schemaKind + " root must declare \"type\": \"object\", " + detail);
+                "Tool '" + toolName + "' inputSchema root must declare \"type\": \"object\", " + detail);
+    }
+
+    /**
+     * Validates that a tool's {@code outputSchema} is well-formed JSON with an object-shaped
+     * schema container at its root. Unlike {@code inputSchema}, no {@code "type"} restriction is
+     * enforced: MCP 2026-07-28 permits any valid JSON Schema 2020-12 as {@code outputSchema}
+     * (object, array, or scalar root), while older protocol versions restrict {@code
+     * structuredContent} to a JSON object on the wire — that fallback is handled at response-encode
+     * time, not at registration.
+     *
+     * @param factory  parses and validates the schema's raw JSON; must handle {@link String}
+     *     sources, otherwise schemas cannot be validated
+     * @param toolName the name of the tool owning the schema
+     * @param schema   the schema to validate, or {@code null}
+     * @throws IllegalArgumentException if the schema is not valid JSON, or its root is invalid
+     */
+    public static void validateOutputSchemaRoot(
+            JsonSchemaFactory<?> factory, String toolName, @Nullable JsonSchema schema) {
+        if (schema == null) return;
+        var node = parseSchemaRoot(factory, "outputSchema", toolName, schema);
+        if (node.isObject()) return;
+        throw new IllegalArgumentException(
+                "Tool '" + toolName + "' outputSchema must be a JSON Schema object, got: " + node.getNodeType());
+    }
+
+    private static JsonNode parseSchemaRoot(
+            JsonSchemaFactory<?> factory, String schemaKind, String toolName, JsonSchema schema) {
+        if (factory.sourceType() != String.class) {
+            throw new IllegalStateException(
+                    "Configured schema factory '" + factory.getClass().getName()
+                            + "' does not handle String sources and cannot validate the " + schemaKind
+                            + " of tool '" + toolName + "'.");
+        }
+        @SuppressWarnings("unchecked")
+        var validated = ((JsonSchemaFactory<String>) factory).toJsonSchema(schema.json());
+        if (validated.isEmpty()) {
+            throw new IllegalStateException(
+                    "Configured schema factory does not handle String sources and cannot validate the " + schemaKind
+                            + " of tool '" + toolName + "'.");
+        }
+        return JsonUtils.parse(validated.get());
     }
 
     /**

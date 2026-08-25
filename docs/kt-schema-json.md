@@ -341,9 +341,11 @@ This gives one end-to-end contract:
 | Structured result | `WeatherObservation` mapped to `GetWeatherResponse` and returned through `ToolResult.structured` |
 | Payload encoding | `KxSerializationSerde.Default` |
 
-The MCP 2026-07-28 specification permits any JSON value in `structuredContent`. Tachyon currently
-accepts object-root tool output schemas and object-shaped structured results, so use a data class
-as the top-level result rather than a list or primitive.
+The MCP 2026-07-28 specification permits any JSON value in `structuredContent`, and Tachyon accepts
+array- and scalar-root `outputSchema`s under that protocol version. Under 2025-11-25, `structuredContent`
+is object-only on the wire; a non-object result still validates against `outputSchema` but falls back
+to the serialized-JSON text block. A data class as the top-level result stays the simplest choice when
+targeting both protocol versions.
 
 See the exact
 [`GetWeatherTool.kt`](https://github.com/kpavlov/tachyon/blob/main/examples/weather-mcp-kotlin/src/main/kotlin/com/example/weather/GetWeatherTool.kt)

@@ -307,8 +307,11 @@ public final class ToolMethodHandlers {
 
         private ToolResult prepareResult(@Nullable JsonSchema outputSchema, ToolResult result) {
             var serialized = JsonUtils.serializeStructured(result, payloadSerializer);
-            validateOutput(outputSchema, serialized);
-            return serialized;
+            var validationError = validateOutput(outputSchema, serialized);
+            if (validationError == null) return serialized;
+            var error = ToolResult.error(validationError);
+            var meta = serialized.meta();
+            return meta == null || meta.isEmpty() ? error : error.withMeta(meta);
         }
 
         private @Nullable String validateInput(@Nullable JsonSchema schema, ToolRequest request) {
@@ -318,16 +321,13 @@ public final class ToolMethodHandlers {
             return errors.isEmpty() ? null : SchemaValidationError.join(errors);
         }
 
-        private void validateOutput(@Nullable JsonSchema schema, ToolResult result) {
-            if (schema == null || outputValidator == JsonSchemaValidator.noop()) return;
-            if (!(result instanceof ToolResult.Success success) || success.structuredValue() == null) return;
+        private @Nullable String validateOutput(@Nullable JsonSchema schema, ToolResult result) {
+            if (schema == null || outputValidator == JsonSchemaValidator.noop()) return null;
+            if (!(result instanceof ToolResult.Success success) || success.structuredValue() == null) return null;
             var value = success.structuredValue();
             var json = value instanceof JsonDocument document ? document.json() : payloadSerializer.serialize(value);
             var errors = outputValidator.validate(schema, JsonDocument.of(json));
-            if (!errors.isEmpty()) {
-                logger.debug(
-                        "Tool output failed schema validation (advisory only): {}", SchemaValidationError.join(errors));
-            }
+            return errors.isEmpty() ? null : SchemaValidationError.join(errors);
         }
 
         private Object handlerError(String name, Throwable cause) {

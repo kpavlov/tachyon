@@ -120,7 +120,11 @@ hold a `CompletionStage` (a non-blocking client, another async service), return 
 | `ToolResult.empty()`                    | No content                             |
 | `ToolResult.inputRequired(reqs, state)` | Elicitation request                    |
 
-`structuredContent` must serialize to a JSON **object**; Tachyon throws `IllegalArgumentException` for arrays and primitives.
+Under MCP 2026-07-28, `structuredContent`/`outputSchema` may be any JSON value — object, array, or
+scalar. Under 2025-11-25, `structuredContent` stays object-only on the wire: a non-object result
+still validates against `outputSchema`, but is delivered as the serialized-JSON text block instead
+of `structuredContent`. A structured value that fails its declared `outputSchema` is rejected as an
+`isError: true` tool result on every protocol version.
 
 ## Add metadata
 
