@@ -23,6 +23,9 @@ import org.jspecify.annotations.Nullable;
         typeImmutable = "Default*")
 public interface ResourceDescriptor extends ServerFeature.Descriptor, HasMeta {
 
+    /** The URI that identifies this resource. */
+    String uri();
+
     /**
      * The resource's display name — a label, not an identifier. {@link #uri()} identifies the
      * resource; distinct resources MAY share a {@code name} (e.g. the same skill mounted under two
@@ -37,9 +40,6 @@ public interface ResourceDescriptor extends ServerFeature.Descriptor, HasMeta {
     /** Optional description of this resource. */
     @Nullable
     String description();
-
-    /** The URI that identifies this resource. */
-    String uri();
 
     /** Optional MIME type of the resource content. */
     @Nullable
@@ -116,13 +116,13 @@ public interface ResourceDescriptor extends ServerFeature.Descriptor, HasMeta {
         /** Fills this builder with the attribute values from {@code instance}. */
         Builder from(ResourceDescriptor instance);
 
+        Builder uri(String uri);
+
         Builder name(String name);
 
         Builder title(@Nullable String title);
 
         Builder description(@Nullable String description);
-
-        Builder uri(String uri);
 
         Builder mimeType(@Nullable String mimeType);
 

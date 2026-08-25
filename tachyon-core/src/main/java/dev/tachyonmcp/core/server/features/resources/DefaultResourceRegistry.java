@@ -20,6 +20,8 @@ import dev.tachyonmcp.core.server.features.Pagination;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -233,11 +235,6 @@ public class DefaultResourceRegistry implements Resources {
     /**
      * Lists registered resources in name order using cursor-based pagination.
      *
-     * <p>ponytail: {@link Pagination#paginate} resumes by matching a single cursor key; with
-     * resource names no longer unique (see {@link Resources#register}), a page boundary that falls
-     * after the 2nd+ of 3-or-more same-named resources can re-return one item. Switch the cursor
-     * key to {@code uri} if that's observed in practice.
-     *
      * @param limit  the maximum number of resources to include; the configured page size is used when this value is not positive
      * @param cursor the cursor identifying the starting position, or {@code null} to start from the beginning
      * @return      the paginated resources and the cursor for the next page
@@ -248,7 +245,7 @@ public class DefaultResourceRegistry implements Resources {
                 .map(ResourceEntry::descriptor)
                 .sorted(RESOURCE_ORDER)
                 .toList();
-        return Pagination.paginate(all, lim, cursor, ResourceDescriptor::name);
+        return Pagination.paginate(all, lim, cursor, DefaultResourceRegistry::resourceCursorKey);
     }
 
     public PaginatedResult<ResourceDescriptor> list(
@@ -259,7 +256,13 @@ public class DefaultResourceRegistry implements Resources {
                 .filter(filter)
                 .sorted(RESOURCE_ORDER)
                 .toList();
-        return Pagination.paginate(all, lim, cursor, ResourceDescriptor::name);
+        return Pagination.paginate(all, lim, cursor, DefaultResourceRegistry::resourceCursorKey);
+    }
+
+    private static String resourceCursorKey(ResourceDescriptor descriptor) {
+        var encoder = Base64.getUrlEncoder().withoutPadding();
+        return encoder.encodeToString(descriptor.name().getBytes(StandardCharsets.UTF_8))
+                + encoder.encodeToString(descriptor.uri().getBytes(StandardCharsets.UTF_8));
     }
 
     /**

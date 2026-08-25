@@ -95,7 +95,11 @@ class DefaultResourceRegistryTest {
         registry.register(resource("alpha"), EMPTY_HANDLER);
         registry.register(resource("beta"), EMPTY_HANDLER);
         registry.register(resource("gamma"), EMPTY_HANDLER);
-        var result = registry.list(1, "alpha");
+        var firstPage = registry.list(1, null);
+        assertThat(firstPage.items()).hasSize(1);
+        assertThat(firstPage.nextCursor()).isNotNull();
+
+        var result = registry.list(1, firstPage.nextCursor());
         assertThat(result.items()).hasSize(1);
         assertThat(result.items().getFirst().name()).isEqualTo("beta");
     }
@@ -105,7 +109,7 @@ class DefaultResourceRegistryTest {
         registry.register(resource("a"), EMPTY_HANDLER);
         registry.register(resource("b"), EMPTY_HANDLER);
         var result = registry.list(1, null);
-        assertThat(result.nextCursor()).isEqualTo("a");
+        assertThat(result.nextCursor()).isNotNull();
     }
 
     @Test
@@ -123,7 +127,7 @@ class DefaultResourceRegistryTest {
         reg.register(resource("b"), EMPTY_HANDLER);
         var result = reg.list(0, null);
         assertThat(result.items()).hasSize(1);
-        assertThat(result.nextCursor()).isEqualTo("a");
+        assertThat(result.nextCursor()).isNotNull();
     }
 
     @Test
