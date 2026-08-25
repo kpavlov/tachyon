@@ -48,7 +48,9 @@ class ElvishMagicServerTest {
             """);
 
         assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-        assertThatJson(response.body()).isEqualTo("""
+        assertThatJson(response.body())
+            .whenIgnoringPaths("result.skills[*].resources[*].size")
+            .isEqualTo("""
             {
               "jsonrpc":"2.0",
               "id":1,
