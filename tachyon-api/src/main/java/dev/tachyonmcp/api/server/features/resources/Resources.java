@@ -14,8 +14,20 @@ public interface Resources {
     /**
      * Registers a resource descriptor with its synchronous function.
      *
-     * <p>Registering a resource whose name already exists replaces it. A URI is unique across
-     * resources: registering a URI already owned by a different name is rejected.
+     * <p>A resource's {@link ResourceDescriptor#uri() uri} is its identity. {@link
+     * ResourceDescriptor#name() name} is a display label, not identity, and MAY repeat across
+     * resources — for example, the same skill mounted under two different namespace prefixes. Two
+     * resources that share a name but have distinct URIs both remain registered; neither replaces
+     * the other.
+     *
+     * <p>Registration is keyed on URI, not name:
+     *
+     * <ul>
+     *   <li>Registering a URI already known under the <em>same</em> name replaces that resource in
+     *       place (e.g. updated content or handler).
+     *   <li>Registering a URI already known under a <em>different</em> name is rejected — one URI
+     *       naming two unrelated resources is a genuine identity conflict, not a label collision.
+     * </ul>
      *
      * @param descriptor the resource descriptor to register
      * @param fn         the resource function
@@ -60,7 +72,11 @@ public interface Resources {
     }
 
     /**
-     * Removes the registered resource with the specified name.
+     * Removes a registered resource with the specified name.
+     *
+     * <p>{@code name} is not guaranteed unique — see {@link #register}. If more than one resource
+     * shares {@code name}, one of them is removed; which one is unspecified. Prefer {@link
+     * #unregisterByUri} when the URI is known.
      *
      * @param name the name of the resource to remove
      * @return {@code true} if a resource was removed, {@code false} otherwise
@@ -78,6 +94,10 @@ public interface Resources {
 
     /**
      * Finds a registered resource descriptor by name.
+     *
+     * <p>{@code name} is not guaranteed unique — see {@link #register}. If more than one resource
+     * shares {@code name}, one of them is returned; which one is unspecified. Prefer {@link
+     * #findByUri} when the URI is known.
      *
      * @param name the resource name
      * @return the matching descriptor, or an empty {@code Optional} if no resource is registered with that name

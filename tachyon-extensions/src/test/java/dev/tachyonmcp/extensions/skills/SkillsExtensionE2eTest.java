@@ -349,6 +349,292 @@ class SkillsExtensionE2eTest {
     }
 
     @Test
+    void sameNamedSkillsUnderDifferentNamespacesAreBothListedAndReadableOn20260728() throws Exception {
+        var gitWorkflowDir = filesystemSkillsDir.resolve("git-workflow");
+        try (final var server = startServer(SkillsExtension.builder()
+                        .registry(new FilesystemSkillsRegistry(gitWorkflowDir, "team/git-workflow"))
+                        .registry(new FilesystemSkillsRegistry(gitWorkflowDir, "acme/git-workflow"))
+                        .build());
+                final var client = createClient(server.port())) {
+
+            // skills/list: both present in registration order, each keeping its own frontmatter name
+            // language=JSON
+            var skillsList = client.post("""
+                {"jsonrpc":"2.0","id":1,"method":"skills/list","params":{"_meta":{"%s":{}}}}
+                """.formatted(SkillsExtension.ID));
+            // language=JSON
+            assertThatJson(skillsList.body()).isEqualTo("""
+                {
+                  "jsonrpc":"2.0",
+                  "id":1,
+                  "result":{
+                    "skills":[
+                      {
+                        "uri":"skill://team/git-workflow/SKILL.md",
+                        "frontmatter":{
+                          "name":"git-workflow",
+                          "description":"Follow this team's Git conventions for branching and commits"
+                        },
+                        "resources":[
+                          {"uri":"skill://team/git-workflow/SKILL.md","digest":"sha256:b9de7cc1f03a390dd4ee3b2881a13eb5e39f02ec5f44ffb0ab9fb91e10c08d67","size":234},
+                          {"uri":"skill://team/git-workflow/references/BRANCHING.md","digest":"sha256:c23e5f309d54105cc561675ce4384fa62971e00919fe9bd297a37e443746c24e","size":68}
+                        ]
+                      },
+                      {
+                        "uri":"skill://acme/git-workflow/SKILL.md",
+                        "frontmatter":{
+                          "name":"git-workflow",
+                          "description":"Follow this team's Git conventions for branching and commits"
+                        },
+                        "resources":[
+                          {"uri":"skill://acme/git-workflow/SKILL.md","digest":"sha256:b9de7cc1f03a390dd4ee3b2881a13eb5e39f02ec5f44ffb0ab9fb91e10c08d67","size":234},
+                          {"uri":"skill://acme/git-workflow/references/BRANCHING.md","digest":"sha256:c23e5f309d54105cc561675ce4384fa62971e00919fe9bd297a37e443746c24e","size":68}
+                        ]
+                      }
+                    ],
+                    "resultType":"complete",
+                    "ttlMs":0,
+                    "cacheScope":"public"
+                  }
+                }
+                """);
+
+            // skills/get: each fetched independently by its own URI, no cross-contamination
+            // language=JSON
+            var teamGet = client.post("""
+                {"jsonrpc":"2.0","id":2,"method":"skills/get","params":{"uri":"skill://team/git-workflow/SKILL.md","_meta":{"%s":{}}}}
+                """.formatted(SkillsExtension.ID));
+            // language=JSON
+            assertThatJson(teamGet.body()).isEqualTo("""
+                {
+                  "jsonrpc":"2.0",
+                  "id":2,
+                  "result":{
+                    "skill":{
+                      "uri":"skill://team/git-workflow/SKILL.md",
+                      "frontmatter":{
+                        "name":"git-workflow",
+                        "description":"Follow this team's Git conventions for branching and commits"
+                      },
+                      "resources":[
+                        {"uri":"skill://team/git-workflow/SKILL.md","digest":"sha256:b9de7cc1f03a390dd4ee3b2881a13eb5e39f02ec5f44ffb0ab9fb91e10c08d67","size":234},
+                        {"uri":"skill://team/git-workflow/references/BRANCHING.md","digest":"sha256:c23e5f309d54105cc561675ce4384fa62971e00919fe9bd297a37e443746c24e","size":68}
+                      ]
+                    },
+                    "resultType":"complete"
+                  }
+                }
+                """);
+
+            // language=JSON
+            var acmeGet = client.post("""
+                {"jsonrpc":"2.0","id":3,"method":"skills/get","params":{"uri":"skill://acme/git-workflow/SKILL.md","_meta":{"%s":{}}}}
+                """.formatted(SkillsExtension.ID));
+            // language=JSON
+            assertThatJson(acmeGet.body()).isEqualTo("""
+                {
+                  "jsonrpc":"2.0",
+                  "id":3,
+                  "result":{
+                    "skill":{
+                      "uri":"skill://acme/git-workflow/SKILL.md",
+                      "frontmatter":{
+                        "name":"git-workflow",
+                        "description":"Follow this team's Git conventions for branching and commits"
+                      },
+                      "resources":[
+                        {"uri":"skill://acme/git-workflow/SKILL.md","digest":"sha256:b9de7cc1f03a390dd4ee3b2881a13eb5e39f02ec5f44ffb0ab9fb91e10c08d67","size":234},
+                        {"uri":"skill://acme/git-workflow/references/BRANCHING.md","digest":"sha256:c23e5f309d54105cc561675ce4384fa62971e00919fe9bd297a37e443746c24e","size":68}
+                      ]
+                    },
+                    "resultType":"complete"
+                  }
+                }
+                """);
+
+            // base resources/list (no extension negotiation): both manifests present, same name
+            // language=JSON
+            var list = client.post("""
+                {"jsonrpc":"2.0","id":4,"method":"resources/list","params":{}}
+                """);
+            // language=JSON
+            assertThatJson(list.body()).isEqualTo("""
+                {
+                  "jsonrpc":"2.0",
+                  "id":4,
+                  "result":{
+                    "resources":[
+                      {
+                        "uri":"skill://acme/git-workflow/references/BRANCHING.md",
+                        "name":"acme/git-workflow/references/BRANCHING.md",
+                        "mimeType":"text/markdown"
+                      },
+                      {
+                        "uri":"skill://acme/git-workflow/SKILL.md",
+                        "name":"git-workflow",
+                        "description":"Follow this team's Git conventions for branching and commits",
+                        "mimeType":"text/markdown"
+                      },
+                      {
+                        "uri":"skill://team/git-workflow/SKILL.md",
+                        "name":"git-workflow",
+                        "description":"Follow this team's Git conventions for branching and commits",
+                        "mimeType":"text/markdown"
+                      },
+                      {
+                        "uri":"skill://team/git-workflow/references/BRANCHING.md",
+                        "name":"team/git-workflow/references/BRANCHING.md",
+                        "mimeType":"text/markdown"
+                      }
+                    ],
+                    "resultType":"complete",
+                    "ttlMs":0,
+                    "cacheScope":"public"
+                  }
+                }
+                """);
+
+            var skillMd = Files.readString(gitWorkflowDir.resolve("SKILL.md"));
+
+            // base resources/read: both readable by their own URI
+            // language=JSON
+            var teamRead = client.post("""
+                {"jsonrpc":"2.0","id":5,"method":"resources/read","params":{"uri":"skill://team/git-workflow/SKILL.md"}}
+                """);
+            // language=JSON
+            assertThatJson(teamRead.body()).isEqualTo("""
+                {
+                  "jsonrpc":"2.0",
+                  "id":5,
+                  "result":{
+                    "contents":[{
+                      "uri":"skill://team/git-workflow/SKILL.md",
+                      "mimeType":"text/markdown",
+                      "text":%s
+                    }],
+                    "resultType":"complete",
+                    "ttlMs":0,
+                    "cacheScope":"public"
+                  }
+                }
+                """.formatted(new ObjectMapper().writeValueAsString(skillMd)));
+
+            // language=JSON
+            var acmeRead = client.post("""
+                {"jsonrpc":"2.0","id":6,"method":"resources/read","params":{"uri":"skill://acme/git-workflow/SKILL.md"}}
+                """);
+            // language=JSON
+            assertThatJson(acmeRead.body()).isEqualTo("""
+                {
+                  "jsonrpc":"2.0",
+                  "id":6,
+                  "result":{
+                    "contents":[{
+                      "uri":"skill://acme/git-workflow/SKILL.md",
+                      "mimeType":"text/markdown",
+                      "text":%s
+                    }],
+                    "resultType":"complete",
+                    "ttlMs":0,
+                    "cacheScope":"public"
+                  }
+                }
+                """.formatted(new ObjectMapper().writeValueAsString(skillMd)));
+        }
+    }
+
+    @Test
+    void sameNamedSkillsUnderDifferentNamespacesAreBothListedAndReadableOn20251125() throws Exception {
+        var gitWorkflowDir = filesystemSkillsDir.resolve("git-workflow");
+        try (final var server = startServer(SkillsExtension.builder()
+                        .registry(new FilesystemSkillsRegistry(gitWorkflowDir, "team/git-workflow"))
+                        .registry(new FilesystemSkillsRegistry(gitWorkflowDir, "acme/git-workflow"))
+                        .build());
+                final var client = new Mcp20251125Client(server.port())) {
+            client.initialize();
+
+            // language=JSON
+            var list = client.sendRpc("""
+                {"jsonrpc":"2.0","id":1,"method":"resources/list","params":{}}
+                """);
+
+            // language=JSON
+            assertThatJson(list).isEqualTo("""
+                {
+                  "jsonrpc":"2.0",
+                  "id":1,
+                  "result":{
+                    "resources":[
+                      {
+                        "uri":"skill://acme/git-workflow/references/BRANCHING.md",
+                        "name":"acme/git-workflow/references/BRANCHING.md",
+                        "mimeType":"text/markdown"
+                      },
+                      {
+                        "uri":"skill://acme/git-workflow/SKILL.md",
+                        "name":"git-workflow",
+                        "description":"Follow this team's Git conventions for branching and commits",
+                        "mimeType":"text/markdown"
+                      },
+                      {
+                        "uri":"skill://team/git-workflow/SKILL.md",
+                        "name":"git-workflow",
+                        "description":"Follow this team's Git conventions for branching and commits",
+                        "mimeType":"text/markdown"
+                      },
+                      {
+                        "uri":"skill://team/git-workflow/references/BRANCHING.md",
+                        "name":"team/git-workflow/references/BRANCHING.md",
+                        "mimeType":"text/markdown"
+                      }
+                    ]
+                  }
+                }
+                """);
+
+            var skillMd = Files.readString(gitWorkflowDir.resolve("SKILL.md"));
+
+            // language=JSON
+            var acmeRead = client.sendRpc("""
+                {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"skill://acme/git-workflow/SKILL.md"}}
+                """);
+            // language=JSON
+            assertThatJson(acmeRead).isEqualTo("""
+                {
+                  "jsonrpc":"2.0",
+                  "id":2,
+                  "result":{
+                    "contents":[{
+                      "uri":"skill://acme/git-workflow/SKILL.md",
+                      "mimeType":"text/markdown",
+                      "text":%s
+                    }]
+                  }
+                }
+                """.formatted(new ObjectMapper().writeValueAsString(skillMd)));
+
+            // language=JSON
+            var teamRead = client.sendRpc("""
+                {"jsonrpc":"2.0","id":3,"method":"resources/read","params":{"uri":"skill://team/git-workflow/SKILL.md"}}
+                """);
+            // language=JSON
+            assertThatJson(teamRead).isEqualTo("""
+                {
+                  "jsonrpc":"2.0",
+                  "id":3,
+                  "result":{
+                    "contents":[{
+                      "uri":"skill://team/git-workflow/SKILL.md",
+                      "mimeType":"text/markdown",
+                      "text":%s
+                    }]
+                  }
+                }
+                """.formatted(new ObjectMapper().writeValueAsString(skillMd)));
+        }
+    }
+
+    @Test
     void rootDirectoryListsNamespaces() throws Exception {
         try (final var server = startServer(SkillsExtension.builder()
                         .registry(new FilesystemSkillsRegistry(

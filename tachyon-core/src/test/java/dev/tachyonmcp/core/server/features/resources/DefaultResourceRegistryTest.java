@@ -664,7 +664,9 @@ class DefaultResourceRegistryTest {
     }
 
     @Test
-    void shouldEvictOldUriWhenResourceUpdatedWithNewUri() throws Exception {
+    void sameNameAtNewUriCoexistsWithoutEvictingTheOld() throws Exception {
+        // URI is identity: two resources may share a name (e.g. same-named skills mounted under
+        // different namespace prefixes) without one silently evicting the other.
         registry.register(
                 ResourceDescriptor.of("doc", "resource://doc-v1", null, "text/plain"),
                 (ctx, request) -> TextResourceContents.of(request.uri(), "v1", "text/plain"));
@@ -676,34 +678,34 @@ class DefaultResourceRegistryTest {
                 ResourceDescriptor.of("doc", "resource://doc-v2", null, "text/plain"),
                 (ctx, request) -> TextResourceContents.of(request.uri(), "v2", "text/plain"));
 
-        // updating a resource's URI is a single change
         assertThat(callCount).hasValue(1);
 
-        // old URI must no longer resolve
-        var oldUriResult = decodeAndHandle(
+        // both URIs remain independently resolvable
+        var v1Result = runInVirtualThread(() -> decodeAndHandle(
                 handlers.get("resources/read"),
                 DefaultDispatchContext.stateless(server),
-                Map.<String, Object>of("uri", "resource://doc-v1"));
-        assertThat(oldUriResult).isInstanceOf(ServerError.class);
+                Map.<String, Object>of("uri", "resource://doc-v1")));
+        assertThat(v1Result).isInstanceOf(ReadResourceResult.class);
 
-        // new URI must resolve correctly
-        var newUriResult = runInVirtualThread(() -> decodeAndHandle(
+        var v2Result = runInVirtualThread(() -> decodeAndHandle(
                 handlers.get("resources/read"),
                 DefaultDispatchContext.stateless(server),
                 Map.<String, Object>of("uri", "resource://doc-v2")));
-        assertThat(newUriResult).isInstanceOf(ReadResourceResult.class);
-        assertThat(registry.descriptors()).hasSize(1);
+        assertThat(v2Result).isInstanceOf(ReadResourceResult.class);
+        assertThat(registry.descriptors())
+                .extracting(ResourceDescriptor::uri)
+                .containsExactlyInAnyOrder("resource://doc-v1", "resource://doc-v2");
     }
 
     @Test
-    void registerWithChangedUriDropsSubscriptionsOnlyForOldUri() {
+    void registeringSameNameAtNewUriKeepsSubscriptionsForBothUris() {
         registry.register(ResourceDescriptor.of("doc", "resource://doc-v1", null, "text/plain"), EMPTY_HANDLER);
         registry.subscribe("resource://doc-v1", "s1");
-        registry.subscribe("resource://doc-v2", "s2"); // pre-existing sub on the not-yet-used new URI
+        registry.subscribe("resource://doc-v2", "s2");
 
         registry.register(ResourceDescriptor.of("doc", "resource://doc-v2", null, "text/plain"), EMPTY_HANDLER);
 
-        assertThat(registry.subscriptions).doesNotContainKey("resource://doc-v1");
+        assertThat(registry.isSubscribed("resource://doc-v1", "s1")).isTrue();
         assertThat(registry.isSubscribed("resource://doc-v2", "s2")).isTrue();
     }
 
@@ -948,12 +950,9 @@ class DefaultResourceRegistryTest {
     }
 
     @Test
-    void concurrentRegisterOfSameNameLeavesExactlyOneUri() throws Exception {
-        // Race under test: two registrations of the same name with different URIs run concurrently.
-        // Under the old two-map design the loser's URI could be stranded in byUri — an orphan
-        // readable via resources/read but absent from find/list, never reclaimed. Copy-on-write
-        // publish of a single immutable Index moves both indexes atomically, so exactly one URI
-        // survives and it always matches find(name), regardless of interleaving.
+    void concurrentRegisterOfDifferentUrisWithSameNameBothSurvive() throws Exception {
+        // Two independent resources sharing a name, registered concurrently: URI is identity, so
+        // both must land in the index with no lost update, regardless of interleaving.
         var name = "A";
         var u1 = "resource://a/1";
         var u2 = "resource://a/2";
@@ -975,14 +974,12 @@ class DefaultResourceRegistryTest {
                 r1.get();
                 r2.get();
 
-                var survivingUri = registry.find(name).orElseThrow().uri();
-                var orphanUri = survivingUri.equals(u1) ? u2 : u1;
-                assertThat(registry.getByUri(survivingUri))
-                        .as("iteration %d: winning URI must resolve", i)
+                assertThat(registry.getByUri(u1))
+                        .as("iteration %d: first URI must resolve", i)
                         .isNotNull();
-                assertThat(registry.getByUri(orphanUri))
-                        .as("iteration %d: losing URI must not be orphaned in byUri", i)
-                        .isNull();
+                assertThat(registry.getByUri(u2))
+                        .as("iteration %d: second URI must resolve", i)
+                        .isNotNull();
             }
         }
     }

@@ -46,12 +46,17 @@ public class DefaultResourceRegistry implements Resources {
     private static final int MAX_RESOURCE_URI_LENGTH = 8_192;
     private static final Logger logger = LoggerFactory.getLogger(DefaultResourceRegistry.class);
 
+    /** Name-sorted per {@code docs/architecture/guidance.md}; URI breaks ties between same-named resources. */
+    private static final Comparator<ResourceDescriptor> RESOURCE_ORDER =
+            Comparator.comparing(ResourceDescriptor::name).thenComparing(ResourceDescriptor::uri);
+
     /**
-     * Immutable pair of the name and URI indexes. Published atomically through {@link #index} so
-     * readers always observe both maps in a mutually consistent state.
+     * URI-keyed index of registered resources. URI is a resource's identity — see {@link
+     * Resources#register}; distinct resources may share a {@code name}. Published atomically
+     * through {@link #index} so readers always observe a consistent snapshot.
      */
-    private record Index(Map<String, ResourceEntry> byName, Map<String, ResourceEntry> byUri) {
-        static final Index EMPTY = new Index(Map.of(), Map.of());
+    private record Index(Map<String, ResourceEntry> byUri) {
+        static final Index EMPTY = new Index(Map.of());
     }
 
     private volatile Index index = Index.EMPTY;
@@ -106,9 +111,9 @@ public class DefaultResourceRegistry implements Resources {
     /**
      * Registers a resource descriptor and its handler.
      *
-     * <p>If resource support is disabled, the descriptor is not registered. Registering a resource
-     * with an existing name replaces the previous resource and updates URI mappings accordingly. A
-     * URI is unique across resources: registering a URI already owned by a different name is rejected.
+     * <p>If resource support is disabled, the descriptor is not registered. A resource's URI is its
+     * identity — see {@link Resources#register}. Registering a URI already known under the same
+     * name replaces that resource in place; registering it under a different name is rejected.
      *
      * @param descriptor the resource descriptor to register
      * @param fn the resource function
@@ -131,28 +136,18 @@ public class DefaultResourceRegistry implements Resources {
         writeLock.lock();
         try {
             var current = index;
-            var uriOwner = current.byUri().get(descriptor.uri());
-            if (uriOwner != null && !uriOwner.descriptor().name().equals(descriptor.name())) {
+            var previous = current.byUri().get(descriptor.uri());
+            if (previous != null && !previous.descriptor().name().equals(descriptor.name())) {
                 throw new IllegalArgumentException("Resource URI '" + descriptor.uri()
                         + "' is already registered under name '"
-                        + uriOwner.descriptor().name() + "'");
+                        + previous.descriptor().name() + "'");
             }
-            var previous = current.byName().get(descriptor.name());
             if (entry.equals(previous)) {
                 return this;
             }
-            var newByName = new HashMap<>(current.byName());
             var newByUri = new HashMap<>(current.byUri());
-            newByName.put(descriptor.name(), entry);
-            if (previous != null) {
-                final var previousUri = previous.descriptor().uri();
-                if (!previousUri.equals(descriptor.uri())) {
-                    newByUri.remove(previousUri);
-                    dropSubscriptions(previousUri);
-                }
-            }
             newByUri.put(descriptor.uri(), entry);
-            index = new Index(Map.copyOf(newByName), Map.copyOf(newByUri));
+            index = new Index(Map.copyOf(newByUri));
         } finally {
             writeLock.unlock();
         }
@@ -161,31 +156,21 @@ public class DefaultResourceRegistry implements Resources {
     }
 
     /**
-     * Removes the resource registered under the specified name.
+     * Removes a registered resource with the specified name.
+     *
+     * <p>{@code name} is not guaranteed unique — see {@link Resources#register}. If more than one
+     * resource shares {@code name}, one of them is removed; which one is unspecified. Prefer {@link
+     * #unregisterByUri} when the URI is known.
      *
      * @param name the resource name
      * @return {@code true} if a resource was removed, {@code false} if no resource was registered under the name
      */
     @Override
     public boolean unregister(String name) {
-        writeLock.lock();
-        try {
-            var current = index;
-            var removed = current.byName().get(name);
-            if (removed == null) {
-                return false;
-            }
-            var newByName = new HashMap<>(current.byName());
-            var newByUri = new HashMap<>(current.byUri());
-            newByName.remove(name);
-            newByUri.remove(removed.descriptor().uri());
-            dropSubscriptions(removed.descriptor().uri());
-            index = new Index(Map.copyOf(newByName), Map.copyOf(newByUri));
-        } finally {
-            writeLock.unlock();
-        }
-        fireOnChange();
-        return true;
+        var match = index.byUri().values().stream()
+                .filter(e -> e.descriptor().name().equals(name))
+                .findFirst();
+        return match.map(e -> unregisterByUri(e.descriptor().uri())).orElse(false);
     }
 
     @Override
@@ -193,17 +178,14 @@ public class DefaultResourceRegistry implements Resources {
         writeLock.lock();
         try {
             var current = index;
-            var removed = current.byUri.get(uri);
+            var removed = current.byUri().get(uri);
             if (removed == null) {
                 return false;
             }
-            final var name = removed.descriptor().name();
-            var newByName = new HashMap<>(current.byName);
-            var newByUri = new HashMap<>(current.byUri);
-            newByName.remove(name);
+            var newByUri = new HashMap<>(current.byUri());
             newByUri.remove(uri);
             dropSubscriptions(uri);
-            index = new Index(Map.copyOf(newByName), Map.copyOf(newByUri));
+            index = new Index(Map.copyOf(newByUri));
         } finally {
             writeLock.unlock();
         }
@@ -214,13 +196,19 @@ public class DefaultResourceRegistry implements Resources {
     /**
      * Finds a registered resource by name.
      *
+     * <p>{@code name} is not guaranteed unique — see {@link Resources#register}. If more than one
+     * resource shares {@code name}, one of them is returned; which one is unspecified. Prefer
+     * {@link #findByUri} when the URI is known.
+     *
      * @param name the resource name
      * @return the resource descriptor, or an empty optional if no resource has the specified name
      */
     @Override
     public Optional<ResourceDescriptor> find(String name) {
-        var entry = index.byName.get(name);
-        return entry != null ? Optional.of(entry.descriptor()) : Optional.empty();
+        return index.byUri().values().stream()
+                .map(ResourceEntry::descriptor)
+                .filter(d -> d.name().equals(name))
+                .findFirst();
     }
 
     @Override
@@ -236,14 +224,19 @@ public class DefaultResourceRegistry implements Resources {
      */
     @Override
     public List<ResourceDescriptor> descriptors() {
-        return index.byName().values().stream()
+        return index.byUri().values().stream()
                 .map(ResourceEntry::descriptor)
-                .sorted(Comparator.comparing(ResourceDescriptor::name))
+                .sorted(RESOURCE_ORDER)
                 .toList();
     }
 
     /**
      * Lists registered resources in name order using cursor-based pagination.
+     *
+     * <p>ponytail: {@link Pagination#paginate} resumes by matching a single cursor key; with
+     * resource names no longer unique (see {@link Resources#register}), a page boundary that falls
+     * after the 2nd+ of 3-or-more same-named resources can re-return one item. Switch the cursor
+     * key to {@code uri} if that's observed in practice.
      *
      * @param limit  the maximum number of resources to include; the configured page size is used when this value is not positive
      * @param cursor the cursor identifying the starting position, or {@code null} to start from the beginning
@@ -251,9 +244,9 @@ public class DefaultResourceRegistry implements Resources {
      */
     public PaginatedResult<ResourceDescriptor> list(int limit, @Nullable String cursor) {
         int lim = limit > 0 ? limit : config.pageSize();
-        var all = index.byName().values().stream()
+        var all = index.byUri().values().stream()
                 .map(ResourceEntry::descriptor)
-                .sorted(Comparator.comparing(ResourceDescriptor::name))
+                .sorted(RESOURCE_ORDER)
                 .toList();
         return Pagination.paginate(all, lim, cursor, ResourceDescriptor::name);
     }
@@ -261,10 +254,10 @@ public class DefaultResourceRegistry implements Resources {
     public PaginatedResult<ResourceDescriptor> list(
             int limit, @Nullable String cursor, Predicate<ResourceDescriptor> filter) {
         int lim = limit > 0 ? limit : config.pageSize();
-        var all = index.byName().values().stream()
+        var all = index.byUri().values().stream()
                 .map(ResourceEntry::descriptor)
                 .filter(filter)
-                .sorted(Comparator.comparing(ResourceDescriptor::name))
+                .sorted(RESOURCE_ORDER)
                 .toList();
         return Pagination.paginate(all, lim, cursor, ResourceDescriptor::name);
     }
@@ -357,7 +350,7 @@ public class DefaultResourceRegistry implements Resources {
      * @return {@code true} if the registry contains no resources, {@code false} otherwise
      */
     public boolean isEmpty() {
-        return index.byName().isEmpty();
+        return index.byUri().isEmpty();
     }
 
     record TemplateMatch(ResourceTemplateEntry entry, Map<String, UriTemplateValue> params) {}

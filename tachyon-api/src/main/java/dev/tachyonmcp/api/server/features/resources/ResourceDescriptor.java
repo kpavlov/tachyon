@@ -13,8 +13,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * Descriptor for a static (non-template) resource.
  * <p>
- * A resource is a named, URI-addressable piece of content such as a file, database
- * record, or API response.
+ * A resource is a URI-addressable piece of content such as a file, database record, or API
+ * response; it also carries a human-readable {@link #name()}.
  */
 @Value.Immutable
 @Value.Style(
@@ -23,7 +23,11 @@ import org.jspecify.annotations.Nullable;
         typeImmutable = "Default*")
 public interface ResourceDescriptor extends ServerFeature.Descriptor, HasMeta {
 
-    /** The resource name, unique within the server. */
+    /**
+     * The resource's display name — a label, not an identifier. {@link #uri()} identifies the
+     * resource; distinct resources MAY share a {@code name} (e.g. the same skill mounted under two
+     * different namespace prefixes). See {@link Resources#register}.
+     */
     String name();
 
     /** Optional human-readable title. */
