@@ -8,6 +8,7 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.core.server.features.resources.MimeTypes;
+import dev.tachyonmcp.testkit.Mcp20251125Client;
 import dev.tachyonmcp.testkit.Mcp20260728Client;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -29,6 +30,20 @@ import tools.jackson.databind.ObjectMapper;
  * {@code resources/directory/read}, with per-request extension negotiation.
  */
 class SkillsExtensionE2eTest {
+
+    private static final String PDF_SKILL = """
+        ---
+        name: pdf-processing
+        description: Extract, fill, and assemble PDF documents
+        metadata:
+          version: "2.1.0"
+        ---
+
+        # PDF Processing
+
+        Extract, fill, and assemble PDF documents.
+        Pick the matching template from `templates/` for the document type.
+        """;
 
     private final SkillsRegistry classpathSkillsRegistry = new ClasspathSkillsRegistry("skills");
     private final SkillsRegistry filesystemSkillsRegistry = new FilesystemSkillsRegistry(filesystemSkillsDir);
@@ -381,7 +396,7 @@ class SkillsExtensionE2eTest {
     }
 
     @Test
-    void methodsHiddenUntilExtensionDeclared() throws Exception {
+    void skillResourcesRemainAvailableWhenExtensionMethodsAreHidden() throws Exception {
         try (final var server = startServer(SkillsExtension.builder()
                         .registry(new ClasspathSkillsRegistry("skills"))
                         .build());
@@ -396,31 +411,109 @@ class SkillsExtensionE2eTest {
                 """);
 
             // language=JSON
-            var read = client.post("""
-                {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"skill://git-workflow/SKILL.md"}}
+            var get = client.post("""
+                {"jsonrpc":"2.0","id":2,"method":"skills/get","params":{"uri":"skill://pdf-processing/SKILL.md"}}
                 """);
             // language=JSON
-            assertThatJson(read.body()).isEqualTo("""
-                {"jsonrpc":"2.0","id":2,"error":{"code":-32602,"message":"Resource not found", "data":{"uri":"skill://git-workflow/SKILL.md"}}}
+            assertThatJson(get.body()).isEqualTo("""
+                {"jsonrpc":"2.0","id":2,"error":{"code":-32601,"message":"Method not found"}}
                 """);
 
             // language=JSON
+            var directory = client.post("""
+                {"jsonrpc":"2.0","id":3,"method":"resources/directory/read","params":{"uri":"skill://pdf-processing"}}
+                """);
+            // language=JSON
+            assertThatJson(directory.body()).isEqualTo("""
+                {"jsonrpc":"2.0","id":3,"error":{"code":-32601,"message":"Method not found"}}
+                """);
+
+            // language=JSON
+            var read = client.post("""
+                {"jsonrpc":"2.0","id":4,"method":"resources/read","params":{"uri":"skill://pdf-processing/SKILL.md"}}
+                """);
+            // language=JSON
+            assertThatJson(read.body()).isEqualTo("""
+                {
+                  "jsonrpc":"2.0",
+                  "id":4,
+                  "result":{
+                    "contents":[{
+                      "uri":"skill://pdf-processing/SKILL.md",
+                      "mimeType":"text/markdown",
+                      "text":%s
+                    }],
+                    "resultType":"complete",
+                    "ttlMs":0,
+                    "cacheScope":"public"
+                  }
+                }
+                """.formatted(new ObjectMapper().writeValueAsString(PDF_SKILL)));
+
+            // language=JSON
             var resources = client.post("""
-                {"jsonrpc":"2.0","id":3,"method":"resources/list","params":{}}
+                {"jsonrpc":"2.0","id":5,"method":"resources/list","params":{}}
                 """);
             // language=JSON
             assertThatJson(resources.body()).isEqualTo("""
                 {
                   "jsonrpc":"2.0",
-                  "id":3,
+                  "id":5,
                   "result":{
-                    "resources":[],
+                    "resources":[
+                      {
+                        "uri":"skill://pdf-processing/SKILL.md",
+                        "name":"pdf-processing",
+                        "description":"Extract, fill, and assemble PDF documents",
+                        "mimeType":"text/markdown"
+                      },
+                      {
+                        "uri":"skill://pdf-processing/scripts/extract.py",
+                        "name":"pdf-processing/scripts/extract.py",
+                        "mimeType":"text/plain"
+                      },
+                      {
+                        "uri":"skill://pdf-processing/templates/invoice.md",
+                        "name":"pdf-processing/templates/invoice.md",
+                        "mimeType":"text/markdown"
+                      }
+                    ],
                     "resultType":"complete",
                     "ttlMs":0,
                     "cacheScope":"public"
                   }
                 }
                 """);
+        }
+    }
+
+    @Test
+    void skillResourceRemainsReadableOnLegacyProtocolWithoutExtensionNegotiation() throws Exception {
+        try (final var server = startServer(SkillsExtension.builder()
+                        .registry(new ClasspathSkillsRegistry("skills"))
+                        .build());
+                final var client = new Mcp20251125Client(server.port())) {
+            client.initialize();
+
+            // language=JSON
+            var read = client.sendRpc("""
+                {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"skill://pdf-processing/SKILL.md"}}
+                """);
+
+            // language=JSON
+            assertThatJson(read).isEqualTo("""
+                {
+                  "jsonrpc":"2.0",
+                  "id":2,
+                  "result":{
+                    "contents":[{
+                      "uri":"skill://pdf-processing/SKILL.md",
+                      "mimeType":"text/markdown",
+                      "text":%s
+                    }]
+                  }
+                }
+                """.formatted(new ObjectMapper().writeValueAsString(PDF_SKILL)));
         }
     }
 

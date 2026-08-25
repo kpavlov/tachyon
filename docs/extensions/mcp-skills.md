@@ -22,7 +22,9 @@ var server = TachyonServer.builder()
 server.start();
 ```
 
-`SkillsExtension.ID` is `io.modelcontextprotocol/skills`. Like any [SEP-2133](https://modelcontextprotocol.io/seps/2133-extensions) extension, its methods and resources are only visible to sessions that negotiate it — see [Extension negotiation](#extension-negotiation) below.
+`SkillsExtension.ID` is `io.modelcontextprotocol/skills`. Its extension methods require negotiation;
+skill files remain available through the standard Resources API. See
+[Extension negotiation](#extension-negotiation).
 
 ## Skill directory layout
 
@@ -89,11 +91,18 @@ public interface SkillsRegistry {
 }
 ```
 
-`Skill` and `SkillFile` are the same records the built-in registries produce (skill path, parsed frontmatter, and per-file `sha256:`-prefixed digests) — see `SkillsRegistry.java` for the exact shape.
+`Skill` and `SkillFile` are the same records the built-in registries produce (skill path, parsed
+frontmatter, and per-file sizes and `sha256:`-prefixed digests) — see `SkillsRegistry.java` for the
+exact shape.
 
 ## How files are served
 
-Every file in every skill becomes an MCP resource at `skill://<skill-path>/<relative-path>`, registered under the extension's ID so it's only visible to negotiating clients. Content type comes from `MimeTypes.guess(fileName)` (`tachyon-core`) and decides transport: text types (`text/*`, `application/json`, `application/yaml`, ...) are served as `TextResourceContents`; everything else as base64 `BlobResourceContents`.
+Every file in every skill becomes a standard MCP resource at
+`skill://<skill-path>/<relative-path>`. Clients can list and read these resources without
+negotiating the Skills extension. Content type comes from `MimeTypes.guess(fileName)`
+(`tachyon-core`) and decides transport: text types (`text/*`, `application/json`,
+`application/yaml`, ...) are served as `TextResourceContents`; everything else as base64
+`BlobResourceContents`.
 
 Filesystem-backed files are re-read from disk on every `resources/read` — a file edited after the server started is served fresh, though its digest in `skills/list`/`skills/get` (computed once at scan time) won't reflect the edit until restart. Classpath-backed files are read once at scan time and cached in memory.
 
@@ -101,7 +110,7 @@ Filesystem-backed files are re-read from disk on every `resources/read` — a fi
 
 | Method | Description |
 |---|---|
-| `skills/list` | List every registered skill: URI, frontmatter, and per-file digests. No pagination — see [Caveats](#caveats). |
+| `skills/list` | List every registered skill: URI, frontmatter, and per-file digests and sizes. No pagination — see [Caveats](#caveats). |
 | `skills/get` | Fetch one skill by its `skill://.../SKILL.md` URI. `-32602` if unknown. |
 | `resources/directory/read` | List the immediate children of a `skill://` directory URI — a skill root, a subdirectory, or the `skill://` namespace root. `-32602` if the URI names no known directory. |
 
@@ -120,8 +129,8 @@ Filesystem-backed files are re-read from disk on every `resources/read` — a fi
         "uri":"skill://git-workflow/SKILL.md",
         "frontmatter":{"name":"git-workflow","description":"Follow this team's Git conventions for branching and commits"},
         "resources":[
-          {"uri":"skill://git-workflow/SKILL.md","digest":"sha256:b9de7cc1..."},
-          {"uri":"skill://git-workflow/references/BRANCHING.md","digest":"sha256:c23e5f30..."}
+          {"uri":"skill://git-workflow/SKILL.md","digest":"sha256:b9de7cc1...","size":234},
+          {"uri":"skill://git-workflow/references/BRANCHING.md","digest":"sha256:c23e5f30...","size":68}
         ]
       }
     ]
@@ -148,19 +157,32 @@ Filesystem-backed files are re-read from disk on every `resources/read` — a fi
 }
 ```
 
-A skill's own files also appear in the standard `resources/list`/`resources/read` methods once the client has negotiated the extension — `skills/*` is additive, not a replacement transport.
+A skill's files always appear in the standard `resources/list` and remain directly readable through
+`resources/read`. The extension methods are additive discovery and manifest operations, not a
+replacement transport.
 
 ## Extension negotiation
 
-Per [SEP-2133](https://modelcontextprotocol.io/seps/2133-extensions), `skills/*` methods and `skill://` resources exist only for sessions that declare the extension. Under MCP 2026-07-28 (sessionless), that's a per-request `_meta` key rather than a one-time handshake:
+Per [SEP-2133](https://modelcontextprotocol.io/seps/2133-extensions), extension-specific features
+require negotiation. For Skills, those features are `skills/list`, `skills/get`, and
+`resources/directory/read`. MCP 2025-11-25 clients declare support in
+`initialize.params.capabilities.extensions`. Under MCP 2026-07-28 (sessionless), declare support
+through the per-request `_meta` key:
 
 ```json
 {"_meta": {"io.modelcontextprotocol/skills": {}}}
 ```
 
-A session that never declares it gets `-32601 Method not found` from `skills/list`, `-32602 Resource not found` from `resources/read` on a `skill://` URI, and no skill entries in `resources/list`.
+A client that does not declare the extension gets `-32601 Method not found` from the three
+extension methods. It can still discover skill files through `resources/list` and fetch a known
+`skill://` URI through `resources/read`. This is SEP-2133 graceful degradation to core protocol
+behavior and SEP-2640's baseline resource transport.
 
-`serverSettings()` reports `{"directoryRead": true}` in the `initialize` response for the extension key, signaling that `resources/directory/read` is available — a client can use this to decide whether to walk `skill://` trees or fetch `SKILL.md` files directly.
+`SkillsExtension` uses `AdvertiseMode.ALWAYS`, so the server advertises
+`io.modelcontextprotocol/skills` even when the client has not declared it. `serverSettings()` reports
+`{"directoryRead": true}` for the extension key, signaling that negotiated clients may use
+`resources/directory/read`. `AdvertiseMode` controls capability advertisement; it does not control
+base resource visibility.
 
 ## Caveats
 

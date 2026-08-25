@@ -41,13 +41,13 @@ class SkillsExtensionTest {
     }
 
     @Test
-    void registersEverySkillFileAsExtensionOwnedResource() {
+    void registersEverySkillFileAsBaseResource() {
         var descriptors = server.resources().descriptors();
         assertThat(descriptors)
                 .extracting(ResourceDescriptor::uri)
                 .contains("skill://pdf-processing/scripts/extract.py", "skill://pdf-processing/templates/invoice.md");
         assertThat(descriptors)
-                .allSatisfy(descriptor -> assertThat(descriptor.extensionId()).isEqualTo(SkillsExtension.ID));
+                .allSatisfy(descriptor -> assertThat(descriptor.extensionId()).isNull());
         assertThat(server.resources().findByUri("skill://pdf-processing/SKILL.md"))
                 .get()
                 .extracting(ResourceDescriptor::description)
