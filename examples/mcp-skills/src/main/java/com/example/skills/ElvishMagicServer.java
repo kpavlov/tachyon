@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Serves the bundled Elvish-magic Agent Skill over MCP.
+ * Serves bundled fictional Elvish Agent Skills over MCP.
  */
 public final class ElvishMagicServer {
 
@@ -28,7 +28,7 @@ public final class ElvishMagicServer {
             Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"))
         );
         server.start();
-        log.info("Elvish magic awaits at http://{}:{}/mcp", server.host(), server.port());
+        log.info("Elvish skills await at http://{}:{}/mcp", server.host(), server.port());
     }
 
     static TachyonServer buildServer(String host, int port) {
@@ -37,7 +37,7 @@ public final class ElvishMagicServer {
             .port(port)
             .info(info -> info.name("elvish-magic")
                 .title("Elvish Magic Library")
-                .description("MCP server for a fictional Elvish-magic Agent Skill")
+                .description("MCP server for fictional Elvish Agent Skills")
                 .version("1.0"))
             .withExtensions(SkillsExtension.builder()
                 .cacheScope("public")

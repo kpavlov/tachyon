@@ -1,9 +1,8 @@
-# MCP Skills Java Example
+# MCP Skills Example
 
-Serves a bundled fictional `elvish-magic` Agent Skill with Tachyon's `SkillsExtension`.
-Clients can fetch `skill://elvish-magic/SKILL.md` through the base `resources/read` method without
-extension negotiation. Clients negotiate `io.modelcontextprotocol/skills` to use `skills/list`,
-`skills/get`, and `resources/directory/read`.
+Serves two bundled fictional Agent Skills with Tachyon's `SkillsExtension`: `elvish-magic` and `elvish-healing`. The healing skill includes a supporting healer's book resource. Clients can fetch their `skill://` resources through the base `resources/read` method without extension negotiation.
+Clients negotiate `io.modelcontextprotocol/skills` to use `skills/list`, `skills/get`, and
+`resources/directory/read`.
 
 ## Quickstart
 
