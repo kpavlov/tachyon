@@ -26,6 +26,7 @@ jobs:
         example:
           - echo-kotlin
           - langchain4j-mcp
+          - mcp-java
           - mcp-skills
           - weather-mcp
           - weather-mcp-kotlin
