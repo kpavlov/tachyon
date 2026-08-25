@@ -15,7 +15,7 @@ Maven:
 <dependency>
     <groupId>dev.tachyonmcp</groupId>
     <artifactId>tachyon-core</artifactId>
-    <version>1.0.0-beta.20</version> <!-- get latest version from Maven Central -->
+    <version>1.0.0-beta.22</version> <!-- get latest version from Maven Central -->
 </dependency>
 ```
 
@@ -23,7 +23,7 @@ Gradle (Kotlin DSL):
 
 ```kotlin
 dependencies {
-    implementation("dev.tachyonmcp:tachyon-core:1.0.0-beta.20")
+    implementation("dev.tachyonmcp:tachyon-core:1.0.0-beta.22")
 }
 ```
 
