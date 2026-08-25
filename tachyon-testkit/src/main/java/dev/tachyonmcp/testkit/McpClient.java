@@ -293,20 +293,20 @@ public abstract class McpClient implements Closeable {
     /**
      * {@link #sendRpc(String, String)} against the session set by {@link #initialize()}.
      */
-    public String sendRpc(String body) throws Exception {
-        return sendRpc(sessionId, body);
+    public String sendRpc(@Language("json") String jsonBody) throws Exception {
+        return sendRpc(sessionId, jsonBody);
     }
 
     /**
      * Sends a JSON-RPC request and returns the response body, extracting the JSON-RPC envelope from
      * an SSE body if the response content-type is {@code text/event-stream}.
      */
-    public String sendRpc(@Nullable String sessionId, String body) throws Exception {
-        var response = post(sessionId, body);
+    public String sendRpc(@Nullable String sessionId, @Language("json") String jsonBody) throws Exception {
+        var response = post(sessionId, jsonBody);
         assertThat(response.statusCode()).isEqualTo(200);
         var contentType = response.headers().firstValue("content-type").orElse("");
         if (contentType.startsWith("text/event-stream")) {
-            return extractJsonRpcResponse(response.body(), extractRequestId(body));
+            return extractJsonRpcResponse(response.body(), extractRequestId(jsonBody));
         }
         return response.body();
     }

@@ -25,6 +25,7 @@ import dev.tachyonmcp.api.server.features.completions.CompletionResult;
 import dev.tachyonmcp.api.server.features.prompts.PromptRequest;
 import dev.tachyonmcp.api.server.features.prompts.PromptResult;
 import dev.tachyonmcp.core.server.TachyonServer;
+import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.ObjectMapper;
@@ -57,22 +58,25 @@ public final class WeatherServer {
     }
 
     public static void main(String... args) {
-        final var server = buildServer(8080);
+        final var server = buildServer(
+            System.getenv().getOrDefault("HOST", "localhost"),
+            Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"))
+        );
         server.start();
-        final var port = server.port();
-        log.info("Connect your MCP client to http://localhost:{}/mcp", port);
+        log.info("Connect your MCP client to http://{}:{}/mcp", server.host(), server.port());
     }
 
-    static TachyonServer buildServer(int port) {
-        return buildServer(port, weatherService);
+    static TachyonServer buildServer(String host, int port) {
+        return buildServer(host, port, weatherService);
     }
 
-    static TachyonServer buildServer(int port, WeatherService weatherService) {
+    static TachyonServer buildServer(String host, int port, WeatherService weatherService) {
         var predictionArticle = weatherService.predictionArticle();
         var resourceAnnotations =
             Annotations.of(List.of(Role.USER, Role.ASSISTANT), 0.8, "2026-07-23T00:00:00Z");
         var resourceIcon = Icon.of(LOGO, "image/png", List.of("256x256"), "light");
         return TachyonServer.builder()
+                .host(host)
                 .port(port)
                 .info(it -> it
                         .name("weather-server")
@@ -82,7 +86,7 @@ public final class WeatherServer {
                         .instructions("Test instructions")
                         .icons(Icon.of(LOGO, "image/png", List.of("256x256"), null))
                         .version("1.0"))
-                .capabilities(c->c.logging())
+                .capabilities(CapabilitiesConfig.Builder::logging)
 
                 .withTools(tools -> tools.register(GetWeatherTool.DESCRIPTOR, GetWeatherTool.fn(weatherService)))
 

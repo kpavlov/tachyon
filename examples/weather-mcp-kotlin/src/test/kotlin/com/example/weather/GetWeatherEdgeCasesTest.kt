@@ -4,7 +4,6 @@
 
 package com.example.weather
 
-import com.example.weather.model.TemperatureUnit
 import com.example.weather.service.WeatherService
 import com.example.weather.spi.WeatherProvider
 import io.kotest.matchers.shouldBe

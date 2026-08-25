@@ -24,9 +24,11 @@ jobs:
         java:
           - 21
         example:
+          - echo-kotlin
+          - langchain4j-mcp
+          - mcp-skills
           - weather-mcp
           - weather-mcp-kotlin
-          - echo-kotlin
 
     runs-on: ubuntu-latest
     timeout-minutes: 7

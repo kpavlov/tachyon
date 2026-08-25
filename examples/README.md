@@ -11,6 +11,8 @@ the Maven wrapper build in, so you can run it without installing anything else �
   Tachyon imports, scanned by `LangChain4jAnnotationProvider` into a running server. Depends on
   `tachyon-annotations-langchain4j`, unreleased — build the Tachyon SNAPSHOT locally first (see
   its own README).
+- [**mcp-skills**](mcp-skills) — Java. Serves a bundled Elvish-magic Agent Skill through the MCP
+  skills extension.
 
 Start with **echo-kotlin** to see the smallest viable server, then move to **weather-mcp** (or its
 Kotlin twin) for a realistic feature-rich example backed by the Open-Meteo API.

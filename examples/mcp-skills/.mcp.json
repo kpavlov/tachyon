@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "elvish-magic-skill-mcp": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp"
+    }
+  }
+}

@@ -41,7 +41,7 @@ class WeatherServerTest {
 
     @BeforeAll
     static void beforeAll() {
-        handle = WeatherServer.buildServer(0, weatherService);
+        handle = WeatherServer.buildServer("localhost", 0, weatherService);
         handle.start();
         int port = handle.port();
 
