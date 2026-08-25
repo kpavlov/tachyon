@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
  * (<a href="https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2640">SEP-2640</a>).
  *
  * <p>An implementation scans skill directories (each a directory containing a {@code SKILL.md}
- * with YAML frontmatter) and serves their files. Default implementations: {@link PathSkillsRegistry}
+ * with YAML frontmatter) and serves their files. Default implementations: {@link FilesystemSkillsRegistry}
  * and {@link ClasspathSkillsRegistry}.
  */
 public interface SkillsRegistry {
@@ -51,6 +51,7 @@ public interface SkillsRegistry {
      * @param uri the resource URI ({@code skill://<skill-path>/<file-path>})
      * @param mimeType the file's MIME type
      * @param digest the SHA-256 digest formatted as {@code sha256:<hex>}
+     * @param size the raw file size in bytes
      */
-    record SkillFile(String relativePath, String uri, String mimeType, String digest) {}
+    record SkillFile(String relativePath, String uri, String mimeType, String digest, long size) {}
 }

@@ -63,7 +63,8 @@ class ElvishMagicServerTest {
                   },
                   "resources":[{
                     "uri":"skill://elvish-magic/SKILL.md",
-                    "digest":"sha256:3679a7ca0e2ff7a55ae17367c73b6f20eea7a12c62a8f8ad7e1811bbdc1fda9a"
+                    "digest":"sha256:3679a7ca0e2ff7a55ae17367c73b6f20eea7a12c62a8f8ad7e1811bbdc1fda9a",
+                    "size":603
                   }]
                 }],
                 "resultType":"complete",

@@ -39,7 +39,8 @@ final class SkillsScanner {
                         entry.getKey(),
                         "skill://" + skillPath + "/" + entry.getKey(),
                         MimeTypes.guess(entry.getKey()),
-                        digest(entry.getValue())))
+                        digest(entry.getValue()),
+                        entry.getValue().length))
                 .sorted(Comparator.comparing(SkillsRegistry.SkillFile::relativePath))
                 .toList();
         return new SkillsRegistry.Skill(skillPath, frontmatter, entries);

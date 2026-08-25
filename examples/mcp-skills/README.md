@@ -10,7 +10,7 @@ The skills extension is currently built from this repository's SNAPSHOT:
 
 ```shell
 # From the repository root
-./mvnw install -pl tachyon-extensions,tachyon-testkit -am -DskipTests
+./mvnw install -pl tachyon-extensions,tachyon-testkit -am -DskipTests -Djacoco.skip=true
 ```
 
 Running example

@@ -59,11 +59,11 @@ class SkillsExtensionE2eTest {
                           "description":"Follow this team's Git conventions for branching and commits"
                         },
                         "resources":[
-                          {"uri":"skill://git-workflow/SKILL.md","digest":"sha256:b9de7cc1f03a390dd4ee3b2881a13eb5e39f02ec5f44ffb0ab9fb91e10c08d67"},
-                          {"uri":"skill://git-workflow/references/BRANCHING.md","digest":"sha256:c23e5f309d54105cc561675ce4384fa62971e00919fe9bd297a37e443746c24e"}
+                          {"uri":"skill://git-workflow/SKILL.md","digest":"sha256:b9de7cc1f03a390dd4ee3b2881a13eb5e39f02ec5f44ffb0ab9fb91e10c08d67","size":234},
+                          {"uri":"skill://git-workflow/references/BRANCHING.md","digest":"sha256:c23e5f309d54105cc561675ce4384fa62971e00919fe9bd297a37e443746c24e","size":68}
                         ]
                       },
-                      {"frontmatter":{"description":"How to read a file","name":"read-file"},"resources":[{"digest":"sha256:c009fac2e4613f3d635e99351e59f685250188809b2d6a8650b86a3eb0b8da2d","uri":"skill://read-file/SKILL.md"}],"uri":"skill://read-file/SKILL.md"},
+                      {"frontmatter":{"description":"How to read a file","name":"read-file"},"resources":[{"digest":"sha256:c009fac2e4613f3d635e99351e59f685250188809b2d6a8650b86a3eb0b8da2d","size":85,"uri":"skill://read-file/SKILL.md"}],"uri":"skill://read-file/SKILL.md"},
                       {
                         "uri":"skill://pdf-processing/SKILL.md",
                         "frontmatter":{
@@ -72,9 +72,9 @@ class SkillsExtensionE2eTest {
                           "metadata":{"version":"2.1.0"}
                         },
                         "resources":[
-                          {"uri":"skill://pdf-processing/SKILL.md","digest":"sha256:da96519e26e173b406339e31ccf3adb0b0bd45c5fdfbabe335bf2ded216b2635"},
-                          {"uri":"skill://pdf-processing/scripts/extract.py","digest":"sha256:f05fea0e15cb5f951049570d4cebb3a84b272fd3390c85e8be7586f84f0b68f8"},
-                          {"uri":"skill://pdf-processing/templates/invoice.md","digest":"sha256:cd1a5be9eb7a5a46feea259ca26620f73dbd3587cc5111da44fff6489993c643"}
+                          {"uri":"skill://pdf-processing/SKILL.md","digest":"sha256:da96519e26e173b406339e31ccf3adb0b0bd45c5fdfbabe335bf2ded216b2635","size":243},
+                          {"uri":"skill://pdf-processing/scripts/extract.py","digest":"sha256:f05fea0e15cb5f951049570d4cebb3a84b272fd3390c85e8be7586f84f0b68f8","size":40},
+                          {"uri":"skill://pdf-processing/templates/invoice.md","digest":"sha256:cd1a5be9eb7a5a46feea259ca26620f73dbd3587cc5111da44fff6489993c643","size":43}
                         ]
                       }
 
@@ -132,9 +132,9 @@ class SkillsExtensionE2eTest {
                         "metadata":{"version":"2.1.0"}
                       },
                       "resources":[
-                        {"uri":"skill://pdf-processing/SKILL.md","digest":"sha256:da96519e26e173b406339e31ccf3adb0b0bd45c5fdfbabe335bf2ded216b2635"},
-                        {"uri":"skill://pdf-processing/scripts/extract.py","digest":"sha256:f05fea0e15cb5f951049570d4cebb3a84b272fd3390c85e8be7586f84f0b68f8"},
-                        {"uri":"skill://pdf-processing/templates/invoice.md","digest":"sha256:cd1a5be9eb7a5a46feea259ca26620f73dbd3587cc5111da44fff6489993c643"}
+                        {"uri":"skill://pdf-processing/SKILL.md","digest":"sha256:da96519e26e173b406339e31ccf3adb0b0bd45c5fdfbabe335bf2ded216b2635","size":243},
+                        {"uri":"skill://pdf-processing/scripts/extract.py","digest":"sha256:f05fea0e15cb5f951049570d4cebb3a84b272fd3390c85e8be7586f84f0b68f8","size":40},
+                        {"uri":"skill://pdf-processing/templates/invoice.md","digest":"sha256:cd1a5be9eb7a5a46feea259ca26620f73dbd3587cc5111da44fff6489993c643","size":43}
                       ]
                     },
                     "resultType":"complete"
@@ -251,8 +251,8 @@ class SkillsExtensionE2eTest {
                           "description":"Follow this team's Git conventions for branching and commits"
                         },
                         "resources":[
-                          {"uri":"skill://git-workflow/SKILL.md","digest":"sha256:b9de7cc1f03a390dd4ee3b2881a13eb5e39f02ec5f44ffb0ab9fb91e10c08d67"},
-                          {"uri":"skill://git-workflow/references/BRANCHING.md","digest":"sha256:c23e5f309d54105cc561675ce4384fa62971e00919fe9bd297a37e443746c24e"}
+                          {"uri":"skill://git-workflow/SKILL.md","digest":"sha256:b9de7cc1f03a390dd4ee3b2881a13eb5e39f02ec5f44ffb0ab9fb91e10c08d67","size":234},
+                          {"uri":"skill://git-workflow/references/BRANCHING.md","digest":"sha256:c23e5f309d54105cc561675ce4384fa62971e00919fe9bd297a37e443746c24e","size":68}
                         ]
                       },
                       {
@@ -264,6 +264,7 @@ class SkillsExtensionE2eTest {
                         "resources":[
                             {
                               "digest":"sha256:c009fac2e4613f3d635e99351e59f685250188809b2d6a8650b86a3eb0b8da2d",
+                              "size":85,
                               "uri":"skill://read-file/SKILL.md"
                              }
                         ]}
@@ -305,8 +306,8 @@ class SkillsExtensionE2eTest {
                           "description":"Follow this team's Git conventions for branching and commits"
                         },
                         "resources":[
-                          {"uri":"skill://team/git-workflow/SKILL.md","digest":"sha256:b9de7cc1f03a390dd4ee3b2881a13eb5e39f02ec5f44ffb0ab9fb91e10c08d67"},
-                          {"uri":"skill://team/git-workflow/references/BRANCHING.md","digest":"sha256:c23e5f309d54105cc561675ce4384fa62971e00919fe9bd297a37e443746c24e"}
+                          {"uri":"skill://team/git-workflow/SKILL.md","digest":"sha256:b9de7cc1f03a390dd4ee3b2881a13eb5e39f02ec5f44ffb0ab9fb91e10c08d67","size":234},
+                          {"uri":"skill://team/git-workflow/references/BRANCHING.md","digest":"sha256:c23e5f309d54105cc561675ce4384fa62971e00919fe9bd297a37e443746c24e","size":68}
                         ]
                       },
                       {
@@ -317,9 +318,9 @@ class SkillsExtensionE2eTest {
                           "metadata":{"version":"2.1.0"}
                         },
                         "resources":[
-                          {"uri":"skill://acme/pdf-processing/SKILL.md","digest":"sha256:da96519e26e173b406339e31ccf3adb0b0bd45c5fdfbabe335bf2ded216b2635"},
-                          {"uri":"skill://acme/pdf-processing/scripts/extract.py","digest":"sha256:f05fea0e15cb5f951049570d4cebb3a84b272fd3390c85e8be7586f84f0b68f8"},
-                          {"uri":"skill://acme/pdf-processing/templates/invoice.md","digest":"sha256:cd1a5be9eb7a5a46feea259ca26620f73dbd3587cc5111da44fff6489993c643"}
+                          {"uri":"skill://acme/pdf-processing/SKILL.md","digest":"sha256:da96519e26e173b406339e31ccf3adb0b0bd45c5fdfbabe335bf2ded216b2635","size":243},
+                          {"uri":"skill://acme/pdf-processing/scripts/extract.py","digest":"sha256:f05fea0e15cb5f951049570d4cebb3a84b272fd3390c85e8be7586f84f0b68f8","size":40},
+                          {"uri":"skill://acme/pdf-processing/templates/invoice.md","digest":"sha256:cd1a5be9eb7a5a46feea259ca26620f73dbd3587cc5111da44fff6489993c643","size":43}
                         ]
                       }
                     ],
@@ -521,17 +522,20 @@ class SkillsExtensionE2eTest {
         assertThat(loadedBytes).as("content of %s", uri).isEqualTo(actualBytes);
         assertThat(sha256(loadedBytes)).as("digest of %s", uri).isEqualTo(expectedDigest);
 
-        assertThat(resource.path("name").asString()).as("name of %s", uri).isEqualTo(relativePath);
         assertThat(resource.path("mimeType").asString())
                 .as("mimeType of %s", uri)
                 .isEqualTo(MimeTypes.guess(relativePath));
 
         if (relativePath.endsWith("/SKILL.md")) {
             var frontmatter = FrontmatterParser.parse(actualBytes);
+            assertThat(resource.path("name").asString())
+                    .as("name of %s", uri)
+                    .isEqualTo(String.valueOf(frontmatter.get("name")));
             assertThat(resource.path("description").asString())
                     .as("description of %s", uri)
                     .isEqualTo(String.valueOf(frontmatter.get("description")));
         } else {
+            assertThat(resource.path("name").asString()).as("name of %s", uri).isEqualTo(relativePath);
             assertThat(resource.has("description"))
                     .as("no description for %s", uri)
                     .isFalse();
