@@ -20,7 +20,7 @@ class SseRetryTest extends AbstractStatefulMcpE2eTest {
 
         try (var client = createTestClient();
                 var subscriber = client.openGetStream(sessionId, null)) {
-            var raw = subscriber.awaitRawResponse(body -> body.contains("\r\n\r\n"), ofSeconds(5));
+            var raw = subscriber.awaitRawResponse(body -> body.contains("retry: 3000"), ofSeconds(5));
             assertThat(raw).contains("retry: 3000");
             assertThat(raw).contains("X-Accel-Buffering: no");
         }

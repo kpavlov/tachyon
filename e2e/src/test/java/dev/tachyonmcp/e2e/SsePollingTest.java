@@ -20,7 +20,7 @@ class SsePollingTest extends AbstractStatefulMcpE2eTest {
         var sessionId = initializeSession();
         try (var client = createTestClient();
                 var subscriber = client.openGetStream(sessionId, null)) {
-            var raw = subscriber.awaitRawResponse(body -> body.contains("\r\n\r\n"), ofSeconds(2));
+            var raw = subscriber.awaitRawResponse(body -> body.contains("retry: 3000"), ofSeconds(2));
             assertThat(raw).contains("retry: 3000");
             assertThat(raw).contains("X-Accel-Buffering: no");
             assertThat(raw)

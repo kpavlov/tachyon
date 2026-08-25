@@ -82,7 +82,7 @@ public abstract class McpClient implements Closeable {
 
     /** {@link #openGetStream(String)} against an explicit session id rather than this client's stored one. */
     public SseStream openGetStream(String sessionId, @Nullable String lastEventId) {
-        var subscriber = new SseStream(mcpEndpoint.getPort(), sessionId, lastEventId, protocolVersion());
+        var subscriber = new SseStream(mcpEndpoint, sessionId, lastEventId, protocolVersion());
         openGetStreams.add(subscriber);
         subscriber.start();
         return subscriber;
@@ -417,14 +417,14 @@ public abstract class McpClient implements Closeable {
      */
     public static String extractJsonRpcResponse(String sseBody, String requestId) {
         String last = null;
-        var idMarker = "\"id\":" + requestId;
+        var expectedId = requestId.isEmpty() ? null : MAPPER.readTree(requestId);
         for (var line : sseBody.split("\n")) {
             String data = null;
             if (line.startsWith("data: ")) data = line.substring("data: ".length());
             else if (line.startsWith("data:")) data = line.substring("data:".length());
             if (data == null) continue;
             last = data;
-            if (!requestId.isEmpty() && data.contains(idMarker)) {
+            if (expectedId != null && MAPPER.readTree(data).path("id").equals(expectedId)) {
                 return data;
             }
         }

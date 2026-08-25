@@ -5,12 +5,14 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import javax.net.ssl.SSLSocketFactory;
 import me.kpavlov.finchly.queue.MessageAggregator;
 import me.kpavlov.finchly.queue.QueueSubscriber;
 import org.awaitility.Awaitility;
@@ -33,7 +35,7 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
     private static final Pattern EVENT_LINE = Pattern.compile("event:\\s?(.*)");
     private static final Pattern DATA_LINE = Pattern.compile("data:\\s?(.*)");
 
-    private final int port;
+    private final URI endpoint;
     private final String sessionId;
     private final @Nullable String lastEventId;
     private final String protocolVersion;
@@ -43,20 +45,20 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
     private volatile boolean stopped;
 
     /**
-     * Opens against {@code /mcp} on {@code localhost:port}, with its own {@link MessageAggregator}.
+     * Opens against {@code endpoint}, with its own {@link MessageAggregator}.
      */
-    SseStream(int port, String sessionId, @Nullable String lastEventId, String protocolVersion) {
-        this(port, sessionId, lastEventId, protocolVersion, new MessageAggregator<>());
+    SseStream(URI endpoint, String sessionId, @Nullable String lastEventId, String protocolVersion) {
+        this(endpoint, sessionId, lastEventId, protocolVersion, new MessageAggregator<>());
     }
 
     SseStream(
-            int port,
+            URI endpoint,
             String sessionId,
             @Nullable String lastEventId,
             String protocolVersion,
             MessageAggregator<SseFrame> aggregator) {
         super(aggregator);
-        this.port = port;
+        this.endpoint = endpoint;
         this.sessionId = sessionId;
         this.lastEventId = lastEventId;
         this.protocolVersion = protocolVersion;
@@ -68,9 +70,18 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
     @Override
     public void start() {
         try {
-            socket = new Socket("localhost", port);
-            var req = new StringBuilder("GET /mcp HTTP/1.1\r\n")
-                    .append("Host: localhost:")
+            var host = endpoint.getHost();
+            var port = endpoint.getPort() != -1 ? endpoint.getPort() : defaultPort(endpoint);
+            socket = "https".equalsIgnoreCase(endpoint.getScheme())
+                    ? SSLSocketFactory.getDefault().createSocket(host, port)
+                    : new Socket(host, port);
+            var path = endpoint.getRawPath() == null || endpoint.getRawPath().isEmpty() ? "/" : endpoint.getRawPath();
+            var req = new StringBuilder("GET ")
+                    .append(path)
+                    .append(" HTTP/1.1\r\n")
+                    .append("Host: ")
+                    .append(host)
+                    .append(':')
                     .append(port)
                     .append("\r\n")
                     .append("MCP-Session-Id: ")
@@ -88,9 +99,13 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
             socket.getOutputStream().flush();
             socket.setSoTimeout(50);
         } catch (IOException e) {
-            throw new UncheckedIOException("Failed to open SSE stream to localhost:" + port, e);
+            throw new UncheckedIOException("Failed to open SSE stream to " + endpoint, e);
         }
         Thread.ofVirtual().start(this::readLoop);
+    }
+
+    private static int defaultPort(URI endpoint) {
+        return "https".equalsIgnoreCase(endpoint.getScheme()) ? 443 : 80;
     }
 
     /**
@@ -108,6 +123,9 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
         }
     }
 
+    /**
+     * Stops the background reader and closes the socket, same as {@link #stop()}.
+     */
     @Override
     public void close() {
         stop();
@@ -132,7 +150,7 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
      * Unlike {@link #await}, absence can't be confirmed faster than waiting the full window —
      * this isn't a lazy sleep standing in for a pollable condition, it <em>is</em> the condition.
      */
-    public void assertNoneArrive(Predicate<SseFrame> predicate, Duration window) {
+    public void assertNoneArrived(Predicate<SseFrame> predicate, Duration window) {
         try {
             Thread.sleep(window);
         } catch (InterruptedException e) {
@@ -178,6 +196,7 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
         var lineBuf = new StringBuilder();
         String pendingId = null;
         String pendingEvent = null;
+        StringBuilder pendingData = null;
         while (!stopped) {
             try {
                 var n = socket.getInputStream().read(buf);
@@ -192,6 +211,17 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
                 while ((newline = lineBuf.indexOf("\n")) >= 0) {
                     var line = lineBuf.substring(0, newline).stripTrailing();
                     lineBuf.delete(0, newline + 1);
+                    if (line.isEmpty()) {
+                        // Blank line terminates the event per the SSE spec: dispatch once, joining
+                        // any accumulated data: lines with embedded newlines.
+                        if (pendingData != null) {
+                            deliver(new SseFrame(pendingId, pendingEvent, pendingData.toString()));
+                        }
+                        pendingId = null;
+                        pendingEvent = null;
+                        pendingData = null;
+                        continue;
+                    }
                     var idMatcher = ID_LINE.matcher(line);
                     var eventMatcher = EVENT_LINE.matcher(line);
                     var dataMatcher = DATA_LINE.matcher(line);
@@ -200,9 +230,12 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
                     } else if (eventMatcher.matches()) {
                         pendingEvent = eventMatcher.group(1);
                     } else if (dataMatcher.matches()) {
-                        deliver(new SseFrame(pendingId, pendingEvent, dataMatcher.group(1)));
-                        pendingId = null;
-                        pendingEvent = null;
+                        if (pendingData == null) {
+                            pendingData = new StringBuilder();
+                        } else {
+                            pendingData.append('\n');
+                        }
+                        pendingData.append(dataMatcher.group(1));
                     }
                 }
             } catch (SocketTimeoutException e) {
