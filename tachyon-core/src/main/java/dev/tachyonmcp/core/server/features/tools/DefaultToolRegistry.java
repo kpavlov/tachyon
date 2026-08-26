@@ -86,6 +86,7 @@ public class DefaultToolRegistry extends AbstractRegistry<ToolDescriptor, ToolHa
         var name = descriptor.name();
         validateName(name);
         JsonSchemaUtils.validateInputSchemaRoot(schemaFactory, name, descriptor.inputSchema());
+        JsonSchemaUtils.validateHeaderAnnotations(schemaFactory, name, descriptor.inputSchema());
         JsonSchemaUtils.validateOutputSchemaRoot(schemaFactory, name, descriptor.outputSchema());
         var desc = descriptor.description();
         if (desc != null && desc.length() > MAX_DESCRIPTION_LENGTH) {

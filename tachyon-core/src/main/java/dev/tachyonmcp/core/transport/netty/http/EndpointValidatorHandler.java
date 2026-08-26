@@ -1,14 +1,13 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.transport.netty.http;
 
-import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.sendPlainTextAndClose;
+import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.rejectAndClose;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,8 +33,7 @@ public class EndpointValidatorHandler extends ChannelInboundHandlerAdapter {
 
             if (!normalizedPath(uri).equals(mcpEndpoint)) {
                 LOGGER.warn("Unknown endpoint: {}", uri);
-                ReferenceCountUtil.release(msg);
-                sendPlainTextAndClose(ctx, HttpResponseStatus.NOT_FOUND, "Not Found");
+                rejectAndClose(ctx, msg, HttpResponseStatus.NOT_FOUND, "Not Found");
                 return;
             }
         }

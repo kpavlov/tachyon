@@ -1,7 +1,8 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.transport.netty.http;
 
-import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.sendPlainTextAndClose;
+import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.dropIfRejected;
+import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.rejectAndClose;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -10,8 +11,6 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.util.AttributeKey;
-import io.netty.util.ReferenceCountUtil;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -74,14 +73,9 @@ public class DnsRebindingProtectionHandler extends ChannelInboundHandlerAdapter 
                 .collect(Collectors.toUnmodifiableSet());
     }
 
-    private static final AttributeKey<Boolean> REJECTED = AttributeKey.valueOf("tachyonDnsRebindingRejected");
-
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        if (Boolean.TRUE.equals(ctx.channel().attr(REJECTED).get())) {
-            // The request was rejected; drop its trailing content chunks instead of forwarding
-            // headerless content downstream while the close is in flight.
-            ReferenceCountUtil.release(msg);
+        if (dropIfRejected(ctx, msg)) {
             return;
         }
         if (msg instanceof HttpRequest req) {
@@ -123,9 +117,7 @@ public class DnsRebindingProtectionHandler extends ChannelInboundHandlerAdapter 
      * message first: it is not forwarded down the pipeline, so nothing else will free its buffers.
      */
     private static void reject(ChannelHandlerContext ctx, Object msg) {
-        ctx.channel().attr(REJECTED).set(Boolean.TRUE);
-        ReferenceCountUtil.release(msg);
-        sendPlainTextAndClose(ctx, HttpResponseStatus.FORBIDDEN, "Forbidden");
+        rejectAndClose(ctx, msg, HttpResponseStatus.FORBIDDEN, "Forbidden");
     }
 
     /** Returns {@code true} when {@code authority} matches a configured allowed host. */

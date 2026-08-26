@@ -148,6 +148,40 @@ Entries are bare authorities, not URLs, matched case-insensitively; an entry wit
 matches that host on any port. See `DnsRebindingProtectionHandler`'s class docs for exact
 matching rules (bracketed IPv6, multiple/missing `Host` headers, HTTP/1.0 exemption).
 
+### `Mcp-Param-*` character restrictions
+
+On a `2026-07-28` request, a literal (non-Base64) `Mcp-Param-*` value may contain only
+horizontal tab, space, and visible ASCII (`0x21`–`0x7E`); anything else is rejected with `400`
+and JSON-RPC `-32020` (HeaderMismatch). Per SEP-2243 clients must Base64-wrap such values as
+`=?base64?{value}?=` instead. Every `Mcp-Param-*` header on the request is checked, whether or
+not it maps to an `x-mcp-header` tool argument.
+
+Netty's decoder already rejects NUL/CR/LF, but decodes `0x80`–`0xFF` as ISO-8859-1 and passes
+it through — that non-ASCII case is what this check catches.
+
+### MCP header guard
+
+Two request shapes let the HTTP view of a request and the executed view disagree. Both are
+rejected with `400 Bad Request` before the body is read, and the connection is closed. Not
+configurable.
+
+**Duplicate singleton headers.** `MCP-Protocol-Version`, `MCP-Session-Id`, `Mcp-Method`,
+`Mcp-Name`, `Last-Event-ID`, and any `Mcp-Param-*` carry exactly one value. Repeating one lets
+the server and an intermediary read different values from the same request — the SEP-2243
+routing headers exist precisely so a gateway can decide without parsing the body, which only
+holds while both views agree. Repeating `MCP-Protocol-Version` is a downgrade: the server
+negotiates the first value while a proxy reading the last one believes a newer revision applied.
+
+Duplicates are rejected even when both values are identical, since an intermediary can still
+disagree about whether the field is singular. Repeatable headers (`Accept`, `Cookie`, …) are
+untouched.
+
+**Mirrored headers without `MCP-Protocol-Version: 2026-07-28`.** `Mcp-Method`, `Mcp-Name` and
+`Mcp-Param-*` are only compared against the body by the `2026-07-28` revision. A request naming
+an older version — or omitting the header entirely — would carry them uninspected, so
+`Mcp-Method: tools/list` could clear a gateway while the body ran `tools/call`. The mirrors were
+introduced by `2026-07-28`, so no legitimate older client sends them.
+
 ## I/O engine
 
 `NettyIoEngine` selects the Netty transport:

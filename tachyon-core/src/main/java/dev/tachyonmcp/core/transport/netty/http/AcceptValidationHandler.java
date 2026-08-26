@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.transport.netty.http;
 
+import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.markRejected;
 import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.sendResponseAndClose;
 
 import io.netty.buffer.Unpooled;
@@ -112,9 +113,11 @@ public final class AcceptValidationHandler extends ChannelInboundHandlerAdapter 
                 req.headers().get(HttpHeaderNames.ACCEPT) == null ? "missing" : "incompatible",
                 method,
                 String.join(", ", requiredTypes));
-        var msg = "Accept header must include " + String.join(" or ", requiredTypes) + " on " + method;
-        var body = Unpooled.copiedBuffer(msg, StandardCharsets.UTF_8);
+        var text = "Accept header must include " + String.join(" or ", requiredTypes) + " on " + method;
+        var body = Unpooled.copiedBuffer(text, StandardCharsets.UTF_8);
+        // Read the origin before marking rejected: markRejected releases the request.
         var origin = req.headers().get(HttpHeaderNames.ORIGIN);
+        markRejected(ctx, req);
         sendResponseAndClose(ctx, HttpResponseStatus.NOT_ACCEPTABLE, TEXT_PLAIN, body, origin);
     }
 }

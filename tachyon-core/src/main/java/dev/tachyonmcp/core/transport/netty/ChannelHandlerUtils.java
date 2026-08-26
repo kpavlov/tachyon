@@ -23,6 +23,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AttributeKey;
+import io.netty.util.ReferenceCountUtil;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
@@ -31,6 +32,60 @@ public final class ChannelHandlerUtils {
     private static final AttributeKey<Session> SESSION_KEY = AttributeKey.valueOf("tachyonSession");
 
     private ChannelHandlerUtils() {}
+
+    private static final AttributeKey<Boolean> REJECTED = AttributeKey.valueOf("tachyonRequestRejected");
+
+    /**
+     * Rejects the request with {@code status} and closes the connection, marking the channel so
+     * {@link #dropIfRejected} discards what the decoder already produced from the same read. Releases
+     * {@code msg}: it is not forwarded on, so nothing else would free it.
+     *
+     * @param ctx     the channel handler context
+     * @param msg     the inbound message being rejected
+     * @param status  the HTTP status to respond with
+     * @param message the plain-text response body; must not echo client-controlled input
+     */
+    public static void rejectAndClose(
+            ChannelHandlerContext ctx, Object msg, HttpResponseStatus status, String message) {
+        markRejected(ctx, msg);
+        sendPlainTextAndClose(ctx, status, message);
+    }
+
+    /**
+     * {@link #rejectAndClose} bookkeeping without the response, for handlers writing their own. Call
+     * after reading anything still needed from {@code msg} — it releases the message.
+     *
+     * @param ctx the channel handler context
+     * @param msg the inbound message being rejected
+     */
+    public static void markRejected(ChannelHandlerContext ctx, Object msg) {
+        ctx.channel().attr(REJECTED).set(Boolean.TRUE);
+        ReferenceCountUtil.release(msg);
+    }
+
+    /**
+     * Releases {@code msg} and returns {@code true} when this channel already rejected a request via
+     * {@link #rejectAndClose}. The decoder can emit the body's {@code HttpContent} chunks from the
+     * same read batch as the {@link HttpRequest} that was rejected, and forwarding headerless content
+     * downstream while the close is in flight leaks it into the next handler.
+     *
+     * <p>Called from exactly one place — {@code DnsRebindingProtectionHandler}, the first inbound
+     * handler after the codec — so every later handler is covered no matter which one rejected.
+     * Repeating the check in those handlers is unreachable: nothing forwards content past the head
+     * once the flag is set. A pipeline customizer that removes {@code dns-rebinding} removes this
+     * too.
+     *
+     * @param ctx the channel handler context
+     * @param msg the inbound message
+     * @return {@code true} if the message was dropped and the caller must return
+     */
+    public static boolean dropIfRejected(ChannelHandlerContext ctx, Object msg) {
+        if (!Boolean.TRUE.equals(ctx.channel().attr(REJECTED).get())) {
+            return false;
+        }
+        ReferenceCountUtil.release(msg);
+        return true;
+    }
 
     /**
      * Binds a session to the channel and installs the {@link SessionTouchHandler} if not already

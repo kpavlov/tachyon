@@ -1,6 +1,8 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.protocol.mcp.v2026_07_28.transport;
 
+import static dev.tachyonmcp.core.protocol.mcp.McpHeaderNames.X_MCP_HEADER;
+
 import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.core.protocol.mcp.McpHeaderNames;
@@ -18,6 +20,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
@@ -49,10 +52,11 @@ public final class RequestValidationHandler extends ChannelInboundHandlerAdapter
     private static final String CLIENT_INFO_KEY = "io.modelcontextprotocol/clientInfo";
     private static final String CLIENT_CAPABILITIES_KEY = "io.modelcontextprotocol/clientCapabilities";
 
+    /** 2^53-1. Past it a JSON number cannot round-trip through a JavaScript intermediary intact. */
+    private static final BigDecimal MAX_SAFE_INTEGER = BigDecimal.valueOf(9007199254740991L);
+
     private static final String BASE64_PREFIX = "=?base64?";
     private static final String BASE64_SUFFIX = "?=";
-    private static final String X_MCP_HEADER = "x-mcp-header";
-    private static final String PARAM_HEADER_PREFIX = "Mcp-Param-";
 
     private final ServerEngine server;
 
@@ -82,9 +86,19 @@ public final class RequestValidationHandler extends ChannelInboundHandlerAdapter
             ctx.fireChannelRead(msg);
             return;
         }
+        if (message instanceof JsonRpcMessage.Notification<?> notification) {
+            // Mcp-Method is required on notifications too, and this revision does define one
+            // client-to-server notification (notifications/cancelled). The other mirrors are
+            // request-scoped, and there is no id to echo, so the error carries a null one.
+            var rejection = validateMethodHeader(req, notification.method());
+            if (rejection != null) {
+                reject(ctx, req, null, rejection);
+                return;
+            }
+            ctx.fireChannelRead(msg);
+            return;
+        }
         if (!(message instanceof JsonRpcMessage.Request<?> request)) {
-            // Notifications/responses/errors: this revision defines no client-to-client-side
-            // notifications over Streamable HTTP; nothing to validate here.
             ctx.fireChannelRead(msg);
             return;
         }
@@ -128,20 +142,24 @@ public final class RequestValidationHandler extends ChannelInboundHandlerAdapter
                     + PROTOCOL_VERSION_KEY + " value '" + metaProtocolVersion + "'");
         }
 
-        var headerMethod = strip(req.headers().get(McpHeaderNames.MCP_METHOD));
-        if (!method.equals(headerMethod)) {
-            return ServerErrors.headerMismatch("Header mismatch: " + McpHeaderNames.MCP_METHOD + " header value '"
-                    + headerMethod + "' does not match body method '" + method + "'");
-        }
+        var methodRejection = validateMethodHeader(req, method);
+        if (methodRejection != null) return methodRejection;
 
         if (NAME_REQUIRED_METHODS.contains(method)) {
             var bodyName =
                     "resources/read".equals(method) ? asString(paramsMap.get("uri")) : asString(paramsMap.get("name"));
             var headerName = decodeName(req.headers().get(McpHeaderNames.MCP_NAME));
-            if (bodyName == null || headerName == null || !headerName.equals(bodyName)) {
+            if (headerName == null || !headerName.equals(bodyName)) {
                 return ServerErrors.headerMismatch("Header mismatch: " + McpHeaderNames.MCP_NAME + " header value '"
                         + headerName + "' does not match body value '" + bodyName + "'");
             }
+        }
+
+        // Not scoped to tools/call: the rule is about the field's wire format, matched or not.
+        var invalidHeader = findInvalidCharacterParamHeader(req);
+        if (invalidHeader != null) {
+            return ServerErrors.headerMismatch(
+                    "Header mismatch: " + invalidHeader + " contains characters not permitted in an HTTP field value");
         }
 
         if ("tools/call".equals(method)) {
@@ -154,8 +172,8 @@ public final class RequestValidationHandler extends ChannelInboundHandlerAdapter
 
     /**
      * Validates {@code Mcp-Param-{Name}} headers against the tool's {@code x-mcp-header}-annotated
-     * input-schema properties (SEP-2243). Only scans top-level {@code properties} — nested reachable
-     * chains are a schema-authoring detail this server's tools don't currently need.
+     * properties (SEP-2243). Registration rejects annotations below the top level, so every one the
+     * schema carries is checked here.
      */
     private @Nullable ServerError validateCustomParamHeaders(FullHttpRequest req, Map<?, ?> paramsMap) {
         var toolName = asString(paramsMap.get("name"));
@@ -165,35 +183,94 @@ public final class RequestValidationHandler extends ChannelInboundHandlerAdapter
         if (inputSchema == null) return null;
         var properties = JsonUtils.parse(inputSchema).path("properties");
         if (!properties.isObject()) return null;
+        var arguments = paramsMap.get("arguments") instanceof Map<?, ?> m ? m : Map.of();
 
-        var arguments = paramsMap.get("arguments") instanceof Map<?, ?> a ? a : Map.of();
         for (var entry : properties.properties()) {
             var headerAnnotation = entry.getValue().path(X_MCP_HEADER);
             if (!headerAnnotation.isString()) continue;
             var propertyName = entry.getKey();
-            var headerName = PARAM_HEADER_PREFIX + headerAnnotation.asString();
-            var bodyValue = argumentAsHeaderString(arguments.get(propertyName));
-            var rawHeader = req.headers().get(headerName);
+            var rejection = validateMirroredValue(
+                    req,
+                    McpHeaderNames.MCP_PARAM_PREFIX + headerAnnotation.asString(),
+                    propertyName,
+                    arguments.get(propertyName));
+            if (rejection != null) return rejection;
+        }
+        return null;
+    }
 
-            if (bodyValue == null) {
-                continue; // Parameter not in arguments: client MUST omit the header, server MUST NOT expect it.
-            }
-            if (rawHeader == null) {
-                return ServerErrors.headerMismatch("Header mismatch: " + headerName
-                        + " is required because body arguments contains '" + propertyName + "'");
-            }
-            String decodedHeader;
-            try {
-                decodedHeader = decodeParamValue(rawHeader);
-            } catch (IllegalArgumentException e) {
-                return ServerErrors.headerMismatch("Header mismatch: " + headerName + " has invalid Base64 encoding");
-            }
-            if (!decodedHeader.equals(bodyValue)) {
-                return ServerErrors.headerMismatch("Header mismatch: " + headerName + " header value '" + decodedHeader
-                        + "' does not match body value '" + bodyValue + "'");
+    private static @Nullable ServerError validateMirroredValue(
+            FullHttpRequest req, String headerName, String propertyName, @Nullable Object argument) {
+        var bodyValue = argumentAsHeaderString(argument);
+        if (bodyValue == null) {
+            return null; // Not in arguments: client MUST omit the header, server MUST NOT expect it.
+        }
+        if (argument instanceof Number n && new BigDecimal(n.toString()).abs().compareTo(MAX_SAFE_INTEGER) > 0) {
+            return ServerErrors.headerMismatch("Header mismatch: " + headerName + " value '" + bodyValue
+                    + "' is outside the safe integer range and cannot be mirrored");
+        }
+        var rawHeader = req.headers().get(headerName);
+        if (rawHeader == null) {
+            return ServerErrors.headerMismatch("Header mismatch: " + headerName
+                    + " is required because body arguments contains '" + propertyName + "'");
+        }
+        String decodedHeader;
+        try {
+            decodedHeader = decodeParamValue(rawHeader);
+        } catch (IllegalArgumentException e) {
+            return ServerErrors.headerMismatch("Header mismatch: " + headerName + " has invalid Base64 encoding");
+        }
+        if (!matches(argument, bodyValue, decodedHeader)) {
+            return ServerErrors.headerMismatch("Header mismatch: " + headerName + " header value '" + decodedHeader
+                    + "' does not match body value '" + bodyValue + "'");
+        }
+        return null;
+    }
+
+    /**
+     * SEP-2243: numbers compare numerically, so {@code 42} and {@code 42.0} are the same value. That
+     * also stops a spoof — JSON Schema accepts {@code 42.0} as an {@code integer}, so a string-only
+     * comparison would have to skip it, leaving the header unchecked.
+     */
+    private static boolean matches(@Nullable Object argument, String bodyValue, String decodedHeader) {
+        if (!(argument instanceof Number)) {
+            return decodedHeader.equals(bodyValue);
+        }
+        try {
+            return new BigDecimal(decodedHeader).compareTo(new BigDecimal(bodyValue)) == 0;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Name of the first {@code Mcp-Param-*} header violating SEP-2243's character restrictions, or
+     * {@code null}. Read before Base64 decoding: the rule applies to what travelled on the wire.
+     */
+    private static @Nullable CharSequence findInvalidCharacterParamHeader(FullHttpRequest req) {
+        var it = req.headers().iteratorCharSequence();
+        while (it.hasNext()) {
+            var entry = it.next();
+            if (McpHeaderNames.isParamHeader(entry.getKey()) && hasInvalidHeaderCharacter(entry.getValue())) {
+                return entry.getKey();
             }
         }
         return null;
+    }
+
+    /**
+     * SEP-2243 permits only HTAB, space and visible ASCII; anything else must travel Base64-wrapped.
+     * Netty rejects NUL/CR/LF already, but passes {@code 0x80}-{@code 0xFF} through as ISO-8859-1 —
+     * that non-ASCII case is what this catches.
+     */
+    private static boolean hasInvalidHeaderCharacter(CharSequence value) {
+        for (var i = 0; i < value.length(); i++) {
+            var c = value.charAt(i);
+            if (c != '\t' && (c < 0x20 || c > 0x7E)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -205,14 +282,22 @@ public final class RequestValidationHandler extends ChannelInboundHandlerAdapter
         return switch (value) {
             case null -> null;
             case String s -> s;
-            case Long l -> String.valueOf(l);
-            case Integer i -> String.valueOf(i);
             case Boolean b -> String.valueOf(b);
+            // Every Number, not just the integral ones: a value the schema calls an integer can still
+            // decode to Double (42.0), and returning null there would skip the header check.
+            case Number n -> n.toString();
             default -> null;
         };
     }
 
-    private void reject(ChannelHandlerContext ctx, FullHttpRequest req, RequestId id, ServerError error) {
+    private static @Nullable ServerError validateMethodHeader(FullHttpRequest req, String method) {
+        var headerMethod = strip(req.headers().get(McpHeaderNames.MCP_METHOD));
+        if (method.equals(headerMethod)) return null;
+        return ServerErrors.headerMismatch("Header mismatch: " + McpHeaderNames.MCP_METHOD + " header value '"
+                + headerMethod + "' does not match body method '" + method + "'");
+    }
+
+    private void reject(ChannelHandlerContext ctx, FullHttpRequest req, @Nullable RequestId id, ServerError error) {
         var interaction = ChannelHandlerUtils.requireInteractionContext(ctx);
         var wireError = interaction.protocol().responseMapper().error(error);
         var body = JsonRpcCodec.serializeError(id, wireError.code(), wireError.message(), wireError.data());

@@ -7,6 +7,7 @@ import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.transport.netty.http.AcceptValidationHandler;
 import dev.tachyonmcp.core.transport.netty.http.DnsRebindingProtectionHandler;
 import dev.tachyonmcp.core.transport.netty.http.EndpointValidatorHandler;
+import dev.tachyonmcp.core.transport.netty.http.McpHeaderGuardHandler;
 import dev.tachyonmcp.core.transport.netty.http.StatelessValidatorHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
@@ -149,6 +150,10 @@ public class McpChannelInitializer extends ChannelInitializer<SocketChannel> {
             p.addLast("cors", new CorsHandler(corsConfig));
         }
         p.addLast("mcp-endpoint", endpointValidatorHandler);
+
+        // Must precede "protocol-version": a repeated version header would otherwise negotiate on its
+        // first value while an intermediary routes on the last.
+        p.addLast("mcp-header-guard", McpHeaderGuardHandler.INSTANCE);
         p.addLast("protocol-version", protocolVersionHandler);
         p.addLast("accept-header", acceptHeaderValidator);
         if (stateless) {

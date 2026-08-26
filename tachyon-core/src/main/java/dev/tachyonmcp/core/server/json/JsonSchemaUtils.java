@@ -1,18 +1,27 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.json;
 
+import static dev.tachyonmcp.core.protocol.mcp.McpHeaderNames.X_MCP_HEADER;
+
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.json.JsonDocument;
 import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.json.JsonSchemaValidator;
 import dev.tachyonmcp.api.json.SchemaValidationError;
 import dev.tachyonmcp.api.json.spi.JsonSchemaFactory;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
 @InternalApi
 public class JsonSchemaUtils {
+
+    /** {@code number} is excluded: its string form is not canonical, so header and body could differ. */
+    private static final List<String> MIRRORABLE_TYPES = List.of("string", "integer", "boolean");
+
     private JsonSchemaUtils() {
         // noop
     }
@@ -67,6 +76,110 @@ public class JsonSchemaUtils {
         if (node.isObject()) return;
         throw new IllegalArgumentException(
                 "Tool '" + toolName + "' outputSchema must be a JSON Schema object, got: " + node.getNodeType());
+    }
+
+    /**
+     * Validates a tool's {@code x-mcp-header} annotations against SEP-2243, rejecting the tool
+     * definition on violation — an annotation the server silently skips is a header intermediaries
+     * route on but nothing compares to the body.
+     *
+     * <p>Only top-level properties may be mirrored. The SEP's constraints allow any nesting depth,
+     * but its conformance suite requires servers to reject a nested annotation, and the stricter
+     * reading is the safe one: a nested annotation a server accepted but never validated would leave
+     * the header spoofable.
+     *
+     * @param factory  parses and validates the schema's raw JSON; must handle {@link String} sources
+     * @param toolName the name of the tool owning the schema
+     * @param schema   the schema to validate, or {@code null}
+     * @throws IllegalArgumentException if any {@code x-mcp-header} annotation is invalid
+     */
+    public static void validateHeaderAnnotations(
+            JsonSchemaFactory<?> factory, String toolName, @Nullable JsonSchema schema) {
+        if (schema == null) return;
+        var root = parseSchemaRoot(factory, "inputSchema", toolName, schema);
+        var topLevel = validateTopLevelAnnotations(root, toolName, new HashMap<>());
+        if (countAnnotations(root) > topLevel) {
+            throw new IllegalArgumentException("Tool '" + toolName + "' declares an " + X_MCP_HEADER
+                    + " on a nested property; only top-level properties can be mirrored");
+        }
+    }
+
+    /**
+     * Validates the top-level annotations and returns how many there were, for comparison against
+     * {@link #countAnnotations} — a higher total means one sits deeper in the schema.
+     *
+     * @param claimed header name, lowercased, to the property that claimed it
+     */
+    private static int validateTopLevelAnnotations(JsonNode root, String toolName, Map<String, String> claimed) {
+        var properties = root.path("properties");
+        if (!properties.isObject()) return 0;
+        var count = 0;
+        for (var entry : properties.properties()) {
+            var propertySchema = entry.getValue();
+            var annotation = propertySchema.path(X_MCP_HEADER);
+            if (annotation.isString()) {
+                validateAnnotation(toolName, entry.getKey(), annotation.asString(), propertySchema, claimed);
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static void validateAnnotation(
+            String toolName, String property, String headerName, JsonNode propertySchema, Map<String, String> claimed) {
+        if (!isToken(headerName)) {
+            throw new IllegalArgumentException("Tool '" + toolName + "' property '" + property + "' has an "
+                    + X_MCP_HEADER + " that is not a non-empty HTTP token: '" + headerName + "'");
+        }
+        var declaredType = propertySchema.path("type");
+        var type = declaredType.isString() ? declaredType.asString() : null;
+        if (!MIRRORABLE_TYPES.contains(type)) {
+            throw new IllegalArgumentException("Tool '" + toolName + "' property '" + property + "' declares "
+                    + X_MCP_HEADER + " on type '" + type + "'; only " + MIRRORABLE_TYPES + " can be mirrored");
+        }
+        var previous = claimed.put(headerName.toLowerCase(Locale.ROOT), property);
+        if (previous != null) {
+            throw new IllegalArgumentException("Tool '" + toolName + "' maps both '" + previous + "' and '" + property
+                    + "' to " + X_MCP_HEADER + " '" + headerName + "'; names must be unique ignoring case");
+        }
+    }
+
+    /** Occurrences anywhere in the tree, to catch those off the {@code properties} chain. */
+    private static int countAnnotations(JsonNode node) {
+        return countAnnotations(node, false);
+    }
+
+    /**
+     * @param propertyNames {@code true} when {@code node} is a {@code properties} map, whose keys are
+     *     author-chosen property names rather than schema keywords — a property may legitimately be
+     *     called {@code x-mcp-header} without being one
+     */
+    private static int countAnnotations(JsonNode node, boolean propertyNames) {
+        if (!node.isObject()) {
+            var elements = 0;
+            for (var child : node) {
+                elements += countAnnotations(child, false);
+            }
+            return elements;
+        }
+        var count = !propertyNames && node.path(X_MCP_HEADER).isString() ? 1 : 0;
+        for (var child : node.properties()) {
+            count += countAnnotations(child.getValue(), "properties".equals(child.getKey()));
+        }
+        return count;
+    }
+
+    /** RFC 9110 section 5.6.2 {@code 1*tchar} — note the {@code 1*}: empty is not a token. */
+    private static boolean isToken(String value) {
+        if (value.isEmpty()) return false;
+        for (var i = 0; i < value.length(); i++) {
+            var c = value.charAt(i);
+            var alphanumeric = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+            if (!alphanumeric && "!#$%&'*+-.^_`|~".indexOf(c) < 0) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static JsonNode parseSchemaRoot(

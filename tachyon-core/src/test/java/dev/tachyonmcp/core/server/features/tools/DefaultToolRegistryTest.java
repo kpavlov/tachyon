@@ -51,6 +51,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import tools.jackson.databind.JsonNode;
 
 class DefaultToolRegistryTest {
@@ -685,6 +686,97 @@ class DefaultToolRegistryTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("inputSchema")
                 .hasMessageContaining("\"type\": \"object\"");
+    }
+
+    @Test
+    void shouldRejectNestedHeaderAnnotation() {
+        // SEP-2243 conformance: a nested x-mcp-header must be rejected, not silently ignored.
+        var schema = parseJson("""
+            {"type":"object","properties":{
+              "target":{"type":"object","properties":{
+                "region":{"type":"string","x-mcp-header":"Region"}}}}}
+            """);
+        assertThatThrownBy(() -> registry.register(testTool("nested", null, schema)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("x-mcp-header")
+                .hasMessageContaining("nested");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"array", "object", "null", "number"})
+    void shouldRejectHeaderAnnotationOnNonPrimitiveType(String type) {
+        // SEP-2243: string/integer/boolean only; number's string form is not canonical.
+        var schema = parseJson("""
+                {"type":"object","properties":{"p":{"type":"%s","x-mcp-header":"P"}}}
+                """.formatted(type));
+        assertThatThrownBy(() -> registry.register(testTool("bad-type-" + type, null, schema)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("x-mcp-header")
+                .hasMessageContaining(type);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "My Region", "Region:Primary", "R\u00e9gion"})
+    void shouldRejectMalformedHeaderAnnotationName(String headerName) {
+        // SEP-2243: the value must be a non-empty RFC 9110 token (1*tchar).
+        var schema = parseJson("""
+                {"type":"object","properties":{"p":{"type":"string","x-mcp-header":"%s"}}}
+                """.formatted(headerName));
+        assertThatThrownBy(() -> registry.register(testTool("bad-name", null, schema)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("x-mcp-header");
+    }
+
+    @Test
+    void shouldRejectHeaderAnnotationNameWithControlCharacter() {
+        // Tab is legal in a header *value* but not in a field-name token. It has to reach the parser
+        // as a JSON escape: a literal control character is not valid inside a JSON string.
+        var schema = parseJson("""
+            {"type":"object","properties":{"p":{"type":"string","x-mcp-header":"Region\\u0009Tab"}}}
+            """);
+        assertThatThrownBy(() -> registry.register(testTool("tab-name", null, schema)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("x-mcp-header");
+    }
+
+    @Test
+    void shouldAcceptPropertyNamedLikeTheHeaderKeyword() {
+        // A "properties" key is an author-chosen name, not a schema keyword, so it must not be
+        // mistaken for an annotation sitting off the properties chain.
+        var schema = parseJson("""
+            {"type":"object","properties":{"x-mcp-header":{"type":"string"}}}
+            """);
+        registry.register(testTool("keyword-named-property", null, schema));
+        assertThat(registry.find("keyword-named-property")).isPresent();
+    }
+
+    @Test
+    void shouldRejectDuplicateHeaderAnnotationNamesIgnoringCase() {
+        // Two properties on one header make it ambiguous for an intermediary.
+        var schema = parseJson("""
+            {"type":"object","properties":{
+              "a":{"type":"string","x-mcp-header":"Region"},
+              "b":{"type":"string","x-mcp-header":"REGION"}}}
+            """);
+        assertThatThrownBy(() -> registry.register(testTool("dup-header", null, schema)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("x-mcp-header")
+                .hasMessageContaining("'a'")
+                .hasMessageContaining("'b'")
+                .hasMessageContaining("unique ignoring case");
+    }
+
+    @Test
+    void shouldRejectHeaderAnnotationInsideArrayItems() {
+        // Also below the top level, and there is no single argument to mirror either.
+        var schema = parseJson("""
+            {"type":"object","properties":{
+              "rows":{"type":"array","items":{"type":"object","properties":{
+                "region":{"type":"string","x-mcp-header":"Region"}}}}}}
+            """);
+        assertThatThrownBy(() -> registry.register(testTool("unreachable", null, schema)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("x-mcp-header");
     }
 
     @Test

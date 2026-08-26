@@ -1,8 +1,10 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.protocol.mcp;
 
+import io.netty.util.AsciiString;
+
 /**
- * Constants for MCP-related HTTP header names.
+ * Constants for MCP HTTP header names, and the schema keyword that declares the custom ones.
  */
 public final class McpHeaderNames {
 
@@ -21,6 +23,25 @@ public final class McpHeaderNames {
 
     public static final String MCP_METHOD = "Mcp-Method";
     public static final String MCP_NAME = "Mcp-Name";
+
+    /**
+     * Tool input-schema keyword naming the {@link #MCP_PARAM_PREFIX} header a property mirrors into
+     * (SEP-2243).
+     */
+    public static final String X_MCP_HEADER = "x-mcp-header";
+
+    /** Prefix of the headers mirroring {@link #X_MCP_HEADER}-annotated tool arguments (SEP-2243). */
+    public static final String MCP_PARAM_PREFIX = "Mcp-Param-";
+
+    /**
+     * Whether {@code name} is an {@code Mcp-Param-*} header, matched case-insensitively per RFC 9110.
+     *
+     * @param name the HTTP header name
+     * @return {@code true} if {@code name} starts with {@link #MCP_PARAM_PREFIX}
+     */
+    public static boolean isParamHeader(CharSequence name) {
+        return AsciiString.regionMatches(name, true, 0, MCP_PARAM_PREFIX, 0, MCP_PARAM_PREFIX.length());
+    }
 
     private McpHeaderNames() {}
 }

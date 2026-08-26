@@ -1,13 +1,15 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp20260728;
 
-import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
-import static org.assertj.core.api.Assertions.assertThat;
+import static dev.tachyonmcp.testkit.McpHttpResponseAssert.assertThatResponse;
 
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.LinkedHashMap;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +28,7 @@ class CustomHeaderValidationTest extends AbstractStatelessMcpE2eTest {
               "type": "object",
               "properties": {
                 "region": {"type": "string", "x-mcp-header": "Region"},
+                "limit": {"type": "integer", "x-mcp-header": "Limit"},
                 "query": {"type": "string"}
               },
               "required": ["region", "query"]
@@ -72,38 +75,32 @@ class CustomHeaderValidationTest extends AbstractStatelessMcpE2eTest {
     @Test
     void acceptsMatchingParamHeader() throws Exception {
         var response = post(toolCallBody(1, "us-west1"), "us-west1");
-        assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-        assertThat(response).isSuccess().hasTextContent("region=us-west1 query=SELECT 1");
+        assertThatResponse(response).hasStatus(200).isSuccess().hasTextContent("region=us-west1 query=SELECT 1");
     }
 
     @Test
     void rejectsMissingParamHeaderWhenBodyHasValue() throws Exception {
         var response = post(toolCallBody(2, "us-west1"), null);
-        assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-        assertThat(response).isJsonRpcError().hasId(2).hasErrorCode(-32020);
+        assertThatResponse(response).hasStatus(400).isJsonRpcError().hasId(2).hasErrorCode(-32020);
     }
 
     @Test
     void rejectsMismatchedParamHeader() throws Exception {
         var response = post(toolCallBody(3, "us-west1"), "eu-west1");
-        assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-        assertThat(response).isJsonRpcError().hasId(3).hasErrorCode(-32020);
+        assertThatResponse(response).hasStatus(400).isJsonRpcError().hasId(3).hasErrorCode(-32020);
     }
 
     @Test
     void acceptsBase64EncodedParamHeader() throws Exception {
-        var encoded = java.util.Base64.getEncoder()
-                .encodeToString("us-west1".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        var encoded = Base64.getEncoder().encodeToString("us-west1".getBytes(StandardCharsets.UTF_8));
         var response = post(toolCallBody(4, "us-west1"), "=?base64?" + encoded + "?=");
-        assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-        assertThat(response).isSuccess().hasTextContent("region=us-west1 query=SELECT 1");
+        assertThatResponse(response).hasStatus(200).isSuccess().hasTextContent("region=us-west1 query=SELECT 1");
     }
 
     @Test
     void rejectsInvalidBase64ParamHeader() throws Exception {
         var response = post(toolCallBody(5, "us-west1"), "=?base64?not-valid-base64!!?=");
-        assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-        assertThat(response).isJsonRpcError().hasId(5).hasErrorCode(-32020);
+        assertThatResponse(response).hasStatus(400).isJsonRpcError().hasId(5).hasErrorCode(-32020);
     }
 
     @Test
@@ -111,19 +108,123 @@ class CustomHeaderValidationTest extends AbstractStatelessMcpE2eTest {
         // "=?base64?=" is short enough that the "=?base64?" prefix and "?=" suffix overlap by one
         // character; the server must not throw while extracting the (empty) encoded segment.
         var response = post(toolCallBody(7, "us-west1"), "=?base64?=");
-        assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-        assertThat(response).isJsonRpcError().hasId(7).hasErrorCode(-32020);
+        assertThatResponse(response).hasStatus(400).isJsonRpcError().hasId(7).hasErrorCode(-32020);
     }
 
     @Test
     void rejectsBase64ParamHeaderWithMissingPadding() throws Exception {
         // "Hello" -> "SGVsbG8=" — strip the trailing '=' pad character. Base64.getDecoder() tolerates
         // this (decodes fine without it), but SEP-2243 requires the server to reject malformed padding.
-        var encoded = java.util.Base64.getEncoder()
-                .encodeToString("Hello".getBytes(java.nio.charset.StandardCharsets.UTF_8))
+        var encoded = Base64.getEncoder()
+                .encodeToString("Hello".getBytes(StandardCharsets.UTF_8))
                 .replace("=", "");
         var response = post(toolCallBody(6, "Hello"), "=?base64?" + encoded + "?=");
-        assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
-        assertThat(response).isJsonRpcError().hasId(6).hasErrorCode(-32020);
+        assertThatResponse(response).hasStatus(400).isJsonRpcError().hasId(6).hasErrorCode(-32020);
+    }
+
+    @Test
+    void rejectsDuplicateParamHeaders() throws Exception {
+        var headers = new LinkedHashMap<String, List<String>>();
+        headers.put("Mcp-Method", List.of("tools/call"));
+        headers.put("Mcp-Name", List.of("execute_sql"));
+        headers.put("Mcp-Param-Region", List.of("us-west1", "eu-west1"));
+
+        var response = postMcpRequest(toolCallBody(8, "us-west1"), headers, true);
+
+        assertThatResponse(response).isRejectedWith(400, "Duplicate MCP header");
+    }
+
+    @Test
+    void rejectsDuplicateIdenticalParamHeaders() throws Exception {
+        var headers = new LinkedHashMap<String, List<String>>();
+        headers.put("Mcp-Method", List.of("tools/call"));
+        headers.put("Mcp-Name", List.of("execute_sql"));
+        headers.put("Mcp-Param-Region", List.of("us-west1", "us-west1"));
+
+        var response = postMcpRequest(toolCallBody(9, "us-west1"), headers, true);
+
+        assertThatResponse(response).isRejectedWith(400, "Duplicate MCP header");
+    }
+
+    /** Pins the trust boundary: an injected {@code Mcp-Param-Admin} must not influence execution. */
+    @Test
+    void ignoresUnknownParamHeaderForDispatch() throws Exception {
+        var headers = new LinkedHashMap<String, List<String>>();
+        headers.put("Mcp-Method", List.of("tools/call"));
+        headers.put("Mcp-Name", List.of("execute_sql"));
+        headers.put("Mcp-Param-Region", List.of("us-west1"));
+        headers.put("Mcp-Param-Admin", List.of("true"));
+
+        var response = postMcpRequest(toolCallBody(10, "us-west1"), headers, true);
+
+        assertThatResponse(response).hasStatus(200).isSuccess().hasTextContent("region=us-west1 query=SELECT 1");
+    }
+
+    /** Netty passes {@code 0x80}-{@code 0xFF} through as ISO-8859-1, so nothing else catches it. */
+    @Test
+    void rejectsParamHeaderWithNonAsciiCharacters() throws Exception {
+        var response = post(toolCallBody(11, "us-west1"), "us-west\u00e9");
+
+        assertThatResponse(response).hasStatus(400).isJsonRpcError().hasId(11).hasErrorCode(-32020);
+    }
+
+    @Test
+    void acceptsParamHeaderWithInternalSpaces() throws Exception {
+        var response = post(toolCallBody(12, "us west 1"), "us west 1");
+
+        assertThatResponse(response)
+                .as("space is a permitted field-value character; only leading/trailing needs Base64")
+                .hasStatus(200)
+                .isSuccess()
+                .hasTextContent("region=us west 1 query=SELECT 1");
+    }
+
+    private HttpResponse<String> postWithLimit(int id, String bodyLimit, String limitHeader) throws Exception {
+        var headers = new LinkedHashMap<String, String>();
+        headers.put("Mcp-Method", "tools/call");
+        headers.put("Mcp-Name", "execute_sql");
+        headers.put("Mcp-Param-Region", "us-west1");
+        headers.put("Mcp-Param-Limit", limitHeader);
+        // language=JSON
+        var body = """
+                {
+                  "jsonrpc": "2.0",
+                  "id": %d,
+                  "method": "tools/call",
+                  "params": {
+                    "name": "execute_sql",
+                    "arguments": {"region": "us-west1", "limit": %s, "query": "SELECT 1"},
+                    "_meta": {
+                      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                      "io.modelcontextprotocol/clientInfo": {"name": "t", "version": "1"},
+                      "io.modelcontextprotocol/clientCapabilities": {}
+                    }
+                  }
+                }
+                """.formatted(id, bodyLimit);
+        return postMcpRequest(body, headers);
+    }
+
+    /** JSON Schema accepts 42.0 as an integer, so this must not slip past the header comparison. */
+    @Test
+    void rejectsSpoofedHeaderAgainstFractionalIntegerBody() throws Exception {
+        var response = postWithLimit(13, "42.0", "1");
+
+        assertThatResponse(response).hasStatus(400).isJsonRpcError().hasId(13).hasErrorCode(-32020);
+    }
+
+    /** SEP-2243: integers compare numerically, so 42.0 and 42 are the same value. */
+    @Test
+    void acceptsNumericallyEqualIntegerHeader() throws Exception {
+        var response = postWithLimit(14, "42.0", "42");
+
+        assertThatResponse(response).hasStatus(200).isSuccess();
+    }
+
+    @Test
+    void rejectsNonNumericHeaderAgainstNumericBody() throws Exception {
+        var response = postWithLimit(15, "42", "not-a-number");
+
+        assertThatResponse(response).hasStatus(400).isJsonRpcError().hasId(15).hasErrorCode(-32020);
     }
 }

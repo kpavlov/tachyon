@@ -134,6 +134,42 @@ return ToolResult.text("done").withMeta("taskId", JSON.textNode("t-123"));
 
 Metadata appears in the `_meta` field of the response.
 
+## Mirror an argument into an HTTP header
+
+MCP 2026-07-28 (SEP-2243) lets a tool argument be mirrored into an `Mcp-Param-{Name}` request
+header, so load balancers, WAFs and rate limiters can route on it without parsing the JSON body.
+Annotate the property with `x-mcp-header`:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "region": {"type": "string", "x-mcp-header": "Region"},
+    "query": {"type": "string"}
+  }
+}
+```
+
+A conforming client then sends `Mcp-Param-Region: us-west1`, and the server rejects the call with
+`400` / JSON-RPC `-32020` if that header is missing, malformed, or disagrees with the body.
+
+The annotation is validated when the tool is registered — a violation throws
+`IllegalArgumentException` rather than being ignored, because an annotation the server skips is a
+header an intermediary trusts but nothing ever checks against the body:
+
+| Rule | Detail |
+|---|---|
+| Non-empty HTTP token | RFC 9110 `1*tchar` — no spaces, colons, control characters, or non-ASCII |
+| Unique, ignoring case | Two properties mirroring to one header make it ambiguous |
+| Primitive types only | `string`, `integer`, `boolean`. `number` is excluded — its string form is not canonical |
+| Top-level properties only | An annotation on a nested property, inside `items`, or behind a `$ref` is rejected rather than silently ignored |
+
+Values must be ASCII; see [Configuration](configuration.md) for the character rules and the
+`=?base64?…?=` wrapper for anything else.
+
+> Do not annotate secrets. Mirrored values are visible to every intermediary on the path, and Base64
+> is an encoding, not encryption.
+
 ## Jackson note
 
 Tachyon uses **Jackson 3** (`tools.jackson.*`), not Jackson 2. Import `tools.jackson.databind.JsonNode`, not `com.fasterxml.jackson.databind.JsonNode`.

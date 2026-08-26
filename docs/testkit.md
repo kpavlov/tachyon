@@ -79,6 +79,24 @@ assertThatJsonRpcResponse(raw)
     .hasErrorMessage("Invalid params");
 ```
 
+### HTTP status and transport rejections
+
+`JsonRpcResponseAssert` reads the body as a JSON-RPC envelope, so it cannot speak for the HTTP
+status, nor for a rejection the transport answers in plain text before an envelope exists —
+a duplicate MCP header, a protocol version that cannot validate mirrored headers, an oversized
+body. `McpHttpResponseAssert` covers both and chains into the JSON-RPC assertions:
+
+```java
+import static dev.tachyonmcp.testkit.McpHttpResponseAssert.assertThatResponse;
+
+assertThatResponse(response).hasStatus(200).isSuccess().hasTextContent("echo:hi");
+assertThatResponse(response).hasStatus(400).isJsonRpcError().hasId(9).hasErrorCode(-32020);
+assertThatResponse(response).isRejectedWith(400, "Duplicate MCP header");
+```
+
+Prefer `isRejectedWith` over a bare status check for transport rejections: a JSON-RPC error
+carries the same `400`, so the status alone does not prove which layer rejected the request.
+
 ## Notifications
 
 Every client captures server-to-client notifications delivered over SSE; await one by method

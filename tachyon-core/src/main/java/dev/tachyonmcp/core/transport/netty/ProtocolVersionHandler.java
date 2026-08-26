@@ -55,10 +55,17 @@ public class ProtocolVersionHandler extends ChannelInboundHandlerAdapter {
                 ctx.channel().attr(UNSUPPORTED_VERSION_KEY).set(protoVersion != null ? protoVersion : "");
             } else {
                 var interaction = ctx.channel().attr(InteractionHandler.INTERACTION_CONTEXT_KEY);
-                if (McpProtocol.VERSION.equals(protocol.get().versionString())) {
+                var current = interaction.get();
+                // 2026-07-28 is sessionless and negotiates extensions per request, so it always starts
+                // a fresh context. Older versions keep theirs across the keep-alive connection, since
+                // the session lives on the channel — but only while the version still matches: a
+                // proxy pooling upstream connections across unrelated clients can put a 2026-07-28
+                // request ahead of a 2025-11-25 one, and validating the latter against the context the
+                // former left behind rejects a perfectly legal request.
+                if (McpProtocol.VERSION.equals(protocol.get().versionString())
+                        || current == null
+                        || !protocol.get().versionString().equals(current.protocolVersion())) {
                     interaction.set(protocol.get().createInteractionContext());
-                } else {
-                    interaction.setIfAbsent(protocol.get().createInteractionContext());
                 }
             }
         }

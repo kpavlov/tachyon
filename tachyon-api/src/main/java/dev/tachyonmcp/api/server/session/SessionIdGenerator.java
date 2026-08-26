@@ -29,6 +29,10 @@ import org.jspecify.annotations.Nullable;
  * server.session(s -> s.enabled(true).sessionIdGenerator(byTenant));
  * }</pre>
  *
+ * <p><b>A session id is not a credential.</b> It identifies protocol state, not the caller. An
+ * application adding authentication must verify the principal even on requests attaching to an
+ * existing session, or possession of the id becomes authorization.
+ *
  * @param <T> the transport-specific request type (a Netty {@code HttpRequest} for the HTTP
  *     transport); use {@link Object} for a request-independent generator like {@link #DEFAULT}
  * @author Konstantin Pavlov
