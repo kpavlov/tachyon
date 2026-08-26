@@ -10,6 +10,7 @@ import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -156,6 +157,9 @@ public final class TaskMethodHandlers {
                 try {
                     var result = entry.completion().toCompletableFuture().join();
                     return context.responseMapper().getTaskPayloadResult(result, entry.id());
+                } catch (CancellationException cancelled) {
+                    // Cancelled while we were parked on the future -- same answer as the pre-check above.
+                    return ServerErrors.invalidParams("Task was cancelled");
                 } catch (Exception e) {
                     return ServerErrors.invalidParams("Task result not available: " + e.getMessage());
                 }

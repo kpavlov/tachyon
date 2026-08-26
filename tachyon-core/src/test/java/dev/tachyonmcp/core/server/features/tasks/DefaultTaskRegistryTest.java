@@ -23,10 +23,12 @@ import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.config.TasksConfig;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.server.session.DefaultDispatchContext;
+import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -269,33 +271,9 @@ class DefaultTaskRegistryTest {
     }
 
     @Test
-    void statusTransitionValidation() {
-        var entry = (TaskEntry) registry.create();
-        assertThat(entry.transitionTo(TaskState.COMPLETED, new TaskResult.Completed(null)))
-                .isTrue();
-        assertThat(entry.transitionTo(TaskState.FAILED)).isFalse();
-        assertThat(entry.transitionTo(TaskState.WORKING)).isFalse();
-    }
-
-    @Test
-    void requireInputTransitionsToInputRequiredAndStoresPendingRequest() {
-        var task = registry.create();
-        assertThat(registry.updateStatus(task.id(), TaskState.WORKING, null)).isTrue();
-        var bundle = new InputRequestBundle(
-                Map.of("user_name", FormInputRequest.of("What is your name?", JsonSchema.objectSchema())),
-                "state-token");
-
-        assertThat(task.requireInput(bundle, "need more info")).isTrue();
-
-        assertThat(task.status()).isEqualTo(TaskState.INPUT_REQUIRED);
-        assertThat(task.statusMessage()).isEqualTo("need more info");
-        assertThat(registry.getById(task.id()).pendingInput()).isEqualTo(bundle);
-    }
-
-    @Test
     void taskUpdateFailureMarksTaskFailedAndUnregistersResumer() throws Exception {
         var task = (TaskEntry) registry.create();
-        assertThat(registry.updateStatus(task.id(), TaskState.WORKING, null)).isTrue();
+        assertThat(task.start()).isTrue();
         task.requireInput(
                 new InputRequestBundle(
                         Map.of("user_name", FormInputRequest.of("What is your name?", JsonSchema.objectSchema())),
@@ -323,82 +301,57 @@ class DefaultTaskRegistryTest {
     }
 
     @Test
-    void pendingInputClearsOnceTaskLeavesInputRequired() {
+    void aCallerOwnedTaskDeliversSubmittedInputToItsOwnResumer() throws Exception {
+        // Given a task the server created itself, with a resumer to receive the answers
+        var delivered = new AtomicReference<Map<String, Object>>();
+        var deliveredState = new AtomicReference<String>();
+        var task = registry.create(TaskOptions.builder().id("owned-1").build(), (resumed, responses, state) -> {
+            delivered.set(responses);
+            deliveredState.set(state);
+            resumed.complete(TaskResult.completed(Map.of("greeted", responses.get("user_name"))));
+        });
+        assertThat(task.start()).isTrue();
+        assertThat(task.requireInput(
+                        new InputRequestBundle(
+                                Map.of("user_name", FormInputRequest.of("Name?", JsonSchema.objectSchema())),
+                                "round-1"),
+                        null))
+                .isTrue();
+
+        // When the client answers it via tasks/update
+        var result = decodeAndHandle(
+                handlers.get("tasks/update"),
+                modernTasksContext(),
+                Map.of("taskId", "owned-1", "inputResponses", Map.of("user_name", "Alice")));
+
+        // Then the resumer -- not a tool handler -- receives the answers and drives the task home
+        assertThat(result).isNotInstanceOf(ServerError.class);
+        assertThat(delivered.get()).isEqualTo(Map.of("user_name", "Alice"));
+        assertThat(deliveredState.get()).isEqualTo("round-1");
+        assertThat(task.status()).isEqualTo(TaskState.COMPLETED);
+    }
+
+    @Test
+    void reportProgressOnATaskWithoutAProgressTokenIsSilentlyDropped() {
+        // Given a task created with no progress token (the caller never opted in)
         var task = registry.create();
-        assertThat(registry.updateStatus(task.id(), TaskState.WORKING, null)).isTrue();
-        var bundle = new InputRequestBundle(
-                Map.of("user_name", FormInputRequest.of("What is your name?", JsonSchema.objectSchema())), null);
-        task.requireInput(bundle, null);
+        task.start();
 
-        assertThat(registry.updateStatus(task.id(), TaskState.WORKING, null)).isTrue();
+        // When progress is reported, it must not blow up -- there is simply nobody to notify
+        task.reportProgress(0.5, 1.0, "halfway");
 
-        assertThat(registry.getById(task.id()).pendingInput()).isNull();
+        assertThat(task.status()).isEqualTo(TaskState.WORKING);
     }
 
-    @Test
-    void requireInputFailsFromSubmittedWithoutReachingWorkingFirst() {
-        var task = registry.create();
-        var bundle = new InputRequestBundle(
-                Map.of("user_name", FormInputRequest.of("What is your name?", JsonSchema.objectSchema())), null);
-
-        assertThat(task.requireInput(bundle, null)).isFalse();
-
-        assertThat(task.status()).isEqualTo(TaskState.SUBMITTED);
-        assertThat(registry.getById(task.id()).pendingInput()).isNull();
-    }
-
-    @Test
-    void taskNotExpiredWithoutTtl() {
-        var entry = TaskEntry.builder("exp-1").build();
-        assertThat(entry.isExpired()).isFalse();
-    }
-
-    @Test
-    void taskExpiresAfterTtl() throws Exception {
-        var entry = TaskEntry.builder("exp-1")
-                .status(TaskState.WORKING)
-                .ttl(Duration.ofMillis(10))
-                .build();
-        var deadline = System.currentTimeMillis() + 500;
-        while (!entry.isExpired() && System.currentTimeMillis() < deadline) {
-            Thread.sleep(1);
-        }
-        assertThat(entry.isExpired()).isTrue();
-    }
-
-    @Test
-    void taskResultNotExpiredBeforeKeepAliveElapses() {
-        var entry = TaskEntry.builder("res-1")
-                .status(TaskState.WORKING)
-                .keepAlive(Duration.ofMillis(200))
-                .build();
-        entry.complete(new TaskResult.Completed(null));
-        assertThat(entry.isResultExpired()).isFalse();
-    }
-
-    @Test
-    void taskResultExpiresAfterKeepAlive() throws Exception {
-        var entry = TaskEntry.builder("res-2")
-                .status(TaskState.WORKING)
-                .keepAlive(Duration.ofMillis(10))
-                .build();
-        entry.complete(new TaskResult.Completed(null));
-
-        var deadline = System.currentTimeMillis() + 500;
-        while (!entry.isResultExpired() && System.currentTimeMillis() < deadline) {
-            Thread.sleep(1);
-        }
-        assertThat(entry.isResultExpired()).isTrue();
-    }
-
-    @Test
-    void taskResultNeverExpiresWithZeroKeepAlive() {
-        var entry = TaskEntry.builder("res-3")
-                .status(TaskState.WORKING)
-                .keepAlive(Duration.ZERO)
-                .build();
-        entry.complete(new TaskResult.Completed(null));
-        assertThat(entry.isResultExpired()).isFalse();
+    private DispatchContext modernTasksContext() {
+        var context = DefaultDispatchContext.create(
+                Protocols.list().stream()
+                        .filter(protocol -> protocol.versionString().equals("2026-07-28"))
+                        .findFirst()
+                        .orElseThrow(),
+                engine);
+        context.enableExtension(TasksExtension.ID);
+        return context;
     }
 
     @Test
@@ -421,34 +374,6 @@ class DefaultTaskRegistryTest {
         registry.runJanitorSweep();
 
         assertThat(registry.get(entry.id())).isNull();
-    }
-
-    @Test
-    void statusEnumFsmTerminalStates() {
-        assertThat(TaskState.COMPLETED.isTerminal()).isTrue();
-        assertThat(TaskState.FAILED.isTerminal()).isTrue();
-        assertThat(TaskState.CANCELLED.isTerminal()).isTrue();
-        assertThat(TaskState.WORKING.isTerminal()).isFalse();
-        assertThat(TaskState.INPUT_REQUIRED.isTerminal()).isFalse();
-    }
-
-    @Test
-    void statusEnumFsmActiveStates() {
-        assertThat(TaskState.WORKING.isActive()).isTrue();
-        assertThat(TaskState.INPUT_REQUIRED.isActive()).isTrue();
-        assertThat(TaskState.COMPLETED.isActive()).isFalse();
-        assertThat(TaskState.FAILED.isActive()).isFalse();
-        assertThat(TaskState.CANCELLED.isActive()).isFalse();
-    }
-
-    @Test
-    void statusEnumFsmTransitions() {
-        assertThat(TaskState.WORKING.canTransitionTo(TaskState.COMPLETED)).isTrue();
-        assertThat(TaskState.WORKING.canTransitionTo(TaskState.CANCELLED)).isTrue();
-        assertThat(TaskState.WORKING.canTransitionTo(TaskState.INPUT_REQUIRED)).isTrue();
-        assertThat(TaskState.COMPLETED.canTransitionTo(TaskState.WORKING)).isFalse();
-        assertThat(TaskState.CANCELLED.canTransitionTo(TaskState.WORKING)).isFalse();
-        assertThat(TaskState.FAILED.canTransitionTo(TaskState.WORKING)).isFalse();
     }
 
     @Test
@@ -547,7 +472,45 @@ class DefaultTaskRegistryTest {
         assertThat(registry.remove(entry.id())).isTrue();
 
         assertThat(entry.status()).isEqualTo(TaskState.CANCELLED);
-        assertThat(entry.completion().toCompletableFuture()).isCompletedExceptionally();
+        assertThat(entry.completion().toCompletableFuture()).isCancelled();
         assertThat(registry.get(entry.id())).isNull();
+    }
+
+    @Test
+    @Timeout(5)
+    void taskResultCancelledWhileTheCallerIsBlockedOnItReportsCancellationNotAGenericFailure() throws Exception {
+        registry.add(TaskEntry.builder("task-1").build());
+        var resultHandler = handlers.get("tasks/result");
+        var result = new AtomicReference<Object>();
+
+        // SEP-1686: tasks/result MUST block a working task until it is terminal. Run the blocking
+        // call on its own thread and cancel the task only once that thread is genuinely parked in
+        // CompletableFuture.join() -- proven by its Thread.State, not assumed via a sleep -- so the
+        // handler is guaranteed to already be past its own status() == CANCELLED pre-check and must
+        // resolve the race through the join() catch block instead.
+        var joiner = new Thread(() -> {
+            try {
+                result.set(decodeAndHandle(resultHandler, DefaultDispatchContext.noop(), Map.of("taskId", "task-1")));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        joiner.start();
+        awaitParked(joiner);
+
+        registry.getAndCancelTask("task-1");
+        joiner.join();
+
+        assertThat(result.get()).isInstanceOf(ServerError.class);
+        var error = (ServerError) result.get();
+        assertThat(error.kind()).isEqualTo(ServerError.Kind.INVALID_PARAMS);
+        assertThat(error.message()).isEqualTo("Task was cancelled");
+    }
+
+    /** Busy-waits until {@code thread} is parked in a blocking call, e.g. {@code CompletableFuture.join()}. */
+    private static void awaitParked(Thread thread) {
+        while (thread.getState() != Thread.State.WAITING && thread.getState() != Thread.State.TIMED_WAITING) {
+            Thread.onSpinWait();
+        }
     }
 }

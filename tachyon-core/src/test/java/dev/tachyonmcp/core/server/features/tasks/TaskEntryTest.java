@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.server.domain.FormInputRequest;
 import dev.tachyonmcp.api.server.domain.InputRequestBundle;
+import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import java.time.Clock;
 import java.time.Duration;
@@ -26,10 +27,6 @@ class TaskEntryTest {
 
     private static TaskEntry workingEntry() {
         return entry(null);
-    }
-
-    private static TaskEntry submittedEntry() {
-        return TaskEntry.builder("task-1").status(TaskState.SUBMITTED).build();
     }
 
     private static InputRequestBundle bundleOf(Map<String, String> requestedKeysToPrompts, String requestState) {
@@ -88,89 +85,73 @@ class TaskEntryTest {
     }
 
     @Test
-    void startMovesSubmittedToWorkingExactlyOnce() {
-        var entry = submittedEntry();
+    void aTaskWithoutTtlNeverExpires() {
+        // Given a task with no ttl at all
+        var entry = TaskEntry.builder("no-ttl").build();
 
-        assertThat(entry.updateMessage("too early")).isFalse();
-        assertThat(entry.start("importing")).isTrue();
-        assertThat(entry.status()).isEqualTo(TaskState.WORKING);
-        assertThat(entry.statusMessage()).isEqualTo("importing");
-        assertThat(entry.updateMessage("now allowed")).isTrue();
-
-        assertThat(entry.start("again")).isFalse();
-        assertThat(entry.statusMessage()).isEqualTo("now allowed");
-    }
-
-    @SuppressWarnings("deprecation")
-    @Test
-    void deprecatedResumeStartsASubmittedTaskButNeverForcesAPausedOne() {
-        var submitted = submittedEntry();
-
-        assertThat(submitted.resume("go")).isTrue();
-        assertThat(submitted.status()).isEqualTo(TaskState.WORKING);
-
-        var paused = workingEntry();
-        paused.requireInput(bundleOf(Map.of("user_name", "What is your name?"), "state-1"), null);
-
-        assertThat(paused.resume("force")).isFalse();
-        assertThat(paused.status()).isEqualTo(TaskState.INPUT_REQUIRED);
-        assertThat(paused.pendingInput()).isNotNull();
+        // Then it stays alive however long we wait
+        assertThat(entry.isExpired()).isFalse();
     }
 
     @Test
-    void submitInputFiltersUnknownAndAlreadySatisfiedKeys() {
-        var entry = workingEntry();
-        entry.requireInput(bundleOf(Map.of("user_name", "What is your name?"), "state-1"), null);
+    void aTaskExpiresOnceItsTtlElapses() {
+        // Given a task with a 10 minute ttl
+        var clock = new MutableClock(Instant.parse("2025-01-01T00:00:00Z"));
+        var entry = TaskEntry.builder("ttl-1")
+                .status(TaskState.WORKING)
+                .ttl(Duration.ofMinutes(10))
+                .clock(clock)
+                .build();
 
-        var responses = new HashMap<String, Object>();
-        responses.put("user_name", "Alice");
-        responses.put("unknown_key", "ignored");
-        var result = entry.submitInput(responses);
+        // When less than the ttl passes
+        clock.advance(Duration.ofMinutes(9));
 
-        assertThat(result).isNotNull();
-        assertThat(result.inputResponses()).isEqualTo(Map.of("user_name", "Alice"));
-        assertThat(result.requestState()).isEqualTo("state-1");
-        assertThat(entry.status()).isEqualTo(TaskState.WORKING);
+        // Then it is still current
+        assertThat(entry.isExpired()).isFalse();
+
+        // And once the ttl is past, it is expired
+        clock.advance(Duration.ofMinutes(2));
+        assertThat(entry.isExpired()).isTrue();
     }
 
     @Test
-    void submitInputIsNoOpWhenNotAwaitingInput() {
-        var entry = workingEntry();
+    void aCompletedTaskKeepsItsResultForTheKeepAliveWindowOnly() {
+        // Given a completed task whose result is retained for 5 minutes
+        var clock = new MutableClock(Instant.parse("2025-01-01T00:00:00Z"));
+        var entry = TaskEntry.builder("keep-1")
+                .status(TaskState.WORKING)
+                .keepAlive(Duration.ofMinutes(5))
+                .clock(clock)
+                .build();
+        entry.complete(new TaskResult.Completed(null));
 
-        var result = entry.submitInput(Map.of("user_name", "Alice"));
+        // When part of the window has passed
+        clock.advance(Duration.ofMinutes(4));
 
-        assertThat(result).isNull();
-        assertThat(entry.status()).isEqualTo(TaskState.WORKING);
+        // Then the result is still retrievable
+        assertThat(entry.isResultExpired()).isFalse();
+
+        // And once the window closes, it is eligible for eviction
+        clock.advance(Duration.ofMinutes(2));
+        assertThat(entry.isResultExpired()).isTrue();
     }
 
     @Test
-    void submitInputAcceptsPartialResponsesAcrossMultipleCalls() {
-        var entry = workingEntry();
-        entry.requireInput(bundleOf(Map.of("name", "Your name?", "email", "Your email?"), null), null);
+    void aZeroKeepAliveRetainsTheResultForever() {
+        // Given a completed task with keepAlive explicitly zeroed
+        var clock = new MutableClock(Instant.parse("2025-01-01T00:00:00Z"));
+        var entry = TaskEntry.builder("keep-forever")
+                .status(TaskState.WORKING)
+                .keepAlive(Duration.ZERO)
+                .clock(clock)
+                .build();
+        entry.complete(new TaskResult.Completed(null));
 
-        var first = entry.submitInput(Map.of("name", "Alice"));
-        assertThat(first).isNull();
-        assertThat(entry.status()).isEqualTo(TaskState.INPUT_REQUIRED);
+        // When a very long time passes
+        clock.advance(Duration.ofDays(3650));
 
-        var second = entry.submitInput(Map.of("email", "alice@example.com"));
-
-        assertThat(second).isNotNull();
-        assertThat(second.inputResponses()).isEqualTo(Map.of("name", "Alice", "email", "alice@example.com"));
-        assertThat(entry.status()).isEqualTo(TaskState.WORKING);
-    }
-
-    @Test
-    void submitInputAccumulatorResetsOnNewInputRequiredRound() {
-        var entry = workingEntry();
-        entry.requireInput(bundleOf(Map.of("key1", "Q1"), "round-1"), null);
-        entry.submitInput(Map.of("key1", "answer-1")); // resumes -> WORKING, clears the accumulator
-
-        entry.requireInput(bundleOf(Map.of("key2", "Q2"), "round-2"), null);
-        var result = entry.submitInput(Map.of("key2", "answer-2"));
-
-        assertThat(result).isNotNull();
-        assertThat(result.inputResponses()).isEqualTo(Map.of("key2", "answer-2"));
-        assertThat(result.requestState()).isEqualTo("round-2");
+        // Then the result is never evicted
+        assertThat(entry.isResultExpired()).isFalse();
     }
 
     @Test

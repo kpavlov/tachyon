@@ -290,17 +290,33 @@ public final class ToolMethodHandlers {
             }
             result = prepareResult(outputSchema, result);
             var meta = result.meta();
-            switch (result) {
-                case ToolResult.Error error -> {
-                    task.fail(new TaskResult.Failed(error.content(), null, meta));
-                    taskRegistry.unregisterResumer(task.id());
-                }
-                case ToolResult.Success success -> {
-                    task.complete(new TaskResult.Completed(success.content(), success.structuredValue(), meta));
-                    taskRegistry.unregisterResumer(task.id());
-                }
-                case ToolResult.InputRequired inputRequired ->
-                    task.requireInput(inputRequired.request(), "Input required");
+            var applied =
+                    switch (result) {
+                        case ToolResult.Error error -> {
+                            var ok = task.fail(new TaskResult.Failed(error.content(), null, meta));
+                            taskRegistry.unregisterResumer(task.id());
+                            yield ok;
+                        }
+                        case ToolResult.Success success -> {
+                            var ok = task.complete(
+                                    new TaskResult.Completed(success.content(), success.structuredValue(), meta));
+                            taskRegistry.unregisterResumer(task.id());
+                            yield ok;
+                        }
+                        case ToolResult.InputRequired inputRequired ->
+                            task.requireInput(inputRequired.request(), "Input required");
+                    };
+            if (!applied) {
+                // The handler already drove this task to a terminal state itself (or a tasks/cancel
+                // beat us to it), so the ToolResult it returned was discarded. Both are legal calls
+                // in isolation, but doing both means the returned result silently loses.
+                logger.warn(
+                        "Tool handler returned a {} for taskId={}, but the task was already {} -- the returned"
+                                + " result was discarded. In a task-augmented tool the returned ToolResult is the"
+                                + " sole authority; do not also call Task.complete/fail/cancel yourself.",
+                        result.getClass().getSimpleName(),
+                        task.id(),
+                        task.status());
             }
             taskRegistry.unregisterRunning(task.id());
         }

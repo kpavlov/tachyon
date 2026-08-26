@@ -9,6 +9,7 @@ import dev.tachyonmcp.api.json.spi.JsonSchemaFactory;
 import dev.tachyonmcp.api.runtime.Notifications;
 import dev.tachyonmcp.api.server.config.RuntimeConfig;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
+import dev.tachyonmcp.api.server.domain.ProgressToken;
 import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.api.server.domain.ServerCapabilities;
 import dev.tachyonmcp.api.server.extensions.ExtensionContext;
@@ -424,8 +425,44 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     }
 
     @Override
+    public void notifyTaskProgress(TaskEntry entry, double progress, @Nullable Double total, @Nullable String message) {
+        var progressToken = entry.progressToken();
+        if (progressToken == null) {
+            logger.debug(
+                    "Dropping task progress for taskId={}: no progressToken (originating request did not opt in)",
+                    entry.id());
+            return;
+        }
+        var sessionId = entry.sessionId();
+        if (sessionId != null) {
+            getSession(sessionId)
+                    .ifPresent(session -> notifyTaskProgress(session, progressToken, progress, total, message));
+        } else {
+            for (var session : sessionManager.allSessions()) {
+                if (session.state() == SessionState.ACTIVE) {
+                    notifyTaskProgress(session, progressToken, progress, total, message);
+                }
+            }
+        }
+    }
+
+    @Override
     public void notifyResourceSubscriptions(String uri) {
         subscriptionRegistry.notifyResourceUpdated(uri);
+    }
+
+    private void notifyTaskProgress(
+            Session session,
+            ProgressToken progressToken,
+            double progress,
+            @Nullable Double total,
+            @Nullable String message) {
+        var protocol = session.protocol();
+        var mapper = protocol != null ? protocol.responseMapper() : responseMapper();
+        var params = mapper.progressNotificationParams(progressToken, progress, total, message);
+        var paramsJson = JsonUtils.writeString(params);
+        var notificationJson = JsonRpcCodec.serializeNotificationAsString("notifications/progress", paramsJson);
+        sendSerializedNotification(session, "notifications/progress", paramsJson, notificationJson, null);
     }
 
     private void notifyTaskStatus(Session session, TaskEntry entry) {

@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReference;
@@ -54,6 +55,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     private final CompletableFuture<TaskResult> completionFuture = new CompletableFuture<>();
     private final @Nullable ProgressToken progressToken;
     private final Consumer<TaskEntry> statusListener;
+    private final ProgressListener progressListener;
     private final Clock clock;
 
     /**
@@ -78,6 +80,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         private Duration keepAlive = TasksConfig.DEFAULT_TASK_KEEP_ALIVE;
         private @Nullable Duration pollInterval;
         private Consumer<TaskEntry> statusListener = entry -> {};
+        private ProgressListener progressListener = (entry, progress, total, message) -> {};
         private Clock clock = Clock.systemUTC();
 
         private Builder(String id) {
@@ -129,6 +132,15 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         }
 
         /**
+         * Invoked when the task owner calls {@link TaskEntry#reportProgress}. Package-private:
+         * only {@link DefaultTaskRegistry} wires a non-default listener.
+         */
+        Builder progressListener(ProgressListener progressListener) {
+            this.progressListener = Objects.requireNonNull(progressListener, "progressListener");
+            return this;
+        }
+
+        /**
          * Overrides the {@link Clock} used for {@code createdAt}/{@code lastUpdatedAt} and
          * TTL/expiry checks. Package-private: only {@link DefaultTaskRegistry} wires a clock
          * other than the system default.
@@ -140,7 +152,17 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
 
         public TaskEntry build() {
             return new TaskEntry(
-                    id, status, ttl, sessionId, progressToken, meta, keepAlive, pollInterval, statusListener, clock);
+                    id,
+                    status,
+                    ttl,
+                    sessionId,
+                    progressToken,
+                    meta,
+                    keepAlive,
+                    pollInterval,
+                    statusListener,
+                    progressListener,
+                    clock);
         }
     }
 
@@ -154,6 +176,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
             Duration keepAlive,
             @Nullable Duration pollInterval,
             Consumer<TaskEntry> statusListener,
+            ProgressListener progressListener,
             Clock clock) {
         this.descriptor = TaskDescriptor.builder().id(id).build();
         this.id = id;
@@ -168,6 +191,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
         this.pollInterval = pollInterval;
         this.progressToken = progressToken;
         this.statusListener = Objects.requireNonNull(statusListener, "statusListener");
+        this.progressListener = Objects.requireNonNull(progressListener, "progressListener");
     }
 
     /**
@@ -277,12 +301,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
 
     @Override
     public boolean cancel(@Nullable String statusMessage) {
-        if (!transitionTo(TaskState.CANCELLED, null, statusMessage)) {
-            return false;
-        }
-        completionFuture.completeExceptionally(
-                new IllegalStateException("Task cancelled" + (statusMessage != null ? ": " + statusMessage : "")));
-        return true;
+        return transitionTo(TaskState.CANCELLED, null, statusMessage);
     }
 
     @Override
@@ -362,7 +381,15 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     }
 
     @Override
-    public void reportProgress(double progress, @Nullable Double total, @Nullable String message) {}
+    public void reportProgress(double progress, @Nullable Double total, @Nullable String message) {
+        progressListener.onProgress(this, progress, total, message);
+    }
+
+    /** Sink for {@link #reportProgress} -- wired by {@link DefaultTaskRegistry} to the outbound transport. */
+    @FunctionalInterface
+    public interface ProgressListener {
+        void onProgress(TaskEntry entry, double progress, @Nullable Double total, @Nullable String message);
+    }
 
     @Override
     public Instant lastUpdatedAt() {
@@ -461,9 +488,12 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
                 this.expiredAt = computeExpiredAt(this.lastUpdatedAt);
                 if (result != null) {
                     completionFuture.complete(result);
+                } else if (newStatus == TaskState.CANCELLED) {
+                    completionFuture.completeExceptionally(new CancellationException(
+                            "Task cancelled" + (statusMessage != null ? ": " + statusMessage : "")));
                 } else {
                     completionFuture.completeExceptionally(
-                            new IllegalStateException("Terminal state reached without result"));
+                            new IllegalStateException("Task reached " + newStatus + " without a result"));
                 }
             }
             statusListener.accept(this);

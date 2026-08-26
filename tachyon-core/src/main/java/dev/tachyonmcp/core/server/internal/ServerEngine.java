@@ -99,6 +99,13 @@ public interface ServerEngine extends TachyonServer {
     /** Maps and sends a task status notification. */
     void notifyTaskStatus(TaskEntry entry);
 
+    /**
+     * Maps and sends a {@code notifications/progress} notification for {@code entry}, addressed to
+     * the progress token the task was created with. A no-op when the task has no token, i.e. the
+     * originating request did not opt into progress.
+     */
+    void notifyTaskProgress(TaskEntry entry, double progress, @Nullable Double total, @Nullable String message);
+
     /** Pushes {@code notifications/resources/updated} to every stateless {@code subscriptions/listen} stream subscribed to {@code uri}. */
     void notifyResourceSubscriptions(String uri);
 

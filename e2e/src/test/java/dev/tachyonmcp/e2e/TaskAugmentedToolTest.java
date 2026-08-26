@@ -97,6 +97,41 @@ class TaskAugmentedToolTest extends AbstractStatelessMcpE2eTest {
     }
 
     @Test
+    void handlerThatCompletesItsOwnTaskWinsAndTheReturnedResultIsDiscarded() throws Exception {
+        // Both calls are legal in isolation, so the framework cannot reject either -- but doing both
+        // means the returned ToolResult loses to the handler's own transition. The server logs a
+        // warning; the observable contract is that the FIRST terminal transition is the one that
+        // sticks, and the task still ends up terminal exactly once.
+        startServerWith(s -> s.tools()
+                .register(tool -> tool.name("self-complete").taskSupport(TaskSupport.REQUIRED), (ctx, req) -> {
+                    var task = req.task();
+                    assertThat(task).isNotNull();
+                    task.complete(TaskResult.completed(
+                            java.util.List.of(dev.tachyonmcp.api.server.domain.TextContent.of("handler-wins")),
+                            null,
+                            null));
+                    return ToolResult.text("returned-result-is-discarded");
+                }));
+
+        try (var client = createTestClient()) {
+            client.initialize();
+
+            var response = client.sendRpc("""
+                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"self-complete","arguments":{},"task":{}}}
+                """);
+            var taskId = extractTaskId(response);
+            client.awaitTaskStatus(taskId, "completed");
+
+            var resultJson = client.sendRpc("""
+                {"jsonrpc":"2.0","id":4,"method":"tasks/result","params":{"taskId":"%s"}}
+                """.formatted(taskId));
+
+            assertThatJson(resultJson).inPath("$.result.content[0].text").isEqualTo("handler-wins");
+            assertThat(resultJson).doesNotContain("returned-result-is-discarded");
+        }
+    }
+
+    @Test
     void taskResultUsesConfiguredPayloadSerializerAndMetadata() throws Exception {
         startServer(
                 b -> b.json(j -> j.serializer(new PayloadSerializer() {

@@ -6,6 +6,7 @@ import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThatJsonRpcResp
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.api.server.domain.ProgressToken;
 import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
@@ -183,6 +184,65 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
             assertThat(response.body()).contains("\"status\":\"working\"");
             assertThat(response.body()).contains("\"taskId\":\"");
             assertThat(response.body()).contains("\"createdAt\":");
+        }
+    }
+
+    @Test
+    void shouldSendProgressNotificationWhenTaskReportsProgress() throws Exception {
+        // A task carries the originating request's progressToken, so Task.reportProgress can address
+        // notifications/progress at it. Uses a synchronous tool so the notification routes through
+        // this POST's own SSE stream.
+        startServer(
+                b -> b.withExtensions(TasksExtension.instance()),
+                s -> s.tools().register(tool -> tool.name("report-progress-sync"), (ctx, req) -> {
+                    var registry = (DefaultTaskRegistry)
+                            ((DispatchContext) ctx).engine().tasks();
+                    var task = registry.createSessionTask(null, null, null, ProgressToken.of("tok-1"));
+                    task.start();
+                    task.reportProgress(0.5, 1.0, "halfway");
+                    return ToolResult.text("ok");
+                }));
+
+        try (var client = createTestClient()) {
+            var sessionId = initializeWithExtension(client);
+
+            var response = client.post(sessionId, """
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"report-progress-sync","arguments":{}}}
+                    """);
+
+            assertThat(response.body()).contains("notifications/progress");
+            assertThat(response.body()).contains("\"progressToken\":\"tok-1\"");
+            assertThat(response.body()).contains("\"progress\":0.5");
+            assertThat(response.body()).contains("\"total\":1.0");
+            assertThat(response.body()).contains("\"message\":\"halfway\"");
+        }
+    }
+
+    @Test
+    void shouldOmitOptionalProgressFieldsWhenNotSupplied() throws Exception {
+        startServer(
+                b -> b.withExtensions(TasksExtension.instance()),
+                s -> s.tools().register(tool -> tool.name("bare-progress-sync"), (ctx, req) -> {
+                    var registry = (DefaultTaskRegistry)
+                            ((DispatchContext) ctx).engine().tasks();
+                    var task = registry.createSessionTask(null, null, null, ProgressToken.of("tok-2"));
+                    task.start();
+                    task.reportProgress(3, null, null);
+                    return ToolResult.text("ok");
+                }));
+
+        try (var client = createTestClient()) {
+            var sessionId = initializeWithExtension(client);
+
+            var response = client.post(sessionId, """
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"bare-progress-sync","arguments":{}}}
+                    """);
+
+            assertThat(response.body()).contains("notifications/progress");
+            assertThat(response.body()).contains("\"progress\":3.0");
+            // total/message are optional per spec -- absent, not total:0 with an empty message
+            assertThat(response.body()).doesNotContain("\"total\"");
+            assertThat(response.body()).doesNotContain("\"message\"");
         }
     }
 

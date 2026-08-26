@@ -132,7 +132,8 @@ public interface ProtocolResponseMapper {
      * version's codegen output, narrower than the spec's {@code string | number} — converting a
      * numeric token through it would silently turn a JSON number into a JSON string on the wire.
      */
-    default Object progressNotificationParams(ProgressToken token, double progress, double total, String message) {
+    default Object progressNotificationParams(
+            ProgressToken token, double progress, @Nullable Double total, @Nullable String message) {
         Object wireToken =
                 switch (token) {
                     case ProgressToken.StringValue(var v) -> v;
@@ -141,8 +142,13 @@ public interface ProtocolResponseMapper {
         var fields = new LinkedHashMap<String, Object>(4);
         fields.put("progressToken", wireToken);
         fields.put("progress", progress);
-        fields.put("total", total);
-        fields.put("message", message);
+        // total and message are optional per spec -- omit rather than emitting a misleading total:0.
+        if (total != null) {
+            fields.put("total", total);
+        }
+        if (message != null) {
+            fields.put("message", message);
+        }
         return JsonUtils.toObjectNode(fields);
     }
 

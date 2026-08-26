@@ -10,6 +10,7 @@ import dev.tachyonmcp.api.server.features.PaginatedResult;
 import dev.tachyonmcp.api.server.features.tasks.TaskDescriptor;
 import dev.tachyonmcp.api.server.features.tasks.TaskIdGenerator;
 import dev.tachyonmcp.api.server.features.tasks.TaskOptions;
+import dev.tachyonmcp.api.server.features.tasks.TaskResumer;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.core.server.config.TasksConfig;
 import dev.tachyonmcp.core.server.features.AbstractRegistry;
@@ -33,7 +34,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
     private static final long TTL_JANITOR_INTERVAL_SECONDS = 30;
 
     private final ConcurrentHashMap<String, Future<?>> running = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, TaskResumer> resumers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, TaskDispatchResumer> resumers = new ConcurrentHashMap<>();
     private final ServerEngine server;
     private final Clock clock;
     private final TaskIdGenerator taskIdGenerator;
@@ -99,6 +100,18 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
     }
 
     @Override
+    public Task create(TaskOptions options, TaskResumer resumer) {
+        Objects.requireNonNull(resumer, "resumer is required");
+        var entry = create(options);
+        // Adapt the public (task, responses, state) shape onto the dispatch-driven one: a
+        // caller-owned task has no request to re-dispatch, so the context is simply dropped.
+        registerResumer(entry.id(), (context, inputResponses, requestState) -> {
+            resumer.resume(entry, inputResponses, requestState);
+        });
+        return entry;
+    }
+
+    @Override
     public TaskEntry createSessionTask(
             @Nullable Duration ttl,
             @Nullable Map<String, Object> meta,
@@ -125,6 +138,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
                 .keepAlive(keepAlive)
                 .pollInterval(pollInterval)
                 .statusListener(this::fireStatusNotification)
+                .progressListener(server::notifyTaskProgress)
                 .clock(clock)
                 .build();
         if (!addItemIfAbsent(entry)) {
@@ -145,7 +159,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
     }
 
     @Override
-    public void registerResumer(String taskId, TaskResumer resumer) {
+    public void registerResumer(String taskId, TaskDispatchResumer resumer) {
         resumers.put(taskId, resumer);
     }
 
@@ -155,7 +169,7 @@ public class DefaultTaskRegistry extends AbstractRegistry<TaskDescriptor, TaskEn
     }
 
     @Override
-    public @Nullable TaskResumer findResumer(String taskId) {
+    public @Nullable TaskDispatchResumer findResumer(String taskId) {
         return resumers.get(taskId);
     }
 
