@@ -690,7 +690,8 @@ class DefaultToolRegistryTest {
 
     @Test
     void shouldRejectNestedHeaderAnnotation() {
-        // SEP-2243 conformance: a nested x-mcp-header must be rejected, not silently ignored.
+        // Tachyon-only restriction (not a conformance requirement): a nested x-mcp-header must be
+        // rejected, not silently ignored.
         var schema = parseJson("""
             {"type":"object","properties":{
               "target":{"type":"object","properties":{
@@ -700,6 +701,29 @@ class DefaultToolRegistryTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("x-mcp-header")
                 .hasMessageContaining("nested");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"123", "true", "{}", "[]", "null"})
+    void shouldRejectNonStringHeaderAnnotationValue(String annotationValue) {
+        var schema = parseJson("""
+                {"type":"object","properties":{"p":{"type":"string","x-mcp-header":%s}}}
+                """.formatted(annotationValue));
+        assertThatThrownBy(() -> registry.register(testTool("non-string-annotation", null, schema)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("x-mcp-header");
+    }
+
+    @Test
+    void shouldRejectNestedNonStringHeaderAnnotationValue() {
+        var schema = parseJson("""
+                {"type":"object","properties":{
+                  "target":{"type":"object","properties":{
+                    "region":{"type":"string","x-mcp-header":123}}}}}
+                """);
+        assertThatThrownBy(() -> registry.register(testTool("nested-non-string", null, schema)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("x-mcp-header");
     }
 
     @ParameterizedTest

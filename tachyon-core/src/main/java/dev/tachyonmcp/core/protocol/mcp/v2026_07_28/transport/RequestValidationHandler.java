@@ -19,6 +19,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -87,10 +88,10 @@ public final class RequestValidationHandler extends ChannelInboundHandlerAdapter
             return;
         }
         if (message instanceof JsonRpcMessage.Notification<?> notification) {
-            // Mcp-Method is required on notifications too, and this revision does define one
-            // client-to-server notification (notifications/cancelled). The other mirrors are
-            // request-scoped, and there is no id to echo, so the error carries a null one.
+            // Mcp-Method applies to notifications too; Mcp-Name/Mcp-Param-* are request-scoped, but
+            // the char-format rule isn't. No id to echo, so the error carries null.
             var rejection = validateMethodHeader(req, notification.method());
+            if (rejection == null) rejection = validateParamHeaderChars(req);
             if (rejection != null) {
                 reject(ctx, req, null, rejection);
                 return;
@@ -155,12 +156,8 @@ public final class RequestValidationHandler extends ChannelInboundHandlerAdapter
             }
         }
 
-        // Not scoped to tools/call: the rule is about the field's wire format, matched or not.
-        var invalidHeader = findInvalidCharacterParamHeader(req);
-        if (invalidHeader != null) {
-            return ServerErrors.headerMismatch(
-                    "Header mismatch: " + invalidHeader + " contains characters not permitted in an HTTP field value");
-        }
+        var charRejection = validateParamHeaderChars(req);
+        if (charRejection != null) return charRejection;
 
         if ("tools/call".equals(method)) {
             var toolCallRejection = validateCustomParamHeaders(req, paramsMap);
@@ -171,11 +168,22 @@ public final class RequestValidationHandler extends ChannelInboundHandlerAdapter
     }
 
     /**
+     * Not scoped to tools/call: the rule is about the field's wire format, matched or not.
+     */
+    private static @Nullable ServerError validateParamHeaderChars(HttpRequest req) {
+        var invalidHeader = findInvalidCharacterParamHeader(req);
+        return invalidHeader == null
+                ? null
+                : ServerErrors.headerMismatch("Header mismatch: " + invalidHeader
+                        + " contains characters not permitted in an HTTP field value");
+    }
+
+    /**
      * Validates {@code Mcp-Param-{Name}} headers against the tool's {@code x-mcp-header}-annotated
      * properties (SEP-2243). Registration rejects annotations below the top level, so every one the
      * schema carries is checked here.
      */
-    private @Nullable ServerError validateCustomParamHeaders(FullHttpRequest req, Map<?, ?> paramsMap) {
+    private @Nullable ServerError validateCustomParamHeaders(HttpRequest req, Map<?, ?> paramsMap) {
         var toolName = asString(paramsMap.get("name"));
         if (toolName == null) return null;
         var descriptor = server.tools().find(toolName).orElse(null);
@@ -200,10 +208,15 @@ public final class RequestValidationHandler extends ChannelInboundHandlerAdapter
     }
 
     private static @Nullable ServerError validateMirroredValue(
-            FullHttpRequest req, String headerName, String propertyName, @Nullable Object argument) {
+            HttpRequest req, String headerName, String propertyName, @Nullable Object argument) {
         var bodyValue = argumentAsHeaderString(argument);
         if (bodyValue == null) {
-            return null; // Not in arguments: client MUST omit the header, server MUST NOT expect it.
+            // Client MUST omit the header when the argument is absent/null/non-primitive; a header
+            // present anyway has nothing in the body backing the value a gateway would route on.
+            return req.headers().get(headerName) == null
+                    ? null
+                    : ServerErrors.headerMismatch(
+                            "Header mismatch: " + headerName + " is present but body has no matching value");
         }
         if (argument instanceof Number n) {
             BigDecimal decimal;
@@ -256,7 +269,7 @@ public final class RequestValidationHandler extends ChannelInboundHandlerAdapter
      * Name of the first {@code Mcp-Param-*} header violating SEP-2243's character restrictions, or
      * {@code null}. Read before Base64 decoding: the rule applies to what travelled on the wire.
      */
-    private static @Nullable CharSequence findInvalidCharacterParamHeader(FullHttpRequest req) {
+    private static @Nullable CharSequence findInvalidCharacterParamHeader(HttpRequest req) {
         var it = req.headers().iteratorCharSequence();
         while (it.hasNext()) {
             var entry = it.next();
@@ -299,7 +312,7 @@ public final class RequestValidationHandler extends ChannelInboundHandlerAdapter
         };
     }
 
-    private static @Nullable ServerError validateMethodHeader(FullHttpRequest req, String method) {
+    private static @Nullable ServerError validateMethodHeader(HttpRequest req, String method) {
         var headerMethod = strip(req.headers().get(McpHeaderNames.MCP_METHOD));
         if (method.equals(headerMethod)) return null;
         return ServerErrors.headerMismatch("Header mismatch: " + McpHeaderNames.MCP_METHOD + " header value '"

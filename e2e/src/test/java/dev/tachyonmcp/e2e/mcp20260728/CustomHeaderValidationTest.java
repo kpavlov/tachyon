@@ -84,6 +84,36 @@ class CustomHeaderValidationTest extends AbstractStatelessMcpE2eTest {
         assertThatResponse(response).hasStatus(400).isJsonRpcError().hasId(2).hasErrorCode(-32020);
     }
 
+    /** A header claiming a value with nothing in the body to back it is spoofable, not just extra. */
+    @Test
+    void rejectsParamHeaderWhenBodyOmitsTheArgument() throws Exception {
+        var headers = new LinkedHashMap<String, String>();
+        headers.put("Mcp-Method", "tools/call");
+        headers.put("Mcp-Name", "execute_sql");
+        headers.put("Mcp-Param-Region", "us-west1");
+        headers.put("Mcp-Param-Limit", "999");
+        // language=JSON
+        var body = """
+                {
+                  "jsonrpc": "2.0",
+                  "id": 17,
+                  "method": "tools/call",
+                  "params": {
+                    "name": "execute_sql",
+                    "arguments": {"region": "us-west1", "query": "SELECT 1"},
+                    "_meta": {
+                      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                      "io.modelcontextprotocol/clientInfo": {"name": "t", "version": "1"},
+                      "io.modelcontextprotocol/clientCapabilities": {}
+                    }
+                  }
+                }
+                """;
+        var response = postMcpRequest(body, headers);
+
+        assertThatResponse(response).hasStatus(400).isJsonRpcError().hasId(17).hasErrorCode(-32020);
+    }
+
     @Test
     void rejectsMismatchedParamHeader() throws Exception {
         var response = post(toolCallBody(3, "us-west1"), "eu-west1");

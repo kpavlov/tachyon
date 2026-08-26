@@ -117,10 +117,13 @@ public class JsonSchemaUtils {
         for (var entry : properties.properties()) {
             var propertySchema = entry.getValue();
             var annotation = propertySchema.path(X_MCP_HEADER);
-            if (annotation.isString()) {
-                validateAnnotation(toolName, entry.getKey(), annotation.asString(), propertySchema, claimed);
-                count++;
+            if (annotation.isMissingNode()) continue;
+            if (!annotation.isString()) {
+                throw new IllegalArgumentException("Tool '" + toolName + "' property '" + entry.getKey() + "' has an "
+                        + X_MCP_HEADER + " that is not a string");
             }
+            validateAnnotation(toolName, entry.getKey(), annotation.asString(), propertySchema, claimed);
+            count++;
         }
         return count;
     }
@@ -162,7 +165,7 @@ public class JsonSchemaUtils {
             }
             return elements;
         }
-        var count = !propertyNames && node.path(X_MCP_HEADER).isString() ? 1 : 0;
+        var count = !propertyNames && !node.path(X_MCP_HEADER).isMissingNode() ? 1 : 0;
         for (var child : node.properties()) {
             count += countAnnotations(child.getValue(), "properties".equals(child.getKey()));
         }
