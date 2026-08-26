@@ -205,9 +205,18 @@ public final class RequestValidationHandler extends ChannelInboundHandlerAdapter
         if (bodyValue == null) {
             return null; // Not in arguments: client MUST omit the header, server MUST NOT expect it.
         }
-        if (argument instanceof Number n && new BigDecimal(n.toString()).abs().compareTo(MAX_SAFE_INTEGER) > 0) {
-            return ServerErrors.headerMismatch("Header mismatch: " + headerName + " value '" + bodyValue
-                    + "' is outside the safe integer range and cannot be mirrored");
+        if (argument instanceof Number n) {
+            BigDecimal decimal;
+            try {
+                decimal = new BigDecimal(n.toString());
+            } catch (NumberFormatException e) {
+                // NaN/Infinity: not a BigDecimal literal. Value not echoed: it is client-controlled.
+                return ServerErrors.headerMismatch("Header mismatch: " + headerName + " value is not a finite number");
+            }
+            if (decimal.abs().compareTo(MAX_SAFE_INTEGER) > 0) {
+                return ServerErrors.headerMismatch("Header mismatch: " + headerName + " value '" + bodyValue
+                        + "' is outside the safe integer range and cannot be mirrored");
+            }
         }
         var rawHeader = req.headers().get(headerName);
         if (rawHeader == null) {

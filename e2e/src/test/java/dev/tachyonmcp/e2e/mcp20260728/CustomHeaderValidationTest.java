@@ -227,4 +227,12 @@ class CustomHeaderValidationTest extends AbstractStatelessMcpE2eTest {
 
         assertThatResponse(response).hasStatus(400).isJsonRpcError().hasId(15).hasErrorCode(-32020);
     }
+
+    /** A body value that overflows to {@code Infinity} must reject cleanly, not throw. */
+    @Test
+    void rejectsNonFiniteNumericBody() throws Exception {
+        var response = postWithLimit(16, "1e400", "1");
+
+        assertThatResponse(response).hasStatus(400).isJsonRpcError().hasId(16).hasErrorCode(-32020);
+    }
 }

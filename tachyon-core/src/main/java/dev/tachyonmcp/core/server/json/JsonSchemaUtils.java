@@ -83,10 +83,10 @@ public class JsonSchemaUtils {
      * definition on violation — an annotation the server silently skips is a header intermediaries
      * route on but nothing compares to the body.
      *
-     * <p>Only top-level properties may be mirrored. The SEP's constraints allow any nesting depth,
-     * but its conformance suite requires servers to reject a nested annotation, and the stricter
-     * reading is the safe one: a nested annotation a server accepted but never validated would leave
-     * the header spoofable.
+     * <p>Only top-level properties may be mirrored. The SEP allows any nesting depth; this is a
+     * Tachyon-only restriction, not a conformance requirement — {@code RequestValidationHandler} only
+     * checks top-level {@code tools/call} arguments, so a nested annotation would go unvalidated and
+     * leave the header spoofable.
      *
      * @param factory  parses and validates the schema's raw JSON; must handle {@link String} sources
      * @param toolName the name of the tool owning the schema
