@@ -50,6 +50,18 @@ public interface Task extends HasMeta {
     CompletionStage<TaskResult> completion();
 
     /**
+     * Transitions a freshly created task from {@link TaskState#SUBMITTED} to
+     * {@link TaskState#WORKING}. Tasks from {@code Tasks.create()} start out {@code SUBMITTED};
+     * call this once the work is actually under way, which also unlocks
+     * {@link #updateMessage(String)} and {@link #requireInput(InputRequestBundle, String)}.
+     * Task-augmented tool calls are started by the server, so tool handlers never need this.
+     *
+     * @param statusMessage optional status message
+     * @return {@code true} if the task was {@code SUBMITTED} and is now {@code WORKING}
+     */
+    boolean start(@Nullable String statusMessage);
+
+    /**
      * Transitions the task to the completed state.
      *
      * @param result the completion result
@@ -82,6 +94,22 @@ public interface Task extends HasMeta {
      */
     @ExperimentalApi
     boolean requireInput(InputRequestBundle request, @Nullable String statusMessage);
+
+    /**
+     * Resumes a task that was waiting for input.
+     *
+     * @param statusMessage optional status message
+     * @return {@code true} if the state transition was applied
+     * @deprecated use {@link #start(String)}. This only ever affects a {@link TaskState#SUBMITTED}
+     *     task, to which it delegates. An {@link TaskState#INPUT_REQUIRED} task is resumed by the
+     *     client answering the pending {@code inputRequests} via {@code tasks/update} — it cannot
+     *     be forced from here (doing so would re-invoke the handler with missing answers, or
+     *     clobber a fresher pause), so this returns {@code false} in that state.
+     */
+    @Deprecated(forRemoval = false)
+    default boolean resume(@Nullable String statusMessage) {
+        return start(statusMessage);
+    }
 
     /**
      * Updates the status message of this task.

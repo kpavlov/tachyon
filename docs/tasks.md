@@ -51,13 +51,15 @@ Task ownedTask = server.tasks().create(
         TaskOptions.builder().id("my-runner-task-42").build());
 
 // Update state via the returned Task handle
-ownedTask.
-
-updateMessage("Running step 1...");
-ownedTask.
-
-complete(TaskResult.completed(List.of(TextContent.of("done")),null,null));
+ownedTask.start("Starting...");
+ownedTask.updateMessage("Running step 1...");
+ownedTask.complete(TaskResult.completed(List.of(TextContent.of("done")), null, null));
 ```
+
+A created task is `SUBMITTED`. `start(...)` moves it to `WORKING`, which is what unlocks
+`updateMessage(...)` and `requireInput(...)` — both return `false` before that. `complete`/`fail`/
+`cancel` work from either state. `start()` moves only `SUBMITTED → WORKING`; an `INPUT_REQUIRED`
+task is resumed by the client via [`tasks/update`](#tasksupdate--submitting-input-to-a-paused-task).
 
 Supply `TaskOptions.builder().id(...)` to map a task onto an ID from your own external task
 runner. IDs must be unique — `create` throws `IllegalArgumentException` if a task with that ID
@@ -172,10 +174,11 @@ declares it per request.
 ```java
 import dev.tachyonmcp.core.server.features.tasks.TasksExtension;
 
-var server = TachyonServer.builder()
+final var server = TachyonServer.builder()
     .withExtensions(TasksExtension.instance())
     .port(8080)
     .build();
+
 server.start();
 ```
 

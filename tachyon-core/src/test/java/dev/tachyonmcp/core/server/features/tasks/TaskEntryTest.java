@@ -28,6 +28,10 @@ class TaskEntryTest {
         return entry(null);
     }
 
+    private static TaskEntry submittedEntry() {
+        return TaskEntry.builder("task-1").status(TaskState.SUBMITTED).build();
+    }
+
     private static InputRequestBundle bundleOf(Map<String, String> requestedKeysToPrompts, String requestState) {
         Map<String, dev.tachyonmcp.api.server.domain.InputRequest> requests = new HashMap<>();
         requestedKeysToPrompts.forEach(
@@ -81,6 +85,36 @@ class TaskEntryTest {
 
         clock.advance(Duration.ofMinutes(11));
         assertThat(entry.isExpired()).isTrue();
+    }
+
+    @Test
+    void startMovesSubmittedToWorkingExactlyOnce() {
+        var entry = submittedEntry();
+
+        assertThat(entry.updateMessage("too early")).isFalse();
+        assertThat(entry.start("importing")).isTrue();
+        assertThat(entry.status()).isEqualTo(TaskState.WORKING);
+        assertThat(entry.statusMessage()).isEqualTo("importing");
+        assertThat(entry.updateMessage("now allowed")).isTrue();
+
+        assertThat(entry.start("again")).isFalse();
+        assertThat(entry.statusMessage()).isEqualTo("now allowed");
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    void deprecatedResumeStartsASubmittedTaskButNeverForcesAPausedOne() {
+        var submitted = submittedEntry();
+
+        assertThat(submitted.resume("go")).isTrue();
+        assertThat(submitted.status()).isEqualTo(TaskState.WORKING);
+
+        var paused = workingEntry();
+        paused.requireInput(bundleOf(Map.of("user_name", "What is your name?"), "state-1"), null);
+
+        assertThat(paused.resume("force")).isFalse();
+        assertThat(paused.status()).isEqualTo(TaskState.INPUT_REQUIRED);
+        assertThat(paused.pendingInput()).isNotNull();
     }
 
     @Test

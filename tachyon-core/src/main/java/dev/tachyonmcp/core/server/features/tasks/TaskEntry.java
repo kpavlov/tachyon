@@ -261,6 +261,11 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     }
 
     @Override
+    public boolean start(@Nullable String statusMessage) {
+        return transitionTo(TaskState.WORKING, null, statusMessage, null, TaskState.SUBMITTED);
+    }
+
+    @Override
     public boolean complete(TaskResult.Completed result) {
         return transitionTo(TaskState.COMPLETED, result);
     }
@@ -283,7 +288,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
     @Override
     public boolean requireInput(InputRequestBundle request, @Nullable String statusMessage) {
         Objects.requireNonNull(request, "request");
-        return transitionTo(TaskState.INPUT_REQUIRED, null, statusMessage, request);
+        return transitionTo(TaskState.INPUT_REQUIRED, null, statusMessage, request, null);
     }
 
     /**
@@ -306,7 +311,8 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
      * answered — unknown or already-satisfied keys are silently dropped (per the {@code
      * tasks/update} spec). Per-round only: the accumulator is reset whenever a new {@code
      * INPUT_REQUIRED} round begins (see {@link #transitionTo(TaskState, TaskResult, String,
-     * InputRequestBundle)}), so a later round's resumer never sees an earlier round's answers.
+     * InputRequestBundle, TaskState)}), so a later round's resumer never sees an earlier round's
+     * answers.
      *
      * <p>Returns the full merged set once every currently-outstanding key has an answer — this
      * call has also atomically resumed the task to {@link TaskState#WORKING} at that point — or
@@ -406,7 +412,7 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
      * (when non-null) atomically with the state change, then notifying the status listener.
      */
     boolean transitionTo(TaskState newStatus, @Nullable TaskResult result, @Nullable String statusMessage) {
-        return transitionTo(newStatus, result, statusMessage, null);
+        return transitionTo(newStatus, result, statusMessage, null, null);
     }
 
     /**
@@ -415,17 +421,26 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
      * status listener. {@code pendingInput} is only retained for {@link TaskState#INPUT_REQUIRED};
      * any other target status clears it, so a task never carries a stale bundle once it has moved
      * on, and the listener never observes {@code INPUT_REQUIRED} without its bundle already set.
+     *
+     * <p>A non-null {@code expected} narrows the move to that single source state, on top of the
+     * {@link TaskState#canTransitionTo} table. {@link #start(String)} needs this: {@code
+     * INPUT_REQUIRED -> WORKING} is a legal transition in general, but must only ever happen
+     * through {@link #submitInput(Map)}.
      */
     private boolean transitionTo(
             TaskState newStatus,
             @Nullable TaskResult result,
             @Nullable String statusMessage,
-            @Nullable InputRequestBundle pendingInput) {
+            @Nullable InputRequestBundle pendingInput,
+            @Nullable TaskState expected) {
         Objects.requireNonNull(newStatus, "status is required");
         if (newStatus == TaskState.COMPLETED) {
             Objects.requireNonNull(result, "result is required when transitioning to completed status");
         }
         var current = status.get();
+        if (expected != null && current != expected) {
+            return false;
+        }
         if (!current.canTransitionTo(newStatus)) {
             return false;
         }
