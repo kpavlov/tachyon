@@ -99,9 +99,11 @@ class FilesystemSkillsRegistryTest {
 
         var registry = new FilesystemSkillsRegistry(skillDir, "junky-skill");
 
+        assertThat(registry.skills()).hasSize(1);
         assertThat(registry.skills().getFirst().files())
                 .extracting(SkillsRegistry.SkillFile::relativePath)
                 .containsExactly("SKILL.md");
+        assertThat(registry.readFile("skill://junky-skill/SKILL.md")).isNotEmpty();
     }
 
     @Test

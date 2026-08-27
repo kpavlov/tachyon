@@ -102,9 +102,14 @@ class ClasspathSkillsRegistryTest {
         try (var loader = new URLClassLoader(new URL[] {jarPath.toUri().toURL()}, null)) {
             var registry = new ClasspathSkillsRegistry(loader, "bundled", null);
 
+            assertThat(registry.skills())
+                    .extracting(SkillsRegistry.Skill::skillPath)
+                    .containsExactly("demo");
             assertThat(registry.skills().getFirst().files())
                     .extracting(SkillsRegistry.SkillFile::relativePath)
                     .containsExactly("SKILL.md");
+            assertThat(new String(registry.readFile("skill://demo/SKILL.md"), StandardCharsets.UTF_8))
+                    .contains("name: demo", "# Demo");
         }
     }
 
