@@ -15,8 +15,10 @@ import dev.tachyonmcp.api.runtime.ElicitationRequest;
 import dev.tachyonmcp.api.runtime.ElicitationResult;
 import dev.tachyonmcp.api.runtime.InteractionContext;
 import dev.tachyonmcp.api.server.domain.Icon;
+import dev.tachyonmcp.api.server.domain.InvalidArgumentException;
 import dev.tachyonmcp.api.server.domain.ProgressToken;
 import dev.tachyonmcp.api.server.domain.ToolAnnotations;
+import dev.tachyonmcp.api.server.features.HandlerFutures;
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolFn;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
@@ -47,6 +49,9 @@ class GetWeatherTool {
         return (ctx, request) -> {
             var args = request.arguments().decode(GetWeatherRequest.class);
             var city = args.city();
+            if (city.isBlank()) {
+                throw new InvalidArgumentException("city", "must not be blank");
+            }
             var units = args.units();
             var progressToken = request.progressToken();
             try {
@@ -54,17 +59,19 @@ class GetWeatherTool {
                     toResponse(city, fetchWithProgress(ctx, progressToken, weatherService, city), units)
                 );
             } catch (CityNotFoundException e) {
-                var elicitedCity = elicitCity(ctx, city);
-                if (elicitedCity.isEmpty()) {
-                    return ToolResult.error("City not found");
-                }
                 try {
+                    var elicitedCity = elicitCity(ctx, city);
+                    if (elicitedCity.isEmpty()) {
+                        return ToolResult.error("City not found");
+                    }
                     final var fetched = fetchWithProgress(ctx, progressToken, weatherService, elicitedCity.get());
                     return ToolResult.structured(
                         toResponse(elicitedCity.get(), fetched, units)
                     );
                 } catch (CityNotFoundException ignored) {
                     return ToolResult.error("City not found");
+                } catch (Exception ex) {
+                    return internalError(ex);
                 }
             } catch (Exception e) {
                 return internalError(e);
@@ -92,13 +99,7 @@ class GetWeatherTool {
     private static Optional<String> elicitCity(InteractionContext ctx, String city) throws Exception {
         var request = new ElicitationRequest(
             "City '%s' was not found. Enter another city.".formatted(city), CITY_SCHEMA);
-        ElicitationResult result;
-        try {
-            result = ctx.client().elicitation().create(request).get();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw e;
-        }
+        var result = HandlerFutures.joinInterruptibly(ctx.client().elicitation().create(request));
         if (result.action() != ElicitationResult.Action.ACCEPT || result.content() == null) {
             return Optional.empty();
         }

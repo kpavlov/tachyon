@@ -26,6 +26,7 @@ import dev.tachyonmcp.api.server.features.prompts.PromptRequest;
 import dev.tachyonmcp.api.server.features.prompts.PromptResult;
 import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.ObjectMapper;
@@ -60,17 +61,24 @@ public final class WeatherServer {
     public static void main(String... args) {
         final var server = buildServer(
             System.getenv().getOrDefault("HOST", "localhost"),
-            Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"))
+            Integer.parseInt(System.getenv().getOrDefault("PORT", "8080")),
+            System.getenv("ALLOWED_HOST")
         );
         server.start();
         log.info("Connect your MCP client to http://{}:{}/mcp", server.host(), server.port());
     }
 
-    static TachyonServer buildServer(String host, int port) {
-        return buildServer(host, port, weatherService);
+    static TachyonServer buildServer(String host, int port, @Nullable String allowedHost) {
+        return buildServer(host, port, allowedHost, weatherService);
     }
 
     static TachyonServer buildServer(String host, int port, WeatherService weatherService) {
+        return buildServer(host, port, null, weatherService);
+    }
+
+    static TachyonServer buildServer(
+        String host, int port, @Nullable String allowedHost, WeatherService weatherService
+    ) {
         var predictionArticle = weatherService.predictionArticle();
         var resourceAnnotations =
             Annotations.of(List.of(Role.USER, Role.ASSISTANT), 0.8, "2026-07-23T00:00:00Z");
@@ -78,6 +86,11 @@ public final class WeatherServer {
         return TachyonServer.builder()
                 .host(host)
                 .port(port)
+            .network(n -> {
+                if (allowedHost != null && !allowedHost.isBlank()) {
+                    n.allowedHosts(allowedHost);
+                }
+            })
                 .info(it -> it
                         .name("weather-server")
                         .title("Weather Server")

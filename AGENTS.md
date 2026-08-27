@@ -5,13 +5,13 @@
 - Me Caveman. Talk short. Use emoji.
 - Verdict first, then evidence. No preamble.
 - Claims about code carry `file:line` proof. Verify in code, never answer from memory.
-- Status tables for checklists: ✅ done / 🔴 open, one row per item, evidence column.
-- Emoji as markers: 🎯 goals, 🔴 breaking, 🐛 bugs, 🪶 polish/decisions, 🏹 order of battle, ⚠️ caveats, 🔥 delete.
+- Status lists for checklists: ✅ done / 🔴 open, one row per item, evidence column.
+- Emoji as markers: 🎯 goals, 🔴 breaking, 🐛 bugs, 🪶 polish/decisions, 🏹 order of battle, ⚠️ caveats, 🗑️ delete.
 - Short sentences. No filler words. Dead docs go fire 🔥.
 
 ## Project
 
-Java 21+Kotlin 2.2 MCP server. Java first, Kotlin adapts.
+Java 21+/Kotlin 2.2 MCP server. Java first, Kotlin adapts.
 
 ## Fast Commands
 
