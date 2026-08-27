@@ -4,6 +4,7 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
 import dev.tachyonmcp.api.server.domain.Icon;
+import dev.tachyonmcp.testkit.TestTaskExecutionEngine;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -11,6 +12,7 @@ class ServerInfoTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void allCapabilitiesEnabled() throws Exception {
+        var taskEngine = new TestTaskExecutionEngine();
         startServer(it -> it.info(b -> b.name("test-server")
                         .version("2.0")
                         .description("Test server")
@@ -24,7 +26,7 @@ class ServerInfoTest extends AbstractStatelessMcpE2eTest {
                         .tools(true)
                         .resources(true, true)
                         .prompts(true)
-                        .tasks(true, true, true)));
+                        .tasks(taskEngine, true, true, true)));
 
         try (var client = createTestClient()) {
             // language=json

@@ -2,8 +2,12 @@
 package dev.tachyonmcp.kotlin.server
 
 import dev.tachyonmcp.api.runtime.InteractionContext
+import dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine
+import dev.tachyonmcp.api.server.features.tasks.TaskFeature
+import dev.tachyonmcp.api.server.features.tasks.TaskInput
+import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot
+import dev.tachyonmcp.api.server.features.tasks.TaskState
 import dev.tachyonmcp.api.server.features.tasks.TaskSupport
-import dev.tachyonmcp.api.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.api.server.features.tools.ToolRequest
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.core.server.TachyonServer
@@ -16,12 +20,12 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.junit.jupiter.api.Test
-import tools.jackson.databind.ObjectMapper
 import java.time.Duration
+import java.time.Instant
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
@@ -162,26 +166,22 @@ internal class ToolFnFactoryTest {
     }
 
     @Test
-    fun `task cancellation cancels coroutine`() {
-        val started = CountDownLatch(1)
-        val cancelled = CountDownLatch(1)
-        val descriptor =
-            ToolDescriptor
-                .builder()
-                .name("cancellable")
-                .taskSupport(TaskSupport.OPTIONAL)
-                .build()
+    fun `tasks cancel is delivered to the task execution engine`() {
+        val taskId = "cancellable-task"
+        val engine = RecordingCancelTaskEngine()
 
         TachyonServer(port = 0) {
             name("cancellable-tool-test")
             session { enabled = true }
-            tool(descriptor) {
-                started.countDown()
-                try {
-                    awaitCancellation()
-                } finally {
-                    cancelled.countDown()
+            capabilities {
+                tasks {
+                    enabled = true
+                    cancel = true
+                    executionEngine = engine
                 }
+            }
+            tool("cancellable", taskSupport = TaskSupport.REQUIRED) {
+                ToolResult.task(TaskSnapshot.working(taskId, Instant.now(), 1))
             }
         }.use { server ->
             McpProbe(server.port()).use { probe ->
@@ -191,29 +191,15 @@ internal class ToolFnFactoryTest {
                         """{"jsonrpc":"2.0","id":2,"method":"tools/call","params":""" +
                             """{"name":"cancellable","arguments":{},"task":{}}}""",
                     )
-                val callJson =
-                    call
-                        .body()
-                        .lineSequence()
-                        .filter { it.startsWith("data:") }
-                        .map { it.removePrefix("data:").trim() }
-                        .first { it.contains(""""id":2""") }
-                val taskId =
-                    ObjectMapper()
-                        .readTree(callJson)
-                        .get("result")
-                        .get("task")
-                        .get("taskId")
-                        .asString()
+                call.body() shouldContain taskId
 
-                started.await(5, TimeUnit.SECONDS) shouldBe true
                 val cancel =
                     probe.post(
                         """{"jsonrpc":"2.0","id":3,"method":"tasks/cancel","params":{"taskId":"$taskId"}}""",
                     )
 
                 cancel.body() shouldContain """"status":"cancelled""""
-                cancelled.await(5, TimeUnit.SECONDS) shouldBe true
+                engine.cancelledTaskIds shouldBe listOf(taskId)
             }
         }
     }
@@ -247,5 +233,44 @@ internal class ToolFnFactoryTest {
         delegate.use {
             block(runtime, DefaultDispatchContext.stateless(delegate))
         }
+    }
+
+    /**
+     * [TaskExecutionEngine] fixture recording every taskId handed to [cancel] -- proving the
+     * signal reaches the engine, not how the engine acts on it. What a real engine does with a
+     * cancel request (interrupt a coroutine, cancel a workflow run, ...) is its own concern, not
+     * Tachyon's.
+     */
+    private class RecordingCancelTaskEngine : TaskExecutionEngine {
+        val cancelledTaskIds = CopyOnWriteArrayList<String>()
+
+        override fun supportedFeatures(): Set<TaskFeature> = setOf(TaskFeature.CANCEL)
+
+        override fun refresh(
+            context: InteractionContext,
+            taskId: String,
+        ): TaskSnapshot? = null
+
+        override fun cancel(
+            context: InteractionContext,
+            taskId: String,
+        ): TaskSnapshot {
+            cancelledTaskIds += taskId
+            val now = Instant.now()
+            return TaskSnapshot
+                .builder()
+                .taskId(taskId)
+                .status(TaskState.CANCELLED)
+                .createdAt(now)
+                .lastUpdatedAt(now)
+                .revision(2)
+                .build()
+        }
+
+        override fun submitInput(
+            context: InteractionContext,
+            taskId: String,
+            input: TaskInput,
+        ): Unit = throw UnsupportedOperationException()
     }
 }

@@ -3,8 +3,10 @@ package dev.tachyonmcp.core.server.internal;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
+import dev.tachyonmcp.api.server.domain.ProgressToken;
 import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.api.server.domain.ServerCapabilities;
+import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.runtime.Session;
@@ -12,7 +14,6 @@ import dev.tachyonmcp.core.runtime.SseEvent;
 import dev.tachyonmcp.core.server.OutboundSseStream;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.TachyonServer;
-import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.core.server.features.tasks.TaskRegistry;
 import dev.tachyonmcp.core.server.session.SessionEvent;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
@@ -97,14 +98,15 @@ public interface ServerEngine extends TachyonServer {
     TaskRegistry tasksRegistry();
 
     /** Maps and sends a task status notification. */
-    void notifyTaskStatus(TaskEntry entry);
+    void notifyTaskStatus(TaskSnapshot snapshot, @Nullable String sessionId);
 
-    /**
-     * Maps and sends a {@code notifications/progress} notification for {@code entry}, addressed to
-     * the progress token the task was created with. A no-op when the task has no token, i.e. the
-     * originating request did not opt into progress.
-     */
-    void notifyTaskProgress(TaskEntry entry, double progress, @Nullable Double total, @Nullable String message);
+    /** Maps and sends a task progress notification to the session that owns {@code progressToken}. */
+    void notifyTaskProgress(
+            ProgressToken progressToken,
+            @Nullable String sessionId,
+            double progress,
+            @Nullable Double total,
+            @Nullable String message);
 
     /** Pushes {@code notifications/resources/updated} to every stateless {@code subscriptions/listen} stream subscribed to {@code uri}. */
     void notifyResourceSubscriptions(String uri);

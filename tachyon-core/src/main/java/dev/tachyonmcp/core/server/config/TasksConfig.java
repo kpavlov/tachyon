@@ -20,15 +20,10 @@ import org.jspecify.annotations.Nullable;
  *                     (default {@code false})
  * @param taskExecutionEngine connector to the system that owns task execution
  * @param pageSize     default page size when a list request omits its limit
- * @param keepAlive    default retention window for a terminal task's result before it's dropped
- *                     from memory (default 5 minutes); overridable per task via
- *                     {@code TaskOptions.keepAlive()}
+ * @param keepAlive    default retention window for a terminal task's cached result (default 5
+ *                     minutes)
  * @param pollInterval default {@code pollInterval} suggested to requestors in task responses, or
- *                     {@code null} (the default) to suggest none; overridable per task via
- *                     {@code TaskOptions.pollInterval()}. Unlike {@code keepAlive}, this value is
- *                     wire-visible and spec-compliant requestors {@code SHOULD} throttle their own
- *                     polling cadence to match it — pick a value that fits how long tasks in this
- *                     server actually run, there's no one-size-fits-all default.
+ *                     {@code null} (the default) to suggest none when a snapshot omits one
  */
 public record TasksConfig(
         boolean enabled,
@@ -45,7 +40,7 @@ public record TasksConfig(
     static final boolean DEFAULT_TASK_CANCEL = false;
     static final boolean DEFAULT_TASK_REQUESTS = false;
 
-    /** Public (unlike the defaults above) — {@code TaskEntry} in a different package reuses this as the resolved default. */
+    /** Default retention window for terminal snapshots in the internal cache. */
     public static final Duration DEFAULT_TASK_KEEP_ALIVE = Duration.ofMinutes(5);
 
     static final TasksConfig DEFAULT = new TasksConfig(

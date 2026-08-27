@@ -3,165 +3,105 @@ package dev.tachyonmcp.e2e;
 
 import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThatJsonRpcResponse;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.domain.TaskResult;
+import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ClientCapabilities;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Implementation;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
-import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
-import dev.tachyonmcp.core.server.features.tasks.DefaultTaskRegistry;
+import dev.tachyonmcp.testkit.TestTaskExecutionEngine;
+import java.time.Instant;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.node.JsonNodeFactory;
 
-/**
- * Core-path task behavior over the wire, driven through the public {@code TaskRegistry}/{@code Task}
- * API only. Extension-specific flows (the {@code create_task} tool, {@code task://} resource,
- * notification delivery) live in {@link TasksExtensionTest}.
- */
 class TasksCoreTest extends AbstractStatefulMcpE2eTest {
+
+    private TestTaskExecutionEngine taskEngine;
 
     @Override
     protected void startDefaultServer() {
-        startServer(it -> it.capabilities(CapabilitiesConfig.Builder::tasks));
+        taskEngine = new TestTaskExecutionEngine();
+        startServer(it -> it.capabilities(c -> c.tasks(taskEngine, true, true, true)));
     }
 
-    // ── Capability advertisement ──────────────────────────────────────────
-
     @Test
-    void advertisesTasksAsCoreCapability() throws Exception {
-        startDefaultServer();
-        try (var client = createTestClient()) {
-            var response = client.post(null, buildInitializeJson(Map.of()));
-            client.sendInitialized(
-                    response.headers().firstValue("MCP-Session-Id").orElseThrow());
+    void listsAndGetsConnectorSnapshots() throws Exception {
+        taskEngine.reset();
+        var first = working("workflow-1", 1);
+        var second = working("workflow-2", 1);
+        taskEngine.publish(first).publish(second);
 
-            assertThatJson(response.body())
-                    .inPath("$.result.capabilities.tasks")
-                    .isObject();
-        }
-    }
-
-    // ── Core lifecycle (create / list / get / cancel / result) ────────────
-
-    @Test
-    void createsListsAndGetsTask() throws Exception {
-        startDefaultServer();
         try (var client = createTestClient()) {
             client.initialize();
-            var task = server.tasks().create();
-
             var listJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/list","params":{}}
                     """);
-            assertThatJson(listJson).inPath("$.result.tasks.length()").isEqualTo(1);
+            assertThatJson(listJson).inPath("$.result.tasks.length()").isEqualTo(2);
+            assertThat(taskEngine.listRequests()).singleElement().satisfies(request -> {
+                assertThat(request.limit()).isPositive();
+                assertThat(request.cursor()).isNull();
+            });
 
             var getJson = client.sendRpc("""
-                    {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
-                    """.formatted(task.id()));
-            assertThatJson(getJson).inPath("$.result.taskId").isEqualTo(task.id());
+                    {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"workflow-1"}}
+                    """);
+            assertThatJson(getJson).inPath("$.result.taskId").isEqualTo("workflow-1");
             assertThatJson(getJson).inPath("$.result.status").isEqualTo("working");
+            assertThat(taskEngine.refreshedTaskIds()).contains("workflow-1");
         }
     }
 
     @Test
-    void statusMessageReflectsCallerSuppliedTextNotTheBareStatusName() throws Exception {
-        startDefaultServer();
+    void cancelsThroughConnector() throws Exception {
+        taskEngine.reset();
+        taskEngine.publish(working("workflow-cancel", 1));
+
         try (var client = createTestClient()) {
             client.initialize();
-            var task = server.tasks().create();
-            var registry = (DefaultTaskRegistry) server.tasks();
-            registry.updateStatus(task.id(), TaskState.WORKING, "step 1 of 3");
-
-            var workingJson = client.sendRpc("""
-                    {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"%s"}}
-                    """.formatted(task.id()));
-            assertThatJson(workingJson).inPath("$.result.statusMessage").isEqualTo("step 1 of 3");
-
-            task.complete(
-                    TaskResult.completed(JsonNodeFactory.instance.objectNode().put("output", "success")));
-
-            var completedJson = client.sendRpc("""
-                    {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
-                    """.formatted(task.id()));
-            assertThatJson(completedJson).inPath("$.result.status").isEqualTo("completed");
-            assertThatJson(completedJson).inPath("$.result.statusMessage").isEqualTo("step 1 of 3");
-        }
-    }
-
-    @Test
-    void cancelsTask() throws Exception {
-        startDefaultServer();
-        try (var client = createTestClient()) {
-            client.initialize();
-            var task = server.tasks().create();
-
             var cancelJson = client.sendRpc("""
-                    {"jsonrpc":"2.0","id":2,"method":"tasks/cancel","params":{"taskId":"%s"}}
-                    """.formatted(task.id()));
-            assertThatJson(cancelJson).inPath("$.result.taskId").isEqualTo(task.id());
+                    {"jsonrpc":"2.0","id":2,"method":"tasks/cancel","params":{"taskId":"workflow-cancel"}}
+                    """);
+            assertThatJson(cancelJson).inPath("$.result.taskId").isEqualTo("workflow-cancel");
             assertThatJson(cancelJson).inPath("$.result.status").isEqualTo("cancelled");
+            assertThat(taskEngine.cancelledTaskIds()).containsExactly("workflow-cancel");
         }
     }
 
     @Test
-    void completedTaskResultIsACallToolResult() throws Exception {
-        startDefaultServer();
+    void returnsCompletedConnectorResult() throws Exception {
+        taskEngine.reset();
+        var completed = TaskSnapshot.builder()
+                .from(working("workflow-complete", 1))
+                .status(TaskState.COMPLETED)
+                .result(TaskResult.completed(Map.of("output", "success")))
+                .revision(2)
+                .build();
+        taskEngine.publish(completed);
+
         try (var client = createTestClient()) {
             client.initialize();
-            var task = server.tasks().create();
-            var output = JsonNodeFactory.instance.objectNode().put("output", "success");
-            task.complete(TaskResult.completed(output));
-
-            var getJson = client.sendRpc("""
-                    {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"%s"}}
-                    """.formatted(task.id()));
-            assertThatJson(getJson).inPath("$.result.status").isEqualTo("completed");
-
-            // tasks/result returns exactly what the tool call would have — a CallToolResult
-            // (content + structuredContent), not a wrapped {"result": …} envelope.
             var resultJson = client.sendRpc("""
-                    {"jsonrpc":"2.0","id":3,"method":"tasks/result","params":{"taskId":"%s"}}
-                    """.formatted(task.id()));
-            assertThatJsonRpcResponse(resultJson).isSuccess().hasContent().hasStructuredContent("""
-                            {"output":"success"}
-                            """);
+                    {"jsonrpc":"2.0","id":3,"method":"tasks/result","params":{"taskId":"workflow-complete"}}
+                    """);
+            assertThatJsonRpcResponse(resultJson).isSuccess().hasStructuredContent("""
+                    {"output":"success"}
+                    """);
+            assertThat(taskEngine.awaitedTaskIds()).containsExactly("workflow-complete");
         }
     }
 
     @Test
     void unknownTaskReturnsError() throws Exception {
-        startDefaultServer();
+        taskEngine.reset();
         try (var client = createTestClient()) {
             client.initialize();
-
             var getJson = client.sendRpc("""
-                    {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"nonexistent-id"}}
+                    {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"missing"}}
                     """);
             assertThatJsonRpcResponse(getJson).isJsonRpcError().hasErrorCode(-32602);
         }
     }
 
-    private static String buildInitializeJson(Map<String, JsonNode> extensions) {
-        var capsBuilder = ClientCapabilities.builder();
-        if (!extensions.isEmpty()) {
-            capsBuilder.extensions(extensions);
-        }
-        var params = InitializeRequestParams.builder()
-                .protocolVersion("2025-11-25")
-                .capabilities(capsBuilder.build())
-                .clientInfo(new Implementation("1.0", null, null, "test-client", null, null))
-                .build();
-        try {
-            var paramsJson = new ObjectMapper().writeValueAsString(params);
-            return """
-                    {"jsonrpc":"2.0","id":1,"method":"initialize","params":%s}
-                    """.formatted(paramsJson);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+    private static TaskSnapshot working(String taskId, long revision) {
+        return TaskSnapshot.working(taskId, Instant.parse("2026-08-27T07:00:00Z"), revision);
     }
 }

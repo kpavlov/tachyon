@@ -7,10 +7,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.json.JsonDocument;
 import dev.tachyonmcp.api.server.domain.TaskResult;
+import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
+import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.features.tasks.TasksExtension;
 import dev.tachyonmcp.core.server.json.JsonUtils;
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.testkit.TestTaskExecutionEngine;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -96,15 +100,25 @@ class StructuredOutputSchemaShapeTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void shouldInlineArrayStructuredContentThroughTasksGet() throws Exception {
-        startServer(builder -> builder.withExtensions(TasksExtension.instance()), registrar -> {});
-        var task = server.tasks().create();
-        task.complete(TaskResult.completed(JsonUtils.parse("[1,2,3]")));
+        var task = TaskSnapshot.builder()
+                .taskId("array-task")
+                .status(TaskState.COMPLETED)
+                .createdAt(Instant.parse("2026-08-27T07:00:00Z"))
+                .lastUpdatedAt(Instant.parse("2026-08-27T07:00:01Z"))
+                .result(TaskResult.completed(JsonUtils.parse("[1,2,3]")))
+                .revision(1)
+                .build();
+        var taskEngine = new TestTaskExecutionEngine().publish(task);
+        startServer(
+                builder -> builder.capabilities(c -> c.tasks(taskEngine, false, true, true))
+                        .withExtensions(TasksExtension.instance()),
+                registrar -> {});
 
         try (var client = createModernTestClient()) {
             var response = client.post("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"%s",\
                     "_meta":{"io.modelcontextprotocol/clientCapabilities":{"extensions":{"%s":{}}}}}}
-                    """.formatted(task.id(), TasksExtension.ID));
+                    """.formatted(task.taskId(), TasksExtension.ID));
 
             // JsonRpcResponseAssert's success helpers assert result.structuredContent/content -- this
             // response nests the tool result one level deeper (result.result.*), so it isn't a fit.
@@ -127,7 +141,7 @@ class StructuredOutputSchemaShapeTest extends AbstractStatelessMcpE2eTest {
                                 }
                               }
                             }
-                            """.formatted(task.id()));
+                            """.formatted(task.taskId()));
         }
     }
 }

@@ -11,6 +11,17 @@ var server = TachyonServer.builder()
         .capabilities(c -> c.tasks(taskExecutionEngine, false, true, true))
         .port(8080)
         .build();
+
+server.tools().register(
+        tool -> tool.name("book_appointment").taskSupport(TaskSupport.REQUIRED),
+        (context, request) -> ToolResult.task(taskExecutionEngine.start(
+                context,
+                TaskExecutionRequest.builder()
+                        .taskId(UUID.randomUUID().toString())
+                        .operation("book_appointment")
+                        .arguments(request.arguments())
+                        .meta(request.meta())
+                        .build())));
 ```
 
 The adapter uses the Tachyon task ID as the Temporal Workflow ID. It deliberately does not retain a

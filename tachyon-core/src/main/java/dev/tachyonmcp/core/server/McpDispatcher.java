@@ -73,7 +73,6 @@ public class McpDispatcher {
 
     public static final String NOTIFICATIONS_INITIALIZED = "notifications/initialized";
     private static final String NOTIFICATIONS_CANCELLED = "notifications/cancelled";
-    private static final String NOTIFICATIONS_TASKS_STATUS = "notifications/tasks/status";
 
     private final Executor executor;
 
@@ -362,10 +361,6 @@ public class McpDispatcher {
                 handleCancellation(context, params, sessionId);
                 return DispatchResult.Accepted.INSTANCE;
             }
-            case NOTIFICATIONS_TASKS_STATUS -> {
-                handleTaskStatusNotification(context, params, sessionId);
-                return DispatchResult.Accepted.INSTANCE;
-            }
             default -> {}
         }
         logger.debug("Unhandled notification: {}", method);
@@ -401,20 +396,6 @@ public class McpDispatcher {
                                 "Cancellation for unknown session: {}, requestId={}",
                                 sessionId,
                                 cancellation.requestId()));
-    }
-
-    private void handleTaskStatusNotification(
-            DispatchContext context, @Nullable Object params, @Nullable String sessionId) {
-        if (sessionId == null) {
-            logger.debug("Task status notification without session");
-            return;
-        }
-        var status = context.requestMapper().taskStatus(params);
-        if (status == null) {
-            logger.debug("Task status notification missing params");
-            return;
-        }
-        server.tasksRegistry().updateStatus(status.taskId(), status.state(), status.message());
     }
 
     private CompletableFuture<DispatchResult> dispatchInitializeAsync(

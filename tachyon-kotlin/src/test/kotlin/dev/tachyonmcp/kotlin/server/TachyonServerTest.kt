@@ -2,11 +2,17 @@
 package dev.tachyonmcp.kotlin.server
 
 import dev.tachyonmcp.api.json.JsonSchema
+import dev.tachyonmcp.api.runtime.InteractionContext
 import dev.tachyonmcp.api.server.config.Mode
 import dev.tachyonmcp.api.server.domain.Role
 import dev.tachyonmcp.api.server.extensions.AdvertiseMode
 import dev.tachyonmcp.api.server.extensions.ExtensionContext
 import dev.tachyonmcp.api.server.extensions.ServerExtension
+import dev.tachyonmcp.api.server.features.PaginatedResult
+import dev.tachyonmcp.api.server.features.tasks.LegacyTaskExecutionEngine
+import dev.tachyonmcp.api.server.features.tasks.TaskFeature
+import dev.tachyonmcp.api.server.features.tasks.TaskInput
+import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.api.server.session.SessionIdGenerator
 import dev.tachyonmcp.core.server.session.InMemorySessionEventStore
@@ -36,6 +42,38 @@ import kotlin.time.toJavaDuration
 
 @Suppress("LongMethod")
 internal class TachyonServerTest {
+    private val taskExecutionEngine =
+        object : LegacyTaskExecutionEngine {
+            override fun supportedFeatures(): Set<TaskFeature> = TaskFeature.entries.toSet()
+
+            override fun refresh(
+                context: InteractionContext,
+                taskId: String,
+            ): TaskSnapshot? = null
+
+            override fun cancel(
+                context: InteractionContext,
+                taskId: String,
+            ): TaskSnapshot = error("unused")
+
+            override fun submitInput(
+                context: InteractionContext,
+                taskId: String,
+                input: TaskInput,
+            ) = Unit
+
+            override fun list(
+                context: InteractionContext,
+                limit: Int,
+                cursor: String?,
+            ): PaginatedResult<TaskSnapshot> = PaginatedResult.of(emptyList(), null, true)
+
+            override fun awaitResult(
+                context: InteractionContext,
+                taskId: String,
+            ): TaskSnapshot = error("unused")
+        }
+
     private data class JacksonPayload(
         val message: String,
     )
@@ -128,6 +166,7 @@ internal class TachyonServerTest {
                         list = true
                         cancel = true
                         requests = true
+                        executionEngine = taskExecutionEngine
                         pageSize = 23
                     }
                     completionsMode = Mode.ON

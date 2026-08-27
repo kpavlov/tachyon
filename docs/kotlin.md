@@ -108,7 +108,7 @@ Tool lambdas are `suspend` functions with access to `ToolScope`:
 tool(name = "reverse", description = "Reverse a string") {
     // this: ToolScope
     // ctx: InteractionContext, request: ToolRequest
-    // arguments: Args, task: Task? — convenience access to request.arguments()/request.task()
+    // arguments: Args — convenience access to request.arguments()
     val msg = arguments.stringValue("message")
     text(msg.reversed())
 }
@@ -345,7 +345,7 @@ Available via `ToolScope.arguments` (or `PromptScope.arguments`):
 | Scope | Builder method | Properties |
 |---|---|---|
 | `ServerInfoScope` | `info { }` | `name`, `version`, `description`, `title`, `instructions` |
-| `CapabilitiesScope` | `capabilities { }` | `tools()`, `resources()`, `prompts()`, `tasks()`, `logging()`, `completions()` |
+| `CapabilitiesScope` | `capabilities { }` | `tools()`, `resources()`, `prompts()`, `tasks()`, `logging`, `completionsMode` |
 | `NetworkScope` | `network { }` | `host`, `port`, `endpointPath`, `allowedOrigins`, `allowedHeaders`, `allowedHosts`, `maxContentLength` |
 | `SessionScope` | `session { }` | `enabled`, `sessionTtl`, `sessionIdGenerator` |
 | `RuntimeScope` | `runtime { }` | `shutdownGracePeriod`, `requestTimeout`, `clock` |

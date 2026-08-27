@@ -72,7 +72,7 @@ class McpResponseMapperTest {
         assertThat(result.resultType()).isEqualTo("complete");
         assertThat(result.completion().values()).containsExactly("one");
         assertThat(result.completion().total()).isEqualTo(100500);
-        assertThat(result._meta()).containsEntry("trace", JsonNodeFactory.instance.textNode("complete-1"));
+        assertThat(result._meta()).containsEntry("trace", JsonNodeFactory.instance.stringNode("complete-1"));
     }
 
     @Test
@@ -113,7 +113,7 @@ class McpResponseMapperTest {
         assertThat(result.resultType()).isEqualTo("complete");
         assertThat(result.description()).isEqualTo("Greeting");
         assertThat(result.messages()).hasSize(1);
-        assertThat(result._meta()).containsEntry("trace", JsonNodeFactory.instance.textNode("prompt-1"));
+        assertThat(result._meta()).containsEntry("trace", JsonNodeFactory.instance.stringNode("prompt-1"));
     }
 
     @Test
@@ -156,22 +156,22 @@ class McpResponseMapperTest {
         assertThat(toolResult.tools().getFirst().annotations().readOnlyHint()).isTrue();
         assertThat(toolResult.tools().getFirst().icons()).hasSize(1);
         assertThat(toolResult.tools().getFirst()._meta())
-                .containsEntry("kind", JsonNodeFactory.instance.textNode("tool"));
+                .containsEntry("kind", JsonNodeFactory.instance.stringNode("tool"));
         assertThat(resourceResult.resources().getFirst().annotations().priority())
                 .isEqualTo(0.5);
         assertThat(resourceResult.resources().getFirst().icons()).hasSize(1);
         assertThat(resourceResult.resources().getFirst()._meta())
-                .containsEntry("kind", JsonNodeFactory.instance.textNode("resource"));
+                .containsEntry("kind", JsonNodeFactory.instance.stringNode("resource"));
         assertThat(templateResult.resourceTemplates().getFirst().annotations().priority())
                 .isEqualTo(0.5);
         assertThat(templateResult.resourceTemplates().getFirst().icons()).hasSize(1);
         assertThat(templateResult.resourceTemplates().getFirst()._meta())
-                .containsEntry("kind", JsonNodeFactory.instance.textNode("template"));
+                .containsEntry("kind", JsonNodeFactory.instance.stringNode("template"));
         assertThat(promptResult.prompts().getFirst().arguments().getFirst().name())
                 .isEqualTo("name");
         assertThat(promptResult.prompts().getFirst().icons()).hasSize(1);
         assertThat(promptResult.prompts().getFirst()._meta())
-                .containsEntry("kind", JsonNodeFactory.instance.textNode("prompt"));
+                .containsEntry("kind", JsonNodeFactory.instance.stringNode("prompt"));
     }
 
     @Test

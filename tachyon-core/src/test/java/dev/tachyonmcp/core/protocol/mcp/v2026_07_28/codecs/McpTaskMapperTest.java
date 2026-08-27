@@ -5,10 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TaskResult;
+import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
-import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
 import java.time.Duration;
-import java.util.List;
+import java.time.Instant;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -20,12 +20,15 @@ import tools.jackson.databind.node.JsonNodeFactory;
  */
 class McpTaskMapperTest {
 
-    private static TaskEntry entry(TaskState status) {
-        return TaskEntry.builder("task-1")
+    private static TaskSnapshot entry(TaskState status) {
+        return TaskSnapshot.builder()
+                .taskId("task-1")
                 .status(status)
                 .ttl(Duration.ofMinutes(1))
-                .sessionId("session-1")
                 .meta(Map.of("trace", "abc"))
+                .createdAt(Instant.EPOCH)
+                .lastUpdatedAt(Instant.EPOCH)
+                .revision(1)
                 .build();
     }
 
@@ -70,7 +73,13 @@ class McpTaskMapperTest {
     void ttlMsIsWrittenAsNullRatherThanOmittedWhenUnlimited() {
         // SEP-2663 types Task.ttlMs as `number | null` (required) unlike the optional
         // pollIntervalMs -- an unlimited task must still report the key, just with a null value.
-        var unlimited = TaskEntry.builder("task-2").status(TaskState.SUBMITTED).build();
+        var unlimited = TaskSnapshot.builder()
+                .taskId("task-2")
+                .status(TaskState.SUBMITTED)
+                .createdAt(Instant.EPOCH)
+                .lastUpdatedAt(Instant.EPOCH)
+                .revision(1)
+                .build();
 
         var node = McpTaskMapper.toGetTaskResult(unlimited, null, null, null);
 
@@ -111,8 +120,12 @@ class McpTaskMapperTest {
 
     @Test
     void toolLevelErrorReportsCompletedStatusNotFailed() {
-        var task = entry(TaskState.WORKING);
-        task.fail(new TaskResult.Failed(List.of(), null, null));
+        var task = TaskSnapshot.builder()
+                .from(entry(TaskState.WORKING))
+                .status(TaskState.FAILED)
+                .result(TaskResult.failed("boom"))
+                .revision(2)
+                .build();
 
         var node = McpTaskMapper.toGetTaskResult(task, null, null, null);
 
@@ -121,8 +134,12 @@ class McpTaskMapperTest {
 
     @Test
     void protocolErrorReportsFailedStatus() {
-        var task = entry(TaskState.WORKING);
-        task.fail(TaskResult.failed(new ServerError(ServerError.Kind.INTERNAL_ERROR, "boom")));
+        var task = TaskSnapshot.builder()
+                .from(entry(TaskState.WORKING))
+                .status(TaskState.FAILED)
+                .result(TaskResult.failed(new ServerError(ServerError.Kind.INTERNAL_ERROR, "boom")))
+                .revision(2)
+                .build();
 
         var node = McpTaskMapper.toGetTaskResult(task, null, null, null);
 

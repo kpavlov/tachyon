@@ -145,12 +145,12 @@ class McpResponseMapperTest {
                         .build()),
                 null);
 
-        assertThat(completion._meta()).containsEntry("kind", JSON.textNode("completion"));
-        assertThat(promptResult._meta()).containsEntry("kind", JSON.textNode("prompt-result"));
-        assertThat(tools.tools().getFirst()._meta()).containsEntry("kind", JSON.textNode("tool"));
-        assertThat(resources.resources().getFirst()._meta()).containsEntry("kind", JSON.textNode("resource"));
-        assertThat(templates.resourceTemplates().getFirst()._meta()).containsEntry("kind", JSON.textNode("template"));
-        assertThat(prompts.prompts().getFirst()._meta()).containsEntry("kind", JSON.textNode("prompt"));
+        assertThat(completion._meta()).containsEntry("kind", JSON.stringNode("completion"));
+        assertThat(promptResult._meta()).containsEntry("kind", JSON.stringNode("prompt-result"));
+        assertThat(tools.tools().getFirst()._meta()).containsEntry("kind", JSON.stringNode("tool"));
+        assertThat(resources.resources().getFirst()._meta()).containsEntry("kind", JSON.stringNode("resource"));
+        assertThat(templates.resourceTemplates().getFirst()._meta()).containsEntry("kind", JSON.stringNode("template"));
+        assertThat(prompts.prompts().getFirst()._meta()).containsEntry("kind", JSON.stringNode("prompt"));
     }
 
     @Test

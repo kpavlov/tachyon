@@ -18,9 +18,6 @@ public interface TaskExecutionEngine extends AutoCloseable {
     /** Returns the immutable set of optional MCP task operations supported by this engine. */
     Set<TaskFeature> supportedFeatures();
 
-    /** Starts externally executed work and returns its initial task projection. */
-    TaskSnapshot start(InteractionContext context, TaskExecutionRequest request) throws Exception;
-
     /** Returns the authoritative task snapshot, or {@code null} when the task is unknown. */
     @Nullable
     TaskSnapshot refresh(InteractionContext context, String taskId) throws Exception;

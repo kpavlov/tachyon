@@ -7,6 +7,9 @@ import dev.tachyonmcp.api.server.domain.TextResourceContents;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceFn;
+import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
+import dev.tachyonmcp.testkit.TestTaskExecutionEngine;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
@@ -96,10 +99,12 @@ class ListPaginationE2eTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void tasksListReturnsConfiguredPageSize() throws Exception {
-        startServer(it -> it.capabilities(c -> c.tasks(true, false, false).tasksPageSize(2)));
-        server.tasks().create();
-        server.tasks().create();
-        server.tasks().create();
+        var taskEngine = new TestTaskExecutionEngine()
+                .publish(working("task-a"))
+                .publish(working("task-b"))
+                .publish(working("task-c"));
+        startServer(it ->
+                it.capabilities(c -> c.tasks(taskEngine, true, false, false).tasksPageSize(2)));
 
         try (var client = createTestClient()) {
             client.initialize();
@@ -123,5 +128,9 @@ class ListPaginationE2eTest extends AbstractStatelessMcpE2eTest {
 
     private static ResourceDescriptor resource(String name) {
         return ResourceDescriptor.of(name, "test://" + name, null, null);
+    }
+
+    private static TaskSnapshot working(String taskId) {
+        return TaskSnapshot.working(taskId, Instant.parse("2026-08-27T07:00:00Z"), 1);
     }
 }

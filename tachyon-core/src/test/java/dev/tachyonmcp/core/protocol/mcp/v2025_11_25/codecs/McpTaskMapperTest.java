@@ -4,22 +4,26 @@ package dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.TaskStatus;
-import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.JsonNodeFactory;
 
 class McpTaskMapperTest {
 
-    private static TaskEntry entry(TaskState status) {
-        return TaskEntry.builder("task-1")
+    private static TaskSnapshot entry(TaskState status) {
+        return TaskSnapshot.builder()
+                .taskId("task-1")
                 .status(status)
                 .ttl(Duration.ofMinutes(1))
-                .sessionId("session-1")
                 .meta(Map.of("trace", "abc"))
+                .createdAt(Instant.EPOCH)
+                .lastUpdatedAt(Instant.EPOCH)
+                .revision(1)
                 .build();
     }
 
@@ -48,9 +52,13 @@ class McpTaskMapperTest {
 
     @Test
     void ttlIsPreservedAcrossAllResponseShapes() {
-        var withTtl = TaskEntry.builder("task-1")
+        var withTtl = TaskSnapshot.builder()
+                .taskId("task-1")
                 .status(TaskState.WORKING)
                 .ttl(Duration.ofSeconds(90))
+                .createdAt(Instant.EPOCH)
+                .lastUpdatedAt(Instant.EPOCH)
+                .revision(1)
                 .build();
 
         assertThat(McpTaskMapper.toTaskProto(withTtl).ttl()).isEqualTo(Duration.ofSeconds(90));
@@ -61,7 +69,7 @@ class McpTaskMapperTest {
 
     @Test
     void nullTtlIsPreservedAcrossAllResponseShapes() {
-        var withoutTtl = TaskEntry.builder("task-1").status(TaskState.WORKING).build();
+        var withoutTtl = TaskSnapshot.working("task-1", Instant.EPOCH, 1);
 
         assertThat(McpTaskMapper.toTaskProto(withoutTtl).ttl()).isNull();
         assertThat(McpTaskMapper.toGetTaskResult(withoutTtl).ttl()).isNull();

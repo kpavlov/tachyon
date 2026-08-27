@@ -7,12 +7,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import dev.tachyonmcp.api.runtime.InteractionContext;
 import dev.tachyonmcp.api.server.config.Mode;
 import dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine;
-import dev.tachyonmcp.api.server.features.tasks.TaskExecutionRequest;
 import dev.tachyonmcp.api.server.features.tasks.TaskFeature;
 import dev.tachyonmcp.api.server.features.tasks.TaskInput;
 import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.core.server.features.Pagination;
-import dev.tachyonmcp.core.server.features.tasks.InProcessTaskExecutionEngine;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -113,29 +111,15 @@ class CapabilitiesConfigTest {
     }
 
     @Test
-    void legacyTasksOverloadUsesInProcessTaskExecutionEngine() {
-        var config = CapabilitiesConfig.builder().tasks(false, true, true).build();
-
-        assertThat(config.tasks().taskExecutionEngine()).isInstanceOf(InProcessTaskExecutionEngine.class);
-        assertThat(config.tasks().taskExecutionEngine().supportedFeatures())
-                .containsExactlyInAnyOrder(TaskFeature.values());
-    }
-
-    @Test
-    void enabledLegacyTasksConfigUsesInProcessTaskExecutionEngine() {
+    void enabledTasksConfigRequiresExplicitEngine() {
         var tasks = TasksConfig.builder().enabled(true).cancel(true).build();
 
-        var config = CapabilitiesConfig.builder().tasks(tasks).build();
-
-        assertThat(config.tasks().taskExecutionEngine()).isInstanceOf(InProcessTaskExecutionEngine.class);
+        assertThatThrownBy(() -> CapabilitiesConfig.builder().tasks(tasks).build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Tasks capability requires a TaskExecutionEngine");
     }
 
     private record StubTaskExecutionEngine(Set<TaskFeature> supportedFeatures) implements TaskExecutionEngine {
-
-        @Override
-        public TaskSnapshot start(InteractionContext context, TaskExecutionRequest request) {
-            throw new UnsupportedOperationException();
-        }
 
         @Override
         public TaskSnapshot refresh(InteractionContext context, String taskId) {

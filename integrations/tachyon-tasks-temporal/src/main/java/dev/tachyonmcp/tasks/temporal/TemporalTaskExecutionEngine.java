@@ -59,7 +59,13 @@ public final class TemporalTaskExecutionEngine implements TaskExecutionEngine {
         return FEATURES;
     }
 
-    @Override
+    /**
+     * Starts the routed Temporal Workflow and returns its initial MCP projection.
+     *
+     * @param context current MCP interaction
+     * @param request operation, stable Workflow ID, arguments, and metadata
+     * @return initial authoritative task snapshot
+     */
     public TaskSnapshot start(InteractionContext context, TaskExecutionRequest request) {
         var route = routeForOperation(request.operation());
         logger.info(

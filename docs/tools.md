@@ -129,7 +129,7 @@ of `structuredContent`. A structured value that fails its declared `outputSchema
 ## Add metadata
 
 ```java
-return ToolResult.text("done").withMeta("taskId", JSON.textNode("t-123"));
+return ToolResult.text("done").withMeta("taskId", JSON.stringNode("t-123"));
 ```
 
 Metadata appears in the `_meta` field of the response.

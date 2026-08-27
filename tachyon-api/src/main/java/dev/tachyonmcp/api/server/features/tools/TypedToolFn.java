@@ -10,8 +10,8 @@ import dev.tachyonmcp.api.runtime.InteractionContext;
  * {@code ToolResult.structured(Object)}.
  *
  * <p>Use this with {@link Tools#register(Class, Class, ToolDescriptor, TypedToolFn)} when a
- * handler only needs the decoded input, not {@link ToolRequest#progressToken()} or {@link
- * ToolRequest#task()} — register with the plain {@link ToolFn} for that.
+ * handler only needs the decoded input, not {@link ToolRequest#progressToken()} — register with
+ * the plain {@link ToolFn} for that.
  *
  * @param <I> the decoded input type
  * @param <O> the result type, wrapped as structured content

@@ -11,8 +11,8 @@ import java.util.concurrent.CompletionStage;
  * {@link AsyncToolFn}.
  *
  * <p>Use this with {@link Tools#registerAsync(Class, Class, ToolDescriptor, AsyncTypedToolFn)}
- * when a handler only needs the decoded input, not {@link ToolRequest#progressToken()} or {@link
- * ToolRequest#task()} — register with the plain {@link AsyncToolFn} for that.
+ * when a handler only needs the decoded input, not {@link ToolRequest#progressToken()} — register
+ * with the plain {@link AsyncToolFn} for that.
  *
  * @param <I> the decoded input type
  * @param <O> the result type, wrapped as structured content

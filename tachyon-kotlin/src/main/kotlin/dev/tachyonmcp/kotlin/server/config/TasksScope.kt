@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.config
 
+import dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine
 import dev.tachyonmcp.core.server.config.TasksConfig
 import dev.tachyonmcp.core.server.config.TasksConfig.DEFAULT_TASK_KEEP_ALIVE
 import dev.tachyonmcp.core.server.features.Pagination
@@ -25,6 +26,9 @@ public class TasksScope
         /** Whether task-augmented `tools/call` requests are accepted (`tasks.requests.tools.call`). */
         public var requests: Boolean = false
 
+        /** Connector to the system that owns task execution. Required when tasks are enabled. */
+        public var executionEngine: TaskExecutionEngine? = null
+
         /** Default page size when a list request omits its limit. */
         public var pageSize: Int = Pagination.DEFAULT_PAGE_SIZE
 
@@ -42,6 +46,7 @@ public class TasksScope
                 .list(list)
                 .cancel(cancel)
                 .requests(requests)
+                .taskExecutionEngine(executionEngine)
                 .pageSize(pageSize)
                 .keepAlive(keepAlive.toJavaDuration())
                 .build()

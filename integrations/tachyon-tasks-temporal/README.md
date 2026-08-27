@@ -33,6 +33,18 @@ var server = TachyonServer.builder()
         .capabilities(c -> c.tasks(taskEngine, false, true, true))
         .port(8080)
         .build();
+
+server.tools().register(
+        tool -> tool.name("book_appointment").taskSupport(TaskSupport.REQUIRED),
+        (context, request) -> {
+            var start = TaskExecutionRequest.builder()
+                    .taskId(UUID.randomUUID().toString())
+                    .operation("book_appointment")
+                    .arguments(request.arguments())
+                    .meta(request.meta())
+                    .build();
+            return ToolResult.task(taskEngine.start(context, start));
+        });
 ```
 
 The MCP task ID becomes the Temporal Workflow ID. Refresh and input submission resolve the route

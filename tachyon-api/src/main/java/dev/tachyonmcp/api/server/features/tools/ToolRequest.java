@@ -6,7 +6,6 @@ import dev.tachyonmcp.api.json.PayloadDeserializer;
 import dev.tachyonmcp.api.server.ServerFeature;
 import dev.tachyonmcp.api.server.domain.Args;
 import dev.tachyonmcp.api.server.domain.ProgressToken;
-import dev.tachyonmcp.api.server.domain.Task;
 import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
@@ -93,14 +92,6 @@ public interface ToolRequest extends ServerFeature.Request {
     String requestState();
 
     /**
-     * The task handle for task-augmented tool calls, or {@code null} for non-augmented calls.
-     *
-     * @return the task handle, or {@code null}
-     */
-    @Nullable
-    Task task();
-
-    /**
      * Creates a new builder for constructing {@code ToolRequest} instances.
      *
      * @return a new builder
@@ -171,14 +162,6 @@ public interface ToolRequest extends ServerFeature.Request {
          * @return this builder
          */
         Builder requestState(@Nullable String requestState);
-
-        /**
-         * Sets the task handle for task-augmented tool calls.
-         *
-         * @param task the task handle, or {@code null}
-         * @return this builder
-         */
-        Builder task(@Nullable Task task);
 
         /**
          * Builds the {@code ToolRequest} instance.

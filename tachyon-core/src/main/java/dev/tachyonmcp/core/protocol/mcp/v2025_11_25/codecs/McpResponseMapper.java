@@ -10,7 +10,6 @@ import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.ResourceContents;
 import dev.tachyonmcp.api.server.domain.RpcMethodRequest;
 import dev.tachyonmcp.api.server.domain.ServerError;
-import dev.tachyonmcp.api.server.domain.Task;
 import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.domain.TextContent;
 import dev.tachyonmcp.api.server.domain.UrlInputRequest;
@@ -18,6 +17,7 @@ import dev.tachyonmcp.api.server.features.completions.CompletionResult;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
+import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.api.server.features.tools.ToolResult.InputRequired;
@@ -40,7 +40,6 @@ import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ListToolsResult;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.LoggingMessageNotificationParams;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ReadResourceResult;
 import dev.tachyonmcp.core.server.domain.InitializeResponse;
-import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.core.server.json.JsonUtils;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcError;
@@ -144,6 +143,7 @@ public class McpResponseMapper implements ProtocolResponseMapper {
         return switch (result) {
             case InputRequired ir ->
                 new InputRequiredPayload(ir.inputRequests(), ir.requestState(), resolveMeta(result));
+            case ToolResult.Task ignored -> throw new IllegalArgumentException("Task result requires task mapping");
             case ToolResult.Error er -> buildCallToolResult(er.content(), null, true, resolveMeta(result));
             case Success s -> wireSuccess(s, resolveMeta(result));
         };
@@ -236,29 +236,29 @@ public class McpResponseMapper implements ProtocolResponseMapper {
     }
 
     @Override
-    public Object listTasksResult(List<TaskEntry> entries, @Nullable String nextCursor) {
+    public Object listTasksResult(List<TaskSnapshot> entries, @Nullable String nextCursor) {
         var tasks = entries.stream().map(McpTaskMapper::toTaskProto).toList();
         return new ListTasksResult(tasks, null, nextCursor, null);
     }
 
     @Override
-    public Object getTaskResult(Task entry) {
-        return McpTaskMapper.toGetTaskResult((TaskEntry) entry);
+    public Object getTaskResult(TaskSnapshot snapshot) {
+        return McpTaskMapper.toGetTaskResult(snapshot);
     }
 
     @Override
-    public Object createTaskResult(TaskEntry entry) {
-        return McpTaskMapper.toCreateTaskResult(entry);
+    public Object createTaskResult(TaskSnapshot snapshot) {
+        return McpTaskMapper.toCreateTaskResult(snapshot);
     }
 
     @Override
-    public Object cancelTaskResult(TaskEntry entry) {
-        return McpTaskMapper.toCancelTaskResult(entry);
+    public Object cancelTaskResult(TaskSnapshot snapshot) {
+        return McpTaskMapper.toCancelTaskResult(snapshot);
     }
 
     @Override
-    public Object taskStatusNotificationParams(TaskEntry entry) {
-        return McpTaskMapper.toStatusNotification(entry);
+    public Object taskStatusNotificationParams(TaskSnapshot snapshot) {
+        return McpTaskMapper.toStatusNotification(snapshot);
     }
 
     @Override

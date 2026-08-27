@@ -159,7 +159,7 @@ Default `Mode.AUTO` advertises only registered features. Force `Mode.ON`/`Mode.O
 | `.tools()` / `.tools(listChanged)` / `.noTools()` | shortcut: tools |
 | `.resources()` / `.resources(subscribe, listChanged)` / `.noResources()` | shortcut: resources |
 | `.prompts()` / `.prompts(listChanged)` / `.noPrompts()` | shortcut: prompts |
-| `.tasks()` / `.tasks(list, cancel, requests)` | shortcut: tasks (`enabled=true`) |
+| `.tasks(engine)` / `.tasks(engine, list, cancel, requests)` | tasks with an external execution connector |
 | `.toolsMode(m)` / `.toolsListChanged(b)` / `.toolsPageSize(n)` (+ `resources*`/`prompts*`/`tasks*` siblings) | flat per-field setters; chain onto the shortcuts above, e.g. `c.tools().toolsPageSize(20)` |
 | `.completions()` | arg autocomplete |
 | `.logging()` | logging notifications |

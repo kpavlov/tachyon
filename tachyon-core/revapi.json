@@ -727,9 +727,192 @@
         },
         {
           "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter java.lang.Object dev.tachyonmcp.core.protocol.ProtocolResponseMapper::cancelTaskResult(===dev.tachyonmcp.core.server.features.tasks.TaskEntry===)",
+          "new": "parameter java.lang.Object dev.tachyonmcp.core.protocol.ProtocolResponseMapper::cancelTaskResult(===dev.tachyonmcp.api.server.features.tasks.TaskSnapshot===)",
+          "parameterIndex": "0",
+          "justification": "Task cache entry (TaskEntry) is an internal wrapper; response mappers now take the public TaskSnapshot projection returned by the TaskExecutionEngine/Tasks facade directly",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter java.lang.Object dev.tachyonmcp.core.protocol.ProtocolResponseMapper::createTaskResult(===dev.tachyonmcp.core.server.features.tasks.TaskEntry===)",
+          "new": "parameter java.lang.Object dev.tachyonmcp.core.protocol.ProtocolResponseMapper::createTaskResult(===dev.tachyonmcp.api.server.features.tasks.TaskSnapshot===)",
+          "parameterIndex": "0",
+          "justification": "Task cache entry (TaskEntry) is an internal wrapper; response mappers now take the public TaskSnapshot projection returned by the TaskExecutionEngine/Tasks facade directly",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter java.lang.Object dev.tachyonmcp.core.protocol.ProtocolResponseMapper::getTaskResult(===dev.tachyonmcp.api.server.domain.Task===)",
+          "new": "parameter java.lang.Object dev.tachyonmcp.core.protocol.ProtocolResponseMapper::getTaskResult(===dev.tachyonmcp.api.server.features.tasks.TaskSnapshot===)",
+          "parameterIndex": "0",
+          "justification": "The mutable Task handle is gone; response mappers now take the immutable TaskSnapshot projection Tachyon caches",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter java.lang.Object dev.tachyonmcp.core.protocol.ProtocolResponseMapper::taskStatusNotificationParams(===dev.tachyonmcp.core.server.features.tasks.TaskEntry===)",
+          "new": "parameter java.lang.Object dev.tachyonmcp.core.protocol.ProtocolResponseMapper::taskStatusNotificationParams(===dev.tachyonmcp.api.server.features.tasks.TaskSnapshot===)",
+          "parameterIndex": "0",
+          "justification": "Task cache entry (TaskEntry) is an internal wrapper; response mappers now take the public TaskSnapshot projection returned by the TaskExecutionEngine/Tasks facade directly",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter java.lang.Object dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpResponseMapper::cancelTaskResult(===dev.tachyonmcp.core.server.features.tasks.TaskEntry===)",
+          "new": "parameter java.lang.Object dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpResponseMapper::cancelTaskResult(===dev.tachyonmcp.api.server.features.tasks.TaskSnapshot===)",
+          "parameterIndex": "0",
+          "justification": "Task cache entry (TaskEntry) is an internal wrapper; response mappers now take the public TaskSnapshot projection returned by the TaskExecutionEngine/Tasks facade directly",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter java.lang.Object dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpResponseMapper::createTaskResult(===dev.tachyonmcp.core.server.features.tasks.TaskEntry===)",
+          "new": "parameter java.lang.Object dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpResponseMapper::createTaskResult(===dev.tachyonmcp.api.server.features.tasks.TaskSnapshot===)",
+          "parameterIndex": "0",
+          "justification": "Task cache entry (TaskEntry) is an internal wrapper; response mappers now take the public TaskSnapshot projection returned by the TaskExecutionEngine/Tasks facade directly",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter java.lang.Object dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpResponseMapper::getTaskResult(===dev.tachyonmcp.api.server.domain.Task===)",
+          "new": "parameter java.lang.Object dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpResponseMapper::getTaskResult(===dev.tachyonmcp.api.server.features.tasks.TaskSnapshot===)",
+          "parameterIndex": "0",
+          "justification": "The mutable Task handle is gone; response mappers now take the immutable TaskSnapshot projection Tachyon caches",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter java.lang.Object dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpResponseMapper::taskStatusNotificationParams(===dev.tachyonmcp.core.server.features.tasks.TaskEntry===)",
+          "new": "parameter java.lang.Object dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpResponseMapper::taskStatusNotificationParams(===dev.tachyonmcp.api.server.features.tasks.TaskSnapshot===)",
+          "parameterIndex": "0",
+          "justification": "Task cache entry (TaskEntry) is an internal wrapper; response mappers now take the public TaskSnapshot projection returned by the TaskExecutionEngine/Tasks facade directly",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter java.lang.Object dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs.McpResponseMapper::cancelTaskResult(===dev.tachyonmcp.core.server.features.tasks.TaskEntry===)",
+          "new": "parameter java.lang.Object dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs.McpResponseMapper::cancelTaskResult(===dev.tachyonmcp.api.server.features.tasks.TaskSnapshot===)",
+          "parameterIndex": "0",
+          "justification": "Task cache entry (TaskEntry) is an internal wrapper; response mappers now take the public TaskSnapshot projection returned by the TaskExecutionEngine/Tasks facade directly",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter java.lang.Object dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs.McpResponseMapper::createTaskResult(===dev.tachyonmcp.core.server.features.tasks.TaskEntry===)",
+          "new": "parameter java.lang.Object dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs.McpResponseMapper::createTaskResult(===dev.tachyonmcp.api.server.features.tasks.TaskSnapshot===)",
+          "parameterIndex": "0",
+          "justification": "Task cache entry (TaskEntry) is an internal wrapper; response mappers now take the public TaskSnapshot projection returned by the TaskExecutionEngine/Tasks facade directly",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter java.lang.Object dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs.McpResponseMapper::getTaskResult(===dev.tachyonmcp.api.server.domain.Task===)",
+          "new": "parameter java.lang.Object dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs.McpResponseMapper::getTaskResult(===dev.tachyonmcp.api.server.features.tasks.TaskSnapshot===)",
+          "parameterIndex": "0",
+          "justification": "The mutable Task handle is gone; response mappers now take the immutable TaskSnapshot projection Tachyon caches",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter java.lang.Object dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs.McpResponseMapper::taskStatusNotificationParams(===dev.tachyonmcp.core.server.features.tasks.TaskEntry===)",
+          "new": "parameter java.lang.Object dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs.McpResponseMapper::taskStatusNotificationParams(===dev.tachyonmcp.api.server.features.tasks.TaskSnapshot===)",
+          "parameterIndex": "0",
+          "justification": "Task cache entry (TaskEntry) is an internal wrapper; response mappers now take the public TaskSnapshot projection returned by the TaskExecutionEngine/Tasks facade directly",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.numberOfParametersChanged",
+          "old": "method dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder::tasks()",
+          "new": "method dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder::tasks(dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine)",
+          "justification": "Enabling tasks now requires wiring the external TaskExecutionEngine that owns execution; there is no in-process engine to default to",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.numberOfParametersChanged",
+          "old": "method dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder::tasks(boolean, boolean, boolean)",
+          "new": "method dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder::tasks(dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine, boolean, boolean, boolean)",
+          "justification": "Enabling tasks now requires wiring the external TaskExecutionEngine that owns execution; there is no in-process engine to default to",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
           "code": "java.class.removed",
           "old": "interface dev.tachyonmcp.core.server.features.tasks.TaskResumer",
-          "justification": "Renamed to TaskDispatchResumer and marked @InternalApi; the public dev.tachyonmcp.api.server.features.tasks.TaskResumer now covers caller-owned tasks",
+          "justification": "Resuming a suspended in-process task handle is no longer a concept; the external TaskExecutionEngine owns execution and hands Tachyon immutable TaskSnapshot projections instead",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.visibilityReduced",
+          "old": "method void dev.tachyonmcp.core.server.features.tasks.TasksExtension::<init>()",
+          "new": "method void dev.tachyonmcp.core.server.features.tasks.TasksExtension::<init>()",
+          "oldVisibility": "public",
+          "newVisibility": "private",
+          "justification": "TasksExtension is now a stateless singleton (TasksExtension.instance()); it no longer needs a public constructor",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method void dev.tachyonmcp.core.server.features.tasks.TasksExtension::bootstrap(dev.tachyonmcp.api.server.extensions.ExtensionContext)",
+          "justification": "bootstrap() used to register the in-process task execution engine at startup; execution is now external, so TasksExtension has nothing to bootstrap and falls back to ServerExtension's no-op default",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.nowFinal",
+          "old": "class dev.tachyonmcp.core.server.features.tasks.TasksExtension",
+          "new": "class dev.tachyonmcp.core.server.features.tasks.TasksExtension",
+          "justification": "TasksExtension is a stateless singleton with a private constructor; not designed for subclassing",
           "attachments": {
             "since": "1.0.0-beta.23"
           }

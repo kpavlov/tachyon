@@ -1,403 +1,112 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e;
 
-import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
-import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThatJsonRpcResponse;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.api.server.domain.ProgressToken;
 import dev.tachyonmcp.api.server.domain.TaskResult;
+import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
+import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ClientCapabilities;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.Implementation;
-import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
-import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
-import dev.tachyonmcp.core.server.features.tasks.DefaultTaskRegistry;
-import dev.tachyonmcp.core.server.features.tasks.TasksExtension;
-import dev.tachyonmcp.core.server.json.JsonUtils;
-import dev.tachyonmcp.core.server.session.DispatchContext;
-import dev.tachyonmcp.testkit.McpClient;
+import dev.tachyonmcp.testkit.TestTaskExecutionEngine;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
-import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.parallel.Execution;
-import org.junit.jupiter.api.parallel.ExecutionMode;
-import org.junit.jupiter.api.parallel.Isolated;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.node.JsonNodeFactory;
 
-/**
- * <a href="https://modelcontextprotocol.io/seps/1686-tasks">SEP-1686 Tasks</a> —
- * negotiable extension exposed only when client opts in via {@code initialize} capabilities.
- */
-@Isolated
-@Execution(ExecutionMode.SAME_THREAD) // to fix shouldNotifyTaskStatusOnCreate flakiness
 class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
 
-    private static final String TASKS_EXTENSION_ID = "io.modelcontextprotocol/tasks";
+    private TestTaskExecutionEngine taskEngine;
+    private TaskSnapshot initial;
 
     @Override
     protected void startDefaultServer() {
-        startServer(it -> it.withExtensions(TasksExtension.instance()));
+        initial = TaskSnapshot.working("legacy-workflow", Instant.parse("2026-08-27T07:00:00Z"), 1);
+        taskEngine = new TestTaskExecutionEngine().publish(initial);
+        startServer(builder -> builder.capabilities(c -> c.tasks(taskEngine, true, true, true)), registrar -> {
+            registrar
+                    .tools()
+                    .register(
+                            b -> b.name("book").taskSupport(TaskSupport.REQUIRED),
+                            (context, request) -> ToolResult.task(initial));
+            // A taskId of its own -- keeps the progress token it captures independent of
+            // "book"/"legacy-workflow", which other tests in this class also publish to.
+            registrar
+                    .tools()
+                    .register(
+                            b -> b.name("book-for-progress").taskSupport(TaskSupport.REQUIRED),
+                            (context, request) -> ToolResult.task(
+                                    TaskSnapshot.working("legacy-progress", Instant.parse("2026-08-27T07:00:00Z"), 1)));
+            registrar.tools().register(b -> b.name("notify-progress"), (context, request) -> {
+                server.tasks().reportProgress("legacy-progress", 0.5, 1.0, "halfway");
+                return ToolResult.text("ok");
+            });
+        });
     }
 
     @Test
-    void advertisesTasksExtensionWhenNegotiated() throws Exception {
-        startServer(it -> it.capabilities(CapabilitiesConfig.Builder::tasks).withExtensions(TasksExtension.instance()));
+    void taskAugmentedToolReturnsConnectorIdentity() throws Exception {
         try (var client = createTestClient()) {
-            var initBody = buildInitializeJson(Map.of(TASKS_EXTENSION_ID, JsonNodeFactory.instance.objectNode()));
-            var response = client.post(null, initBody);
-            client.sendInitialized(
-                    response.headers().firstValue("MCP-Session-Id").orElseThrow());
-
-            assertThatJson(response.body())
-                    .inPath("$.result.capabilities.tasks")
-                    .isObject();
-            assertThatJson(response.body())
-                    .inPath("$.result.capabilities.extensions")
-                    .isObject()
-                    .containsKey(TASKS_EXTENSION_ID);
-        }
-    }
-
-    @Test
-    void createTaskViaTool() throws Exception {
-        try (var client = createTestClient()) {
-            initializeWithExtension(client);
-
-            var callJson = client.sendRpc("""
-                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create_task","arguments":{"name":"my-task","description":"from tool"}}}
-                    """);
-            assertThatJsonRpcResponse(callJson).isSuccess().hasTextContent();
-            var taskId = extractText(callJson);
-
-            var getJson = client.sendRpc("""
-                    {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
-                    """.formatted(taskId));
-            assertThatJson(getJson).inPath("$.result.taskId").isEqualTo(taskId);
-            assertThatJson(getJson).inPath("$.result.status").isEqualTo("working");
-        }
-    }
-
-    @Test
-    void rejectsToolCallWhileSessionNotYetActive() throws Exception {
-        // Deterministic counterpart to the createTaskViaTool flake: initialize a session but
-        // deliberately skip notifications/initialized, so it stays INITIALIZING and the
-        // activation gate (McpDispatcher) rejects the tools/call with a JSON-RPC error.
-        // This is the exact response shape the flake produced when activation had not yet
-        // completed — and it falsifies the diagnosis if initialize secretly activates.
-        try (var client = createTestClient()) {
-            @Language("json")
-            var initBody = """
-                    {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/tasks":{}}},"clientInfo":{"name":"test","version":"1.0"}}}
-                    """;
-            var initResponse = client.post(null, initBody);
-            var sessionId = initResponse.headers().firstValue("MCP-Session-Id").orElseThrow();
-
-            var response = client.post(sessionId, """
-                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create_task","arguments":{"name":"my-task"}}}
+            client.initialize();
+            var response = client.sendRpc("""
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{
+                      "name":"book","arguments":{},"task":{}}}
                     """);
 
-            assertThat(response.statusCode()).isEqualTo(200);
-            assertThat(response.headers().firstValue("content-type").orElse("")).startsWith("application/json");
-            assertThat(response).isJsonRpcError().hasErrorMessageContaining("not yet active");
+            assertThatJson(response).inPath("$.result.task.taskId").isEqualTo("legacy-workflow");
+            assertThatJson(response).inPath("$.result.task.status").isEqualTo("working");
         }
     }
 
     @Test
-    void createCompletePollAndGetResult() throws Exception {
+    void resultReadsTerminalSnapshotFromConnector() throws Exception {
+        var resultTaskId = "legacy-result";
         try (var client = createTestClient()) {
-            initializeWithExtension(client);
+            client.initialize();
+            taskEngine.publish(TaskSnapshot.builder()
+                    .from(initial)
+                    .taskId(resultTaskId)
+                    .status(TaskState.COMPLETED)
+                    .lastUpdatedAt(Instant.parse("2026-08-27T07:00:01Z"))
+                    .result(TaskResult.completed(Map.of("bookingId", "booking-1")))
+                    .revision(2)
+                    .build());
 
-            var callJson = client.sendRpc("""
-                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create_task","arguments":{"name":"full-cycle","description":"complete lifecycle"}}}
+            var result = client.sendRpc("""
+                    {"jsonrpc":"2.0","id":3,"method":"tasks/result","params":{"taskId":"%s"}}
+                    """.formatted(resultTaskId));
+            assertThatJson(result)
+                    .inPath("$.result.structuredContent.bookingId")
+                    .isEqualTo("booking-1");
+            assertThat(taskEngine.awaitedTaskIds()).containsExactly(resultTaskId);
+        }
+    }
+
+    @Test
+    void reportsProgressForAConnectorDrivenTask() throws Exception {
+        try (var client = createTestClient()) {
+            client.initialize();
+
+            var bookResponse = client.sendRpc("""
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{
+                      "name":"book-for-progress","arguments":{},"task":{},
+                      "_meta":{"progressToken":"tok-1"}}}
                     """);
-            var taskId = extractText(callJson);
-            assertThat(taskId).isNotEmpty();
+            assertThatJson(bookResponse).inPath("$.result.task.taskId").isEqualTo("legacy-progress");
 
-            var getBeforeJson = client.sendRpc("""
-                    {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
-                    """.formatted(taskId));
-            assertThatJson(getBeforeJson).inPath("$.result.taskId").isEqualTo(taskId);
-            assertThatJson(getBeforeJson).inPath("$.result.status").isEqualTo("working");
-
-            server.tasks().get(taskId).complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"completed\"}")));
-
-            var getAfterJson = client.sendRpc("""
-                    {"jsonrpc":"2.0","id":4,"method":"tasks/get","params":{"taskId":"%s"}}
-                    """.formatted(taskId));
-            assertThatJson(getAfterJson).inPath("$.result.taskId").isEqualTo(taskId);
-            assertThatJson(getAfterJson).inPath("$.result.status").isEqualTo("completed");
-
-            var resultJson = client.sendRpc("""
-                    {"jsonrpc":"2.0","id":5,"method":"tasks/result","params":{"taskId":"%s"}}
-                    """.formatted(taskId));
-            // tasks/result returns a CallToolResult: structured tool output lands in structuredContent.
-            assertThatJson(resultJson)
-                    .inPath("$.result.structuredContent")
-                    .isObject()
-                    .containsEntry("output", "completed");
-        }
-    }
-
-    @Test
-    void readTaskResourceTemplate() throws Exception {
-        try (var client = createTestClient()) {
-            initializeWithExtension(client);
-
-            var task = server.tasks().create();
-
-            var readJson = client.sendRpc("""
-                    {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"task://%s"}}
-                    """.formatted(task.id()));
-            assertThatJson(readJson).inPath("$.result.contents[0].text").isEqualTo("SUBMITTED");
-            assertThatJson(readJson).inPath("$.result.contents[0].uri").isEqualTo("task://" + task.id());
-        }
-    }
-
-    @Test
-    void shouldNotifyTaskStatusOnCreate() throws Exception {
-        // The extension's create_task tool is async, so notifications don't route
-        // through POST-SSE (ThreadLocal not inherited by ForkJoin threads).
-        // This test uses a synchronous tool to verify notification delivery.
-        startServer(
-                b -> b.withExtensions(TasksExtension.instance()),
-                s -> s.tools().register(tool -> tool.name("create-sync"), (ctx, req) -> {
-                    ((DispatchContext) ctx).engine().tasks().create();
-                    return ToolResult.text("ok");
-                }));
-
-        try (var client = createTestClient()) {
-            var sessionId = initializeWithExtension(client);
-
-            var response = client.post(sessionId, """
-                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create-sync","arguments":{}}}
-                    """);
-            assertThat(response.headers().firstValue("content-type").orElse("")).startsWith("text/event-stream");
-            assertThat(response.headers().firstValue("connection"))
-                    .as("POST-SSE response must signal Connection: close so the client does not pool the socket")
-                    .hasValue("close");
-            assertThat(response.body()).contains("notifications/tasks/status");
-            assertThat(response.body()).contains("\"status\":\"working\"");
-            assertThat(response.body()).contains("\"taskId\":\"");
-            assertThat(response.body()).contains("\"createdAt\":");
-        }
-    }
-
-    @Test
-    void shouldSendProgressNotificationWhenTaskReportsProgress() throws Exception {
-        // A task carries the originating request's progressToken, so Task.reportProgress can address
-        // notifications/progress at it. Uses a synchronous tool so the notification routes through
-        // this POST's own SSE stream.
-        startServer(
-                b -> b.withExtensions(TasksExtension.instance()),
-                s -> s.tools().register(tool -> tool.name("report-progress-sync"), (ctx, req) -> {
-                    var registry = (DefaultTaskRegistry)
-                            ((DispatchContext) ctx).engine().tasks();
-                    var task = registry.createSessionTask(null, null, null, ProgressToken.of("tok-1"));
-                    task.start();
-                    task.reportProgress(0.5, 1.0, "halfway");
-                    return ToolResult.text("ok");
-                }));
-
-        try (var client = createTestClient()) {
-            var sessionId = initializeWithExtension(client);
-
-            var response = client.post(sessionId, """
-                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"report-progress-sync","arguments":{}}}
+            client.sendRpc("""
+                    {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{
+                      "name":"notify-progress","arguments":{}}}
                     """);
 
-            assertThat(response.body()).contains("notifications/progress");
-            assertThat(response.body()).contains("\"progressToken\":\"tok-1\"");
-            assertThat(response.body()).contains("\"progress\":0.5");
-            assertThat(response.body()).contains("\"total\":1.0");
-            assertThat(response.body()).contains("\"message\":\"halfway\"");
-        }
-    }
-
-    @Test
-    void shouldOmitOptionalProgressFieldsWhenNotSupplied() throws Exception {
-        startServer(
-                b -> b.withExtensions(TasksExtension.instance()),
-                s -> s.tools().register(tool -> tool.name("bare-progress-sync"), (ctx, req) -> {
-                    var registry = (DefaultTaskRegistry)
-                            ((DispatchContext) ctx).engine().tasks();
-                    var task = registry.createSessionTask(null, null, null, ProgressToken.of("tok-2"));
-                    task.start();
-                    task.reportProgress(3, null, null);
-                    return ToolResult.text("ok");
-                }));
-
-        try (var client = createTestClient()) {
-            var sessionId = initializeWithExtension(client);
-
-            var response = client.post(sessionId, """
-                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"bare-progress-sync","arguments":{}}}
-                    """);
-
-            assertThat(response.body()).contains("notifications/progress");
-            assertThat(response.body()).contains("\"progress\":3.0");
-            // total/message are optional per spec -- absent, not total:0 with an empty message
-            assertThat(response.body()).doesNotContain("\"total\"");
-            assertThat(response.body()).doesNotContain("\"message\"");
-        }
-    }
-
-    @Test
-    void shouldNotifyTaskStatusWithCallerSuppliedMessage() throws Exception {
-        startServer(
-                b -> b.withExtensions(TasksExtension.instance()),
-                s -> s.tools().register(tool -> tool.name("update-status-sync"), (ctx, req) -> {
-                    var task = ((DispatchContext) ctx).engine().tasks().create();
-                    ((DefaultTaskRegistry) ((DispatchContext) ctx).engine().tasks())
-                            .updateStatus(task.id(), TaskState.WORKING, "step 1 of 3");
-                    return ToolResult.text("ok");
-                }));
-
-        try (var client = createTestClient()) {
-            var sessionId = initializeWithExtension(client);
-
-            var response = client.post(sessionId, """
-                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"update-status-sync","arguments":{}}}
-                    """);
-            assertThat(response.body()).contains("\"statusMessage\":\"step 1 of 3\"");
-            assertThat(response.body()).doesNotContain("\"statusMessage\":\"WORKING\"");
-        }
-    }
-
-    @Test
-    void shouldNotifyOnEveryTaskMutation() throws Exception {
-        startServer(
-                b -> b.withExtensions(TasksExtension.instance()),
-                s -> s.tools().register(tool -> tool.name("drive-task-sync"), (ctx, req) -> {
-                    final var engine = ((DispatchContext) ctx).engine();
-                    var task = engine.tasks().create();
-                    engine.tasksRegistry().updateStatus(task.id(), TaskState.WORKING, "step 1");
-                    task.updateMessage("step 2");
-                    task.complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"done\"}")));
-                    return ToolResult.text("ok");
-                }));
-
-        try (var client = createTestClient()) {
-            var sessionId = initializeWithExtension(client);
-
-            var response = client.post(sessionId, """
-                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"drive-task-sync","arguments":{}}}
-                    """);
-
-            assertThat(response.body()).contains("\"statusMessage\":\"step 1\"");
-            assertThat(response.body()).contains("\"statusMessage\":\"step 2\"");
-            assertThat(response.body()).contains("\"status\":\"completed\"");
-            var notificationCount = response.body().split("notifications/tasks/status", -1).length - 1;
-            assertThat(notificationCount)
-                    .as("one notification each for create, start, updateMessage, complete")
-                    .isEqualTo(4);
-        }
-    }
-
-    @Test
-    void shouldCancelAndNotifyBeforeRemovingNonTerminalTask() throws Exception {
-        startServer(
-                b -> b.withExtensions(TasksExtension.instance()),
-                s -> s.tools().register(tool -> tool.name("remove-active-sync"), (ctx, req) -> {
-                    final var engine = ((DispatchContext) ctx).engine();
-                    var task = engine.tasks().create();
-                    engine.tasks().remove(task.id());
-                    return ToolResult.text(task.id());
-                }));
-
-        try (var client = createTestClient()) {
-            var sessionId = initializeWithExtension(client);
-
-            var response = client.post(sessionId, """
-                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"remove-active-sync","arguments":{}}}
-                    """);
-            assertThat(response.body()).contains("\"status\":\"cancelled\"");
-            var taskId = extractText(McpClient.extractJsonRpcResponse(response.body(), "2"));
-
-            var getAfterRemove = client.sendRpc("""
-                    {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
-                    """.formatted(taskId));
-            assertThatJsonRpcResponse(getAfterRemove).isJsonRpcError();
-        }
-    }
-
-    @Test
-    void shouldRemoveTerminalTaskSilently() throws Exception {
-        startServer(
-                b -> b.withExtensions(TasksExtension.instance()),
-                s -> s.tools().register(tool -> tool.name("remove-terminal-sync"), (ctx, req) -> {
-                    final var engine = ((DispatchContext) ctx).engine();
-                    var task = engine.tasks().create();
-                    task.complete(TaskResult.completed(JsonUtils.parse("{\"output\":\"done\"}")));
-                    engine.tasks().remove(task.id());
-                    return ToolResult.text(task.id());
-                }));
-
-        try (var client = createTestClient()) {
-            var sessionId = initializeWithExtension(client);
-
-            var response = client.post(sessionId, """
-                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"remove-terminal-sync","arguments":{}}}
-                    """);
-            assertThat(response.body()).doesNotContain("\"status\":\"cancelled\"");
-            var notificationCount = response.body().split("notifications/tasks/status", -1).length - 1;
-            assertThat(notificationCount)
-                    .as("create + complete only, removal of an already-terminal task is silent")
-                    .isEqualTo(2);
-            var taskId = extractText(McpClient.extractJsonRpcResponse(response.body(), "2"));
-
-            var getAfterRemove = client.sendRpc("""
-                    {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"%s"}}
-                    """.formatted(taskId));
-            assertThatJsonRpcResponse(getAfterRemove).isJsonRpcError();
-        }
-    }
-
-    private static String buildInitializeJson(Map<String, JsonNode> extensions) {
-        var capsBuilder = ClientCapabilities.builder();
-        if (!extensions.isEmpty()) {
-            capsBuilder.extensions(extensions);
-        }
-        var params = InitializeRequestParams.builder()
-                .protocolVersion("2025-11-25")
-                .capabilities(capsBuilder.build())
-                .clientInfo(new Implementation("1.0", null, null, "test-client", null, null))
-                .build();
-        try {
-            var paramsJson = new ObjectMapper().writeValueAsString(params);
-            return """
-                    {"jsonrpc":"2.0","id":1,"method":"initialize","params":%s}
-                    """.formatted(paramsJson);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private String initializeWithExtension(McpClient client) throws Exception {
-        var initBody = """
-            {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/tasks":{}}},"clientInfo":{"name":"test","version":"1.0"}}}
-            """;
-        var response = client.post(null, initBody);
-        var sessionId = response.headers().firstValue("MCP-Session-Id").orElseThrow();
-        client.sendInitialized(sessionId);
-        return sessionId;
-    }
-
-    private static String extractText(String json) {
-        try {
-            return new ObjectMapper()
-                    .readTree(json)
-                    .path("result")
-                    .path("content")
-                    .get(0)
-                    .path("text")
-                    .asString();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to extract $.result.content[0].text from: " + json, e);
+            client.awaitNotification("notifications/progress", Duration.ofSeconds(5))
+                    .satisfies(params -> {
+                        assertThat(params.path("progressToken").asString()).isEqualTo("tok-1");
+                        assertThat(params.path("progress").asDouble()).isEqualTo(0.5);
+                        assertThat(params.path("total").asDouble()).isEqualTo(1.0);
+                        assertThat(params.path("message").asString()).isEqualTo("halfway");
+                    });
         }
     }
 }

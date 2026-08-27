@@ -8,13 +8,13 @@ import java.util.Map;
 import org.immutables.value.Value;
 import org.jspecify.annotations.Nullable;
 
-/** Stable operation envelope used to start externally executed work. */
+/** Provider-neutral operation envelope used by connectors with an explicit start helper. */
 @ExperimentalApi
 @Value.Immutable
 @Value.Style(visibility = Value.Style.ImplementationVisibility.PACKAGE, typeImmutable = "Default*")
 public interface TaskExecutionRequest extends HasMeta {
 
-    /** Returns the Tachyon-assigned MCP task identifier. */
+    /** Returns the caller-assigned stable MCP task identifier. */
     String taskId();
 
     /** Returns the application operation name, such as an MCP tool name. */
@@ -49,7 +49,7 @@ public interface TaskExecutionRequest extends HasMeta {
         /** Copies values from an existing execution request. */
         Builder from(TaskExecutionRequest request);
 
-        /** Sets the Tachyon-assigned task ID. */
+        /** Sets the caller-assigned stable task ID. */
         Builder taskId(String taskId);
 
         /** Sets the application operation name. */

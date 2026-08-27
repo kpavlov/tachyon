@@ -2,9 +2,9 @@
 package dev.tachyonmcp.core.server.config;
 
 import dev.tachyonmcp.api.server.config.Mode;
+import dev.tachyonmcp.api.server.features.tasks.LegacyTaskExecutionEngine;
 import dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine;
 import dev.tachyonmcp.api.server.features.tasks.TaskFeature;
-import dev.tachyonmcp.core.server.features.tasks.InProcessTaskExecutionEngine;
 import java.time.Duration;
 import java.util.EnumSet;
 import java.util.Objects;
@@ -113,16 +113,12 @@ public record CapabilitiesConfig(
          * @return this builder
          */
         public Builder tasks(TasksConfig config) {
-            var taskExecutionEngine = config.taskExecutionEngine();
-            if (config.enabled() && taskExecutionEngine == null) {
-                taskExecutionEngine = new InProcessTaskExecutionEngine();
-            }
             tasksBuilder = TasksConfig.builder()
                     .enabled(config.enabled())
                     .list(config.list())
                     .cancel(config.cancel())
                     .requests(config.requests())
-                    .taskExecutionEngine(taskExecutionEngine)
+                    .taskExecutionEngine(config.taskExecutionEngine())
                     .pageSize(config.pageSize())
                     .keepAlive(config.keepAlive())
                     .pollInterval(config.pollInterval());
@@ -260,9 +256,6 @@ public record CapabilitiesConfig(
          */
         public Builder tasksEnabled(boolean tasksEnabled) {
             tasksBuilder.enabled(tasksEnabled);
-            if (tasksEnabled && tasksBuilder.build().taskExecutionEngine() == null) {
-                tasksBuilder.taskExecutionEngine(new InProcessTaskExecutionEngine());
-            }
             return this;
         }
 
@@ -473,31 +466,6 @@ public record CapabilitiesConfig(
         }
 
         /**
-         * Enables tasks with default settings.
-         *
-         * @return this builder
-         */
-        public Builder tasks() {
-            return tasks(
-                    new InProcessTaskExecutionEngine(),
-                    TasksConfig.DEFAULT_TASK_LIST,
-                    TasksConfig.DEFAULT_TASK_CANCEL,
-                    TasksConfig.DEFAULT_TASK_REQUESTS);
-        }
-
-        /**
-         * Enables tasks with the specified list, cancel, and requests settings.
-         *
-         * @param list    whether task listing is enabled
-         * @param cancel  whether task cancellation is enabled
-         * @param requests whether task requests are enabled
-         * @return this builder
-         */
-        public Builder tasks(boolean list, boolean cancel, boolean requests) {
-            return tasks(new InProcessTaskExecutionEngine(), list, cancel, requests);
-        }
-
-        /**
          * Enables tasks using the supplied engine and default optional operations.
          *
          * @param taskExecutionEngine task execution connector
@@ -555,6 +523,9 @@ public record CapabilitiesConfig(
                         + taskExecutionEngine.getClass().getSimpleName()
                         + " does not support enabled task features: "
                         + unsupported);
+            }
+            if (tasks.list() && !(taskExecutionEngine instanceof LegacyTaskExecutionEngine)) {
+                throw new IllegalStateException("Task listing requires a LegacyTaskExecutionEngine");
             }
         }
     }

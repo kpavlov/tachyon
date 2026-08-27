@@ -62,8 +62,7 @@ final class ConfigReference {
         return CapabilitiesConfig.builder()
             .tools(true) // Mode.ON, listChanged=true
             .resources(true, true) // Mode.ON, subscribe=true, listChanged=true
-            .prompts() // Mode.ON, listChanged=false
-            .tasks() // enabled=true, list=true, cancel=false, requests=false
+            .prompts() // Mode.ON, listChanged=false; tasks remain off by default
             .completions() // true
             .logging() // true
             .build();

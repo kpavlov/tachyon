@@ -70,16 +70,6 @@
         },
         {
           "ignore": true,
-          "code": "java.method.returnTypeChanged",
-          "old": "method java.lang.Long dev.tachyonmcp.api.server.domain.Task::ttl()",
-          "new": "method java.time.Duration dev.tachyonmcp.api.server.domain.Task::ttl()",
-          "justification": "Use idiomatic domain types",
-          "attachments": {
-            "since": "1.0.0-beta.19"
-          }
-        },
-        {
-          "ignore": true,
           "code": "java.method.abstractMethodAdded",
           "new": "method dev.tachyonmcp.api.server.config.RuntimeConfig.Builder dev.tachyonmcp.api.server.config.RuntimeConfig.Builder::clock(java.time.Clock)",
           "justification": "Better time api",
@@ -95,6 +85,61 @@
           "justification": "Form schema is now a validated JsonSchema instead of a raw Map; Map-based construction stays available via the deprecated FormInputRequest.of(String, Map) and Builder.requestedSchema(Map) overloads, which route through JsonSchema.from(Map.class)/MapJsonFactory",
           "attachments": {
             "since": "1.0.0-beta.21"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.removed",
+          "old": "interface dev.tachyonmcp.api.server.features.tasks.TaskOptions",
+          "justification": "Tachyon no longer starts tasks; TaskExecutionEngine dropped its generic start(), so a task-producing tool handler starts work itself and returns ToolResult.task(snapshot). Options for starting a task are the external engine's concern now.",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method dev.tachyonmcp.api.server.domain.Task dev.tachyonmcp.api.server.features.tasks.Tasks::create()",
+          "justification": "Tasks facade no longer creates tasks; the application/workflow engine owns execution and hands Tachyon immutable TaskSnapshot projections via ToolResult.task(snapshot)",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method dev.tachyonmcp.api.server.domain.Task dev.tachyonmcp.api.server.features.tasks.Tasks::create(dev.tachyonmcp.api.server.features.tasks.TaskOptions)",
+          "justification": "Tasks facade no longer creates tasks; the application/workflow engine owns execution and hands Tachyon immutable TaskSnapshot projections via ToolResult.task(snapshot)",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method dev.tachyonmcp.api.server.domain.Task dev.tachyonmcp.api.server.features.tasks.Tasks::get(java.lang.String)",
+          "new": "method dev.tachyonmcp.api.server.features.tasks.TaskSnapshot dev.tachyonmcp.api.server.features.tasks.Tasks::get(java.lang.String)",
+          "justification": "The mutable Task handle (start/complete/fail/cancel/requireInput/reportProgress) is gone; Tasks.get() now returns the immutable TaskSnapshot projection Tachyon caches",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method dev.tachyonmcp.api.server.features.tools.ToolRequest.Builder dev.tachyonmcp.api.server.features.tools.ToolRequest.Builder::task(dev.tachyonmcp.api.server.domain.Task)",
+          "justification": "Task handle removed; a task-producing tool handler now returns its initial projection via ToolResult.task(snapshot) instead of receiving a mutable Task on the request",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method dev.tachyonmcp.api.server.domain.Task dev.tachyonmcp.api.server.features.tools.ToolRequest::task()",
+          "justification": "Task handle removed; a task-producing tool handler now returns its initial projection via ToolResult.task(snapshot) instead of receiving a mutable Task on the request",
+          "attachments": {
+            "since": "1.0.0-beta.23"
           }
         }
       ]

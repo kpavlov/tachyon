@@ -18,6 +18,7 @@ import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.api.server.features.completions.Completions;
 import dev.tachyonmcp.api.server.features.prompts.Prompts;
 import dev.tachyonmcp.api.server.features.resources.Resources;
+import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.api.server.features.tasks.Tasks;
 import dev.tachyonmcp.api.server.features.tools.Tools;
@@ -39,7 +40,6 @@ import dev.tachyonmcp.core.server.features.resources.DefaultResourceRegistry;
 import dev.tachyonmcp.core.server.features.resources.ResourceMethodHandlers;
 import dev.tachyonmcp.core.server.features.subscriptions.SubscriptionRegistry;
 import dev.tachyonmcp.core.server.features.tasks.DefaultTaskRegistry;
-import dev.tachyonmcp.core.server.features.tasks.TaskEntry;
 import dev.tachyonmcp.core.server.features.tasks.TaskMethodHandlers;
 import dev.tachyonmcp.core.server.features.tasks.TaskRegistry;
 import dev.tachyonmcp.core.server.features.tools.DefaultToolRegistry;
@@ -246,6 +246,18 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         return builder.build();
     }
 
+    void validateConfiguration() {
+        // Only TaskSupport.REQUIRED is checked eagerly: it always attempts to create a task, on
+        // every call, so a missing engine is unambiguously a misconfiguration. OPTIONAL/FORBIDDEN
+        // tools may run synchronously and never touch the engine; ToolMethodHandlers.mapResult
+        // still rejects a REQUIRED-without-engine call at runtime, this just fails faster.
+        var hasRequiredTaskTool = toolRegistry.getAll().stream()
+                .anyMatch(handler -> handler.descriptor().taskSupport() == TaskSupport.REQUIRED);
+        if (hasRequiredTaskTool && !taskRegistry.executionConfigured()) {
+            throw new IllegalStateException("Task-producing tools require a TaskExecutionEngine");
+        }
+    }
+
     DefaultTachyonServer(
             ExecutorService executor,
             SessionEventStore sessionEventStore,
@@ -411,29 +423,25 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     }
 
     @Override
-    public void notifyTaskStatus(TaskEntry entry) {
-        var sessionId = entry.sessionId();
+    public void notifyTaskStatus(TaskSnapshot snapshot, @Nullable String sessionId) {
         if (sessionId != null) {
-            getSession(sessionId).ifPresent(session -> notifyTaskStatus(session, entry));
+            getSession(sessionId).ifPresent(session -> notifyTaskStatus(session, snapshot));
         } else {
             for (var session : sessionManager.allSessions()) {
                 if (session.state() == SessionState.ACTIVE) {
-                    notifyTaskStatus(session, entry);
+                    notifyTaskStatus(session, snapshot);
                 }
             }
         }
     }
 
     @Override
-    public void notifyTaskProgress(TaskEntry entry, double progress, @Nullable Double total, @Nullable String message) {
-        var progressToken = entry.progressToken();
-        if (progressToken == null) {
-            logger.debug(
-                    "Dropping task progress for taskId={}: no progressToken (originating request did not opt in)",
-                    entry.id());
-            return;
-        }
-        var sessionId = entry.sessionId();
+    public void notifyTaskProgress(
+            ProgressToken progressToken,
+            @Nullable String sessionId,
+            double progress,
+            @Nullable Double total,
+            @Nullable String message) {
         if (sessionId != null) {
             getSession(sessionId)
                     .ifPresent(session -> notifyTaskProgress(session, progressToken, progress, total, message));
@@ -451,6 +459,15 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         subscriptionRegistry.notifyResourceUpdated(uri);
     }
 
+    private void notifyTaskStatus(Session session, TaskSnapshot snapshot) {
+        var protocol = session.protocol();
+        var params = (protocol != null ? protocol.responseMapper() : responseMapper())
+                .taskStatusNotificationParams(snapshot);
+        var paramsJson = JsonUtils.writeString(params);
+        var notificationJson = JsonRpcCodec.serializeNotificationAsString("notifications/tasks/status", paramsJson);
+        sendSerializedNotification(session, "notifications/tasks/status", paramsJson, notificationJson, null);
+    }
+
     private void notifyTaskProgress(
             Session session,
             ProgressToken progressToken,
@@ -463,15 +480,6 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         var paramsJson = JsonUtils.writeString(params);
         var notificationJson = JsonRpcCodec.serializeNotificationAsString("notifications/progress", paramsJson);
         sendSerializedNotification(session, "notifications/progress", paramsJson, notificationJson, null);
-    }
-
-    private void notifyTaskStatus(Session session, TaskEntry entry) {
-        var protocol = session.protocol();
-        var params =
-                (protocol != null ? protocol.responseMapper() : responseMapper()).taskStatusNotificationParams(entry);
-        var paramsJson = JsonUtils.writeString(params);
-        var notificationJson = JsonRpcCodec.serializeNotificationAsString("notifications/tasks/status", paramsJson);
-        sendSerializedNotification(session, "notifications/tasks/status", paramsJson, notificationJson, null);
     }
 
     private void registerDefaults() {
@@ -884,6 +892,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
             logger.info("Shutting down TachyonMCP Server");
             subscriptionRegistry.closeAll();
             shutdownExtensions();
+            closeTaskExecutionEngine();
             executor.shutdown();
             try {
                 var grace = config.runtime().shutdownGracePeriod();
@@ -909,6 +918,18 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
                     logger.debug("Error closing transport", e);
                 }
             }
+        }
+    }
+
+    private void closeTaskExecutionEngine() {
+        var taskExecutionEngine = config.capabilities().tasks().taskExecutionEngine();
+        if (taskExecutionEngine == null) {
+            return;
+        }
+        try {
+            taskExecutionEngine.close();
+        } catch (Exception e) {
+            logger.warn("Task execution engine shutdown error", e);
         }
     }
 }

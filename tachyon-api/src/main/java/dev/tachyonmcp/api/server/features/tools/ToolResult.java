@@ -7,6 +7,7 @@ import dev.tachyonmcp.api.server.domain.HasMeta;
 import dev.tachyonmcp.api.server.domain.InputRequest;
 import dev.tachyonmcp.api.server.domain.InputRequestBundle;
 import dev.tachyonmcp.api.server.domain.TextContent;
+import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -15,7 +16,7 @@ import org.jspecify.annotations.Nullable;
 
 /** Outcome of a tool invocation: success, error, input-required. */
 public sealed interface ToolResult extends HasMeta
-        permits ToolResult.Success, ToolResult.Error, ToolResult.InputRequired {
+        permits ToolResult.Success, ToolResult.Error, ToolResult.InputRequired, ToolResult.Task {
 
     @Override
     default @Nullable Map<String, Object> meta() {
@@ -309,6 +310,48 @@ public sealed interface ToolResult extends HasMeta
         }
     }
 
+    /** A task projection created by this tool invocation. */
+    @Value.Immutable
+    @Value.Style(
+            visibility = Value.Style.ImplementationVisibility.PACKAGE,
+            typeImmutable = "Default*",
+            with = "",
+            from = "")
+    non-sealed interface Task extends ToolResult {
+
+        /** Returns the initial task projection. */
+        TaskSnapshot snapshot();
+
+        @Override
+        default @Nullable Map<String, Object> meta() {
+            return snapshot().meta();
+        }
+
+        @Override
+        default Task withMeta(Map<String, Object> m) {
+            if (m.isEmpty()) return this;
+            var snapshot = TaskSnapshot.builder()
+                    .from(snapshot())
+                    .meta(HasMeta.merge(snapshot().meta(), m))
+                    .build();
+            return of(snapshot);
+        }
+
+        /** Creates a task result for the supplied initial projection. */
+        static Task of(TaskSnapshot snapshot) {
+            return DefaultTask.builder().snapshot(snapshot).build();
+        }
+
+        /** Builder for {@link Task}. */
+        interface Builder {
+            /** Sets the initial task projection. */
+            Builder snapshot(TaskSnapshot snapshot);
+
+            /** Builds the task result. */
+            Task build();
+        }
+    }
+
     /**
      * Creates a successful result containing a single text content block.
      *
@@ -378,6 +421,11 @@ public sealed interface ToolResult extends HasMeta
     /** Creates a successful result with no structured value and no content. */
     static ToolResult empty() {
         return Success.of(null, List.of());
+    }
+
+    /** Creates a task result carrying its initial immutable projection. */
+    static ToolResult task(TaskSnapshot snapshot) {
+        return Task.of(snapshot);
     }
 
     /**

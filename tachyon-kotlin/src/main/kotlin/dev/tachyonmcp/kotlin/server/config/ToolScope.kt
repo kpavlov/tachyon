@@ -7,7 +7,6 @@ import dev.tachyonmcp.api.annotations.ExperimentalApi
 import dev.tachyonmcp.api.runtime.InteractionContext
 import dev.tachyonmcp.api.server.domain.Args
 import dev.tachyonmcp.api.server.domain.InputRequest
-import dev.tachyonmcp.api.server.domain.Task
 import dev.tachyonmcp.api.server.features.tools.ToolRequest
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.kotlin.server.TachyonDsl
@@ -22,10 +21,6 @@ public class ToolScope
         /** Convenience access to the tool call arguments. */
         public val arguments: Args
             get() = request.arguments()
-
-        /** Convenience access to the task handle for task-augmented calls, or `null`. */
-        public val task: Task?
-            get() = request.task()
 
         /**
          * Returns a [ToolResult] whose structured value is [value], serialized to

@@ -42,7 +42,8 @@ their state and commands to MCP.
 | `tasks/get`, `tasks/list`, `tasks/cancel`, `tasks/update` dispatch | Tachyon |
 | Authoritative execution state | Application or external execution system |
 | Cached MCP projection and terminal-result retention | Tachyon |
-| MCP status/progress notifications | Tachyon, from published projections |
+| `notifications/tasks/status` | Tachyon, from published projections |
+| `notifications/progress` for a task | Tachyon, via `Tasks.reportProgress(taskId, ...)` — ephemeral, not part of `TaskSnapshot` |
 
 ### 🔴 Forbidden task ownership
 
@@ -63,7 +64,7 @@ work.
 
 ### 🎯 Target task API
 
-`Task` is an immutable, read-only MCP projection. State changes arrive as complete snapshots,
+`TaskSnapshot` is an immutable, read-only MCP projection. State changes arrive as complete snapshots,
 not mutator calls on a task handle. A monotonically increasing `revision` makes callback and refresh
 application idempotent: Tachyon ignores a snapshot whose revision is not newer than the cached one.
 
@@ -101,10 +102,6 @@ leaking that client's async type into Tachyon's API.
 public interface TaskExecutionEngine {
 
     Set<TaskFeature> supportedFeatures();
-
-    TaskSnapshot start(
-            InteractionContext context,
-            TaskExecutionRequest request) throws Exception;
 
     @Nullable
     TaskSnapshot refresh(InteractionContext context, String taskId) throws Exception;
@@ -154,18 +151,16 @@ Task execution engine TemporalTaskExecutionEngine does not support enabled task 
 `TaskExecutionEngine` contract and therefore needs no feature flag. Return an immutable set. Never probe
 support by calling a method and catching `UnsupportedOperationException`.
 
-Keep the existing `tasks()` and `tasks(list, cancel, requests)` overloads. They delegate to an
-`InProcessTaskExecutionEngine`, which supports every `TaskFeature`. Its no-argument constructor owns a
-virtual-thread-per-task executor named with the `vt-tasks-` prefix. A constructor accepting an
-`ExecutorService` borrows that executor and must not close it. Futures may exist inside this
-compatibility engine, but must not escape through the Tasks API.
+There is no default or in-process engine. `TaskExecutionEngine` is the user/integration SPI. A
+task-producing handler starts external work itself and returns its initial snapshot. Tachyon must
+not invent a generic `start` operation because external systems require different start contracts.
 
 Legacy `tasks/list` and blocking `tasks/result` support use a separate optional engine extension. Do
 not force session-scoped operations removed by MCP 2026-07-28 into every engine:
 
 ```java
 @ExperimentalApi
-public interface LegacyTaskExecutionEngine {
+public interface LegacyTaskExecutionEngine extends TaskExecutionEngine {
 
     PaginatedResult<TaskSnapshot> list(
             InteractionContext context,
@@ -214,7 +209,13 @@ Kotlin follows the Java source of truth:
 
 ```kotlin
 capabilities {
-    tasks(taskExecutionEngine, list = false, cancel = true, requests = true)
+    tasks {
+        enabled = true
+        list = false
+        cancel = true
+        requests = true
+        executionEngine = taskExecutionEngine
+    }
 }
 ```
 

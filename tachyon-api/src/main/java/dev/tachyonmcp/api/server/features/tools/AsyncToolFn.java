@@ -11,8 +11,7 @@ import java.util.concurrent.CompletionStage;
  * {@code AsyncResourceFn} and {@code AsyncPromptFn}.
  *
  * <p>Receives the full {@link ToolRequest} — call {@link ToolRequest#arguments()} for parsed
- * {@link Args}, or read {@link ToolRequest#progressToken()}
- * or {@link ToolRequest#task()} directly when needed.
+ * {@link Args}, or read {@link ToolRequest#progressToken()} directly when needed.
  *
  * @author Konstantin Pavlov
  */
