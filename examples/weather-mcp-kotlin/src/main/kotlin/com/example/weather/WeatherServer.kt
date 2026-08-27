@@ -51,7 +51,11 @@ private data class NarrationStyleInput(
 )
 
 fun main() {
-    val server = assembleServer(8080)
+    val server =
+        createServer(
+            host = System.getenv("HOST") ?: "127.0.0.1",
+            port = System.getenv("PORT")?.toIntOrNull() ?: 8080,
+        )
     server.start()
     log.info("Connect your MCP client to http://localhost:{}/mcp", server.port())
 }
@@ -67,7 +71,8 @@ fun createWeatherService(): WeatherService {
     return WeatherService(openMeteoProvider, openMeteoProvider)
 }
 
-fun assembleServer(
+fun createServer(
+    host: String,
     port: Int,
     weatherService: WeatherService = createWeatherService(),
 ): TachyonServer {
@@ -86,7 +91,10 @@ fun assembleServer(
             theme = "light"
         }
     return buildServer {
-        network { this.port = port }
+        network {
+            this.host = host
+            this.port = port
+        }
         json { serde = KxSerializationSerde.Default }
         info {
             name = "weather-server-kotlin"

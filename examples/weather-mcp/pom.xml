@@ -55,12 +55,6 @@
             <version>${tachyon.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>io.modelcontextprotocol.sdk</groupId>
-            <artifactId>mcp-json-jackson3</artifactId>
-            <version>2.0.0</version>
-        </dependency>
-
         <!-- Recognized by kt-schema-apt out of the box to describe generated JSON schemas -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -81,6 +75,12 @@
         </dependency>
 
         <!-- Test -->
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-testkit</artifactId>
+            <version>${tachyon.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>

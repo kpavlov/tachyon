@@ -11,9 +11,8 @@ import com.example.weather.service.WeatherService;
 import com.example.weather.spi.CityNotFoundException;
 import com.example.weather.spi.WeatherObservation;
 import dev.tachyonmcp.api.json.JsonSchema;
-import dev.tachyonmcp.api.runtime.ElicitationRequest;
-import dev.tachyonmcp.api.runtime.ElicitationResult;
 import dev.tachyonmcp.api.runtime.InteractionContext;
+import dev.tachyonmcp.api.server.domain.FormInputRequest;
 import dev.tachyonmcp.api.server.domain.Icon;
 import dev.tachyonmcp.api.server.domain.ProgressToken;
 import dev.tachyonmcp.api.server.domain.ToolAnnotations;
@@ -23,15 +22,19 @@ import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 class GetWeatherTool {
     private static final Logger log = LoggerFactory.getLogger(GetWeatherTool.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final JsonSchema CITY_SCHEMA = JsonSchema.generate(CityInput.class);
     private static final JsonSchema INPUT_SCHEMA = JsonSchema.generate(GetWeatherRequest.class);
     private static final JsonSchema OUTPUT_SCHEMA = JsonSchema.generate(GetWeatherResponse.class);
+    private static final String CITY_INPUT_KEY = "city";
 
     static final ToolDescriptor DESCRIPTOR = ToolDescriptor.builder()
         .name("get-weather")
@@ -46,26 +49,23 @@ class GetWeatherTool {
     static ToolFn fn(WeatherService weatherService) {
         return (ctx, request) -> {
             var args = request.arguments().decode(GetWeatherRequest.class);
-            var city = args.city();
             var units = args.units();
             var progressToken = request.progressToken();
+            var inputResponses = request.inputResponses();
+            var city = elicitedCity(inputResponses).orElseGet(args::city);
             try {
                 return ToolResult.structured(
                     toResponse(city, fetchWithProgress(ctx, progressToken, weatherService, city), units)
                 );
             } catch (CityNotFoundException e) {
-                var elicitedCity = elicitCity(ctx, city);
-                if (elicitedCity.isEmpty()) {
+                if (inputResponses != null) {
                     return ToolResult.error("City not found");
                 }
-                try {
-                    final var fetched = fetchWithProgress(ctx, progressToken, weatherService, elicitedCity.get());
-                    return ToolResult.structured(
-                        toResponse(elicitedCity.get(), fetched, units)
-                    );
-                } catch (CityNotFoundException ignored) {
-                    return ToolResult.error("City not found");
-                }
+                var inputRequests = Map.of(
+                    CITY_INPUT_KEY,
+                    FormInputRequest.of(
+                        "City '%s' was not found. Enter another city.".formatted(city), citySchemaMap()));
+                return ToolResult.inputRequired(inputRequests, null);
             } catch (Exception e) {
                 return internalError(e);
             }
@@ -89,21 +89,21 @@ class GetWeatherTool {
         return ToolResult.error("Could not get weather");
     }
 
-    private static Optional<String> elicitCity(InteractionContext ctx, String city) throws Exception {
-        var request = new ElicitationRequest(
-            "City '%s' was not found. Enter another city.".formatted(city), CITY_SCHEMA);
-        ElicitationResult result;
-        try {
-            result = ctx.client().elicitation().create(request).get();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw e;
-        }
-        if (result.action() != ElicitationResult.Action.ACCEPT || result.content() == null) {
+    private static Optional<String> elicitedCity(@Nullable Map<String, Object> inputResponses) {
+        if (inputResponses == null) {
             return Optional.empty();
         }
-        var correctedCity = result.content().stringOr("city", "");
-        return correctedCity.isBlank() ? Optional.empty() : Optional.of(correctedCity);
+        if (inputResponses.get(CITY_INPUT_KEY) instanceof Map<?, ?> response
+            && response.get("city") instanceof String correctedCity
+            && !correctedCity.isBlank()) {
+            return Optional.of(correctedCity);
+        }
+        return Optional.empty();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> citySchemaMap() {
+        return (Map<String, Object>) MAPPER.readValue(CITY_SCHEMA.json(), Map.class);
     }
 
     private static GetWeatherResponse toResponse(String city, WeatherObservation weather, @Nullable TemperatureUnit units) {

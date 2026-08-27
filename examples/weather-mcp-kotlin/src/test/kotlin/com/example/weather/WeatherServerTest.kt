@@ -6,384 +6,559 @@ package com.example.weather
 
 import com.example.weather.service.WeatherService
 import dev.tachyonmcp.core.server.TachyonServer
-import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.matchers.collections.shouldContainExactly
-import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import dev.tachyonmcp.testkit.Mcp20260728Client
+import dev.tachyonmcp.testkit.McpTestClients
+import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.matchers.collections.shouldHaveSize
-import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
-import io.kotest.matchers.string.shouldContain
-import io.kotest.matchers.string.shouldStartWith
-import io.kotest.matchers.types.shouldBeInstanceOf
-import io.modelcontextprotocol.client.McpClient
-import io.modelcontextprotocol.client.McpSyncClient
-import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport
-import io.modelcontextprotocol.spec.McpError
-import io.modelcontextprotocol.spec.McpSchema.CallToolRequest
-import io.modelcontextprotocol.spec.McpSchema.CompleteRequest
-import io.modelcontextprotocol.spec.McpSchema.ElicitResult
-import io.modelcontextprotocol.spec.McpSchema.GetPromptRequest
-import io.modelcontextprotocol.spec.McpSchema.InitializeResult
-import io.modelcontextprotocol.spec.McpSchema.ProgressNotification
-import io.modelcontextprotocol.spec.McpSchema.PromptReference
-import io.modelcontextprotocol.spec.McpSchema.ReadResourceRequest
-import io.modelcontextprotocol.spec.McpSchema.ResourceReference
-import io.modelcontextprotocol.spec.McpSchema.Role
-import io.modelcontextprotocol.spec.McpSchema.TextContent
-import io.modelcontextprotocol.spec.McpSchema.TextResourceContents
-import org.awaitility.Awaitility.await
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import java.time.Duration
-import java.util.concurrent.CopyOnWriteArrayList
+
+// Redaction marker for fields kotest-assertions-json has no jsonunit-style
+// "${json-unit.ignore-element}"/"${json-unit.regex}" placeholder for.
+private const val IGNORED = "IGNORED"
+private val IGNORED_KEYS = setOf("inputSchema", "outputSchema", "requestedSchema")
+private val ICON_SRC_FIELD = Regex(""""src"\s*:\s*"data:image/png;base64,[^"]+"""")
+
+private fun JsonElement.redactIgnoredKeys(): JsonElement =
+    when (this) {
+        is JsonObject -> {
+            JsonObject(
+                entries.associate { (key, value) ->
+                    key to
+                        if (key in
+                            IGNORED_KEYS
+                        ) {
+                            JsonPrimitive(IGNORED)
+                        } else {
+                            value.redactIgnoredKeys()
+                        }
+                },
+            )
+        }
+
+        is JsonArray -> {
+            JsonArray(map { it.redactIgnoredKeys() })
+        }
+
+        else -> {
+            this
+        }
+    }
+
+// Redacts inputSchema/outputSchema/requestedSchema (structure not under test here) and
+// icon `src` data URIs (fails the comparison if they don't look like base64 PNGs).
+private fun String.redacted(): String =
+    ICON_SRC_FIELD.replace(
+        Json.parseToJsonElement(this).redactIgnoredKeys().toString(),
+    ) { """"src":"$IGNORED"""" }
+
+private const val CAPABILITIES = """{"tools":{},"resources":{},"prompts":{},"completions":{}}"""
+private const val SERVER_INFO =
+    """
+    {
+      "version": "1.0",
+      "description": "Weather MCP server built with Tachyon Kotlin DSL",
+      "websiteUrl": "https://github.com/kpavlov/tachyon/tree/main/examples/weather-mcp-kotlin",
+      "name": "weather-server-kotlin",
+      "title": "Weather Server (Kotlin)",
+      "icons": [{"src": "$IGNORED", "mimeType": "image/png", "sizes": ["256x256"]}]
+    }
+    """
+private const val RESOURCE_ANNOTATIONS =
+    """{"audience": ["user", "assistant"], "priority": 0.8, "lastModified": "2026-07-23T00:00:00Z"}"""
+private const val RESOURCE_ICON =
+    """{"src": "$IGNORED", "mimeType": "image/png", "sizes": ["256x256"], "theme": "light"}"""
 
 class WeatherServerTest {
     companion object {
+        private val json = Json { prettyPrint = true }
         private val weatherProvider = TestWeatherProvider()
         private val cityProvider = TestCityProvider()
         private val weatherService = WeatherService(weatherProvider, cityProvider)
-        private lateinit var server: TachyonServer
-        private lateinit var clientTransport: HttpClientStreamableHttpTransport
-        private lateinit var client: McpSyncClient
-        private lateinit var initResult: InitializeResult
-        private val progressNotifications = CopyOnWriteArrayList<ProgressNotification>()
+        private lateinit var handle: TachyonServer
+        private lateinit var client: Mcp20260728Client
 
         @JvmStatic
         @BeforeAll
         fun beforeAll() {
-            server = assembleServer(0, weatherService)
-            server.start()
-            val port = server.port()
-
-            clientTransport =
-                HttpClientStreamableHttpTransport.builder("http://localhost:$port").build()
-            client =
-                McpClient
-                    .sync(clientTransport)
-                    .elicitation { _ ->
-                        ElicitResult(
-                            ElicitResult.Action.ACCEPT,
-                            mapOf("city" to "Tallinn"),
-                        )
-                    }.progressConsumer { progressNotifications.add(it) }
-                    .build()
-
-            initResult = client.initialize()
+            handle = createServer(0, weatherService)
+            handle.start()
+            client = McpTestClients.latest(handle.port())
         }
 
         @JvmStatic
         @AfterAll
         fun afterAll() {
             client.close()
-            clientTransport.close()
-            server.close()
+            handle.close()
+        }
+
+        private fun weatherCallResultBody(
+            id: Int,
+            city: String,
+        ): String {
+            val structured =
+                """{"city":"$city","condition":"Clear sky","temperature":18.5,"temperatureUnit":"Celsius","humidity":52,"windSpeed":12.0}"""
+            val textJson = json.encodeToString(structured)
+            return """
+                {
+                  "jsonrpc": "2.0",
+                  "id": $id,
+                  "result": {
+                    "content": [{"type": "text", "text": $textJson}],
+                    "structuredContent": $structured,
+                    "resultType": "complete"
+                  }
+                }
+                """
+        }
+
+        private fun weatherResourceResultBody(
+            id: Int,
+            requestUri: String,
+        ): String {
+            val observation =
+                """{"condition":"Clear sky","temperature":18.5,"temperatureUnit":"Celsius","humidity":52,"windSpeed":12.0}"""
+            val textJson = json.encodeToString(observation)
+            return """
+                {
+                  "jsonrpc": "2.0",
+                  "id": $id,
+                  "result": {
+                    "contents": [{"text": $textJson, "uri": "$requestUri", "mimeType": "application/json"}],
+                    "resultType": "complete",
+                    "ttlMs": 0,
+                    "cacheScope": "public"
+                  }
+                }
+                """
         }
     }
 
     @Test
     fun verifyInitResult() {
-        with(initResult.serverInfo()) {
-            name() shouldBe "weather-server-kotlin"
-            title() shouldBe "Weather Server (Kotlin)"
-            description() shouldBe "Weather MCP server built with Tachyon Kotlin DSL"
-            websiteUrl() shouldBe
-                "https://github.com/kpavlov/tachyon/tree/main/examples/weather-mcp-kotlin"
-            icons() shouldHaveSize 1
-            icons().first().src() shouldStartWith "data:image/png;base64,"
-        }
-        initResult.protocolVersion() shouldBe "2025-11-25"
-        initResult.instructions() shouldBe "Test instructions"
+        val response = client.post("""{"jsonrpc":"2.0","id":1,"method":"server/discover"}""")
+
+        response.statusCode() shouldBe 200
+        response.body().redacted() shouldEqualJson
+            """
+            {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "result": {
+                "supportedVersions": ["2026-07-28", "2025-11-25"],
+                "capabilities": $CAPABILITIES,
+                "instructions": "Test instructions",
+                "serverInfo": $SERVER_INFO,
+                "_meta": {"io.modelcontextprotocol/serverInfo": $SERVER_INFO},
+                "resultType": "complete",
+                "ttlMs": 0,
+                "cacheScope": "public"
+              }
+            }
+            """
     }
 
     @Test
     fun `should list tools`() {
-        val result = client.listTools()
+        val response = client.post("""{"jsonrpc":"2.0","id":2,"method":"tools/list"}""")
 
-        result.tools() shouldHaveSize 1
-        result.tools().first() shouldNotBeNull {
-            name() shouldBe "get-weather"
-            title() shouldBe "Current Weather"
-            description() shouldBe "Get current weather for a city"
-            outputSchema() shouldNotBe null
-        }
+        response.statusCode() shouldBe 200
+        response.body().redacted() shouldEqualJson
+            """
+            {
+              "jsonrpc": "2.0",
+              "id": 2,
+              "result": {
+                "tools": [{
+                  "description": "Get current weather for a city",
+                  "inputSchema": "$IGNORED",
+                  "outputSchema": "$IGNORED",
+                  "annotations": {
+                    "readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true
+                  },
+                  "name": "get-weather",
+                  "title": "Current Weather",
+                  "icons": [{"src": "$IGNORED", "mimeType": "image/png", "sizes": ["128x128"]}]
+                }],
+                "resultType": "complete",
+                "ttlMs": 0,
+                "cacheScope": "public"
+              }
+            }
+            """
     }
 
     @Test
     fun `should call weather tool`() {
-        val result =
-            client.callTool(
-                CallToolRequest
-                    .builder("get-weather")
-                    .arguments(mapOf("city" to "London", "units" to "Celsius"))
-                    .build(),
+        val response =
+            client.post(
+                """
+                {"jsonrpc":"2.0","id":3,"method":"tools/call",
+                 "params":{"name":"get-weather","arguments":{"city":"London","units":"Celsius"}}}
+                """,
             )
 
-        result.isError shouldNotBe true
-        result.structuredContent() shouldBe
-            mapOf(
-                "city" to "London",
-                "condition" to "Clear sky",
-                "temperature" to 18.5,
-                "temperatureUnit" to "Celsius",
-                "humidity" to 52,
-                "windSpeed" to 12.0,
-            )
-        result
-            .content()
-            .single()
-            .shouldBeInstanceOf<TextContent>()
-            .text() shouldBe
-            """{"city":"London","condition":"Clear sky","temperature":18.5,"temperatureUnit":"Celsius","humidity":52,"windSpeed":12.0}"""
+        response.statusCode() shouldBe 200
+        response.body() shouldEqualJson weatherCallResultBody(3, "London")
     }
 
     @Test
     fun `should emit progress while fetching weather`() {
-        val result =
-            client.callTool(
-                CallToolRequest
-                    .builder("get-weather")
-                    .arguments(mapOf("city" to "London"))
-                    .progressToken("weather-progress")
-                    .build(),
+        client.clearNotifications()
+
+        val responseBody =
+            client.sendRpc(
+                """
+                {"jsonrpc":"2.0","id":4,"method":"tools/call",
+                 "params":{"name":"get-weather","arguments":{"city":"London"},
+                           "_meta":{"progressToken":"weather-progress"}}}
+                """,
             )
 
-        result.isError shouldNotBe true
-        await().atMost(Duration.ofSeconds(5)).untilAsserted {
-            progressNotifications shouldHaveSize 2
-        }
-        progressNotifications.map { it.progressToken() to it.message() } shouldContainExactly
-            listOf(
-                "weather-progress" to "Fetching weather for London",
-                "weather-progress" to "Weather retrieved for London",
-            )
+        responseBody shouldEqualJson weatherCallResultBody(4, "London")
+
+        val progressNotifications =
+            client
+                .notifications()
+                .filter { it.method() == "notifications/progress" }
+                .map { it.params() }
+        progressNotifications shouldHaveSize 2
+        progressNotifications[0].toString() shouldEqualJson
+            """{"progressToken": "weather-progress", "progress": 0.1, "total": 1.0, "message": "Fetching weather for London"}"""
+        progressNotifications[1].toString() shouldEqualJson
+            """{"progressToken": "weather-progress", "progress": 1.0, "total": 1.0, "message": "Weather retrieved for London"}"""
     }
 
     @Test
     fun `should call weather tool after eliciting another city`() {
-        val result =
-            client.callTool(
-                CallToolRequest
-                    .builder("get-weather")
-                    .arguments(mapOf("city" to "Unknown"))
-                    .build(),
+        val round1 =
+            client.post(
+                """
+                {"jsonrpc":"2.0","id":5,"method":"tools/call",
+                 "params":{"name":"get-weather","arguments":{"city":"Unknown"}}}
+                """,
             )
 
-        result.isError shouldNotBe true
-        result.structuredContent() shouldBe
-            mapOf(
-                "city" to "Tallinn",
-                "condition" to "Clear sky",
-                "temperature" to 18.5,
-                "temperatureUnit" to "Celsius",
-                "humidity" to 52,
-                "windSpeed" to 12.0,
+        round1.statusCode() shouldBe 200
+        round1.body().redacted() shouldEqualJson
+            """
+            {
+              "jsonrpc": "2.0",
+              "id": 5,
+              "result": {
+                "inputRequests": {
+                  "city": {
+                    "method": "elicitation/create",
+                    "params": {
+                      "message": "City 'Unknown' was not found. Enter another city.",
+                      "requestedSchema": "$IGNORED"
+                    }
+                  }
+                },
+                "resultType": "input_required"
+              }
+            }
+            """
+
+        val round2 =
+            client.post(
+                """
+                {"jsonrpc":"2.0","id":6,"method":"tools/call",
+                 "params":{"name":"get-weather","arguments":{"city":"Unknown"},
+                           "inputResponses":{"city":{"city":"Tallinn"}}}}
+                """,
             )
-        result
-            .content()
-            .single()
-            .shouldBeInstanceOf<TextContent>()
-            .text() shouldBe
-            """{"city":"Tallinn","condition":"Clear sky","temperature":18.5,"temperatureUnit":"Celsius","humidity":52,"windSpeed":12.0}"""
+
+        round2.statusCode() shouldBe 200
+        round2.body() shouldEqualJson weatherCallResultBody(6, "Tallinn")
     }
 
     @Test
     fun `should list resources`() {
-        val result = client.listResources()
+        val response = client.post("""{"jsonrpc":"2.0","id":7,"method":"resources/list"}""")
 
-        result.resources() shouldHaveSize 2
-        val article = result.resources().first { it.uri() == "weather://prediction/article" }
-        with(article) {
-            name() shouldBe "prediction-article"
-            title() shouldBe "Weather Prediction"
-            description() shouldBe "Weather prediction article"
-            mimeType() shouldBe "text/markdown"
-            size() shouldBe
-                weatherService.predictionArticle
-                    .toByteArray()
-                    .size
-                    .toLong()
-            with(annotations()) {
-                audience() shouldContainExactly
-                    listOf(Role.USER, Role.ASSISTANT)
-                priority() shouldBe 0.8
-                lastModified() shouldBe "2026-07-23T00:00:00Z"
+        response.statusCode() shouldBe 200
+        val size = weatherService.predictionArticle.toByteArray(Charsets.UTF_8).size
+        response.body().redacted() shouldEqualJson
+            """
+            {
+              "jsonrpc": "2.0",
+              "id": 7,
+              "result": {
+                "resources": [
+                  {
+                    "uri": "weather://featured/current",
+                    "description": "Current weather in Tallinn",
+                    "mimeType": "application/json",
+                    "annotations": $RESOURCE_ANNOTATIONS,
+                    "name": "featured-current-weather",
+                    "title": "Featured Current Weather",
+                    "icons": [$RESOURCE_ICON]
+                  },
+                  {
+                    "uri": "weather://prediction/article",
+                    "description": "Weather prediction article",
+                    "mimeType": "text/markdown",
+                    "annotations": $RESOURCE_ANNOTATIONS,
+                    "size": $size,
+                    "name": "prediction-article",
+                    "title": "Weather Prediction",
+                    "icons": [$RESOURCE_ICON]
+                  }
+                ],
+                "resultType": "complete",
+                "ttlMs": 0,
+                "cacheScope": "public"
+              }
             }
-            with(icons().single()) {
-                src() shouldStartWith "data:image/png;base64,"
-                mimeType() shouldBe "image/png"
-                sizes() shouldContainExactly listOf("256x256")
-                theme() shouldBe "light"
-            }
-        }
-
-        val weather =
-            result.resources().first {
-                it.uri() == "weather://featured/current"
-            }
-        with(weather) {
-            name() shouldBe "featured-current-weather"
-            title() shouldBe "Featured Current Weather"
-            description() shouldBe "Current weather in Tallinn"
-            mimeType() shouldBe "application/json"
-            annotations() shouldBe article.annotations()
-            icons() shouldBe article.icons()
-        }
+            """
     }
 
     @Test
     fun `should read text resource`() {
-        val article =
-            client.listResources().resources().first { it.uri() == "weather://prediction/article" }
+        val response =
+            client.post(
+                """{"jsonrpc":"2.0","id":8,"method":"resources/read","params":{"uri":"weather://prediction/article"}}""",
+            )
 
-        val result = client.readResource(article)
-
-        val contents = result.contents().first()
-        with(contents) {
-            shouldBeInstanceOf<TextResourceContents>()
-            uri() shouldBe "weather://prediction/article"
-            mimeType() shouldBe "text/markdown"
-            text().trim() shouldStartWith "# Weather Prediction"
-        }
+        response.statusCode() shouldBe 200
+        val articleJson = json.encodeToString(weatherService.predictionArticle)
+        response.body() shouldEqualJson
+            """
+            {
+              "jsonrpc": "2.0",
+              "id": 8,
+              "result": {
+                "contents": [{"text": $articleJson, "uri": "weather://prediction/article", "mimeType": "text/markdown"}],
+                "resultType": "complete",
+                "ttlMs": 0,
+                "cacheScope": "public"
+              }
+            }
+            """
     }
 
     @Test
     fun `should read current weather resource`() {
-        val weather =
-            client.listResources().resources().first { it.uri() == "weather://featured/current" }
+        val response =
+            client.post(
+                """{"jsonrpc":"2.0","id":9,"method":"resources/read","params":{"uri":"weather://featured/current"}}""",
+            )
 
-        val result = client.readResource(weather)
-
-        val contents = result.contents().first()
-        with(contents) {
-            shouldBeInstanceOf<TextResourceContents>()
-            uri() shouldBe "weather://featured/current"
-            mimeType() shouldBe "application/json"
-            text() shouldContain "Clear sky"
-        }
+        response.statusCode() shouldBe 200
+        response.body() shouldEqualJson weatherResourceResultBody(9, "weather://featured/current")
     }
 
     @Test
     fun `should list resource templates`() {
-        val result = client.listResourceTemplates()
+        val response =
+            client.post(
+                """
+                {"jsonrpc":"2.0","id":10,"method":"resources/templates/list"}
+                """.trimMargin(),
+            )
 
-        result.resourceTemplates() shouldHaveSize 1
-        result.resourceTemplates().first() shouldNotBeNull {
-            uriTemplate() shouldBe "weather://current/{city}"
-            name() shouldBe "current-weather"
-            mimeType() shouldBe "application/json"
-        }
+        response.statusCode() shouldBe 200
+        response.body() shouldEqualJson
+            """
+            {
+              "jsonrpc": "2.0",
+              "id": 10,
+              "result": {
+                "resourceTemplates": [{
+                  "uriTemplate": "weather://current/{city}",
+                  "description": "Weather forecast for a city",
+                  "mimeType": "application/json",
+                  "name": "current-weather",
+                  "title": "Weather in the city"
+                }],
+                "resultType": "complete",
+                "ttlMs": 0,
+                "cacheScope": "public"
+              }
+            }
+            """
     }
 
     @Test
     fun `should read current weather from template`() {
-        val result =
-            client.readResource(
-                ReadResourceRequest.builder("weather://current/London").build(),
+        val response =
+            client.post(
+                """{"jsonrpc":"2.0","id":11,"method":"resources/read","params":{"uri":"weather://current/London"}}""",
             )
 
-        val contents = result.contents().first()
-        contents.shouldBeInstanceOf<TextResourceContents>()
-        contents.uri() shouldBe "weather://current/London"
-        contents.mimeType() shouldBe "application/json"
-        contents.text() shouldContain "Clear sky"
+        response.statusCode() shouldBe 200
+        response.body() shouldEqualJson weatherResourceResultBody(11, "weather://current/London")
     }
 
     @Test
     fun `should return invalid params when template city is unknown`() {
-        val error =
-            shouldThrow<McpError> {
-                client.readResource(
-                    ReadResourceRequest.builder("weather://current/Unknown").build(),
-                )
+        val response =
+            client.post(
+                """{"jsonrpc":"2.0","id":12,"method":"resources/read","params":{"uri":"weather://current/Unknown"}}""",
+            )
+
+        response.statusCode() shouldBe 400
+        response.body() shouldEqualJson
+            """
+            {
+              "jsonrpc": "2.0",
+              "id": 12,
+              "error": {"code": -32602, "message": "invalid argument 'city': City not found: Unknown"}
             }
-        error.jsonRpcError.code() shouldBe -32602
+            """
     }
 
     @Test
     fun `should complete city name for current weather template`() {
-        val result =
-            client.completeCompletion(
-                CompleteRequest
-                    .builder(
-                        ResourceReference("weather://current/{city}"),
-                        CompleteRequest.CompleteArgument("city", "Lo"),
-                    ).build(),
+        val response =
+            client.post(
+                """
+                {"jsonrpc":"2.0","id":13,"method":"completion/complete",
+                 "params":{"ref":{"type":"ref/resource","uri":"weather://current/{city}"},
+                           "argument":{"name":"city","value":"Lo"}}}
+                """,
             )
 
-        result.completion().values() shouldContainExactlyInAnyOrder listOf("London", "Los Angeles")
-        result.completion().hasMore() shouldNotBe true
+        response.statusCode() shouldBe 200
+        response.body() shouldEqualJson
+            """
+            {
+              "jsonrpc": "2.0",
+              "id": 13,
+              "result": {"completion": {"values": ["London", "Los Angeles"]}, "resultType": "complete"}
+            }
+            """
     }
 
     @Test
     fun `should return empty completion for blank query`() {
-        val result =
-            client.completeCompletion(
-                CompleteRequest
-                    .builder(
-                        ResourceReference("weather://current/{city}"),
-                        CompleteRequest.CompleteArgument("city", ""),
-                    ).build(),
+        val response =
+            client.post(
+                """
+                {"jsonrpc":"2.0","id":14,"method":"completion/complete",
+                 "params":{"ref":{"type":"ref/resource","uri":"weather://current/{city}"},
+                           "argument":{"name":"city","value":""}}}
+                """,
             )
 
-        result.completion().values() shouldHaveSize 0
+        response.statusCode() shouldBe 200
+        response.body() shouldEqualJson
+            """
+            {
+              "jsonrpc": "2.0",
+              "id": 14,
+              "result": {"completion": {"values": []}, "resultType": "complete"}
+            }
+            """
     }
 
     @Test
     fun `should complete style name for rewrite-forecast prompt`() {
-        val result =
-            client.completeCompletion(
-                CompleteRequest
-                    .builder(
-                        PromptReference("rewrite-forecast"),
-                        CompleteRequest.CompleteArgument("style", "pi"),
-                    ).build(),
+        val response =
+            client.post(
+                """
+                {"jsonrpc":"2.0","id":15,"method":"completion/complete",
+                 "params":{"ref":{"type":"ref/prompt","name":"rewrite-forecast"},
+                           "argument":{"name":"style","value":"pi"}}}
+                """,
             )
 
-        result.completion().values() shouldContainExactly listOf("pirate")
+        response.statusCode() shouldBe 200
+        response.body() shouldEqualJson
+            """
+            {
+              "jsonrpc": "2.0",
+              "id": 15,
+              "result": {"completion": {"values": ["pirate"]}, "resultType": "complete"}
+            }
+            """
     }
 
     @Test
     fun `should return empty completion for non-style argument of rewrite-forecast prompt`() {
-        val result =
-            client.completeCompletion(
-                CompleteRequest
-                    .builder(
-                        PromptReference("rewrite-forecast"),
-                        CompleteRequest.CompleteArgument("forecast", "Rain"),
-                    ).build(),
+        val response =
+            client.post(
+                """
+                {"jsonrpc":"2.0","id":16,"method":"completion/complete",
+                 "params":{"ref":{"type":"ref/prompt","name":"rewrite-forecast"},
+                           "argument":{"name":"forecast","value":"Rain"}}}
+                """,
             )
 
-        result.completion().values() shouldHaveSize 0
+        response.statusCode() shouldBe 200
+        response.body() shouldEqualJson
+            """
+            {
+              "jsonrpc": "2.0",
+              "id": 16,
+              "result": {"completion": {"values": []}, "resultType": "complete"}
+            }
+            """
     }
 
     @Test
     fun `should list prompts`() {
-        val result = client.listPrompts()
+        val response = client.post("""{"jsonrpc":"2.0","id":17,"method":"prompts/list"}""")
 
-        result.prompts() shouldHaveSize 1
-        val prompt = result.prompts().first()
-        prompt.name() shouldBe "rewrite-forecast"
-        prompt.description() shouldBe "Rewrites a weather forecast in a chosen style"
-        prompt.arguments() shouldHaveSize 2
+        response.statusCode() shouldBe 200
+        response.body() shouldEqualJson
+            """
+            {
+              "jsonrpc": "2.0",
+              "id": 17,
+              "result": {
+                "prompts": [{
+                  "description": "Rewrites a weather forecast in a chosen style",
+                  "arguments": [
+                    {"description": "Weather forecast to rewrite", "required": true, "name": "forecast", "title": "Forecast"},
+                    {"description": "plain, concise, or pirate", "required": true, "name": "style", "title": "Style"}
+                  ],
+                  "name": "rewrite-forecast"
+                }],
+                "resultType": "complete",
+                "ttlMs": 0,
+                "cacheScope": "public"
+              }
+            }
+            """
     }
 
     @Test
     fun `should get prompt`() {
-        val result =
-            client.getPrompt(
-                GetPromptRequest
-                    .builder("rewrite-forecast")
-                    .arguments(mapOf("forecast" to "Rain in London", "style" to "pirate"))
-                    .build(),
+        val response =
+            client.post(
+                """
+                {"jsonrpc":"2.0","id":18,"method":"prompts/get",
+                 "params":{"name":"rewrite-forecast",
+                           "arguments":{"forecast":"Rain in London","style":"pirate"}}}
+                """,
             )
 
-        result.messages() shouldHaveSize 1
-        val message = result.messages().first()
-        message.role() shouldBe Role.USER
-        message.content().shouldBeInstanceOf<TextContent>()
-        (message.content() as TextContent).text() shouldBe
-            "Rewrite the following weather forecast in pirate style. Preserve factual details:\n\n```Rain in London\n```"
+        response.statusCode() shouldBe 200
+        val text =
+            "Rewrite the following weather forecast in pirate style. " +
+                "Preserve factual details:\n\n```Rain in London\n```"
+        val textJson = json.encodeToString(text)
+        response.body() shouldEqualJson
+            """
+            {
+              "jsonrpc": "2.0",
+              "id": 18,
+              "result": {
+                "description": "Rewrites a weather forecast in a chosen style",
+                "messages": [{"role": "user", "content": {"type": "text", "text": $textJson}}],
+                "resultType": "complete"
+              }
+            }
+            """
     }
 }

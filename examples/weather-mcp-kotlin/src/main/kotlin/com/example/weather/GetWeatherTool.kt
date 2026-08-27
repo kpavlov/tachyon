@@ -12,13 +12,11 @@ import com.example.weather.model.TemperatureUnit.Fahrenheit
 import com.example.weather.service.WeatherService
 import com.example.weather.spi.CityNotFoundException
 import com.example.weather.spi.WeatherObservation
-import dev.tachyonmcp.api.json.JsonSchema
-import dev.tachyonmcp.api.runtime.ElicitationRequest
-import dev.tachyonmcp.api.runtime.ElicitationResult
 import dev.tachyonmcp.api.runtime.InteractionContext
 import dev.tachyonmcp.api.server.domain.ProgressToken
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.kotlin.server.config.ToolScope
+import dev.tachyonmcp.kotlin.server.domain.FormInputRequest
 import dev.tachyonmcp.kotlin.server.domain.Icon
 import dev.tachyonmcp.kotlin.server.domain.ToolAnnotations
 import dev.tachyonmcp.kotlin.server.domain.stringOrNull
@@ -27,11 +25,9 @@ import me.kpavlov.kt.schema.generator.json.JsonSchemaConfig
 import me.kpavlov.kt.schema.generator.json.ReflectionClassJsonSchemaGenerator
 import org.slf4j.LoggerFactory
 import java.util.Locale
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 
 private val log = LoggerFactory.getLogger("com.example.weather.GetWeatherTool")
-private const val ELICITATION_TIMEOUT_SECONDS = 600L
+private const val CITY_INPUT_KEY = "city"
 
 private val schemaGenerator =
     ReflectionClassJsonSchemaGenerator(
@@ -39,14 +35,12 @@ private val schemaGenerator =
         config = JsonSchemaConfig.Default,
     )
 
-private val CITY_SCHEMA =
-    JsonSchema.parse(
-        schemaGenerator.generateSchemaString(CityElicitationInput::class),
+private val CITY_SCHEMA_MAP: Map<String, Any> =
+    mapOf(
+        "type" to "object",
+        "properties" to mapOf("city" to mapOf("type" to "string")),
+        "required" to listOf("city"),
     )
-
-private data class CityElicitationInput(
-    val city: String,
-)
 
 val getWeatherToolDescriptor =
     ToolDescriptor {
@@ -66,7 +60,6 @@ val getWeatherToolDescriptor =
     }
 
 fun ToolScope.getWeather(weatherService: WeatherService): ToolResult {
-    val city = arguments.stringValue("city")
     val units = arguments.stringOrNull("units")
     val progressToken = request.progressToken()
     val temperatureUnit =
@@ -83,6 +76,8 @@ fun ToolScope.getWeather(weatherService: WeatherService): ToolResult {
                 Celsius
             }
         }
+    val inputResponses: Map<String, Any>? = request.inputResponses()
+    val city = elicitedCity(inputResponses) ?: arguments.stringValue("city")
 
     fun attempt(city: String): ToolResult =
         try {
@@ -106,13 +101,21 @@ fun ToolScope.getWeather(weatherService: WeatherService): ToolResult {
     return try {
         attempt(city)
     } catch (_: CityNotFoundException) {
-        val elicitedCity = elicitCity(ctx, city) ?: return fail("City not found")
-        try {
-            attempt(elicitedCity)
-        } catch (_: CityNotFoundException) {
-            fail("City not found")
-        }
+        if (inputResponses != null) return fail("City not found")
+        inputRequired(
+            CITY_INPUT_KEY to
+                FormInputRequest(
+                    "City '$city' was not found. Enter another city.",
+                    CITY_SCHEMA_MAP,
+                ),
+        )
     }
+}
+
+private fun elicitedCity(inputResponses: Map<String, Any>?): String? {
+    val response = inputResponses?.get(CITY_INPUT_KEY) as? Map<*, *> ?: return null
+    val city = response["city"] as? String ?: return null
+    return city.takeIf(String::isNotBlank)
 }
 
 private fun fetchWithProgress(
@@ -153,25 +156,4 @@ private fun internalError(e: Exception): ToolResult {
     restoreInterruptStatus(e)
     log.warn("get-weather failed", e)
     return ToolResult.error("Could not get weather")
-}
-
-private fun elicitCity(
-    ctx: InteractionContext,
-    city: String,
-): String? {
-    val future =
-        ctx.client().elicitation().create(
-            ElicitationRequest("City '$city' was not found. Enter another city.", CITY_SCHEMA),
-        )
-    val result =
-        try {
-            future.get(ELICITATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        } catch (e: InterruptedException) {
-            restoreInterruptStatus(e)
-            throw e
-        } catch (_: TimeoutException) {
-            return null
-        }
-    if (result.action() != ElicitationResult.Action.ACCEPT) return null
-    return result.content()?.stringOr("city", "")?.takeIf(String::isNotBlank)
 }

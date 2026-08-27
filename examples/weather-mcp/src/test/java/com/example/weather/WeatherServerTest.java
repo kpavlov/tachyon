@@ -4,56 +4,55 @@
 
 package com.example.weather;
 
+import com.example.weather.model.GetWeatherResponse;
+import com.example.weather.model.TemperatureUnit;
 import com.example.weather.service.WeatherService;
+import com.example.weather.spi.WeatherObservation;
 import dev.tachyonmcp.core.server.TachyonServer;
-import io.modelcontextprotocol.client.McpClient;
-import io.modelcontextprotocol.client.McpSyncClient;
-import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
-import io.modelcontextprotocol.spec.McpError;
-import io.modelcontextprotocol.spec.McpSchema;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpTestClients;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
 
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.tuple;
-import static org.awaitility.Awaitility.await;
 
 class WeatherServerTest {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final String ICON_SRC_PATTERN = "${json-unit.regex}^data:image/png;base64,.+$";
+    private static final String CAPABILITIES = """
+        {"tools":{},"resources":{},"prompts":{},"logging":{},"completions":{}}""";
+    private static final String SERVER_INFO = """
+        {
+          "version": "1.0",
+          "description": "Weather MCP server",
+          "websiteUrl": "https://github.com/kpavlov/tachyon/tree/main/examples/weather-mcp",
+          "name": "weather-server",
+          "title": "Weather Server",
+          "icons": [{"src": "%s", "mimeType": "image/png", "sizes": ["256x256"]}]
+        }""".formatted(ICON_SRC_PATTERN);
+    private static final String RESOURCE_ANNOTATIONS = """
+        {"audience": ["user", "assistant"], "priority": 0.8, "lastModified": "2026-07-23T00:00:00Z"}""";
+    private static final String RESOURCE_ICON = """
+        {"src": "%s", "mimeType": "image/png", "sizes": ["256x256"], "theme": "light"}""".formatted(ICON_SRC_PATTERN);
 
     private static final TestWeatherProvider weatherProvider = new TestWeatherProvider();
     private static final TestCityProvider cityProvider = new TestCityProvider();
     private static final WeatherService weatherService = new WeatherService(weatherProvider, cityProvider);
     private static TachyonServer handle;
-    private static HttpClientStreamableHttpTransport clientTransport;
-    private static McpSyncClient client;
-    private static McpSchema.InitializeResult initResult;
+    private static Mcp20260728Client client;
 
     @BeforeAll
     static void beforeAll() {
         handle = WeatherServer.buildServer("localhost", 0, weatherService);
         handle.start();
-        int port = handle.port();
-
-        clientTransport = HttpClientStreamableHttpTransport
-            .builder("http://localhost:" + port)
-            .build();
-        client = McpClient.sync(clientTransport)
-            .elicitation(request -> new McpSchema.ElicitResult(
-                McpSchema.ElicitResult.Action.ACCEPT, Map.of("city", "Tallinn")))
-            .build();
-
-        initResult = client.initialize();
+        client = McpTestClients.latest(handle.port());
     }
 
     @AfterAll
@@ -61,335 +60,486 @@ class WeatherServerTest {
         if (client != null) {
             client.close();
         }
-        if (clientTransport != null) {
-            clientTransport.close();
-        }
         if (handle != null) {
             handle.close();
         }
     }
 
-    @Test
-    void shouldGetServerInfo() {
-        assertThat(initResult.serverInfo()).usingRecursiveComparison().ignoringFields("icons").isEqualTo(
-            McpSchema.Implementation.builder("weather-server", "1.0")
-                .title("Weather Server")
-                .websiteUrl("https://github.com/kpavlov/tachyon/tree/main/examples/weather-mcp")
-                .description("Weather MCP server")
-                .build());
-        assertThat(initResult.serverInfo().icons()).singleElement().satisfies(icon -> {
-            assertThat(icon.src()).startsWith("data:image/png;base64,");
-            assertThat(icon.mimeType()).isEqualTo("image/png");
-            assertThat(icon.sizes()).containsExactly("256x256");
-        });
-        assertThat(initResult.protocolVersion()).isEqualTo("2025-11-25");
-        assertThat(initResult.instructions()).isEqualTo("Test instructions");
-        assertThat(initResult.capabilities()).isEqualTo(McpSchema.ServerCapabilities.builder()
-            .tools(null)
-            .resources(null, null)
-            .prompts(null)
-            .logging()
-            .completions()
-            .build());
+    private static String weatherCallResultBody(int id, String city, String unit) throws Exception {
+        var response = new GetWeatherResponse(
+            city, "Clear sky", 18.5, TemperatureUnit.valueOf(unit.toUpperCase(Locale.ROOT)), 52, 12.0);
+        var structuredJson = MAPPER.writeValueAsString(response);
+        var textJson = MAPPER.writeValueAsString(structuredJson);
+        return """
+            {
+              "jsonrpc": "2.0",
+              "id": %d,
+              "result": {
+                "content": [{"type": "text", "text": %s}],
+                "structuredContent": %s,
+                "resultType": "complete"
+              }
+            }
+            """.formatted(id, textJson, structuredJson);
     }
 
     @Test
-    void shouldListTools() {
-        final var result = client.listTools();
-        assertThat(result).isNotNull();
-        assertThat(result.tools()).hasSize(1);
-        McpSchema.Tool tool = result.tools().getFirst();
-        assertThat(tool.name()).isEqualTo("get-weather");
-        assertThat(tool.title()).isEqualTo("Current Weather");
-        assertThat(tool.description()).isEqualTo("Get current weather for a city");
-        assertThat(tool.inputSchema()).isEqualTo(Map.of(
-            "$schema", "https://json-schema.org/draft/2020-12/schema",
-            "$id", "GetWeatherRequest",
-            "description", "Input for looking up the current weather in a city.",
-            "type", "object",
-            "required", List.of("city", "units"),
-            "additionalProperties", false,
-            "properties", Map.of(
-                "city", Map.of(
-                    "description", "City name (e.g., London, Tokyo, New York)",
-                    "type", "string"),
-                "units", Map.of(
-                    "description", "Temperature unit (default: celsius)",
-                    "oneOf", List.of(
-                        Map.of("type", "null"),
-                        Map.of("$ref", "#/$defs/TemperatureUnit")))),
-            "$defs", Map.of(
-                "TemperatureUnit", Map.of(
-                    "type", "string",
-                    "description", "Unit used to represent temperature.",
-                    "enum", List.of("celsius", "fahrenheit")))));
-        assertThat(tool.outputSchema()).isEqualTo(Map.of(
-            "$schema", "https://json-schema.org/draft/2020-12/schema",
-            "$id", "GetWeatherResponse",
-            "description", "Current weather observation for a city.",
-            "type", "object",
-            "required", List.of("city", "condition", "temperature", "unit", "humidity", "windSpeed"),
-            "additionalProperties", false,
-            "properties", Map.of(
-                "city", Map.of("description", "City name", "type", "string"),
-                "condition", Map.of("description", "Weather condition", "type", "string"),
-                "temperature", Map.of("description", "Temperature in the response unit", "type", "number"),
-                "unit", Map.of("description", "Temperature unit", "$ref", "#/$defs/TemperatureUnit"),
-                "humidity", Map.of("description", "Relative humidity percentage", "type", "integer"),
-                "windSpeed", Map.of("description", "Wind speed in km/h", "type", "number")),
-            "$defs", Map.of(
-                "TemperatureUnit", Map.of(
-                    "type", "string",
-                    "description", "Unit used to represent temperature.",
-                    "enum", List.of("celsius", "fahrenheit")))));
-        assertThat(tool.meta()).isNull();
+    void shouldGetServerInfo() throws Exception {
+        var response = client.post("""
+            {"jsonrpc":"2.0","id":1,"method":"server/discover"}
+            """);
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThatJson(response.body())
+            .isEqualTo("""
+                {
+                  "jsonrpc": "2.0",
+                  "id": 1,
+                  "result": {
+                    "supportedVersions": ["2026-07-28", "2025-11-25"],
+                    "capabilities": %s,
+                    "instructions": "Test instructions",
+                    "serverInfo": %s,
+                    "_meta": {"io.modelcontextprotocol/serverInfo": %s},
+                    "resultType": "complete",
+                    "ttlMs": 0,
+                    "cacheScope": "public"
+                  }
+                }
+                """.formatted(CAPABILITIES, SERVER_INFO, SERVER_INFO));
     }
 
     @Test
-    void shouldCallWeatherTool() {
-        final var result = client.callTool(McpSchema.CallToolRequest.builder("get-weather")
-            .arguments(Map.of("city", "London", "units", "celsius"))
-            .build());
+    void shouldListTools() throws Exception {
+        var response = client.post("""
+            {"jsonrpc":"2.0","id":2,"method":"tools/list"}
+            """);
 
-        assertThat(result).isNotNull();
-        assertThat(result.structuredContent()).isEqualTo(Map.of(
-            "city", "London",
-            "condition", "Clear sky",
-            "temperature", 18.5,
-            "unit", "celsius",
-            "humidity", 52,
-            "windSpeed", 12.0));
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThatJson(response.body())
+            .isEqualTo("""
+                {
+                  "jsonrpc": "2.0",
+                  "id": 2,
+                  "result": {
+                    "tools": [{
+                      "description": "Get current weather for a city",
+                      "inputSchema": {
+                        "$schema": "https://json-schema.org/draft/2020-12/schema",
+                        "$id": "GetWeatherRequest",
+                        "description": "Input for looking up the current weather in a city.",
+                        "type": "object",
+                        "required": ["city", "units"],
+                        "additionalProperties": false,
+                        "properties": {
+                          "city": {"description": "City name (e.g., London, Tokyo, New York)", "type": "string"},
+                          "units": {
+                            "description": "Temperature unit (default: celsius)",
+                            "oneOf": [{"type": "null"}, {"$ref": "#/$defs/TemperatureUnit"}]
+                          }
+                        },
+                        "$defs": {
+                          "TemperatureUnit": {
+                            "type": "string",
+                            "description": "Unit used to represent temperature.",
+                            "enum": ["celsius", "fahrenheit"]
+                          }
+                        }
+                      },
+                      "outputSchema": {
+                        "$schema": "https://json-schema.org/draft/2020-12/schema",
+                        "$id": "GetWeatherResponse",
+                        "description": "Current weather observation for a city.",
+                        "type": "object",
+                        "required": ["city", "condition", "temperature", "unit", "humidity", "windSpeed"],
+                        "additionalProperties": false,
+                        "properties": {
+                          "city": {"description": "City name", "type": "string"},
+                          "condition": {"description": "Weather condition", "type": "string"},
+                          "temperature": {"description": "Temperature in the response unit", "type": "number"},
+                          "unit": {"description": "Temperature unit", "$ref": "#/$defs/TemperatureUnit"},
+                          "humidity": {"description": "Relative humidity percentage", "type": "integer"},
+                          "windSpeed": {"description": "Wind speed in km/h", "type": "number"}
+                        },
+                        "$defs": {
+                          "TemperatureUnit": {
+                            "type": "string",
+                            "description": "Unit used to represent temperature.",
+                            "enum": ["celsius", "fahrenheit"]
+                          }
+                        }
+                      },
+                      "annotations": {
+                        "readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true
+                      },
+                      "name": "get-weather",
+                      "title": "Current Weather",
+                      "icons": [{"src": "%s", "mimeType": "image/png", "sizes": ["128x128"]}]
+                    }],
+                    "resultType": "complete",
+                    "ttlMs": 0,
+                    "cacheScope": "public"
+                  }
+                }
+                """.formatted(ICON_SRC_PATTERN));
     }
 
     @Test
-    void shouldEmitProgressWhileFetchingWeather() {
-        var progressNotifications = new CopyOnWriteArrayList<McpSchema.ProgressNotification>();
-        var progressScheduler = Schedulers.newSingle("weather-progress");
-        var progressClient = McpClient.async(HttpClientStreamableHttpTransport
-            .builder("http://localhost:" + handle.port())
-            .build())
-            .progressConsumer(notification -> Mono.<Void>fromRunnable(() -> progressNotifications.add(notification))
-                .subscribeOn(progressScheduler))
-            .build();
-        try {
-            progressClient.initialize().block();
-            var arguments = new HashMap<String, Object>();
-            arguments.put("city", "London");
-            arguments.put("units", null);
-            final var result = progressClient.callTool(McpSchema.CallToolRequest.builder("get-weather")
-                .arguments(arguments)
-                .progressToken("weather-progress")
-                .build())
-                .block();
+    void shouldCallWeatherTool() throws Exception {
+        var response = client.post("""
+            {"jsonrpc":"2.0","id":3,"method":"tools/call",
+             "params":{"name":"get-weather","arguments":{"city":"London","units":"celsius"}}}
+            """);
 
-            assertThat(result.isError()).isNotEqualTo(true);
-            await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
-                assertThat(progressNotifications)
-                    .extracting(
-                        McpSchema.ProgressNotification::progressToken,
-                        McpSchema.ProgressNotification::progress,
-                        McpSchema.ProgressNotification::total,
-                        McpSchema.ProgressNotification::message)
-                    .containsExactly(
-                        tuple("weather-progress", 0.1, 1.0, "Fetching weather for London"),
-                        tuple("weather-progress", 1.0, 1.0, "Weather retrieved for London")));
-        } finally {
-            progressClient.close();
-            progressScheduler.dispose();
-        }
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThatJson(response.body()).isEqualTo(weatherCallResultBody(3, "London", "celsius"));
     }
 
     @Test
-    void shouldCallWeatherToolAfterElicitingAnotherCity() {
-        var arguments = new HashMap<String, Object>();
-        arguments.put("city", "Unknown");
-        arguments.put("units", null);
-        final var result = client.callTool(McpSchema.CallToolRequest.builder("get-weather")
-            .arguments(arguments)
-            .build());
+    void shouldEmitProgressWhileFetchingWeather() throws Exception {
+        client.clearNotifications();
 
-        assertThat(result.structuredContent()).isEqualTo(Map.of(
-            "city", "Tallinn",
-            "condition", "Clear sky",
-            "temperature", 18.5,
-            "unit", "celsius",
-            "humidity", 52,
-            "windSpeed", 12.0));
+        var response = client.post("""
+            {"jsonrpc":"2.0","id":4,"method":"tools/call",
+             "params":{"name":"get-weather","arguments":{"city":"London","units":null},
+                       "_meta":{"progressToken":"weather-progress"}}}
+            """);
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThatJson(response.body()).isEqualTo(weatherCallResultBody(4, "London", "celsius"));
+
+        var progressNotifications = client.notifications().stream()
+            .filter(n -> n.method().equals("notifications/progress"))
+            .map(n -> n.params())
+            .toList();
+        assertThat(progressNotifications).hasSize(2);
+        assertThatJson(progressNotifications.get(0).toString())
+            .isEqualTo("""
+                {"progressToken": "weather-progress", "progress": 0.1, "total": 1.0, "message": "Fetching weather for London"}
+                """);
+        assertThatJson(progressNotifications.get(1).toString())
+            .isEqualTo("""
+                {"progressToken": "weather-progress", "progress": 1.0, "total": 1.0, "message": "Weather retrieved for London"}
+                """);
     }
 
     @Test
-    void shouldListResources() {
-        final var result = client.listResources();
+    void shouldCallWeatherToolAfterElicitingAnotherCity() throws Exception {
+        var round1 = client.post("""
+            {"jsonrpc":"2.0","id":5,"method":"tools/call",
+             "params":{"name":"get-weather","arguments":{"city":"Unknown","units":null}}}
+            """);
 
-        assertThat(result.resources()).hasSize(2);
+        assertThat(round1.statusCode()).isEqualTo(200);
+        assertThatJson(round1.body())
+            .isEqualTo("""
+                {
+                  "jsonrpc": "2.0",
+                  "id": 5,
+                  "result": {
+                    "inputRequests": {
+                      "city": {
+                        "method": "elicitation/create",
+                        "params": {
+                          "message": "City 'Unknown' was not found. Enter another city.",
+                          "requestedSchema": "${json-unit.ignore-element}"
+                        }
+                      }
+                    },
+                    "resultType": "input_required"
+                  }
+                }
+                """);
 
-        var article = result.resources().stream()
-            .filter(resource -> resource.uri().equals("weather://prediction/article"))
-            .findFirst().orElseThrow();
-        assertThat(article.uri()).isEqualTo("weather://prediction/article");
-        assertThat(article.name()).isEqualTo("prediction-article");
-        assertThat(article.title()).isEqualTo("Weather Prediction");
-        assertThat(article.description()).isEqualTo("Weather prediction article");
-        assertThat(article.mimeType()).isEqualTo("text/markdown");
-        assertThat(article.size()).isEqualTo(weatherService.predictionArticle().getBytes(UTF_8).length);
-        assertThat(article.annotations().audience())
-            .containsExactly(McpSchema.Role.USER, McpSchema.Role.ASSISTANT);
-        assertThat(article.annotations().priority()).isEqualTo(0.8);
-        assertThat(article.annotations().lastModified()).isEqualTo("2026-07-23T00:00:00Z");
-        assertThat(article.icons()).singleElement().satisfies(icon -> {
-            assertThat(icon.src()).startsWith("data:image/png;base64,");
-            assertThat(icon.mimeType()).isEqualTo("image/png");
-            assertThat(icon.sizes()).containsExactly("256x256");
-            assertThat(icon.theme()).isEqualTo("light");
-        });
+        var round2 = client.post("""
+            {"jsonrpc":"2.0","id":6,"method":"tools/call",
+             "params":{"name":"get-weather","arguments":{"city":"Unknown","units":null},
+                       "inputResponses":{"city":{"city":"Tallinn"}}}}
+            """);
 
-        var weather = result.resources().stream()
-            .filter(resource -> resource.uri().equals("weather://featured/current"))
-            .findFirst().orElseThrow();
-        assertThat(weather.uri()).isEqualTo("weather://featured/current");
-        assertThat(weather.name()).isEqualTo("featured-current-weather");
-        assertThat(weather.title()).isEqualTo("Featured Current Weather");
-        assertThat(weather.description()).isEqualTo("Current weather in Tallinn");
-        assertThat(weather.mimeType()).isEqualTo("application/json");
-        assertThat(weather.annotations()).isEqualTo(article.annotations());
-        assertThat(weather.icons()).isEqualTo(article.icons());
+        assertThat(round2.statusCode()).isEqualTo(200);
+        assertThatJson(round2.body()).isEqualTo(weatherCallResultBody(6, "Tallinn", "celsius"));
     }
 
     @Test
-    void shouldReadTextResource() {
-        final var listResult = client.listResources();
-        var article = listResult.resources().stream()
-            .filter(r -> r.uri().equals("weather://prediction/article"))
-            .findFirst().orElseThrow();
+    void shouldListResources() throws Exception {
+        var response = client.post("""
+            {"jsonrpc":"2.0","id":7,"method":"resources/list"}
+            """);
 
-        final var result = client.readResource(article);
-
-        var contents = result.contents().getFirst();
-        assertThat(contents).isInstanceOf(McpSchema.TextResourceContents.class);
-        var textContents = ((McpSchema.TextResourceContents) contents);
-        assertThat(textContents.uri()).isEqualTo("weather://prediction/article");
-        assertThat(textContents.mimeType()).isEqualTo("text/markdown");
-        assertThat(textContents.text().trim())
-            .startsWith("# Weather Prediction")
-            .endsWith("reports, ocean buoys, and over 30 polar-orbiting and geostationary satellites.");
+        assertThat(response.statusCode()).isEqualTo(200);
+        var size = weatherService.predictionArticle().getBytes(StandardCharsets.UTF_8).length;
+        assertThatJson(response.body())
+            .isEqualTo("""
+                {
+                  "jsonrpc": "2.0",
+                  "id": 7,
+                  "result": {
+                    "resources": [
+                      {
+                        "uri": "weather://prediction/article",
+                        "description": "Weather prediction article",
+                        "mimeType": "text/markdown",
+                        "annotations": %s,
+                        "size": %d,
+                        "name": "prediction-article",
+                        "title": "Weather Prediction",
+                        "icons": [%s]
+                      },
+                      {
+                        "uri": "weather://featured/current",
+                        "description": "Current weather in Tallinn",
+                        "mimeType": "application/json",
+                        "annotations": %s,
+                        "name": "featured-current-weather",
+                        "title": "Featured Current Weather",
+                        "icons": [%s]
+                      }
+                    ],
+                    "resultType": "complete",
+                    "ttlMs": 0,
+                    "cacheScope": "public"
+                  }
+                }
+                """.formatted(RESOURCE_ANNOTATIONS, size, RESOURCE_ICON, RESOURCE_ANNOTATIONS, RESOURCE_ICON));
     }
 
     @Test
-    void shouldReadCurrentWeatherResource() {
-        final var listResult = client.listResources();
-        var weather = listResult.resources().stream()
-            .filter(r -> r.uri().equals("weather://featured/current"))
-            .findFirst().orElseThrow();
+    void shouldReadTextResource() throws Exception {
+        var response = client.post("""
+            {"jsonrpc":"2.0","id":8,"method":"resources/read",
+             "params":{"uri":"weather://prediction/article"}}
+            """);
 
-        final var result = client.readResource(weather);
+        assertThat(response.statusCode()).isEqualTo(200);
+        var articleJson = MAPPER.writeValueAsString(weatherService.predictionArticle());
+        assertThatJson(response.body())
+            .isEqualTo("""
+                {
+                  "jsonrpc": "2.0",
+                  "id": 8,
+                  "result": {
+                    "contents": [{"text": %s, "uri": "weather://prediction/article", "mimeType": "text/markdown"}],
+                    "resultType": "complete",
+                    "ttlMs": 0,
+                    "cacheScope": "public"
+                  }
+                }
+                """.formatted(articleJson));
+    }
 
-        var contents = result.contents().getFirst();
-        assertThat(contents).isInstanceOf(McpSchema.TextResourceContents.class);
-        var textContents = ((McpSchema.TextResourceContents) contents);
-        assertThat(textContents.uri()).isEqualTo("weather://featured/current");
-        assertThat(textContents.mimeType()).isEqualTo("application/json");
-        assertThat(textContents.text()).contains("Clear sky");
+    private static String weatherResourceResultBody(int id, String requestUri) throws Exception {
+        var weather = new WeatherObservation("Clear sky", 18.5, 52, 12.0);
+        var textJson = MAPPER.writeValueAsString(MAPPER.writeValueAsString(weather));
+        return """
+            {
+              "jsonrpc": "2.0",
+              "id": %d,
+              "result": {
+                "contents": [{"text": %s, "uri": "%s", "mimeType": "application/json"}],
+                "resultType": "complete",
+                "ttlMs": 0,
+                "cacheScope": "public"
+              }
+            }
+            """.formatted(id, textJson, requestUri);
     }
 
     @Test
-    void shouldListResourceTemplates() {
-        final var result = client.listResourceTemplates();
+    void shouldReadCurrentWeatherResource() throws Exception {
+        var response = client.post("""
+            {"jsonrpc":"2.0","id":9,"method":"resources/read",
+             "params":{"uri":"weather://featured/current"}}
+            """);
 
-        assertThat(result.resourceTemplates()).hasSize(1);
-        var template = result.resourceTemplates().getFirst();
-        assertThat(template.uriTemplate()).isEqualTo("weather://current/{city}");
-        assertThat(template.name()).isEqualTo("current-weather");
-        assertThat(template.mimeType()).isEqualTo("application/json");
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThatJson(response.body()).isEqualTo(weatherResourceResultBody(9, "weather://featured/current"));
     }
 
     @Test
-    void shouldReadCurrentWeatherFromTemplate() {
-        final var result = client.readResource(
-            McpSchema.ReadResourceRequest.builder("weather://current/London").build());
+    void shouldListResourceTemplates() throws Exception {
+        var response = client.post("""
+            {"jsonrpc":"2.0","id":10,"method":"resources/templates/list"}
+            """);
 
-        var contents = result.contents().getFirst();
-        assertThat(contents).isInstanceOf(McpSchema.TextResourceContents.class);
-        var textContents = ((McpSchema.TextResourceContents) contents);
-        assertThat(textContents.uri()).isEqualTo("weather://current/London");
-        assertThat(textContents.mimeType()).isEqualTo("application/json");
-        assertThat(textContents.text()).contains("Clear sky");
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThatJson(response.body())
+            .isEqualTo("""
+                {
+                  "jsonrpc": "2.0",
+                  "id": 10,
+                  "result": {
+                    "resourceTemplates": [{
+                      "uriTemplate": "weather://current/{city}",
+                      "description": "Weather forecast for a city",
+                      "mimeType": "application/json",
+                      "name": "current-weather",
+                      "title": "Weather in the city"
+                    }],
+                    "resultType": "complete",
+                    "ttlMs": 0,
+                    "cacheScope": "public"
+                  }
+                }
+                """);
     }
 
     @Test
-    void shouldReturnInvalidParamsWhenTemplateCityIsUnknown() {
-        assertThatThrownBy(() -> client.readResource(
-                McpSchema.ReadResourceRequest.builder("weather://current/Unknown").build()))
-            .isInstanceOf(McpError.class)
-            .extracting(e -> ((McpError) e).getJsonRpcError().code())
-            .isEqualTo(-32602);
+    void shouldReadCurrentWeatherFromTemplate() throws Exception {
+        var response = client.post("""
+            {"jsonrpc":"2.0","id":11,"method":"resources/read",
+             "params":{"uri":"weather://current/London"}}
+            """);
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThatJson(response.body()).isEqualTo(weatherResourceResultBody(11, "weather://current/London"));
     }
 
     @Test
-    void shouldCompleteCityNameForCurrentWeatherTemplate() {
-        final var result = client.completeCompletion(McpSchema.CompleteRequest.builder(
-                new McpSchema.ResourceReference("weather://current/{city}"),
-                new McpSchema.CompleteRequest.CompleteArgument("city", "Lo"))
-            .build());
+    void shouldReturnInvalidParamsWhenTemplateCityIsUnknown() throws Exception {
+        var response = client.post("""
+            {"jsonrpc":"2.0","id":12,"method":"resources/read",
+             "params":{"uri":"weather://current/Unknown"}}
+            """);
 
-        assertThat(result.completion().values()).containsExactlyInAnyOrder("London", "Los Angeles");
-        assertThat(result.completion().hasMore()).isNotEqualTo(true);
+        assertThat(response.statusCode()).isEqualTo(400);
+        assertThatJson(response.body())
+            .isEqualTo("""
+                {
+                  "jsonrpc": "2.0",
+                  "id": 12,
+                  "error": {"code": -32602, "message": "invalid argument 'city': City not found: Unknown"}
+                }
+                """);
     }
 
     @Test
-    void shouldReturnEmptyCompletionForBlankQuery() {
-        final var result = client.completeCompletion(McpSchema.CompleteRequest.builder(
-                new McpSchema.ResourceReference("weather://current/{city}"),
-                new McpSchema.CompleteRequest.CompleteArgument("city", ""))
-            .build());
+    void shouldCompleteCityNameForCurrentWeatherTemplate() throws Exception {
+        var response = client.post("""
+            {"jsonrpc":"2.0","id":13,"method":"completion/complete",
+             "params":{"ref":{"type":"ref/resource","uri":"weather://current/{city}"},
+                       "argument":{"name":"city","value":"Lo"}}}
+            """);
 
-        assertThat(result.completion().values()).isEmpty();
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThatJson(response.body())
+            .isEqualTo("""
+                {
+                  "jsonrpc": "2.0",
+                  "id": 13,
+                  "result": {"completion": {"values": ["London", "Los Angeles"]}, "resultType": "complete"}
+                }
+                """);
     }
 
     @Test
-    void shouldCompleteStyleNameForRewriteForecastPrompt() {
-        final var result = client.completeCompletion(McpSchema.CompleteRequest.builder(
-                new McpSchema.PromptReference("rewrite-forecast"),
-                new McpSchema.CompleteRequest.CompleteArgument("style", "pi"))
-            .build());
+    void shouldReturnEmptyCompletionForBlankQuery() throws Exception {
+        var response = client.post("""
+            {"jsonrpc":"2.0","id":14,"method":"completion/complete",
+             "params":{"ref":{"type":"ref/resource","uri":"weather://current/{city}"},
+                       "argument":{"name":"city","value":""}}}
+            """);
 
-        assertThat(result.completion().values()).containsExactly("pirate");
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThatJson(response.body())
+            .isEqualTo("""
+                {
+                  "jsonrpc": "2.0",
+                  "id": 14,
+                  "result": {"completion": {"values": []}, "resultType": "complete"}
+                }
+                """);
     }
 
     @Test
-    void shouldReturnEmptyCompletionForNonStyleArgumentOfRewriteForecastPrompt() {
-        final var result = client.completeCompletion(McpSchema.CompleteRequest.builder(
-                new McpSchema.PromptReference("rewrite-forecast"),
-                new McpSchema.CompleteRequest.CompleteArgument("forecast", "Rain"))
-            .build());
+    void shouldCompleteStyleNameForRewriteForecastPrompt() throws Exception {
+        var response = client.post("""
+            {"jsonrpc":"2.0","id":15,"method":"completion/complete",
+             "params":{"ref":{"type":"ref/prompt","name":"rewrite-forecast"},
+                       "argument":{"name":"style","value":"pi"}}}
+            """);
 
-        assertThat(result.completion().values()).isEmpty();
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThatJson(response.body())
+            .isEqualTo("""
+                {
+                  "jsonrpc": "2.0",
+                  "id": 15,
+                  "result": {"completion": {"values": ["pirate"]}, "resultType": "complete"}
+                }
+                """);
     }
 
     @Test
-    void shouldListPrompts() {
-        final var result = client.listPrompts();
+    void shouldReturnEmptyCompletionForNonStyleArgumentOfRewriteForecastPrompt() throws Exception {
+        var response = client.post("""
+            {"jsonrpc":"2.0","id":16,"method":"completion/complete",
+             "params":{"ref":{"type":"ref/prompt","name":"rewrite-forecast"},
+                       "argument":{"name":"forecast","value":"Rain"}}}
+            """);
 
-        assertThat(result.prompts()).hasSize(1);
-        var prompt = result.prompts().getFirst();
-        assertThat(prompt.name()).isEqualTo("rewrite-forecast");
-        assertThat(prompt.description()).isEqualTo("Rewrites a weather forecast in a chosen style");
-        assertThat(prompt.arguments()).hasSize(2);
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThatJson(response.body())
+            .isEqualTo("""
+                {
+                  "jsonrpc": "2.0",
+                  "id": 16,
+                  "result": {"completion": {"values": []}, "resultType": "complete"}
+                }
+                """);
     }
 
     @Test
-    void shouldGetPrompt() {
-        final var result = client.getPrompt(
-            McpSchema.GetPromptRequest.builder("rewrite-forecast")
-                .arguments(Map.of("forecast", "Rain in London", "style", "pirate"))
-                .build());
+    void shouldListPrompts() throws Exception {
+        var response = client.post("""
+            {"jsonrpc":"2.0","id":17,"method":"prompts/list"}
+            """);
 
-        assertThat(result).isNotNull();
-        assertThat(result.messages()).hasSize(1);
-        var message = result.messages().getFirst();
-        assertThat(message.role()).isEqualTo(McpSchema.Role.USER);
-        assertThat(message.content()).isInstanceOf(McpSchema.TextContent.class);
-        var textContent = ((McpSchema.TextContent) message.content());
-        assertThat(textContent.text())
-            .isEqualTo("Rewrite the following weather forecast in pirate style. Preserve factual details:\n\n```Rain in London\n```");
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThatJson(response.body())
+            .isEqualTo("""
+                {
+                  "jsonrpc": "2.0",
+                  "id": 17,
+                  "result": {
+                    "prompts": [{
+                      "description": "Rewrites a weather forecast in a chosen style",
+                      "arguments": [
+                        {"description": "Weather forecast to rewrite", "required": true, "name": "forecast", "title": "Forecast"},
+                        {"description": "plain, concise, or pirate", "required": true, "name": "style", "title": "Style"}
+                      ],
+                      "name": "rewrite-forecast"
+                    }],
+                    "resultType": "complete",
+                    "ttlMs": 0,
+                    "cacheScope": "public"
+                  }
+                }
+                """);
+    }
+
+    @Test
+    void shouldGetPrompt() throws Exception {
+        var response = client.post("""
+            {"jsonrpc":"2.0","id":18,"method":"prompts/get",
+             "params":{"name":"rewrite-forecast",
+                       "arguments":{"forecast":"Rain in London","style":"pirate"}}}
+            """);
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        var text = "Rewrite the following weather forecast in pirate style. "
+            + "Preserve factual details:\n\n```Rain in London\n```";
+        var textJson = MAPPER.writeValueAsString(text);
+        assertThatJson(response.body())
+            .isEqualTo("""
+                {
+                  "jsonrpc": "2.0",
+                  "id": 18,
+                  "result": {
+                    "messages": [{"role": "user", "content": {"type": "text", "text": %s}}],
+                    "resultType": "complete"
+                  }
+                }
+                """.formatted(textJson));
     }
 }
