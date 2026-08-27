@@ -16,6 +16,7 @@ import dev.tachyonmcp.api.json.JsonSchema
 import dev.tachyonmcp.api.runtime.ElicitationRequest
 import dev.tachyonmcp.api.runtime.ElicitationResult
 import dev.tachyonmcp.api.runtime.InteractionContext
+import dev.tachyonmcp.api.server.domain.InvalidArgumentException
 import dev.tachyonmcp.api.server.domain.ProgressToken
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.kotlin.server.config.ToolScope
@@ -67,6 +68,9 @@ val getWeatherToolDescriptor =
 
 fun ToolScope.getWeather(weatherService: WeatherService): ToolResult {
     val city = arguments.stringValue("city")
+    if (city.isBlank()) {
+        throw InvalidArgumentException("city", "must not be blank")
+    }
     val units = arguments.stringOrNull("units")
     val progressToken = request.progressToken()
     val temperatureUnit =
@@ -106,11 +110,13 @@ fun ToolScope.getWeather(weatherService: WeatherService): ToolResult {
     return try {
         attempt(city)
     } catch (_: CityNotFoundException) {
-        val elicitedCity = elicitCity(ctx, city) ?: return fail("City not found")
         try {
+            val elicitedCity = elicitCity(ctx, city) ?: return fail("City not found")
             attempt(elicitedCity)
         } catch (_: CityNotFoundException) {
             fail("City not found")
+        } catch (e: Exception) {
+            internalError(e)
         }
     }
 }

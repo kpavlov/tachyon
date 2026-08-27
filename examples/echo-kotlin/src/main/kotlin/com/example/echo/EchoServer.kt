@@ -7,11 +7,19 @@ import dev.tachyonmcp.api.server.config.Mode
 import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.kotlin.server.buildServer
 
-fun assembleServer(port: Int = 0): TachyonServer {
+fun assembleServer(
+    port: Int = 0,
+    host: String = "localhost",
+    allowedHost: String? = null,
+): TachyonServer {
     val inputSchema = buildEchoSchema()
     val server =
         buildServer {
-            network { this.port = port }
+            network {
+                this.host = host
+                this.port = port
+                if (!allowedHost.isNullOrBlank()) allowedHosts += allowedHost
+            }
             info {
                 name = "echo-server"
                 title = "Echo Server"
@@ -61,8 +69,13 @@ private fun buildEchoSchema() =
     )
 
 fun main() {
-    val server = assembleServer(8080)
+    val server =
+        assembleServer(
+            port = System.getenv("PORT")?.toInt() ?: 8080,
+            host = System.getenv("HOST") ?: "localhost",
+            allowedHost = System.getenv("ALLOWED_HOST"),
+        )
     server.start()
-    println("Echo server running. Connect your MCP client to http://localhost:${server.port()}/mcp")
+    println("Echo server running. Connect your MCP client to http://${server.host()}:${server.port()}/mcp")
     Thread.sleep(Long.MAX_VALUE)
 }

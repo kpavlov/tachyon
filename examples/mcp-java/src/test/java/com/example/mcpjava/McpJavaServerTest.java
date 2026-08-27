@@ -21,7 +21,7 @@ class McpJavaServerTest {
 
     @BeforeAll
     static void beforeAll() {
-        server = McpJavaServer.buildServer("localhost", 0);
+        server = McpJavaServer.buildServer("localhost", 0, null);
         server.start();
         var transport = HttpClientStreamableHttpTransport.builder("http://localhost:" + server.port()).build();
         client = McpClient.sync(transport).build();
