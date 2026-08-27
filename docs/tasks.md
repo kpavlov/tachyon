@@ -20,9 +20,8 @@ public final class WorkflowTasks implements TaskExecutionEngine {
     }
 
     @Override
-    public TaskSnapshot cancel(InteractionContext context, String taskId) {
+    public void cancel(InteractionContext context, String taskId) {
         workflows.cancel(taskId);
-        return workflows.snapshot(taskId);
     }
 
     @Override
@@ -81,7 +80,9 @@ The flow is:
 3. Tachyon publishes that snapshot and maps the task response.
 4. `tasks/get` calls `refresh` and publishes the authoritative returned snapshot.
 5. `tasks/update` forwards `TaskInput` to `submitInput`.
-6. `tasks/cancel` calls `cancel` and publishes the returned cancelled snapshot.
+6. `tasks/cancel` calls `cancel` and acknowledges the accepted request immediately.
+7. A later `tasks/get` calls `refresh` to observe the authoritative state. Cancellation may still be
+   pending or may settle in another terminal state.
 
 Tachyon never runs the handler in the background and never invokes it again for `tasks/update`.
 

@@ -141,6 +141,16 @@
           "attachments": {
             "since": "1.0.0-beta.23"
           }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method dev.tachyonmcp.api.server.features.tasks.TaskSnapshot dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine::cancel(dev.tachyonmcp.api.runtime.InteractionContext, java.lang.String)",
+          "new": "method void dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine::cancel(dev.tachyonmcp.api.runtime.InteractionContext, java.lang.String)",
+          "justification": "Cancellation is a cooperative request and the modern MCP response is an empty acknowledgement; callers observe eventual state through refresh instead of trusting a fabricated synchronous snapshot",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
         }
       ]
     }

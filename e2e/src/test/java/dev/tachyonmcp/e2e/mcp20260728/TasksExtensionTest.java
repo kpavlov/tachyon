@@ -89,9 +89,9 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
     }
 
     @Test
-    void cancelDelegatesToConnectorAndPublishesReturnedSnapshot() throws Exception {
+    void cancelAcknowledgesBeforeConnectorSettles() throws Exception {
         var initial = TaskSnapshot.working("workflow-cancel", Instant.parse("2026-08-27T07:00:00Z"), 1);
-        var taskEngine = new TestTaskExecutionEngine().publish(initial);
+        var taskEngine = new TestTaskExecutionEngine().deferCancellation().publish(initial);
         startTasksServer(taskEngine, "book", ToolResult.task(initial));
 
         try (var client = tasksClient()) {
@@ -107,10 +107,23 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
                     """);
             assertThat(taskEngine.cancelledTaskIds()).containsExactly("workflow-cancel");
 
-            var refreshed = client.post("""
+            var getResponse = client.post("""
                     {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"workflow-cancel"}}
                     """);
-            assertThatJson(refreshed.body()).inPath("$.result.status").isEqualTo("cancelled");
+            assertThatJson(getResponse.body()).isEqualTo("""
+                    {
+                      "jsonrpc":"2.0",
+                      "id":3,
+                      "result":{
+                        "taskId":"workflow-cancel",
+                        "status":"working",
+                        "createdAt":"2026-08-27T07:00:00Z",
+                        "lastUpdatedAt":"2026-08-27T07:00:00Z",
+                        "ttlMs":null,
+                        "resultType":"complete"
+                      }
+                    }
+                    """);
             assertThat(taskEngine.refreshedTaskIds()).containsExactly("workflow-cancel");
         }
     }

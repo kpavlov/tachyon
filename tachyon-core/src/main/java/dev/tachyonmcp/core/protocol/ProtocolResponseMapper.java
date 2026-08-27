@@ -111,7 +111,7 @@ public interface ProtocolResponseMapper {
     /** Maps an initial task snapshot into a CreateTaskResult. */
     Object createTaskResult(TaskSnapshot snapshot);
 
-    /** Maps a cancelled task snapshot into protocol-specific shape. */
+    /** Maps the task-bearing legacy cancellation response. Modern cancellation uses {@link #emptyResult()}. */
     Object cancelTaskResult(TaskSnapshot snapshot);
 
     /** Maps a task's terminal result into the tasks/result payload — a {@code CallToolResult}. */

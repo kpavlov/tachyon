@@ -168,7 +168,8 @@ internal class ToolFnFactoryTest {
     @Test
     fun `tasks cancel is delivered to the task execution engine`() {
         val taskId = "cancellable-task"
-        val engine = RecordingCancelTaskEngine()
+        val initial = TaskSnapshot.working(taskId, Instant.parse("2026-08-28T00:00:00Z"), 1)
+        val engine = RecordingCancelTaskEngine(initial)
 
         TachyonServer(port = 0) {
             name("cancellable-tool-test")
@@ -181,7 +182,7 @@ internal class ToolFnFactoryTest {
                 }
             }
             tool("cancellable", taskSupport = TaskSupport.REQUIRED) {
-                ToolResult.task(TaskSnapshot.working(taskId, Instant.now(), 1))
+                ToolResult.task(initial)
             }
         }.use { server ->
             McpProbe(server.port()).use { probe ->
@@ -235,36 +236,32 @@ internal class ToolFnFactoryTest {
         }
     }
 
-    /**
-     * [TaskExecutionEngine] fixture recording every taskId handed to [cancel] -- proving the
-     * signal reaches the engine, not how the engine acts on it. What a real engine does with a
-     * cancel request (interrupt a coroutine, cancel a workflow run, ...) is its own concern, not
-     * Tachyon's.
-     */
-    private class RecordingCancelTaskEngine : TaskExecutionEngine {
+    private class RecordingCancelTaskEngine(
+        initial: TaskSnapshot,
+    ) : TaskExecutionEngine {
         val cancelledTaskIds = CopyOnWriteArrayList<String>()
+        private val snapshot = AtomicReference(initial)
 
         override fun supportedFeatures(): Set<TaskFeature> = setOf(TaskFeature.CANCEL)
 
         override fun refresh(
             context: InteractionContext,
             taskId: String,
-        ): TaskSnapshot? = null
+        ): TaskSnapshot? = snapshot.get().takeIf { it.taskId() == taskId }
 
         override fun cancel(
             context: InteractionContext,
             taskId: String,
-        ): TaskSnapshot {
+        ) {
             cancelledTaskIds += taskId
-            val now = Instant.now()
-            return TaskSnapshot
-                .builder()
-                .taskId(taskId)
-                .status(TaskState.CANCELLED)
-                .createdAt(now)
-                .lastUpdatedAt(now)
-                .revision(2)
-                .build()
+            snapshot.updateAndGet {
+                TaskSnapshot
+                    .builder()
+                    .from(it)
+                    .status(TaskState.CANCELLED)
+                    .revision(it.revision() + 1)
+                    .build()
+            }
         }
 
         override fun submitInput(

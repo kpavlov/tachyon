@@ -8,6 +8,7 @@ import dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine;
 import dev.tachyonmcp.api.server.features.tasks.TaskFeature;
 import dev.tachyonmcp.api.server.features.tasks.TaskInput;
 import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
+import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -26,6 +27,7 @@ public final class TestTaskExecutionEngine implements LegacyTaskExecutionEngine 
     private final List<ListRequest> listRequests = new CopyOnWriteArrayList<>();
     private final List<String> awaitedTaskIds = new CopyOnWriteArrayList<>();
     private final List<SubmittedInput> submittedInputs = new CopyOnWriteArrayList<>();
+    private volatile boolean settleCancellation = true;
 
     /** Creates a fixture supporting all optional task operations. */
     public TestTaskExecutionEngine() {
@@ -44,6 +46,12 @@ public final class TestTaskExecutionEngine implements LegacyTaskExecutionEngine 
         return this;
     }
 
+    /** Leaves the current snapshot unchanged when cancellation is requested. */
+    public TestTaskExecutionEngine deferCancellation() {
+        settleCancellation = false;
+        return this;
+    }
+
     /** Removes stored snapshots and captured calls. */
     public TestTaskExecutionEngine reset() {
         snapshots.clear();
@@ -52,6 +60,7 @@ public final class TestTaskExecutionEngine implements LegacyTaskExecutionEngine 
         listRequests.clear();
         awaitedTaskIds.clear();
         submittedInputs.clear();
+        settleCancellation = true;
         return this;
     }
 
@@ -67,17 +76,19 @@ public final class TestTaskExecutionEngine implements LegacyTaskExecutionEngine 
     }
 
     @Override
-    public TaskSnapshot cancel(InteractionContext context, String taskId) {
+    public void cancel(InteractionContext context, String taskId) {
         cancelledTaskIds.add(taskId);
         var current = requireSnapshot(taskId);
+        if (!settleCancellation) {
+            return;
+        }
         var cancelled = TaskSnapshot.builder()
                 .from(current)
-                .status(dev.tachyonmcp.api.server.features.tasks.TaskState.CANCELLED)
-                .lastUpdatedAt(java.time.Instant.now())
+                .status(TaskState.CANCELLED)
+                .lastUpdatedAt(current.lastUpdatedAt())
                 .revision(current.revision() + 1)
                 .build();
         snapshots.put(taskId, cancelled);
-        return cancelled;
     }
 
     @Override

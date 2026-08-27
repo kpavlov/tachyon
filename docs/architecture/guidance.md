@@ -106,7 +106,7 @@ public interface TaskExecutionEngine {
     @Nullable
     TaskSnapshot refresh(InteractionContext context, String taskId) throws Exception;
 
-    TaskSnapshot cancel(
+    void cancel(
             InteractionContext context,
             String taskId) throws Exception;
 
@@ -239,8 +239,9 @@ For a task-producing call:
 3. Tachyon publishes the snapshot and returns the MCP task handle.
 4. `tasks/get` calls `TaskExecutionEngine.refresh` and maps the returned snapshot.
 5. `tasks/update` forwards `TaskInput`; it does not aggregate answers or resume a handler.
-6. `tasks/cancel` calls `TaskExecutionEngine.cancel`; it publishes the returned state only after the
-   external owner accepts and reports the cancellation.
+6. `tasks/cancel` calls `TaskExecutionEngine.cancel` and immediately acknowledges the request.
+7. A later `tasks/get` calls `refresh`; cancellation is cooperative and may still be pending or
+   settle in another terminal state.
 
 The external task ID should be used directly as the MCP task ID when it is stable and safe to
 expose. For Temporal, use the workflow ID rather than a run ID so Continue-As-New preserves the

@@ -2,6 +2,7 @@
 package dev.tachyonmcp.tasks.temporal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.mock;
 
@@ -12,6 +13,8 @@ import dev.tachyonmcp.api.server.features.tasks.TaskExecutionRequest;
 import dev.tachyonmcp.api.server.features.tasks.TaskInput;
 import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
+import io.temporal.client.WorkflowFailedException;
+import io.temporal.failure.CanceledFailure;
 import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.workflow.QueryMethod;
 import io.temporal.workflow.UpdateMethod;
@@ -59,6 +62,29 @@ class TemporalTaskExecutionEngineTest {
                                     .refresh(CONTEXT, "workflow-1")
                                     .status())
                             .isEqualTo(TaskState.COMPLETED));
+        }
+    }
+
+    @Test
+    void requestsWorkflowCancellationWithoutSynthesizingTaskState() {
+        try (var environment = TestWorkflowEnvironment.newInstance()) {
+            var worker = environment.newWorker(TASK_QUEUE);
+            worker.registerWorkflowImplementationTypes(TestWorkflowImpl.class);
+            environment.start();
+            var engine = engine(environment);
+            engine.start(CONTEXT, request("workflow-cancel"));
+
+            await().atMost(Duration.ofSeconds(5))
+                    .untilAsserted(() -> assertThat(
+                                    engine.refresh(CONTEXT, "workflow-cancel").status())
+                            .isEqualTo(TaskState.INPUT_REQUIRED));
+
+            engine.cancel(CONTEXT, "workflow-cancel");
+
+            var workflow = environment.getWorkflowClient().newUntypedWorkflowStub("workflow-cancel");
+            assertThatThrownBy(() -> workflow.getResult(Void.class))
+                    .isInstanceOf(WorkflowFailedException.class)
+                    .hasCauseInstanceOf(CanceledFailure.class);
         }
     }
 

@@ -118,7 +118,7 @@ class DefaultTaskRegistryTest {
         }
 
         @Override
-        public TaskSnapshot cancel(InteractionContext context, String taskId) {
+        public void cancel(InteractionContext context, String taskId) {
             throw new UnsupportedOperationException();
         }
 

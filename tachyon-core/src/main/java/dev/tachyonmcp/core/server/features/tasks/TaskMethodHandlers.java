@@ -4,7 +4,6 @@ package dev.tachyonmcp.core.server.features.tasks;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.features.tasks.LegacyTaskExecutionEngine;
 import dev.tachyonmcp.api.server.features.tasks.TaskInput;
-import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
@@ -115,9 +114,13 @@ public final class TaskMethodHandlers {
             if (engine == null) {
                 return ServerErrors.methodNotFound("Method not found");
             }
-            var snapshot = engine.cancel(context, taskId);
-            if (snapshot.status() != TaskState.CANCELLED) {
-                return ServerErrors.invalidParams("Task cannot be cancelled in current state: " + snapshot.status());
+            engine.cancel(context, taskId);
+            if (!context.requestMapper().supportsLegacyTaskAugmentation()) {
+                return context.responseMapper().emptyResult();
+            }
+            var snapshot = engine.refresh(context, taskId);
+            if (snapshot == null) {
+                return ServerErrors.invalidParams("Failed to retrieve task: Task not found");
             }
             return context.responseMapper().cancelTaskResult(registry.publish(snapshot));
         }

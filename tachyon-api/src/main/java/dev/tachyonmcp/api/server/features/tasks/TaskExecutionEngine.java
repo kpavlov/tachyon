@@ -22,8 +22,13 @@ public interface TaskExecutionEngine extends AutoCloseable {
     @Nullable
     TaskSnapshot refresh(InteractionContext context, String taskId) throws Exception;
 
-    /** Cancels externally executed work and returns its latest snapshot. */
-    TaskSnapshot cancel(InteractionContext context, String taskId) throws Exception;
+    /**
+     * Requests cancellation of externally executed work.
+     *
+     * <p>Cancellation is cooperative and may settle after this method returns. Use {@link
+     * #refresh(InteractionContext, String)} to observe the authoritative state.
+     */
+    void cancel(InteractionContext context, String taskId) throws Exception;
 
     /** Submits client input to externally executed work. */
     void submitInput(InteractionContext context, String taskId, TaskInput input) throws Exception;

@@ -8,7 +8,6 @@ import dev.tachyonmcp.api.server.features.tasks.TaskExecutionRequest;
 import dev.tachyonmcp.api.server.features.tasks.TaskFeature;
 import dev.tachyonmcp.api.server.features.tasks.TaskInput;
 import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
-import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.client.WorkflowStub;
@@ -97,19 +96,10 @@ public final class TemporalTaskExecutionEngine implements TaskExecutionEngine {
     }
 
     @Override
-    public TaskSnapshot cancel(InteractionContext context, String taskId) {
+    public void cancel(InteractionContext context, String taskId) {
         var workflow = workflow(taskId);
-        var status = routeFor(workflow).query(workflow, taskId);
-        logger.info("Cancelling Temporal workflow: taskId={}, state={}", taskId, status.status());
+        logger.info("Requesting Temporal workflow cancellation: taskId={}", taskId);
         workflow.cancel();
-        return TaskSnapshot.builder()
-                .taskId(taskId)
-                .status(TaskState.CANCELLED)
-                .statusMessage("Cancelled")
-                .createdAt(status.createdAt())
-                .lastUpdatedAt(clock.instant())
-                .revision(status.revision() + 1)
-                .build();
     }
 
     @Override

@@ -54,7 +54,7 @@ internal class TachyonServerTest {
             override fun cancel(
                 context: InteractionContext,
                 taskId: String,
-            ): TaskSnapshot = error("unused")
+            ) = Unit
 
             override fun submitInput(
                 context: InteractionContext,
