@@ -19,6 +19,7 @@ import dev.tachyonmcp.testkit.Mcp20260728Client;
 import dev.tachyonmcp.testkit.TestTaskExecutionEngine;
 import java.time.Instant;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.JsonNodeFactory;
 
@@ -131,7 +132,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
                 .revision(1)
                 .build();
         var taskEngine = new TestTaskExecutionEngine().publish(snapshot);
-        startTasksServer(taskEngine, "book", ToolResult.task(snapshot));
+        var toolInvocations = startTasksServer(taskEngine, "book", ToolResult.task(snapshot));
 
         try (var client = tasksClient()) {
             client.post("""
@@ -148,6 +149,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
                 assertThat(submission.input().requestState()).isEqualTo("approval-round-1");
                 assertThat(submission.input().inputResponses()).containsKey("approval");
             });
+            assertThat(toolInvocations).hasValue(1);
         }
     }
 
@@ -165,14 +167,18 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
         }
     }
 
-    private void startTasksServer(TestTaskExecutionEngine taskEngine, String toolName, ToolResult result) {
+    private AtomicInteger startTasksServer(TestTaskExecutionEngine taskEngine, String toolName, ToolResult result) {
+        final var toolInvocations = new AtomicInteger();
         startServer(
                 builder -> builder.capabilities(c -> c.tasks(taskEngine, false, true, true))
                         .withExtensions(TasksExtension.instance()),
                 registrar -> registrar
                         .tools()
-                        .register(
-                                b -> b.name(toolName).taskSupport(TaskSupport.REQUIRED), (context, request) -> result));
+                        .register(b -> b.name(toolName).taskSupport(TaskSupport.REQUIRED), (context, request) -> {
+                            toolInvocations.incrementAndGet();
+                            return result;
+                        }));
+        return toolInvocations;
     }
 
     private Mcp20260728Client tasksClient() {

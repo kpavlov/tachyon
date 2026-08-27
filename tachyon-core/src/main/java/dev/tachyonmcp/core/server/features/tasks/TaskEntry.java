@@ -40,8 +40,8 @@ final class TaskEntry {
             throw new IllegalArgumentException("Task ID cannot change");
         }
         if (candidate.revision() > snapshot.revision()) {
-            snapshot = candidate;
             cachedAt = clock.instant();
+            snapshot = candidate;
         }
         return snapshot;
     }
@@ -66,7 +66,7 @@ final class TaskEntry {
 
     boolean isResultExpired() {
         return snapshot.status().isTerminal()
-                && !keepAlive.isZero()
+                && keepAlive.compareTo(Duration.ZERO) > 0
                 && !clock.instant().isBefore(cachedAt.plus(keepAlive));
     }
 }

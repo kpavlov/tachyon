@@ -64,6 +64,18 @@ class TaskAugmentedToolTest extends AbstractStatefulMcpE2eTest {
     }
 
     @Test
+    void optionalToolRejectsInlineResultForTaskAugmentedCall() throws Exception {
+        try (var client = createTestClient()) {
+            client.initialize();
+            var response = client.sendRpc("""
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{
+                      "name":"optional","arguments":{},"task":{}}}
+                    """);
+            assertThatJsonRpcResponse(response).isJsonRpcError().hasErrorCode(-32603);
+        }
+    }
+
+    @Test
     void forbiddenToolRejectsTaskAugmentation() throws Exception {
         try (var client = createTestClient()) {
             client.initialize();

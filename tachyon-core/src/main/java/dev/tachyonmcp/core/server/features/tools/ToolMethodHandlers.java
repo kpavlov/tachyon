@@ -165,14 +165,14 @@ public final class ToolMethodHandlers {
                 @Nullable JsonSchema outputSchema,
                 ToolResult result) {
             if (result instanceof ToolResult.Task task) {
-                if (!context.engine().tasksRegistry().executionConfigured()) {
-                    return internalError("Task-producing tool requires a configured TaskExecutionEngine");
-                }
                 if (taskSupport == TaskSupport.FORBIDDEN) {
-                    return invalidParams("Task augmentation not supported for this tool");
+                    return internalError("Task-producing tool is configured to forbid task augmentation");
                 }
                 if (context.requestMapper().supportsLegacyTaskAugmentation() && !mapped.taskAugmented()) {
-                    return invalidParams("Task augmentation was not requested");
+                    return internalError("Task-producing tool returned a task for a non-task request");
+                }
+                if (!context.engine().tasksRegistry().executionConfigured()) {
+                    return internalError("Task-producing tool requires a configured TaskExecutionEngine");
                 }
                 var missingCapability = TasksExtension.requireDeclared(context);
                 if (!context.requestMapper().supportsLegacyTaskAugmentation() && missingCapability != null) {

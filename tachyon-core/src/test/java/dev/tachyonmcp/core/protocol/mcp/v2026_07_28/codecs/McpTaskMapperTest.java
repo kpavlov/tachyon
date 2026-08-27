@@ -119,7 +119,7 @@ class McpTaskMapperTest {
     }
 
     @Test
-    void toolLevelErrorReportsCompletedStatusNotFailed() {
+    void toolLevelErrorReportsCompletedStatusForGetAndCreate() {
         var task = TaskSnapshot.builder()
                 .from(entry(TaskState.WORKING))
                 .status(TaskState.FAILED)
@@ -127,9 +127,12 @@ class McpTaskMapperTest {
                 .revision(2)
                 .build();
 
-        var node = McpTaskMapper.toGetTaskResult(task, null, null, null);
+        var getNode = McpTaskMapper.toGetTaskResult(task, null, null, null);
+        var createNode = McpTaskMapper.toCreateTaskResult(task);
 
-        assertThat(node.get("status").asString()).isEqualTo("completed");
+        assertThat(getNode.get("status").asString()).isEqualTo("completed");
+        assertThat(createNode.get("status").asString()).isEqualTo("completed");
+        assertThat(createNode.get("resultType").asString()).isEqualTo("task");
     }
 
     @Test

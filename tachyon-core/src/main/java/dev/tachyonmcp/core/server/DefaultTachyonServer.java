@@ -247,13 +247,10 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     }
 
     void validateConfiguration() {
-        // Only TaskSupport.REQUIRED is checked eagerly: it always attempts to create a task, on
-        // every call, so a missing engine is unambiguously a misconfiguration. OPTIONAL/FORBIDDEN
-        // tools may run synchronously and never touch the engine; ToolMethodHandlers.mapResult
-        // still rejects a REQUIRED-without-engine call at runtime, this just fails faster.
-        var hasRequiredTaskTool = toolRegistry.getAll().stream()
-                .anyMatch(handler -> handler.descriptor().taskSupport() == TaskSupport.REQUIRED);
-        if (hasRequiredTaskTool && !taskRegistry.executionConfigured()) {
+        var hasTaskAugmentedTool = toolRegistry.getAll().stream()
+                .anyMatch(handler -> handler.descriptor().taskSupport() != null
+                        && handler.descriptor().taskSupport() != TaskSupport.FORBIDDEN);
+        if (hasTaskAugmentedTool && !taskRegistry.executionConfigured()) {
             throw new IllegalStateException("Task-producing tools require a TaskExecutionEngine");
         }
     }

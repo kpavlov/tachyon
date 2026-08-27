@@ -44,7 +44,7 @@ final class McpTaskMapper {
     }
 
     static JsonNode toCreateTaskResult(TaskSnapshot snapshot) {
-        var fields = taskFields(snapshot, toWireStatus(snapshot.status()));
+        var fields = taskFields(snapshot, effectiveWireStatus(snapshot));
         fields.put("resultType", RESULT_TYPE_TASK);
         return JsonUtils.toObjectNode(fields);
     }

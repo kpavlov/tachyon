@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2026 Konstantin Pavlov and contributors.
- */
+/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 
 /** Temporal Workflow integration for Tachyon MCP tasks. */
 @NullMarked

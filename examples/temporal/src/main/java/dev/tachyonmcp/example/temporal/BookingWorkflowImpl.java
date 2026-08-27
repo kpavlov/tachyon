@@ -18,29 +18,30 @@ public final class BookingWorkflowImpl implements BookingWorkflow {
     private Map<String, Object> result = Map.of();
     private Map<String, Object> input;
     private long revision;
+    private Instant observedAt = Instant.EPOCH;
 
     @Override
     public void book(Map<String, Object> arguments) {
         createdAt = now();
+        observedAt = createdAt;
         logger.info("Booking workflow started: fields={}", arguments.keySet());
-        state = TaskState.WORKING;
-        message = "Booking appointment";
-        revision++;
-        state = TaskState.INPUT_REQUIRED;
-        message = "Approval required";
-        revision++;
+        transitionTo(TaskState.WORKING, "Booking appointment");
+        transitionTo(TaskState.INPUT_REQUIRED, "Approval required");
         logger.info("Booking workflow waiting for approval");
         Workflow.await(() -> input != null);
-        result = Map.of("booking", arguments, "confirmed", true);
-        state = TaskState.COMPLETED;
-        message = "Appointment booked";
-        revision++;
-        logger.info("Booking workflow completed");
+        var approved = Boolean.TRUE.equals(input.get("approved"));
+        result = Map.of("booking", arguments, "confirmed", approved);
+        if (approved) {
+            transitionTo(TaskState.COMPLETED, "Appointment booked");
+            logger.info("Booking workflow completed");
+        } else {
+            transitionTo(TaskState.REJECTED, "Booking rejected");
+            logger.info("Booking workflow rejected");
+        }
     }
 
     @Override
     public TemporalTaskStatus taskStatus() {
-        var observedAt = createdAt != null ? now() : Instant.EPOCH;
         return new TemporalTaskStatus(state, message, createdAt, observedAt, result, revision);
     }
 
@@ -48,9 +49,14 @@ public final class BookingWorkflowImpl implements BookingWorkflow {
     public void provideInput(Map<String, Object> input) {
         logger.info("Booking workflow received input: fields={}", input.keySet());
         this.input = input;
-        state = TaskState.WORKING;
-        message = "Input accepted: " + input.keySet();
+        transitionTo(TaskState.WORKING, "Input accepted: " + input.keySet());
+    }
+
+    private void transitionTo(TaskState nextState, String nextMessage) {
+        state = nextState;
+        message = nextMessage;
         revision++;
+        observedAt = now();
     }
 
     private static Instant now() {

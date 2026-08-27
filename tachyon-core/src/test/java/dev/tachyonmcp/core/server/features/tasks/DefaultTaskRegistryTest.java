@@ -76,6 +76,18 @@ class DefaultTaskRegistryTest {
     }
 
     @Test
+    void nonPositiveKeepAliveRetainsTerminalResults() {
+        var terminal = snapshot("terminal", TaskState.COMPLETED, 1);
+        var zeroRetention = new TaskEntry(terminal, null, null, Duration.ZERO, clock);
+        var negativeRetention = new TaskEntry(terminal, null, null, Duration.ofSeconds(-1), clock);
+
+        clock.advance(Duration.ofDays(1));
+
+        assertThat(zeroRetention.isResultExpired()).isFalse();
+        assertThat(negativeRetention.isResultExpired()).isFalse();
+    }
+
+    @Test
     void removeOnlyDropsProjection() {
         registry.publish(snapshot("task-1", TaskState.WORKING, 1));
 

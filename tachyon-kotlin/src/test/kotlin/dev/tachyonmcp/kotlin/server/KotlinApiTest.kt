@@ -585,6 +585,12 @@ internal class KotlinApiTest {
     fun `tool builder sets taskSupport on the registered descriptor`() {
         TachyonServer(port = 0) {
             name("task-support-test")
+            capabilities {
+                tasks {
+                    enabled = true
+                    executionEngine = DescriptorTaskExecutionEngine
+                }
+            }
             tool("t-task", taskSupport = TaskSupport.OPTIONAL) {
                 ToolResult.text("ok")
             }

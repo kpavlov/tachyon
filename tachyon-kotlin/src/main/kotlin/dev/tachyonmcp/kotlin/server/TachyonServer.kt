@@ -174,8 +174,8 @@ internal class DefaultKotlinTachyonServer(
  * Two behaviours go beyond the build-time overload, mirroring
  * [dev.tachyonmcp.api.server.features.tools.TypedToolFn]: the call arguments are decoded into
  * [In] by the serde configured in server config, and the block's return value is wrapped with
- * [ToolResult.structured]. The block runs with a [ToolScope] receiver, so `ctx` and `task`
- * stay reachable.
+ * [ToolResult.structured]. The block runs with a [ToolScope] receiver, so `ctx`, `request`, and
+ * `arguments` stay reachable.
  *
  * The block may return **either** shape:
  *  - an [Out] — wrapped into a success result carrying it as `structuredContent`;

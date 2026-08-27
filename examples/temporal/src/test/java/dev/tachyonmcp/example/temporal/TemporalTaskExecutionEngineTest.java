@@ -14,15 +14,17 @@ import dev.tachyonmcp.tasks.temporal.TemporalTaskExecutionEngine;
 import io.temporal.testing.TestWorkflowEnvironment;
 import java.time.Duration;
 import java.util.Map;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class TemporalTaskExecutionEngineTest {
 
     private static final String TASK_QUEUE = "tachyon-temporal-test";
     private static final InteractionContext CONTEXT = mock(InteractionContext.class);
 
-    @Test
-    void startsRefreshesAndUpdatesWorkflowUsingTemporalTestEnvironment() {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void startsRefreshesAndUpdatesWorkflowUsingTemporalTestEnvironment(boolean approved) {
         try (var testEnvironment = TestWorkflowEnvironment.newInstance()) {
             var worker = testEnvironment.newWorker(TASK_QUEUE);
             worker.registerWorkflowImplementationTypes(BookingWorkflowImpl.class);
@@ -36,19 +38,22 @@ class TemporalTaskExecutionEngineTest {
             await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertThat(
                             engine.refresh(CONTEXT, "test-workflow").status())
                     .isEqualTo(TaskState.INPUT_REQUIRED));
+            var waiting = engine.refresh(CONTEXT, "test-workflow");
+            assertThat(engine.refresh(CONTEXT, "test-workflow").lastUpdatedAt())
+                    .isEqualTo(waiting.lastUpdatedAt());
 
             engine.submitInput(
                     CONTEXT,
                     "test-workflow",
                     TaskInput.builder()
-                            .inputResponses(Map.of("approved", true))
+                            .inputResponses(Map.of("approved", approved))
                             .requestState("approval-1")
                             .build());
 
             await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-                var completed = engine.refresh(CONTEXT, "test-workflow");
-                assertThat(completed.status()).isEqualTo(TaskState.COMPLETED);
-                assertThat(completed.result()).isNotNull();
+                var terminal = engine.refresh(CONTEXT, "test-workflow");
+                assertThat(terminal.status()).isEqualTo(approved ? TaskState.COMPLETED : TaskState.REJECTED);
+                assertThat(terminal.result() != null).isEqualTo(approved);
             });
         }
     }

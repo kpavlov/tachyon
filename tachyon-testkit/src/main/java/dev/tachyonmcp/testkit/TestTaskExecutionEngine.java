@@ -39,7 +39,8 @@ public final class TestTaskExecutionEngine implements LegacyTaskExecutionEngine 
 
     /** Stores the snapshot returned by subsequent engine operations. */
     public TestTaskExecutionEngine publish(TaskSnapshot snapshot) {
-        snapshots.put(snapshot.taskId(), Objects.requireNonNull(snapshot, "snapshot"));
+        var validated = Objects.requireNonNull(snapshot, "snapshot");
+        snapshots.put(validated.taskId(), validated);
         return this;
     }
 

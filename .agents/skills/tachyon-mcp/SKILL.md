@@ -164,7 +164,8 @@ Default `Mode.AUTO` advertises only registered features. Force `Mode.ON`/`Mode.O
 | `.completions()` | arg autocomplete |
 | `.logging()` | logging notifications |
 
-Kotlin DSL nests instead: `capabilities { tools { mode = Mode.ON; pageSize = 20 }; tasks { enabled = true; list = true } }`.
+Kotlin DSL nests instead:
+`capabilities { tools { mode = Mode.ON; pageSize = 20 }; tasks { enabled = true; list = true; executionEngine = engine } }`.
 
 Enable logging before publishing structured messages from a handler. `log` accepts every MCP
 severity; `info`, `warning`, and `error` are conveniences. The client-selected threshold is applied
