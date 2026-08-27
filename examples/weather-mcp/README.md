@@ -26,6 +26,11 @@ another `Host` header — e.g. a Docker-bridge caller using `host.docker.interna
 `ALLOWED_HOST`:
 
 ```shell
+export HOST=0.0.0.0 && \
 export ALLOWED_HOST=host.docker.internal:8080 && \
 java -jar target/weather-example.jar
 ```
+
+⚠️ `HOST=0.0.0.0` publishes the port on every interface, not just loopback — anything that can
+reach your machine can reach the server. Use a specific reachable address instead of `0.0.0.0`
+when you can, and keep `ALLOWED_HOST` set so the `Host` check still filters requests.

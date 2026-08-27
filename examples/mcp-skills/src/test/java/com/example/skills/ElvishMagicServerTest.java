@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ElvishMagicServerTest {
 
-    private final TachyonServer server = ElvishMagicServer.buildServer("localhost", 0);
+    private final TachyonServer server = ElvishMagicServer.buildServer("localhost", 0, null);
     private Mcp20260728Client client;
     private static final ObjectMapper JSON = new ObjectMapper();
 

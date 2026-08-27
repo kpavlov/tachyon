@@ -6,6 +6,7 @@ import dev.tachyonmcp.extensions.skills.ClasspathSkillsRegistry;
 import dev.tachyonmcp.extensions.skills.FilesystemSkillsRegistry;
 import dev.tachyonmcp.extensions.skills.SkillsExtension;
 import java.nio.file.Path;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,23 +21,30 @@ public final class ElvishMagicServer {
     }
 
     /**
-     * Starts the server on {@code PORT}, or port 8080 when unset.
+     * Starts the server on {@code HOST}:{@code PORT}, defaulting to {@code localhost:8080}.
+     * Set {@code ALLOWED_HOST} to accept an extra {@code Host} authority (e.g. a Docker-bridge caller).
      *
      * @param args unused
      */
     public static void main(String... args) {
         var server = buildServer(
             System.getenv().getOrDefault("HOST", "localhost"),
-            Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"))
+            Integer.parseInt(System.getenv().getOrDefault("PORT", "8080")),
+            System.getenv("ALLOWED_HOST")
         );
         server.start();
         log.info("Elvish skills await at http://{}:{}/mcp", server.host(), server.port());
     }
 
-    static TachyonServer buildServer(String host, int port) {
+    static TachyonServer buildServer(String host, int port, @Nullable String allowedHost) {
         return TachyonServer.builder()
             .host(host)
             .port(port)
+            .network(n -> {
+                if (allowedHost != null && !allowedHost.isBlank()) {
+                    n.allowedHosts(allowedHost);
+                }
+            })
             .info(info -> info.name("elvish-magic")
                 .title("Elvish Magic Library")
                 .description("MCP server for fictional Elvish Agent Skills")

@@ -62,18 +62,11 @@ public final class WeatherServer {
         final var server = buildServer(
             System.getenv().getOrDefault("HOST", "localhost"),
             Integer.parseInt(System.getenv().getOrDefault("PORT", "8080")),
-            System.getenv("ALLOWED_HOST")
+            System.getenv("ALLOWED_HOST"),
+            weatherService
         );
         server.start();
         log.info("Connect your MCP client to http://{}:{}/mcp", server.host(), server.port());
-    }
-
-    static TachyonServer buildServer(String host, int port, @Nullable String allowedHost) {
-        return buildServer(host, port, allowedHost, weatherService);
-    }
-
-    static TachyonServer buildServer(String host, int port, WeatherService weatherService) {
-        return buildServer(host, port, null, weatherService);
     }
 
     static TachyonServer buildServer(

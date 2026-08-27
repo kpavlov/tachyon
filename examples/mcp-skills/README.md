@@ -91,3 +91,21 @@ skills extension can still discover them with the base `resources/list` method.
 ```
 
 </details>
+
+## Binding and access from Docker
+
+`HOST` (default `localhost`), `PORT` (default `8080`), and `ALLOWED_HOST` (unset) control the bind
+address and which extra `Host` authority the DNS-rebinding guard accepts. To reach the server from
+a Docker container:
+
+```shell
+export HOST=0.0.0.0 && \
+export ALLOWED_HOST=host.docker.internal:8080 && \
+java -jar target/mcp-skills-example.jar
+```
+
+⚠️ `HOST=0.0.0.0` publishes the port on every interface, not just loopback — anything that can
+reach your machine can reach the server. Use a specific reachable address instead of `0.0.0.0`
+when you can, and keep `ALLOWED_HOST` set so the `Host` check still filters requests.
+
+See [../README.md](../README.md#binding-and-access-from-docker) for the full table.

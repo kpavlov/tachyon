@@ -28,7 +28,7 @@ class Langchain4jServerTest {
 
     @BeforeAll
     static void beforeAll() {
-        server = Langchain4jServer.buildServer(0, new OrderService());
+        server = Langchain4jServer.buildServer("localhost", 0, null, new OrderService());
         server.start();
 
         clientTransport = HttpClientStreamableHttpTransport.builder("http://localhost:" + server.port())

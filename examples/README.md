@@ -21,4 +21,28 @@ Kotlin twin) for a realistic feature-rich example backed by the Open-Meteo API.
 
 Run a server from its own directory — each example's README has the exact build and run commands.
 
+## Binding and access from Docker
+
+Every example reads the same three environment variables:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `HOST` | `localhost` | Interface to bind to |
+| `PORT` | `8080` | Port to listen on |
+| `ALLOWED_HOST` | *(unset)* | Extra `Host` authority the DNS-rebinding guard accepts |
+
+By default a server binds loopback and accepts only `localhost`/`127.0.0.1` in the `Host` header
+(DNS-rebinding protection). A client inside a Docker container reaches your machine as
+`host.docker.internal`, so it fails both checks. To let it in, bind a reachable interface **and**
+whitelist the authority it sends:
+
+```shell
+export HOST=0.0.0.0
+export ALLOWED_HOST=host.docker.internal:8080
+```
+
+⚠️ `HOST=0.0.0.0` publishes the port on every interface, not just loopback — anything that can
+reach your machine can reach the server. Use a specific reachable address instead of `0.0.0.0`
+when you can, and keep `ALLOWED_HOST` set so the `Host` check still filters requests.
+
 Looking for the API and docs? See the main [README](../README.md).
