@@ -3,7 +3,9 @@ package com.example.skills;
 
 import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.extensions.skills.ClasspathSkillsRegistry;
+import dev.tachyonmcp.extensions.skills.FilesystemSkillsRegistry;
 import dev.tachyonmcp.extensions.skills.SkillsExtension;
+import java.nio.file.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +44,7 @@ public final class ElvishMagicServer {
             .withExtensions(SkillsExtension.builder()
                 .cacheScope("public")
                 .registry(new ClasspathSkillsRegistry("skills"))
+                .registry(new FilesystemSkillsRegistry(Path.of(System.getProperty("user.dir"),"src/data/skills")))
                 .build())
             .build();
     }

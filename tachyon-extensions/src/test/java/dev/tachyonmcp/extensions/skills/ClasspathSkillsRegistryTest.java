@@ -79,6 +79,41 @@ class ClasspathSkillsRegistryTest {
     }
 
     @Test
+    void ignoresFilesMatchingMcpignorePatternsInJar(@TempDir Path tempDir) throws Exception {
+        var jarPath = tempDir.resolve("skills.jar");
+        try (var out = new JarOutputStream(Files.newOutputStream(jarPath))) {
+            out.putNextEntry(new JarEntry("bundled/"));
+            out.closeEntry();
+            out.putNextEntry(new JarEntry("bundled/demo/"));
+            out.closeEntry();
+            out.putNextEntry(new JarEntry("bundled/demo/SKILL.md"));
+            out.write("""
+                    ---
+                    name: demo
+                    description: A demo skill
+                    ---
+                    # Demo
+                    """.getBytes(StandardCharsets.UTF_8));
+            out.closeEntry();
+            out.putNextEntry(new JarEntry("bundled/demo/.DS_Store"));
+            out.write("junk".getBytes(StandardCharsets.UTF_8));
+            out.closeEntry();
+        }
+        try (var loader = new URLClassLoader(new URL[] {jarPath.toUri().toURL()}, null)) {
+            var registry = new ClasspathSkillsRegistry(loader, "bundled", null);
+
+            assertThat(registry.skills())
+                    .extracting(SkillsRegistry.Skill::skillPath)
+                    .containsExactly("demo");
+            assertThat(registry.skills().getFirst().files())
+                    .extracting(SkillsRegistry.SkillFile::relativePath)
+                    .containsExactly("SKILL.md");
+            assertThat(new String(registry.readFile("skill://demo/SKILL.md"), StandardCharsets.UTF_8))
+                    .contains("name: demo", "# Demo");
+        }
+    }
+
+    @Test
     void includesSingleCharacterSkillDirectory(@TempDir Path tempDir) throws Exception {
         var jarPath = tempDir.resolve("skills.jar");
         try (var out = new JarOutputStream(Files.newOutputStream(jarPath))) {

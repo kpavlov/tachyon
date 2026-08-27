@@ -78,12 +78,13 @@ public abstract class BaseSkillsRegistry implements SkillsRegistry {
             String skillPath,
             Map<String, byte[]> files,
             BiFunction<String, Map<String, byte[]>, SkillsRegistry.@Nullable Skill> register) {
-        var skill = register.apply(skillPath, files);
+        var filtered = IgnoreRules.filter(files);
+        var skill = register.apply(skillPath, filtered);
         if (skill == null) {
             return;
         }
         for (var file : skill.files()) {
-            bytesByUri.put(file.uri(), files.get(file.relativePath()));
+            bytesByUri.put(file.uri(), filtered.get(file.relativePath()));
         }
     }
 
@@ -96,6 +97,9 @@ public abstract class BaseSkillsRegistry implements SkillsRegistry {
             var files = new HashMap<String, byte[]>();
             walk.filter(Files::isRegularFile).filter(Files::isReadable).forEach(file -> {
                 var relative = skillDir.relativize(file).toString().replace('\\', '/');
+                if (IgnoreRules.matches(relative)) {
+                    return;
+                }
                 relativePaths.put(relative, file);
                 try {
                     files.put(relative, Files.readAllBytes(file));

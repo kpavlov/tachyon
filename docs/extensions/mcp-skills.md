@@ -54,6 +54,16 @@ Two rules are enforced at scan time, both throwing `IllegalArgumentException`:
 
 Any other frontmatter field (`metadata`, `license`, ...) passes through verbatim into `skills/list` and `skills/get` responses.
 
+### Ignoring files
+
+Both built-in registries filter scanned files against `META-INF/dev/tachyonmcp/extensions/skills/.mcpignore`, a gitignore-style pattern file bundled with `tachyon-extensions`. It ships pre-loaded with OS junk (`.DS_Store`, `Thumbs.db`, `.Trash-*`, ...) so these never turn into skill resources.
+
+- Blank lines and `#` comments are skipped.
+- A pattern with no `/` (e.g. `*.tmp`) matches any path segment at any depth, excluding whole subdirectories.
+- A pattern containing `/` — anywhere, including a leading `/` — matches the file's full relative path from the skill root instead of any segment.
+
+To use your own patterns, place a `.mcpignore` at that same resource path earlier on the classpath (or context classloader): it's resolved with `getResourceAsStream`, so the first one found replaces the bundled file entirely rather than merging with it.
+
 ## Adding skills to the builder
 
 `SkillsExtension.Builder` has exactly one way to add skills: `registry(SkillsRegistry)`. The

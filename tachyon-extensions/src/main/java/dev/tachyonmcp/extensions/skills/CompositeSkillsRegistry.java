@@ -14,7 +14,13 @@ public class CompositeSkillsRegistry implements SkillsRegistry {
     private final List<Skill> skills;
     private final Map<String, SkillsRegistry> registryByUri;
 
-    CompositeSkillsRegistry(List<SkillsRegistry> registries) {
+    /**
+     * Combines the given registries, merging their skills into one view.
+     *
+     * @param registries the source registries, consulted in iteration order
+     * @throws IllegalArgumentException if two registries serve a skill with the same path
+     */
+    public CompositeSkillsRegistry(Iterable<SkillsRegistry> registries) {
         var skillsByPath = new LinkedHashMap<String, Skill>();
         var byUri = new HashMap<String, SkillsRegistry>();
         for (var registry : registries) {
@@ -33,7 +39,13 @@ public class CompositeSkillsRegistry implements SkillsRegistry {
         this.registryByUri = Map.copyOf(byUri);
     }
 
-    CompositeSkillsRegistry(SkillsRegistry... registries) {
+    /**
+     * Combines the given registries, merging their skills into one view.
+     *
+     * @param registries the source registries, consulted in iteration order
+     * @throws IllegalArgumentException if two registries serve a skill with the same path
+     */
+    public CompositeSkillsRegistry(SkillsRegistry... registries) {
         this(Arrays.asList(registries));
     }
 
