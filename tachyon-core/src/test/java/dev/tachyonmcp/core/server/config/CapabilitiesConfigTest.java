@@ -4,8 +4,16 @@ package dev.tachyonmcp.core.server.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.tachyonmcp.api.runtime.InteractionContext;
 import dev.tachyonmcp.api.server.config.Mode;
+import dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine;
+import dev.tachyonmcp.api.server.features.tasks.TaskExecutionRequest;
+import dev.tachyonmcp.api.server.features.tasks.TaskFeature;
+import dev.tachyonmcp.api.server.features.tasks.TaskInput;
+import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.core.server.features.Pagination;
+import dev.tachyonmcp.core.server.features.tasks.InProcessTaskExecutionEngine;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -67,5 +75,81 @@ class CapabilitiesConfigTest {
 
         assertThat(config.tools().mode()).isEqualTo(Mode.ON);
         assertThat(config.tools().pageSize()).isEqualTo(2);
+    }
+
+    @Test
+    void storesConfiguredTaskExecutionEngine() {
+        var engine = new StubTaskExecutionEngine(Set.of(TaskFeature.CANCEL));
+
+        var config =
+                CapabilitiesConfig.builder().tasks(engine, false, true, false).build();
+
+        assertThat(config.tasks().taskExecutionEngine()).isSameAs(engine);
+    }
+
+    @Test
+    void rejectsFeaturesUnsupportedByTaskExecutionEngine() {
+        var engine = new StubTaskExecutionEngine(Set.of(TaskFeature.LIST));
+
+        assertThatThrownBy(() -> CapabilitiesConfig.builder()
+                        .tasks(engine, true, true, true)
+                        .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("StubTaskExecutionEngine")
+                .hasMessageContaining("CANCEL")
+                .hasMessageContaining("REQUESTS");
+    }
+
+    @Test
+    void validatesTaskFeaturesAfterFlatSetterChanges() {
+        var engine = new StubTaskExecutionEngine(Set.of());
+
+        assertThatThrownBy(() -> CapabilitiesConfig.builder()
+                        .tasks(engine)
+                        .tasksCancel(true)
+                        .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("CANCEL");
+    }
+
+    @Test
+    void legacyTasksOverloadUsesInProcessTaskExecutionEngine() {
+        var config = CapabilitiesConfig.builder().tasks(false, true, true).build();
+
+        assertThat(config.tasks().taskExecutionEngine()).isInstanceOf(InProcessTaskExecutionEngine.class);
+        assertThat(config.tasks().taskExecutionEngine().supportedFeatures())
+                .containsExactlyInAnyOrder(TaskFeature.values());
+    }
+
+    @Test
+    void enabledLegacyTasksConfigUsesInProcessTaskExecutionEngine() {
+        var tasks = TasksConfig.builder().enabled(true).cancel(true).build();
+
+        var config = CapabilitiesConfig.builder().tasks(tasks).build();
+
+        assertThat(config.tasks().taskExecutionEngine()).isInstanceOf(InProcessTaskExecutionEngine.class);
+    }
+
+    private record StubTaskExecutionEngine(Set<TaskFeature> supportedFeatures) implements TaskExecutionEngine {
+
+        @Override
+        public TaskSnapshot start(InteractionContext context, TaskExecutionRequest request) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public TaskSnapshot refresh(InteractionContext context, String taskId) {
+            return null;
+        }
+
+        @Override
+        public TaskSnapshot cancel(InteractionContext context, String taskId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void submitInput(InteractionContext context, String taskId, TaskInput input) {
+            throw new UnsupportedOperationException();
+        }
     }
 }

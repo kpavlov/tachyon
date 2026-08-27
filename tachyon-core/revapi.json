@@ -703,6 +703,36 @@
           "attachments": {
             "since": "1.0.0-beta.21"
           }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.parameterTypeChanged",
+          "old": "parameter java.lang.Object dev.tachyonmcp.core.protocol.ProtocolResponseMapper::progressNotificationParams(dev.tachyonmcp.api.server.domain.ProgressToken, double, ===double===, java.lang.String)",
+          "new": "parameter java.lang.Object dev.tachyonmcp.core.protocol.ProtocolResponseMapper::progressNotificationParams(dev.tachyonmcp.api.server.domain.ProgressToken, double, ===java.lang.Double===, java.lang.String)",
+          "parameterIndex": "2",
+          "justification": "total is optional per MCP spec; boxed to Double so callers can omit it and the wire omits the field instead of always emitting total:0",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.numberOfParametersChanged",
+          "old": "method void dev.tachyonmcp.core.server.config.TasksConfig::<init>(boolean, boolean, boolean, boolean, int, java.time.Duration, java.time.Duration)",
+          "new": "method void dev.tachyonmcp.core.server.config.TasksConfig::<init>(boolean, boolean, boolean, boolean, dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine, int, java.time.Duration, java.time.Duration)",
+          "justification": "Tasks capability now takes an optional TaskExecutionEngine connecting to external task execution, wired via TasksConfig.Builder.taskExecutionEngine()",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.removed",
+          "old": "interface dev.tachyonmcp.core.server.features.tasks.TaskResumer",
+          "justification": "Renamed to TaskDispatchResumer and marked @InternalApi; the public dev.tachyonmcp.api.server.features.tasks.TaskResumer now covers caller-owned tasks",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
         }
       ]
     }

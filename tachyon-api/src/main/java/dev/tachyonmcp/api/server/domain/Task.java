@@ -5,7 +5,6 @@ import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.concurrent.CompletionStage;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -45,19 +44,6 @@ public interface Task extends HasMeta {
     /** The task result if the task has reached a terminal state, or {@code null}. */
     @Nullable
     TaskResult result();
-
-    /**
-     * A future that settles when the task reaches a terminal state: it completes with the
-     * {@link TaskResult} passed to {@link #complete} or {@link #fail}, and is <em>cancelled</em>
-     * when the task is cancelled — {@code toCompletableFuture().isCancelled()} is then {@code true}
-     * and waiters get a {@link java.util.concurrent.CancellationException}.
-     *
-     * <p>The reason passed to {@link #cancel(String)} reaches {@code whenComplete}/{@code handle}
-     * callbacks, but not {@code join()}/{@code get()} — those throw a fresh
-     * {@code CancellationException} of their own. Read the reason from {@link #statusMessage()}
-     * instead.
-     */
-    CompletionStage<TaskResult> completion();
 
     /**
      * Transitions a freshly created task from {@link TaskState#SUBMITTED} to
@@ -115,22 +101,6 @@ public interface Task extends HasMeta {
      */
     @ExperimentalApi
     boolean requireInput(InputRequestBundle request, @Nullable String statusMessage);
-
-    /**
-     * Resumes a task that was waiting for input.
-     *
-     * @param statusMessage optional status message
-     * @return {@code true} if the state transition was applied
-     * @deprecated use {@link #start(String)}. This only ever affects a {@link TaskState#SUBMITTED}
-     *     task, to which it delegates. An {@link TaskState#INPUT_REQUIRED} task is resumed by the
-     *     client answering the pending {@code inputRequests} via {@code tasks/update} — it cannot
-     *     be forced from here (doing so would re-invoke the handler with missing answers, or
-     *     clobber a fresher pause), so this returns {@code false} in that state.
-     */
-    @Deprecated(forRemoval = true)
-    default boolean resume(@Nullable String statusMessage) {
-        return start(statusMessage);
-    }
 
     /**
      * Updates the status message of this task.

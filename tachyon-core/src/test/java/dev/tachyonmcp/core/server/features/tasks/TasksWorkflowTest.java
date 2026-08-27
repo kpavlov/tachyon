@@ -5,12 +5,10 @@ import static dev.tachyonmcp.core.server.features.tasks.TasksWorkflowTest.Operat
 import static dev.tachyonmcp.core.server.features.tasks.TasksWorkflowTest.Operation.COMPLETE;
 import static dev.tachyonmcp.core.server.features.tasks.TasksWorkflowTest.Operation.FAIL;
 import static dev.tachyonmcp.core.server.features.tasks.TasksWorkflowTest.Operation.REQUIRE_INPUT;
-import static dev.tachyonmcp.core.server.features.tasks.TasksWorkflowTest.Operation.RESUME;
 import static dev.tachyonmcp.core.server.features.tasks.TasksWorkflowTest.Operation.START;
 import static dev.tachyonmcp.core.server.features.tasks.TasksWorkflowTest.Operation.UPDATE_MESSAGE;
 import static dev.tachyonmcp.core.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.server.domain.FormInputRequest;
@@ -24,7 +22,6 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CancellationException;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
@@ -66,9 +63,7 @@ class TasksWorkflowTest {
         REQUIRE_INPUT(task -> task.requireInput(NAME_REQUEST, "need input")),
         COMPLETE(task -> task.complete(TaskResult.completed(Map.of("ok", true)))),
         FAIL(task -> task.fail(TaskResult.failed("boom"))),
-        CANCEL(task -> task.cancel("no longer needed")),
-        @SuppressWarnings("for removal")
-        RESUME(task -> task.resume("resumed"));
+        CANCEL(task -> task.cancel("no longer needed"));
 
         private final Predicate<Task> invocation;
 
@@ -84,7 +79,7 @@ class TasksWorkflowTest {
     /** One row per state, naming exactly the operations it accepts. Anything unnamed is rejected. */
     private static Stream<Arguments> legalOperations() {
         return Stream.of(
-                        accepts(TaskState.SUBMITTED, START, RESUME, COMPLETE, FAIL, CANCEL),
+                        accepts(TaskState.SUBMITTED, START, COMPLETE, FAIL, CANCEL),
                         accepts(TaskState.WORKING, UPDATE_MESSAGE, REQUIRE_INPUT, COMPLETE, FAIL, CANCEL),
                         accepts(TaskState.INPUT_REQUIRED, UPDATE_MESSAGE, COMPLETE, FAIL, CANCEL),
                         accepts(TaskState.COMPLETED),
@@ -117,11 +112,11 @@ class TasksWorkflowTest {
     }
 
     @Test
-    void taskRunsFromSubmittedToCompletedAndResolvesItsCompletionFuture() {
+    void taskRunsFromSubmittedToCompletedWithObservableResult() {
         // Given a freshly created task, not yet started
         var task = registry.create();
         assertThat(task.status()).isEqualTo(TaskState.SUBMITTED);
-        assertThat(task.completion().toCompletableFuture()).isNotDone();
+        assertThat(task.result()).isNull();
 
         // When it is started, reports progress in words, and finishes
         assertThat(task.start("importing")).isTrue();
@@ -129,12 +124,10 @@ class TasksWorkflowTest {
         assertThat(task.updateMessage("step 1 of 2")).isTrue();
         assertThat(task.complete(TaskResult.completed(Map.of("imported", 42)))).isTrue();
 
-        // Then it is completed, carries the last message, and its waiters are released
+        // Then it is completed and carries its last message and result
         assertThat(task.status()).isEqualTo(TaskState.COMPLETED);
         assertThat(task.statusMessage()).isEqualTo("step 1 of 2");
-        assertThat(task.completion().toCompletableFuture()).isCompleted();
-        assertThat(task.result())
-                .isEqualTo(task.completion().toCompletableFuture().join());
+        assertThat(task.result()).isEqualTo(TaskResult.completed(Map.of("imported", 42)));
     }
 
     @Test
@@ -162,7 +155,7 @@ class TasksWorkflowTest {
     }
 
     @Test
-    void cancellingATaskReleasesItsWaitersAsCancelledInsteadOfHanging() {
+    void cancellingATaskExposesCancelledStateAndReason() {
         // Given a running task
         final var task = registry.create();
         assertThat(task.status()).isEqualTo(TaskState.SUBMITTED);
@@ -172,13 +165,10 @@ class TasksWorkflowTest {
         // When it is cancelled
         assertThat(task.cancel("user went away")).isTrue();
 
-        // Then the reason is kept, and anyone awaiting completion sees a cancellation, not a
-        // generic failure, and is not left waiting
+        // Then the reason is kept and no result is invented
         assertThat(task.status()).isEqualTo(TaskState.CANCELLED);
         assertThat(task.statusMessage()).isEqualTo("user went away");
-        var future = task.completion().toCompletableFuture();
-        assertThat(future).isCancelled();
-        assertThatThrownBy(future::join).isInstanceOf(CancellationException.class);
+        assertThat(task.result()).isNull();
     }
 
     /** Drives a freshly created task into {@code state} using only public {@link Task} calls. */

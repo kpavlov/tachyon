@@ -2,7 +2,12 @@
 package dev.tachyonmcp.core.server.config;
 
 import dev.tachyonmcp.api.server.config.Mode;
+import dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine;
+import dev.tachyonmcp.api.server.features.tasks.TaskFeature;
+import dev.tachyonmcp.core.server.features.tasks.InProcessTaskExecutionEngine;
 import java.time.Duration;
+import java.util.EnumSet;
+import java.util.Objects;
 
 /**
  * Configuration of which MCP capabilities to enable and their behaviour.
@@ -108,13 +113,19 @@ public record CapabilitiesConfig(
          * @return this builder
          */
         public Builder tasks(TasksConfig config) {
+            var taskExecutionEngine = config.taskExecutionEngine();
+            if (config.enabled() && taskExecutionEngine == null) {
+                taskExecutionEngine = new InProcessTaskExecutionEngine();
+            }
             tasksBuilder = TasksConfig.builder()
                     .enabled(config.enabled())
                     .list(config.list())
                     .cancel(config.cancel())
                     .requests(config.requests())
+                    .taskExecutionEngine(taskExecutionEngine)
                     .pageSize(config.pageSize())
-                    .keepAlive(config.keepAlive());
+                    .keepAlive(config.keepAlive())
+                    .pollInterval(config.pollInterval());
             return this;
         }
 
@@ -249,6 +260,9 @@ public record CapabilitiesConfig(
          */
         public Builder tasksEnabled(boolean tasksEnabled) {
             tasksBuilder.enabled(tasksEnabled);
+            if (tasksEnabled && tasksBuilder.build().taskExecutionEngine() == null) {
+                tasksBuilder.taskExecutionEngine(new InProcessTaskExecutionEngine());
+            }
             return this;
         }
 
@@ -324,11 +338,13 @@ public record CapabilitiesConfig(
          * @return the built {@link CapabilitiesConfig}
          */
         public CapabilitiesConfig build() {
+            var tasks = tasksBuilder.build();
+            validateTaskExecutionEngine(tasks);
             return new CapabilitiesConfig(
                     toolsBuilder.build(),
                     resourcesBuilder.build(),
                     promptsBuilder.build(),
-                    tasksBuilder.build(),
+                    tasks,
                     completions,
                     logging);
         }
@@ -462,12 +478,11 @@ public record CapabilitiesConfig(
          * @return this builder
          */
         public Builder tasks() {
-            tasksBuilder
-                    .enabled(true)
-                    .list(TasksConfig.DEFAULT_TASK_LIST)
-                    .cancel(TasksConfig.DEFAULT_TASK_CANCEL)
-                    .requests(TasksConfig.DEFAULT_TASK_REQUESTS);
-            return this;
+            return tasks(
+                    new InProcessTaskExecutionEngine(),
+                    TasksConfig.DEFAULT_TASK_LIST,
+                    TasksConfig.DEFAULT_TASK_CANCEL,
+                    TasksConfig.DEFAULT_TASK_REQUESTS);
         }
 
         /**
@@ -479,8 +494,68 @@ public record CapabilitiesConfig(
          * @return this builder
          */
         public Builder tasks(boolean list, boolean cancel, boolean requests) {
-            tasksBuilder.enabled(true).list(list).cancel(cancel).requests(requests);
+            return tasks(new InProcessTaskExecutionEngine(), list, cancel, requests);
+        }
+
+        /**
+         * Enables tasks using the supplied engine and default optional operations.
+         *
+         * @param taskExecutionEngine task execution connector
+         * @return this builder
+         */
+        public Builder tasks(TaskExecutionEngine taskExecutionEngine) {
+            return tasks(
+                    taskExecutionEngine,
+                    TasksConfig.DEFAULT_TASK_LIST,
+                    TasksConfig.DEFAULT_TASK_CANCEL,
+                    TasksConfig.DEFAULT_TASK_REQUESTS);
+        }
+
+        /**
+         * Enables tasks using the supplied engine and optional MCP operations.
+         *
+         * @param taskExecutionEngine task execution connector
+         * @param list whether task listing is enabled
+         * @param cancel whether task cancellation is enabled
+         * @param requests whether task requests are enabled
+         * @return this builder
+         */
+        public Builder tasks(TaskExecutionEngine taskExecutionEngine, boolean list, boolean cancel, boolean requests) {
+            tasksBuilder
+                    .enabled(true)
+                    .list(list)
+                    .cancel(cancel)
+                    .requests(requests)
+                    .taskExecutionEngine(Objects.requireNonNull(taskExecutionEngine, "taskExecutionEngine"));
+            validateTaskExecutionEngine(tasksBuilder.build());
             return this;
+        }
+
+        private static void validateTaskExecutionEngine(TasksConfig tasks) {
+            if (!tasks.enabled()) {
+                return;
+            }
+            var taskExecutionEngine = tasks.taskExecutionEngine();
+            if (taskExecutionEngine == null) {
+                throw new IllegalStateException("Tasks capability requires a TaskExecutionEngine");
+            }
+            var unsupported = EnumSet.noneOf(TaskFeature.class);
+            if (tasks.list()) {
+                unsupported.add(TaskFeature.LIST);
+            }
+            if (tasks.cancel()) {
+                unsupported.add(TaskFeature.CANCEL);
+            }
+            if (tasks.requests()) {
+                unsupported.add(TaskFeature.REQUESTS);
+            }
+            unsupported.removeAll(taskExecutionEngine.supportedFeatures());
+            if (!unsupported.isEmpty()) {
+                throw new IllegalStateException("Task execution engine "
+                        + taskExecutionEngine.getClass().getSimpleName()
+                        + " does not support enabled task features: "
+                        + unsupported);
+            }
         }
     }
 }

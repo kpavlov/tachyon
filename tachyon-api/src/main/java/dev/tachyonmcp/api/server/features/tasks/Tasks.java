@@ -34,8 +34,7 @@ public interface Tasks {
 
     /**
      * Removes a task from the registry, e.g. because it was removed on the caller's side.
-     * A non-terminal task is cancelled first (firing a final status notification) so its
-     * {@link Task#completion()} doesn't hang forever.
+     * A non-terminal task is cancelled first, firing a final status notification.
      *
      * @return {@code true} if a task with this id existed and was removed
      */

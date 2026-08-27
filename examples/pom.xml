@@ -21,5 +21,6 @@
         <module>langchain4j-mcp</module>
         <module>mcp-java</module>
         <module>mcp-skills</module>
+        <module>temporal</module>
     </modules>
 </project>

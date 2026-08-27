@@ -17,11 +17,12 @@
     <packaging>pom</packaging>
 
     <name>Tachyon MCP Integrations</name>
-    <description>Integration modules for third-party annotation frameworks</description>
+    <description>Integration modules for third-party frameworks and execution systems</description>
 
     <modules>
         <module>tachyon-annotations-mcp-java</module>
         <module>tachyon-annotations-langchain4j</module>
         <module>tachyon-annotations-spring-ai</module>
+        <module>tachyon-tasks-temporal</module>
     </modules>
 </project>

@@ -465,14 +465,13 @@ class DefaultTaskRegistryTest {
     }
 
     @Test
-    void removeOfActiveTaskCancelsFirstSoCompletionDoesNotHang() {
+    void removeOfActiveTaskCancelsFirst() {
         var entry = (TaskEntry) registry.create();
         registry.updateStatus(entry.id(), TaskState.WORKING, null);
 
         assertThat(registry.remove(entry.id())).isTrue();
 
         assertThat(entry.status()).isEqualTo(TaskState.CANCELLED);
-        assertThat(entry.completion().toCompletableFuture()).isCancelled();
         assertThat(registry.get(entry.id())).isNull();
     }
 

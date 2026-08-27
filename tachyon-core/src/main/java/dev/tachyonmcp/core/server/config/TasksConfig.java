@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.config;
 
+import dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine;
 import dev.tachyonmcp.core.server.features.Pagination;
 import java.time.Duration;
 import java.util.Objects;
@@ -17,6 +18,7 @@ import org.jspecify.annotations.Nullable;
  * @param cancel       whether {@code tasks/cancel} is supported (default {@code false})
  * @param requests     whether task-augmented {@code tools/call} requests are accepted
  *                     (default {@code false})
+ * @param taskExecutionEngine connector to the system that owns task execution
  * @param pageSize     default page size when a list request omits its limit
  * @param keepAlive    default retention window for a terminal task's result before it's dropped
  *                     from memory (default 5 minutes); overridable per task via
@@ -33,6 +35,7 @@ public record TasksConfig(
         boolean list,
         boolean cancel,
         boolean requests,
+        @Nullable TaskExecutionEngine taskExecutionEngine,
         int pageSize,
         Duration keepAlive,
         @Nullable Duration pollInterval) {
@@ -45,8 +48,8 @@ public record TasksConfig(
     /** Public (unlike the defaults above) — {@code TaskEntry} in a different package reuses this as the resolved default. */
     public static final Duration DEFAULT_TASK_KEEP_ALIVE = Duration.ofMinutes(5);
 
-    static final TasksConfig DEFAULT =
-            new TasksConfig(false, false, false, false, Pagination.DEFAULT_PAGE_SIZE, DEFAULT_TASK_KEEP_ALIVE, null);
+    static final TasksConfig DEFAULT = new TasksConfig(
+            false, false, false, false, null, Pagination.DEFAULT_PAGE_SIZE, DEFAULT_TASK_KEEP_ALIVE, null);
 
     public TasksConfig {
         if (pageSize <= 0) {
@@ -68,6 +71,7 @@ public record TasksConfig(
         private boolean list = DEFAULT.list;
         private boolean cancel = DEFAULT.cancel;
         private boolean requests = DEFAULT.requests;
+        private @Nullable TaskExecutionEngine taskExecutionEngine = DEFAULT.taskExecutionEngine;
         private int pageSize = DEFAULT.pageSize;
         private Duration keepAlive = DEFAULT.keepAlive;
         private @Nullable Duration pollInterval = DEFAULT.pollInterval;
@@ -91,6 +95,12 @@ public record TasksConfig(
 
         public Builder requests(boolean requests) {
             this.requests = requests;
+            return this;
+        }
+
+        /** Sets the engine that owns or connects to task execution. */
+        public Builder taskExecutionEngine(@Nullable TaskExecutionEngine taskExecutionEngine) {
+            this.taskExecutionEngine = taskExecutionEngine;
             return this;
         }
 
@@ -123,7 +133,8 @@ public record TasksConfig(
         }
 
         public TasksConfig build() {
-            return new TasksConfig(enabled, list, cancel, requests, pageSize, keepAlive, pollInterval);
+            return new TasksConfig(
+                    enabled, list, cancel, requests, taskExecutionEngine, pageSize, keepAlive, pollInterval);
         }
     }
 }

@@ -279,7 +279,6 @@ public class TaskEntry implements ServerFeature<TaskDescriptor>, Task {
                 : null;
     }
 
-    @Override
     public CompletionStage<TaskResult> completion() {
         return completionFuture;
     }

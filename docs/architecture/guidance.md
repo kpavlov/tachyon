@@ -28,6 +28,234 @@ registry/domain result -> protocol response mapper -> wire JSON
 `McpDispatcher` and transport code are wire glue and may handle raw JSON-RPC envelopes. This
 exception does not extend to feature registries or user-facing feature handlers.
 
+## 🎯 Tasks are protocol connectors, not job executors
+
+Tachyon owns the MCP task representation. It does not own the work represented by a task.
+Applications, workflow engines, job queues, and schedulers start and run that work. Tachyon maps
+their state and commands to MCP.
+
+| Concern | Owner |
+|---|---|
+| Starting and running business work | Application or external execution system |
+| Retries, timers, durable waits, recovery | Application or external execution system |
+| MCP task IDs and wire-version mapping | Tachyon |
+| `tasks/get`, `tasks/list`, `tasks/cancel`, `tasks/update` dispatch | Tachyon |
+| Authoritative execution state | Application or external execution system |
+| Cached MCP projection and terminal-result retention | Tachyon |
+| MCP status/progress notifications | Tachyon, from published projections |
+
+### 🔴 Forbidden task ownership
+
+Task code must not:
+
+- accept or retain `Runnable`, `Callable`, handler instances, `DispatchContext`, Netty objects, or
+  Java closures as task state;
+- expose `Future`, `CompletableFuture`, or `CompletionStage` from `Task`, `Tasks`, or any task SPI;
+- submit task work to Tachyon's executor;
+- retain a map of running futures or interrupt application work for `tasks/cancel`;
+- re-invoke a tool handler after `tasks/update`;
+- infer external execution state from whether a local future completed;
+- transition an external task merely because Tachyon's local TTL janitor ran.
+
+The server-owned virtual-thread executor remains for serving an MCP request. It may block while a
+task engine calls an external system. It must never become the lifetime owner of that external
+work.
+
+### 🎯 Target task API
+
+`Task` is an immutable, read-only MCP projection. State changes arrive as complete snapshots,
+not mutator calls on a task handle. A monotonically increasing `revision` makes callback and refresh
+application idempotent: Tachyon ignores a snapshot whose revision is not newer than the cached one.
+
+The target public model is:
+
+```java
+@ExperimentalApi
+@Value.Immutable
+public interface TaskSnapshot {
+
+    String taskId();
+    TaskState status();
+    long revision();
+
+    static Builder builder() {
+        return DefaultTaskSnapshot.builder();
+    }
+}
+
+var snapshot = TaskSnapshot.builder()
+        .taskId(workflowId)
+        .status(TaskState.WORKING)
+        .createdAt(observedAt)
+        .lastUpdatedAt(observedAt)
+        .revision(1)
+        .build();
+```
+
+The engine is synchronous and blocking by design. Protocol handlers already run on virtual
+threads. An implementation may call a database, Temporal, Camunda, or another MCP server without
+leaking that client's async type into Tachyon's API.
+
+```java
+@ExperimentalApi
+public interface TaskExecutionEngine {
+
+    Set<TaskFeature> supportedFeatures();
+
+    TaskSnapshot start(
+            InteractionContext context,
+            TaskExecutionRequest request) throws Exception;
+
+    @Nullable
+    TaskSnapshot refresh(InteractionContext context, String taskId) throws Exception;
+
+    TaskSnapshot cancel(
+            InteractionContext context,
+            String taskId) throws Exception;
+
+    void submitInput(
+            InteractionContext context,
+            String taskId,
+            TaskInput input) throws Exception;
+}
+
+public enum TaskFeature {
+    LIST,
+    CANCEL,
+    REQUESTS
+}
+```
+
+Declare the engine together with the Tasks capability. Calling `tasks(...)` enables the feature;
+there is no root `ServerBuilder.taskExecutionEngine(...)` setter:
+
+```java
+CapabilitiesConfig.Builder tasks(TaskExecutionEngine taskExecutionEngine);
+
+CapabilitiesConfig.Builder tasks(
+        TaskExecutionEngine taskExecutionEngine,
+        boolean list,
+        boolean cancel,
+        boolean requests);
+```
+
+This keeps capability advertisement and its required implementation atomic. Building must reject a
+task-producing tool without a configured engine. `noTasks()` remains the explicit opt-out.
+
+The enabled flags must be a subset of `taskExecutionEngine.supportedFeatures()`. Validate after every
+`tasks(...)` call and again during `build()`, because later flat setters can change the final config.
+Report every missing feature in one `IllegalStateException`:
+
+```text
+Task execution engine TemporalTaskExecutionEngine does not support enabled task features: [CANCEL, REQUESTS]
+```
+
+`supportedFeatures()` describes optional MCP surfaces. `tasks/get` refresh is the base
+`TaskExecutionEngine` contract and therefore needs no feature flag. Return an immutable set. Never probe
+support by calling a method and catching `UnsupportedOperationException`.
+
+Keep the existing `tasks()` and `tasks(list, cancel, requests)` overloads. They delegate to an
+`InProcessTaskExecutionEngine`, which supports every `TaskFeature`. Its no-argument constructor owns a
+virtual-thread-per-task executor named with the `vt-tasks-` prefix. A constructor accepting an
+`ExecutorService` borrows that executor and must not close it. Futures may exist inside this
+compatibility engine, but must not escape through the Tasks API.
+
+Legacy `tasks/list` and blocking `tasks/result` support use a separate optional engine extension. Do
+not force session-scoped operations removed by MCP 2026-07-28 into every engine:
+
+```java
+@ExperimentalApi
+public interface LegacyTaskExecutionEngine {
+
+    PaginatedResult<TaskSnapshot> list(
+            InteractionContext context,
+            int limit,
+            @Nullable String cursor) throws Exception;
+
+    TaskSnapshot awaitResult(
+            InteractionContext context,
+            String taskId) throws Exception;
+}
+```
+
+`awaitResult` may block in the external client's supported wait operation. Tachyon must not emulate
+it with a local completion future or a polling loop.
+
+The Tasks facade owns only projection publication and lookup:
+
+```java
+public interface Tasks {
+
+    TaskSnapshot publish(TaskSnapshot snapshot);
+
+    @Nullable
+    TaskSnapshot get(String taskId);
+
+    boolean remove(String taskId);
+}
+```
+
+`publish` updates the cache, applies retention policy, and emits any negotiated MCP notification.
+It does not start work. `refresh` is authoritative for `tasks/get`; a successful snapshot is
+published before mapping the response. A refresh failure must not silently invent a state. A cached
+snapshot may be used only under an explicit stale-read policy.
+
+Configure one engine while declaring the capability. The engine is an infrastructure
+dependency, not a task executor or task-handler registration:
+
+```java
+var server = TachyonServer.builder()
+        .capabilities(c -> c.tasks(taskExecutionEngine, false, true, true))
+        .port(8080)
+        .build();
+```
+
+Kotlin follows the Java source of truth:
+
+```kotlin
+capabilities {
+    tasks(taskExecutionEngine, list = false, cancel = true, requests = true)
+}
+```
+
+### 🎯 Task-producing tools
+
+A task-capable tool handler is invoked once. The application starts its external execution and
+returns the initial task projection. Tachyon registers that projection and maps it to the negotiated
+MCP `CreateTaskResult`. Tachyon never runs the same handler in the background.
+
+The target result shape adds a task branch to `ToolResult`:
+
+```java
+var workflowId = workflows.start(request.arguments());
+return ToolResult.task(TaskSnapshot.working(workflowId, clock.instant(), 1));
+```
+
+For a task-producing call:
+
+1. The tool handler starts or signals the external execution.
+2. The handler returns `ToolResult.task(initialSnapshot)`.
+3. Tachyon publishes the snapshot and returns the MCP task handle.
+4. `tasks/get` calls `TaskExecutionEngine.refresh` and maps the returned snapshot.
+5. `tasks/update` forwards `TaskInput`; it does not aggregate answers or resume a handler.
+6. `tasks/cancel` calls `TaskExecutionEngine.cancel`; it publishes the returned state only after the
+   external owner accepts and reports the cancellation.
+
+The external task ID should be used directly as the MCP task ID when it is stable and safe to
+expose. For Temporal, use the workflow ID rather than a run ID so Continue-As-New preserves the
+logical task identity. If identifiers cannot be exposed, the connector owns the durable mapping;
+Tachyon must not keep an in-memory execution-reference map.
+
+### 🩶 Push is optional; pull is authoritative
+
+External callbacks may call `Tasks.publish(snapshot)` to reduce notification latency. Push does not
+replace reconciliation: callbacks can be duplicated, reordered, delayed, or lost while Tachyon is
+offline. `tasks/get` always refreshes through the connector before responding unless an explicitly
+configured stale-read policy applies.
+
+Task projection retention is not execution control. The janitor may evict an expired cached terminal
+projection. It must not cancel, fail, terminate, or otherwise mutate external work.
+
 ## 🎯 Default shape: two independent SAMs
 
 Tools, resources, prompts, and completions use one request shape and two unrelated contracts:
