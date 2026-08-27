@@ -84,6 +84,27 @@ class FilesystemSkillsRegistryTest {
     }
 
     @Test
+    void ignoresFilesMatchingMcpignorePatterns(@TempDir Path tempDir) throws Exception {
+        var skillDir = tempDir.resolve("junky-skill");
+        Files.createDirectory(skillDir);
+        Files.writeString(skillDir.resolve("SKILL.md"), """
+                ---
+                name: junky-skill
+                description: A skill directory littered with OS junk files
+                ---
+                # Junky Skill
+                """);
+        Files.writeString(skillDir.resolve(".DS_Store"), "junk");
+        Files.writeString(skillDir.resolve("Thumbs.db"), "junk");
+
+        var registry = new FilesystemSkillsRegistry(skillDir, "junky-skill");
+
+        assertThat(registry.skills().getFirst().files())
+                .extracting(SkillsRegistry.SkillFile::relativePath)
+                .containsExactly("SKILL.md");
+    }
+
+    @Test
     void returnsBinaryBytesForNonTextFiles() {
         var registry = new FilesystemSkillsRegistry(filesystemSkillsDir);
 
