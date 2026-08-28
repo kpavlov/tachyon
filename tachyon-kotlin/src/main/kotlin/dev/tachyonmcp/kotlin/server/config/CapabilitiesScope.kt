@@ -52,6 +52,12 @@ public class CapabilitiesScope
             promptsConfig = FeatureScope().apply(configure).toConfig()
         }
 
+        /**
+         * Enables task support with the supplied external [TaskConnector].
+         *
+         * @param connector system that owns task execution
+         * @param configure additional task capability configuration
+         */
         @OptIn(ExperimentalContracts::class)
         public inline fun tasks(
             connector: TaskConnector,

@@ -187,11 +187,12 @@ public class McpRequestMapper implements ProtocolRequestMapper {
 
     @Override
     public TaskUpdateRequest taskUpdate(@Nullable Object params) {
-        var map = asMap(params);
-        var responses = optionalMap(map, "inputResponses", "Invalid inputResponses");
+        final var map = asMap(params);
+        final var taskId = requiredString(map, "taskId", "Missing taskId");
+        final var responses = requiredMap(map, "inputResponses", "Missing inputResponses");
         return TaskUpdateRequest.builder()
-                .taskId(requiredString(map, "taskId", "Missing taskId"))
-                .inputResponses(responses != null ? responses : Map.of())
+                .taskId(taskId)
+                .inputResponses(responses)
                 .meta(optionalMap(map, "_meta", "Invalid _meta"))
                 .build();
     }

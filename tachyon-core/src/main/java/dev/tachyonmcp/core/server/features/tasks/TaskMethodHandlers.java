@@ -76,7 +76,8 @@ public final class TaskMethodHandlers {
             if (!result.cursorValid()) {
                 return ServerErrors.invalidParams("Invalid cursor");
             }
-            return context.responseMapper().listTasksResult(result.items(), result.nextCursor());
+            var snapshots = result.items().stream().map(registry::publish).toList();
+            return context.responseMapper().listTasksResult(snapshots, result.nextCursor());
         }
     }
 

@@ -79,11 +79,28 @@ public final class TestTaskConnector {
                 .build();
     }
 
+    /**
+     * Implements {@code TaskGetFn}: looks up the stored snapshot for {@code request.taskId()}.
+     * Records the lookup for {@link #refreshedTaskIds()}.
+     *
+     * @param context current MCP interaction
+     * @param request task lookup request
+     * @return the stored snapshot, or {@code null} if the task is unknown
+     */
     public @Nullable TaskSnapshot refresh(InteractionContext context, TaskGetRequest request) {
         refreshedTaskIds.add(request.taskId());
         return snapshots.get(request.taskId());
     }
 
+    /**
+     * Implements {@code TaskCancelFn}: records the cancellation request and advances a
+     * non-terminal snapshot to {@link TaskState#CANCELLED}, unless {@link #deferCancellation()}
+     * was called or the snapshot is already terminal.
+     *
+     * @param context current MCP interaction
+     * @param request task cancellation request
+     * @throws TaskNotFoundException if {@code request.taskId()} has no stored snapshot
+     */
     public void cancel(InteractionContext context, TaskCancelRequest request) throws TaskNotFoundException {
         var current = requireSnapshot(request.taskId());
         cancelledTaskIds.add(request.taskId());
@@ -99,11 +116,27 @@ public final class TestTaskConnector {
         snapshots.put(request.taskId(), cancelled);
     }
 
+    /**
+     * Implements {@code TaskUpdateFn}: records the submitted input for later inspection via
+     * {@link #submittedInputs()}.
+     *
+     * @param context current MCP interaction
+     * @param request task input submission
+     * @throws TaskNotFoundException if {@code request.taskId()} has no stored snapshot
+     */
     public void submitInput(InteractionContext context, TaskUpdateRequest request) throws TaskNotFoundException {
         requireSnapshot(request.taskId());
         submittedInputs.add(request);
     }
 
+    /**
+     * Implements the legacy {@code TaskListFn}: returns stored snapshots ordered by task ID,
+     * paginated per {@code request}.
+     *
+     * @param context current MCP interaction
+     * @param request page size and optional cursor
+     * @return the requested page of snapshots
+     */
     @SuppressWarnings("deprecation")
     public PaginatedResult<TaskSnapshot> list(InteractionContext context, TaskListRequest request) {
         listRequests.add(request);
@@ -126,6 +159,15 @@ public final class TestTaskConnector {
         return PaginatedResult.of(ordered.subList(start, end), nextCursor, true);
     }
 
+    /**
+     * Implements the legacy blocking {@code TaskAwaitResultFn}: returns the current snapshot
+     * immediately rather than actually blocking until the task reaches a terminal state.
+     *
+     * @param context current MCP interaction
+     * @param request task lookup request
+     * @return the stored snapshot
+     * @throws TaskNotFoundException if {@code request.taskId()} has no stored snapshot
+     */
     @SuppressWarnings("deprecation")
     public TaskSnapshot awaitResult(InteractionContext context, TaskAwaitResultRequest request)
             throws TaskNotFoundException {

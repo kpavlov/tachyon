@@ -10,12 +10,16 @@ import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.server.config.TasksConfig;
 import dev.tachyonmcp.testkit.TestTaskConnector;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class TasksCoreTest extends AbstractStatefulMcpE2eTest {
+
+    private static final Duration DEFAULT_POLL_INTERVAL = Duration.ofSeconds(5);
 
     private TestTaskConnector taskConnector;
 
@@ -23,7 +27,11 @@ class TasksCoreTest extends AbstractStatefulMcpE2eTest {
     protected void startDefaultServer() {
         taskConnector = new TestTaskConnector();
         startServer(
-                it -> it.capabilities(c -> c.tasks(taskConnector.connector())),
+                it -> it.capabilities(c -> c.tasks(TasksConfig.builder()
+                        .enabled(true)
+                        .connector(taskConnector.connector())
+                        .pollInterval(DEFAULT_POLL_INTERVAL)
+                        .build())),
                 registrar -> registrar
                         .tools()
                         .register(
@@ -71,6 +79,12 @@ class TasksCoreTest extends AbstractStatefulMcpE2eTest {
                     {"jsonrpc":"2.0","id":2,"method":"tasks/list","params":{}}
                     """);
             assertThatJson(listJson).inPath("$.result.tasks.length()").isEqualTo(2);
+            assertThatJson(listJson)
+                    .inPath("$.result.tasks[0].pollInterval")
+                    .isEqualTo(DEFAULT_POLL_INTERVAL.toMillis());
+            assertThatJson(listJson)
+                    .inPath("$.result.tasks[1].pollInterval")
+                    .isEqualTo(DEFAULT_POLL_INTERVAL.toMillis());
             assertThat(taskConnector.listRequests()).singleElement().satisfies(request -> {
                 assertThat(request.limit()).isPositive();
                 assertThat(request.cursor()).isNull();
