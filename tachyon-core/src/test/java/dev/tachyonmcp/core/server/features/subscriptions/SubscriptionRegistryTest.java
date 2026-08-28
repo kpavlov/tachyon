@@ -78,7 +78,7 @@ class SubscriptionRegistryTest {
         registry.activate(
                 RequestId.of(1L),
                 stream,
-                new SubscriptionListenRequest(true, false, false, Set.of()),
+                new SubscriptionListenRequest(true, false, false, Set.of(), Set.of()),
                 responseMapper,
                 pending);
 

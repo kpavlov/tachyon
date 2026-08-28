@@ -4,7 +4,7 @@ package dev.tachyonmcp.core.server.features.tasks;
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.server.domain.ProgressToken;
 import dev.tachyonmcp.api.server.features.PaginatedResult;
-import dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine;
+import dev.tachyonmcp.api.server.features.tasks.TaskConnector;
 import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.core.server.OutboundSseStreamMessageRouter;
 import dev.tachyonmcp.core.server.config.TasksConfig;
@@ -29,7 +29,7 @@ public final class DefaultTaskRegistry implements TaskRegistry {
 
     private final ConcurrentHashMap<String, TaskEntry> entries = new ConcurrentHashMap<>();
     private final ServerEngine server;
-    private final @Nullable TaskExecutionEngine taskExecutionEngine;
+    private final @Nullable TaskConnector taskConnector;
     private final Duration keepAlive;
     private final @Nullable Duration pollInterval;
     private final int pageSize;
@@ -48,7 +48,7 @@ public final class DefaultTaskRegistry implements TaskRegistry {
 
     public DefaultTaskRegistry(ServerEngine server, TasksConfig config, Clock clock) {
         this.server = Objects.requireNonNull(server, "server");
-        this.taskExecutionEngine = config.taskExecutionEngine();
+        this.taskConnector = config.connector();
         this.keepAlive = config.keepAlive();
         this.pollInterval = config.pollInterval();
         this.pageSize = config.pageSize();
@@ -56,13 +56,13 @@ public final class DefaultTaskRegistry implements TaskRegistry {
     }
 
     @Nullable
-    TaskExecutionEngine taskExecutionEngine() {
-        return taskExecutionEngine;
+    TaskConnector taskConnector() {
+        return taskConnector;
     }
 
     @Override
     public boolean executionConfigured() {
-        return taskExecutionEngine != null;
+        return taskConnector != null;
     }
 
     @Override

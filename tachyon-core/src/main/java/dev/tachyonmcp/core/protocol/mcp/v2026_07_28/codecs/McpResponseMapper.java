@@ -304,7 +304,8 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
 
     @Override
     public Object taskStatusNotificationParams(TaskSnapshot snapshot) {
-        return McpTaskMapper.toStatusNotification(snapshot);
+        return McpTaskMapper.toStatusNotification(
+                snapshot, taskResultNode(snapshot), taskErrorNode(snapshot), inputRequestsNode(snapshot));
     }
 
     @Override
@@ -319,12 +320,15 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
     @Override
     public Object subscriptionsAcknowledgedParams(RequestId subscriptionId, SubscriptionListenRequest filter) {
         var uris = filter.resourceSubscriptions();
+        var taskIds = filter.taskIds();
         return new SubscriptionsAcknowledgedNotificationParams(
                 new SubscriptionFilter(
                         trueOrNull(filter.toolsListChanged()),
                         trueOrNull(filter.promptsListChanged()),
                         trueOrNull(filter.resourcesListChanged()),
-                        uris.isEmpty() ? null : List.copyOf(uris)),
+                        uris.isEmpty() ? null : List.copyOf(uris),
+                        taskIds.isEmpty() ? null : List.copyOf(taskIds),
+                        null),
                 subscriptionIdMeta(subscriptionId));
     }
 

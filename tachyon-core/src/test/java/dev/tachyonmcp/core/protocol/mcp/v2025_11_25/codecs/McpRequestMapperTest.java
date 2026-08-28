@@ -166,8 +166,8 @@ class McpRequestMapperTest {
         var mapper = new McpRequestMapper();
 
         assertThat(mapper.page(Map.of("limit", 10, "cursor", "abc")))
-                .isEqualTo(new ProtocolRequestMapper.PageRequest(10, "abc"));
-        assertThat(mapper.page(null)).isEqualTo(new ProtocolRequestMapper.PageRequest(0, null));
+                .isEqualTo(new ProtocolRequestMapper.PageRequest(10, "abc", null));
+        assertThat(mapper.page(null)).isEqualTo(new ProtocolRequestMapper.PageRequest(0, null, null));
     }
 
     @Test

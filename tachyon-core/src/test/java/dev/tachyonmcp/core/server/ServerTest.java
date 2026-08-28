@@ -391,12 +391,14 @@ class ServerTest {
                             .revision(1)
                             .build());
 
+            // SUBMITTED isn't a real wire value in either protocol version's status enum -- both
+            // fold it to "working" (verified against the current spec: 5 wire states, no submitted).
             assertThat(legacyConnection.sent)
                     .singleElement()
                     .satisfies(event -> assertThat(event.data()).contains("\"status\":\"working\""));
             assertThat(modernConnection.sent)
                     .singleElement()
-                    .satisfies(event -> assertThat(event.data()).contains("\"status\":\"submitted\""));
+                    .satisfies(event -> assertThat(event.data()).contains("\"status\":\"working\""));
         }
     }
 

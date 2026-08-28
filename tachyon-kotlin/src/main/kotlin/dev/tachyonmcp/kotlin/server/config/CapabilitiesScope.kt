@@ -2,6 +2,7 @@
 package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.api.server.config.Mode
+import dev.tachyonmcp.api.server.features.tasks.TaskConnector
 import dev.tachyonmcp.core.server.config.CapabilitiesConfig
 import dev.tachyonmcp.core.server.config.FeatureConfig
 import dev.tachyonmcp.core.server.config.ResourcesConfig
@@ -52,9 +53,12 @@ public class CapabilitiesScope
         }
 
         @OptIn(ExperimentalContracts::class)
-        public inline fun tasks(configure: (@TachyonDsl TasksScope).() -> Unit) {
+        public inline fun tasks(
+            connector: TaskConnector,
+            configure: (@TachyonDsl TasksScope).() -> Unit = {},
+        ) {
             contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
-            tasksConfig = TasksScope().apply(configure).toConfig()
+            tasksConfig = TasksScope(connector).apply(configure).toConfig()
         }
 
         @PublishedApi

@@ -1,22 +1,17 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.example.temporal;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
-import static org.mockito.Mockito.mock;
-
 import dev.tachyonmcp.api.json.JsonObject;
 import dev.tachyonmcp.api.runtime.InteractionContext;
-import dev.tachyonmcp.api.server.features.tasks.TaskExecutionRequest;
-import dev.tachyonmcp.api.server.features.tasks.TaskInput;
+import dev.tachyonmcp.api.server.features.tasks.TaskGetRequest;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
+import dev.tachyonmcp.api.server.features.tasks.TaskUpdateRequest;
 import dev.tachyonmcp.tasks.temporal.TemporalTaskExecutionEngine;
+import dev.tachyonmcp.tasks.temporal.TemporalTaskStartRequest;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.WorkerFactory;
-import java.time.Duration;
-import java.util.Map;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -25,6 +20,13 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+
+import java.time.Duration;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.mock;
 
 @Testcontainers(disabledWithoutDocker = true)
 class TemporalTaskExecutionEngineContainerTest {
@@ -68,31 +70,34 @@ class TemporalTaskExecutionEngineContainerTest {
     }
 
     @Test
-    void runsTaskLifecycleAgainstRealTemporalServer() {
+    void runsTaskLifecycleAgainstRealTemporalServer() throws Exception {
         var taskId = "container-workflow";
 
         engine.start(CONTEXT, request(taskId));
 
         await().atMost(Duration.ofSeconds(20)).untilAsserted(() -> assertThat(
-                        engine.refresh(CONTEXT, taskId).status())
+                        engine.refresh(CONTEXT, get(taskId)).status())
                 .isEqualTo(TaskState.INPUT_REQUIRED));
         engine.submitInput(
                 CONTEXT,
-                taskId,
-                TaskInput.builder()
+                TaskUpdateRequest.builder()
+                        .taskId(taskId)
                         .inputResponses(Map.of("approved", true))
-                        .requestState("approval-1")
                         .build());
         await().atMost(Duration.ofSeconds(20)).untilAsserted(() -> assertThat(
-                        engine.refresh(CONTEXT, taskId).status())
+                        engine.refresh(CONTEXT, get(taskId)).status())
                 .isEqualTo(TaskState.COMPLETED));
     }
 
-    private static TaskExecutionRequest request(String taskId) {
-        return TaskExecutionRequest.builder()
+    private static TemporalTaskStartRequest request(String taskId) {
+        return TemporalTaskStartRequest.builder()
                 .taskId(taskId)
                 .operation("book_appointment")
                 .arguments(JsonObject.of(Map.of("customer", "Ada")))
                 .build();
+    }
+
+    private static TaskGetRequest get(String taskId) {
+        return TaskGetRequest.builder().taskId(taskId).build();
     }
 }

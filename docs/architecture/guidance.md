@@ -42,7 +42,7 @@ their state and commands to MCP.
 | `tasks/get`, `tasks/list`, `tasks/cancel`, `tasks/update` dispatch | Tachyon |
 | Authoritative execution state | Application or external execution system |
 | Cached MCP projection and terminal-result retention | Tachyon |
-| `notifications/tasks/status` | Tachyon, from published projections |
+| `notifications/tasks/status` (legacy) / `notifications/tasks` (modern, via `subscriptions/listen`) | Tachyon, from published projections |
 | `notifications/progress` for a task | Tachyon, via `Tasks.reportProgress(taskId, ...)` — ephemeral, not part of `TaskSnapshot` |
 
 ### 🔴 Forbidden task ownership
@@ -67,6 +67,9 @@ work.
 `TaskSnapshot` is an immutable, read-only MCP projection. State changes arrive as complete snapshots,
 not mutator calls on a task handle. A monotonically increasing `revision` makes callback and refresh
 application idempotent: Tachyon ignores a snapshot whose revision is not newer than the cached one.
+`@Value.Check` enforces that `status()` agrees with `result()`/`pendingInput()` — e.g. a `COMPLETED`
+snapshot without a `TaskResult.Completed`, or a non-terminal snapshot carrying a result, fails at
+construction instead of reaching the wire as an invalid union.
 
 The target public model is:
 
@@ -93,88 +96,68 @@ var snapshot = TaskSnapshot.builder()
         .build();
 ```
 
-The engine is synchronous and blocking by design. Protocol handlers already run on virtual
-threads. An implementation may call a database, Temporal, Camunda, or another MCP server without
-leaking that client's async type into Tachyon's API.
+The connector is a builder of per-operation SAMs, not an interface to implement — the same
+discipline every other feature in this document follows (see "Default shape: two independent SAMs"
+and "Own SAM, `throws Exception`" below). Each operation is synchronous and blocking by design;
+protocol handlers already run on virtual threads. An implementation may call a database, Temporal,
+Camunda, or another MCP server without leaking that client's async type into Tachyon's API.
 
 ```java
 @ExperimentalApi
-public interface TaskExecutionEngine {
+public final class TaskConnector {
+    public static Builder builder() { ... }
 
-    Set<TaskFeature> supportedFeatures();
-
-    @Nullable
-    TaskSnapshot refresh(InteractionContext context, String taskId) throws Exception;
-
-    void cancel(
-            InteractionContext context,
-            String taskId) throws Exception;
-
-    void submitInput(
-            InteractionContext context,
-            String taskId,
-            TaskInput input) throws Exception;
+    public interface Builder {
+        Builder get(TaskGetFn fn);       // required
+        Builder cancel(TaskCancelFn fn); // required; cooperative signal
+        Builder update(TaskUpdateFn fn); // required
+        TaskConnector build();           // rejects any missing modern operation
+    }
 }
 
-public enum TaskFeature {
-    LIST,
-    CANCEL,
-    REQUESTS
-}
+var tasks = TaskConnector.builder()
+        .get((ctx, request) -> workflows.snapshot(request.taskId()))
+        .cancel((ctx, request) -> workflows.requestCancellation(request.taskId()))
+        .update((ctx, request) -> workflows.submitInput(request.taskId(), request.inputResponses()))
+        .build();
 ```
 
-Declare the engine together with the Tasks capability. Calling `tasks(...)` enables the feature;
-there is no root `ServerBuilder.taskExecutionEngine(...)` setter:
+The modern Tasks extension is atomic: `get`, `cancel`, and `update` are all required. This avoids
+partial connector objects and runtime `UnsupportedOperationException` paths. Only legacy operations
+remain optional.
+
+Declare the connector together with the Tasks capability. Calling `tasks(...)` enables the feature,
+registers the connector, and auto-registers the `io.modelcontextprotocol/tasks` wire extension in one
+call; there is no root `ServerBuilder.taskExecutionEngine(...)` setter and no separate
+`.withExtensions(TasksExtension.instance())` call:
 
 ```java
-CapabilitiesConfig.Builder tasks(TaskExecutionEngine taskExecutionEngine);
-
-CapabilitiesConfig.Builder tasks(
-        TaskExecutionEngine taskExecutionEngine,
-        boolean list,
-        boolean cancel,
-        boolean requests);
+CapabilitiesConfig.Builder tasks(TaskConnector connector);
 ```
 
-This keeps capability advertisement and its required implementation atomic. Building must reject a
-task-producing tool without a configured engine. `noTasks()` remains the explicit opt-out.
+This keeps capability advertisement, extension registration, and the connector atomic. Building must
+reject a task-producing tool without a configured connector. `noTasks()` remains the explicit opt-out.
 
-The enabled flags must be a subset of `taskExecutionEngine.supportedFeatures()`. Validate after every
-`tasks(...)` call and again during `build()`, because later flat setters can change the final config.
-Report every missing feature in one `IllegalStateException`:
-
-```text
-Task execution engine TemporalTaskExecutionEngine does not support enabled task features: [CANCEL, REQUESTS]
-```
-
-`supportedFeatures()` describes optional MCP surfaces. `tasks/get` refresh is the base
-`TaskExecutionEngine` contract and therefore needs no feature flag. Return an immutable set. Never probe
-support by calling a method and catching `UnsupportedOperationException`.
-
-There is no default or in-process engine. `TaskExecutionEngine` is the user/integration SPI. A
+There is no default or in-process engine. `TaskConnector` is the user/integration SPI. A
 task-producing handler starts external work itself and returns its initial snapshot. Tachyon must
 not invent a generic `start` operation because external systems require different start contracts.
 
-Legacy `tasks/list` and blocking `tasks/result` support use a separate optional engine extension. Do
-not force session-scoped operations removed by MCP 2026-07-28 into every engine:
+Legacy `tasks/list` and blocking `tasks/result` support are two optional, deprecated builder methods
+on the same connector. Do not force session-scoped operations removed by MCP 2026-07-28 into every
+connector:
 
 ```java
-@ExperimentalApi
-public interface LegacyTaskExecutionEngine extends TaskExecutionEngine {
-
-    PaginatedResult<TaskSnapshot> list(
-            InteractionContext context,
-            int limit,
-            @Nullable String cursor) throws Exception;
-
-    TaskSnapshot awaitResult(
-            InteractionContext context,
-            String taskId) throws Exception;
-}
+var tasks = TaskConnector.builder()
+        .get((ctx, request) -> workflows.snapshot(request.taskId()))
+        .cancel((ctx, request) -> workflows.requestCancellation(request.taskId()))
+        .update((ctx, request) -> workflows.submitInput(request.taskId(), request.inputResponses()))
+        .list((ctx, request) -> workflows.list(request.limit(), request.cursor()))
+        .awaitResult((ctx, request) -> workflows.awaitResult(request.taskId()))
+        .build();
 ```
 
-`awaitResult` may block in the external client's supported wait operation. Tachyon must not emulate
-it with a local completion future or a polling loop.
+`awaitResult` may block in the external client's supported wait operation. Tachyon must not
+emulate it with a local completion future or a polling loop.
 
 The Tasks facade owns only projection publication and lookup:
 
@@ -191,16 +174,16 @@ public interface Tasks {
 ```
 
 `publish` updates the cache, applies retention policy, and emits any negotiated MCP notification.
-It does not start work. `refresh` is authoritative for `tasks/get`; a successful snapshot is
-published before mapping the response. A refresh failure must not silently invent a state. A cached
-snapshot may be used only under an explicit stale-read policy.
+It does not start work. `TaskConnector.get()` is authoritative for `tasks/get`; a successful
+snapshot is published before mapping the response. A refresh failure must not silently invent a
+state. A cached snapshot may be used only under an explicit stale-read policy.
 
-Configure one engine while declaring the capability. The engine is an infrastructure
+Configure one connector while declaring the capability. The connector is an infrastructure
 dependency, not a task executor or task-handler registration:
 
 ```java
 var server = TachyonServer.builder()
-        .capabilities(c -> c.tasks(taskExecutionEngine, false, true, true))
+        .capabilities(c -> c.tasks(taskConnector))
         .port(8080)
         .build();
 ```
@@ -209,13 +192,7 @@ Kotlin follows the Java source of truth:
 
 ```kotlin
 capabilities {
-    tasks {
-        enabled = true
-        list = false
-        cancel = true
-        requests = true
-        executionEngine = taskExecutionEngine
-    }
+    tasks(taskConnector)
 }
 ```
 
@@ -237,10 +214,10 @@ For a task-producing call:
 1. The tool handler starts or signals the external execution.
 2. The handler returns `ToolResult.task(initialSnapshot)`.
 3. Tachyon publishes the snapshot and returns the MCP task handle.
-4. `tasks/get` calls `TaskExecutionEngine.refresh` and maps the returned snapshot.
-5. `tasks/update` forwards `TaskInput`; it does not aggregate answers or resume a handler.
-6. `tasks/cancel` calls `TaskExecutionEngine.cancel` and immediately acknowledges the request.
-7. A later `tasks/get` calls `refresh`; cancellation is cooperative and may still be pending or
+4. `tasks/get` calls `TaskConnector.get()` and maps the returned snapshot.
+5. `tasks/update` forwards a `TaskUpdateRequest`; it does not aggregate answers or resume a handler.
+6. `tasks/cancel` calls `TaskConnector.cancel()` and immediately acknowledges the request.
+7. A later `tasks/get` calls `get()` again; cancellation is cooperative and may still be pending or
    settle in another terminal state.
 
 The external task ID should be used directly as the MCP task ID when it is stable and safe to

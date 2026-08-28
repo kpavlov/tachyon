@@ -151,6 +151,51 @@
           "attachments": {
             "since": "1.0.0-beta.23"
           }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.removed",
+          "old": "interface dev.tachyonmcp.api.server.features.tasks.TaskDescriptor",
+          "justification": "TaskExecutionEngine (and the capability-flags registration it required) is replaced by TaskConnector.builder(), which is the single registration unit for the tasks capability; presence of each builder call is now the supported-operation signal, so there is no separate ServerFeature.Descriptor to bundle",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.removed",
+          "old": "interface dev.tachyonmcp.api.server.features.tasks.TaskIdGenerator",
+          "justification": "Direct corollary of the TaskOptions removal above: Tachyon no longer starts tasks or invents their identifiers. A task-producing tool handler starts the external work and supplies its own stable taskId via ToolResult.task(snapshot), so no server-side generation strategy is needed",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.removed",
+          "old": "enum dev.tachyonmcp.api.server.features.tasks.TaskState",
+          "justification": "Not actually removed from the jar — annotated @ExperimentalApi for consistency with every other type in this package (TaskConnector, TaskSnapshot, the Task*Fn/Task*Request SPI), which Revapi's element filter excludes from the tracked stable surface. The whole Tasks feature is unreleased and still evolving; this closes the one inconsistency where TaskState/TaskSupport/Tasks were tracked as stable while their neighbors were not. (TaskState also dropped the unused canTransitionTo()/isActive() helpers as part of the same pass.)",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.removed",
+          "old": "enum dev.tachyonmcp.api.server.features.tasks.TaskSupport",
+          "justification": "Not actually removed from the jar — annotated @ExperimentalApi for consistency with every other type in this package, which Revapi's element filter excludes from the tracked stable surface; see the TaskState entry above",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.removed",
+          "old": "interface dev.tachyonmcp.api.server.features.tasks.Tasks",
+          "justification": "Not actually removed from the jar — annotated @ExperimentalApi for consistency with every other type in this package, which Revapi's element filter excludes from the tracked stable surface; see the TaskState entry above",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
         }
       ]
     }

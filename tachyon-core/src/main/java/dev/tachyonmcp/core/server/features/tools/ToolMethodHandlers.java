@@ -172,7 +172,7 @@ public final class ToolMethodHandlers {
                     return internalError("Task-producing tool returned a task for a non-task request");
                 }
                 if (!context.engine().tasksRegistry().executionConfigured()) {
-                    return internalError("Task-producing tool requires a configured TaskExecutionEngine");
+                    return internalError("Task-producing tool requires a configured TaskConnector");
                 }
                 var missingCapability = TasksExtension.requireDeclared(context);
                 if (!context.requestMapper().supportsLegacyTaskAugmentation() && missingCapability != null) {

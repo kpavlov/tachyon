@@ -13,7 +13,7 @@ import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.features.tasks.TasksExtension;
 import dev.tachyonmcp.core.server.json.JsonUtils;
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
-import dev.tachyonmcp.testkit.TestTaskExecutionEngine;
+import dev.tachyonmcp.testkit.TestTaskConnector;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
@@ -108,11 +108,8 @@ class StructuredOutputSchemaShapeTest extends AbstractStatelessMcpE2eTest {
                 .result(TaskResult.completed(JsonUtils.parse("[1,2,3]")))
                 .revision(1)
                 .build();
-        var taskEngine = new TestTaskExecutionEngine().publish(task);
-        startServer(
-                builder -> builder.capabilities(c -> c.tasks(taskEngine, false, true, true))
-                        .withExtensions(TasksExtension.instance()),
-                registrar -> {});
+        var taskEngine = new TestTaskConnector().publish(task);
+        startServer(builder -> builder.capabilities(c -> c.tasks(taskEngine.connector())), registrar -> {});
 
         try (var client = createModernTestClient()) {
             var response = client.post("""

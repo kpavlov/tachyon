@@ -7,6 +7,7 @@ import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.features.subscriptions.SubscriptionRegistry;
+import dev.tachyonmcp.core.server.features.tasks.TasksExtension;
 import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -40,7 +41,14 @@ public final class SubscriptionsListenHandler
         if (!requestMapper.supportsSubscriptionsListen()) {
             throw new RequestMappingException(ServerErrors.methodNotFound("Method not found"));
         }
-        return requestMapper.subscriptionsListen(rawParams);
+        var request = requestMapper.subscriptionsListen(rawParams);
+        if (!request.taskIds().isEmpty()) {
+            var missingCapability = TasksExtension.requireDeclared(context);
+            if (missingCapability != null) {
+                throw new RequestMappingException(missingCapability);
+            }
+        }
+        return request;
     }
 
     @Override

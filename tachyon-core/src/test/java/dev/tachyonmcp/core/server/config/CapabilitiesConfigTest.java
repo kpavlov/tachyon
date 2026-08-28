@@ -4,14 +4,9 @@ package dev.tachyonmcp.core.server.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import dev.tachyonmcp.api.runtime.InteractionContext;
 import dev.tachyonmcp.api.server.config.Mode;
-import dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine;
-import dev.tachyonmcp.api.server.features.tasks.TaskFeature;
-import dev.tachyonmcp.api.server.features.tasks.TaskInput;
-import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
+import dev.tachyonmcp.api.server.features.tasks.TaskConnector;
 import dev.tachyonmcp.core.server.features.Pagination;
-import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -76,64 +71,24 @@ class CapabilitiesConfigTest {
     }
 
     @Test
-    void storesConfiguredTaskExecutionEngine() {
-        var engine = new StubTaskExecutionEngine(Set.of(TaskFeature.CANCEL));
+    void storesConfiguredTaskConnector() {
+        var connector = TaskConnector.builder()
+                .get((ctx, request) -> null)
+                .cancel((ctx, request) -> {})
+                .update((ctx, request) -> {})
+                .build();
 
-        var config =
-                CapabilitiesConfig.builder().tasks(engine, false, true, false).build();
+        var config = CapabilitiesConfig.builder().tasks(connector).build();
 
-        assertThat(config.tasks().taskExecutionEngine()).isSameAs(engine);
+        assertThat(config.tasks().connector()).isSameAs(connector);
     }
 
     @Test
-    void rejectsFeaturesUnsupportedByTaskExecutionEngine() {
-        var engine = new StubTaskExecutionEngine(Set.of(TaskFeature.LIST));
-
-        assertThatThrownBy(() -> CapabilitiesConfig.builder()
-                        .tasks(engine, true, true, true)
-                        .build())
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("StubTaskExecutionEngine")
-                .hasMessageContaining("CANCEL")
-                .hasMessageContaining("REQUESTS");
-    }
-
-    @Test
-    void validatesTaskFeaturesAfterFlatSetterChanges() {
-        var engine = new StubTaskExecutionEngine(Set.of());
-
-        assertThatThrownBy(() -> CapabilitiesConfig.builder()
-                        .tasks(engine)
-                        .tasksCancel(true)
-                        .build())
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("CANCEL");
-    }
-
-    @Test
-    void enabledTasksConfigRequiresExplicitEngine() {
-        var tasks = TasksConfig.builder().enabled(true).cancel(true).build();
+    void enabledTasksConfigRequiresExplicitConnector() {
+        var tasks = TasksConfig.builder().enabled(true).build();
 
         assertThatThrownBy(() -> CapabilitiesConfig.builder().tasks(tasks).build())
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Tasks capability requires a TaskExecutionEngine");
-    }
-
-    private record StubTaskExecutionEngine(Set<TaskFeature> supportedFeatures) implements TaskExecutionEngine {
-
-        @Override
-        public TaskSnapshot refresh(InteractionContext context, String taskId) {
-            return null;
-        }
-
-        @Override
-        public void cancel(InteractionContext context, String taskId) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void submitInput(InteractionContext context, String taskId, TaskInput input) {
-            throw new UnsupportedOperationException();
-        }
+                .hasMessage("Tasks capability requires a TaskConnector");
     }
 }

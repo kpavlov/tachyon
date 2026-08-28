@@ -3,28 +3,32 @@ package dev.tachyonmcp.tasks.temporal;
 
 import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import dev.tachyonmcp.api.runtime.InteractionContext;
-import dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine;
-import dev.tachyonmcp.api.server.features.tasks.TaskExecutionRequest;
-import dev.tachyonmcp.api.server.features.tasks.TaskFeature;
-import dev.tachyonmcp.api.server.features.tasks.TaskInput;
+import dev.tachyonmcp.api.server.features.tasks.TaskCancelRequest;
+import dev.tachyonmcp.api.server.features.tasks.TaskConnector;
+import dev.tachyonmcp.api.server.features.tasks.TaskGetRequest;
+import dev.tachyonmcp.api.server.features.tasks.TaskNotFoundException;
 import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
+import dev.tachyonmcp.api.server.features.tasks.TaskUpdateRequest;
 import io.temporal.client.WorkflowClient;
+import io.temporal.client.WorkflowNotFoundException;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.client.WorkflowStub;
 import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Task execution engine backed by one Temporal Workflow Execution per MCP task. */
+/**
+ * Task execution methods backed by one Temporal Workflow Execution per MCP task.
+ *
+ * <p>Use {@link #connector()} to wire the engine into Tachyon's Tasks capability.
+ */
 @ExperimentalApi
-public final class TemporalTaskExecutionEngine implements TaskExecutionEngine {
+public final class TemporalTaskExecutionEngine {
 
     private static final Logger logger = LoggerFactory.getLogger(TemporalTaskExecutionEngine.class);
-    private static final Set<TaskFeature> FEATURES = Set.of(TaskFeature.CANCEL, TaskFeature.REQUESTS);
 
     private final WorkflowClient workflowClient;
     private final String taskQueue;
@@ -53,9 +57,17 @@ public final class TemporalTaskExecutionEngine implements TaskExecutionEngine {
         return new Builder(workflowClient);
     }
 
-    @Override
-    public Set<TaskFeature> supportedFeatures() {
-        return FEATURES;
+    /**
+     * Creates the Tachyon connector for this engine.
+     *
+     * @return connector with all modern Tasks operations wired
+     */
+    public TaskConnector connector() {
+        return TaskConnector.builder()
+                .get(this::refresh)
+                .cancel(this::cancel)
+                .update(this::submitInput)
+                .build();
     }
 
     /**
@@ -65,7 +77,7 @@ public final class TemporalTaskExecutionEngine implements TaskExecutionEngine {
      * @param request operation, stable Workflow ID, arguments, and metadata
      * @return initial authoritative task snapshot
      */
-    public TaskSnapshot start(InteractionContext context, TaskExecutionRequest request) {
+    public TaskSnapshot start(InteractionContext context, TemporalTaskStartRequest request) {
         var route = routeForOperation(request.operation());
         logger.info(
                 "Starting Temporal workflow: taskId={}, operation={}, workflowType={}, taskQueue={}",
@@ -83,33 +95,64 @@ public final class TemporalTaskExecutionEngine implements TaskExecutionEngine {
         return TaskSnapshot.working(request.taskId(), clock.instant(), 1);
     }
 
-    @Override
-    public TaskSnapshot refresh(InteractionContext context, String taskId) {
-        var workflow = workflow(taskId);
-        var snapshot = routeFor(workflow).query(workflow, taskId);
-        logger.debug(
-                "Refreshed Temporal workflow: taskId={}, state={}, revision={}",
-                taskId,
-                snapshot.status(),
-                snapshot.revision());
-        return snapshot;
+    /**
+     * Queries the authoritative Workflow status.
+     *
+     * @param context current MCP interaction
+     * @param request task lookup request
+     * @return current task snapshot
+     * @throws TaskNotFoundException when Temporal does not know the Workflow ID
+     */
+    public TaskSnapshot refresh(InteractionContext context, TaskGetRequest request) throws TaskNotFoundException {
+        try {
+            var workflow = workflow(request.taskId());
+            var snapshot = routeFor(workflow).query(workflow, request.taskId());
+            logger.debug(
+                    "Refreshed Temporal workflow: taskId={}, state={}, revision={}",
+                    request.taskId(),
+                    snapshot.status(),
+                    snapshot.revision());
+            return snapshot;
+        } catch (WorkflowNotFoundException e) {
+            throw new TaskNotFoundException(request.taskId(), e);
+        }
     }
 
-    @Override
-    public void cancel(InteractionContext context, String taskId) {
-        var workflow = workflow(taskId);
-        logger.info("Requesting Temporal workflow cancellation: taskId={}", taskId);
-        workflow.cancel();
+    /**
+     * Requests cooperative Workflow cancellation.
+     *
+     * @param context current MCP interaction
+     * @param request task cancellation request
+     * @throws TaskNotFoundException when Temporal does not know the Workflow ID
+     */
+    public void cancel(InteractionContext context, TaskCancelRequest request) throws TaskNotFoundException {
+        try {
+            var workflow = workflow(request.taskId());
+            logger.info("Requesting Temporal workflow cancellation: taskId={}", request.taskId());
+            workflow.cancel();
+        } catch (WorkflowNotFoundException e) {
+            throw new TaskNotFoundException(request.taskId(), e);
+        }
     }
 
-    @Override
-    public void submitInput(InteractionContext context, String taskId, TaskInput input) {
-        var workflow = workflow(taskId);
-        logger.info(
-                "Submitting input to Temporal workflow: taskId={}, fields={}",
-                taskId,
-                input.inputResponses().keySet());
-        routeFor(workflow).submitInput(workflow, input);
+    /**
+     * Submits MCP task input through the configured Temporal Update.
+     *
+     * @param context current MCP interaction
+     * @param input submitted task input
+     * @throws TaskNotFoundException when Temporal does not know the Workflow ID
+     */
+    public void submitInput(InteractionContext context, TaskUpdateRequest input) throws TaskNotFoundException {
+        try {
+            var workflow = workflow(input.taskId());
+            logger.info(
+                    "Submitting input to Temporal workflow: taskId={}, fields={}",
+                    input.taskId(),
+                    input.inputResponses().keySet());
+            routeFor(workflow).submitInput(workflow, input);
+        } catch (WorkflowNotFoundException e) {
+            throw new TaskNotFoundException(input.taskId(), e);
+        }
     }
 
     private WorkflowStub workflow(String taskId) {
@@ -177,6 +220,12 @@ public final class TemporalTaskExecutionEngine implements TaskExecutionEngine {
             return this;
         }
 
+        /**
+         * Sets the clock used for snapshot timestamps.
+         *
+         * @param clock clock to use
+         * @return this builder
+         */
         Builder clock(Clock clock) {
             this.clock = clock;
             return this;

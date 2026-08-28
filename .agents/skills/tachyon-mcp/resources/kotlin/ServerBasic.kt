@@ -54,12 +54,6 @@ fun assembleServer(port: Int = NetworkConfig.UNSET_PORT): TachyonServer =
                 mode = Mode.ON
                 listChanged = true
             }
-            tasks {
-                enabled = true
-                list = true
-                cancel = true
-                requests = true
-            }
             completionsMode = Mode.AUTO
             logging = true
         }

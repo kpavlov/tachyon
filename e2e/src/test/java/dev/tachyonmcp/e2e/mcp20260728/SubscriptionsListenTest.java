@@ -6,18 +6,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
+import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.server.features.tasks.TasksExtension;
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.testkit.TestTaskConnector;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.node.JsonNodeFactory;
 
 /**
  * MCP 2026-07-28 {@code subscriptions/listen} (SEP-2575): the request-scoped SSE stream that
@@ -133,6 +139,111 @@ class SubscriptionsListenTest extends AbstractStatelessMcpE2eTest {
 
             response.body().close();
             awaitQuietly(consume);
+        }
+    }
+
+    @Test
+    void pushesTaskStatusOnlyForSubscribedTaskId() throws Exception {
+        var taskEngine = new TestTaskConnector();
+        startServer(b -> b.capabilities(c -> c.tools(true).tasks(taskEngine.connector())));
+
+        var lines = new CopyOnWriteArrayList<String>();
+        var unsubscribedLines = new CopyOnWriteArrayList<String>();
+        try (var client = createModernTestClient()
+                .withExtensions(Map.of(TasksExtension.ID, JsonNodeFactory.instance.objectNode()))) {
+            var response = client.sendStreamingRequest(null, """
+                {"jsonrpc":"2.0","id":1,"method":"subscriptions/listen",
+                 "params":{"notifications":{"taskIds":["task-a"]}}}
+                """);
+            var unsubscribedResponse = client.sendStreamingRequest(null, """
+                {"jsonrpc":"2.0","id":2,"method":"subscriptions/listen",
+                 "params":{"notifications":{"toolsListChanged":true}}}
+                """);
+            var consume = CompletableFuture.runAsync(() -> response.body().forEach(lines::add));
+            var consumeUnsubscribed =
+                    CompletableFuture.runAsync(() -> unsubscribedResponse.body().forEach(unsubscribedLines::add));
+            await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+                assertThat(payloads(lines)).anyMatch(l -> l.contains("notifications/subscriptions/acknowledged"));
+                assertThat(payloads(unsubscribedLines))
+                        .anyMatch(l -> l.contains("notifications/subscriptions/acknowledged"));
+            });
+
+            // language=JSON
+            assertThatJson(payloads(lines).getFirst()).isEqualTo("""
+                {
+                  "jsonrpc": "2.0",
+                  "method": "notifications/subscriptions/acknowledged",
+                    "params": {
+                      "notifications": {
+                        "taskIds": ["task-a"]
+                      },
+                      "_meta": {"io.modelcontextprotocol/subscriptionId": 1}
+                  }
+                }
+                """);
+
+            var observedAt = Instant.parse("2026-08-28T10:00:00Z");
+            server.tasks().publish(TaskSnapshot.working("task-b", observedAt, 1));
+            server.tasks().publish(TaskSnapshot.working("task-a", observedAt, 1));
+
+            await().atMost(Duration.ofSeconds(10))
+                    .untilAsserted(() -> assertThat(payloads(lines))
+                            .anyMatch(l -> l.contains("notifications/tasks") && l.contains("task-a")));
+
+            assertThat(payloads(lines))
+                    .filteredOn(l -> l.contains("notifications/tasks"))
+                    .noneMatch(l -> l.contains("task-b"));
+
+            // A listener with no task-ID subscription must never receive notifications/tasks, even
+            // after both snapshots above were published. Trigger a notification this listener *is*
+            // subscribed to and wait for it: deliveries from one publish are dispatched in submission
+            // order, so observing this later notification proves the earlier task publishes already
+            // had their chance to (wrongly) reach this stream first.
+            server.tools()
+                    .register(
+                            t -> t.name("trigger-tool-unsubscribed")
+                                    .description("d")
+                                    .inputSchema("{\"type\":\"object\"}"),
+                            (ctx, req) -> ToolResult.text("x"));
+            await().atMost(Duration.ofSeconds(10))
+                    .untilAsserted(() -> assertThat(payloads(unsubscribedLines))
+                            .anyMatch(l -> l.contains("notifications/tools/list_changed")));
+
+            assertThat(payloads(unsubscribedLines)).noneMatch(l -> l.contains("notifications/tasks"));
+
+            response.body().close();
+            unsubscribedResponse.body().close();
+            awaitQuietly(consume);
+            awaitQuietly(consumeUnsubscribed);
+        }
+    }
+
+    @Test
+    void taskStatusSubscriptionRequiresTasksExtension() throws Exception {
+        var taskEngine = new TestTaskConnector();
+        startServer(b -> b.capabilities(c -> c.tasks(taskEngine.connector())));
+
+        try (var client = createModernTestClient()) {
+            var response = client.post("""
+                {"jsonrpc":"2.0","id":1,"method":"subscriptions/listen",
+                 "params":{"notifications":{"taskIds":["task-a"]}}}
+                """);
+
+            // MISSING_REQUIRED_CLIENT_CAPABILITY maps to HTTP 400, not 200 — see
+            // McpResponseMapper (2026-07-28) .error(), same convention as HEADER_MISMATCH et al.
+            assertThat(response.statusCode()).isEqualTo(400);
+            // language=JSON
+            assertThatJson(response.body()).isEqualTo("""
+                {
+                  "jsonrpc":"2.0",
+                  "id":1,
+                  "error":{
+                    "code":-32021,
+                    "message":"Requires the 'io.modelcontextprotocol/tasks' extension",
+                    "data":{"requiredCapabilities":{"extensions":{"io.modelcontextprotocol/tasks":{}}}}
+                  }
+                }
+                """);
         }
     }
 

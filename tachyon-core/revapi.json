@@ -719,8 +719,8 @@
           "ignore": true,
           "code": "java.method.numberOfParametersChanged",
           "old": "method void dev.tachyonmcp.core.server.config.TasksConfig::<init>(boolean, boolean, boolean, boolean, int, java.time.Duration, java.time.Duration)",
-          "new": "method void dev.tachyonmcp.core.server.config.TasksConfig::<init>(boolean, boolean, boolean, boolean, dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine, int, java.time.Duration, java.time.Duration)",
-          "justification": "Tasks capability now takes an optional TaskExecutionEngine connecting to external task execution, wired via TasksConfig.Builder.taskExecutionEngine()",
+          "new": "method void dev.tachyonmcp.core.server.config.TasksConfig::<init>(boolean, dev.tachyonmcp.api.server.features.tasks.TaskConnector, int, java.time.Duration, java.time.Duration)",
+          "justification": "TasksConfig collapses list/cancel/requests booleans and the connector into one @Nullable TaskConnector field; enabled + connector + pageSize + keepAlive + pollInterval is the final shape",
           "attachments": {
             "since": "1.0.0-beta.23"
           }
@@ -861,18 +861,17 @@
           "ignore": true,
           "code": "java.method.numberOfParametersChanged",
           "old": "method dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder::tasks()",
-          "new": "method dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder::tasks(dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine)",
-          "justification": "Enabling tasks now requires wiring the external TaskExecutionEngine that owns execution; there is no in-process engine to default to",
+          "new": "method dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder::tasks(dev.tachyonmcp.api.server.features.tasks.TaskConnector)",
+          "justification": "Enabling tasks now requires wiring a TaskConnector (builder-of-SAMs) rather than a TaskExecutionEngine; TaskConnector.builder().get(fn).cancel(fn).update(fn).build() replaces the interface-implementing engine",
           "attachments": {
             "since": "1.0.0-beta.23"
           }
         },
         {
           "ignore": true,
-          "code": "java.method.numberOfParametersChanged",
+          "code": "java.method.removed",
           "old": "method dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder::tasks(boolean, boolean, boolean)",
-          "new": "method dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder::tasks(dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine, boolean, boolean, boolean)",
-          "justification": "Enabling tasks now requires wiring the external TaskExecutionEngine that owns execution; there is no in-process engine to default to",
+          "justification": "Capability-flags overload dropped entirely; presence of each TaskConnector.builder() call (get/cancel/update required, list/awaitResult optional) is now the supported-operation signal instead of separate booleans",
           "attachments": {
             "since": "1.0.0-beta.23"
           }
@@ -913,6 +912,146 @@
           "old": "class dev.tachyonmcp.core.server.features.tasks.TasksExtension",
           "new": "class dev.tachyonmcp.core.server.features.tasks.TasksExtension",
           "justification": "TasksExtension is a stateless singleton with a private constructor; not designed for subclassing",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.numberOfParametersChanged",
+          "old": "method void dev.tachyonmcp.core.protocol.ProtocolRequestMapper.PageRequest::<init>(int, java.lang.String)",
+          "new": "method void dev.tachyonmcp.core.protocol.ProtocolRequestMapper.PageRequest::<init>(int, java.lang.String, java.util.Map<java.lang.String, java.lang.Object>)",
+          "justification": "PageRequest gained a meta map so tasks/list (and other paginated methods) can round-trip request metadata like every other Task*Request",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.numberOfParametersChanged",
+          "old": "method void dev.tachyonmcp.core.protocol.ProtocolRequestMapper.SubscriptionListenRequest::<init>(boolean, boolean, boolean, java.util.Set<java.lang.String>)",
+          "new": "method void dev.tachyonmcp.core.protocol.ProtocolRequestMapper.SubscriptionListenRequest::<init>(boolean, boolean, boolean, java.util.Set<java.lang.String>, java.util.Set<java.lang.String>)",
+          "justification": "subscriptions/listen gained per-task-ID notifications (SEP-2663): a taskIds allowlist alongside the existing toolsListChanged/promptsListChanged/resourcesListChanged/resourceSubscriptions filter fields",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.removed",
+          "old": "class dev.tachyonmcp.core.protocol.ProtocolRequestMapper.TaskUpdateRequest",
+          "justification": "This internal nested request type is replaced by the public dev.tachyonmcp.api.server.features.tasks.TaskUpdateRequest, the one genuinely multi-field connector operation, now shared by both protocol versions instead of duplicated per-mapper",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method java.lang.String dev.tachyonmcp.core.protocol.ProtocolRequestMapper::taskId(java.lang.Object)",
+          "justification": "Superseded by the per-operation decode methods (taskGet/taskCancel/taskUpdate/taskAwaitResult) that each return their own Task*Request carrying taskId(), rather than a bare taskId extractor every handler had to call separately",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method dev.tachyonmcp.core.protocol.ProtocolRequestMapper.TaskUpdateRequest dev.tachyonmcp.core.protocol.ProtocolRequestMapper::taskUpdate(java.lang.Object)",
+          "new": "method dev.tachyonmcp.api.server.features.tasks.TaskUpdateRequest dev.tachyonmcp.core.protocol.ProtocolRequestMapper::taskUpdate(java.lang.Object)",
+          "justification": "Returns the public dev.tachyonmcp.api.server.features.tasks.TaskUpdateRequest instead of the internal nested type; see the TaskUpdateRequest class-removed entry above",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method java.lang.String dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpRequestMapper::taskId(java.lang.Object)",
+          "justification": "Superseded by the per-operation decode methods (taskGet/taskCancel/taskUpdate/taskAwaitResult); see the ProtocolRequestMapper::taskId entry above",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method dev.tachyonmcp.core.protocol.ProtocolRequestMapper.TaskUpdateRequest dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpRequestMapper::taskUpdate(java.lang.Object)",
+          "new": "method dev.tachyonmcp.api.server.features.tasks.TaskUpdateRequest dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs.McpRequestMapper::taskUpdate(java.lang.Object)",
+          "justification": "Returns the public dev.tachyonmcp.api.server.features.tasks.TaskUpdateRequest instead of the internal nested type; see the TaskUpdateRequest class-removed entry above",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.numberOfParametersChanged",
+          "old": "method void dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.SubscriptionFilter::<init>(java.lang.Boolean, java.lang.Boolean, java.lang.Boolean, java.util.List<java.lang.String>)",
+          "new": "method void dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.SubscriptionFilter::<init>(java.lang.Boolean, java.lang.Boolean, java.lang.Boolean, java.util.List<java.lang.String>, java.util.List<java.lang.String>, java.util.Map<java.lang.String, tools.jackson.databind.JsonNode>)",
+          "justification": "Generated wire model for subscriptions/listen's notification filter; gained taskIds (SEP-2663 per-task-ID subscriptions) and extensions, added via the vendored spec's sibling _config.json additionalProperties, not by hand-editing the generated .ts",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder::tasksCancel(boolean)",
+          "justification": "Per-feature convenience setter dropped with the capability-flags shape; presence of TaskConnector.builder().cancel(fn) is now the signal instead of a separate boolean",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder::tasksList(boolean)",
+          "justification": "Per-feature convenience setter dropped with the capability-flags shape; presence of TaskConnector.builder().list(fn) is now the signal instead of a separate boolean",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder dev.tachyonmcp.core.server.config.CapabilitiesConfig.Builder::tasksRequests(boolean)",
+          "justification": "Per-feature convenience setter dropped with the capability-flags shape; presence of TaskConnector.builder().update(fn) is now the signal instead of a separate boolean",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method dev.tachyonmcp.core.server.config.TasksConfig.Builder dev.tachyonmcp.core.server.config.TasksConfig.Builder::cancel(boolean)",
+          "justification": "TasksConfig.Builder now takes a single connector(TaskConnector) instead of individual enabled/list/cancel/requests booleans",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method dev.tachyonmcp.core.server.config.TasksConfig.Builder dev.tachyonmcp.core.server.config.TasksConfig.Builder::list(boolean)",
+          "justification": "TasksConfig.Builder now takes a single connector(TaskConnector) instead of individual enabled/list/cancel/requests booleans",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method dev.tachyonmcp.core.server.config.TasksConfig.Builder dev.tachyonmcp.core.server.config.TasksConfig.Builder::on()",
+          "justification": "TasksConfig.Builder now takes a single connector(TaskConnector) instead of individual enabled/list/cancel/requests booleans; supplying a connector is what enables tasks",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method dev.tachyonmcp.core.server.config.TasksConfig.Builder dev.tachyonmcp.core.server.config.TasksConfig.Builder::requests(boolean)",
+          "justification": "TasksConfig.Builder now takes a single connector(TaskConnector) instead of individual enabled/list/cancel/requests booleans",
           "attachments": {
             "since": "1.0.0-beta.23"
           }

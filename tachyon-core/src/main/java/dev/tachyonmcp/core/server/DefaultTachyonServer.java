@@ -250,8 +250,8 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         var hasTaskAugmentedTool = toolRegistry.getAll().stream()
                 .anyMatch(handler -> handler.descriptor().taskSupport() != null
                         && handler.descriptor().taskSupport() != TaskSupport.FORBIDDEN);
-        if (hasTaskAugmentedTool && !taskRegistry.executionConfigured()) {
-            throw new IllegalStateException("Task-producing tools require a TaskExecutionEngine");
+        if (hasTaskAugmentedTool && (!config.capabilities().tasks().enabled() || !taskRegistry.executionConfigured())) {
+            throw new IllegalStateException("Task-producing tools require a TaskConnector");
         }
     }
 
@@ -430,6 +430,9 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
                 }
             }
         }
+        // Session-based delivery above serves legacy (2025-11-25) requestors. Modern (2026-07-28)
+        // requestors opt in per taskId via subscriptions/listen, independent of any session.
+        subscriptionRegistry.notifyTaskStatus(snapshot);
     }
 
     @Override
@@ -889,7 +892,6 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
             logger.info("Shutting down TachyonMCP Server");
             subscriptionRegistry.closeAll();
             shutdownExtensions();
-            closeTaskExecutionEngine();
             executor.shutdown();
             try {
                 var grace = config.runtime().shutdownGracePeriod();
@@ -915,18 +917,6 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
                     logger.debug("Error closing transport", e);
                 }
             }
-        }
-    }
-
-    private void closeTaskExecutionEngine() {
-        var taskExecutionEngine = config.capabilities().tasks().taskExecutionEngine();
-        if (taskExecutionEngine == null) {
-            return;
-        }
-        try {
-            taskExecutionEngine.close();
-        } catch (Exception e) {
-            logger.warn("Task execution engine shutdown error", e);
         }
     }
 }

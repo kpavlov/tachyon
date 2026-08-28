@@ -16,12 +16,15 @@ import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.api.server.domain.Role;
 import dev.tachyonmcp.api.server.domain.ServerError;
+import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.domain.TextContent;
 import dev.tachyonmcp.api.server.domain.ToolAnnotations;
 import dev.tachyonmcp.api.server.features.completions.CompletionResult;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
+import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
+import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper.SubscriptionListenRequest;
@@ -34,6 +37,7 @@ import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ListResourcesResult;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.ListToolsResult;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.NotificationParams;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -210,7 +214,7 @@ class McpResponseMapperTest {
     @Test
     void subscriptionPayloadsSerializeThroughTheProtocolVersionsCodecs() {
         var id = RequestId.of("sub-1");
-        var filter = new SubscriptionListenRequest(true, false, false, Set.of("memory://one"));
+        var filter = new SubscriptionListenRequest(true, false, false, Set.of("memory://one"), Set.of("task-1"));
 
         var ack = mapper.encode(mapper.subscriptionsAcknowledgedParams(id, filter));
         var listChanged = mapper.encode(mapper.subscriptionListChangedParams(id));
@@ -220,7 +224,11 @@ class McpResponseMapperTest {
         // language=JSON
         assertThatJson(ack).isEqualTo("""
             {
-              "notifications": {"toolsListChanged": true, "resourceSubscriptions": ["memory://one"]},
+              "notifications": {
+                "toolsListChanged": true,
+                "resourceSubscriptions": ["memory://one"],
+                "taskIds": ["task-1"]
+              },
               "_meta": {"io.modelcontextprotocol/subscriptionId": "sub-1"}
             }
             """);
@@ -240,9 +248,40 @@ class McpResponseMapperTest {
     }
 
     @Test
+    void taskStatusNotificationContainsTheCompleteDetailedTask() {
+        var observedAt = Instant.parse("2026-08-28T10:00:00Z");
+        var completed = TaskSnapshot.builder()
+                .taskId("task-1")
+                .status(TaskState.COMPLETED)
+                .createdAt(observedAt)
+                .lastUpdatedAt(observedAt.plusSeconds(1))
+                .result(TaskResult.completed(Map.of("answer", 42)))
+                .revision(2)
+                .build();
+
+        var json = mapper.encode(mapper.taskStatusNotificationParams(completed));
+
+        // language=JSON
+        assertThatJson(json).isEqualTo("""
+            {
+              "taskId":"task-1",
+              "status":"completed",
+              "createdAt":"2026-08-28T10:00:00Z",
+              "lastUpdatedAt":"2026-08-28T10:00:01Z",
+              "ttlMs":null,
+              "result":{
+                "content":[{"type":"text","text":"{\\\"answer\\\":42}"}],
+                "structuredContent":{"answer":42},
+                "resultType":"complete"
+              }
+            }
+            """);
+    }
+
+    @Test
     void subscriptionIdPreservesNumericTypeFromTheRequestId() {
         var id = RequestId.of(1);
-        var filter = new SubscriptionListenRequest(true, false, false, Set.of());
+        var filter = new SubscriptionListenRequest(true, false, false, Set.of(), Set.of());
 
         var ack = mapper.encode(mapper.subscriptionsAcknowledgedParams(id, filter));
 

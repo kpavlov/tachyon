@@ -3,57 +3,36 @@
 Tachyon exposes external work as MCP tasks. The application, workflow engine, or job system owns
 execution. Tachyon owns protocol mapping, a small snapshot cache, and notifications.
 
-## Configure an execution connector
+## Configure a task connector
 
-Implement `TaskExecutionEngine` for the system that owns the work:
-
-```java
-public final class WorkflowTasks implements TaskExecutionEngine {
-    @Override
-    public Set<TaskFeature> supportedFeatures() {
-        return Set.of(TaskFeature.CANCEL, TaskFeature.REQUESTS);
-    }
-
-    @Override
-    public TaskSnapshot refresh(InteractionContext context, String taskId) {
-        return workflows.snapshot(taskId);
-    }
-
-    @Override
-    public void cancel(InteractionContext context, String taskId) {
-        workflows.cancel(taskId);
-    }
-
-    @Override
-    public void submitInput(InteractionContext context, String taskId, TaskInput input) {
-        workflows.submitInput(taskId, input);
-    }
-}
-```
-
-Enable only operations implemented by the connector:
+Build a `TaskConnector` from the three operations in the modern Tasks extension. Lookup, cooperative
+cancellation, and input submission are one required contract. Only the two legacy operations are
+optional:
 
 ```java
-var taskEngine = new WorkflowTasks();
+var tasks = TaskConnector.builder()
+        .get((ctx, request) -> workflows.snapshot(request.taskId()))
+        .cancel((ctx, request) -> workflows.cancel(request.taskId()))
+        .update((ctx, request) -> workflows.submitInput(request.taskId(), request.inputResponses()))
+        .build();
 
 var server = TachyonServer.builder()
-        .capabilities(c -> c.tasks(taskEngine, false, true, true))
+        .capabilities(c -> c.tasks(tasks))
         .port(8080)
         .build();
 ```
 
-Tasks are off by default. There is no built-in in-process engine. Enabling tasks without an engine
-fails during server configuration. `tasks/get` is part of the base connector contract. Optional
-features are:
+Tasks are off by default. There is no built-in in-process engine. Enabling tasks without a connector
+fails during server configuration. Declaring
+`.tasks(tasks)` also registers the `io.modelcontextprotocol/tasks` wire extension automatically —
+there's no separate `.withExtensions(...)` call to make. Legacy compatibility operations are:
 
-| Feature | Connector hook | MCP method |
-|---|---|---|
-| `CANCEL` | `cancel` | `tasks/cancel` |
-| `REQUESTS` | `submitInput` | `tasks/update` |
-| `LIST` | `LegacyTaskExecutionEngine.list` | legacy `tasks/list` |
+| Builder method | MCP method |
+|---|---|
+| `.list(...)` | legacy `tasks/list` |
+| `.awaitResult(...)` | legacy blocking `tasks/result` |
 
-Legacy protocol support for `tasks/list` and blocking `tasks/result` requires
-`LegacyTaskExecutionEngine`, which extends `TaskExecutionEngine` and adds `list` and `awaitResult`.
+`.list(...)` and `.awaitResult(...)` support the pre-SEP-2663 (2025-11-25) wire only.
 
 ## Return a task from a tool
 
@@ -70,21 +49,24 @@ server.tools().register(
         });
 ```
 
-Use the external system's stable, safe identifier as `taskId`. For Temporal, use Workflow ID rather
-than Run ID so Continue-As-New keeps one logical MCP task.
+Use the external system's stable, safe identifier as `taskId`. For Temporal, use Workflow ID rather than Run ID so Continue-As-New keeps one logical MCP task.
 
 The flow is:
 
 1. The handler starts external work.
 2. It returns `ToolResult.task(initialSnapshot)`.
-3. Tachyon publishes that snapshot and maps the task response.
-4. `tasks/get` calls `refresh` and publishes the authoritative returned snapshot.
-5. `tasks/update` forwards `TaskInput` to `submitInput`.
-6. `tasks/cancel` calls `cancel` and acknowledges the accepted request immediately.
-7. A later `tasks/get` calls `refresh` to observe the authoritative state. Cancellation may still be
-   pending or may settle in another terminal state.
+3. Tachyon publishes that projection and maps the task response.
+4. `tasks/get` calls the connector's `get(...)` and publishes the authoritative returned snapshot.
+5. `tasks/update` forwards a `TaskUpdateRequest` to the connector's `update(...)`.
+6. `tasks/cancel` calls the connector's `cancel(...)` and acknowledges the accepted request immediately.
+7. A later `tasks/get` calls `get(...)` again to observe the authoritative state. Cancellation may
+   still be pending or may settle in another terminal state.
 
 Tachyon never runs the handler in the background and never invokes it again for `tasks/update`.
+
+The handler must durably create the external task before returning `ToolResult.task(...)`. Tachyon
+then caches the projection before sending the tool response. A subsequent `tasks/get` does not rely
+on that cache: it asks the connector for authoritative state.
 
 ## Publish snapshots
 
@@ -113,6 +95,11 @@ void reportProgress(String taskId, double progress, @Nullable Double total, @Nul
 Each snapshot carries a monotonically increasing `revision`. Tachyon ignores duplicate or older
 revisions. Push improves notification latency, but pull remains authoritative: `tasks/get` always
 calls the connector.
+
+`ttl` is measured from `createdAt`, not from when a task goes terminal: it's the point at which the
+receiver may delete the task and its result, regardless of status. It's a different setting from the
+server's own `keepAlive` cache-retention window (below), which governs only Tachyon's internal
+snapshot cache.
 
 Terminal snapshots may carry `TaskResult`:
 
@@ -148,12 +135,8 @@ Kotlin uses the same Java connector:
 
 ```kotlin
 capabilities {
-    tasks {
-        enabled = true
-        list = false
-        cancel = true
-        requests = true
-        executionEngine = taskEngine
+    tasks(taskConnector) {
+        pollInterval = 1.seconds
     }
 }
 ```
@@ -162,6 +145,6 @@ Tool handlers return the same `ToolResult.task(TaskSnapshot)` branch.
 
 ## Temporal
 
-Use `tachyon-tasks-temporal` when Temporal owns execution. The adapter exposes a concrete `start`
+Use `tachyon-tasks-temporal` when [Temporal](https://temporal.io) owns execution. The adapter exposes a concrete `start`
 helper because Temporal has a known start contract; that helper is deliberately not part of the
-generic `TaskExecutionEngine` SPI. See [the Temporal example](../examples/temporal/README.md).
+generic `TaskConnector` SPI. See [the Temporal example](../examples/temporal/README.md).

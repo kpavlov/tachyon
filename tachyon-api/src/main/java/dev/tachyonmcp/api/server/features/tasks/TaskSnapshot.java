@@ -33,7 +33,12 @@ public interface TaskSnapshot extends HasMeta {
     /** Returns the latest state observation timestamp. */
     Instant lastUpdatedAt();
 
-    /** Returns the optional terminal-result retention duration. */
+    /**
+     * Returns the optional duration, measured from {@link #createdAt()}, after which the receiver
+     * may delete this task and its result regardless of status. {@code null} means unlimited
+     * retention. Not the same as a server's internal cache eviction policy, which may retain (or
+     * evict) terminal snapshots on its own schedule.
+     */
     @Nullable
     Duration ttl();
 
@@ -57,7 +62,11 @@ public interface TaskSnapshot extends HasMeta {
     /** Returns the monotonically increasing projection revision. */
     long revision();
 
-    /** Validates task identity and revision. */
+    /**
+     * Validates task identity, revision, and that {@link #status()} agrees with {@link #result()}
+     * and {@link #pendingInput()} — the combination the wire mapper serializes into a discriminated
+     * union, so an inconsistent combination here would otherwise reach the wire.
+     */
     @Value.Check
     default void check() {
         if (taskId().isBlank()) {
@@ -65,6 +74,43 @@ public interface TaskSnapshot extends HasMeta {
         }
         if (revision() < 0) {
             throw new IllegalArgumentException("revision cannot be negative: " + revision());
+        }
+        if (lastUpdatedAt().isBefore(createdAt())) {
+            throw new IllegalArgumentException("lastUpdatedAt cannot be before createdAt");
+        }
+        if (ttl() != null && ttl().isNegative()) {
+            throw new IllegalArgumentException("ttl cannot be negative: " + ttl());
+        }
+        if (pollInterval() != null && (pollInterval().isZero() || pollInterval().isNegative())) {
+            throw new IllegalArgumentException("pollInterval must be positive: " + pollInterval());
+        }
+        if (status() != TaskState.INPUT_REQUIRED && pendingInput() != null) {
+            throw new IllegalArgumentException(status() + " snapshot cannot carry pendingInput");
+        }
+        switch (status()) {
+            case COMPLETED -> {
+                if (!(result() instanceof TaskResult.Completed)) {
+                    throw new IllegalArgumentException("COMPLETED snapshot requires a TaskResult.Completed result");
+                }
+            }
+            case FAILED, REJECTED -> {
+                if (!(result() instanceof TaskResult.Failed)) {
+                    throw new IllegalArgumentException(status() + " snapshot requires a TaskResult.Failed result");
+                }
+            }
+            case CANCELLED, WORKING, SUBMITTED, AUTH_REQUIRED, UNKNOWN -> {
+                if (result() != null) {
+                    throw new IllegalArgumentException(status() + " snapshot cannot carry a result");
+                }
+            }
+            case INPUT_REQUIRED -> {
+                if (pendingInput() == null) {
+                    throw new IllegalArgumentException("INPUT_REQUIRED snapshot requires pendingInput");
+                }
+                if (result() != null) {
+                    throw new IllegalArgumentException("INPUT_REQUIRED snapshot cannot carry a result");
+                }
+            }
         }
     }
 
@@ -104,7 +150,7 @@ public interface TaskSnapshot extends HasMeta {
         /** Sets the latest state observation timestamp. */
         Builder lastUpdatedAt(Instant lastUpdatedAt);
 
-        /** Sets the optional terminal-result retention duration. */
+        /** Sets the optional task lifetime measured from creation. */
         Builder ttl(@Nullable Duration ttl);
 
         /** Sets the optional suggested client polling interval. */

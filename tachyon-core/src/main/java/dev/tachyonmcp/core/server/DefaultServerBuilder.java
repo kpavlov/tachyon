@@ -17,6 +17,7 @@ import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.core.server.config.NetworkConfig;
 import dev.tachyonmcp.core.server.config.ServerConfig;
 import dev.tachyonmcp.core.server.config.SessionConfig;
+import dev.tachyonmcp.core.server.features.tasks.TasksExtension;
 import dev.tachyonmcp.core.server.json.JacksonPayloadSerde;
 import dev.tachyonmcp.core.server.json.NetworkntJsonSchemaValidator;
 import dev.tachyonmcp.core.server.session.InMemorySessionEventStore;
@@ -310,8 +311,11 @@ final class DefaultServerBuilder implements ServerBuilder {
                 ? sessionConfig.sessionEventStore()
                 : new InMemorySessionEventStore();
         var store = sessionConfig.sessionStore() != null ? sessionConfig.sessionStore() : new InMemorySessionStore();
-        var allExtensions = List.copyOf(extensions);
         var serverConfig = buildConfig();
+        if (serverConfig.capabilities().tasks().enabled() && !extensionIds.contains(TasksExtension.ID)) {
+            addExtension(TasksExtension.instance());
+        }
+        var allExtensions = List.copyOf(extensions);
         final ExecutorService resolvedExecutor;
         if (threadFactory != null) {
             resolvedExecutor = Executors.newThreadPerTaskExecutor(threadFactory);

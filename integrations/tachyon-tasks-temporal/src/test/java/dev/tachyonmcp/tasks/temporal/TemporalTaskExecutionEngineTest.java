@@ -7,12 +7,16 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.mock;
 
 import dev.tachyonmcp.api.json.JsonObject;
+import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.runtime.InteractionContext;
+import dev.tachyonmcp.api.server.domain.FormInputRequest;
+import dev.tachyonmcp.api.server.domain.InputRequestBundle;
 import dev.tachyonmcp.api.server.domain.TaskResult;
-import dev.tachyonmcp.api.server.features.tasks.TaskExecutionRequest;
-import dev.tachyonmcp.api.server.features.tasks.TaskInput;
+import dev.tachyonmcp.api.server.features.tasks.TaskCancelRequest;
+import dev.tachyonmcp.api.server.features.tasks.TaskGetRequest;
 import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
+import dev.tachyonmcp.api.server.features.tasks.TaskUpdateRequest;
 import io.temporal.client.WorkflowFailedException;
 import io.temporal.failure.CanceledFailure;
 import io.temporal.testing.TestWorkflowEnvironment;
@@ -32,7 +36,7 @@ class TemporalTaskExecutionEngineTest {
     private static final InteractionContext CONTEXT = mock(InteractionContext.class);
 
     @Test
-    void reattachesToWorkflowAndForwardsInput() {
+    void reattachesToWorkflowAndForwardsInput() throws Exception {
         try (var environment = TestWorkflowEnvironment.newInstance()) {
             var worker = environment.newWorker(TASK_QUEUE);
             worker.registerWorkflowImplementationTypes(TestWorkflowImpl.class);
@@ -45,28 +49,27 @@ class TemporalTaskExecutionEngineTest {
             var reattachedEngine = engine(environment);
             await().atMost(Duration.ofSeconds(5))
                     .untilAsserted(() -> assertThat(reattachedEngine
-                                    .refresh(CONTEXT, "workflow-1")
+                                    .refresh(CONTEXT, get("workflow-1"))
                                     .status())
                             .isEqualTo(TaskState.INPUT_REQUIRED));
 
             reattachedEngine.submitInput(
                     CONTEXT,
-                    "workflow-1",
-                    TaskInput.builder()
+                    TaskUpdateRequest.builder()
+                            .taskId("workflow-1")
                             .inputResponses(Map.of("approved", true))
-                            .requestState("approval-1")
                             .build());
 
             await().atMost(Duration.ofSeconds(5))
                     .untilAsserted(() -> assertThat(reattachedEngine
-                                    .refresh(CONTEXT, "workflow-1")
+                                    .refresh(CONTEXT, get("workflow-1"))
                                     .status())
                             .isEqualTo(TaskState.COMPLETED));
         }
     }
 
     @Test
-    void requestsWorkflowCancellationWithoutSynthesizingTaskState() {
+    void requestsWorkflowCancellationWithoutSynthesizingTaskState() throws Exception {
         try (var environment = TestWorkflowEnvironment.newInstance()) {
             var worker = environment.newWorker(TASK_QUEUE);
             worker.registerWorkflowImplementationTypes(TestWorkflowImpl.class);
@@ -75,11 +78,13 @@ class TemporalTaskExecutionEngineTest {
             engine.start(CONTEXT, request("workflow-cancel"));
 
             await().atMost(Duration.ofSeconds(5))
-                    .untilAsserted(() -> assertThat(
-                                    engine.refresh(CONTEXT, "workflow-cancel").status())
+                    .untilAsserted(() -> assertThat(engine.refresh(CONTEXT, get("workflow-cancel"))
+                                    .status())
                             .isEqualTo(TaskState.INPUT_REQUIRED));
 
-            engine.cancel(CONTEXT, "workflow-cancel");
+            engine.cancel(
+                    CONTEXT,
+                    TaskCancelRequest.builder().taskId("workflow-cancel").build());
 
             var workflow = environment.getWorkflowClient().newUntypedWorkflowStub("workflow-cancel");
             assertThatThrownBy(() -> workflow.getResult(Void.class))
@@ -111,19 +116,30 @@ class TemporalTaskExecutionEngineTest {
                 .createdAt(status.createdAt())
                 .lastUpdatedAt(status.updatedAt())
                 .result(status.state() == TaskState.COMPLETED ? TaskResult.completed(status.result()) : null)
+                .pendingInput(status.state() == TaskState.INPUT_REQUIRED ? pendingInput() : null)
                 .revision(status.revision())
                 .build();
     }
 
-    private static TaskExecutionRequest request(String taskId) {
-        return TaskExecutionRequest.builder()
+    private static InputRequestBundle pendingInput() {
+        return new InputRequestBundle(
+                Map.of("field", FormInputRequest.of("test", JsonSchema.unchecked("{\"type\":\"object\"}"))), null);
+    }
+
+    private static TemporalTaskStartRequest request(String taskId) {
+        return TemporalTaskStartRequest.builder()
                 .taskId(taskId)
                 .operation("test_operation")
                 .arguments(JsonObject.of(Map.of("customer", "Ada")))
                 .build();
     }
 
+    private static TaskGetRequest get(String taskId) {
+        return TaskGetRequest.builder().taskId(taskId).build();
+    }
+
     @WorkflowInterface
+    @SuppressWarnings("unused")
     public interface TestWorkflow {
 
         @WorkflowMethod

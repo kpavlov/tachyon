@@ -8,7 +8,11 @@ import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.api.server.features.completions.CompletionRequest;
 import dev.tachyonmcp.api.server.features.prompts.PromptRequest;
 import dev.tachyonmcp.api.server.features.resources.ResourceRequest;
+import dev.tachyonmcp.api.server.features.tasks.TaskAwaitResultRequest;
+import dev.tachyonmcp.api.server.features.tasks.TaskCancelRequest;
+import dev.tachyonmcp.api.server.features.tasks.TaskGetRequest;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
+import dev.tachyonmcp.api.server.features.tasks.TaskUpdateRequest;
 import dev.tachyonmcp.api.server.features.tools.ToolRequest;
 import java.time.Duration;
 import java.util.Map;
@@ -57,8 +61,14 @@ public interface ProtocolRequestMapper {
     /** Extracts the resource {@code uri} from params. */
     String resourceUri(@Nullable Object params);
 
-    /** Extracts the {@code taskId} from params. */
-    String taskId(@Nullable Object params);
+    /** Maps {@code tasks/get} params into a task lookup request. */
+    TaskGetRequest taskGet(@Nullable Object params);
+
+    /** Maps {@code tasks/cancel} params into a cancellation request. */
+    TaskCancelRequest taskCancel(@Nullable Object params);
+
+    /** Maps legacy {@code tasks/result} params into a blocking-result request. */
+    TaskAwaitResultRequest taskAwaitResult(@Nullable Object params);
 
     /** Maps {@code tasks/update} params into the target task id and its input responses. */
     TaskUpdateRequest taskUpdate(@Nullable Object params);
@@ -111,8 +121,10 @@ public interface ProtocolRequestMapper {
      *
      * @param limit  maximum number of items to return
      * @param cursor opaque continuation token from a prior page, or {@code null} for the first page
+     * @param meta request metadata, or {@code null} when absent
      */
-    record PageRequest(int limit, @Nullable String cursor) {}
+    record PageRequest(
+            int limit, @Nullable String cursor, @Nullable Map<String, Object> meta) {}
 
     /**
      * A tool call request.
@@ -187,25 +199,19 @@ public interface ProtocolRequestMapper {
             String taskId, TaskState state, @Nullable String message) {}
 
     /**
-     * A {@code tasks/update} request.
-     *
-     * @param taskId the task's ID
-     * @param inputResponses the submitted responses, keyed to the task's outstanding {@code
-     *     inputRequests}; empty if none were submitted
-     */
-    record TaskUpdateRequest(String taskId, Map<String, Object> inputResponses) {}
-
-    /**
      * The notification filter requested on a {@code subscriptions/listen} call.
      *
      * @param toolsListChanged whether to receive {@code notifications/tools/list_changed}
      * @param promptsListChanged whether to receive {@code notifications/prompts/list_changed}
      * @param resourcesListChanged whether to receive {@code notifications/resources/list_changed}
      * @param resourceSubscriptions resource URIs to receive {@code notifications/resources/updated} for
+     * @param taskIds task IDs to receive {@code notifications/tasks} for (tasks extension, SEP-2663;
+     *     not part of the core 2026-07-28 schema)
      */
     record SubscriptionListenRequest(
             boolean toolsListChanged,
             boolean promptsListChanged,
             boolean resourcesListChanged,
-            Set<String> resourceSubscriptions) {}
+            Set<String> resourceSubscriptions,
+            Set<String> taskIds) {}
 }

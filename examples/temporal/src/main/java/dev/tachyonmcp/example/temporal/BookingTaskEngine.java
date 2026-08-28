@@ -1,12 +1,16 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.example.temporal;
 
+import dev.tachyonmcp.api.json.JsonSchema;
+import dev.tachyonmcp.api.server.domain.FormInputRequest;
+import dev.tachyonmcp.api.server.domain.InputRequestBundle;
 import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.tasks.temporal.TemporalTaskExecutionEngine;
 import dev.tachyonmcp.tasks.temporal.TemporalTaskRoute;
 import io.temporal.client.WorkflowClient;
+import java.util.Map;
 
 /** Configures the booking application's Temporal task engine. */
 public final class BookingTaskEngine {
@@ -36,9 +40,12 @@ public final class BookingTaskEngine {
     }
 
     private static TaskSnapshot snapshot(String taskId, TemporalTaskStatus status) {
-        var result = status.state() == TaskState.COMPLETED
-                ? TaskResult.completed(status.result())
-                : null;
+        var result = switch (status.state()) {
+            case COMPLETED -> TaskResult.completed(status.result());
+            case REJECTED -> TaskResult.failed(status.message());
+            default -> null;
+        };
+        var pendingInput = status.state() == TaskState.INPUT_REQUIRED ? approvalRequest() : null;
         return TaskSnapshot.builder()
                 .taskId(taskId)
                 .status(status.state())
@@ -46,7 +53,14 @@ public final class BookingTaskEngine {
                 .createdAt(status.createdAt())
                 .lastUpdatedAt(status.updatedAt())
                 .result(result)
+                .pendingInput(pendingInput)
                 .revision(status.revision())
                 .build();
+    }
+
+    private static InputRequestBundle approvalRequest() {
+        var schema = JsonSchema.unchecked(
+                "{\"type\":\"object\",\"properties\":{\"approved\":{\"type\":\"boolean\"}}}");
+        return new InputRequestBundle(Map.of("approval", FormInputRequest.of("Approve booking", schema)), null);
     }
 }

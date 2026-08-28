@@ -16,7 +16,7 @@ import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.features.tasks.TasksExtension;
 import dev.tachyonmcp.e2e.AbstractStatelessMcpE2eTest;
 import dev.tachyonmcp.testkit.Mcp20260728Client;
-import dev.tachyonmcp.testkit.TestTaskExecutionEngine;
+import dev.tachyonmcp.testkit.TestTaskConnector;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -37,7 +37,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
                 .result(TaskResult.completed(Map.of("bookingId", "booking-1")))
                 .revision(2)
                 .build();
-        var taskEngine = new TestTaskExecutionEngine().publish(initial);
+        var taskEngine = new TestTaskConnector().publish(initial);
         startTasksServer(taskEngine, "book", ToolResult.task(initial));
 
         try (var client = tasksClient()) {
@@ -91,13 +91,10 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
     @Test
     void cancelAcknowledgesBeforeConnectorSettles() throws Exception {
         var initial = TaskSnapshot.working("workflow-cancel", Instant.parse("2026-08-27T07:00:00Z"), 1);
-        var taskEngine = new TestTaskExecutionEngine().deferCancellation().publish(initial);
+        var taskEngine = new TestTaskConnector().deferCancellation().publish(initial);
         startTasksServer(taskEngine, "book", ToolResult.task(initial));
 
         try (var client = tasksClient()) {
-            client.post("""
-                    {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"book","arguments":{}}}
-                    """);
             var response = client.post("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/cancel","params":{"taskId":"workflow-cancel"}}
                     """);
@@ -144,32 +141,71 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
                 .pendingInput(pendingInput)
                 .revision(1)
                 .build();
-        var taskEngine = new TestTaskExecutionEngine().publish(snapshot);
+        var taskEngine = new TestTaskConnector().publish(snapshot);
         var toolInvocations = startTasksServer(taskEngine, "book", ToolResult.task(snapshot));
 
         try (var client = tasksClient()) {
-            client.post("""
-                    {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"book","arguments":{}}}
-                    """);
             var response = client.post("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/update","params":{
                       "taskId":"workflow-input","inputResponses":{"approval":{"approved":true}}}}
                     """);
 
             assertThat(response).isSuccess();
-            assertThat(taskEngine.submittedInputs()).singleElement().satisfies(submission -> {
-                assertThat(submission.taskId()).isEqualTo("workflow-input");
-                assertThat(submission.input().requestState()).isEqualTo("approval-round-1");
-                assertThat(submission.input().inputResponses()).containsKey("approval");
+            assertThat(taskEngine.submittedInputs()).singleElement().satisfies(request -> {
+                assertThat(request.taskId()).isEqualTo("workflow-input");
+                assertThat(request.inputResponses()).isEqualTo(Map.of("approval", Map.of("approved", true)));
+                assertThat(request.meta()).isNotNull();
             });
-            assertThat(toolInvocations).hasValue(1);
+            assertThat(toolInvocations).hasValue(0);
+        }
+    }
+
+    @Test
+    void updateForUnknownTaskReturnsError() throws Exception {
+        var snapshot = TaskSnapshot.working("workflow-known", Instant.parse("2026-08-27T07:00:00Z"), 1);
+        var taskEngine = new TestTaskConnector().publish(snapshot);
+        startTasksServer(taskEngine, "book", ToolResult.task(snapshot));
+
+        try (var client = tasksClient()) {
+            var response = client.post("""
+                    {"jsonrpc":"2.0","id":1,"method":"tasks/update","params":{
+                      "taskId":"never-created","inputResponses":{}}}
+                    """);
+            assertThat(response).isJsonRpcError().hasErrorCode(-32602);
+        }
+    }
+
+    @Test
+    void cancelAlreadyTerminalTaskAcknowledgesNoOp() throws Exception {
+        var completed = TaskSnapshot.builder()
+                .taskId("workflow-done")
+                .status(TaskState.COMPLETED)
+                .createdAt(Instant.parse("2026-08-27T07:00:00Z"))
+                .lastUpdatedAt(Instant.parse("2026-08-27T07:00:01Z"))
+                .result(TaskResult.completed(Map.of("bookingId", "booking-1")))
+                .revision(1)
+                .build();
+        var taskEngine = new TestTaskConnector().publish(completed);
+        startTasksServer(taskEngine, "book", ToolResult.task(completed));
+
+        try (var client = tasksClient()) {
+            client.post("""
+                    {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"book","arguments":{}}}
+                    """);
+            var response = client.post("""
+                    {"jsonrpc":"2.0","id":2,"method":"tasks/cancel","params":{"taskId":"workflow-done"}}
+                    """);
+            assertThatJson(response.body()).isEqualTo("""
+                    {"jsonrpc":"2.0","id":2,"result":{"resultType":"complete"}}
+                    """);
+            assertThat(taskEngine.cancelledTaskIds()).containsExactly("workflow-done");
         }
     }
 
     @Test
     void taskMethodsRequireClientExtensionDeclaration() throws Exception {
         var snapshot = TaskSnapshot.working("workflow-gated", Instant.parse("2026-08-27T07:00:00Z"), 1);
-        var taskEngine = new TestTaskExecutionEngine().publish(snapshot);
+        var taskEngine = new TestTaskConnector().publish(snapshot);
         startTasksServer(taskEngine, "book", ToolResult.task(snapshot));
 
         try (var client = createModernTestClient()) {
@@ -180,11 +216,10 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest {
         }
     }
 
-    private AtomicInteger startTasksServer(TestTaskExecutionEngine taskEngine, String toolName, ToolResult result) {
+    private AtomicInteger startTasksServer(TestTaskConnector taskEngine, String toolName, ToolResult result) {
         final var toolInvocations = new AtomicInteger();
         startServer(
-                builder -> builder.capabilities(c -> c.tasks(taskEngine, false, true, true))
-                        .withExtensions(TasksExtension.instance()),
+                builder -> builder.capabilities(c -> c.tasks(taskEngine.connector())),
                 registrar -> registrar
                         .tools()
                         .register(b -> b.name(toolName).taskSupport(TaskSupport.REQUIRED), (context, request) -> {

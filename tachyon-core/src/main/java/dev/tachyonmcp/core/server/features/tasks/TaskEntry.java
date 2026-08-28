@@ -8,6 +8,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.concurrent.locks.ReentrantLock;
 import org.jspecify.annotations.Nullable;
 
 /** Cached task projection plus server-local retention and notification ownership. */
@@ -20,6 +21,7 @@ final class TaskEntry {
     private final Duration keepAlive;
     private final Clock clock;
     private volatile Instant cachedAt;
+    private final ReentrantLock lock = new ReentrantLock();
 
     TaskEntry(
             TaskSnapshot snapshot,
@@ -35,15 +37,20 @@ final class TaskEntry {
         this.cachedAt = clock.instant();
     }
 
-    synchronized TaskSnapshot publish(TaskSnapshot candidate) {
-        if (!snapshot.taskId().equals(candidate.taskId())) {
-            throw new IllegalArgumentException("Task ID cannot change");
+    TaskSnapshot publish(TaskSnapshot candidate) {
+        lock.lock();
+        try {
+            if (!snapshot.taskId().equals(candidate.taskId())) {
+                throw new IllegalArgumentException("Task ID cannot change");
+            }
+            if (candidate.revision() > snapshot.revision()) {
+                cachedAt = clock.instant();
+                snapshot = candidate;
+            }
+            return snapshot;
+        } finally {
+            lock.unlock();
         }
-        if (candidate.revision() > snapshot.revision()) {
-            cachedAt = clock.instant();
-            snapshot = candidate;
-        }
-        return snapshot;
     }
 
     TaskSnapshot snapshot() {

@@ -146,10 +146,15 @@ Full: `resources/java/PromptFnExample.java`
 ### Capabilities `capabilities(cfg -> ...)`
 
 Configs: `FeatureConfig` (tools/prompts: `mode`, `listChanged`, `pageSize`), `ResourcesConfig` (+ `subscribe`), 
-`TasksConfig` (`enabled`, `list`, `cancel`, `requests`, `pageSize`, 
+`TasksConfig` (`enabled`, `connector` (a `TaskConnector`), `pageSize`, 
 `keepAlive` (default 5 min — retention window for a terminal task's result), 
-`pollInterval` (default none — suggested `tasks/get` polling cadence, wire-visible), 
-mapping 1:1 to MCP `tasks.list`/`tasks.cancel`/`tasks.requests.tools.call`).
+`pollInterval` (default none — suggested `tasks/get` polling cadence, wire-visible); `list`/`cancel`/`requests` 
+are derived read-only accessors reflecting which `TaskConnector` operations are wired, not settable flags).
+
+`TaskConnector.builder().get(fn).cancel(fn).update(fn).list(fn).awaitResult(fn).build()` — `get`,
+`cancel`, and `update` are required by the modern Tasks extension. `list`/`awaitResult` are optional
+and `@Deprecated(forRemoval = false)`: legacy MCP 2025-11-25
+(pre-SEP-2663) surface, kept for compatibility.
 
 Default `Mode.AUTO` advertises only registered features. Force `Mode.ON`/`Mode.OFF`. **`OFF` also blocks registration**: registry `register` becomes a debug-logged no-op, not merely hidden from `initialize`.
 
@@ -159,13 +164,13 @@ Default `Mode.AUTO` advertises only registered features. Force `Mode.ON`/`Mode.O
 | `.tools()` / `.tools(listChanged)` / `.noTools()` | shortcut: tools |
 | `.resources()` / `.resources(subscribe, listChanged)` / `.noResources()` | shortcut: resources |
 | `.prompts()` / `.prompts(listChanged)` / `.noPrompts()` | shortcut: prompts |
-| `.tasks(engine)` / `.tasks(engine, list, cancel, requests)` | tasks with an external execution connector |
+| `.tasks(connector)` | tasks with a `TaskConnector` — also auto-registers the `io.modelcontextprotocol/tasks` wire extension |
 | `.toolsMode(m)` / `.toolsListChanged(b)` / `.toolsPageSize(n)` (+ `resources*`/`prompts*`/`tasks*` siblings) | flat per-field setters; chain onto the shortcuts above, e.g. `c.tools().toolsPageSize(20)` |
 | `.completions()` | arg autocomplete |
 | `.logging()` | logging notifications |
 
 Kotlin DSL nests instead:
-`capabilities { tools { mode = Mode.ON; pageSize = 20 }; tasks { enabled = true; list = true; executionEngine = engine } }`.
+`capabilities { tools { mode = Mode.ON; pageSize = 20 }; tasks(taskConnector) { pollInterval = 1.seconds } }`.
 
 Enable logging before publishing structured messages from a handler. `log` accepts every MCP
 severity; `info`, `warning`, and `error` are conveniences. The client-selected threshold is applied
@@ -307,9 +312,12 @@ Register `ServerExtension`s with `extensions(...)` (vararg — pass one or sever
 
 ```kotlin
 val server = TachyonServer(8080) {
-    extensions(TasksExtension.instance(), MyAuditExtension())
+    extensions(MyAuditExtension(), MyMetricsExtension())
 }
 ```
+
+(`TasksExtension` is the one built-in extension you never register by hand — `.tasks(connector)` in
+`capabilities { }` registers it automatically.)
 
 ### Typed decode/result (Kotlin)
 

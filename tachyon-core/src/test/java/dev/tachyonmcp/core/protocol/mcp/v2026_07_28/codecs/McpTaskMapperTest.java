@@ -2,7 +2,11 @@
 package dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.tachyonmcp.api.json.JsonSchema;
+import dev.tachyonmcp.api.server.domain.FormInputRequest;
+import dev.tachyonmcp.api.server.domain.InputRequestBundle;
 import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TaskResult;
 import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
@@ -20,22 +24,35 @@ import tools.jackson.databind.node.JsonNodeFactory;
  */
 class McpTaskMapperTest {
 
+    /** Builds a minimal snapshot satisfying {@code status}'s result/pendingInput invariant. */
     private static TaskSnapshot entry(TaskState status) {
-        return TaskSnapshot.builder()
+        var builder = TaskSnapshot.builder()
                 .taskId("task-1")
                 .status(status)
                 .ttl(Duration.ofMinutes(1))
                 .meta(Map.of("trace", "abc"))
                 .createdAt(Instant.EPOCH)
                 .lastUpdatedAt(Instant.EPOCH)
-                .revision(1)
-                .build();
+                .revision(1);
+        if (status == TaskState.COMPLETED) {
+            builder.result(TaskResult.completed(Map.of()));
+        }
+        if (status == TaskState.FAILED || status == TaskState.REJECTED) {
+            builder.result(TaskResult.failed(new ServerError(ServerError.Kind.INTERNAL_ERROR, "failed")));
+        }
+        if (status == TaskState.INPUT_REQUIRED) {
+            builder.pendingInput(new InputRequestBundle(
+                    Map.of("field", FormInputRequest.of("test", JsonSchema.unchecked("{\"type\":\"object\"}"))), null));
+        }
+        return builder.build();
     }
 
     @Test
-    void submittedMapsToSubmittedWireString() {
+    void submittedFoldsToWorkingWireString() {
+        // Verified against the current tasks extension spec: the wire status enum has exactly five
+        // values (working, input_required, completed, failed, cancelled) — submitted isn't one.
         var node = McpTaskMapper.toGetTaskResult(entry(TaskState.SUBMITTED), null, null, null);
-        assertThat(node.get("status").asString()).isEqualTo("submitted");
+        assertThat(node.get("status").asString()).isEqualTo("working");
         assertThat(node.get("taskId").asString()).isEqualTo("task-1");
         assertThat(node.get("createdAt").asString()).isNotEmpty();
         assertThat(node.get("lastUpdatedAt").asString()).isNotEmpty();
@@ -43,20 +60,26 @@ class McpTaskMapperTest {
     }
 
     @Test
-    void unknownMapsToUnknownWireStringInsteadOfThrowing() {
-        var node = McpTaskMapper.toGetTaskResult(entry(TaskState.UNKNOWN), null, null, null);
-        assertThat(node.get("status").asString()).isEqualTo("unknown");
+    void unknownCannotBeProjectedToMcp() {
+        assertThatThrownBy(() -> McpTaskMapper.toGetTaskResult(entry(TaskState.UNKNOWN), null, null, null))
+                .isInstanceOf(UnsupportedOperationException.class)
+                .hasMessageContaining("UNKNOWN");
     }
 
     @Test
     void sharedStatesMatchTheFiveClassicWireStrings() {
+        assertThat(McpTaskMapper.toWireStatus(TaskState.SUBMITTED)).isEqualTo("working");
         assertThat(McpTaskMapper.toWireStatus(TaskState.WORKING)).isEqualTo("working");
         assertThat(McpTaskMapper.toWireStatus(TaskState.INPUT_REQUIRED)).isEqualTo("input_required");
         assertThat(McpTaskMapper.toWireStatus(TaskState.COMPLETED)).isEqualTo("completed");
         assertThat(McpTaskMapper.toWireStatus(TaskState.CANCELLED)).isEqualTo("cancelled");
         assertThat(McpTaskMapper.toWireStatus(TaskState.FAILED)).isEqualTo("failed");
-        assertThat(McpTaskMapper.toWireStatus(TaskState.REJECTED)).isEqualTo("failed");
-        assertThat(McpTaskMapper.toWireStatus(TaskState.AUTH_REQUIRED)).isEqualTo("failed");
+        assertThatThrownBy(() -> McpTaskMapper.toWireStatus(TaskState.REJECTED))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> McpTaskMapper.toWireStatus(TaskState.AUTH_REQUIRED))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> McpTaskMapper.toWireStatus(TaskState.UNKNOWN))
+                .isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
@@ -152,7 +175,7 @@ class McpTaskMapperTest {
     @Test
     void createTaskResultIsFlatWithTaskDiscriminator() {
         var node = McpTaskMapper.toCreateTaskResult(entry(TaskState.SUBMITTED));
-        assertThat(node.get("status").asString()).isEqualTo("submitted");
+        assertThat(node.get("status").asString()).isEqualTo("working");
         assertThat(node.get("taskId").asString()).isEqualTo("task-1");
         assertThat(node.get("resultType").asString()).isEqualTo("task");
         assertThat(node.get("_meta").get("trace").asString()).isEqualTo("abc");
@@ -169,7 +192,7 @@ class McpTaskMapperTest {
 
     @Test
     void statusNotificationCarriesTheCurrentStatus() {
-        assertThat(McpTaskMapper.toStatusNotification(entry(TaskState.INPUT_REQUIRED))
+        assertThat(McpTaskMapper.toStatusNotification(entry(TaskState.INPUT_REQUIRED), null, null, null)
                         .get("status")
                         .asString())
                 .isEqualTo("input_required");

@@ -325,14 +325,14 @@ TachyonServer(port = 8080) {
 Configured via `capabilities { }` / `CapabilitiesConfig.Builder`. Each MCP capability has its own
 config type, nested under `capabilities`: `tools` and `prompts` share `FeatureConfig`
 (`mode`, `listChanged`, `pageSize`); `resources` uses `ResourcesConfig` (adds `subscribe`); `tasks`
-uses `TasksConfig`, whose fields map 1:1 to the MCP `tasks` capability object (`tasks.list`,
-`tasks.cancel`, `tasks.requests.tools.call`).
+uses `TasksConfig`, which binds the external `TaskConnector` and server-side projection settings.
+The legacy `list` flag and modern `cancel`/`requests` flags are derived from that connector.
 
 | Sub-config | Fields | Default |
 |---|---|---|
 | `tools` / `prompts` (`FeatureConfig`) | `mode`, `listChanged`, `pageSize` | `AUTO`, `false`, `50` |
 | `resources` (`ResourcesConfig`) | `mode`, `listChanged`, `pageSize`, `subscribe` | `AUTO`, `false`, `50`, `false` |
-| `tasks` (`TasksConfig`) | `enabled`, `list`, `cancel`, `requests`, `pageSize`, `keepAlive`, `pollInterval` | `false` × 4, `50`, `5m`, none |
+| `tasks` (`TasksConfig`) | `enabled`, `connector`, derived `list`/`cancel`/`requests`, `pageSize`, `keepAlive`, `pollInterval` | `false`, none, `50`, `5m`, none |
 | — | `completions`, `logging` | `AUTO`, `false` |
 
 `mode`:
@@ -349,7 +349,7 @@ var server = TachyonServer.builder()
     .capabilities(c -> c
         .tools(FeatureConfig.builder().mode(Mode.ON).listChanged(true).build())
         .resources(ResourcesConfig.builder().mode(Mode.ON).subscribe(true).build())
-        .tasks(TasksConfig.builder().enabled(true).list(true).build())
+        .tasks(TasksConfig.builder().enabled(true).connector(taskConnector).build())
         .completions()
         .logging())
     .port(8080)
@@ -362,7 +362,7 @@ TachyonServer(port = 8080) {
     capabilities {
         tools { mode = Mode.ON; listChanged = true }
         resources { mode = Mode.ON; subscribe = true }
-        tasks { enabled = true; list = true }
+        tasks(taskConnector)
         completions = true
         logging = true
     }

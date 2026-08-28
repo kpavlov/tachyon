@@ -345,7 +345,7 @@ Available via `ToolScope.arguments` (or `PromptScope.arguments`):
 | Scope | Builder method | Properties |
 |---|---|---|
 | `ServerInfoScope` | `info { }` | `name`, `version`, `description`, `title`, `instructions` |
-| `CapabilitiesScope` | `capabilities { }` | `tools()`, `resources()`, `prompts()`, `tasks()`, `logging`, `completionsMode` |
+| `CapabilitiesScope` | `capabilities { }` | `tools()`, `resources()`, `prompts()`, `tasks(connector)`, `logging`, `completionsMode` |
 | `NetworkScope` | `network { }` | `host`, `port`, `endpointPath`, `allowedOrigins`, `allowedHeaders`, `allowedHosts`, `maxContentLength` |
 | `SessionScope` | `session { }` | `enabled`, `sessionTtl`, `sessionIdGenerator` |
 | `RuntimeScope` | `runtime { }` | `shutdownGracePeriod`, `requestTimeout`, `clock` |

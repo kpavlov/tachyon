@@ -1,6 +1,8 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.api.server.features.tasks;
 
+import dev.tachyonmcp.api.annotations.ExperimentalApi;
+
 /**
  * Declares whether a tool may run as a background task instead of returning its result
  * synchronously from {@code tools/call}. Set via {@code ToolDescriptor.taskSupport()}; a
@@ -14,6 +16,7 @@ package dev.tachyonmcp.api.server.features.tasks;
  * client having declared the {@code io.modelcontextprotocol/tasks} extension for that request.
  * {@link #OPTIONAL} and {@link #FORBIDDEN} both run synchronously under 2026-07-28.
  */
+@ExperimentalApi
 public enum TaskSupport {
 
     /** The tool never runs as a task; a task-augmented call is rejected. This is the default. */

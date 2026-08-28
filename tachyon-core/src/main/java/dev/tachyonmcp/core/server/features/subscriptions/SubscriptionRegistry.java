@@ -3,6 +3,7 @@ package dev.tachyonmcp.core.server.features.subscriptions;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.server.domain.RequestId;
+import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper.SubscriptionListenRequest;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.runtime.SseEvent;
@@ -95,6 +96,26 @@ public final class SubscriptionRegistry {
 
     public void notifyResourcesListChanged() {
         pushListChanged(SubscriptionListenRequest::resourcesListChanged, "notifications/resources/list_changed");
+    }
+
+    /**
+     * Pushes {@code notifications/tasks} (tasks extension, SEP-2663) to every subscription that
+     * opted into {@code snapshot.taskId()} via {@code subscriptions/listen}.
+     */
+    public void notifyTaskStatus(TaskSnapshot snapshot) {
+        lock.lock();
+        try {
+            for (var entry : entries.values()) {
+                if (!entry.filter().taskIds().contains(snapshot.taskId())) continue;
+                push(
+                        entry.stream(),
+                        entry.responseMapper(),
+                        "notifications/tasks",
+                        entry.responseMapper().taskStatusNotificationParams(snapshot));
+            }
+        } finally {
+            lock.unlock();
+        }
     }
 
     /** Pushes {@code notifications/resources/updated} to every subscription that opted into {@code uri}. */

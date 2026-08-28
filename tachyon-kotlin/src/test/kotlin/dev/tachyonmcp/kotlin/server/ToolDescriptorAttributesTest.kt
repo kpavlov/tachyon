@@ -2,12 +2,8 @@
 package dev.tachyonmcp.kotlin.server
 
 import dev.tachyonmcp.api.json.JsonSchema
-import dev.tachyonmcp.api.runtime.InteractionContext
 import dev.tachyonmcp.api.server.domain.ToolAnnotations
-import dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine
-import dev.tachyonmcp.api.server.features.tasks.TaskFeature
-import dev.tachyonmcp.api.server.features.tasks.TaskInput
-import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot
+import dev.tachyonmcp.api.server.features.tasks.TaskConnector
 import dev.tachyonmcp.api.server.features.tasks.TaskSupport
 import dev.tachyonmcp.kotlin.server.domain.Icon
 import dev.tachyonmcp.kotlin.server.features.tools.toolDescriptor
@@ -32,10 +28,7 @@ internal class ToolDescriptorAttributesTest {
 
         buildServer {
             capabilities {
-                tasks {
-                    enabled = true
-                    executionEngine = DescriptorTaskExecutionEngine
-                }
+                tasks(DescriptorTaskConnector)
             }
             tool(
                 name = "build-time",
@@ -95,22 +88,10 @@ internal class ToolDescriptorAttributesTest {
     }
 }
 
-internal object DescriptorTaskExecutionEngine : TaskExecutionEngine {
-    override fun supportedFeatures(): Set<TaskFeature> = emptySet()
-
-    override fun refresh(
-        context: InteractionContext,
-        taskId: String,
-    ): TaskSnapshot? = null
-
-    override fun cancel(
-        context: InteractionContext,
-        taskId: String,
-    ) = Unit
-
-    override fun submitInput(
-        context: InteractionContext,
-        taskId: String,
-        input: TaskInput,
-    ) = Unit
-}
+internal val DescriptorTaskConnector: TaskConnector =
+    TaskConnector
+        .builder()
+        .get { _, _ -> null }
+        .cancel { _, _ -> }
+        .update { _, _ -> }
+        .build()

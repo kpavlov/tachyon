@@ -2,13 +2,14 @@
  * Copyright (c) 2026 Konstantin Pavlov and contributors.
  */
 
+import dev.tachyonmcp.api.server.config.Mode;
+import dev.tachyonmcp.api.server.config.RuntimeConfig;
+import dev.tachyonmcp.api.server.features.tasks.TaskConnector;
+import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.core.server.config.FeatureConfig;
-import dev.tachyonmcp.api.server.config.Mode;
 import dev.tachyonmcp.core.server.config.NetworkConfig;
 import dev.tachyonmcp.core.server.config.ResourcesConfig;
-import dev.tachyonmcp.api.server.config.RuntimeConfig;
-import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.server.config.SessionConfig;
 import dev.tachyonmcp.core.server.config.TasksConfig;
 import dev.tachyonmcp.core.server.session.InMemorySessionEventStore;
@@ -29,6 +30,13 @@ final class ConfigReference {
      * {@link FeatureConfig} (tools/prompts), {@link ResourcesConfig}, {@link TasksConfig}.
      */
     static CapabilitiesConfig capabilities() {
+        // Modern Tasks requires get/cancel/update. Legacy list/awaitResult remain optional.
+        var taskConnector = TaskConnector.builder()
+            .get((ctx, request) -> null)
+            .cancel((ctx, request) -> {})
+            .update((ctx, request) -> {})
+            .build();
+
         return CapabilitiesConfig.builder()
             .tools(FeatureConfig.builder()
                 .mode(Mode.AUTO) // ON when tools registered
@@ -45,9 +53,7 @@ final class ConfigReference {
                 .build())
             .tasks(TasksConfig.builder()
                 .enabled(false) // also advertised when a registered tool supports task augmentation
-                .list(false)
-                .cancel(false)
-                .requests(false)
+                .connector(taskConnector) // required when enabled
                 .build())
             .completions(Mode.AUTO)
             .logging(false)

@@ -2,17 +2,13 @@
 package dev.tachyonmcp.kotlin.server
 
 import dev.tachyonmcp.api.json.JsonSchema
-import dev.tachyonmcp.api.runtime.InteractionContext
 import dev.tachyonmcp.api.server.config.Mode
 import dev.tachyonmcp.api.server.domain.Role
 import dev.tachyonmcp.api.server.extensions.AdvertiseMode
 import dev.tachyonmcp.api.server.extensions.ExtensionContext
 import dev.tachyonmcp.api.server.extensions.ServerExtension
 import dev.tachyonmcp.api.server.features.PaginatedResult
-import dev.tachyonmcp.api.server.features.tasks.LegacyTaskExecutionEngine
-import dev.tachyonmcp.api.server.features.tasks.TaskFeature
-import dev.tachyonmcp.api.server.features.tasks.TaskInput
-import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot
+import dev.tachyonmcp.api.server.features.tasks.TaskConnector
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.api.server.session.SessionIdGenerator
 import dev.tachyonmcp.core.server.session.InMemorySessionEventStore
@@ -42,37 +38,16 @@ import kotlin.time.toJavaDuration
 
 @Suppress("LongMethod")
 internal class TachyonServerTest {
-    private val taskExecutionEngine =
-        object : LegacyTaskExecutionEngine {
-            override fun supportedFeatures(): Set<TaskFeature> = TaskFeature.entries.toSet()
-
-            override fun refresh(
-                context: InteractionContext,
-                taskId: String,
-            ): TaskSnapshot? = null
-
-            override fun cancel(
-                context: InteractionContext,
-                taskId: String,
-            ) = Unit
-
-            override fun submitInput(
-                context: InteractionContext,
-                taskId: String,
-                input: TaskInput,
-            ) = Unit
-
-            override fun list(
-                context: InteractionContext,
-                limit: Int,
-                cursor: String?,
-            ): PaginatedResult<TaskSnapshot> = PaginatedResult.of(emptyList(), null, true)
-
-            override fun awaitResult(
-                context: InteractionContext,
-                taskId: String,
-            ): TaskSnapshot = error("unused")
-        }
+    @Suppress("DEPRECATION")
+    private val taskConnector: TaskConnector =
+        TaskConnector
+            .builder()
+            .get { _, _ -> null }
+            .cancel { _, _ -> }
+            .update { _, _ -> }
+            .list { _, _ -> PaginatedResult.of(emptyList(), null, true) }
+            .awaitResult { _, _ -> error("unused") }
+            .build()
 
     private data class JacksonPayload(
         val message: String,
@@ -161,13 +136,9 @@ internal class TachyonServerTest {
                         listChanged = true
                         pageSize = 22
                     }
-                    tasks {
-                        enabled = true
-                        list = true
-                        cancel = true
-                        requests = true
-                        executionEngine = taskExecutionEngine
+                    tasks(taskConnector) {
                         pageSize = 23
+                        pollInterval = 250.milliseconds
                     }
                     completionsMode = Mode.ON
                     logging = true
@@ -244,9 +215,7 @@ internal class TachyonServerTest {
                 prompts().listChanged() shouldBe true
                 prompts().pageSize() shouldBe 22
                 tasks().enabled() shouldBe true
-                tasks().list() shouldBe true
-                tasks().cancel() shouldBe true
-                tasks().requests() shouldBe true
+                tasks().connector() shouldBe taskConnector
                 tasks().pageSize() shouldBe 23
                 completions() shouldBe Mode.ON
                 logging() shouldBe true

@@ -2,11 +2,8 @@
 package dev.tachyonmcp.core.server.config;
 
 import dev.tachyonmcp.api.server.config.Mode;
-import dev.tachyonmcp.api.server.features.tasks.LegacyTaskExecutionEngine;
-import dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine;
-import dev.tachyonmcp.api.server.features.tasks.TaskFeature;
+import dev.tachyonmcp.api.server.features.tasks.TaskConnector;
 import java.time.Duration;
-import java.util.EnumSet;
 import java.util.Objects;
 
 /**
@@ -115,10 +112,7 @@ public record CapabilitiesConfig(
         public Builder tasks(TasksConfig config) {
             tasksBuilder = TasksConfig.builder()
                     .enabled(config.enabled())
-                    .list(config.list())
-                    .cancel(config.cancel())
-                    .requests(config.requests())
-                    .taskExecutionEngine(config.taskExecutionEngine())
+                    .connector(config.connector())
                     .pageSize(config.pageSize())
                     .keepAlive(config.keepAlive())
                     .pollInterval(config.pollInterval());
@@ -260,39 +254,6 @@ public record CapabilitiesConfig(
         }
 
         /**
-         * Sets whether task listing is enabled.
-         *
-         * @param tasksList whether task listing is enabled
-         * @return this builder
-         */
-        public Builder tasksList(boolean tasksList) {
-            tasksBuilder.list(tasksList);
-            return this;
-        }
-
-        /**
-         * Sets whether task cancellation is enabled.
-         *
-         * @param tasksCancel whether task cancellation is enabled
-         * @return this builder
-         */
-        public Builder tasksCancel(boolean tasksCancel) {
-            tasksBuilder.cancel(tasksCancel);
-            return this;
-        }
-
-        /**
-         * Sets whether task requests are enabled.
-         *
-         * @param tasksRequests whether task requests are enabled
-         * @return this builder
-         */
-        public Builder tasksRequests(boolean tasksRequests) {
-            tasksBuilder.requests(tasksRequests);
-            return this;
-        }
-
-        /**
          * Sets the tasks page size.
          *
          * @param tasksPageSize the tasks page size
@@ -332,7 +293,7 @@ public record CapabilitiesConfig(
          */
         public CapabilitiesConfig build() {
             var tasks = tasksBuilder.build();
-            validateTaskExecutionEngine(tasks);
+            validateTaskConnector(tasks);
             return new CapabilitiesConfig(
                     toolsBuilder.build(),
                     resourcesBuilder.build(),
@@ -462,70 +423,25 @@ public record CapabilitiesConfig(
          * @return this builder
          */
         public Builder noTasks() {
-            return tasksEnabled(false);
-        }
-
-        /**
-         * Enables tasks using the supplied engine and default optional operations.
-         *
-         * @param taskExecutionEngine task execution connector
-         * @return this builder
-         */
-        public Builder tasks(TaskExecutionEngine taskExecutionEngine) {
-            return tasks(
-                    taskExecutionEngine,
-                    TasksConfig.DEFAULT_TASK_LIST,
-                    TasksConfig.DEFAULT_TASK_CANCEL,
-                    TasksConfig.DEFAULT_TASK_REQUESTS);
-        }
-
-        /**
-         * Enables tasks using the supplied engine and optional MCP operations.
-         *
-         * @param taskExecutionEngine task execution connector
-         * @param list whether task listing is enabled
-         * @param cancel whether task cancellation is enabled
-         * @param requests whether task requests are enabled
-         * @return this builder
-         */
-        public Builder tasks(TaskExecutionEngine taskExecutionEngine, boolean list, boolean cancel, boolean requests) {
-            tasksBuilder
-                    .enabled(true)
-                    .list(list)
-                    .cancel(cancel)
-                    .requests(requests)
-                    .taskExecutionEngine(Objects.requireNonNull(taskExecutionEngine, "taskExecutionEngine"));
-            validateTaskExecutionEngine(tasksBuilder.build());
+            tasksBuilder.enabled(false).connector(null);
             return this;
         }
 
-        private static void validateTaskExecutionEngine(TasksConfig tasks) {
-            if (!tasks.enabled()) {
-                return;
-            }
-            var taskExecutionEngine = tasks.taskExecutionEngine();
-            if (taskExecutionEngine == null) {
-                throw new IllegalStateException("Tasks capability requires a TaskExecutionEngine");
-            }
-            var unsupported = EnumSet.noneOf(TaskFeature.class);
-            if (tasks.list()) {
-                unsupported.add(TaskFeature.LIST);
-            }
-            if (tasks.cancel()) {
-                unsupported.add(TaskFeature.CANCEL);
-            }
-            if (tasks.requests()) {
-                unsupported.add(TaskFeature.REQUESTS);
-            }
-            unsupported.removeAll(taskExecutionEngine.supportedFeatures());
-            if (!unsupported.isEmpty()) {
-                throw new IllegalStateException("Task execution engine "
-                        + taskExecutionEngine.getClass().getSimpleName()
-                        + " does not support enabled task features: "
-                        + unsupported);
-            }
-            if (tasks.list() && !(taskExecutionEngine instanceof LegacyTaskExecutionEngine)) {
-                throw new IllegalStateException("Task listing requires a LegacyTaskExecutionEngine");
+        /**
+         * Enables tasks using the supplied connector. Modern operations are required by the
+         * connector; legacy {@code tasks/list} and blocking result remain optional.
+         *
+         * @param connector task execution connector
+         * @return this builder
+         */
+        public Builder tasks(TaskConnector connector) {
+            tasksBuilder.enabled(true).connector(Objects.requireNonNull(connector, "connector"));
+            return this;
+        }
+
+        private static void validateTaskConnector(TasksConfig tasks) {
+            if (tasks.enabled() && tasks.connector() == null) {
+                throw new IllegalStateException("Tasks capability requires a TaskConnector");
             }
         }
     }

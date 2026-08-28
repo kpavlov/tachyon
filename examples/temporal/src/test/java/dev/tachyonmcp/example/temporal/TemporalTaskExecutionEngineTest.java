@@ -1,21 +1,23 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.example.temporal;
 
+import dev.tachyonmcp.api.json.JsonObject;
+import dev.tachyonmcp.api.runtime.InteractionContext;
+import dev.tachyonmcp.api.server.domain.TaskResult;
+import dev.tachyonmcp.api.server.features.tasks.TaskGetRequest;
+import dev.tachyonmcp.api.server.features.tasks.TaskState;
+import dev.tachyonmcp.api.server.features.tasks.TaskUpdateRequest;
+import dev.tachyonmcp.tasks.temporal.TemporalTaskStartRequest;
+import io.temporal.testing.TestWorkflowEnvironment;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import java.time.Duration;
+import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.mock;
-
-import dev.tachyonmcp.api.json.JsonObject;
-import dev.tachyonmcp.api.runtime.InteractionContext;
-import dev.tachyonmcp.api.server.features.tasks.TaskExecutionRequest;
-import dev.tachyonmcp.api.server.features.tasks.TaskInput;
-import dev.tachyonmcp.api.server.features.tasks.TaskState;
-import dev.tachyonmcp.tasks.temporal.TemporalTaskExecutionEngine;
-import io.temporal.testing.TestWorkflowEnvironment;
-import java.time.Duration;
-import java.util.Map;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 class TemporalTaskExecutionEngineTest {
 
@@ -24,7 +26,7 @@ class TemporalTaskExecutionEngineTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    void startsRefreshesAndUpdatesWorkflowUsingTemporalTestEnvironment(boolean approved) {
+    void startsRefreshesAndUpdatesWorkflowUsingTemporalTestEnvironment(boolean approved) throws Exception {
         try (var testEnvironment = TestWorkflowEnvironment.newInstance()) {
             var worker = testEnvironment.newWorker(TASK_QUEUE);
             worker.registerWorkflowImplementationTypes(BookingWorkflowImpl.class);
@@ -36,33 +38,37 @@ class TemporalTaskExecutionEngineTest {
             assertThat(started.taskId()).isEqualTo("test-workflow");
             assertThat(started.status()).isEqualTo(TaskState.WORKING);
             await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertThat(
-                            engine.refresh(CONTEXT, "test-workflow").status())
+                            engine.refresh(CONTEXT, get("test-workflow")).status())
                     .isEqualTo(TaskState.INPUT_REQUIRED));
-            var waiting = engine.refresh(CONTEXT, "test-workflow");
-            assertThat(engine.refresh(CONTEXT, "test-workflow").lastUpdatedAt())
+            var waiting = engine.refresh(CONTEXT, get("test-workflow"));
+            assertThat(engine.refresh(CONTEXT, get("test-workflow")).lastUpdatedAt())
                     .isEqualTo(waiting.lastUpdatedAt());
 
             engine.submitInput(
                     CONTEXT,
-                    "test-workflow",
-                    TaskInput.builder()
+                    TaskUpdateRequest.builder()
+                            .taskId("test-workflow")
                             .inputResponses(Map.of("approved", approved))
-                            .requestState("approval-1")
                             .build());
 
             await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-                var terminal = engine.refresh(CONTEXT, "test-workflow");
+                var terminal = engine.refresh(CONTEXT, get("test-workflow"));
                 assertThat(terminal.status()).isEqualTo(approved ? TaskState.COMPLETED : TaskState.REJECTED);
-                assertThat(terminal.result() != null).isEqualTo(approved);
+                assertThat(terminal.result())
+                        .isInstanceOf(approved ? TaskResult.Completed.class : TaskResult.Failed.class);
             });
         }
     }
 
-    private static TaskExecutionRequest request(String taskId) {
-        return TaskExecutionRequest.builder()
+    private static TemporalTaskStartRequest request(String taskId) {
+        return TemporalTaskStartRequest.builder()
                 .taskId(taskId)
                 .operation("book_appointment")
                 .arguments(JsonObject.of(Map.of("customer", "Ada")))
                 .build();
+    }
+
+    private static TaskGetRequest get(String taskId) {
+        return TaskGetRequest.builder().taskId(taskId).build();
     }
 }

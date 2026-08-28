@@ -7,20 +7,20 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
-import dev.tachyonmcp.testkit.TestTaskExecutionEngine;
+import dev.tachyonmcp.testkit.TestTaskConnector;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 class TaskAugmentedToolTest extends AbstractStatefulMcpE2eTest {
 
-    private TestTaskExecutionEngine taskEngine;
+    private TestTaskConnector taskEngine;
     private TaskSnapshot snapshot;
 
     @Override
     protected void startDefaultServer() {
         snapshot = TaskSnapshot.working("external-42", Instant.parse("2026-08-27T07:00:00Z"), 1);
-        taskEngine = new TestTaskExecutionEngine().publish(snapshot);
-        startServer(builder -> builder.capabilities(c -> c.tasks(taskEngine, true, true, true)), registrar -> {
+        taskEngine = new TestTaskConnector().publish(snapshot);
+        startServer(builder -> builder.capabilities(c -> c.tasks(taskEngine.connector())), registrar -> {
             registrar
                     .tools()
                     .register(

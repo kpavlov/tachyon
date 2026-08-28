@@ -10,7 +10,11 @@ import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.api.server.features.completions.CompletionRequest;
 import dev.tachyonmcp.api.server.features.prompts.PromptRequest;
 import dev.tachyonmcp.api.server.features.resources.ResourceRequest;
+import dev.tachyonmcp.api.server.features.tasks.TaskAwaitResultRequest;
+import dev.tachyonmcp.api.server.features.tasks.TaskCancelRequest;
+import dev.tachyonmcp.api.server.features.tasks.TaskGetRequest;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
+import dev.tachyonmcp.api.server.features.tasks.TaskUpdateRequest;
 import dev.tachyonmcp.api.server.features.tools.ToolRequest;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.RequestMappingException;
@@ -47,7 +51,7 @@ public class McpRequestMapper implements ProtocolRequestMapper {
         var map = asMap(params);
         var limit = map.get("limit") instanceof Number number ? number.intValue() : 0;
         var paginated = convert(map, PaginatedRequestParams.class);
-        return new PageRequest(limit, paginated.cursor());
+        return new PageRequest(limit, paginated.cursor(), optionalMap(map, "_meta", "Invalid _meta"));
     }
 
     @Override
@@ -154,16 +158,42 @@ public class McpRequestMapper implements ProtocolRequestMapper {
     }
 
     @Override
-    public String taskId(@Nullable Object params) {
-        return requiredString(asMap(params), "taskId", "Missing taskId");
+    public TaskGetRequest taskGet(@Nullable Object params) {
+        var map = asMap(params);
+        return TaskGetRequest.builder()
+                .taskId(requiredString(map, "taskId", "Missing taskId"))
+                .meta(optionalMap(map, "_meta", "Invalid _meta"))
+                .build();
+    }
+
+    @Override
+    public TaskCancelRequest taskCancel(@Nullable Object params) {
+        var map = asMap(params);
+        return TaskCancelRequest.builder()
+                .taskId(requiredString(map, "taskId", "Missing taskId"))
+                .meta(optionalMap(map, "_meta", "Invalid _meta"))
+                .build();
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public TaskAwaitResultRequest taskAwaitResult(@Nullable Object params) {
+        var map = asMap(params);
+        return TaskAwaitResultRequest.builder()
+                .taskId(requiredString(map, "taskId", "Missing taskId"))
+                .meta(optionalMap(map, "_meta", "Invalid _meta"))
+                .build();
     }
 
     @Override
     public TaskUpdateRequest taskUpdate(@Nullable Object params) {
         var map = asMap(params);
         var responses = optionalMap(map, "inputResponses", "Invalid inputResponses");
-        return new TaskUpdateRequest(
-                requiredString(map, "taskId", "Missing taskId"), responses != null ? responses : Map.of());
+        return TaskUpdateRequest.builder()
+                .taskId(requiredString(map, "taskId", "Missing taskId"))
+                .inputResponses(responses != null ? responses : Map.of())
+                .meta(optionalMap(map, "_meta", "Invalid _meta"))
+                .build();
     }
 
     @Override

@@ -4,10 +4,8 @@ package dev.tachyonmcp.core.server.features.tasks;
 import static dev.tachyonmcp.core.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.api.runtime.InteractionContext;
-import dev.tachyonmcp.api.server.features.tasks.TaskExecutionEngine;
-import dev.tachyonmcp.api.server.features.tasks.TaskFeature;
-import dev.tachyonmcp.api.server.features.tasks.TaskInput;
+import dev.tachyonmcp.api.server.domain.TaskResult;
+import dev.tachyonmcp.api.server.features.tasks.TaskConnector;
 import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.core.server.config.TasksConfig;
@@ -17,7 +15,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.Set;
+import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -29,7 +27,11 @@ class DefaultTaskRegistryTest {
             server,
             TasksConfig.builder()
                     .enabled(true)
-                    .taskExecutionEngine(new StubTaskExecutionEngine())
+                    .connector(TaskConnector.builder()
+                            .get((ctx, request) -> null)
+                            .cancel((ctx, request) -> {})
+                            .update((ctx, request) -> {})
+                            .build())
                     .keepAlive(Duration.ofMinutes(5))
                     .pollInterval(Duration.ofSeconds(2))
                     .build(),
@@ -102,30 +104,9 @@ class DefaultTaskRegistryTest {
                 .status(status)
                 .createdAt(clock.instant())
                 .lastUpdatedAt(clock.instant())
+                .result(status == TaskState.COMPLETED ? TaskResult.completed(Map.of()) : null)
                 .revision(revision)
                 .build();
-    }
-
-    private static final class StubTaskExecutionEngine implements TaskExecutionEngine {
-        @Override
-        public Set<TaskFeature> supportedFeatures() {
-            return Set.of();
-        }
-
-        @Override
-        public TaskSnapshot refresh(InteractionContext context, String taskId) {
-            return null;
-        }
-
-        @Override
-        public void cancel(InteractionContext context, String taskId) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void submitInput(InteractionContext context, String taskId, TaskInput input) {
-            throw new UnsupportedOperationException();
-        }
     }
 
     private static final class MutableClock extends Clock {

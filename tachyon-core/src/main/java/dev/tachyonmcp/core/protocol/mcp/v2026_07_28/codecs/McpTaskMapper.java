@@ -20,9 +20,11 @@ import tools.jackson.databind.JsonNode;
  * a {@code "task"} key), and {@code tasks/cancel} returning an empty acknowledgement rather than
  * the full task state.
  *
- * <p>{@code SUBMITTED} maps to {@code "submitted"} and {@code UNKNOWN} to {@code "unknown"} — two
- * states 2025-11-25 cannot express on the wire (it folds {@code SUBMITTED} to {@code "working"}
- * and throws on {@code UNKNOWN}).
+ * <p>The wire status enum has exactly five values: {@code working}, {@code input_required},
+ * {@code completed}, {@code failed}, {@code cancelled} (per the current tasks extension spec —
+ * {@code submitted} and {@code unknown} are not wire values). {@link TaskState#SUBMITTED} folds to
+ * {@code "working"}. A2A-only states without an MCP representation are rejected instead of being
+ * serialized as an invalid status-specific payload.
  */
 final class McpTaskMapper {
 
@@ -33,13 +35,13 @@ final class McpTaskMapper {
 
     static String toWireStatus(TaskState status) {
         return switch (status) {
-            case SUBMITTED -> "submitted";
-            case WORKING -> "working";
+            case SUBMITTED, WORKING -> "working";
             case INPUT_REQUIRED -> "input_required";
             case COMPLETED -> "completed";
             case CANCELLED -> "cancelled";
-            case REJECTED, AUTH_REQUIRED, FAILED -> "failed";
-            case UNKNOWN -> "unknown";
+            case FAILED -> "failed";
+            case REJECTED, AUTH_REQUIRED, UNKNOWN ->
+                throw new UnsupportedOperationException("Task state cannot be projected to MCP: " + status);
         };
     }
 
@@ -67,8 +69,16 @@ final class McpTaskMapper {
         return JsonUtils.toObjectNode(Map.of("resultType", RESULT_TYPE_COMPLETE));
     }
 
-    static JsonNode toStatusNotification(TaskSnapshot snapshot) {
-        return JsonUtils.toObjectNode(taskFields(snapshot, effectiveWireStatus(snapshot)));
+    static JsonNode toStatusNotification(
+            TaskSnapshot snapshot,
+            @Nullable JsonNode inlineResult,
+            @Nullable JsonNode inlineError,
+            @Nullable JsonNode inputRequests) {
+        var fields = taskFields(snapshot, effectiveWireStatus(snapshot));
+        putIfPresent(fields, "result", inlineResult);
+        putIfPresent(fields, "error", inlineError);
+        putIfPresent(fields, "inputRequests", inputRequests);
+        return JsonUtils.toObjectNode(fields);
     }
 
     /**
@@ -78,8 +88,8 @@ final class McpTaskMapper {
      * a {@link TaskResult.Failed} carrying a {@code protocolError} is a genuine JSON-RPC failure.
      */
     private static String effectiveWireStatus(TaskSnapshot snapshot) {
-        if (snapshot.result() instanceof TaskResult.Failed failed && failed.protocolError() == null) {
-            return "completed";
+        if (snapshot.result() instanceof TaskResult.Failed failed) {
+            return failed.protocolError() == null ? "completed" : "failed";
         }
         return toWireStatus(snapshot.status());
     }

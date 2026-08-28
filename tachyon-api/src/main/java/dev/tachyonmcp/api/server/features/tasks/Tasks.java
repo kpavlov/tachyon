@@ -1,11 +1,13 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.api.server.features.tasks;
 
+import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import org.jspecify.annotations.Nullable;
 
 /**
  * Façade interface for MCP tasks
  */
+@ExperimentalApi
 public interface Tasks {
     /** Publishes a complete task projection and returns the effective cached snapshot. */
     TaskSnapshot publish(TaskSnapshot snapshot);

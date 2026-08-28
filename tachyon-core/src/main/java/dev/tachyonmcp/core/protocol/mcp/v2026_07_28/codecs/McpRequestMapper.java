@@ -2,8 +2,6 @@
 package dev.tachyonmcp.core.protocol.mcp.v2026_07_28.codecs;
 
 import dev.tachyonmcp.api.json.PayloadDeserializer;
-import dev.tachyonmcp.core.protocol.ProtocolRequestMapper.SubscriptionListenRequest;
-import dev.tachyonmcp.core.protocol.ProtocolRequestMapper.ToolCallRequest;
 import dev.tachyonmcp.core.protocol.mcp.v2026_07_28.models.SubscriptionsListenRequestParams;
 import java.util.Objects;
 import java.util.Set;
@@ -38,7 +36,7 @@ public final class McpRequestMapper extends dev.tachyonmcp.core.protocol.mcp.v20
         var listenParams = convert(asMap(params), SubscriptionsListenRequestParams.class);
         var filter = listenParams.notifications();
         if (filter == null) {
-            return new SubscriptionListenRequest(false, false, false, Set.of());
+            return new SubscriptionListenRequest(false, false, false, Set.of(), Set.of());
         }
         var resourceSubscriptions = filter.resourceSubscriptions() != null
                 ? filter.resourceSubscriptions().stream()
@@ -49,6 +47,9 @@ public final class McpRequestMapper extends dev.tachyonmcp.core.protocol.mcp.v20
                 Boolean.TRUE.equals(filter.toolsListChanged()),
                 Boolean.TRUE.equals(filter.promptsListChanged()),
                 Boolean.TRUE.equals(filter.resourcesListChanged()),
-                resourceSubscriptions);
+                resourceSubscriptions,
+                filter.taskIds() != null
+                        ? filter.taskIds().stream().filter(Objects::nonNull).collect(Collectors.toUnmodifiableSet())
+                        : Set.of());
     }
 }

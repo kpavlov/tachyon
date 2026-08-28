@@ -586,10 +586,7 @@ internal class KotlinApiTest {
         TachyonServer(port = 0) {
             name("task-support-test")
             capabilities {
-                tasks {
-                    enabled = true
-                    executionEngine = DescriptorTaskExecutionEngine
-                }
+                tasks(DescriptorTaskConnector)
             }
             tool("t-task", taskSupport = TaskSupport.OPTIONAL) {
                 ToolResult.text("ok")

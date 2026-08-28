@@ -8,7 +8,7 @@ import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceFn;
 import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
-import dev.tachyonmcp.testkit.TestTaskExecutionEngine;
+import dev.tachyonmcp.testkit.TestTaskConnector;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -99,12 +99,11 @@ class ListPaginationE2eTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void tasksListReturnsConfiguredPageSize() throws Exception {
-        var taskEngine = new TestTaskExecutionEngine()
+        var taskEngine = new TestTaskConnector()
                 .publish(working("task-a"))
                 .publish(working("task-b"))
                 .publish(working("task-c"));
-        startServer(it ->
-                it.capabilities(c -> c.tasks(taskEngine, true, false, false).tasksPageSize(2)));
+        startServer(it -> it.capabilities(c -> c.tasks(taskEngine.connector()).tasksPageSize(2)));
 
         try (var client = createTestClient()) {
             client.initialize();

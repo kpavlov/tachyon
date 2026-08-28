@@ -5,18 +5,18 @@ The `tachyon-tasks-temporal` integration starts, refreshes, updates, and cancels
 `TemporalTaskExecutionEngine`. Temporal owns durability, retries, timers, and business execution.
 
 ```java
-var taskExecutionEngine = BookingTaskEngine.create(workflowClient, "bookings");
+var taskEngine = BookingTaskEngine.create(workflowClient, "bookings");
 
 var server = TachyonServer.builder()
-        .capabilities(c -> c.tasks(taskExecutionEngine, false, true, true))
+        .capabilities(c -> c.tasks(taskEngine.connector()))
         .port(8080)
         .build();
 
 server.tools().register(
         tool -> tool.name("book_appointment").taskSupport(TaskSupport.REQUIRED),
-        (context, request) -> ToolResult.task(taskExecutionEngine.start(
+        (context, request) -> ToolResult.task(taskEngine.start(
                 context,
-                TaskExecutionRequest.builder()
+                TemporalTaskStartRequest.builder()
                         .taskId(UUID.randomUUID().toString())
                         .operation("book_appointment")
                         .arguments(request.arguments())

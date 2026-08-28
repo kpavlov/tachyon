@@ -4,7 +4,7 @@ package dev.tachyonmcp.e2e;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
 import dev.tachyonmcp.api.server.domain.Icon;
-import dev.tachyonmcp.testkit.TestTaskExecutionEngine;
+import dev.tachyonmcp.testkit.TestTaskConnector;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -12,7 +12,7 @@ class ServerInfoTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void allCapabilitiesEnabled() throws Exception {
-        var taskEngine = new TestTaskExecutionEngine();
+        var taskEngine = new TestTaskConnector();
         startServer(it -> it.info(b -> b.name("test-server")
                         .version("2.0")
                         .description("Test server")
@@ -26,7 +26,7 @@ class ServerInfoTest extends AbstractStatelessMcpE2eTest {
                         .tools(true)
                         .resources(true, true)
                         .prompts(true)
-                        .tasks(taskEngine, true, true, true)));
+                        .tasks(taskEngine.connector())));
 
         try (var client = createTestClient()) {
             // language=json
@@ -36,51 +36,54 @@ class ServerInfoTest extends AbstractStatelessMcpE2eTest {
 
             // language=json
             final var expected = """
-                {
-                  "jsonrpc": "2.0",
-                  "id": 1,
-                  "result": {
-                    "protocolVersion": "2025-11-25",
-                    "serverInfo": {
-                      "name": "test-server",
-                      "version": "2.0",
-                      "description": "Test server",
-                      "title": "Test Server",
-                      "websiteUrl": "https://example.com/mcp",
-                      "icons": [{
-                        "src": "https://example.com/icon.png",
-                        "mimeType": "image/png",
-                        "sizes": ["32x32"],
-                        "theme": "light"
-                      }]
-                    },
-                    "instructions": "Test instructions",
-                    "capabilities": {
-                      "logging": {},
-                      "completions": {},
-                      "tools": {
-                        "listChanged": true
-                      },
-                      "resources": {
-                        "subscribe": true,
-                        "listChanged": true
-                      },
-                      "prompts": {
-                        "listChanged": true
-                      },
-                      "tasks": {
-                        "list": {},
-                        "cancel": {},
-                        "requests": {
+                    {
+                      "jsonrpc": "2.0",
+                      "id": 1,
+                      "result": {
+                        "protocolVersion": "2025-11-25",
+                        "serverInfo": {
+                          "name": "test-server",
+                          "version": "2.0",
+                          "description": "Test server",
+                          "title": "Test Server",
+                          "websiteUrl": "https://example.com/mcp",
+                          "icons": [{
+                            "src": "https://example.com/icon.png",
+                            "mimeType": "image/png",
+                            "sizes": ["32x32"],
+                            "theme": "light"
+                          }]
+                        },
+                        "instructions": "Test instructions",
+                        "capabilities": {
+                          "logging": {},
+                          "completions": {},
                           "tools": {
-                            "call": {}
+                            "listChanged": true
+                          },
+                          "resources": {
+                            "subscribe": true,
+                            "listChanged": true
+                          },
+                          "prompts": {
+                            "listChanged": true
+                          },
+                          "tasks": {
+                            "list": {},
+                            "cancel": {},
+                            "requests": {
+                              "tools": {
+                                "call": {}
+                              }
+                            }
+                          },
+                          "extensions": {
+                            "io.modelcontextprotocol/tasks": {}
                           }
                         }
                       }
                     }
-                  }
-                }
-                """;
+                    """;
 
             assertThatJson(response.body()).isEqualTo(expected);
         }

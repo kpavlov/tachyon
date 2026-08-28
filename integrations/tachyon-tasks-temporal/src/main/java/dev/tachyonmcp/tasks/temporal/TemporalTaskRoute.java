@@ -2,9 +2,8 @@
 package dev.tachyonmcp.tasks.temporal;
 
 import dev.tachyonmcp.api.annotations.ExperimentalApi;
-import dev.tachyonmcp.api.server.features.tasks.TaskExecutionRequest;
-import dev.tachyonmcp.api.server.features.tasks.TaskInput;
 import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
+import dev.tachyonmcp.api.server.features.tasks.TaskUpdateRequest;
 import io.temporal.client.WorkflowStub;
 import java.util.Objects;
 import java.util.function.BiFunction;
@@ -23,8 +22,8 @@ public final class TemporalTaskRoute<S> {
     private final String statusQuery;
     private final String inputUpdate;
     private final Class<S> statusType;
-    private final Function<TaskExecutionRequest, Object[]> startArguments;
-    private final Function<TaskInput, Object[]> inputArguments;
+    private final Function<TemporalTaskStartRequest, Object[]> startArguments;
+    private final Function<TaskUpdateRequest, Object[]> inputArguments;
     private final BiFunction<String, S, TaskSnapshot> snapshotMapper;
 
     private TemporalTaskRoute(Builder<S> builder) {
@@ -57,7 +56,7 @@ public final class TemporalTaskRoute<S> {
         return workflowType;
     }
 
-    Object[] startArguments(TaskExecutionRequest request) {
+    Object[] startArguments(TemporalTaskStartRequest request) {
         return Objects.requireNonNull(startArguments.apply(request), "startArguments result");
     }
 
@@ -70,7 +69,7 @@ public final class TemporalTaskRoute<S> {
         return snapshot;
     }
 
-    void submitInput(WorkflowStub workflow, TaskInput input) {
+    void submitInput(WorkflowStub workflow, TaskUpdateRequest input) {
         var arguments = Objects.requireNonNull(inputArguments.apply(input), "inputArguments result");
         workflow.update(inputUpdate, Void.class, arguments);
     }
@@ -94,8 +93,8 @@ public final class TemporalTaskRoute<S> {
         private String workflowType;
         private String statusQuery;
         private String inputUpdate;
-        private Function<TaskExecutionRequest, Object[]> startArguments;
-        private Function<TaskInput, Object[]> inputArguments;
+        private Function<TemporalTaskStartRequest, Object[]> startArguments;
+        private Function<TaskUpdateRequest, Object[]> inputArguments;
         private BiFunction<String, S, TaskSnapshot> snapshotMapper;
 
         private Builder(Class<S> statusType) {
@@ -130,7 +129,7 @@ public final class TemporalTaskRoute<S> {
          * @param startArguments argument mapper
          * @return this builder
          */
-        public Builder<S> startArguments(Function<TaskExecutionRequest, Object[]> startArguments) {
+        public Builder<S> startArguments(Function<TemporalTaskStartRequest, Object[]> startArguments) {
             this.startArguments = startArguments;
             return this;
         }
@@ -164,7 +163,7 @@ public final class TemporalTaskRoute<S> {
          * @param inputArguments argument mapper
          * @return this builder
          */
-        public Builder<S> inputUpdate(String inputUpdate, Function<TaskInput, Object[]> inputArguments) {
+        public Builder<S> inputUpdate(String inputUpdate, Function<TaskUpdateRequest, Object[]> inputArguments) {
             this.inputUpdate = inputUpdate;
             this.inputArguments = inputArguments;
             return this;

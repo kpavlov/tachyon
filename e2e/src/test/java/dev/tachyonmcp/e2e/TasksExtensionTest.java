@@ -9,7 +9,7 @@ import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
-import dev.tachyonmcp.testkit.TestTaskExecutionEngine;
+import dev.tachyonmcp.testkit.TestTaskConnector;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
@@ -17,14 +17,14 @@ import org.junit.jupiter.api.Test;
 
 class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
 
-    private TestTaskExecutionEngine taskEngine;
+    private TestTaskConnector taskEngine;
     private TaskSnapshot initial;
 
     @Override
     protected void startDefaultServer() {
         initial = TaskSnapshot.working("legacy-workflow", Instant.parse("2026-08-27T07:00:00Z"), 1);
-        taskEngine = new TestTaskExecutionEngine().publish(initial);
-        startServer(builder -> builder.capabilities(c -> c.tasks(taskEngine, true, true, true)), registrar -> {
+        taskEngine = new TestTaskConnector().publish(initial);
+        startServer(builder -> builder.capabilities(c -> c.tasks(taskEngine.connector())), registrar -> {
             registrar
                     .tools()
                     .register(
@@ -40,6 +40,10 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
                                     TaskSnapshot.working("legacy-progress", Instant.parse("2026-08-27T07:00:00Z"), 1)));
             registrar.tools().register(b -> b.name("notify-progress"), (context, request) -> {
                 server.tasks().reportProgress("legacy-progress", 0.5, 1.0, "halfway");
+                return ToolResult.text("ok");
+            });
+            registrar.tools().register(b -> b.name("notify-legacy-task-status"), (context, request) -> {
+                server.tasks().publish(TaskSnapshot.working("legacy-notify", Instant.parse("2026-08-27T07:00:00Z"), 1));
                 return ToolResult.text("ok");
             });
         });
@@ -80,6 +84,23 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
                     .inPath("$.result.structuredContent.bookingId")
                     .isEqualTo("booking-1");
             assertThat(taskEngine.awaitedTaskIds()).containsExactly(resultTaskId);
+        }
+    }
+
+    @Test
+    void notifiesTaskStatusOverSessionForLegacyClient() throws Exception {
+        try (var client = createTestClient()) {
+            client.initialize();
+
+            client.sendRpc("""
+                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{
+                      "name":"notify-legacy-task-status","arguments":{}}}
+                    """);
+
+            client.awaitNotification("notifications/tasks/status").satisfies(params -> {
+                assertThat(params.path("taskId").asString()).isEqualTo("legacy-notify");
+                assertThat(params.path("status").asString()).isEqualTo("working");
+            });
         }
     }
 

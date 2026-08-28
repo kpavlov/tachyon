@@ -206,14 +206,14 @@ class ServerBuilderTest {
     @EnumSource(
             value = TaskSupport.class,
             names = {"OPTIONAL", "REQUIRED"})
-    void taskAugmentedToolsRequireExecutionEngine(TaskSupport taskSupport) {
+    void taskAugmentedToolsRequireTaskConnector(TaskSupport taskSupport) {
         assertThatThrownBy(() -> TachyonServer.builder()
                         .withTools(tools -> tools.register(
                                 builder -> builder.name("task-tool").taskSupport(taskSupport),
                                 (context, request) -> ToolResult.empty()))
                         .build())
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Task-producing tools require a TaskExecutionEngine");
+                .hasMessage("Task-producing tools require a TaskConnector");
     }
 
     @Test

@@ -2,8 +2,12 @@
 package dev.tachyonmcp.core.server.features.tasks;
 
 import dev.tachyonmcp.api.server.domain.ServerError;
-import dev.tachyonmcp.api.server.features.tasks.LegacyTaskExecutionEngine;
-import dev.tachyonmcp.api.server.features.tasks.TaskInput;
+import dev.tachyonmcp.api.server.features.tasks.TaskAwaitResultRequest;
+import dev.tachyonmcp.api.server.features.tasks.TaskCancelRequest;
+import dev.tachyonmcp.api.server.features.tasks.TaskGetRequest;
+import dev.tachyonmcp.api.server.features.tasks.TaskListRequest;
+import dev.tachyonmcp.api.server.features.tasks.TaskNotFoundException;
+import dev.tachyonmcp.api.server.features.tasks.TaskUpdateRequest;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.RequestMappingException;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
@@ -57,12 +61,18 @@ public final class TaskMethodHandlers {
         }
 
         @Override
+        @SuppressWarnings("deprecation")
         public Object handle(DispatchContext context, ProtocolRequestMapper.PageRequest page) throws Exception {
-            var engine = registry.taskExecutionEngine();
-            if (!(engine instanceof LegacyTaskExecutionEngine legacy)) {
+            var connector = registry.taskConnector();
+            if (connector == null || connector.list() == null) {
                 return ServerErrors.methodNotFound("Method not found");
             }
-            var result = legacy.list(context, registry.resolvePageLimit(page.limit()), page.cursor());
+            var request = TaskListRequest.builder()
+                    .limit(registry.resolvePageLimit(page.limit()))
+                    .cursor(page.cursor())
+                    .meta(page.meta())
+                    .build();
+            var result = connector.list().apply(context, request);
             if (!result.cursorValid()) {
                 return ServerErrors.invalidParams("Invalid cursor");
             }
@@ -70,25 +80,25 @@ public final class TaskMethodHandlers {
         }
     }
 
-    private record TasksGetHandler(DefaultTaskRegistry registry) implements RpcMethodHandler<String, Object> {
+    private record TasksGetHandler(DefaultTaskRegistry registry) implements RpcMethodHandler<TaskGetRequest, Object> {
         @Override
         public String method() {
             return "tasks/get";
         }
 
         @Override
-        public String decode(DispatchContext context, @Nullable Object rawParams) {
+        public TaskGetRequest decode(DispatchContext context, @Nullable Object rawParams) {
             requireGate(TasksExtension.requireDeclared(context));
-            return context.requestMapper().taskId(rawParams);
+            return context.requestMapper().taskGet(rawParams);
         }
 
         @Override
-        public Object handle(DispatchContext context, String taskId) throws Exception {
-            var engine = registry.taskExecutionEngine();
-            if (engine == null) {
+        public Object handle(DispatchContext context, TaskGetRequest request) throws Exception {
+            var connector = registry.taskConnector();
+            if (connector == null) {
                 return ServerErrors.methodNotFound("Method not found");
             }
-            var snapshot = engine.refresh(context, taskId);
+            var snapshot = connector.get().apply(context, request);
             if (snapshot == null) {
                 return ServerErrors.invalidParams("Failed to retrieve task: Task not found");
             }
@@ -96,29 +106,38 @@ public final class TaskMethodHandlers {
         }
     }
 
-    private record TasksCancelHandler(DefaultTaskRegistry registry) implements RpcMethodHandler<String, Object> {
+    private record TasksCancelHandler(DefaultTaskRegistry registry)
+            implements RpcMethodHandler<TaskCancelRequest, Object> {
         @Override
         public String method() {
             return "tasks/cancel";
         }
 
         @Override
-        public String decode(DispatchContext context, @Nullable Object rawParams) {
+        public TaskCancelRequest decode(DispatchContext context, @Nullable Object rawParams) {
             requireGate(TasksExtension.requireDeclared(context));
-            return context.requestMapper().taskId(rawParams);
+            return context.requestMapper().taskCancel(rawParams);
         }
 
         @Override
-        public Object handle(DispatchContext context, String taskId) throws Exception {
-            var engine = registry.taskExecutionEngine();
-            if (engine == null) {
+        public Object handle(DispatchContext context, TaskCancelRequest request) throws Exception {
+            var connector = registry.taskConnector();
+            if (connector == null) {
                 return ServerErrors.methodNotFound("Method not found");
             }
-            engine.cancel(context, taskId);
+            try {
+                connector.cancel().apply(context, request);
+            } catch (TaskNotFoundException e) {
+                return ServerErrors.invalidParams("Failed to retrieve task: Task not found");
+            }
             if (!context.requestMapper().supportsLegacyTaskAugmentation()) {
                 return context.responseMapper().emptyResult();
             }
-            var snapshot = engine.refresh(context, taskId);
+            var getRequest = TaskGetRequest.builder()
+                    .taskId(request.taskId())
+                    .meta(request.meta())
+                    .build();
+            var snapshot = connector.get().apply(context, getRequest);
             if (snapshot == null) {
                 return ServerErrors.invalidParams("Failed to retrieve task: Task not found");
             }
@@ -126,59 +145,56 @@ public final class TaskMethodHandlers {
         }
     }
 
-    private record TasksResultHandler(DefaultTaskRegistry registry) implements RpcMethodHandler<String, Object> {
+    private record TasksResultHandler(DefaultTaskRegistry registry)
+            implements RpcMethodHandler<TaskAwaitResultRequest, Object> {
         @Override
         public String method() {
             return "tasks/result";
         }
 
         @Override
-        public String decode(DispatchContext context, @Nullable Object rawParams) {
+        public TaskAwaitResultRequest decode(DispatchContext context, @Nullable Object rawParams) {
             requireGate(legacyTasksUnavailable(context));
-            return context.requestMapper().taskId(rawParams);
+            return context.requestMapper().taskAwaitResult(rawParams);
         }
 
         @Override
-        public Object handle(DispatchContext context, String taskId) throws Exception {
-            var engine = registry.taskExecutionEngine();
-            if (!(engine instanceof LegacyTaskExecutionEngine legacy)) {
+        @SuppressWarnings("deprecation")
+        public Object handle(DispatchContext context, TaskAwaitResultRequest request) throws Exception {
+            var connector = registry.taskConnector();
+            if (connector == null || connector.awaitResult() == null) {
                 return ServerErrors.methodNotFound("Method not found");
             }
-            var snapshot = registry.publish(legacy.awaitResult(context, taskId));
+            var snapshot = registry.publish(connector.awaitResult().apply(context, request));
             return context.responseMapper().getTaskPayloadResult(snapshot.result(), snapshot.taskId());
         }
     }
 
     private record TasksUpdateHandler(DefaultTaskRegistry registry)
-            implements RpcMethodHandler<ProtocolRequestMapper.TaskUpdateRequest, Object> {
+            implements RpcMethodHandler<TaskUpdateRequest, Object> {
         @Override
         public String method() {
             return "tasks/update";
         }
 
         @Override
-        public ProtocolRequestMapper.TaskUpdateRequest decode(DispatchContext context, @Nullable Object rawParams) {
+        public TaskUpdateRequest decode(DispatchContext context, @Nullable Object rawParams) {
             requireGate(modernTasksOnly(context));
             requireGate(TasksExtension.requireDeclared(context));
             return context.requestMapper().taskUpdate(rawParams);
         }
 
         @Override
-        public Object handle(DispatchContext context, ProtocolRequestMapper.TaskUpdateRequest request)
-                throws Exception {
-            var cached = registry.get(request.taskId());
-            var input = TaskInput.builder()
-                    .inputResponses(request.inputResponses())
-                    .requestState(
-                            cached != null && cached.pendingInput() != null
-                                    ? cached.pendingInput().requestState()
-                                    : null)
-                    .build();
-            var engine = registry.taskExecutionEngine();
-            if (engine == null) {
+        public Object handle(DispatchContext context, TaskUpdateRequest request) throws Exception {
+            var connector = registry.taskConnector();
+            if (connector == null) {
                 return ServerErrors.methodNotFound("Method not found");
             }
-            engine.submitInput(context, request.taskId(), input);
+            try {
+                connector.update().apply(context, request);
+            } catch (TaskNotFoundException e) {
+                return ServerErrors.invalidParams("Failed to retrieve task: Task not found");
+            }
             return context.responseMapper().emptyResult();
         }
     }
