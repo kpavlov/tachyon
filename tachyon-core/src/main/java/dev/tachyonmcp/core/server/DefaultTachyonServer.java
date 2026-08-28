@@ -247,11 +247,29 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     }
 
     void validateConfiguration() {
-        var hasTaskAugmentedTool = toolRegistry.getAll().stream()
-                .anyMatch(handler -> handler.descriptor().taskSupport() != null
-                        && handler.descriptor().taskSupport() != TaskSupport.FORBIDDEN);
-        if (hasTaskAugmentedTool && (!config.capabilities().tasks().enabled() || !taskRegistry.executionConfigured())) {
+        // Only TaskSupport.REQUIRED is checked eagerly: it always attempts to create a task, on
+        // every call, so a missing connector is unambiguously a misconfiguration. OPTIONAL tools
+        // may run synchronously and never touch the connector -- under MCP 2026-07-28 OPTIONAL
+        // always runs synchronously, and under 2025-11-25 the client decides per call. FORBIDDEN
+        // tools never touch it either. ToolMethodHandlers.mapResult still rejects a
+        // REQUIRED-without-connector call at runtime; this just fails faster.
+        var hasRequiredTaskTool = toolRegistry.getAll().stream()
+                .anyMatch(handler -> handler.descriptor().taskSupport() == TaskSupport.REQUIRED);
+        var connectorMissing = !config.capabilities().tasks().enabled() || !taskRegistry.executionConfigured();
+        if (hasRequiredTaskTool && connectorMissing) {
             throw new IllegalStateException("Task-producing tools require a TaskConnector");
+        }
+        if (connectorMissing) {
+            var optionalTaskTools = toolRegistry.getAll().stream()
+                    .filter(handler -> handler.descriptor().taskSupport() == TaskSupport.OPTIONAL)
+                    .map(handler -> handler.descriptor().name())
+                    .toList();
+            if (!optionalTaskTools.isEmpty()) {
+                logger.warn(
+                        "Tool(s) {} declare TaskSupport.OPTIONAL but no TaskConnector is configured -- a"
+                                + " task-augmented call to them will fail at runtime under MCP 2025-11-25",
+                        optionalTaskTools);
+            }
         }
     }
 

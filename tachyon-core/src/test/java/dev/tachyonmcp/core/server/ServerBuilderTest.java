@@ -202,18 +202,29 @@ class ServerBuilderTest {
         }
     }
 
-    @ParameterizedTest
-    @EnumSource(
-            value = TaskSupport.class,
-            names = {"OPTIONAL", "REQUIRED"})
-    void taskAugmentedToolsRequireTaskConnector(TaskSupport taskSupport) {
+    @Test
+    void requiredTaskSupportRequiresTaskConnector() {
         assertThatThrownBy(() -> TachyonServer.builder()
                         .withTools(tools -> tools.register(
-                                builder -> builder.name("task-tool").taskSupport(taskSupport),
+                                builder -> builder.name("task-tool").taskSupport(TaskSupport.REQUIRED),
                                 (context, request) -> ToolResult.empty()))
                         .build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("Task-producing tools require a TaskConnector");
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = TaskSupport.class,
+            names = {"FORBIDDEN", "OPTIONAL"})
+    void nonRequiredTaskSupportBuildsWithoutTaskConnector(TaskSupport taskSupport) {
+        try (var server = TachyonServer.builder()
+                .withTools(tools -> tools.register(
+                        builder -> builder.name("task-tool").taskSupport(taskSupport),
+                        (context, request) -> ToolResult.empty()))
+                .build()) {
+            assertThat(server).isNotNull();
+        }
     }
 
     @Test

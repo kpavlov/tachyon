@@ -128,7 +128,7 @@ public final class TaskMethodHandlers {
             try {
                 connector.cancel().apply(context, request);
             } catch (TaskNotFoundException e) {
-                return ServerErrors.invalidParams("Failed to retrieve task: Task not found");
+                return ServerErrors.invalidParams("Failed to cancel task: Task not found");
             }
             if (!context.requestMapper().supportsLegacyTaskAugmentation()) {
                 return context.responseMapper().emptyResult();
@@ -193,7 +193,7 @@ public final class TaskMethodHandlers {
             try {
                 connector.update().apply(context, request);
             } catch (TaskNotFoundException e) {
-                return ServerErrors.invalidParams("Failed to retrieve task: Task not found");
+                return ServerErrors.invalidParams("Failed to update task: Task not found");
             }
             return context.responseMapper().emptyResult();
         }
