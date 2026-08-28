@@ -34,10 +34,10 @@ class McpTaskMapperTest {
                 .createdAt(Instant.EPOCH)
                 .lastUpdatedAt(Instant.EPOCH)
                 .revision(1);
-        if (status == TaskState.COMPLETED) {
+        if (status == TaskState.COMPLETED || status == TaskState.REJECTED) {
             builder.result(TaskResult.completed(Map.of()));
         }
-        if (status == TaskState.FAILED || status == TaskState.REJECTED) {
+        if (status == TaskState.FAILED) {
             builder.result(TaskResult.failed(new ServerError(ServerError.Kind.INTERNAL_ERROR, "failed")));
         }
         if (status == TaskState.INPUT_REQUIRED) {
@@ -145,8 +145,8 @@ class McpTaskMapperTest {
     void toolLevelErrorReportsCompletedStatusForGetAndCreate() {
         var task = TaskSnapshot.builder()
                 .from(entry(TaskState.WORKING))
-                .status(TaskState.FAILED)
-                .result(TaskResult.failed("boom"))
+                .status(TaskState.COMPLETED)
+                .result(TaskResult.completedWithError("boom"))
                 .revision(2)
                 .build();
 

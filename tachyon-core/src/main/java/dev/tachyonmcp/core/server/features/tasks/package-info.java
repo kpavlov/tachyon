@@ -9,6 +9,8 @@
  * tracking for the MCP task extension.
  */
 @NullMarked
+@ExperimentalApi
 package dev.tachyonmcp.core.server.features.tasks;
 
+import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import org.jspecify.annotations.NullMarked;

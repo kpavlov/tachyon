@@ -4,7 +4,9 @@ package dev.tachyonmcp.api.server.features.tasks;
 import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import dev.tachyonmcp.api.server.domain.HasMeta;
 import dev.tachyonmcp.api.server.domain.InputRequestBundle;
+import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TaskResult;
+import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
@@ -88,14 +90,14 @@ public interface TaskSnapshot extends HasMeta {
             throw new IllegalArgumentException(status() + " snapshot cannot carry pendingInput");
         }
         switch (status()) {
-            case COMPLETED -> {
+            case COMPLETED, REJECTED -> {
                 if (!(result() instanceof TaskResult.Completed)) {
-                    throw new IllegalArgumentException("COMPLETED snapshot requires a TaskResult.Completed result");
+                    throw new IllegalArgumentException(status() + " snapshot requires a TaskResult.Completed result");
                 }
             }
-            case FAILED, REJECTED -> {
+            case FAILED -> {
                 if (!(result() instanceof TaskResult.Failed)) {
-                    throw new IllegalArgumentException(status() + " snapshot requires a TaskResult.Failed result");
+                    throw new IllegalArgumentException("FAILED snapshot requires a TaskResult.Failed result");
                 }
             }
             case CANCELLED, WORKING, SUBMITTED, AUTH_REQUIRED, UNKNOWN -> {
@@ -114,12 +116,78 @@ public interface TaskSnapshot extends HasMeta {
         }
     }
 
-    /** Creates a working snapshot observed at the supplied instant. */
+    /**
+     * Creates a working snapshot, using {@code observedAt} as both {@link #createdAt()} and {@link
+     * #lastUpdatedAt()} — the shape of a task's very first snapshot.
+     */
     static TaskSnapshot working(String taskId, Instant observedAt, long revision) {
+        return working(taskId, observedAt, observedAt, revision);
+    }
+
+    /**
+     * Creates a working snapshot observed at {@code observedAt}, preserving the task's original
+     * {@link #createdAt()} across a later transition back to {@code WORKING}.
+     */
+    static TaskSnapshot working(String taskId, Instant createdAt, Instant observedAt, long revision) {
         return builder()
                 .taskId(taskId)
                 .status(TaskState.WORKING)
-                .createdAt(observedAt)
+                .createdAt(createdAt)
+                .lastUpdatedAt(observedAt)
+                .revision(revision)
+                .build();
+    }
+
+    /** Creates an input-required snapshot awaiting {@code pendingInput}. */
+    static TaskSnapshot inputRequired(
+            String taskId, Instant createdAt, Instant observedAt, long revision, InputRequestBundle pendingInput) {
+        return builder()
+                .taskId(taskId)
+                .status(TaskState.INPUT_REQUIRED)
+                .createdAt(createdAt)
+                .lastUpdatedAt(observedAt)
+                .pendingInput(pendingInput)
+                .revision(revision)
+                .build();
+    }
+
+    /**
+     * Creates a completed snapshot carrying {@code result}, which may be a {@link ToolResult.Error}
+     * — a tool-level error is still a completed task on the wire, never a {@link #failed} one.
+     */
+    static TaskSnapshot completed(
+            String taskId, Instant createdAt, Instant observedAt, long revision, ToolResult result) {
+        return builder()
+                .taskId(taskId)
+                .status(TaskState.COMPLETED)
+                .createdAt(createdAt)
+                .lastUpdatedAt(observedAt)
+                .result(TaskResult.completed(result))
+                .revision(revision)
+                .build();
+    }
+
+    /**
+     * Creates a failed snapshot carrying the genuine protocol {@code error}. Use {@link #completed}
+     * with a {@link ToolResult.Error} for a tool-level failure instead.
+     */
+    static TaskSnapshot failed(String taskId, Instant createdAt, Instant observedAt, long revision, ServerError error) {
+        return builder()
+                .taskId(taskId)
+                .status(TaskState.FAILED)
+                .createdAt(createdAt)
+                .lastUpdatedAt(observedAt)
+                .result(TaskResult.failed(error))
+                .revision(revision)
+                .build();
+    }
+
+    /** Creates a cancelled snapshot. */
+    static TaskSnapshot cancelled(String taskId, Instant createdAt, Instant observedAt, long revision) {
+        return builder()
+                .taskId(taskId)
+                .status(TaskState.CANCELLED)
+                .createdAt(createdAt)
                 .lastUpdatedAt(observedAt)
                 .revision(revision)
                 .build();

@@ -20,7 +20,15 @@ import java.lang.annotation.Target;
  */
 @Documented
 @Retention(RetentionPolicy.CLASS)
-@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD, ElementType.PACKAGE})
+@Target({
+    ElementType.TYPE,
+    ElementType.METHOD,
+    ElementType.CONSTRUCTOR,
+    ElementType.FIELD,
+    ElementType.PACKAGE,
+    ElementType.PARAMETER,
+    ElementType.RECORD_COMPONENT
+})
 public @interface ExperimentalApi {
 
     /** Version in which the annotated API became experimental. */

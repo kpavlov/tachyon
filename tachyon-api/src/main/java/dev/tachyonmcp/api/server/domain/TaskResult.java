@@ -2,26 +2,54 @@
 package dev.tachyonmcp.api.server.domain;
 
 import dev.tachyonmcp.api.annotations.ExperimentalApi;
-import java.util.Collections;
+import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
+/**
+ * The terminal outcome of a task: either {@link Completed} (a normal {@code tools/call}-shaped
+ * outcome, including a tool-level error) or {@link Failed} (a genuine JSON-RPC protocol failure).
+ * These are structurally distinct on purpose: a {@link Completed} can never be mistaken for a
+ * {@link Failed} and vice versa, so the wire status ({@code "completed"} vs {@code "failed"})
+ * follows from the type alone.
+ */
 @ExperimentalApi
 public sealed interface TaskResult extends HasMeta permits TaskResult.Completed, TaskResult.Failed {
 
-    static Completed completed(
-            List<ContentBlock> content, @Nullable Object structuredContent, @Nullable Map<String, Object> meta) {
-        return new Completed(content, structuredContent, meta);
+    /**
+     * Creates a completed task carrying the given tool result, including a tool-level error
+     * ({@link ToolResult.Error}) — errors within a task's outcome are still {@code "completed"}
+     * on the wire, never {@code "failed"}.
+     *
+     * @param result the tool result
+     * @return a completed task result
+     */
+    static Completed completed(ToolResult result) {
+        return new Completed(result);
     }
 
+    /**
+     * Creates a completed task carrying only a structured payload, with no content blocks.
+     *
+     * @param structuredContent the structured payload
+     * @return a completed task result
+     */
     static Completed completed(Object structuredContent) {
-        return new Completed(Collections.emptyList(), structuredContent, null);
+        return new Completed(ToolResult.Success.of(structuredContent, List.of()));
     }
 
-    static Failed failed(String message) {
-        return new Failed(List.of(TextContent.of(message)), null, null);
+    /**
+     * Creates a completed task carrying a tool-level error message. Still {@code "completed"} on
+     * the wire, not {@code "failed"} — use {@link #failed(ServerError)} for a genuine protocol
+     * failure.
+     *
+     * @param message the error message
+     * @return a completed task result carrying a tool-level error
+     */
+    static Completed completedWithError(String message) {
+        return new Completed(ToolResult.error(message));
     }
 
     /**
@@ -31,41 +59,34 @@ public sealed interface TaskResult extends HasMeta permits TaskResult.Completed,
      * @return failed task result carrying the protocol error
      */
     static Failed failed(ServerError error) {
-        return new Failed(List.of(), null, null, Objects.requireNonNull(error, "error"));
+        return new Failed(Objects.requireNonNull(error, "error"));
     }
 
-    record Completed(
-            List<ContentBlock> content,
-            @Nullable Object structuredContent,
-            @Nullable Map<String, Object> meta) implements TaskResult {
+    /** A normal {@code tools/call}-shaped outcome, including a tool-level error. */
+    record Completed(ToolResult result) implements TaskResult {
         public Completed {
-            Objects.requireNonNull(content, "content");
-            content = List.copyOf(content);
+            Objects.requireNonNull(result, "result");
+            if (result instanceof ToolResult.InputRequired || result instanceof ToolResult.Task) {
+                throw new IllegalArgumentException("TaskResult.Completed cannot nest a "
+                        + result.getClass().getSimpleName() + " result");
+            }
         }
 
-        public Completed(@Nullable Map<String, Object> meta) {
-            this(List.of(), null, meta);
+        @Override
+        public @Nullable Map<String, Object> meta() {
+            return result.meta();
         }
     }
 
-    record Failed(
-            List<ContentBlock> content,
-            @Nullable Object structuredContent,
-            @Nullable Map<String, Object> meta,
-            @Nullable ServerError protocolError)
-            implements TaskResult {
-        public Failed(
-                List<ContentBlock> content, @Nullable Object structuredContent, @Nullable Map<String, Object> meta) {
-            this(content, structuredContent, meta, null);
-        }
-
+    /** A genuine JSON-RPC protocol failure. */
+    record Failed(ServerError error) implements TaskResult {
         public Failed {
-            Objects.requireNonNull(content, "content");
-            content = List.copyOf(content);
+            Objects.requireNonNull(error, "error");
         }
 
-        public Failed(@Nullable Map<String, Object> meta) {
-            this(List.of(), null, meta, null);
+        @Override
+        public @Nullable Map<String, Object> meta() {
+            return null;
         }
     }
 }

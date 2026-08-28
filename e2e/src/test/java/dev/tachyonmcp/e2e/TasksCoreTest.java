@@ -100,6 +100,24 @@ class TasksCoreTest extends AbstractStatefulMcpE2eTest {
     }
 
     @Test
+    void getOnUnknownTaskReturnsTheSameErrorShapeAsCancelAndUpdate() throws Exception {
+        taskConnector.reset();
+
+        try (var client = createTestClient()) {
+            client.initialize();
+            var getJson = client.sendRpc("""
+                    {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"unknown-workflow"}}
+                    """);
+            assertThatJsonRpcResponse(getJson).isJsonRpcError().hasErrorMessageContaining("Task not found");
+
+            var cancelJson = client.sendRpc("""
+                    {"jsonrpc":"2.0","id":3,"method":"tasks/cancel","params":{"taskId":"unknown-workflow"}}
+                    """);
+            assertThatJsonRpcResponse(cancelJson).isJsonRpcError().hasErrorMessageContaining("Task not found");
+        }
+    }
+
+    @Test
     void cancelsThroughConnector() throws Exception {
         taskConnector.reset();
         taskConnector.publish(working("workflow-cancel", 1));

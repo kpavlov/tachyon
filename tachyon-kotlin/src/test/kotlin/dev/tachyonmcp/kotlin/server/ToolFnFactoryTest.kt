@@ -5,6 +5,7 @@ import dev.tachyonmcp.api.runtime.InteractionContext
 import dev.tachyonmcp.api.server.features.tasks.TaskCancelRequest
 import dev.tachyonmcp.api.server.features.tasks.TaskConnector
 import dev.tachyonmcp.api.server.features.tasks.TaskGetRequest
+import dev.tachyonmcp.api.server.features.tasks.TaskNotFoundException
 import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot
 import dev.tachyonmcp.api.server.features.tasks.TaskState
 import dev.tachyonmcp.api.server.features.tasks.TaskSupport
@@ -263,7 +264,9 @@ internal class ToolFnFactoryTest {
             @Suppress("unused")
             context: InteractionContext,
             request: TaskGetRequest,
-        ): TaskSnapshot? = snapshot.get().takeIf { it.taskId() == request.taskId() }
+        ): TaskSnapshot =
+            snapshot.get().takeIf { it.taskId() == request.taskId() }
+                ?: throw TaskNotFoundException(request.taskId())
 
         fun cancel(
             @Suppress("unused")

@@ -85,13 +85,15 @@ final class McpTaskMapper {
      * A tool result that completed with {@code isError: true} is a normal {@code completed}
      * outcome, not a task failure: "This status MUST NOT be used for non-JSON-RPC errors ...
      * errors within the context of a protocol method result MUST use the completed status." Only
-     * a {@link TaskResult.Failed} carrying a {@code protocolError} is a genuine JSON-RPC failure.
+     * a {@link TaskResult.Failed}, which always carries a genuine protocol {@link
+     * dev.tachyonmcp.api.server.domain.ServerError}, maps to {@code "failed"}.
      */
     private static String effectiveWireStatus(TaskSnapshot snapshot) {
-        if (snapshot.result() instanceof TaskResult.Failed failed) {
-            return failed.protocolError() == null ? "completed" : "failed";
-        }
-        return toWireStatus(snapshot.status());
+        return switch (snapshot.result()) {
+            case TaskResult.Completed c -> "completed";
+            case TaskResult.Failed f -> "failed";
+            case null -> toWireStatus(snapshot.status());
+        };
     }
 
     private static Map<String, Object> taskFields(TaskSnapshot snapshot, String wireStatus) {

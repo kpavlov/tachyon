@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.config
 
+import dev.tachyonmcp.api.annotations.ExperimentalApi
 import dev.tachyonmcp.api.server.config.Mode
 import dev.tachyonmcp.api.server.features.tasks.TaskConnector
 import dev.tachyonmcp.core.server.config.CapabilitiesConfig
@@ -59,6 +60,7 @@ public class CapabilitiesScope
          * @param configure additional task capability configuration
          */
         @OptIn(ExperimentalContracts::class)
+        @ExperimentalApi
         public inline fun tasks(
             connector: TaskConnector,
             configure: (@TachyonDsl TasksScope).() -> Unit = {},

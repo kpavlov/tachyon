@@ -215,6 +215,7 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
             case ToolResult.Error error -> buildCallToolResult(error.content(), null, true, resolveMeta(result));
             case ToolResult.Success success ->
                 buildCallToolResult(success.content(), success.structuredValue(), null, resolveMeta(result));
+            default -> throw new IllegalArgumentException("Unsupported ToolResult: " + result.getClass());
         };
     }
 
@@ -362,26 +363,17 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
     }
 
     /**
-     * Inlines a completed task's outcome (or a tool-level {@code isError: true} failure — see
-     * {@link TaskResult.Failed#protocolError()}) into {@code tasks/get}'s {@code result} field, in
-     * the same shape a synchronous {@code tools/call} would have returned. {@code null} while the
-     * task hasn't reached a result-bearing state.
+     * Inlines a completed task's outcome (including a tool-level {@code isError: true} failure)
+     * into {@code tasks/get}'s {@code result} field, in the same shape a synchronous {@code
+     * tools/call} would have returned. {@code null} while the task hasn't reached a
+     * result-bearing state, or for a genuine {@link TaskResult.Failed} protocol failure — see
+     * {@link #taskErrorNode(TaskSnapshot)}.
      */
     private @Nullable JsonNode taskResultNode(TaskSnapshot snapshot) {
-        return switch (snapshot.result()) {
-            case TaskResult.Completed c ->
-                encodeToTree(
-                        CallToolResult.class,
-                        buildCallToolResult(
-                                c.content(), c.structuredContent(), null, JsonUtils.toJsonNodeMap(c.meta())));
-            case TaskResult.Failed f
-            when f.protocolError() == null ->
-                encodeToTree(
-                        CallToolResult.class,
-                        buildCallToolResult(
-                                f.content(), f.structuredContent(), true, JsonUtils.toJsonNodeMap(f.meta())));
-            case null, default -> null;
-        };
+        if (!(snapshot.result() instanceof TaskResult.Completed c)) {
+            return null;
+        }
+        return encodeToTree(CallToolResult.class, (CallToolResult) callToolResult(c.result()));
     }
 
     /**
@@ -396,10 +388,10 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
 
     /** Inlines a genuine JSON-RPC protocol failure into {@code tasks/get}'s {@code error} field. */
     private @Nullable JsonNode taskErrorNode(TaskSnapshot snapshot) {
-        if (!(snapshot.result() instanceof TaskResult.Failed f) || f.protocolError() == null) {
+        if (!(snapshot.result() instanceof TaskResult.Failed f)) {
             return null;
         }
-        var mapped = error(f.protocolError());
+        var mapped = error(f.error());
         var fields = new LinkedHashMap<String, Object>();
         fields.put("code", mapped.code());
         fields.put("message", mapped.message());

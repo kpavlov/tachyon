@@ -19,7 +19,6 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.IntStream;
-import org.jspecify.annotations.Nullable;
 
 /** Controllable task-connector fixture for MCP server tests. */
 public final class TestTaskConnector {
@@ -85,11 +84,12 @@ public final class TestTaskConnector {
      *
      * @param context current MCP interaction
      * @param request task lookup request
-     * @return the stored snapshot, or {@code null} if the task is unknown
+     * @return the stored snapshot
+     * @throws TaskNotFoundException if {@code request.taskId()} has no stored snapshot
      */
-    public @Nullable TaskSnapshot refresh(InteractionContext context, TaskGetRequest request) {
+    public TaskSnapshot refresh(InteractionContext context, TaskGetRequest request) throws TaskNotFoundException {
         refreshedTaskIds.add(request.taskId());
-        return snapshots.get(request.taskId());
+        return requireSnapshot(request.taskId());
     }
 
     /**

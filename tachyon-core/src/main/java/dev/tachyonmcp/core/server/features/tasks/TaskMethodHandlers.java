@@ -7,6 +7,7 @@ import dev.tachyonmcp.api.server.features.tasks.TaskCancelRequest;
 import dev.tachyonmcp.api.server.features.tasks.TaskGetRequest;
 import dev.tachyonmcp.api.server.features.tasks.TaskListRequest;
 import dev.tachyonmcp.api.server.features.tasks.TaskNotFoundException;
+import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.api.server.features.tasks.TaskUpdateRequest;
 import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.protocol.RequestMappingException;
@@ -99,8 +100,10 @@ public final class TaskMethodHandlers {
             if (connector == null) {
                 return ServerErrors.methodNotFound("Method not found");
             }
-            var snapshot = connector.get().apply(context, request);
-            if (snapshot == null) {
+            final TaskSnapshot snapshot;
+            try {
+                snapshot = connector.get().apply(context, request);
+            } catch (TaskNotFoundException e) {
                 return ServerErrors.invalidParams("Failed to retrieve task: Task not found");
             }
             return context.responseMapper().getTaskResult(registry.publish(snapshot));
@@ -138,8 +141,10 @@ public final class TaskMethodHandlers {
                     .taskId(request.taskId())
                     .meta(request.meta())
                     .build();
-            var snapshot = connector.get().apply(context, getRequest);
-            if (snapshot == null) {
+            final TaskSnapshot snapshot;
+            try {
+                snapshot = connector.get().apply(context, getRequest);
+            } catch (TaskNotFoundException e) {
                 return ServerErrors.invalidParams("Failed to retrieve task: Task not found");
             }
             return context.responseMapper().cancelTaskResult(registry.publish(snapshot));

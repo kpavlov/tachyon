@@ -54,8 +54,9 @@ class TemporalTaskExecutionEngineTest {
             await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
                 var terminal = engine.refresh(CONTEXT, get("test-workflow"));
                 assertThat(terminal.status()).isEqualTo(approved ? TaskState.COMPLETED : TaskState.REJECTED);
-                assertThat(terminal.result())
-                        .isInstanceOf(approved ? TaskResult.Completed.class : TaskResult.Failed.class);
+                // A rejected booking is still a completed task carrying a tool-level error — MCP's
+                // "failed" status is reserved for genuine JSON-RPC protocol failures, not this.
+                assertThat(terminal.result()).isInstanceOf(TaskResult.Completed.class);
             });
         }
     }

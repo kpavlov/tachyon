@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.config;
 
+import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import dev.tachyonmcp.api.server.config.Mode;
 import dev.tachyonmcp.api.server.features.tasks.TaskConnector;
 import java.time.Duration;
@@ -20,7 +21,7 @@ public record CapabilitiesConfig(
         FeatureConfig tools,
         ResourcesConfig resources,
         FeatureConfig prompts,
-        TasksConfig tasks,
+        @ExperimentalApi TasksConfig tasks,
         Mode completions,
         boolean logging) {
 

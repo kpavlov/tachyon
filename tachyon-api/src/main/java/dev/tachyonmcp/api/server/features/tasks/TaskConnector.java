@@ -23,15 +23,19 @@ public final class TaskConnector {
     private final TaskGetFn get;
     private final TaskCancelFn cancel;
     private final TaskUpdateFn update;
+
+    @SuppressWarnings("deprecation")
     private final @Nullable TaskListFn list;
+
+    @SuppressWarnings("deprecation")
     private final @Nullable TaskAwaitResultFn awaitResult;
 
     private TaskConnector(
             TaskGetFn get,
             TaskCancelFn cancel,
             TaskUpdateFn update,
-            @Nullable TaskListFn list,
-            @Nullable TaskAwaitResultFn awaitResult) {
+            @SuppressWarnings("deprecation") @Nullable TaskListFn list,
+            @SuppressWarnings("deprecation") @Nullable TaskAwaitResultFn awaitResult) {
         this.get = get;
         this.cancel = cancel;
         this.update = update;
@@ -65,7 +69,7 @@ public final class TaskConnector {
      * @deprecated legacy surface kept for MCP 2025-11-25 (pre-SEP-2663) compatibility; no
      *     equivalent exists in the modern tasks extension. Not scheduled for removal.
      */
-    @Deprecated(forRemoval = false)
+    @Deprecated
     public @Nullable TaskListFn list() {
         return list;
     }
@@ -76,7 +80,7 @@ public final class TaskConnector {
      * @deprecated legacy surface kept for MCP 2025-11-25 (pre-SEP-2663) compatibility; no
      *     equivalent exists in the modern tasks extension. Not scheduled for removal.
      */
-    @Deprecated(forRemoval = false)
+    @Deprecated
     public @Nullable TaskAwaitResultFn awaitResult() {
         return awaitResult;
     }
@@ -87,7 +91,11 @@ public final class TaskConnector {
         private @Nullable TaskGetFn get;
         private @Nullable TaskCancelFn cancel;
         private @Nullable TaskUpdateFn update;
+
+        @SuppressWarnings("deprecation")
         private @Nullable TaskListFn list;
+
+        @SuppressWarnings("deprecation")
         private @Nullable TaskAwaitResultFn awaitResult;
 
         private Builder() {}
@@ -116,7 +124,7 @@ public final class TaskConnector {
          * @deprecated legacy surface kept for MCP 2025-11-25 (pre-SEP-2663) compatibility; no
          *     equivalent exists in the modern tasks extension. Not scheduled for removal.
          */
-        @Deprecated(forRemoval = false)
+        @Deprecated
         public Builder list(TaskListFn list) {
             this.list = Objects.requireNonNull(list, "list");
             return this;
@@ -128,7 +136,7 @@ public final class TaskConnector {
          * @deprecated legacy surface kept for MCP 2025-11-25 (pre-SEP-2663) compatibility; no
          *     equivalent exists in the modern tasks extension. Not scheduled for removal.
          */
-        @Deprecated(forRemoval = false)
+        @Deprecated
         public Builder awaitResult(TaskAwaitResultFn awaitResult) {
             this.awaitResult = Objects.requireNonNull(awaitResult, "awaitResult");
             return this;

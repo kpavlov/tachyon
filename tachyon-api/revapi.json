@@ -196,6 +196,24 @@
           "attachments": {
             "since": "1.0.0-beta.23"
           }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method dev.tachyonmcp.api.server.features.tools.ToolDescriptor.Builder dev.tachyonmcp.api.server.features.tools.ToolDescriptor.Builder::taskSupport(dev.tachyonmcp.api.server.features.tasks.TaskSupport)",
+          "justification": "Not actually removed from the jar — annotated @ExperimentalApi for consistency with the TaskSupport type it exposes, which Revapi's element filter excludes from the tracked stable surface; see the TaskState entry above",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method dev.tachyonmcp.api.server.features.tasks.TaskSupport dev.tachyonmcp.api.server.features.tools.ToolDescriptor::taskSupport()",
+          "justification": "Not actually removed from the jar — annotated @ExperimentalApi for consistency with the TaskSupport type it exposes, which Revapi's element filter excludes from the tracked stable surface; see the TaskState entry above",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
         }
       ]
     }

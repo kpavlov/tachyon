@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.api.server.features.tools;
 
+import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import dev.tachyonmcp.api.json.JsonDocument;
 import dev.tachyonmcp.api.server.domain.ContentBlock;
 import dev.tachyonmcp.api.server.domain.HasMeta;
@@ -16,7 +17,7 @@ import org.jspecify.annotations.Nullable;
 
 /** Outcome of a tool invocation: success, error, input-required. */
 public sealed interface ToolResult extends HasMeta
-        permits ToolResult.Success, ToolResult.Error, ToolResult.InputRequired, ToolResult.Task {
+        permits ToolResult.Error, ToolResult.InputRequired, ToolResult.Success, ToolResult.Task {
 
     @Override
     default @Nullable Map<String, Object> meta() {
@@ -317,6 +318,7 @@ public sealed interface ToolResult extends HasMeta
             typeImmutable = "Default*",
             with = "",
             from = "")
+    @ExperimentalApi
     non-sealed interface Task extends ToolResult {
 
         /** Returns the initial task projection. */
@@ -338,11 +340,13 @@ public sealed interface ToolResult extends HasMeta
         }
 
         /** Creates a task result for the supplied initial projection. */
+        @ExperimentalApi
         static Task of(TaskSnapshot snapshot) {
             return DefaultTask.builder().snapshot(snapshot).build();
         }
 
         /** Builder for {@link Task}. */
+        @ExperimentalApi
         interface Builder {
             /** Sets the initial task projection. */
             Builder snapshot(TaskSnapshot snapshot);
@@ -424,6 +428,7 @@ public sealed interface ToolResult extends HasMeta
     }
 
     /** Creates a task result carrying its initial immutable projection. */
+    @ExperimentalApi
     static ToolResult task(TaskSnapshot snapshot) {
         return Task.of(snapshot);
     }

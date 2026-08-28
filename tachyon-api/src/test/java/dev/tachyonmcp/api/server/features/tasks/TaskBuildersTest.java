@@ -4,13 +4,49 @@ package dev.tachyonmcp.api.server.features.tasks;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.tachyonmcp.api.json.JsonSchema;
+import dev.tachyonmcp.api.server.domain.FormInputRequest;
+import dev.tachyonmcp.api.server.domain.InputRequestBundle;
+import dev.tachyonmcp.api.server.domain.ServerError;
 import dev.tachyonmcp.api.server.domain.TaskResult;
+import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class TaskBuildersTest {
+
+    private static final Instant CREATED_AT = Instant.parse("2026-08-27T07:00:00Z");
+    private static final Instant OBSERVED_AT = Instant.parse("2026-08-27T07:05:00Z");
+
+    @Test
+    void commonFactoriesCoverEveryTerminalAndNonTerminalState() {
+        var working = TaskSnapshot.working("task-w", CREATED_AT, OBSERVED_AT, 1);
+        assertThat(working.status()).isEqualTo(TaskState.WORKING);
+        assertThat(working.createdAt()).isEqualTo(CREATED_AT);
+        assertThat(working.lastUpdatedAt()).isEqualTo(OBSERVED_AT);
+
+        var pendingInput = new InputRequestBundle(
+                Map.of("approval", FormInputRequest.of("Approve", JsonSchema.unchecked("{\"type\":\"object\"}"))),
+                null);
+        var inputRequired = TaskSnapshot.inputRequired("task-i", CREATED_AT, OBSERVED_AT, 2, pendingInput);
+        assertThat(inputRequired.status()).isEqualTo(TaskState.INPUT_REQUIRED);
+        assertThat(inputRequired.pendingInput()).isEqualTo(pendingInput);
+
+        var completed = TaskSnapshot.completed("task-c", CREATED_AT, OBSERVED_AT, 3, ToolResult.text("booked"));
+        assertThat(completed.status()).isEqualTo(TaskState.COMPLETED);
+        assertThat(completed.result()).isInstanceOf(TaskResult.Completed.class);
+
+        var failed = TaskSnapshot.failed(
+                "task-f", CREATED_AT, OBSERVED_AT, 4, new ServerError(ServerError.Kind.INTERNAL_ERROR, "boom"));
+        assertThat(failed.status()).isEqualTo(TaskState.FAILED);
+        assertThat(failed.result()).isInstanceOf(TaskResult.Failed.class);
+
+        var cancelled = TaskSnapshot.cancelled("task-x", CREATED_AT, OBSERVED_AT, 5);
+        assertThat(cancelled.status()).isEqualTo(TaskState.CANCELLED);
+        assertThat(cancelled.result()).isNull();
+    }
 
     @Test
     void buildsAndCopiesTaskSnapshot() {
@@ -43,6 +79,20 @@ class TaskBuildersTest {
                         .build())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("COMPLETED");
+    }
+
+    @Test
+    void failedSnapshotCannotCarryATaskLevelErrorResult() {
+        var working = TaskSnapshot.working("task-2b", Instant.EPOCH, 1);
+
+        assertThatThrownBy(() -> TaskSnapshot.builder()
+                        .from(working)
+                        .status(TaskState.FAILED)
+                        .result(TaskResult.completedWithError("Booking rejected"))
+                        .revision(2)
+                        .build())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("FAILED");
     }
 
     @Test
@@ -139,7 +189,9 @@ class TaskBuildersTest {
 
     @Test
     void connectorRequiresEveryModernTaskOperation() {
-        var builder = TaskConnector.builder().get((context, request) -> null);
+        var builder = TaskConnector.builder().get((context, request) -> {
+            throw new TaskNotFoundException(request.taskId());
+        });
 
         assertThatThrownBy(builder::build)
                 .isInstanceOf(IllegalStateException.class)

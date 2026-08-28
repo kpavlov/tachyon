@@ -146,6 +146,7 @@ public class McpResponseMapper implements ProtocolResponseMapper {
             case ToolResult.Task ignored -> throw new IllegalArgumentException("Task result requires task mapping");
             case ToolResult.Error er -> buildCallToolResult(er.content(), null, true, resolveMeta(result));
             case Success s -> wireSuccess(s, resolveMeta(result));
+            default -> throw new IllegalArgumentException("Unsupported ToolResult: " + result.getClass());
         };
     }
 
@@ -276,18 +277,20 @@ public class McpResponseMapper implements ProtocolResponseMapper {
             case null ->
                 new CallToolResult(List.of(), null, null, JsonUtils.toJsonNodeMap(relatedTaskMeta(null, taskId)), null);
             case TaskResult.Completed c ->
-                buildCallToolResult(
-                        c.content(),
-                        c.structuredContent(),
-                        null,
-                        JsonUtils.toJsonNodeMap(relatedTaskMeta(c.meta(), taskId)));
-            case TaskResult.Failed f when f.protocolError() != null -> f.protocolError();
-            case TaskResult.Failed f ->
-                buildCallToolResult(
-                        f.content(),
-                        f.structuredContent(),
-                        true,
-                        JsonUtils.toJsonNodeMap(relatedTaskMeta(f.meta(), taskId)));
+                switch (c.result()) {
+                    case ToolResult.Success s ->
+                        buildCallToolResult(
+                                s.content(),
+                                s.structuredValue(),
+                                null,
+                                JsonUtils.toJsonNodeMap(relatedTaskMeta(s.meta(), taskId)));
+                    case ToolResult.Error e ->
+                        buildCallToolResult(
+                                e.content(), null, true, JsonUtils.toJsonNodeMap(relatedTaskMeta(e.meta(), taskId)));
+                    default ->
+                        throw new IllegalStateException("unreachable: TaskResult.Completed cannot nest " + c.result());
+                };
+            case TaskResult.Failed f -> f.error();
         };
     }
 

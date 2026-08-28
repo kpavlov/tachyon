@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.config;
 
+import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import dev.tachyonmcp.api.server.features.tasks.TaskConnector;
 import dev.tachyonmcp.core.server.features.Pagination;
 import java.time.Duration;
@@ -21,6 +22,7 @@ import org.jspecify.annotations.Nullable;
  * @param pollInterval default {@code pollInterval} suggested to requestors in task responses, or
  *                     {@code null} (the default) to suggest none when a snapshot omits one
  */
+@ExperimentalApi
 public record TasksConfig(
         boolean enabled,
         @Nullable TaskConnector connector,
@@ -69,6 +71,7 @@ public record TasksConfig(
     /**
      * Builder for {@link TasksConfig}.
      */
+    @ExperimentalApi
     public static final class Builder {
 
         private boolean enabled = DEFAULT_TASKS_ENABLED;

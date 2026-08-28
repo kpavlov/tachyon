@@ -91,7 +91,7 @@ internal class ToolDescriptorAttributesTest {
 internal val DescriptorTaskConnector: TaskConnector =
     TaskConnector
         .builder()
-        .get { _, _ -> null }
+        .get { _, _ -> error("unused") }
         .cancel { _, _ -> }
         .update { _, _ -> }
         .build()

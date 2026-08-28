@@ -42,7 +42,7 @@ public final class BookingTaskEngine {
     private static TaskSnapshot snapshot(String taskId, TemporalTaskStatus status) {
         var result = switch (status.state()) {
             case COMPLETED -> TaskResult.completed(status.result());
-            case REJECTED -> TaskResult.failed(status.message());
+            case REJECTED -> TaskResult.completedWithError(status.message());
             default -> null;
         };
         var pendingInput = status.state() == TaskState.INPUT_REQUIRED ? approvalRequest() : null;

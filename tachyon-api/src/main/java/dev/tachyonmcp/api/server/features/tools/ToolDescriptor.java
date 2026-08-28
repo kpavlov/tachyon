@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.api.server.features.tools;
 
+import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.server.ServerFeature;
 import dev.tachyonmcp.api.server.domain.HasMeta;
@@ -43,6 +44,7 @@ public interface ToolDescriptor extends ServerFeature.Descriptor, HasMeta {
 
     /** Optional declaration of this tool's support for long-running tasks. */
     @Nullable
+    @ExperimentalApi
     TaskSupport taskSupport();
 
     /** Optional behavioral annotations (e.g. read-only, destructive) for this tool. */
@@ -118,6 +120,7 @@ public interface ToolDescriptor extends ServerFeature.Descriptor, HasMeta {
         }
 
         /** Sets the optional declaration of this tool's support for long-running tasks. */
+        @ExperimentalApi
         Builder taskSupport(@Nullable TaskSupport taskSupport);
 
         /** Sets the optional behavioral annotations (e.g. read-only, destructive) for this tool. */
