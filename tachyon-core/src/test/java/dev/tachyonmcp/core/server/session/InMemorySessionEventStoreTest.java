@@ -69,11 +69,10 @@ class InMemorySessionEventStoreTest {
 
         System.out.printf("[InMemorySessionEventStore]: %,d ops/sec%n", lockFreeOpsPerSec, (double) lockFreeOpsPerSec);
 
-        assertThat(lockFreeOpsPerSec).as("Performance baseline").isGreaterThan(800_000);
+        assertThat(lockFreeOpsPerSec).as("Performance baseline").isGreaterThan(1_000_000);
     }
 
     private long measure(int threads, int eventsPerThread) throws Exception {
-        // AFTER: ConcurrentLinkedQueue — O(1) CAS append
         try (var store = new InMemorySessionEventStore()) {
             var latch = new CountDownLatch(1);
             var total = new AtomicLong(0);
@@ -107,7 +106,11 @@ class InMemorySessionEventStoreTest {
 
     @Test
     void concurrentAppendCorrectness() throws Exception {
-        try (var store = new InMemorySessionEventStore()) {
+        // maxEventsPerSession == maxEvents: isolates this test to the global cap alone, since a
+        // per-session cap smaller than the global one would starve sessions before the global
+        // window fills, which is a different behavior covered by the per-session cap tests below.
+        try (var store = new InMemorySessionEventStore(
+                0, InMemorySessionEventStore.DEFAULT_MAX_EVENTS, InMemorySessionEventStore.DEFAULT_MAX_EVENTS)) {
             int threads = 8;
             int eventsPerThread = 10_000;
             var latch = new CountDownLatch(1);
@@ -163,7 +166,10 @@ class InMemorySessionEventStoreTest {
 
     @Test
     void trimDropsOldestAndKeepsCursorSemantics() {
-        try (var store = new InMemorySessionEventStore()) {
+        // maxEventsPerSession == maxEvents: this test floods a single session and checks the
+        // global cap's trim/cursor behavior, not the per-session cap (covered separately below).
+        try (var store = new InMemorySessionEventStore(
+                0, InMemorySessionEventStore.DEFAULT_MAX_EVENTS, InMemorySessionEventStore.DEFAULT_MAX_EVENTS)) {
             int overflow = 100;
             int total = store.maxEvents + overflow;
             for (int i = 0; i < total; i++) {
@@ -171,7 +177,7 @@ class InMemorySessionEventStoreTest {
             }
 
             var all = store.replay("s1", -1);
-            assertThat(all).hasSize(store.maxEvents);
+            assertThat(all).hasSize(store.maxEventsPerSession);
             var first = (SessionEvent.RequestEvent) all.getFirst();
             assertThat(intId(first)).isEqualTo(overflow);
 
@@ -181,6 +187,62 @@ class InMemorySessionEventStoreTest {
             assertThat(tail).hasSize(4);
             var tailFirst = (SessionEvent.RequestEvent) tail.getFirst();
             assertThat(intId(tailFirst)).isEqualTo(total - 5 + 1);
+        }
+    }
+
+    @Test
+    void perSessionCapProtectsOtherSessionsFromAHoggingSession() {
+        try (var store = new InMemorySessionEventStore(0, 100, 5)) {
+            for (int i = 0; i < 3; i++) {
+                store.append(requestEvent("quiet", i));
+            }
+            for (int i = 0; i < 20; i++) {
+                store.append(requestEvent("hog", i));
+            }
+
+            var hogEvents = store.replay("hog", -1);
+            assertThat(hogEvents).hasSize(5);
+            var hogFirst = (SessionEvent.RequestEvent) hogEvents.getFirst();
+            assertThat(intId(hogFirst)).isEqualTo(15);
+
+            var quietEvents = store.replay("quiet", -1);
+            assertThat(quietEvents).hasSize(3);
+        }
+    }
+
+    @Test
+    void globalCapStillEvictsOldestAcrossSessionsWithinTheirOwnCap() {
+        try (var store = new InMemorySessionEventStore(0, 60, 20)) {
+            for (int i = 0; i < 20; i++) {
+                for (int s = 0; s < 5; s++) {
+                    store.append(requestEvent("s" + s, i));
+                }
+            }
+
+            int totalRetained = 0;
+            for (int s = 0; s < 5; s++) {
+                totalRetained += store.replay("s" + s, -1).size();
+            }
+            assertThat(totalRetained).isEqualTo(60);
+        }
+    }
+
+    @Test
+    void sessionEmptiedByGlobalEvictionCanAppendAgainCleanly() {
+        try (var store = new InMemorySessionEventStore(0, 5, 1000)) {
+            store.append(requestEvent("s1", 0));
+            store.append(requestEvent("s1", 1));
+            for (int i = 0; i < 10; i++) {
+                store.append(requestEvent("s2", i));
+            }
+            // s1's two events are the globally oldest and get fully evicted by s2's flood.
+            assertThat(store.replay("s1", -1)).isEmpty();
+
+            store.append(requestEvent("s1", 42));
+            var result = store.replay("s1", -1);
+            assertThat(result).hasSize(1);
+            var only = (SessionEvent.RequestEvent) result.getFirst();
+            assertThat(intId(only)).isEqualTo(42);
         }
     }
 }
