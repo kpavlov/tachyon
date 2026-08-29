@@ -17,6 +17,7 @@ description: Apply Tachyon MCP project rules when designing, implementing, revie
 - Prefer an `import` over a fully-qualified name. Fall back to FQN only where two same-named
   types are genuinely both referenced in one file, and then prefer FQN-ing just the side that isn't
   this module's own domain type, importing the other, rather than FQN-ing both out of caution.
+- `final var` over explicit types. Use `final` for fields/vars where possible.
 - Kotlin API refactors follow the adapter shapes in
   [`docs/architecture/guidance.md`](../../../docs/architecture/guidance.md#kotlin-adapter-shape).
 - Java `ServerBuilder` is the implementation source of truth. Kotlin adds only thin adaptation for
