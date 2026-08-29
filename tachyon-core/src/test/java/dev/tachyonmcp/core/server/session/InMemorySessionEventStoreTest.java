@@ -9,6 +9,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junitpioneer.jupiter.RetryingTest;
 
@@ -62,6 +63,13 @@ class InMemorySessionEventStoreTest {
 
     @RetryingTest(maxAttempts = 3)
     void throughput() throws Exception {
+        // The critical section is a single lock: throughput is bound by scheduling/contention
+        // overhead on the available cores, not by algorithmic parallelism. Below 4 cores the
+        // 8-thread setup can't produce a meaningful signal, so the baseline isn't fair to assert.
+        Assumptions.assumeTrue(
+                Runtime.getRuntime().availableProcessors() >= 4,
+                "Skipping throughput baseline: fewer than 4 cores available");
+
         int threads = 8;
         int eventsPerThread = 10_000;
 
