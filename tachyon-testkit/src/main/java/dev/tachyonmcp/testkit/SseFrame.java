@@ -20,6 +20,8 @@ public record SseFrame(@Nullable String id, @Nullable String eventType, String d
      * POST-delivered notifications (see {@code McpClient#captureNotifications}). Parsed lazily,
      * on the caller's thread, so a malformed payload fails the assertion that reads it rather
      * than the background reader thread.
+     *
+     * @return the parsed JSON-RPC envelope
      */
     public JsonNode json() {
         return McpClient.MAPPER.readTree(data);

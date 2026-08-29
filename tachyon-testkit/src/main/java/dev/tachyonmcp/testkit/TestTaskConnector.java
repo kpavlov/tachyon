@@ -23,6 +23,9 @@ import java.util.stream.IntStream;
 /** Controllable task-connector fixture for MCP server tests. */
 public final class TestTaskConnector {
 
+    /** Creates a new test task connector. */
+    public TestTaskConnector() {}
+
     private final Map<String, TaskSnapshot> snapshots = new ConcurrentHashMap<>();
     private final List<String> startedTaskIds = new CopyOnWriteArrayList<>();
     private final List<String> refreshedTaskIds = new CopyOnWriteArrayList<>();
@@ -32,7 +35,11 @@ public final class TestTaskConnector {
     private final List<TaskUpdateRequest> submittedInputs = new CopyOnWriteArrayList<>();
     private volatile boolean settleCancellation = true;
 
-    /** Starts a task in the external system represented by this fixture. */
+    /** Starts a task in the external system represented by this fixture.
+     *
+     * @param snapshot the initial task snapshot
+     * @return this connector for chaining
+     */
     public TestTaskConnector start(TaskSnapshot snapshot) {
         var validated = Objects.requireNonNull(snapshot, "snapshot");
         startedTaskIds.add(validated.taskId());
@@ -40,20 +47,30 @@ public final class TestTaskConnector {
         return this;
     }
 
-    /** Stores a later snapshot returned by subsequent connector operations. */
+    /** Stores a later snapshot returned by subsequent connector operations.
+     *
+     * @param snapshot the task snapshot to store
+     * @return this connector for chaining
+     */
     public TestTaskConnector publish(TaskSnapshot snapshot) {
         var validated = Objects.requireNonNull(snapshot, "snapshot");
         snapshots.put(validated.taskId(), validated);
         return this;
     }
 
-    /** Leaves the current snapshot unchanged when cancellation is requested. */
+    /** Leaves the current snapshot unchanged when cancellation is requested.
+     *
+     * @return this connector for chaining
+     */
     public TestTaskConnector deferCancellation() {
         settleCancellation = false;
         return this;
     }
 
-    /** Removes stored snapshots and captured calls. */
+    /** Removes stored snapshots and captured calls.
+     *
+     * @return this connector for chaining
+     */
     public TestTaskConnector reset() {
         snapshots.clear();
         startedTaskIds.clear();
@@ -66,7 +83,10 @@ public final class TestTaskConnector {
         return this;
     }
 
-    /** Builds a connector wiring every operation this fixture supports, including legacy. */
+    /** Builds a connector wiring every operation this fixture supports, including legacy.
+     *
+     * @return a new task connector wired to this fixture
+     */
     @SuppressWarnings("deprecation")
     public TaskConnector connector() {
         return TaskConnector.builder()
@@ -175,33 +195,51 @@ public final class TestTaskConnector {
         return requireSnapshot(request.taskId());
     }
 
-    /** Returns task IDs passed to {@link #refresh}. */
+    /** Returns task IDs passed to {@link #refresh}.
+     *
+     * @return the refreshed task IDs
+     */
     public List<String> refreshedTaskIds() {
         return List.copyOf(refreshedTaskIds);
     }
 
-    /** Returns task IDs started by the application through {@link #start(TaskSnapshot)}. */
+    /** Returns task IDs started by the application through {@link #start(TaskSnapshot)}.
+     *
+     * @return the started task IDs
+     */
     public List<String> startedTaskIds() {
         return List.copyOf(startedTaskIds);
     }
 
-    /** Returns task IDs passed to {@link #cancel}. */
+    /** Returns task IDs passed to {@link #cancel}.
+     *
+     * @return the cancelled task IDs
+     */
     public List<String> cancelledTaskIds() {
         return List.copyOf(cancelledTaskIds);
     }
 
-    /** Returns task-list requests received by this fixture. */
+    /** Returns task-list requests received by this fixture.
+     *
+     * @return the task list requests
+     */
     @SuppressWarnings("deprecation")
     public List<TaskListRequest> listRequests() {
         return List.copyOf(listRequests);
     }
 
-    /** Returns task IDs passed to {@link #awaitResult}. */
+    /** Returns task IDs passed to {@link #awaitResult}.
+     *
+     * @return the awaited task IDs
+     */
     public List<String> awaitedTaskIds() {
         return List.copyOf(awaitedTaskIds);
     }
 
-    /** Returns input submissions received by this fixture. */
+    /** Returns input submissions received by this fixture.
+     *
+     * @return the submitted inputs
+     */
     public List<TaskUpdateRequest> submittedInputs() {
         return List.copyOf(submittedInputs);
     }

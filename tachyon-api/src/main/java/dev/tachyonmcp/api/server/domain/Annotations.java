@@ -82,7 +82,11 @@ public interface Annotations {
     /** Builder for {@link Annotations}. */
     interface Builder {
 
-        /** Fills this builder with the attribute values from {@code instance}. */
+        /** Fills this builder with the attribute values from {@code instance}.
+         *
+         * @param instance the instance to copy from
+         * @return this builder
+         */
         Builder from(Annotations instance);
 
         /**

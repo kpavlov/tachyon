@@ -35,6 +35,7 @@ public abstract class McpClient implements Closeable {
 
     private static final Duration DEFAULT_TASK_POLL_INTERVAL = Duration.ofMillis(100);
     private static final Duration DEFAULT_NOTIFICATION_TIMEOUT = Duration.ofSeconds(5);
+    /** Shared Jackson ObjectMapper for JSON-RPC serialization. */
     protected static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final URI mcpEndpoint;
@@ -44,12 +45,18 @@ public abstract class McpClient implements Closeable {
     private volatile @Nullable String sessionId;
     private volatile boolean closed;
 
-    /** Creates a client against a local, port-0-style Tachyon server ({@code http://localhost:<port>/mcp}). */
+    /** Creates a client against a local, port-0-style Tachyon server ({@code http://localhost:<port>/mcp}).
+     *
+     * @param port the server's bound port
+     */
     protected McpClient(int port) {
         this(localEndpoint(port));
     }
 
-    /** Creates a client against an arbitrary MCP endpoint (local or remote, http or https). */
+    /** Creates a client against an arbitrary MCP endpoint (local or remote, http or https).
+     *
+     * @param mcpEndpoint the MCP endpoint URI
+     */
     protected McpClient(URI mcpEndpoint) {
         this.mcpEndpoint = mcpEndpoint;
         this.httpClient = HttpClient.newHttpClient();
@@ -59,7 +66,10 @@ public abstract class McpClient implements Closeable {
         return URI.create("http://localhost:" + port + "/mcp");
     }
 
-    /** The MCP protocol version this client speaks; sent as {@code MCP-Protocol-Version}. */
+    /** The MCP protocol version this client speaks; sent as {@code MCP-Protocol-Version}.
+     *
+     * @return the protocol version string
+     */
     protected abstract String protocolVersion();
 
     @Override
@@ -74,13 +84,21 @@ public abstract class McpClient implements Closeable {
      * testing. Requires {@link #initialize()} (or {@link #sendInitialized}) to have set a session
      * id first. Closed automatically when this client is {@link #close() closed}, in addition to
      * whatever the caller does with it directly.
+     *
+     * @param lastEventId the last event id for reconnection, or {@code null}
+     * @return the SSE stream
      */
     public SseStream openGetStream(@Nullable String lastEventId) {
         return openGetStream(
                 Objects.requireNonNull(sessionId, "call initialize() before openGetStream()"), lastEventId);
     }
 
-    /** {@link #openGetStream(String)} against an explicit session id rather than this client's stored one. */
+    /** {@link #openGetStream(String)} against an explicit session id rather than this client's stored one.
+     *
+     * @param sessionId  the session id to use
+     * @param lastEventId the last event id for reconnection, or {@code null}
+     * @return the SSE stream
+     */
     public SseStream openGetStream(String sessionId, @Nullable String lastEventId) {
         var subscriber = new SseStream(mcpEndpoint, sessionId, lastEventId, protocolVersion());
         openGetStreams.add(subscriber);
@@ -92,6 +110,8 @@ public abstract class McpClient implements Closeable {
      * Performs the {@code initialize}/{@code notifications/initialized} handshake and returns the
      * session id issued by the server.
      *
+     * @return the session id issued by the server, or {@code null}
+     * @throws Exception if the handshake fails
      * @throws UnsupportedOperationException on protocol revisions that removed {@code initialize}
      */
     public @Nullable String initialize() throws Exception {
@@ -133,6 +153,7 @@ public abstract class McpClient implements Closeable {
      * Sends the {@code notifications/initialized} notification for the given session.
      *
      * @param sessionId the session id returned by {@link #initialize()}, or {@code null}
+     * @throws Exception if the notification fails
      */
     public void sendInitialized(@Nullable String sessionId) throws Exception {
         var response = post(sessionId, """
@@ -147,24 +168,47 @@ public abstract class McpClient implements Closeable {
         this.sessionId = sessionId;
     }
 
-    /** POSTs an MCP request without a session. */
+    /** POSTs an MCP request without a session.
+     *
+     * @param body the JSON-RPC request body
+     * @return the HTTP response
+     * @throws Exception if the request fails
+     */
     public HttpResponse<String> post(@Language("json") String body) throws Exception {
         return post(null, body);
     }
 
     /**
      * POSTs an MCP request carrying extra HTTP headers (e.g. {@code Mcp-Param-*} custom headers).
+     *
+     * @param body         the JSON-RPC request body
+     * @param extraHeaders additional HTTP headers to include
+     * @return the HTTP response
+     * @throws Exception if the request fails
      */
     public HttpResponse<String> post(@Language("json") String body, Map<String, String> extraHeaders) throws Exception {
         return post(null, body, extraHeaders);
     }
 
-    /** POSTs an MCP request for the given session. */
+    /** POSTs an MCP request for the given session.
+     *
+     * @param sessionId the session id, or {@code null}
+     * @param body      the JSON-RPC request body
+     * @return the HTTP response
+     * @throws Exception if the request fails
+     */
     public HttpResponse<String> post(@Nullable String sessionId, String body) throws Exception {
         return post(sessionId, body, Map.of());
     }
 
-    /** POSTs an MCP request for the given session with extra HTTP headers. */
+    /** POSTs an MCP request for the given session with extra HTTP headers.
+     *
+     * @param sessionId    the session id, or {@code null}
+     * @param body         the JSON-RPC request body
+     * @param extraHeaders additional HTTP headers to include
+     * @return the HTTP response
+     * @throws Exception if the request fails
+     */
     public HttpResponse<String> post(@Nullable String sessionId, String body, Map<String, String> extraHeaders)
             throws Exception {
         body = requestBody(body);
@@ -205,6 +249,11 @@ public abstract class McpClient implements Closeable {
 
     /**
      * POSTs an MCP request carrying an {@code Origin} header, exercising DNS-rebinding protection.
+     *
+     * @param origin the Origin header value
+     * @param body   the JSON-RPC request body
+     * @return the HTTP response
+     * @throws Exception if the request fails
      */
     public HttpResponse<String> postWithOrigin(String origin, String body) throws Exception {
         body = requestBody(body);
@@ -218,18 +267,35 @@ public abstract class McpClient implements Closeable {
         return response;
     }
 
-    /** Posts a {@code ping} request with the given JSON-RPC {@code id}. */
+    /** Posts a {@code ping} request with the given JSON-RPC {@code id}.
+     *
+     * @param sessionId the session id, or {@code null}
+     * @param id        the JSON-RPC request id
+     * @return the HTTP response
+     * @throws Exception if the request fails
+     */
     public HttpResponse<String> ping(@Nullable String sessionId, Object id) throws Exception {
         final var idString = MAPPER.writeValueAsString(id);
         return post(sessionId, "{\"jsonrpc\":\"2.0\",\"id\":%s,\"method\":\"ping\"}".formatted(idString));
     }
 
-    /** Sends a notification (a JSON-RPC envelope with a {@code method} and no {@code id}). */
+    /** Sends a notification (a JSON-RPC envelope with a {@code method} and no {@code id}).
+     *
+     * @param method the notification method name
+     * @return the HTTP response
+     * @throws Exception if the request fails
+     */
     public HttpResponse<String> notify(String method) throws Exception {
         return notify(method, null);
     }
 
-    /** Sends a notification with the given params. */
+    /** Sends a notification with the given params.
+     *
+     * @param method the notification method name
+     * @param params the notification params, or {@code null}
+     * @return the HTTP response
+     * @throws Exception if the request fails
+     */
     public HttpResponse<String> notify(String method, @Nullable Object params) throws Exception {
         return post(sessionId, notificationEnvelope(method, params));
     }
@@ -244,6 +310,10 @@ public abstract class McpClient implements Closeable {
      * Awaits a notification with the given {@code method} and returns it once it arrives, or fails
      * after {@code timeout}. The notification is left in the queue (use {@link #clearNotifications()}
      * to reset).
+     *
+     * @param method  the notification method name
+     * @param timeout the maximum wait duration
+     * @return the received notification
      */
     public Notification awaitNotification(String method, Duration timeout) {
         return awaitNotification(method, node -> true, timeout);
@@ -252,6 +322,11 @@ public abstract class McpClient implements Closeable {
     /**
      * Awaits a notification whose {@code method} matches and whose params satisfy {@code predicate},
      * or fails after {@code timeout}.
+     *
+     * @param method    the notification method name
+     * @param predicate the predicate to match against the params
+     * @param timeout   the maximum wait duration
+     * @return the received notification
      */
     public Notification awaitNotification(String method, Predicate<JsonNode> predicate, Duration timeout) {
         final var message = notifications.awaitMessage(timeout, true, node -> {
@@ -263,12 +338,19 @@ public abstract class McpClient implements Closeable {
         return Notification.from(message);
     }
 
-    /** {@link #awaitNotification(String, Duration)} with a 5s timeout. */
+    /** {@link #awaitNotification(String, Duration)} with a 5s timeout.
+     *
+     * @param method the notification method name
+     * @return the received notification
+     */
     public Notification awaitNotification(String method) {
         return awaitNotification(method, DEFAULT_NOTIFICATION_TIMEOUT);
     }
 
-    /** A snapshot of all notifications received so far, in arrival order. */
+    /** A snapshot of all notifications received so far, in arrival order.
+     *
+     * @return the received notifications
+     */
     public List<Notification> notifications() {
         return notifications.findAll(node -> true).stream()
                 .map(Notification::from)
@@ -280,7 +362,13 @@ public abstract class McpClient implements Closeable {
         notifications.clear();
     }
 
-    /** POSTs a request and returns the raw response line stream (for SSE responses). */
+    /** POSTs a request and returns the raw response line stream (for SSE responses).
+     *
+     * @param sessionId the session id, or {@code null}
+     * @param body      the JSON-RPC request body
+     * @return the streaming HTTP response
+     * @throws Exception if the request fails
+     */
     public HttpResponse<Stream<String>> sendStreamingRequest(@Nullable String sessionId, @Language("json") String body)
             throws Exception {
         body = requestBody(body);
@@ -298,32 +386,96 @@ public abstract class McpClient implements Closeable {
     }
 
     /**
-     * Sends a JSON-RPC request and returns the response body, extracting the JSON-RPC envelope from
-     * an SSE body if the response content-type is {@code text/event-stream}.
+     * Sends a JSON-RPC request and returns the HTTP response, asserting a {@code 200} status. If the
+     * response content-type is {@code text/event-stream}, {@link HttpResponse#body()} transparently
+     * returns the matching JSON-RPC envelope extracted from the SSE body rather than the raw SSE text.
+     *
+     * @param sessionId the session id, or {@code null}
+     * @param jsonBody  the JSON-RPC request body
+     * @return the HTTP response
+     * @throws Exception if the request fails
      */
-    public String sendRpc(@Nullable String sessionId, @Language("json") String jsonBody) throws Exception {
+    public HttpResponse<String> sendRpc(@Nullable String sessionId, @Language("json") String jsonBody)
+            throws Exception {
         var response = post(sessionId, jsonBody);
         assertThat(response.statusCode()).isEqualTo(200);
         var contentType = response.headers().firstValue("content-type").orElse("");
         if (contentType.startsWith("text/event-stream")) {
-            return extractJsonRpcResponse(response.body(), extractRequestId(jsonBody));
+            var extracted = extractJsonRpcResponse(response.body(), extractRequestId(jsonBody));
+            return new ExtractedJsonRpcResponse(response, extracted);
         }
-        return response.body();
+        return response;
     }
 
     /**
      * Sends {@code tasks/get} for {@code taskId} and returns the JSON-RPC response body.
+     *
+     * @param sessionId the session id, or {@code null}
+     * @param taskId    the task id to look up
+     * @return the response body
+     * @throws Exception if the request fails
      */
     public String getTask(@Nullable String sessionId, String taskId) throws Exception {
         var body = """
                 {"jsonrpc":"2.0","id":"tasks-get","method":"tasks/get","params":{"taskId":%s}}
                 """.formatted(MAPPER.writeValueAsString(taskId));
-        return sendRpc(sessionId, body);
+        return sendRpc(sessionId, body).body();
+    }
+
+    /** {@link HttpResponse} wrapper reporting the extracted JSON-RPC envelope as its {@link #body()}. */
+    private record ExtractedJsonRpcResponse(HttpResponse<String> delegate, String body)
+            implements HttpResponse<String> {
+
+        @Override
+        public int statusCode() {
+            return delegate.statusCode();
+        }
+
+        @Override
+        public HttpRequest request() {
+            return delegate.request();
+        }
+
+        @Override
+        public Optional<HttpResponse<String>> previousResponse() {
+            return delegate.previousResponse();
+        }
+
+        @Override
+        public HttpHeaders headers() {
+            return delegate.headers();
+        }
+
+        @Override
+        public String body() {
+            return body;
+        }
+
+        @Override
+        public Optional<SSLSession> sslSession() {
+            return delegate.sslSession();
+        }
+
+        @Override
+        public URI uri() {
+            return delegate.uri();
+        }
+
+        @Override
+        public HttpClient.Version version() {
+            return delegate.version();
+        }
     }
 
     /**
      * Polls {@code tasks/get} until the task reaches {@code status}, then returns the last response
      * body. Fails if {@code status} is not reached within {@code timeout}.
+     *
+     * @param sessionId the session id, or {@code null}
+     * @param taskId    the task id to poll
+     * @param status    the expected terminal status
+     * @param timeout   the maximum wait duration
+     * @return the last response body, or {@code null}
      */
     public @Nullable String awaitTaskStatus(
             @Nullable String sessionId, String taskId, String status, Duration timeout) {
@@ -345,29 +497,55 @@ public abstract class McpClient implements Closeable {
         return lastResponse.get();
     }
 
-    /** {@link #awaitTaskStatus(String, String, String, Duration)} with a 5s timeout. */
+    /** {@link #awaitTaskStatus(String, String, String, Duration)} with a 5s timeout.
+     *
+     * @param sessionId the session id, or {@code null}
+     * @param taskId    the task id to poll
+     * @param status    the expected terminal status
+     * @return the last response body, or {@code null}
+     */
     public @Nullable String awaitTaskStatus(String sessionId, String taskId, String status) {
         return awaitTaskStatus(sessionId, taskId, status, Duration.ofSeconds(5));
     }
 
-    /** {@link #awaitTaskStatus(String, String, String, Duration)} against the stored session. */
+    /** {@link #awaitTaskStatus(String, String, String, Duration)} against the stored session.
+     *
+     * @param taskId  the task id to poll
+     * @param status  the expected terminal status
+     * @param timeout the maximum wait duration
+     * @return the last response body, or {@code null}
+     */
     public @Nullable String awaitTaskStatus(String taskId, String status, Duration timeout) {
         return awaitTaskStatus(sessionId, taskId, status, timeout);
     }
 
-    /** {@link #awaitTaskStatus(String, String, String)} against the stored session, 5s timeout. */
+    /** {@link #awaitTaskStatus(String, String, String)} against the stored session, 5s timeout.
+     *
+     * @param taskId the task id to poll
+     * @param status the expected terminal status
+     * @return the last response body, or {@code null}
+     */
     public @Nullable String awaitTaskStatus(String taskId, String status) {
         return awaitTaskStatus(taskId, status, Duration.ofSeconds(5));
     }
 
-    /** Closes the session with {@code DELETE}. */
+    /** Closes the session with {@code DELETE}.
+     *
+     * @param sessionId the session id to close
+     * @return the HTTP response
+     * @throws Exception if the request fails
+     */
     public HttpResponse<String> delete(String sessionId) throws Exception {
         return httpClient.send(
                 baseRequest().header("MCP-Session-Id", sessionId).DELETE().build(),
                 HttpResponse.BodyHandlers.ofString());
     }
 
-    /** Issues {@code DELETE} without a session header. */
+    /** Issues {@code DELETE} without a session header.
+     *
+     * @return the HTTP response
+     * @throws Exception if the request fails
+     */
     public HttpResponse<String> deleteWithoutSession() throws Exception {
         return httpClient.send(baseRequest().DELETE().build(), HttpResponse.BodyHandlers.ofString());
     }
@@ -386,16 +564,28 @@ public abstract class McpClient implements Closeable {
         return builder;
     }
 
-    /** Hook: rewrites the request body before sending (e.g. 2026-07-28 {@code _meta} shaping). */
-    protected String requestBody(String body) throws Exception {
+    /** Hook: rewrites the request body before sending (e.g. 2026-07-28 {@code _meta} shaping).
+     *
+     * @param body the original request body
+     * @return the rewritten body
+     */
+    protected String requestBody(String body) {
         return body;
     }
 
-    /** Hook: adds protocol-version-specific request headers (e.g. {@code Mcp-Method}). */
+    /** Hook: adds protocol-version-specific request headers (e.g. {@code Mcp-Method}).
+     *
+     * @param builder the request builder to configure
+     * @param body    the request body
+     * @throws Exception if configuration fails
+     */
     protected void configureRequest(HttpRequest.Builder builder, String body) throws Exception {}
 
     /**
      * Parses {@code "id":<n>} or {@code "id":"<s>"} out of a JSON-RPC request body.
+     *
+     * @param requestBody the JSON-RPC request body
+     * @return the extracted request id as a string, or empty if not found
      */
     public static String extractRequestId(String requestBody) {
         var idx = requestBody.indexOf("\"id\"");
@@ -414,6 +604,10 @@ public abstract class McpClient implements Closeable {
     /**
      * Walks all {@code data:} lines in an SSE body and returns the JSON payload whose JSON-RPC
      * envelope has an id matching {@code requestId}. Falls back to the last data line if no match.
+     *
+     * @param sseBody    the SSE response body
+     * @param requestId  the JSON-RPC request id to match
+     * @return the matching JSON-RPC envelope
      */
     public static String extractJsonRpcResponse(String sseBody, String requestId) {
         String last = null;

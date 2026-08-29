@@ -62,7 +62,11 @@ public sealed interface TaskResult extends HasMeta permits TaskResult.Completed,
         return new Failed(Objects.requireNonNull(error, "error"));
     }
 
-    /** A normal {@code tools/call}-shaped outcome, including a tool-level error. */
+    /**
+     * A normal {@code tools/call}-shaped outcome, including a tool-level error.
+     *
+     * @param result the tool result
+     */
     record Completed(ToolResult result) implements TaskResult {
         public Completed {
             Objects.requireNonNull(result, "result");
@@ -78,7 +82,11 @@ public sealed interface TaskResult extends HasMeta permits TaskResult.Completed,
         }
     }
 
-    /** A genuine JSON-RPC protocol failure. */
+    /**
+     * A genuine JSON-RPC protocol failure.
+     *
+     * @param error the protocol error
+     */
     record Failed(ServerError error) implements TaskResult {
         public Failed {
             Objects.requireNonNull(error, "error");

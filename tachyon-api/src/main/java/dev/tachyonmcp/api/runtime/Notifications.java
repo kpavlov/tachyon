@@ -25,22 +25,38 @@ public interface Notifications {
      */
     void log(LoggingLevel level, @Nullable String logger, @Nullable Object data);
 
-    /** Emits a structured MCP log message without a logger name. */
+    /** Emits a structured MCP log message without a logger name.
+     *
+     * @param level the message severity
+     * @param data  JSON-serializable message data, including {@code null}
+     */
     default void log(LoggingLevel level, @Nullable Object data) {
         log(level, null, data);
     }
 
-    /** Emits an info-level log message. */
+    /** Emits an info-level log message.
+     *
+     * @param logger the optional logger name
+     * @param data   JSON-serializable message data, including {@code null}
+     */
     default void info(String logger, @Nullable Object data) {
         log(LoggingLevel.INFO, logger, data);
     }
 
-    /** Emits a warning-level log message. */
+    /** Emits a warning-level log message.
+     *
+     * @param logger the optional logger name
+     * @param data   JSON-serializable message data, including {@code null}
+     */
     default void warning(String logger, @Nullable Object data) {
         log(LoggingLevel.WARNING, logger, data);
     }
 
-    /** Emits an error-level log message. */
+    /** Emits an error-level log message.
+     *
+     * @param logger the optional logger name
+     * @param data   JSON-serializable message data, including {@code null}
+     */
     default void error(String logger, @Nullable Object data) {
         log(LoggingLevel.ERROR, logger, data);
     }

@@ -32,6 +32,7 @@ import java.util.Optional;
  * <p>Discoverable via {@link java.util.ServiceLoader}: implementations register themselves in
  * {@code META-INF/services/dev.tachyonmcp.api.json.spi.JsonSchemaFactory}.
  *
+ * @param <T> the type of the JSON source representation this factory accepts
  * @author Konstantin Pavlov
  */
 @ExperimentalApi

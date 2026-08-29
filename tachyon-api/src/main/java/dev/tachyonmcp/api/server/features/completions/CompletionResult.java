@@ -21,17 +21,23 @@ public interface CompletionResult extends HasMeta {
 
     /**
      * Candidate values ranked by relevance.
+     *
+     * @return the candidate values
      */
     List<String> values();
 
     /**
      * The total number of matches, if known.
+     *
+     * @return the total count, or {@code null} if unknown
      */
     @Nullable
     Long total();
 
     /**
      * Whether additional results exist beyond {@link #values()}.
+     *
+     * @return {@code true} if more results exist, or {@code null} if unknown
      */
     @Nullable
     Boolean hasMore();
@@ -43,6 +49,8 @@ public interface CompletionResult extends HasMeta {
 
     /**
      * An empty completion result with no candidates, unknown total, and no more results.
+     *
+     * @return an empty completion result
      */
     static CompletionResult empty() {
         return DefaultCompletionResult.builder()
@@ -53,6 +61,9 @@ public interface CompletionResult extends HasMeta {
 
     /**
      * Creates a result with candidate values and no total/hasMore metadata.
+     *
+     * @param values the candidate values
+     * @return a new completion result
      */
     static CompletionResult of(List<String> values) {
         return DefaultCompletionResult.builder().values(values).build();
@@ -60,6 +71,11 @@ public interface CompletionResult extends HasMeta {
 
     /**
      * Creates a result with candidate values and total/hasMore metadata.
+     *
+     * @param values  the candidate values
+     * @param total   the total number of matches, or {@code null} if unknown
+     * @param hasMore whether additional results exist, or {@code null} if unknown
+     * @return a new completion result
      */
     static CompletionResult of(List<String> values, @Nullable Long total, @Nullable Boolean hasMore) {
         return DefaultCompletionResult.builder()
@@ -69,7 +85,11 @@ public interface CompletionResult extends HasMeta {
                 .build();
     }
 
-    /** Creates a new builder for {@link CompletionResult}. */
+    /**
+     * Creates a new builder for {@link CompletionResult}.
+     *
+     * @return a new builder
+     */
     static Builder builder() {
         return DefaultCompletionResult.builder();
     }
@@ -77,13 +97,24 @@ public interface CompletionResult extends HasMeta {
     /** Builder for {@link CompletionResult}. */
     interface Builder {
 
-        /** Fills this builder with the attribute values from {@code instance}. */
+        /**
+         * Fills this builder with the attribute values from {@code instance}.
+         *
+         * @param instance the instance to copy from
+         * @return this builder
+         */
         Builder from(CompletionResult instance);
 
         /**
          * Sets the candidate values ranked by relevance.
          *
          * @param elements candidate values
+         */
+        /**
+         * Sets the candidate values ranked by relevance.
+         *
+         * @param elements candidate values
+         * @return this builder
          */
         Builder values(Iterable<String> elements);
 
@@ -101,6 +132,12 @@ public interface CompletionResult extends HasMeta {
          *
          * @param total total match count, or {@code null} if unknown
          */
+        /**
+         * Sets the total number of matches, if known.
+         *
+         * @param total total match count, or {@code null} if unknown
+         * @return this builder
+         */
         Builder total(@Nullable Long total);
 
         /**
@@ -117,6 +154,12 @@ public interface CompletionResult extends HasMeta {
          *
          * @param hasMore {@code true} if more results exist, or {@code null} if unknown
          */
+        /**
+         * Sets whether additional results exist beyond {@link CompletionResult#values()}.
+         *
+         * @param hasMore {@code true} if more results exist, or {@code null} if unknown
+         * @return this builder
+         */
         Builder hasMore(@Nullable Boolean hasMore);
 
         /**
@@ -124,9 +167,19 @@ public interface CompletionResult extends HasMeta {
          *
          * @param entries metadata entries, or {@code null} for none
          */
+        /**
+         * Sets optional protocol extension metadata.
+         *
+         * @param entries metadata entries, or {@code null} for none
+         * @return this builder
+         */
         Builder meta(@Nullable Map<String, ?> entries);
 
-        /** Builds the {@link CompletionResult}. */
+        /**
+         * Builds the {@link CompletionResult}.
+         *
+         * @return a new completion result
+         */
         CompletionResult build();
     }
 }

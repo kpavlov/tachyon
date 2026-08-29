@@ -21,9 +21,19 @@ public non-sealed interface EmbeddedResource extends ContentBlock, HasMeta {
 
     ResourceContents resource();
 
+    /**
+     * Returns the annotations for this content, or {@code null} if none.
+     *
+     * @return the annotations, or {@code null}
+     */
     @Nullable
     Annotations annotations();
 
+    /**
+     * Returns optional protocol extension metadata.
+     *
+     * @return the metadata entries, or {@code null}
+     */
     @Nullable
     Map<String, Object> meta();
 
@@ -36,24 +46,46 @@ public non-sealed interface EmbeddedResource extends ContentBlock, HasMeta {
         return DefaultEmbeddedResource.builder();
     }
 
-    /** Creates an embedded resource with no metadata or annotations. */
+    /**
+     * Creates an embedded resource with no metadata or annotations.
+     *
+     * @param resource the resource contents
+     * @return a new embedded resource
+     */
     static EmbeddedResource of(ResourceContents resource) {
         return DefaultEmbeddedResource.of(resource, null, null);
     }
 
-    /** Creates an embedded resource with given annotations and no metadata. */
+    /**
+     * Creates an embedded resource with given annotations and no metadata.
+     *
+     * @param resource    the resource contents
+     * @param annotations the annotations, or {@code null}
+     * @return a new embedded resource
+     */
     static EmbeddedResource of(ResourceContents resource, @Nullable Annotations annotations) {
         return DefaultEmbeddedResource.of(resource, annotations, null);
     }
 
-    /** Creates an embedded resource with metadata and optional annotations. */
+    /**
+     * Creates an embedded resource with metadata and optional annotations.
+     *
+     * @param resource    the resource contents
+     * @param annotations the annotations, or {@code null}
+     * @param meta        the metadata entries, or {@code null}
+     * @return a new embedded resource
+     */
     static EmbeddedResource of(
             ResourceContents resource, @Nullable Annotations annotations, @Nullable Map<String, Object> meta) {
         return DefaultEmbeddedResource.of(resource, annotations, meta);
     }
 
     interface Builder {
-        /** Fills this builder with the attribute values from {@code instance}. */
+        /** Fills this builder with the attribute values from {@code instance}.
+         *
+         * @param instance the instance to copy from
+         * @return this builder
+         */
         Builder from(EmbeddedResource instance);
 
         Builder resource(ResourceContents resource);

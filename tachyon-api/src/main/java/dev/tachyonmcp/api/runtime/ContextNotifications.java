@@ -22,6 +22,11 @@ public interface ContextNotifications extends Notifications {
      * (e.g. {@code ToolRequest.progressToken()}). When it is {@code null} the client did not opt
      * into progress, so the notification is silently dropped per the MCP spec — handlers may emit
      * progress unconditionally without null-checking the token.
+     *
+     * @param progressToken the client's progress token, or {@code null}
+     * @param progress      the current progress value
+     * @param total         the total expected value
+     * @param message       a human-readable progress message
      */
     void progress(@Nullable ProgressToken progressToken, double progress, double total, String message);
 
@@ -33,6 +38,8 @@ public interface ContextNotifications extends Notifications {
      * transport-level bytes the client ignores. Use it to keep a long-running request's connection
      * alive when no progress token is available. A {@code null} or blank message emits a bare
      * {@code :} heartbeat comment. No-op when no outbound stream is bound to the context.
+     *
+     * @param message the comment text, or {@code null} for a bare heartbeat
      */
     @ExperimentalApi
     void comment(@Nullable String message);

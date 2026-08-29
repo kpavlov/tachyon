@@ -24,21 +24,39 @@ import dev.tachyonmcp.api.server.features.tools.Tools;
 @ExperimentalApi
 public interface AnnotationRegistrationContext {
 
-    /** Returns the tool registry façade. */
+    /** Returns the tool registry façade.
+     *
+     * @return the tools registry
+     */
     Tools tools();
 
-    /** Returns the resource registry façade. */
+    /** Returns the resource registry façade.
+     *
+     * @return the resources registry
+     */
     Resources resources();
 
-    /** Returns the prompt registry façade. */
+    /** Returns the prompt registry façade.
+     *
+     * @return the prompts registry
+     */
     Prompts prompts();
 
-    /** Returns the completion registry façade. */
+    /** Returns the completion registry façade.
+     *
+     * @return the completions registry
+     */
     Completions completions();
 
-    /** Returns the server's configured payload serializer. */
+    /** Returns the server's configured payload serializer.
+     *
+     * @return the payload serializer
+     */
     PayloadSerializer payloadSerializer();
 
-    /** Returns the server's configured payload deserializer. */
+    /** Returns the server's configured payload deserializer.
+     *
+     * @return the payload deserializer
+     */
     PayloadDeserializer payloadDeserializer();
 }

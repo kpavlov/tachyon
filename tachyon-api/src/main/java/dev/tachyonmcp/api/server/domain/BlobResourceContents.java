@@ -104,7 +104,11 @@ public non-sealed interface BlobResourceContents extends ResourceContents {
      * Builder for {@link BlobResourceContents}.
      */
     interface Builder {
-        /** Fills this builder with the attribute values from {@code instance}. */
+        /** Fills this builder with the attribute values from {@code instance}.
+         *
+         * @param instance the instance to copy from
+         * @return this builder
+         */
         Builder from(BlobResourceContents instance);
 
         /**

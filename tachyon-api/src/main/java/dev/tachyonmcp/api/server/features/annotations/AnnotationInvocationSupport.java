@@ -70,6 +70,7 @@ public final class AnnotationInvocationSupport {
      * Maps {@code type} to a JSON Schema {@code "type"} value, unwrapping {@code Optional}-family
      * types to their inner type first.
      *
+     * @param type the Java type to map
      * @throws IllegalStateException if {@code type} isn't one {@link #coerce} can produce
      */
     public static String jsonSchemaType(Type type) {
@@ -88,6 +89,8 @@ public final class AnnotationInvocationSupport {
      * some other way (e.g. an injected {@code InteractionContext} or a framework-specific request
      * context), after excluding those.
      *
+     * @param param  the parameter to validate
+     * @param method the declaring method (for diagnostic messages)
      * @throws IllegalStateException if {@code param}'s type isn't bindable
      */
     public static void requireBindable(Parameter param, Method method) {
@@ -101,7 +104,11 @@ public final class AnnotationInvocationSupport {
         }
     }
 
-    /** Returns whether {@code type} is {@code Optional}, {@code OptionalInt}, {@code OptionalLong}, or {@code OptionalDouble}. */
+    /** Returns whether {@code type} is {@code Optional}, {@code OptionalInt}, {@code OptionalLong}, or {@code OptionalDouble}.
+     *
+     * @param type the type to check
+     * @return {@code true} if the type is an Optional-family type
+     */
     public static boolean isOptionalType(Type type) {
         return type == OptionalInt.class
                 || type == OptionalLong.class
@@ -114,6 +121,9 @@ public final class AnnotationInvocationSupport {
      * Returns the inner type of an {@code Optional}-family {@code type} (e.g. {@code String} for
      * {@code Optional<String>}, {@code int.class} for {@code OptionalInt}), or {@code type}
      * unchanged if it isn't one.
+     *
+     * @param type the type to unwrap
+     * @return the inner type, or {@code type} unchanged
      */
     public static Type unwrapOptional(Type type) {
         if (type == OptionalInt.class) return int.class;
@@ -157,6 +167,12 @@ public final class AnnotationInvocationSupport {
      * {@code null} or already an instance of {@code type}. Correctly constructs {@code
      * Optional}-family wrappers around the coerced inner value, since {@code type} carries full
      * generic information (e.g. {@code Optional<Integer>}), not an erased {@link Class}.
+     *
+     * @param raw          the raw JSON-RPC argument value, or {@code null}
+     * @param type         the target parameter type
+     * @param serializer   the payload serializer
+     * @param deserializer the payload deserializer
+     * @return the coerced value, or {@code null}
      */
     public static @Nullable Object coerce(
             @Nullable Object raw, Type type, PayloadSerializer serializer, PayloadDeserializer deserializer) {
@@ -190,6 +206,9 @@ public final class AnnotationInvocationSupport {
      * AnnotationInvocationSupport.unwrap(e);} from their {@code catch (InvocationTargetException
      * e)} block. If the cause is an {@link Error}, it is thrown directly from this method instead
      * of being returned, since {@code Error} isn't an {@code Exception}.
+     *
+     * @param e the invocation target exception to unwrap
+     * @return the real exception, or throws the {@link Error} cause directly
      */
     public static Exception unwrap(InvocationTargetException e) {
         Throwable cause = e.getCause();
@@ -208,6 +227,9 @@ public final class AnnotationInvocationSupport {
      * setAccessible(true)} already applied, so providers can call {@link Method#invoke} on it
      * directly regardless of which package they live in.
      *
+     * @param clazz          the class to scan for annotated methods
+     * @param annotationTypes the annotation types to search for
+     * @return discovered methods, in declaration order with duplicates removed
      * @throws IllegalStateException if an annotated method (or its declaring class) is private
      */
     @SafeVarargs
@@ -252,6 +274,7 @@ public final class AnnotationInvocationSupport {
      * as part of an object's annotated MCP surface. Package-private, protected, and public
      * methods are all otherwise discoverable.
      *
+     * @param method the method to validate
      * @throws IllegalStateException if {@code method} or a declaring/enclosing class is private
      */
     public static void requireNotPrivate(Method method) {

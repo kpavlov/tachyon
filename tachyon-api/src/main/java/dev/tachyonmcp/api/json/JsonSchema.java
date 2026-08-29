@@ -15,7 +15,11 @@ import java.util.Map;
  */
 public interface JsonSchema extends JsonDocument {
 
-    /** Returns a schema that accepts any JSON object. */
+    /**
+     * Returns a schema that accepts any JSON object.
+     *
+     * @return a schema accepting any JSON object
+     */
     static JsonSchema objectSchema() {
         return DefaultJsonSchema.OBJECT;
     }
@@ -23,6 +27,8 @@ public interface JsonSchema extends JsonDocument {
     /**
      * Creates a schema from encoded JSON without parsing and verifying if the schema is correct.
      *
+     * @param json the encoded JSON schema
+     * @return the unchecked schema
      * @throws IllegalArgumentException when json is null or blank string
      */
     static JsonSchema unchecked(String json) {
@@ -102,6 +108,9 @@ public interface JsonSchema extends JsonDocument {
 
     /**
      * Use {@link #generate(Class)} instead.
+     *
+     * @param type the type whose schema to resolve
+     * @return the generated schema
      */
     @ExperimentalApi
     @Deprecated

@@ -133,6 +133,10 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
 
     /**
      * Awaits an SSE frame matching {@code predicate}, or fails after {@code timeout}.
+     *
+     * @param predicate the predicate to match
+     * @param timeout   the maximum wait duration
+     * @return the matching frame
      */
     public SseFrame await(Predicate<SseFrame> predicate, Duration timeout) {
         return aggregator.awaitMessage(timeout, false, predicate);
@@ -140,6 +144,9 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
 
     /**
      * Awaits the first frame carrying an eventType id — the priming eventType a fresh GET stream sends.
+     *
+     * @param timeout the maximum wait duration
+     * @return the first event id
      */
     public String awaitFirstEventId(Duration timeout) {
         return Objects.requireNonNull(await(f -> f.id() != null, timeout).id());
@@ -149,6 +156,9 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
      * Waits out {@code window} and asserts no frame matching {@code predicate} arrived in it.
      * Unlike {@link #await}, absence can't be confirmed faster than waiting the full window —
      * this isn't a lazy sleep standing in for a pollable condition, it <em>is</em> the condition.
+     *
+     * @param predicate the predicate to check for absence
+     * @param window    the time window to wait
      */
     public void assertNoneArrived(Predicate<SseFrame> predicate, Duration window) {
         try {
@@ -165,6 +175,9 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
 
     /**
      * All frames delivered so far matching {@code predicate}, without waiting.
+     *
+     * @param predicate the predicate to filter by
+     * @return the matching frames
      */
     public List<SseFrame> received(Predicate<SseFrame> predicate) {
         return aggregator.findAll(predicate);
@@ -172,6 +185,8 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
 
     /**
      * The raw response bytes accumulated so far (status line, headers, and any SSE body), as text.
+     *
+     * @return the raw response text
      */
     public synchronized String rawResponse() {
         return rawResponse.toString();
@@ -181,6 +196,10 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
      * Polls {@link #rawResponse()} until {@code predicate} holds, or fails after {@code timeout}.
      * For plain, non-SSE-framed responses (a 4xx status and body) that never deliver a frame, so
      * {@link #await} has nothing to wait on.
+     *
+     * @param predicate the predicate to match against the raw response
+     * @param timeout   the maximum wait duration
+     * @return the raw response text
      */
     public String awaitRawResponse(Predicate<String> predicate, Duration timeout) {
         return Awaitility.await()

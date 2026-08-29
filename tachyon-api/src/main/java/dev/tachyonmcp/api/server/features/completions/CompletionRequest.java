@@ -34,6 +34,8 @@ public interface CompletionRequest extends ServerFeature.Request {
 
     /**
      * Previously-resolved argument name/value pairs, or empty if none.
+     *
+     * @return the resolved arguments map
      */
     @Value.Default
     default Map<String, String> resolvedArguments() {
@@ -46,6 +48,14 @@ public interface CompletionRequest extends ServerFeature.Request {
         Objects.requireNonNull(argumentValue(), "argumentValue must not be null");
     }
 
+    /**
+     * Creates a completion request with the given argument name, partial value, and resolved siblings.
+     *
+     * @param argumentName     the name of the argument being completed
+     * @param argumentValue    the current (partial) value typed for the argument
+     * @param resolvedArguments previously-resolved argument name/value pairs
+     * @return a new completion request
+     */
     static CompletionRequest of(String argumentName, String argumentValue, Map<String, String> resolvedArguments) {
         return DefaultCompletionRequest.builder()
                 .argumentName(argumentName)
@@ -54,22 +64,61 @@ public interface CompletionRequest extends ServerFeature.Request {
                 .build();
     }
 
+    /**
+     * Creates a new builder for {@link CompletionRequest}.
+     *
+     * @return a new builder
+     */
     static Builder builder() {
         return DefaultCompletionRequest.builder();
     }
 
     interface Builder {
-        /** Fills this builder with the attribute values from {@code instance}. */
+        /**
+         * Fills this builder with the attribute values from {@code instance}.
+         *
+         * @param instance the instance to copy from
+         * @return this builder
+         */
         Builder from(CompletionRequest instance);
 
+        /**
+         * Sets the name of the argument being completed.
+         *
+         * @param argumentName the argument name
+         * @return this builder
+         */
         Builder argumentName(String argumentName);
 
+        /**
+         * Sets the current (partial) value typed for the argument.
+         *
+         * @param argumentValue the partial value
+         * @return this builder
+         */
         Builder argumentValue(String argumentValue);
 
+        /**
+         * Sets the previously-resolved argument name/value pairs.
+         *
+         * @param resolvedArguments the resolved arguments map
+         * @return this builder
+         */
         Builder resolvedArguments(Map<String, ? extends String> resolvedArguments);
 
+        /**
+         * Sets optional protocol extension metadata.
+         *
+         * @param entries metadata entries, or {@code null} for none
+         * @return this builder
+         */
         Builder meta(@Nullable Map<String, ?> entries);
 
+        /**
+         * Builds the {@link CompletionRequest}.
+         *
+         * @return a new completion request
+         */
         CompletionRequest build();
     }
 }

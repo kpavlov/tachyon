@@ -19,12 +19,20 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
         super(envelope, JsonRpcResponseAssert.class);
     }
 
-    /** Creates assertions for a parsed JSON-RPC response envelope. */
+    /** Creates assertions for a parsed JSON-RPC response envelope.
+     *
+     * @param envelope the parsed JSON-RPC response envelope
+     * @return new assertions
+     */
     public static JsonRpcResponseAssert assertThat(JsonNode envelope) {
         return new JsonRpcResponseAssert(envelope);
     }
 
-    /** Creates assertions for an HTTP response containing a JSON-RPC envelope. */
+    /** Creates assertions for an HTTP response containing a JSON-RPC envelope.
+     *
+     * @param response the HTTP response
+     * @return new assertions
+     */
     public static JsonRpcResponseAssert assertThat(HttpResponse<String> response) {
         return assertThatJsonRpcResponse(response.body());
     }
@@ -40,12 +48,19 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
         return assertThatJsonRpcResponse(McpClient.extractJsonRpcResponse(response.body(), requestId));
     }
 
-    /** Creates assertions for a raw JSON-RPC response body. */
+    /** Creates assertions for a raw JSON-RPC response body.
+     *
+     * @param json the raw JSON-RPC response body
+     * @return new assertions
+     */
     public static JsonRpcResponseAssert assertThatJsonRpcResponse(String json) {
         return new JsonRpcResponseAssert(MAPPER.readTree(json));
     }
 
-    /** Verifies the success branch and returns success-only assertions. */
+    /** Verifies the success branch and returns success-only assertions.
+     *
+     * @return success-only assertions
+     */
     public JsonRpcSuccessAssert isSuccess() {
         isNotNull();
         if (actual.has("error") || !actual.has("result")) {
@@ -54,7 +69,10 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
         return new JsonRpcSuccessAssert(actual);
     }
 
-    /** Verifies the error branch and returns error-only assertions. */
+    /** Verifies the error branch and returns error-only assertions.
+     *
+     * @return error-only assertions
+     */
     public JsonRpcErrorAssert isJsonRpcError() {
         isNotNull();
         if (actual.has("result") || !actual.path("error").isObject()) {
@@ -70,7 +88,11 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
             super(envelope, JsonRpcSuccessAssert.class);
         }
 
-        /** Verifies the JSON-RPC response id. */
+        /** Verifies the JSON-RPC response id.
+         *
+         * @param expected the expected response id
+         * @return this assertion
+         */
         public JsonRpcSuccessAssert hasId(Object expected) {
             var expectedId = MAPPER.valueToTree(expected);
             var id = actual.path("id");
@@ -80,7 +102,10 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
             return this;
         }
 
-        /** Verifies a successful tool result reports {@code isError: true}. */
+        /** Verifies a successful tool result reports {@code isError: true}.
+         *
+         * @return this assertion
+         */
         public JsonRpcSuccessAssert isToolError() {
             var isError = actual.path("result").path("isError");
             if (!isError.isBoolean() || !isError.asBoolean()) {
@@ -89,7 +114,11 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
             return this;
         }
 
-        /** Verifies result content contains an equal text block. */
+        /** Verifies result content contains an equal text block.
+         *
+         * @param expectedText the expected text content
+         * @return this assertion
+         */
         public JsonRpcSuccessAssert hasTextContent(String expectedText) {
             var content = actual.path("result").path("content");
             for (var block : content) {
@@ -102,7 +131,10 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
             return this;
         }
 
-        /** Verifies result content contains a text block. */
+        /** Verifies result content contains a text block.
+         *
+         * @return this assertion
+         */
         public JsonRpcSuccessAssert hasTextContent() {
             var content = actual.path("result").path("content");
             for (var block : content) {
@@ -117,6 +149,8 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
 
         /**
          * Verifies result content is a non-empty array.
+         *
+         * @return this assertion
          */
         public JsonRpcSuccessAssert hasContent() {
             var content = actual.path("result").path("content");
@@ -128,6 +162,9 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
 
         /**
          * Verifies result content contains exactly the expected blocks, in order.
+         *
+         * @param expected the expected content blocks
+         * @return this assertion
          */
         public JsonRpcSuccessAssert hasContentExactly(JsonNode... expected) {
             var content = actual.path("result").path("content");
@@ -140,6 +177,9 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
 
         /**
          * Verifies the complete JSON-RPC result value.
+         *
+         * @param expected the expected result
+         * @return this assertion
          */
         public JsonRpcSuccessAssert hasResult(JsonNode expected) {
             var result = actual.path("result");
@@ -151,6 +191,9 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
 
         /**
          * Verifies the MCP result type.
+         *
+         * @param expected the expected result type
+         * @return this assertion
          */
         public JsonRpcSuccessAssert hasResultType(String expected) {
             var resultType = actual.path("result").path("resultType").asString(null);
@@ -160,7 +203,11 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
             return this;
         }
 
-        /** Verifies {@code structuredContent} equals the expected JSON. */
+        /** Verifies {@code structuredContent} equals the expected JSON.
+         *
+         * @param expected the expected structured content
+         * @return this assertion
+         */
         public JsonRpcSuccessAssert hasStructuredContent(JsonNode expected) {
             var structuredContent = actual.path("result").path("structuredContent");
             if (!structuredContent.equals(expected)) {
@@ -172,6 +219,9 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
 
         /**
          * Verifies {@code structuredContent} equals the expected JSON text.
+         *
+         * @param expectedJson the expected structured content as JSON text
+         * @return this assertion
          */
         public JsonRpcSuccessAssert hasStructuredContent(@Language("json") String expectedJson) {
             assertThatJson(actual.path("result").path("structuredContent")).isEqualTo(expectedJson);
@@ -188,7 +238,11 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
             super(envelope, JsonRpcErrorAssert.class);
         }
 
-        /** Verifies the JSON-RPC response id. */
+        /** Verifies the JSON-RPC response id.
+         *
+         * @param expected the expected response id
+         * @return this assertion
+         */
         public JsonRpcErrorAssert hasId(Object expected) {
             var expectedId = MAPPER.valueToTree(expected);
             var id = actual.path("id");
@@ -198,7 +252,11 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
             return this;
         }
 
-        /** Verifies the JSON-RPC error code. */
+        /** Verifies the JSON-RPC error code.
+         *
+         * @param expectedCode the expected error code
+         * @return this assertion
+         */
         public JsonRpcErrorAssert hasErrorCode(int expectedCode) {
             var code = actual.path("error").path("code");
             if (!code.isInt() || code.asInt() != expectedCode) {
@@ -207,7 +265,11 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
             return this;
         }
 
-        /** Verifies the exact JSON-RPC error message. */
+        /** Verifies the exact JSON-RPC error message.
+         *
+         * @param expectedMessage the expected error message
+         * @return this assertion
+         */
         public JsonRpcErrorAssert hasErrorMessage(String expectedMessage) {
             var message = actual.path("error").path("message").asString(null);
             if (!expectedMessage.equals(message)) {
@@ -217,7 +279,11 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
             return this;
         }
 
-        /** Verifies the JSON-RPC error message contains the expected text. */
+        /** Verifies the JSON-RPC error message contains the expected text.
+         *
+         * @param expectedText the expected text substring
+         * @return this assertion
+         */
         public JsonRpcErrorAssert hasErrorMessageContaining(String expectedText) {
             var message = actual.path("error").path("message").asString("");
             if (!message.contains(expectedText)) {
@@ -228,7 +294,11 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
             return this;
         }
 
-        /** Runs an assertion against {@code error.data}. */
+        /** Runs an assertion against {@code error.data}.
+         *
+         * @param assertion the assertion to run against the error data
+         * @return this assertion
+         */
         public JsonRpcErrorAssert hasErrorDataSatisfying(Consumer<JsonNode> assertion) {
             assertion.accept(actual.path("error").path("data"));
             return this;
@@ -236,6 +306,9 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
 
         /**
          * Verifies the complete JSON-RPC error value.
+         *
+         * @param expected the expected error object
+         * @return this assertion
          */
         public JsonRpcErrorAssert hasError(JsonNode expected) {
             var error = actual.path("error");

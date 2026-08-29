@@ -20,10 +20,15 @@ public sealed interface ContentBlock extends HasMeta
      * {@link #discriminator()} rather than repeating raw strings.
      */
     enum Type {
+        /** Text content block. */
         TEXT("text"),
+        /** Image content block. */
         IMAGE("image"),
+        /** Audio content block. */
         AUDIO("audio"),
+        /** Resource link content block. */
         RESOURCE_LINK("resource_link"),
+        /** Embedded resource content block. */
         RESOURCE("resource");
 
         private final String discriminator;
