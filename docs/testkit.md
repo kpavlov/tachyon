@@ -69,11 +69,11 @@ array is stable. `hasContent()` requires at least one content block.
 Error assertions follow the same staged shape:
 
 ```java
-import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThatJsonRpcResponse;
+import static dev.tachyonmcp.testkit.McpHttpResponseAssert.assertThatResponse;
 
-var raw = client.sendRpc("""{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"missing","arguments":{}}}""");
+final HttpResponse<String> response = client.sendRpc("""{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"missing","arguments":{}}}""");
 
-assertThatJsonRpcResponse(raw)
+assertThatResponse(response)
     .isJsonRpcError()
     .hasErrorCode(-32602)
     .hasErrorMessage("Invalid params");

@@ -2,6 +2,7 @@
 package dev.tachyonmcp.e2e.mcp.v2025_11_25;
 
 import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
+import static dev.tachyonmcp.testkit.McpHttpResponseAssert.assertThatResponse;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,16 +32,12 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
             var response = client.sendRpc("""
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://bad-arg"}}
                 """);
-            // language=JSON
-            var expected = """
-                    {
-                      "jsonrpc": "2.0",
-                      "id": 2,
-                      "error": {"code": -32602, "message": "Invalid params"}
-                    }
-                    """;
-            assertThatJson(response).isEqualTo(expected);
-            assertThat(response).doesNotContain("sensitive internal detail");
+            assertThatResponse(response)
+                    .isJsonRpcError()
+                    .hasId(2)
+                    .hasErrorCode(-32602)
+                    .hasErrorMessage("Invalid params");
+            assertThat(response.body()).doesNotContain("sensitive internal detail");
         }
     }
 

@@ -175,18 +175,19 @@ internal class TypedToolKotlinE2eTest : AbstractStatelessMcpE2eTest() {
             @Suppress("USELESS_CAST")
             server.registerTool<GreetArgs, GreetReply>("greet") { "not a GreetReply" as Any }
 
-            val client = createTestClient(server.port())
-            client.initialize()
-            val response =
-                client.post(
-                    // language=json
-                    """
-                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"greet","arguments":{"name":"World","greeting":"Hi"}}}
-                    """.trimIndent(),
-                )
+            createTestClient(server.port()).use { client ->
+                client.initialize()
+                val response =
+                    client.sendRpc(
+                        // language=json
+                        """
+                        {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"greet","arguments":{"name":"World","greeting":"Hi"}}}
+                        """.trimIndent(),
+                    )
 
-            response.statusCode() shouldEqual 200
-            response.body() shouldContain "error"
+                response.statusCode() shouldEqual 200
+                response.body() shouldContain "error"
+            }
         }
     }
 

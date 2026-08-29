@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp;
 
-import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static dev.tachyonmcp.testkit.McpHttpResponseAssert.assertThatResponse;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
@@ -48,16 +48,12 @@ class ToolErrorTest extends AbstractStatelessMcpE2eTest {
             var response = client.sendRpc("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"bad-arg","arguments":{}}}
                 """);
-            // language=JSON
-            var expected = """
-                    {
-                      "jsonrpc": "2.0",
-                      "id": 2,
-                      "error": {"code": -32602, "message": "Invalid params"}
-                    }
-                    """;
-            assertThatJson(response).isEqualTo(expected);
-            assertThat(response).doesNotContain("sensitive internal detail");
+            assertThatResponse(response)
+                    .isJsonRpcError()
+                    .hasId(2)
+                    .hasErrorCode(-32602)
+                    .hasErrorMessage("Invalid params");
+            assertThat(response.body()).doesNotContain("sensitive internal detail");
         }
     }
 }

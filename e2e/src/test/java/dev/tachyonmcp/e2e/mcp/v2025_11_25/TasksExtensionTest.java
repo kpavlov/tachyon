@@ -58,8 +58,8 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
                       "name":"book","arguments":{},"task":{}}}
                     """);
 
-            assertThatJson(response).inPath("$.result.task.taskId").isEqualTo("legacy-workflow");
-            assertThatJson(response).inPath("$.result.task.status").isEqualTo("working");
+            assertThatJson(response.body()).inPath("$.result.task.taskId").isEqualTo("legacy-workflow");
+            assertThatJson(response.body()).inPath("$.result.task.status").isEqualTo("working");
         }
     }
 
@@ -80,7 +80,7 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
             var result = client.sendRpc("""
                     {"jsonrpc":"2.0","id":3,"method":"tasks/result","params":{"taskId":"%s"}}
                     """.formatted(resultTaskId));
-            assertThatJson(result)
+            assertThatJson(result.body())
                     .inPath("$.result.structuredContent.bookingId")
                     .isEqualTo("booking-1");
             assertThat(taskEngine.awaitedTaskIds()).containsExactly(resultTaskId);
@@ -114,7 +114,7 @@ class TasksExtensionTest extends AbstractStatefulMcpE2eTest {
                       "name":"book-for-progress","arguments":{},"task":{},
                       "_meta":{"progressToken":"tok-1"}}}
                     """);
-            assertThatJson(bookResponse).inPath("$.result.task.taskId").isEqualTo("legacy-progress");
+            assertThatJson(bookResponse.body()).inPath("$.result.task.taskId").isEqualTo("legacy-progress");
 
             client.sendRpc("""
                     {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{

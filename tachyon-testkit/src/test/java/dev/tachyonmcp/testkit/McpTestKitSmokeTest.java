@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.testkit;
 
+import static dev.tachyonmcp.testkit.McpHttpResponseAssert.assertThatResponse;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -98,7 +99,7 @@ class McpTestKitSmokeTest {
             var ping = client.sendRpc("""
                     {"jsonrpc":"2.0","id":4,"method":"ping"}
                     """);
-            assertThat(ping).contains("\"result\"");
+            assertThatResponse(ping).isSuccess();
         }
     }
 

@@ -79,7 +79,7 @@ class StatelessServerTest {
                       }
                     }
                     """;
-            assertThatJson(response).when(Option.IGNORING_EXTRA_FIELDS).isEqualTo(expected);
+            assertThatJson(response.body()).when(Option.IGNORING_EXTRA_FIELDS).isEqualTo(expected);
         }
     }
 
@@ -103,7 +103,7 @@ class StatelessServerTest {
                       }
                     }
                     """;
-            assertThatJson(response).isEqualTo(expected);
+            assertThatJson(response.body()).isEqualTo(expected);
         }
     }
 

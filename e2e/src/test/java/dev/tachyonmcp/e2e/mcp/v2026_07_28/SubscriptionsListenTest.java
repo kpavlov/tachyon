@@ -332,7 +332,7 @@ class SubscriptionsListenTest extends AbstractStatelessMcpE2eTest {
                 var pingResponse = client.sendRpc(null, """
                     {"jsonrpc":"2.0","id":99,"method":"tools/list","params":{}}
                     """);
-                assertThat(pingResponse).contains("\"trigger-tool-3\"");
+                assertThat(pingResponse.body()).contains("\"trigger-tool-3\"");
             });
         }
     }

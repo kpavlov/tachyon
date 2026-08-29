@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp.v2025_11_25;
 
-import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThatJsonRpcResponse;
+import static dev.tachyonmcp.testkit.McpHttpResponseAssert.assertThatResponse;
 
 import dev.tachyonmcp.api.server.features.tasks.TaskConnector;
 import org.junit.jupiter.api.Test;
@@ -31,12 +31,12 @@ class TasksOptionalOperationsTest extends AbstractStatefulMcpE2eTest {
             var listJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/list","params":{}}
                     """);
-            assertThatJsonRpcResponse(listJson).isJsonRpcError().hasErrorCode(-32601);
+            assertThatResponse(listJson).isJsonRpcError().hasErrorCode(-32601);
 
             var resultJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":3,"method":"tasks/result","params":{"taskId":"missing"}}
                     """);
-            assertThatJsonRpcResponse(resultJson).isJsonRpcError().hasErrorCode(-32601);
+            assertThatResponse(resultJson).isJsonRpcError().hasErrorCode(-32601);
         }
     }
 }

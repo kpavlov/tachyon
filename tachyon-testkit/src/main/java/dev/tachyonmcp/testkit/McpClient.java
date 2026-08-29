@@ -7,16 +7,19 @@ import static org.awaitility.Awaitility.await;
 import java.io.Closeable;
 import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+import javax.net.ssl.SSLSession;
 import me.kpavlov.finchly.queue.MessageAggregator;
 import org.intellij.lang.annotations.Language;
 import org.jspecify.annotations.Nullable;
@@ -380,8 +383,12 @@ public abstract class McpClient implements Closeable {
 
     /**
      * {@link #sendRpc(String, String)} against the session set by {@link #initialize()}.
+     *
+     * @param jsonBody the JSON-RPC request body
+     * @return the HTTP response
+     * @throws Exception if the request fails
      */
-    public String sendRpc(@Language("json") String jsonBody) throws Exception {
+    public HttpResponse<String> sendRpc(@Language("json") String jsonBody) throws Exception {
         return sendRpc(sessionId, jsonBody);
     }
 

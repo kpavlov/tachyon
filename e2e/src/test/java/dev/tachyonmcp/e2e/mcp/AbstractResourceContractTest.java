@@ -47,7 +47,7 @@ public abstract class AbstractResourceContractTest extends AbstractStatelessMcpE
                 """);
 
             // registration order is irrelevant: resources/list sorts by name.
-            assertThatJson(response)
+            assertThatJson(response.body())
                     .when(Option.IGNORING_EXTRA_FIELDS)
                     .isEqualTo(
                             // language=JSON
@@ -73,7 +73,10 @@ public abstract class AbstractResourceContractTest extends AbstractStatelessMcpE
                 {"jsonrpc":"2.0","id":2,"method":"resources/list"}
                 """);
 
-            assertThatJson(response).inPath("$.result.resources").isArray().isEmpty();
+            assertThatJson(response.body())
+                    .inPath("$.result.resources")
+                    .isArray()
+                    .isEmpty();
         }
     }
 
@@ -93,7 +96,7 @@ public abstract class AbstractResourceContractTest extends AbstractStatelessMcpE
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://doc"}}
                 """);
 
-            assertThatJson(response)
+            assertThatJson(response.body())
                     .when(Option.IGNORING_EXTRA_FIELDS)
                     .isEqualTo(
                             // language=JSON
@@ -137,7 +140,7 @@ public abstract class AbstractResourceContractTest extends AbstractStatelessMcpE
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://beta"}}
                 """);
 
-            assertThatJson(response)
+            assertThatJson(response.body())
                     .when(Option.IGNORING_EXTRA_FIELDS)
                     .isEqualTo(
                             // language=JSON
@@ -178,7 +181,7 @@ public abstract class AbstractResourceContractTest extends AbstractStatelessMcpE
                   }
                 }
                 """.formatted(resourceNotFoundErrorCode());
-            assertThatJson(response).isEqualTo(expected);
+            assertThatJson(response.body()).isEqualTo(expected);
         }
     }
 }

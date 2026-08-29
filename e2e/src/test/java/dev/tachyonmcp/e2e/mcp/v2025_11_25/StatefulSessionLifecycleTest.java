@@ -28,7 +28,7 @@ class StatefulSessionLifecycleTest extends AbstractStatefulMcpE2eTest {
                     .map(Session::state)
                     .hasValue(SessionState.ACTIVE);
             // language=JSON
-            assertThatJson(response).isEqualTo("""
+            assertThatJson(response.body()).isEqualTo("""
                     {"jsonrpc":"2.0","id":2,"result":{}}
                     """);
         }

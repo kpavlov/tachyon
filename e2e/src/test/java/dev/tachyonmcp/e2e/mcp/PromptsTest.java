@@ -2,6 +2,7 @@
 package dev.tachyonmcp.e2e.mcp;
 
 import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
+import static dev.tachyonmcp.testkit.McpHttpResponseAssert.assertThatResponse;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -118,16 +119,12 @@ class PromptsTest extends AbstractStatelessMcpE2eTest {
             var response = client.sendRpc("""
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"bad-arg"}}
                 """);
-            // language=JSON
-            var expected = """
-                    {
-                      "jsonrpc": "2.0",
-                      "id": 2,
-                      "error": {"code": -32602, "message": "Invalid params"}
-                    }
-                    """;
-            assertThatJson(response).isEqualTo(expected);
-            assertThat(response).doesNotContain("sensitive internal detail");
+            assertThatResponse(response)
+                    .isJsonRpcError()
+                    .hasId(2)
+                    .hasErrorCode(-32602)
+                    .hasErrorMessage("Invalid params");
+            assertThat(response.body()).doesNotContain("sensitive internal detail");
         }
     }
 
@@ -143,18 +140,11 @@ class PromptsTest extends AbstractStatelessMcpE2eTest {
             var response = client.sendRpc("""
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"bad-city"}}
                 """);
-            // language=JSON
-            var expected = """
-                    {
-                      "jsonrpc": "2.0",
-                      "id": 2,
-                      "error": {
-                        "code": -32602,
-                        "message": "invalid argument 'city': unknown city"
-                      }
-                    }
-                    """;
-            assertThatJson(response).isEqualTo(expected);
+            assertThatResponse(response)
+                    .isJsonRpcError()
+                    .hasId(2)
+                    .hasErrorCode(-32602)
+                    .hasErrorMessage("invalid argument 'city': unknown city");
         }
     }
 

@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp.v2025_11_25;
 
-import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThatJsonRpcResponse;
+import static dev.tachyonmcp.testkit.McpHttpResponseAssert.assertThatResponse;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
 import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
@@ -47,7 +47,7 @@ class TaskAugmentedToolTest extends AbstractStatefulMcpE2eTest {
                     {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{
                       "name":"required","arguments":{}}}
                     """);
-            assertThatJsonRpcResponse(response).isJsonRpcError().hasErrorCode(-32602);
+            assertThatResponse(response).isJsonRpcError().hasErrorCode(-32602);
         }
     }
 
@@ -59,7 +59,7 @@ class TaskAugmentedToolTest extends AbstractStatefulMcpE2eTest {
                     {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{
                       "name":"optional","arguments":{}}}
                     """);
-            assertThatJson(response).inPath("$.result.content[0].text").isEqualTo("inline");
+            assertThatJson(response.body()).inPath("$.result.content[0].text").isEqualTo("inline");
         }
     }
 
@@ -71,7 +71,7 @@ class TaskAugmentedToolTest extends AbstractStatefulMcpE2eTest {
                     {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{
                       "name":"optional","arguments":{},"task":{}}}
                     """);
-            assertThatJsonRpcResponse(response).isJsonRpcError().hasErrorCode(-32603);
+            assertThatResponse(response).isJsonRpcError().hasErrorCode(-32603);
         }
     }
 
@@ -83,7 +83,7 @@ class TaskAugmentedToolTest extends AbstractStatefulMcpE2eTest {
                     {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{
                       "name":"forbidden","arguments":{},"task":{}}}
                     """);
-            assertThatJsonRpcResponse(response).isJsonRpcError().hasErrorCode(-32602);
+            assertThatResponse(response).isJsonRpcError().hasErrorCode(-32602);
         }
     }
 }

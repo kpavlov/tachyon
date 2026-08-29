@@ -559,7 +559,7 @@ class SkillsExtensionE2eTest {
                 """);
 
             // language=JSON
-            assertThatJson(list).isEqualTo("""
+            assertThatJson(list.body()).isEqualTo("""
                 {
                   "jsonrpc":"2.0",
                   "id":1,
@@ -599,7 +599,7 @@ class SkillsExtensionE2eTest {
                 {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"skill://acme/git-workflow/SKILL.md"}}
                 """);
             // language=JSON
-            assertThatJson(acmeRead).isEqualTo("""
+            assertThatJson(acmeRead.body()).isEqualTo("""
                 {
                   "jsonrpc":"2.0",
                   "id":2,
@@ -618,7 +618,7 @@ class SkillsExtensionE2eTest {
                 {"jsonrpc":"2.0","id":3,"method":"resources/read","params":{"uri":"skill://team/git-workflow/SKILL.md"}}
                 """);
             // language=JSON
-            assertThatJson(teamRead).isEqualTo("""
+            assertThatJson(teamRead.body()).isEqualTo("""
                 {
                   "jsonrpc":"2.0",
                   "id":3,
@@ -787,7 +787,7 @@ class SkillsExtensionE2eTest {
                 """);
 
             // language=JSON
-            assertThatJson(read).isEqualTo("""
+            assertThatJson(read.body()).isEqualTo("""
                 {
                   "jsonrpc":"2.0",
                   "id":2,

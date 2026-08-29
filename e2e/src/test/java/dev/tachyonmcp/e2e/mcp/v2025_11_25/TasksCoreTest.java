@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp.v2025_11_25;
 
-import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThatJsonRpcResponse;
+import static dev.tachyonmcp.testkit.McpHttpResponseAssert.assertThatResponse;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -53,16 +53,16 @@ class TasksCoreTest extends AbstractStatefulMcpE2eTest {
                       "name":"start-workflow","arguments":{},"task":{}}}
                     """);
 
-            assertThatJson(callJson).inPath("$.result.task.taskId").isEqualTo("workflow-started-by-tool");
-            assertThatJson(callJson).inPath("$.result.task.status").isEqualTo("working");
+            assertThatJson(callJson.body()).inPath("$.result.task.taskId").isEqualTo("workflow-started-by-tool");
+            assertThatJson(callJson.body()).inPath("$.result.task.status").isEqualTo("working");
             assertThat(taskConnector.startedTaskIds()).containsExactly("workflow-started-by-tool");
 
             var getJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{
                       "taskId":"workflow-started-by-tool"}}
                     """);
-            assertThatJson(getJson).inPath("$.result.taskId").isEqualTo("workflow-started-by-tool");
-            assertThatJson(getJson).inPath("$.result.status").isEqualTo("working");
+            assertThatJson(getJson.body()).inPath("$.result.taskId").isEqualTo("workflow-started-by-tool");
+            assertThatJson(getJson.body()).inPath("$.result.status").isEqualTo("working");
         }
     }
 
@@ -78,11 +78,11 @@ class TasksCoreTest extends AbstractStatefulMcpE2eTest {
             var listJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/list","params":{}}
                     """);
-            assertThatJson(listJson).inPath("$.result.tasks.length()").isEqualTo(2);
-            assertThatJson(listJson)
+            assertThatJson(listJson.body()).inPath("$.result.tasks.length()").isEqualTo(2);
+            assertThatJson(listJson.body())
                     .inPath("$.result.tasks[0].pollInterval")
                     .isEqualTo(DEFAULT_POLL_INTERVAL.toMillis());
-            assertThatJson(listJson)
+            assertThatJson(listJson.body())
                     .inPath("$.result.tasks[1].pollInterval")
                     .isEqualTo(DEFAULT_POLL_INTERVAL.toMillis());
             assertThat(taskConnector.listRequests()).singleElement().satisfies(request -> {
@@ -93,8 +93,8 @@ class TasksCoreTest extends AbstractStatefulMcpE2eTest {
             var getJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"workflow-1"}}
                     """);
-            assertThatJson(getJson).inPath("$.result.taskId").isEqualTo("workflow-1");
-            assertThatJson(getJson).inPath("$.result.status").isEqualTo("working");
+            assertThatJson(getJson.body()).inPath("$.result.taskId").isEqualTo("workflow-1");
+            assertThatJson(getJson.body()).inPath("$.result.status").isEqualTo("working");
             assertThat(taskConnector.refreshedTaskIds()).contains("workflow-1");
         }
     }
@@ -108,12 +108,12 @@ class TasksCoreTest extends AbstractStatefulMcpE2eTest {
             var getJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"unknown-workflow"}}
                     """);
-            assertThatJsonRpcResponse(getJson).isJsonRpcError().hasErrorMessageContaining("Task not found");
+            assertThatResponse(getJson).isJsonRpcError().hasErrorMessageContaining("Task not found");
 
             var cancelJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":3,"method":"tasks/cancel","params":{"taskId":"unknown-workflow"}}
                     """);
-            assertThatJsonRpcResponse(cancelJson).isJsonRpcError().hasErrorMessageContaining("Task not found");
+            assertThatResponse(cancelJson).isJsonRpcError().hasErrorMessageContaining("Task not found");
         }
     }
 
@@ -127,8 +127,8 @@ class TasksCoreTest extends AbstractStatefulMcpE2eTest {
             var cancelJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/cancel","params":{"taskId":"workflow-cancel"}}
                     """);
-            assertThatJson(cancelJson).inPath("$.result.taskId").isEqualTo("workflow-cancel");
-            assertThatJson(cancelJson).inPath("$.result.status").isEqualTo("cancelled");
+            assertThatJson(cancelJson.body()).inPath("$.result.taskId").isEqualTo("workflow-cancel");
+            assertThatJson(cancelJson.body()).inPath("$.result.status").isEqualTo("cancelled");
             assertThat(taskConnector.cancelledTaskIds()).containsExactly("workflow-cancel");
         }
     }
@@ -149,7 +149,7 @@ class TasksCoreTest extends AbstractStatefulMcpE2eTest {
             var resultJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":3,"method":"tasks/result","params":{"taskId":"workflow-complete"}}
                     """);
-            assertThatJsonRpcResponse(resultJson).isSuccess().hasStructuredContent("""
+            assertThatResponse(resultJson).isSuccess().hasStructuredContent("""
                     {"output":"success"}
                     """);
             assertThat(taskConnector.awaitedTaskIds()).containsExactly("workflow-complete");
@@ -164,7 +164,7 @@ class TasksCoreTest extends AbstractStatefulMcpE2eTest {
             var getJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"missing"}}
                     """);
-            assertThatJsonRpcResponse(getJson).isJsonRpcError().hasErrorCode(-32602);
+            assertThatResponse(getJson).isJsonRpcError().hasErrorCode(-32602);
         }
     }
 
@@ -176,7 +176,7 @@ class TasksCoreTest extends AbstractStatefulMcpE2eTest {
             var cancelJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/cancel","params":{"taskId":"missing"}}
                     """);
-            assertThatJsonRpcResponse(cancelJson).isJsonRpcError().hasErrorCode(-32602);
+            assertThatResponse(cancelJson).isJsonRpcError().hasErrorCode(-32602);
         }
     }
 
@@ -200,8 +200,8 @@ class TasksCoreTest extends AbstractStatefulMcpE2eTest {
             var cancelJson = client.sendRpc("""
                     {"jsonrpc":"2.0","id":3,"method":"tasks/cancel","params":{"taskId":"workflow-terminal"}}
                     """);
-            assertThatJson(cancelJson).inPath("$.result.taskId").isEqualTo("workflow-terminal");
-            assertThatJson(cancelJson).inPath("$.result.status").isEqualTo("completed");
+            assertThatJson(cancelJson.body()).inPath("$.result.taskId").isEqualTo("workflow-terminal");
+            assertThatJson(cancelJson.body()).inPath("$.result.status").isEqualTo("completed");
             assertThat(taskConnector.cancelledTaskIds()).containsExactly("workflow-terminal");
         }
     }
@@ -217,7 +217,7 @@ class TasksCoreTest extends AbstractStatefulMcpE2eTest {
                     {"jsonrpc":"2.0","id":2,"method":"tasks/update","params":{
                       "taskId":"workflow-legacy-update","inputResponses":{}}}
                     """);
-            assertThatJsonRpcResponse(updateJson).isJsonRpcError().hasErrorCode(-32601);
+            assertThatResponse(updateJson).isJsonRpcError().hasErrorCode(-32601);
         }
     }
 

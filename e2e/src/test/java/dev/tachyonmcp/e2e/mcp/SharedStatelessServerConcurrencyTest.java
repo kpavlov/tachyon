@@ -55,7 +55,7 @@ class SharedStatelessServerConcurrencyTest extends AbstractStatelessMcpE2eTest {
                         var response = client.sendRpc("""
                             {"jsonrpc":"2.0","id":%d,"method":"tools/list"}
                             """.formatted(clientId));
-                        responses.put(clientId, response);
+                        responses.put(clientId, response.body());
                     } catch (Exception e) {
                         errors.add("client %d: %s".formatted(clientId, e.getMessage()));
                     } finally {

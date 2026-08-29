@@ -75,6 +75,36 @@
           "old": "method dev.tachyonmcp.testkit.JsonRpcResponseAssert dev.tachyonmcp.testkit.JsonRpcResponseAssert::isToolError()",
           "justification": "Moved to JsonRpcSuccessAssert because a tool error is an MCP result on the JSON-RPC success branch.",
           "attachments": {"since": "1.0.0-beta.22"}
+        },
+        {
+          "ignore": true,
+          "code": "java.method.exception.checkedRemoved",
+          "old": "method java.lang.String dev.tachyonmcp.testkit.McpClient::requestBody(java.lang.String) throws java.lang.Exception",
+          "new": "method java.lang.String dev.tachyonmcp.testkit.McpClient::requestBody(java.lang.String)",
+          "justification": "requestBody() never threw; removed the unnecessary checked-exception declaration.",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.String dev.tachyonmcp.testkit.McpClient::sendRpc(java.lang.String) throws java.lang.Exception",
+          "new": "method java.net.http.HttpResponse<java.lang.String> dev.tachyonmcp.testkit.McpClient::sendRpc(java.lang.String) throws java.lang.Exception",
+          "justification": "sendRpc now returns the full HttpResponse<String> so callers can inspect status codes and headers, not just the body.",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.returnTypeChanged",
+          "old": "method java.lang.String dev.tachyonmcp.testkit.McpClient::sendRpc(java.lang.String, java.lang.String) throws java.lang.Exception",
+          "new": "method java.net.http.HttpResponse<java.lang.String> dev.tachyonmcp.testkit.McpClient::sendRpc(java.lang.String, java.lang.String) throws java.lang.Exception",
+          "justification": "sendRpc now returns the full HttpResponse<String> so callers can inspect status codes and headers, not just the body.",
+          "attachments": {
+            "since": "1.0.0-beta.23"
+          }
         }
       ]
     }
