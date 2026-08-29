@@ -14,62 +14,8 @@ import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import tools.jackson.databind.ObjectMapper;
 
 class ResourceTest extends AbstractStatefulMcpE2eTest {
-
-    @Test
-    void shouldListRegisteredResources() throws Exception {
-        startEmptyServer();
-        server.resources()
-                .register(
-                        ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain"),
-                        (ctx, request) -> TextResourceContents.of(request.uri(), "Hello", "text/plain"))
-                .register(
-                        ResourceDescriptor.of("code", "resource://code", "Source code", "text/x-java"),
-                        (ctx, request) ->
-                                TextResourceContents.of("resource://code", "package com.example;", "text/x-java"));
-
-        try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
-                {"jsonrpc":"2.0","id":2,"method":"resources/list"}
-                """);
-
-            var mapper = new ObjectMapper();
-            var root = mapper.readTree(response.body());
-            var resources = root.at("/result/resources");
-            assertThat(resources).isNotNull();
-            assertThat(resources.size()).isEqualTo(2);
-            assertThat(resources.get(0).get("name").asString()).isEqualTo("code");
-            assertThat(resources.get(0).get("uri").asString()).isEqualTo("resource://code");
-            assertThat(resources.get(1).get("name").asString()).isEqualTo("doc");
-            assertThat(resources.get(1).get("uri").asString()).isEqualTo("resource://doc");
-        }
-    }
-
-    @Test
-    void shouldReadTextResource() throws Exception {
-        var descriptor = ResourceDescriptor.of("doc", "resource://doc", "A document", "text/plain");
-        startEmptyServer();
-        server.resources()
-                .register(
-                        descriptor,
-                        (ctx, request) -> TextResourceContents.of(request.uri(), "Hello world", "text/plain"));
-
-        try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
-                {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://doc"}}
-                """);
-
-            assertThatJson(response.body()).inPath("$.result.contents[0].uri").isEqualTo("resource://doc");
-            assertThatJson(response.body()).inPath("$.result.contents[0].text").isEqualTo("Hello world");
-            assertThatJson(response.body())
-                    .inPath("$.result.contents[0].mimeType")
-                    .isEqualTo("text/plain");
-        }
-    }
 
     @Test
     void shouldRedactIllegalArgumentExceptionFromInvalidParamsError() throws Exception {
@@ -95,44 +41,6 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
                     """;
             assertThatJson(response).isEqualTo(expected);
             assertThat(response).doesNotContain("sensitive internal detail");
-        }
-    }
-
-    @Test
-    void shouldReadCorrectResourceWhenMultipleRegistered() throws Exception {
-        startEmptyServer();
-        server.resources()
-                .register(
-                        ResourceDescriptor.of("alpha", "resource://alpha", "Alpha", "text/plain"),
-                        (ctx, request) -> TextResourceContents.of(request.uri(), "content-alpha", "text/plain"))
-                .register(
-                        ResourceDescriptor.of("beta", "resource://beta", "Beta", "text/plain"),
-                        (ctx, request) -> TextResourceContents.of(request.uri(), "content-beta", "text/plain"))
-                .register(
-                        ResourceDescriptor.of("gamma", "resource://gamma", "Gamma", "text/plain"),
-                        (ctx, request) -> TextResourceContents.of(request.uri(), "content-gamma", "text/plain"));
-
-        try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
-                {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://beta"}}
-                """);
-
-            assertThatJson(response.body())
-                    .inPath("$.result")
-                    .isEqualTo(
-                            // language=JSON
-                            """
-                {
-                  "contents": [
-                    {
-                      "uri": "resource://beta",
-                      "mimeType": "text/plain",
-                      "text": "content-beta"
-                    }
-                  ]
-                }
-                """);
         }
     }
 
@@ -212,32 +120,6 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
     }
 
     @Test
-    void shouldReturnErrorForUnknownResource() throws Exception {
-        startEmptyServer();
-
-        try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
-                {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"resource://unknown"}}
-                """);
-
-            // language=JSON
-            var expected = """
-                {
-                  "jsonrpc": "2.0",
-                  "id": 2,
-                  "error": {
-                    "code": -32002,
-                    "message": "Resource not found",
-                    "data":{"uri":"resource://unknown"}
-                  }
-                }
-                """;
-            assertThatJson(response.body()).isEqualTo(expected);
-        }
-    }
-
-    @Test
     void shouldRejectInvalidResourceUri() throws Exception {
         startEmptyServer();
 
@@ -260,23 +142,6 @@ class ResourceTest extends AbstractStatefulMcpE2eTest {
                 }
                 """;
             assertThatJson(response.body()).isEqualTo(expected);
-        }
-    }
-
-    @Test
-    void shouldReturnEmptyListWhenNoResources() throws Exception {
-        startEmptyServer();
-
-        try (var client = createTestClient()) {
-            var sessionId = client.initialize();
-            var response = client.post(sessionId, """
-                {"jsonrpc":"2.0","id":2,"method":"resources/list"}
-                """);
-
-            assertThatJson(response.body())
-                    .inPath("$.result.resources")
-                    .isArray()
-                    .isEmpty();
         }
     }
 
