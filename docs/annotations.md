@@ -56,7 +56,8 @@ var server = TachyonServer.builder()
 | `tachyon-annotations-spring-ai` | `SpringAiAnnotationProvider` | `@McpTool`, `@McpResource` (static or, when the URI contains `{...}`, a template), `@McpPrompt` |
 
 Add the module you need as a dependency; each is independent of the other two. All three live under
-`integrations/` in the source tree.
+`integrations/` in the source tree. Version is pinned by the `tachyon-bom` — see
+[Quickstart](quickstart.md#1-add-the-dependency).
 
 ```xml
 <dependency>

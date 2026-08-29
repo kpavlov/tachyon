@@ -9,21 +9,38 @@ Build and run an MCP server in under 5 minutes.
 
 ## 1. Add the dependency
 
+Import the `tachyon-bom` once to pin every Tachyon module to the same version, then add modules
+without repeating the version on each one.
+
 Maven:
 
 ```xml
-<dependency>
-    <groupId>dev.tachyonmcp</groupId>
-    <artifactId>tachyon-core</artifactId>
-    <version>1.0.0-beta.22</version> <!-- get latest version from Maven Central -->
-</dependency>
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-bom</artifactId>
+            <version>${tachyon.version}</version> <!-- get latest version from Maven Central -->
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+
+<dependencies>
+    <dependency>
+        <groupId>dev.tachyonmcp</groupId>
+        <artifactId>tachyon-core</artifactId>
+    </dependency>
+</dependencies>
 ```
 
 Gradle (Kotlin DSL):
 
 ```kotlin
 dependencies {
-    implementation("dev.tachyonmcp:tachyon-core:1.0.0-beta.22")
+    implementation(platform("dev.tachyonmcp:tachyon-bom:1.0.0-beta.22"))
+    implementation("dev.tachyonmcp:tachyon-core")
 }
 ```
 

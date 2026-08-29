@@ -3,11 +3,12 @@
 `tachyon-testkit` drives a running Tachyon server from tests: protocol-shaping HTTP clients,
 in-process port-0 server helpers, and fluent JSON-RPC assertions.
 
+Version is pinned by the `tachyon-bom` — see [Quickstart](quickstart.md#1-add-the-dependency).
+
 ```xml
 <dependency>
     <groupId>dev.tachyonmcp</groupId>
     <artifactId>tachyon-testkit</artifactId>
-    <version>${tachyon.version}</version>
     <scope>test</scope>
 </dependency>
 ```

@@ -4,11 +4,12 @@ The `tachyon-kotlin` module wraps `ServerBuilder` with a coroutine-first DSL, su
 
 ## Dependency
 
+Version is pinned by the `tachyon-bom` — see [Quickstart](quickstart.md#1-add-the-dependency).
+
 ```xml
 <dependency>
     <groupId>dev.tachyonmcp</groupId>
     <artifactId>tachyon-kotlin</artifactId>
-    <version>1.0.0-beta.15</version>
 </dependency>
 ```
 

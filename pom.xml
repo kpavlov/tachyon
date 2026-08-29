@@ -55,6 +55,7 @@
         <module>tachyon-extensions</module>
         <module>tachyon-testkit</module>
         <module>integrations</module>
+        <module>tachyon-bom</module>
     </modules>
 
     <properties>
@@ -195,7 +196,6 @@
                 <artifactId>snakeyaml</artifactId>
                 <version>${snakeyaml.version}</version>
             </dependency>
-
 
             <dependency>
                 <groupId>com.networknt</groupId>

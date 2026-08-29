@@ -10,6 +10,31 @@ metadata:
 
 Make **Java 21+** MCP server. Tachyon lib. Transport = Streamable HTTP (Netty).
 
+## Dependency
+
+Import `tachyon-bom` once, then add modules with no `<version>`:
+
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-bom</artifactId>
+            <version>1.0.0-beta.23</version> <!-- get latest version from Maven Central -->
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+
+<dependencies>
+    <dependency>
+        <groupId>dev.tachyonmcp</groupId>
+        <artifactId>tachyon-core</artifactId> <!-- or tachyon-kotlin for the Kotlin DSL -->
+    </dependency>
+</dependencies>
+```
+
 ## Core
 
 - `TachyonServer.builder()` → `ServerBuilder`. Start here.

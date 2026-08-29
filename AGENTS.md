@@ -22,7 +22,8 @@ Use IDE MCP for building/running tests if available. Otherwise see
 
 ## Parts
 
-- **`tachyon-runtime`** — Core: Netty HTTP/SSE, JSON-RPC, event log, MCP registries
+- **`tachyon-bom`** — Maven BOM: pins consumer-facing module versions via `dependencyManagement`
+- **`tachyon-core`** — Core: Netty HTTP/SSE, JSON-RPC, event log, MCP registries
 - **`e2e`** — E2E tests via `io.modelcontextprotocol.sdk:mcp-core` v2.0+
 - **`conformance`** — Conformance via `@modelcontextprotocol/conformance`
 

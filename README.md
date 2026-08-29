@@ -36,14 +36,27 @@ application framework.
 
 ## Quickstart
 
-Add the core dependency:
+Import the [BOM](tachyon-bom) once to pin the version, then add the core dependency:
 
 ```xml
-<dependency>
-    <groupId>dev.tachyonmcp</groupId>
-    <artifactId>tachyon-core</artifactId>
-    <version>${tachyon.version}</version>
-</dependency>
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-bom</artifactId>
+            <version>${tachyon.version}</version> <!-- get latest version from Maven Central -->
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+
+<dependencies>
+    <dependency>
+        <groupId>dev.tachyonmcp</groupId>
+        <artifactId>tachyon-core</artifactId>
+    </dependency>
+</dependencies>
 ```
 
 Create and start a server:
