@@ -1,0 +1,80 @@
+/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
+package dev.tachyonmcp.e2e.mcp;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.server.OutboundSseStreamMessageRouter;
+import java.time.Duration;
+import java.util.regex.Pattern;
+
+import dev.tachyonmcp.e2e.mcp.v2025_11_25.AbstractStatefulMcpE2eTest;
+import org.junit.jupiter.api.Test;
+
+/**
+ * MCP 2025-11-25 Streamable HTTP resumability: a tool that closes its POST-SSE stream mid-call
+ * before producing its result. The client observes the disconnect and resumes the stream with
+ * {@code Last-Event-ID: <n>#<key>}; the server MUST still deliver the final response on that stream.
+ *
+ * <p>The tool sleeps after closing so the response is finalized (and appended to the event log)
+ * only AFTER the client has already reconnected and run its one-shot replay — deterministically
+ * exercising the reconnect-before-append race. Without live re-delivery on resume, the reconnecting
+ * client would never receive the response.
+ */
+class SsePostReconnectRedeliveryTest extends AbstractStatefulMcpE2eTest {
+
+    private static final Pattern PRIMING_ID = Pattern.compile("id: (\\d+#\\d+)", Pattern.MULTILINE);
+
+    @Override
+    protected void startDefaultServer() {
+        startServerWith(s -> s.tools()
+                .register(
+                        b -> b.name("self-closing")
+                                .description("Closes its SSE stream mid-call, then returns after a delay"),
+                        (ctx, request) -> {
+                            var stream = OutboundSseStreamMessageRouter.currentOutboundSseStream();
+                            if (stream != null) {
+                                stream.start();
+                                stream.close();
+                            }
+                            try {
+                                Thread.sleep(300);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                            return ToolResult.text("resumed-payload");
+                        }));
+    }
+
+    @Test
+    void reconnectAfterMidCallCloseReceivesResponse() throws Exception {
+        try (var client = createTestClient()) {
+            var sessionId = client.initialize();
+
+            // POST tools/call: the tool upgrades the POST to SSE, emits the priming event, then
+            // closes the stream — so the POST completes carrying only that priming event.
+            var post = client.post(sessionId, """
+                    {"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"self-closing","arguments":{}}}
+                    """);
+            assertThat(post.headers().firstValue("Content-Type").orElse("")).contains("text/event-stream");
+            assertThat(post.body()).contains("retry: 3000");
+            var matcher = PRIMING_ID.matcher(post.body());
+            assertThat(matcher.find())
+                    .as("POST-SSE priming event id (<n>#<key>) in:\n%s", post.body())
+                    .isTrue();
+            var lastEventId = matcher.group(1);
+
+            // Resume that exact POST stream. The tool is still sleeping, so its response has not
+            // been appended yet: the one-shot replay finds nothing, and only live re-delivery on
+            // resume can hand the client its result.
+            try (var subscriber = client.openGetStream(lastEventId)) {
+                var received =
+                        subscriber.awaitRawResponse(body -> body.contains("resumed-payload"), Duration.ofSeconds(5));
+                assertThat(received)
+                        .as("resumed POST stream must receive the final response delivered after reconnect")
+                        .contains("\"id\":9")
+                        .contains("resumed-payload");
+            }
+        }
+    }
+}

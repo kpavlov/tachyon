@@ -3,6 +3,7 @@ package dev.tachyonmcp.e2e
 
 import dev.tachyonmcp.api.json.JsonSchema
 import dev.tachyonmcp.api.server.features.tools.ToolResult.structured
+import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest
 import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.kotlin.server.domain.arguments
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde

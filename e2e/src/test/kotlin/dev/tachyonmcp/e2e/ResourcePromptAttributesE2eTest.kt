@@ -2,11 +2,11 @@
 package dev.tachyonmcp.e2e
 
 import dev.tachyonmcp.api.json.JsonSchema
+import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest
 import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.kotlin.server.domain.Annotations
 import dev.tachyonmcp.kotlin.server.domain.Icon
 import dev.tachyonmcp.kotlin.server.domain.PromptArgument
-import dev.tachyonmcp.kotlin.server.domain.TextResourceContents
 import dev.tachyonmcp.kotlin.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.kotlin.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.kotlin.server.features.resources.resourceDescriptor
