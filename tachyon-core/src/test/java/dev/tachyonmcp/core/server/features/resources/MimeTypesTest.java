@@ -30,7 +30,7 @@ class MimeTypesTest {
         "anim.gif,image/gif",
         "icon.svg,image/svg+xml",
         "banner.webp,image/webp",
-        "archive.zip,application/octet-stream",
+        "archive.zip,application/zip",
         "noextension,application/octet-stream"
     })
     void guessesMimeTypeFromExtension(String fileName, String expected) {
