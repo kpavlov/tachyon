@@ -8,7 +8,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.core.runtime.Session;
 import dev.tachyonmcp.core.runtime.SessionState;
 import java.net.http.HttpResponse;
-
 import org.junit.jupiter.api.Test;
 
 class StatefulSessionLifecycleTest extends AbstractStatefulMcpE2eTest {

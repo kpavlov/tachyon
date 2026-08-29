@@ -1,10 +1,9 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
-package dev.tachyonmcp.e2e.mcp;
+package dev.tachyonmcp.e2e.mcp.v2025_11_25;
 
 import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThatJsonRpcResponse;
 
 import dev.tachyonmcp.api.server.features.tasks.TaskConnector;
-import dev.tachyonmcp.e2e.mcp.v2025_11_25.AbstractStatefulMcpE2eTest;
 import org.junit.jupiter.api.Test;
 
 /**

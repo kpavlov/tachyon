@@ -1,5 +1,5 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
-package dev.tachyonmcp.e2e.mcp;
+package dev.tachyonmcp.e2e.mcp.v2025_11_25;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -10,8 +10,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import dev.tachyonmcp.e2e.mcp.v2025_11_25.AbstractStatefulMcpE2eTest;
 import org.junit.jupiter.api.Test;
 
 class SharedStatefulServerConcurrencyTest extends AbstractStatefulMcpE2eTest {

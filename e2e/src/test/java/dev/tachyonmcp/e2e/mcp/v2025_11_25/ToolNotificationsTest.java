@@ -1,11 +1,13 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
-package dev.tachyonmcp.e2e.mcp;
+package dev.tachyonmcp.e2e.mcp.v2025_11_25;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
+import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.e2e.mcp.EchoToolHandler;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 

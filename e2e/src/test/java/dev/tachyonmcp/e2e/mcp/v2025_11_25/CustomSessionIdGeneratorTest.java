@@ -1,11 +1,12 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
-package dev.tachyonmcp.e2e.mcp;
+package dev.tachyonmcp.e2e.mcp.v2025_11_25;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.server.TachyonServer;
+import dev.tachyonmcp.e2e.mcp.EchoToolHandler;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;

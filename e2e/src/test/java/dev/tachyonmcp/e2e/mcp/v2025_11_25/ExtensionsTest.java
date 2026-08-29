@@ -1,5 +1,5 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
-package dev.tachyonmcp.e2e.mcp;
+package dev.tachyonmcp.e2e.mcp.v2025_11_25;
 
 import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
@@ -15,8 +15,6 @@ import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.ClientCapabilities;
 import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.models.InitializeRequestParams;
 import java.util.Map;
 import java.util.Set;
-
-import dev.tachyonmcp.e2e.mcp.v2025_11_25.AbstractStatefulMcpE2eTest;
 import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;

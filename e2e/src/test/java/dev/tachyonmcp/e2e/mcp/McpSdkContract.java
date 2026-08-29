@@ -9,7 +9,7 @@ import io.modelcontextprotocol.spec.McpSchema;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-interface McpSdkContract {
+public interface McpSdkContract {
 
     int port();
 

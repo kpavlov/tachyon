@@ -1,5 +1,5 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
-package dev.tachyonmcp.e2e.mcp;
+package dev.tachyonmcp.e2e.mcp.v2025_11_25;
 
 import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
@@ -11,8 +11,6 @@ import dev.tachyonmcp.api.server.features.resources.AsyncResourceFn;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import java.util.concurrent.CompletableFuture;
-
-import dev.tachyonmcp.e2e.mcp.v2025_11_25.AbstractStatefulMcpE2eTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;

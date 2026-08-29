@@ -1,9 +1,10 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
-package dev.tachyonmcp.e2e.mcp;
+package dev.tachyonmcp.e2e.mcp.v2025_11_25;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
 import dev.tachyonmcp.api.server.domain.Icon;
+import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
 import dev.tachyonmcp.testkit.TestTaskConnector;
 import java.util.List;
 import org.junit.jupiter.api.Test;

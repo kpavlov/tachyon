@@ -7,7 +7,7 @@ import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import java.util.concurrent.CompletableFuture;
 
-class EchoToolHandler {
+public class EchoToolHandler {
 
     static final JsonSchema ECHO_INPUT_SCHEMA = JsonSchema.unchecked("""
         {
@@ -22,12 +22,12 @@ class EchoToolHandler {
         }
         """);
 
-    static final ToolDescriptor DESCRIPTOR = ToolDescriptor.builder()
+    public static final ToolDescriptor DESCRIPTOR = ToolDescriptor.builder()
             .name("echo")
             .description("Echo back the input message")
             .inputSchema(ECHO_INPUT_SCHEMA)
             .build();
 
-    static final AsyncToolFn FN = (ctx, request) -> CompletableFuture.supplyAsync(
+    public static final AsyncToolFn FN = (ctx, request) -> CompletableFuture.supplyAsync(
             () -> ToolResult.text(request.arguments().stringOr("message", "")));
 }
