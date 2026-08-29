@@ -4,13 +4,24 @@ package dev.tachyonmcp.e2e.mcp.v2026_07_28;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.e2e.mcp.AbstractResourceContractTest;
-import dev.tachyonmcp.testkit.McpClient;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpTestClients;
 import org.junit.jupiter.api.Test;
 
-class ResourceContractTest extends AbstractResourceContractTest {
+class ResourceContractTest extends AbstractResourceContractTest<Mcp20260728Client> {
 
     @Override
-    protected McpClient readyClient() {
+    protected Mcp20260728Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20260728Client createTestClient(int port) {
+        return McpTestClients.latest(port);
+    }
+
+    @Override
+    protected Mcp20260728Client readyClient() {
         return createModernTestClient();
     }
 

@@ -1,15 +1,10 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp.v2025_11_25;
 
-import dev.tachyonmcp.e2e.mcp.AbstractMcpE2eTest;
+import dev.tachyonmcp.e2e.mcp.AbstractStringSchemaContractTest;
 import dev.tachyonmcp.testkit.Mcp20251125Client;
 
-public abstract class AbstractStatefulMcpE2eTest extends AbstractMcpE2eTest<Mcp20251125Client> {
-
-    @Override
-    protected final SessionMode sessionMode() {
-        return SessionMode.STATEFUL;
-    }
+class StringSchemaContractTest extends AbstractStringSchemaContractTest<Mcp20251125Client> {
 
     @Override
     protected Mcp20251125Client createTestClient() {
@@ -19,5 +14,12 @@ public abstract class AbstractStatefulMcpE2eTest extends AbstractMcpE2eTest<Mcp2
     @Override
     protected Mcp20251125Client createTestClient(int port) {
         return new Mcp20251125Client(port);
+    }
+
+    @Override
+    protected Mcp20251125Client readyClient() throws Exception {
+        var client = createTestClient();
+        client.initialize();
+        return client;
     }
 }

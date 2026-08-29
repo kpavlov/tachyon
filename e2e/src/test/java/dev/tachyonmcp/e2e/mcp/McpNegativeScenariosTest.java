@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.testkit.Mcp20251125Client;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
 import java.util.List;
@@ -18,7 +19,17 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 @TestInstance(Lifecycle.PER_CLASS)
-class McpNegativeScenariosTest extends AbstractStatelessMcpE2eTest {
+class McpNegativeScenariosTest extends AbstractStatelessMcpE2eTest<dev.tachyonmcp.testkit.McpClient> {
+
+    @Override
+    protected Mcp20251125Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20251125Client createTestClient(int port) {
+        return new Mcp20251125Client(port);
+    }
 
     @Test
     void shouldRejectUnknownTool() {

@@ -10,6 +10,7 @@ import dev.tachyonmcp.kotlin.server.domain.PromptArgument
 import dev.tachyonmcp.kotlin.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.kotlin.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.kotlin.server.features.resources.resourceDescriptor
+import dev.tachyonmcp.testkit.Mcp20251125Client
 import io.kotest.matchers.equals.shouldEqual
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
@@ -32,7 +33,11 @@ import org.junit.jupiter.api.Test
  * overload) rather than treated as a wire-format detail like `inputSchema` (prompt-only, also not
  * on the wire, but not gated — just not part of the `Prompt` protocol model).
  */
-internal class ResourcePromptAttributesE2eTest : AbstractStatelessMcpE2eTest() {
+internal class ResourcePromptAttributesE2eTest : AbstractStatelessMcpE2eTest<Mcp20251125Client>() {
+    override fun createTestClient(): Mcp20251125Client = createTestClient(port)
+
+    override fun createTestClient(port: Int): Mcp20251125Client = Mcp20251125Client(port)
+
     @Test
     fun `resource full attribute set round-trips over the wire`() {
         val icon = Icon { src = "https://example.com/resource-icon.png" }

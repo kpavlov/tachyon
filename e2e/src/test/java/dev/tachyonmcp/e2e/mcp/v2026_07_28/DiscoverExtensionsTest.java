@@ -5,12 +5,24 @@ import dev.tachyonmcp.api.server.extensions.AdvertiseMode;
 import dev.tachyonmcp.api.server.extensions.ExtensionSettings;
 import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpTestClients;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.JsonNodeFactory;
 
 /** {@code server/discover} (2026-07-28) must advertise registered extensions the same way {@code initialize} does. */
-class DiscoverExtensionsTest extends AbstractStatelessMcpE2eTest {
+class DiscoverExtensionsTest extends AbstractStatelessMcpE2eTest<Mcp20260728Client> {
+
+    @Override
+    protected Mcp20260728Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20260728Client createTestClient(int port) {
+        return McpTestClients.latest(port);
+    }
 
     private static final String ALWAYS_EXT_ID = "com.example/always";
     private static final String NEVER_EXT_ID = "com.example/never";

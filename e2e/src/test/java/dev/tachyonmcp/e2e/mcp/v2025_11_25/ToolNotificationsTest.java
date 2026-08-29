@@ -8,10 +8,22 @@ import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
 import dev.tachyonmcp.e2e.mcp.EchoToolHandler;
+import dev.tachyonmcp.testkit.Mcp20251125Client;
+import dev.tachyonmcp.testkit.McpClient;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-class ToolNotificationsTest extends AbstractStatelessMcpE2eTest {
+class ToolNotificationsTest extends AbstractStatelessMcpE2eTest<McpClient> {
+
+    @Override
+    protected Mcp20251125Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20251125Client createTestClient(int port) {
+        return new Mcp20251125Client(port);
+    }
 
     @Override
     protected void startDefaultServer() {

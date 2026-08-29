@@ -227,6 +227,17 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
             assertThatJson(actual.path("result").path("structuredContent")).isEqualTo(expectedJson);
             return this;
         }
+
+        /** Verifies {@code structuredContent} is absent from the result.
+         *
+         * @return this assertion
+         */
+        public JsonRpcSuccessAssert doesNotHaveStructuredContent() {
+            if (actual.path("result").has("structuredContent")) {
+                failWithMessage("Expected no structuredContent in: %s", actual);
+            }
+            return this;
+        }
     }
 
     /**

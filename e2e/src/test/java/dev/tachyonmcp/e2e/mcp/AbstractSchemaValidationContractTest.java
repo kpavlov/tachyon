@@ -15,18 +15,30 @@ import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.json.NetworkntJsonSchemaValidator;
+import dev.tachyonmcp.testkit.McpClient;
 import java.util.List;
 import java.util.Map;
+import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
-class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
+/**
+ * Input/output schema validation scenarios that hold under both MCP protocol revisions: only the
+ * client creation and the response envelope differ (2026-07-28 adds {@code resultType}/{@code
+ * ttlMs}/{@code cacheScope}), supplied by subclasses in {@code v2025_11_25}/{@code v2026_07_28}.
+ * Version-specific structured-content tests (array fallback under 2025-11-25) stay in the
+ * version-specific subclasses.
+ */
+public abstract class AbstractSchemaValidationContractTest<T extends McpClient> extends AbstractStatelessMcpE2eTest<T> {
 
-    private static final JsonSchemaValidator VALIDATOR = new NetworkntJsonSchemaValidator();
+    /** Returns a client ready to send requests (handshake already performed, if the version needs one). */
+    protected abstract T readyClient() throws Exception;
 
-    private static final JsonSchema TOOL_SCHEMA = JsonSchema.from(buildToolSchema(), JsonNode.class);
-    private static final JsonSchema PROMPT_SCHEMA = JsonSchema.from(buildPromptSchema(), JsonNode.class);
+    protected static final JsonSchemaValidator VALIDATOR = new NetworkntJsonSchemaValidator();
+
+    protected static final JsonSchema TOOL_SCHEMA = JsonSchema.from(buildToolSchema(), JsonNode.class);
+    protected static final JsonSchema PROMPT_SCHEMA = JsonSchema.from(buildPromptSchema(), JsonNode.class);
 
     // region: Tool input schema validation
 
@@ -38,14 +50,12 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
                         .register(validatedTool(), (context, request) -> ToolResult.text("ok"))
                         .register(validatedTool2(), (context, request) -> ToolResult.text("ok")));
 
-        try (var client = createTestClient()) {
-            client.initialize();
-
+        try (var client = readyClient()) {
             var r1 = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"validated","arguments":{"name":"John","age":30}}}
                 """);
             assertThat(r1.statusCode()).isEqualTo(200);
-            assertThatJson(r1.body()).isEqualTo("""
+            assertThatJson(r1.body()).when(Option.IGNORING_EXTRA_FIELDS).isEqualTo("""
                 {"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"ok"}]}}
                 """);
 
@@ -53,7 +63,7 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
                 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"validated2","arguments":{"email":"john@example.com","age":25}}}
                 """);
             assertThat(r2.statusCode()).isEqualTo(200);
-            assertThatJson(r2.body()).isEqualTo("""
+            assertThatJson(r2.body()).when(Option.IGNORING_EXTRA_FIELDS).isEqualTo("""
                 {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"ok"}]}}
                 """);
 
@@ -61,7 +71,7 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
                 {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"validated2","arguments":{"email":"john@example.com"}}}
                 """);
             assertThat(r3.statusCode()).isEqualTo(200);
-            assertThatJson(r3.body()).isEqualTo("""
+            assertThatJson(r3.body()).when(Option.IGNORING_EXTRA_FIELDS).isEqualTo("""
                 {"jsonrpc":"2.0","id":4,"result":{"content":[{"type":"text","text":"ok"}]}}
                 """);
         }
@@ -73,8 +83,7 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
                 b -> b.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR)),
                 s -> s.tools().register(validatedTool(), (context, request) -> ToolResult.text("ok")));
 
-        try (var client = createTestClient()) {
-            client.initialize();
+        try (var client = readyClient()) {
             var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"validated","arguments":{"name":"John","age":30}}}
                 """);
@@ -84,18 +93,17 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
             var expected = """
                 {"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"ok"}]}}
                 """;
-            assertThatJson(response.body()).isEqualTo(expected);
+            assertThatJson(response.body()).when(Option.IGNORING_EXTRA_FIELDS).isEqualTo(expected);
         }
     }
 
     @Test
-    void shouldRejectToolCallWithMissingRequiredField() throws Exception {
+    protected void shouldRejectToolCallWithMissingRequiredField() throws Exception {
         startServer(
                 b -> b.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR)),
                 s -> s.tools().register(validatedTool(), (context, request) -> ToolResult.text("ok")));
 
-        try (var client = createTestClient()) {
-            client.initialize();
+        try (var client = readyClient()) {
             var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"validated","arguments":{"age":30}}}
                 """);
@@ -110,13 +118,12 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
     }
 
     @Test
-    void shouldRejectToolCallWithWrongType() throws Exception {
+    protected void shouldRejectToolCallWithWrongType() throws Exception {
         startServer(
                 b -> b.json(j -> j.schemaValidator(VALIDATOR)),
                 s -> s.tools().register(validatedTool(), (context, request) -> ToolResult.text("ok")));
 
-        try (var client = createTestClient()) {
-            client.initialize();
+        try (var client = readyClient()) {
             var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"validated","arguments":{"name":123}}}
                 """);
@@ -153,81 +160,13 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
                                 // "count" is a string, not the integer the outputSchema requires.
                                 (context, request) -> ToolResult.structured(Map.of("count", "not-a-number"))));
 
-        try (var client = createTestClient()) {
-            client.initialize();
+        try (var client = readyClient()) {
             var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"bad-structured-output","arguments":{}}}
                 """);
 
             assertThat(response.statusCode()).isEqualTo(200);
             assertThat(response).isSuccess().hasId(2).isToolError().hasTextContent("string found, integer expected");
-        }
-    }
-
-    @Test
-    void shouldFallBackToTextOnlyForArrayStructuredContentUnder20251125() throws Exception {
-        // 2026-07-28 permits array/scalar outputSchema and structuredContent (see
-        // dev.tachyonmcp.e2e.mcp20260728.StructuredOutputSchemaShapeTest); 2025-11-25's
-        // structuredContent is object-only on the wire, so a valid array result falls back to the
-        // backwards-compat text block instead of being rejected or crashing.
-        startServer(
-                b -> b.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR)),
-                s -> s.tools()
-                        .register(
-                                ToolDescriptor.builder()
-                                        .name("array-structured-output")
-                                        .description("Returns an array structured result")
-                                        .outputSchema("{\"type\":\"array\",\"items\":{\"type\":\"integer\"}}")
-                                        .build(),
-                                (context, request) -> ToolResult.structured(List.of(1, 2, 3))));
-
-        try (var client = createTestClient()) {
-            client.initialize();
-            var response = client.post("""
-                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"array-structured-output","arguments":{}}}
-                """);
-
-            assertThat(response.statusCode()).isEqualTo(200);
-            assertThat(response).isSuccess().hasId(2).hasTextContent("[1,2,3]");
-        }
-    }
-
-    @Test
-    void shouldEmitBothHandlerTextAndArrayFallbackTextUnder20251125() throws Exception {
-        // Regression: for a non-object structured value, the handler's own text block (from
-        // ToolResult.structured(payload, text)) must not suppress the serialized-JSON fallback --
-        // under 2025-11-25 that fallback is the array's only representation on the wire, since
-        // structuredContent can't carry it.
-        startServer(
-                b -> b.json(j -> j.inputSchemaValidator(VALIDATOR).outputSchemaValidator(VALIDATOR)),
-                s -> s.tools()
-                        .register(
-                                ToolDescriptor.builder()
-                                        .name("array-structured-output-with-text")
-                                        .description("Returns an array structured result plus an explicit text block")
-                                        .outputSchema("{\"type\":\"array\",\"items\":{\"type\":\"integer\"}}")
-                                        .build(),
-                                (context, request) -> ToolResult.structured(List.of(1, 2), "summary")));
-
-        try (var client = createTestClient()) {
-            client.initialize();
-            var response = client.post("""
-                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"array-structured-output-with-text","arguments":{}}}
-                """);
-
-            assertThat(response.statusCode()).isEqualTo(200);
-            assertThat(response)
-                    .isSuccess()
-                    .hasId(2)
-                    .hasContentExactly(
-                            JsonNodeFactory.instance
-                                    .objectNode()
-                                    .put("type", "text")
-                                    .put("text", "summary"),
-                            JsonNodeFactory.instance
-                                    .objectNode()
-                                    .put("type", "text")
-                                    .put("text", "[1,2]"));
         }
     }
 
@@ -249,8 +188,7 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
                                 PROMPT_SCHEMA),
                         List.of(PromptMessage.of(Role.USER, TextContent.of("Hello {name}"))));
 
-        try (var client = createTestClient()) {
-            client.initialize();
+        try (var client = readyClient()) {
             var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"validated-prompt","arguments":{"name":"John"}}}
                 """);
@@ -264,12 +202,12 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
                   ]
                 }}
                 """;
-            assertThatJson(response.body()).isEqualTo(expected);
+            assertThatJson(response.body()).when(Option.IGNORING_EXTRA_FIELDS).isEqualTo(expected);
         }
     }
 
     @Test
-    void shouldRejectPromptWithMissingRequiredField() throws Exception {
+    protected void shouldRejectPromptWithMissingRequiredField() throws Exception {
         startServer(it -> it.json(j -> j.schemaValidator(VALIDATOR)));
 
         server.prompts()
@@ -282,8 +220,7 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
                                 PROMPT_SCHEMA),
                         List.of(PromptMessage.of(Role.USER, TextContent.of("Hello {name}"))));
 
-        try (var client = createTestClient()) {
-            client.initialize();
+        try (var client = readyClient()) {
             var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"validated-prompt","arguments":{}}}
                 """);
@@ -301,7 +238,7 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
 
     // region: Tool handler
 
-    private static ToolDescriptor validatedTool() {
+    protected static ToolDescriptor validatedTool() {
         return ToolDescriptor.builder()
                 .name("validated")
                 .description("A tool with input schema validation")
@@ -309,7 +246,7 @@ class SchemaValidationTest extends AbstractStatelessMcpE2eTest {
                 .build();
     }
 
-    private static ToolDescriptor validatedTool2() {
+    protected static ToolDescriptor validatedTool2() {
         return ToolDescriptor.builder()
                 .name("validated2")
                 .description("Another tool with a distinct input schema")

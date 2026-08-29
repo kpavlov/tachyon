@@ -8,6 +8,8 @@ import dev.tachyonmcp.api.server.domain.TextResourceContents;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpTestClients;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -19,7 +21,17 @@ import org.junit.jupiter.api.Test;
  * {@code discoverResult} and falling through to the 2025-11-25 record shapes (no caching fields)
  * for every other list/read method.
  */
-class CachingHintsTest extends AbstractStatelessMcpE2eTest {
+class CachingHintsTest extends AbstractStatelessMcpE2eTest<Mcp20260728Client> {
+
+    @Override
+    protected Mcp20260728Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20260728Client createTestClient(int port) {
+        return McpTestClients.latest(port);
+    }
 
     @BeforeEach
     void registerFixtures() {

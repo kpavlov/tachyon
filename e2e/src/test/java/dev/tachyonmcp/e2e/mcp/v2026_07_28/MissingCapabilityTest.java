@@ -8,6 +8,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.domain.MissingRequiredClientCapabilityException;
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpClient;
+import dev.tachyonmcp.testkit.McpTestClients;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,7 +23,17 @@ import org.junit.jupiter.api.Test;
  * it to the wire error, whose HTTP status (400) is now spec-tied via
  * {@code v2026_07_28.codecs.McpResponseMapper}.
  */
-class MissingCapabilityTest extends AbstractStatelessMcpE2eTest {
+class MissingCapabilityTest extends AbstractStatelessMcpE2eTest<McpClient> {
+
+    @Override
+    protected Mcp20260728Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20260728Client createTestClient(int port) {
+        return McpTestClients.latest(port);
+    }
 
     @BeforeEach
     void registerFixtures() {

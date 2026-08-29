@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp;
 
+import dev.tachyonmcp.testkit.McpClient;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -9,7 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class AbstractStatelessMcpE2eTest extends AbstractMcpE2eTest {
+public abstract class AbstractStatelessMcpE2eTest<C extends McpClient> extends AbstractMcpE2eTest<C> {
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
 

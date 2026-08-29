@@ -12,13 +12,25 @@ import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.json.JacksonPayloadSerde;
 import dev.tachyonmcp.core.server.json.NetworkntJsonSchemaValidator;
+import dev.tachyonmcp.testkit.Mcp20251125Client;
+import dev.tachyonmcp.testkit.McpClient;
 import java.lang.reflect.Type;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
-class PayloadSerdeTest extends AbstractStatelessMcpE2eTest {
+class PayloadSerdeTest extends AbstractStatelessMcpE2eTest<McpClient> {
+
+    @Override
+    protected Mcp20251125Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20251125Client createTestClient(int port) {
+        return new Mcp20251125Client(port);
+    }
 
     private static final JsonNodeFactory JSON = JsonNodeFactory.instance;
 

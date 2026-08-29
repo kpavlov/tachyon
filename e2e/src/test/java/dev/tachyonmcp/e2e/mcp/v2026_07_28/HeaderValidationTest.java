@@ -4,6 +4,9 @@ package dev.tachyonmcp.e2e.mcp.v2026_07_28;
 import static dev.tachyonmcp.testkit.McpHttpResponseAssert.assertThatResponse;
 
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpClient;
+import dev.tachyonmcp.testkit.McpTestClients;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -18,7 +21,17 @@ import org.junit.jupiter.api.Test;
  * where the header doesn't match with JSON-RPC {@code -32020} (HeaderMismatch) and HTTP
  * {@code 400 Bad Request}.
  */
-class HeaderValidationTest extends AbstractStatelessMcpE2eTest {
+class HeaderValidationTest extends AbstractStatelessMcpE2eTest<McpClient> {
+
+    @Override
+    protected Mcp20260728Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20260728Client createTestClient(int port) {
+        return McpTestClients.latest(port);
+    }
 
     // language=JSON
     private static final String TOOLS_CALL_ECHO_BODY = """

@@ -4,9 +4,19 @@ package dev.tachyonmcp.e2e.mcp;
 import static dev.tachyonmcp.testkit.McpHttpResponseAssert.assertThatResponse;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.testkit.McpClient;
 import org.junit.jupiter.api.Test;
 
-class ToolErrorTest extends AbstractStatelessMcpE2eTest {
+/**
+ * Tool error handling scenarios that hold under both MCP protocol revisions: exception mapping to
+ * JSON-RPC error codes ({@code -32603} for handler failure, {@code -32602} for invalid params) and
+ * message redaction. Only the client creation differs, supplied by subclasses in {@code
+ * v2025_11_25}/{@code v2026_07_28}.
+ */
+public abstract class AbstractToolErrorContractTest<C extends McpClient> extends AbstractStatelessMcpE2eTest<C> {
+
+    /** Returns a client ready to send requests (handshake already performed, if the version needs one). */
+    protected abstract C readyClient() throws Exception;
 
     @Override
     protected void startDefaultServer() {
@@ -20,8 +30,7 @@ class ToolErrorTest extends AbstractStatelessMcpE2eTest {
 
     @Test
     void toolThrowsAfterSseUpgradeStillClosesStream() throws Exception {
-        try (var client = createTestClient()) {
-            client.initialize();
+        try (var client = readyClient()) {
             var body = """
                 {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"boom","arguments":{}}}
                 """;
@@ -37,14 +46,13 @@ class ToolErrorTest extends AbstractStatelessMcpE2eTest {
     }
 
     @Test
-    void shouldRedactIllegalArgumentExceptionFromInvalidParamsError() throws Exception {
+    protected void shouldRedactIllegalArgumentExceptionFromInvalidParamsError() throws Exception {
         startServerWith(s -> s.tools()
                 .register(builder -> builder.name("bad-arg").description("Rejects input"), (context, request) -> {
                     throw new IllegalArgumentException("sensitive internal detail");
                 }));
 
-        try (var client = createTestClient()) {
-            client.initialize();
+        try (var client = readyClient()) {
             var response = client.sendRpc("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"bad-arg","arguments":{}}}
                 """);

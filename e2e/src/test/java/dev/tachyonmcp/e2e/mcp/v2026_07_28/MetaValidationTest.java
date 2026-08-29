@@ -5,6 +5,9 @@ import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpClient;
+import dev.tachyonmcp.testkit.McpTestClients;
 import java.net.http.HttpResponse;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -15,7 +18,17 @@ import org.junit.jupiter.api.Test;
  * field is malformed: the server must reject it with JSON-RPC {@code -32602} (Invalid params) and
  * HTTP {@code 400 Bad Request}, and the error response must still carry the original request id.
  */
-class MetaValidationTest extends AbstractStatelessMcpE2eTest {
+class MetaValidationTest extends AbstractStatelessMcpE2eTest<McpClient> {
+
+    @Override
+    protected Mcp20260728Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20260728Client createTestClient(int port) {
+        return McpTestClients.latest(port);
+    }
 
     private static final String VALID_META = """
             "io.modelcontextprotocol/protocolVersion": "2026-07-28",

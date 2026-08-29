@@ -13,6 +13,9 @@ import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.features.tasks.TasksExtension;
 import dev.tachyonmcp.core.server.json.JsonUtils;
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpClient;
+import dev.tachyonmcp.testkit.McpTestClients;
 import dev.tachyonmcp.testkit.TestTaskConnector;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
@@ -23,7 +26,17 @@ import org.junit.jupiter.api.Test;
  * {@code dev.tachyonmcp.e2e.SchemaValidationTest} and the sibling 2025-11-25 fallback coverage for
  * that restriction). These tests cover the array/scalar shapes end to end under 2026-07-28.
  */
-class StructuredOutputSchemaShapeTest extends AbstractStatelessMcpE2eTest {
+class StructuredOutputSchemaShapeTest extends AbstractStatelessMcpE2eTest<McpClient> {
+
+    @Override
+    protected Mcp20260728Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20260728Client createTestClient(int port) {
+        return McpTestClients.latest(port);
+    }
 
     // language=JSON
     private static final String NO_ARGS_SCHEMA = "{\"type\": \"object\", \"properties\": {}}";

@@ -2,12 +2,22 @@
 package dev.tachyonmcp.e2e.mcp.v2025_11_25;
 
 import dev.tachyonmcp.e2e.mcp.AbstractResourceContractTest;
-import dev.tachyonmcp.testkit.McpClient;
+import dev.tachyonmcp.testkit.Mcp20251125Client;
 
-class ResourceContractTest extends AbstractResourceContractTest {
+class ResourceContractTest extends AbstractResourceContractTest<Mcp20251125Client> {
 
     @Override
-    protected McpClient readyClient() throws Exception {
+    protected Mcp20251125Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20251125Client createTestClient(int port) {
+        return new Mcp20251125Client(port);
+    }
+
+    @Override
+    protected Mcp20251125Client readyClient() throws Exception {
         var client = createTestClient();
         client.initialize();
         return client;

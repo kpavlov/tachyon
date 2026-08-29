@@ -4,7 +4,6 @@ package dev.tachyonmcp.e2e.mcp;
 import dev.tachyonmcp.core.server.ServerBuilder;
 import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
-import dev.tachyonmcp.testkit.Mcp20251125Client;
 import dev.tachyonmcp.testkit.Mcp20260728Client;
 import dev.tachyonmcp.testkit.McpClient;
 import dev.tachyonmcp.testkit.McpTestClients;
@@ -15,7 +14,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class AbstractMcpE2eTest {
+public abstract class AbstractMcpE2eTest<C extends McpClient> {
 
     protected TachyonServer server;
     protected int port;
@@ -44,13 +43,9 @@ public abstract class AbstractMcpE2eTest {
         closeCustomServerIfRunning();
     }
 
-    protected Mcp20251125Client createTestClient() {
-        return createTestClient(port);
-    }
+    protected abstract C createTestClient();
 
-    protected Mcp20251125Client createTestClient(int port) {
-        return new Mcp20251125Client(port);
-    }
+    protected abstract C createTestClient(int port);
 
     protected McpClient createTestClient(String protocolVersion) {
         return McpTestClients.forVersion(port, protocolVersion);

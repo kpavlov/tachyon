@@ -4,6 +4,8 @@ package dev.tachyonmcp.e2e.mcp;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.testkit.Mcp20251125Client;
+import dev.tachyonmcp.testkit.McpClient;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
@@ -12,7 +14,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
-class SharedStatelessServerConcurrencyTest extends AbstractStatelessMcpE2eTest {
+class SharedStatelessServerConcurrencyTest extends AbstractStatelessMcpE2eTest<McpClient> {
+
+    @Override
+    protected Mcp20251125Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20251125Client createTestClient(int port) {
+        return new Mcp20251125Client(port);
+    }
 
     private static final int CLIENT_COUNT = 32;
     private static final long TIMEOUT_SECONDS = 10;

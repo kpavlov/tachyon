@@ -8,6 +8,8 @@ import dev.tachyonmcp.api.server.domain.PromptArgument;
 import dev.tachyonmcp.api.server.domain.Role;
 import dev.tachyonmcp.api.server.domain.TextContent;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.testkit.Mcp20251125Client;
+import dev.tachyonmcp.testkit.McpClient;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -16,7 +18,17 @@ import org.junit.jupiter.params.provider.CsvSource;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-class PromptCapabilitiesTest extends AbstractStatelessMcpE2eTest {
+class PromptCapabilitiesTest extends AbstractStatelessMcpE2eTest<McpClient> {
+
+    @Override
+    protected Mcp20251125Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20251125Client createTestClient(int port) {
+        return new Mcp20251125Client(port);
+    }
 
     @Override
     protected void startDefaultServer() {

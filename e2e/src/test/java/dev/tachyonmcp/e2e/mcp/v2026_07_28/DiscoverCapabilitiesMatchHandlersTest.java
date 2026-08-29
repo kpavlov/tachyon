@@ -5,6 +5,8 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpTestClients;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -15,7 +17,17 @@ import org.junit.jupiter.api.Test;
  * `discover-capabilities-match-handlers` check from `server-stateless`; it only ever failed
  * because {@code tools/list} was rejected for lack of a session (see {@code StatelessDispatchTest}).
  */
-class DiscoverCapabilitiesMatchHandlersTest extends AbstractStatelessMcpE2eTest {
+class DiscoverCapabilitiesMatchHandlersTest extends AbstractStatelessMcpE2eTest<Mcp20260728Client> {
+
+    @Override
+    protected Mcp20260728Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20260728Client createTestClient(int port) {
+        return McpTestClients.latest(port);
+    }
 
     @Test
     void toolsCapabilityAdvertisedInDiscoverActuallyWorks() throws Exception {

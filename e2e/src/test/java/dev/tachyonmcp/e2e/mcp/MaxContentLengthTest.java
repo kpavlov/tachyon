@@ -3,6 +3,8 @@ package dev.tachyonmcp.e2e.mcp;
 
 import static dev.tachyonmcp.testkit.McpHttpResponseAssert.assertThatResponse;
 
+import dev.tachyonmcp.testkit.Mcp20251125Client;
+import dev.tachyonmcp.testkit.McpClient;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -10,7 +12,17 @@ import org.junit.jupiter.api.Test;
  * Pins that {@code NetworkConfig.maxContentLength} actually reaches the
  * {@code HttpObjectAggregator}: a body past the 1 MiB default is refused, not parsed.
  */
-class MaxContentLengthTest extends AbstractStatelessMcpE2eTest {
+class MaxContentLengthTest extends AbstractStatelessMcpE2eTest<McpClient> {
+
+    @Override
+    protected Mcp20251125Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20251125Client createTestClient(int port) {
+        return new Mcp20251125Client(port);
+    }
 
     @Test
     void rejectsBodyLargerThanMaxContentLength() throws Exception {

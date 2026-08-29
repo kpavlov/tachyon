@@ -6,10 +6,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.testkit.Mcp20251125Client;
+import dev.tachyonmcp.testkit.McpClient;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 
-class PageSizeConfigTest extends AbstractStatelessMcpE2eTest {
+class PageSizeConfigTest extends AbstractStatelessMcpE2eTest<McpClient> {
+
+    @Override
+    protected Mcp20251125Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20251125Client createTestClient(int port) {
+        return new Mcp20251125Client(port);
+    }
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 

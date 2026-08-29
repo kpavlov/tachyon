@@ -4,9 +4,21 @@ package dev.tachyonmcp.e2e.mcp;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
+import dev.tachyonmcp.testkit.Mcp20251125Client;
+import dev.tachyonmcp.testkit.McpClient;
 import org.junit.jupiter.api.Test;
 
-class ResourceTemplateTest extends AbstractStatelessMcpE2eTest {
+class ResourceTemplateTest extends AbstractStatelessMcpE2eTest<McpClient> {
+
+    @Override
+    protected Mcp20251125Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20251125Client createTestClient(int port) {
+        return new Mcp20251125Client(port);
+    }
 
     @Test
     void shouldReadResourceFromSingleParamTemplate() throws Exception {

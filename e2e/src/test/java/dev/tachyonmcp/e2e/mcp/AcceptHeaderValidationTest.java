@@ -3,6 +3,7 @@ package dev.tachyonmcp.e2e.mcp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.testkit.Mcp20251125Client;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -17,7 +18,17 @@ import org.junit.jupiter.api.Test;
  * aggregator, where its {@code FullHttpRequest} match never fired and validation was silently
  * skipped.
  */
-class AcceptHeaderValidationTest extends AbstractStatelessMcpE2eTest {
+class AcceptHeaderValidationTest extends AbstractStatelessMcpE2eTest<Mcp20251125Client> {
+
+    @Override
+    protected Mcp20251125Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20251125Client createTestClient(int port) {
+        return new Mcp20251125Client(port);
+    }
 
     // language=JSON
     private static final String INIT_BODY =

@@ -6,6 +6,8 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpTestClients;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -14,7 +16,17 @@ import org.junit.jupiter.api.Test;
  * configuration. Regression test for {@code McpDispatcher} only bypassing the session requirement
  * for {@code server/discover}/{@code ping} instead of every method under this protocol version.
  */
-class StatelessDispatchTest extends AbstractStatelessMcpE2eTest {
+class StatelessDispatchTest extends AbstractStatelessMcpE2eTest<Mcp20260728Client> {
+
+    @Override
+    protected Mcp20260728Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20260728Client createTestClient(int port) {
+        return McpTestClients.latest(port);
+    }
 
     @Test
     void toolsCallSucceedsWithNoSession() throws Exception {

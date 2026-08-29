@@ -10,6 +10,8 @@ import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.features.tasks.TasksExtension;
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpTestClients;
 import dev.tachyonmcp.testkit.TestTaskConnector;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -29,7 +31,17 @@ import tools.jackson.databind.node.JsonNodeFactory;
  * MCP 2026-07-28 {@code subscriptions/listen} (SEP-2575): the request-scoped SSE stream that
  * replaces {@code resources/subscribe} and the plain HTTP GET stream for the stateless transport.
  */
-class SubscriptionsListenTest extends AbstractStatelessMcpE2eTest {
+class SubscriptionsListenTest extends AbstractStatelessMcpE2eTest<Mcp20260728Client> {
+
+    @Override
+    protected Mcp20260728Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20260728Client createTestClient(int port) {
+        return McpTestClients.latest(port);
+    }
 
     @BeforeEach
     void freshServer() {

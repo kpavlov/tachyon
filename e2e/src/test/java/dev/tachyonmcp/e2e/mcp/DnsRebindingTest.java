@@ -3,6 +3,8 @@ package dev.tachyonmcp.e2e.mcp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.tachyonmcp.testkit.Mcp20251125Client;
+import dev.tachyonmcp.testkit.McpClient;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -14,7 +16,17 @@ import org.junit.jupiter.api.Test;
  * that socket, raced the next request onto it, and intermittently saw "other side closed".
  * Signalling {@code Connection: close} stops the client from reusing the socket.
  */
-class DnsRebindingTest extends AbstractStatelessMcpE2eTest {
+class DnsRebindingTest extends AbstractStatelessMcpE2eTest<McpClient> {
+
+    @Override
+    protected Mcp20251125Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20251125Client createTestClient(int port) {
+        return new Mcp20251125Client(port);
+    }
 
     // language=JSON
     private static final String INIT_BODY = """

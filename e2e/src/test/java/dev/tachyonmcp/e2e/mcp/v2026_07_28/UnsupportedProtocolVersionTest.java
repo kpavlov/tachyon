@@ -6,6 +6,9 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpClient;
+import dev.tachyonmcp.testkit.McpTestClients;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -19,7 +22,17 @@ import org.junit.jupiter.api.Test;
  * support and echoes the requested one, over HTTP {@code 400 Bad Request}, with the response
  * {@code id} matching the request's JSON-RPC id.
  */
-class UnsupportedProtocolVersionTest extends AbstractStatelessMcpE2eTest {
+class UnsupportedProtocolVersionTest extends AbstractStatelessMcpE2eTest<McpClient> {
+
+    @Override
+    protected Mcp20260728Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20260728Client createTestClient(int port) {
+        return McpTestClients.latest(port);
+    }
 
     @Test
     void rejectsUnsupportedProtocolVersion() throws Exception {

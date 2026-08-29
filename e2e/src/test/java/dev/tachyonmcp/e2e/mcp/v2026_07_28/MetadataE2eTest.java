@@ -16,6 +16,9 @@ import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpClient;
+import dev.tachyonmcp.testkit.McpTestClients;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +30,17 @@ import org.junit.jupiter.api.Test;
  * flows through list operations, and request {@code _meta} reaches handlers
  * and appears in results for tools, prompts, and completions.
  */
-class MetadataE2eTest extends AbstractStatelessMcpE2eTest {
+class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
+
+    @Override
+    protected Mcp20260728Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20260728Client createTestClient(int port) {
+        return McpTestClients.latest(port);
+    }
 
     // language=JSON
     private static final String NO_ARGS_SCHEMA = "{\"type\": \"object\", \"properties\": {}}";

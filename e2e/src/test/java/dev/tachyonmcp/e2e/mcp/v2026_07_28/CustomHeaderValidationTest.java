@@ -5,6 +5,8 @@ import static dev.tachyonmcp.testkit.McpHttpResponseAssert.assertThatResponse;
 
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpTestClients;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -20,7 +22,17 @@ import org.junit.jupiter.api.Test;
  * format when present) and reject on mismatch/invalid-encoding/omission with {@code -32020}
  * (HeaderMismatch).
  */
-class CustomHeaderValidationTest extends AbstractStatelessMcpE2eTest {
+class CustomHeaderValidationTest extends AbstractStatelessMcpE2eTest<Mcp20260728Client> {
+
+    @Override
+    protected Mcp20260728Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20260728Client createTestClient(int port) {
+        return McpTestClients.latest(port);
+    }
 
     // language=JSON
     private static final String EXECUTE_SQL_SCHEMA = """

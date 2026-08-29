@@ -8,6 +8,9 @@ import dev.tachyonmcp.api.server.extensions.AdvertiseMode;
 import dev.tachyonmcp.api.server.extensions.ExtensionSettings;
 import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpClient;
+import dev.tachyonmcp.testkit.McpTestClients;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 
@@ -17,7 +20,17 @@ import org.junit.jupiter.api.Test;
  * {@code ExtensionNegotiator}, so a negotiated extension's {@link ServerExtension#onConnectionInit}
  * fires under 2026-07-28 too, not just 2025-11-25.
  */
-class ExtensionNegotiationTest extends AbstractStatelessMcpE2eTest {
+class ExtensionNegotiationTest extends AbstractStatelessMcpE2eTest<McpClient> {
+
+    @Override
+    protected Mcp20260728Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20260728Client createTestClient(int port) {
+        return McpTestClients.latest(port);
+    }
 
     private static final String EXT_ID = "com.example/onconnectinit-test";
 

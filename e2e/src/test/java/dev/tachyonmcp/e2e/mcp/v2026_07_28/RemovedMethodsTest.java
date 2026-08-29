@@ -5,6 +5,9 @@ import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpClient;
+import dev.tachyonmcp.testkit.McpTestClients;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -18,7 +21,17 @@ import org.junit.jupiter.params.provider.ValueSource;
  * only this revision must answer them with HTTP 404 and JSON-RPC {@code -32601} (Method not found),
  * not dispatch them as it would under 2025-11-25.
  */
-class RemovedMethodsTest extends AbstractStatelessMcpE2eTest {
+class RemovedMethodsTest extends AbstractStatelessMcpE2eTest<McpClient> {
+
+    @Override
+    protected Mcp20260728Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20260728Client createTestClient(int port) {
+        return McpTestClients.latest(port);
+    }
 
     @ParameterizedTest
     @ValueSource(strings = {"initialize", "ping", "logging/setLevel", "resources/subscribe", "resources/unsubscribe"})

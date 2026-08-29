@@ -6,6 +6,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpClient;
+import dev.tachyonmcp.testkit.McpTestClients;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -15,7 +18,17 @@ import org.junit.jupiter.api.Test;
  * is no {@code logging/setLevel} RPC and no session to carry a standing threshold. When the
  * request does set a level, only messages at or above it may be sent.
  */
-class LogLevelGatingTest extends AbstractStatelessMcpE2eTest {
+class LogLevelGatingTest extends AbstractStatelessMcpE2eTest<McpClient> {
+
+    @Override
+    protected Mcp20260728Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20260728Client createTestClient(int port) {
+        return McpTestClients.latest(port);
+    }
 
     // language=JSON
     private static final String NO_ARGS_SCHEMA = "{\"type\": \"object\", \"properties\": {}}";

@@ -8,16 +8,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.api.json.JsonSchema;
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.testkit.McpClient;
+import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-class StringSchemaTest extends AbstractStatelessMcpE2eTest {
+/**
+ * String-based JSON schema scenarios that hold under both MCP protocol revisions: only the client
+ * creation and the response envelope differ (2026-07-28 adds {@code resultType}/{@code ttlMs}/{@code
+ * cacheScope}), supplied by subclasses in {@code v2025_11_25}/{@code v2026_07_28}. Assertions use
+ * {@link Option#IGNORING_EXTRA_FIELDS} where the envelope shape diverges.
+ */
+public abstract class AbstractStringSchemaContractTest<C extends McpClient> extends AbstractStatelessMcpE2eTest<C> {
 
-    private static final String INPUT_SCHEMA_JSON =
+    /** Returns a client ready to send requests (handshake already performed, if the version needs one). */
+    protected abstract C readyClient() throws Exception;
+
+    static final String INPUT_SCHEMA_JSON =
             "{\"type\":\"object\",\"properties\":{\"x\":{\"type\":\"string\"}},\"required\":[\"x\"]}";
 
-    private static final String OUTPUT_SCHEMA_JSON =
+    static final String OUTPUT_SCHEMA_JSON =
             "{\"type\":\"object\",\"properties\":{\"y\":{\"type\":\"integer\"}},\"required\":[\"y\"]}";
 
     @Test
@@ -30,14 +41,13 @@ class StringSchemaTest extends AbstractStatelessMcpE2eTest {
                                 .outputSchema(OUTPUT_SCHEMA_JSON),
                         (ctx, request) -> ToolResult.text("ok")));
 
-        try (var client = createTestClient()) {
-            client.initialize();
+        try (var client = readyClient()) {
             var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
                 """);
 
             assertThat(response.statusCode()).isEqualTo(200);
-            assertThatJson(response.body()).isEqualTo("""
+            assertThatJson(response.body()).when(Option.IGNORING_EXTRA_FIELDS).isEqualTo("""
                     {
                       "jsonrpc":"2.0",
                       "id":2,
@@ -92,8 +102,7 @@ class StringSchemaTest extends AbstractStatelessMcpE2eTest {
                             (ctx, request) -> ToolResult.text("node"));
         });
 
-        try (var client = createTestClient()) {
-            client.initialize();
+        try (var client = readyClient()) {
             var r1 = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
                 """);
@@ -123,8 +132,7 @@ class StringSchemaTest extends AbstractStatelessMcpE2eTest {
                                 .build(),
                         (ctx, request) -> ToolResult.text("called")));
 
-        try (var client = createTestClient()) {
-            client.initialize();
+        try (var client = readyClient()) {
             var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"call-test","arguments":{"x":"hello"}}}
                 """);

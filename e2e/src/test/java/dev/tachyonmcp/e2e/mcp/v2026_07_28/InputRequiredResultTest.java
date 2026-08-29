@@ -12,6 +12,8 @@ import dev.tachyonmcp.api.server.domain.RpcMethodRequest;
 import dev.tachyonmcp.api.server.domain.UrlInputRequest;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
+import dev.tachyonmcp.testkit.McpTestClients;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +28,17 @@ import org.junit.jupiter.api.Test;
  * scenarios only ever failed because the session gate rejected the request before it reached the
  * tool (see {@code StatelessDispatchTest}).
  */
-class InputRequiredResultTest extends AbstractStatelessMcpE2eTest {
+class InputRequiredResultTest extends AbstractStatelessMcpE2eTest<Mcp20260728Client> {
+
+    @Override
+    protected Mcp20260728Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20260728Client createTestClient(int port) {
+        return McpTestClients.latest(port);
+    }
 
     private static FormInputRequest elicitation(String message, String prop) {
         var schema = new LinkedHashMap<String, Object>();

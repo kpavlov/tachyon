@@ -15,10 +15,10 @@ import org.junit.jupiter.api.Test;
  * scenarios stay version-specific (2026-07-28 replaced {@code resources/subscribe} with
  * {@code subscriptions/listen}) and are not part of this contract.
  */
-public abstract class AbstractResourceContractTest extends AbstractStatelessMcpE2eTest {
+public abstract class AbstractResourceContractTest<C extends McpClient> extends AbstractStatelessMcpE2eTest<C> {
 
     /** Returns a client ready to send requests (handshake already performed, if the version needs one). */
-    protected abstract McpClient readyClient() throws Exception;
+    protected abstract C readyClient() throws Exception;
 
     /** The wire error code for {@code resources/read} on an unknown URI. */
     protected abstract int resourceNotFoundErrorCode();

@@ -7,13 +7,18 @@ import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest
 import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.kotlin.server.domain.arguments
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
+import dev.tachyonmcp.testkit.Mcp20251125Client
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.matchers.equals.shouldEqual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Test
 
-internal class KotlinE2eTest : AbstractStatelessMcpE2eTest() {
+internal class KotlinE2eTest : AbstractStatelessMcpE2eTest<Mcp20251125Client>() {
+    override fun createTestClient(): Mcp20251125Client = createTestClient(port)
+
+    override fun createTestClient(port: Int): Mcp20251125Client = Mcp20251125Client(port)
+
     @Serializable
     data class GreetArgs(
         val name: String,

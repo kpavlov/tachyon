@@ -8,10 +8,22 @@ import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.Role;
 import dev.tachyonmcp.api.server.domain.TextContent;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
+import dev.tachyonmcp.testkit.Mcp20251125Client;
+import dev.tachyonmcp.testkit.McpClient;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class StatelessMcpSdkTest extends AbstractStatelessMcpE2eTest implements McpSdkContract {
+class StatelessMcpSdkTest extends AbstractStatelessMcpE2eTest<McpClient> implements McpSdkContract {
+
+    @Override
+    protected Mcp20251125Client createTestClient() {
+        return createTestClient(port);
+    }
+
+    @Override
+    protected Mcp20251125Client createTestClient(int port) {
+        return new Mcp20251125Client(port);
+    }
 
     @Override
     public int port() {

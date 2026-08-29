@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp;
 
-import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
+import static dev.tachyonmcp.testkit.McpHttpResponseAssert.assertThatResponse;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -14,6 +14,7 @@ import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.testkit.McpClient;
 import java.net.http.HttpResponse;
 import java.util.stream.Stream;
+import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -23,7 +24,17 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.JsonNodeFactory;
 
-class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
+/**
+ * Tool descriptor metadata, structured content, and registration scenarios that hold under both MCP
+ * protocol revisions: only the client creation and the {@code tools/list} response envelope differ
+ * (2026-07-28 adds {@code resultType}/{@code ttlMs}/{@code cacheScope}), supplied by subclasses in
+ * {@code v2025_11_25}/{@code v2026_07_28}. Assertions use {@link Option#IGNORING_EXTRA_FIELDS} where
+ * the envelope shape diverges.
+ */
+public abstract class AbstractToolCapabilitiesContractTest<C extends McpClient> extends AbstractStatelessMcpE2eTest<C> {
+
+    /** Returns a client ready to send requests (handshake already performed, if the version needs one). */
+    protected abstract C readyClient() throws Exception;
 
     // region: Output Schema Tests
 
@@ -41,7 +52,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
         }
         startServerWith(s -> s.tools().register(descriptor, OK));
 
-        try (var client = createTestClient()) {
+        try (var client = readyClient()) {
             var response = listTools(client);
 
             final String expected;
@@ -98,7 +109,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
                     }
                     """.formatted(toolName, toolName);
             }
-            assertThatJson(response.body()).isEqualTo(expected);
+            assertThatJson(response.body()).when(Option.IGNORING_EXTRA_FIELDS).isEqualTo(expected);
         }
     }
 
@@ -109,7 +120,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
                 .register(outputSchemaToolDescriptor(OUTPUT_SCHEMA), OK)
                 .register(simpleToolDescriptor("tool-b", "Tool B"), OK));
 
-        try (var client = createTestClient()) {
+        try (var client = readyClient()) {
             var response = listTools(client);
 
             var mapper = new ObjectMapper();
@@ -137,11 +148,11 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
 
     @ParameterizedTest(name = "[{index}] {0}")
     @MethodSource
-    void shouldIncludeExecutionTaskSupport(String toolName, boolean hasExecution, ToolDescriptor descriptor)
+    protected void shouldIncludeExecutionTaskSupport(String toolName, boolean hasExecution, ToolDescriptor descriptor)
             throws Exception {
         startServerWith(s -> s.tools().register(descriptor, OK));
 
-        try (var client = createTestClient()) {
+        try (var client = readyClient()) {
             var response = listTools(client);
 
             assertThatJson(response.body()).inPath("$.result.tools[0].name").isEqualTo(toolName);
@@ -173,14 +184,14 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
         startEmptyServer();
         server.tools().register(builder -> builder.name("minimal-tool"), OK);
 
-        try (var client = createTestClient()) {
+        try (var client = readyClient()) {
             var response = listTools(client);
 
             // language=JSON
             var expected = """
                 {"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"minimal-tool", "inputSchema":{"type":"object"}}]}}
                 """;
-            assertThatJson(response.body()).isEqualTo(expected.trim());
+            assertThatJson(response.body()).when(Option.IGNORING_EXTRA_FIELDS).isEqualTo(expected.trim());
         }
     }
 
@@ -199,14 +210,13 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
                             return ToolResult.structured(echo, "Echo: " + msg);
                         }));
 
-        try (var client = createTestClient()) {
-            client.initialize();
+        try (var client = readyClient()) {
             var response = client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"structured","arguments":{"message":"hi"}}}
                 """);
 
             assertThat(response.statusCode()).isEqualTo(200);
-            assertThat(response).isSuccess().hasTextContent("Echo: hi");
+            assertThatResponse(response).isSuccess().hasTextContent("Echo: hi");
             assertThatJson(response.body())
                     .inPath("$.result.structuredContent")
                     .isObject()
@@ -217,7 +227,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
     // endregion
 
     @Test
-    void shouldRegisterWithFullDescriptor() throws Exception {
+    protected void shouldRegisterWithFullDescriptor() throws Exception {
         var annotations = ToolAnnotations.of(null, true, false, null, null);
         startEmptyServer();
         server.tools()
@@ -231,13 +241,13 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
                                 .annotations(annotations),
                         OK);
 
-        try (var client = createTestClient()) {
+        try (var client = readyClient()) {
             var response = listTools(client);
 
             var expected = """
                 {"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"full-tool","title":"Full Tool","description":"A tool with all metadata","inputSchema":{"type":"object","properties":{"message":{"type":"string","description":"Input"}},"required":["message"]},"outputSchema":{"type":"object","properties":{"result":{"type":"string","description":"The output result"}}},"execution":{"taskSupport":"optional"},"annotations":{"readOnlyHint":true,"destructiveHint":false}}]}}
                 """;
-            assertThatJson(response.body()).isEqualTo(expected.trim());
+            assertThatJson(response.body()).when(Option.IGNORING_EXTRA_FIELDS).isEqualTo(expected.trim());
         }
     }
 
@@ -245,14 +255,13 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
 
     // region: Tool Handler Implementations
 
-    private static HttpResponse<String> listTools(McpClient client) throws Exception {
-        client.initialize();
+    protected static HttpResponse<String> listTools(McpClient client) throws Exception {
         return client.post("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/list"}
                 """);
     }
 
-    private static ToolDescriptor outputSchemaToolDescriptor(JsonSchema outputSchema) {
+    public static ToolDescriptor outputSchemaToolDescriptor(JsonSchema outputSchema) {
         return ToolDescriptor.builder()
                 .name("output-schema-tool")
                 .description("A tool with output schema")
@@ -261,7 +270,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
                 .build();
     }
 
-    private static ToolDescriptor simpleToolDescriptor(String name, String description) {
+    public static ToolDescriptor simpleToolDescriptor(String name, String description) {
         return ToolDescriptor.builder()
                 .name(name)
                 .description(description)
@@ -269,7 +278,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
                 .build();
     }
 
-    private static ToolDescriptor taskAwareToolDescriptor(TaskSupport taskSupport) {
+    public static ToolDescriptor taskAwareToolDescriptor(TaskSupport taskSupport) {
         return ToolDescriptor.builder()
                 .name("task-aware-tool")
                 .description("A task-aware tool")
@@ -280,7 +289,7 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
 
     // ---- JSON schemas ----
 
-    private static final JsonSchema OUTPUT_SCHEMA = JsonSchema.from(buildOutputSchema(), JsonNode.class);
+    public static final JsonSchema OUTPUT_SCHEMA = JsonSchema.from(buildOutputSchema(), JsonNode.class);
 
     private static JsonNode buildOutputSchema() {
         var schema = JsonNodeFactory.instance.objectNode();
@@ -292,9 +301,9 @@ class ToolCapabilitiesTest extends AbstractStatelessMcpE2eTest {
         return schema;
     }
 
-    private static final JsonSchema INPUT_SCHEMA = JsonSchema.from(buildInputSchema(), JsonNode.class);
+    public static final JsonSchema INPUT_SCHEMA = JsonSchema.from(buildInputSchema(), JsonNode.class);
 
-    private static final ToolFn OK = (ctx, request) -> ToolResult.text("ok");
+    public static final ToolFn OK = (ctx, request) -> ToolResult.text("ok");
 
     private static JsonNode buildInputSchema() {
         var schema = JsonNodeFactory.instance.objectNode();

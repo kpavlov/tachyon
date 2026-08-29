@@ -8,6 +8,7 @@ import dev.tachyonmcp.kotlin.server.domain.arguments
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
 import dev.tachyonmcp.kotlin.server.json.ktschema.ktSchemaGenerator
 import dev.tachyonmcp.kotlin.server.registerTool
+import dev.tachyonmcp.testkit.Mcp20251125Client
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.matchers.equals.shouldEqual
 import io.kotest.matchers.string.shouldContain
@@ -21,7 +22,11 @@ import org.junit.jupiter.api.Test
  * `META-INF/services`; this module opts the artifact in as a test dependency). Split out from
  * [KotlinE2eTest] because this is the only test class in the module that needs it.
  */
-internal class TypedToolKotlinE2eTest : AbstractStatelessMcpE2eTest() {
+internal class TypedToolKotlinE2eTest : AbstractStatelessMcpE2eTest<Mcp20251125Client>() {
+    override fun createTestClient(): Mcp20251125Client = createTestClient(port)
+
+    override fun createTestClient(port: Int): Mcp20251125Client = Mcp20251125Client(port)
+
     @Serializable
     private data class GreetArgs(
         val name: String,
