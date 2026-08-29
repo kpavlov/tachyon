@@ -2,11 +2,12 @@
 package dev.tachyonmcp.core.transport.netty.sse;
 
 import dev.tachyonmcp.core.transport.netty.SessionTouchHandler;
-import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.util.AttributeKey;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -28,6 +29,9 @@ public final class SseHeartbeat {
 
     private static final AttributeKey<Boolean> ACTIVE = AttributeKey.valueOf("sseHeartbeatActive");
     private static final AttributeKey<ScheduledFuture<?>> HEARTBEAT_FUTURE = AttributeKey.valueOf("sseHeartbeatFuture");
+
+    // The payload is constant across every channel and every tick.
+    private static final byte[] HEARTBEAT_BYTES = ":\r\n".getBytes(StandardCharsets.UTF_8);
 
     private SseHeartbeat() {}
 
@@ -67,7 +71,7 @@ public final class SseHeartbeat {
         if (!channel.isActive() || !channel.isWritable()) {
             return;
         }
-        var buf = ByteBufUtil.writeAscii(channel.alloc(), ":\r\n");
+        var buf = Unpooled.wrappedBuffer(HEARTBEAT_BYTES);
         channel.writeAndFlush(new DefaultHttpContent(buf)).addListener((ChannelFutureListener) f -> {
             if (!f.isSuccess()) channel.close();
         });
