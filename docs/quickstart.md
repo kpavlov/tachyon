@@ -39,7 +39,7 @@ Gradle (Kotlin DSL):
 
 ```kotlin
 dependencies {
-    implementation(platform("dev.tachyonmcp:tachyon-bom:1.0.0-beta.22"))
+    implementation(platform("dev.tachyonmcp:tachyon-bom:$tachyonVersion")) // get latest version from Maven Central
     implementation("dev.tachyonmcp:tachyon-core")
 }
 ```

@@ -165,8 +165,7 @@ class ElvishMagicServerTest {
               }
             }
             """);
-
-        assertThatJson(response).isEqualTo("""
+        assertThatJson(response.body()).isEqualTo("""
             {
               "jsonrpc":"2.0",
               "id":2,
@@ -210,7 +209,7 @@ class ElvishMagicServerTest {
             }
             """);
 
-        assertThatJson(response).isEqualTo("""
+        assertThatJson(response.body()).isEqualTo("""
             {
               "jsonrpc":"2.0",
               "id":3,
@@ -260,7 +259,7 @@ class ElvishMagicServerTest {
             }
             """);
 
-        assertThatJson(response).isEqualTo("""
+        assertThatJson(response.body()).isEqualTo("""
             {
               "jsonrpc":"2.0",
               "id":4,
