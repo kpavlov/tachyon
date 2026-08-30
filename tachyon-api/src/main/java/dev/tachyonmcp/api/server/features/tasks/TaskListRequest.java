@@ -2,6 +2,7 @@
 package dev.tachyonmcp.api.server.features.tasks;
 
 import dev.tachyonmcp.api.annotations.ExperimentalApi;
+import dev.tachyonmcp.api.annotations.LegacyApi;
 import dev.tachyonmcp.api.server.domain.HasMeta;
 import java.util.Map;
 import org.immutables.value.Value;
@@ -9,7 +10,7 @@ import org.jspecify.annotations.Nullable;
 
 /** Legacy request to list authoritative task projections. */
 @ExperimentalApi
-@Deprecated(forRemoval = false)
+@LegacyApi
 @Value.Immutable
 @Value.Style(visibility = Value.Style.ImplementationVisibility.PACKAGE, typeImmutable = "Default*")
 public interface TaskListRequest extends HasMeta {

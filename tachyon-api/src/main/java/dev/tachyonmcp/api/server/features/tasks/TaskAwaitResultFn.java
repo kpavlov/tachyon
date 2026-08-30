@@ -2,6 +2,7 @@
 package dev.tachyonmcp.api.server.features.tasks;
 
 import dev.tachyonmcp.api.annotations.ExperimentalApi;
+import dev.tachyonmcp.api.annotations.LegacyApi;
 import dev.tachyonmcp.api.runtime.InteractionContext;
 
 /**
@@ -13,7 +14,7 @@ import dev.tachyonmcp.api.runtime.InteractionContext;
  */
 @FunctionalInterface
 @ExperimentalApi
-@Deprecated(forRemoval = false)
+@LegacyApi
 public interface TaskAwaitResultFn {
 
     /**

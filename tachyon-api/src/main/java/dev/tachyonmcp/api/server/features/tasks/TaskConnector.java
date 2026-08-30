@@ -2,6 +2,7 @@
 package dev.tachyonmcp.api.server.features.tasks;
 
 import dev.tachyonmcp.api.annotations.ExperimentalApi;
+import dev.tachyonmcp.api.annotations.LegacyApi;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
@@ -24,18 +25,18 @@ public final class TaskConnector {
     private final TaskCancelFn cancel;
     private final TaskUpdateFn update;
 
-    @SuppressWarnings("deprecation")
+    @LegacyApi
     private final @Nullable TaskListFn list;
 
-    @SuppressWarnings("deprecation")
+    @LegacyApi
     private final @Nullable TaskAwaitResultFn awaitResult;
 
     private TaskConnector(
             TaskGetFn get,
             TaskCancelFn cancel,
             TaskUpdateFn update,
-            @SuppressWarnings("deprecation") @Nullable TaskListFn list,
-            @SuppressWarnings("deprecation") @Nullable TaskAwaitResultFn awaitResult) {
+            @Nullable TaskListFn list,
+            @Nullable TaskAwaitResultFn awaitResult) {
         this.get = get;
         this.cancel = cancel;
         this.update = update;
@@ -65,22 +66,24 @@ public final class TaskConnector {
 
     /**
      * Returns the legacy {@code tasks/list} hook, or {@code null} when unsupported.
-     *
-     * @deprecated legacy surface kept for MCP 2025-11-25 (pre-SEP-2663) compatibility; no
+     * <p>
+     * Legacy: legacy surface kept for MCP 2025-11-25 (pre-SEP-2663) compatibility; no
      *     equivalent exists in the modern tasks extension. Not scheduled for removal.
+     * </p>
      */
-    @Deprecated
+    @LegacyApi
     public @Nullable TaskListFn list() {
         return list;
     }
 
     /**
      * Returns the legacy blocking {@code tasks/result} hook, or {@code null} when unsupported.
-     *
-     * @deprecated legacy surface kept for MCP 2025-11-25 (pre-SEP-2663) compatibility; no
+     * <p>
+     * Legacy: legacy surface kept for MCP 2025-11-25 (pre-SEP-2663) compatibility; no
      *     equivalent exists in the modern tasks extension. Not scheduled for removal.
+     * </p>
      */
-    @Deprecated
+    @LegacyApi
     public @Nullable TaskAwaitResultFn awaitResult() {
         return awaitResult;
     }
@@ -92,10 +95,8 @@ public final class TaskConnector {
         private @Nullable TaskCancelFn cancel;
         private @Nullable TaskUpdateFn update;
 
-        @SuppressWarnings("deprecation")
         private @Nullable TaskListFn list;
 
-        @SuppressWarnings("deprecation")
         private @Nullable TaskAwaitResultFn awaitResult;
 
         private Builder() {}
@@ -120,11 +121,12 @@ public final class TaskConnector {
 
         /**
          * Enables the legacy {@code tasks/list} operation.
-         *
-         * @deprecated legacy surface kept for MCP 2025-11-25 (pre-SEP-2663) compatibility; no
+         * <p>
+         * Legacy: legacy surface kept for MCP 2025-11-25 (pre-SEP-2663) compatibility; no
          *     equivalent exists in the modern tasks extension. Not scheduled for removal.
+         * </p>
          */
-        @Deprecated
+        @LegacyApi
         public Builder list(TaskListFn list) {
             this.list = Objects.requireNonNull(list, "list");
             return this;
@@ -132,11 +134,12 @@ public final class TaskConnector {
 
         /**
          * Enables the legacy blocking {@code tasks/result} operation.
-         *
-         * @deprecated legacy surface kept for MCP 2025-11-25 (pre-SEP-2663) compatibility; no
+         * <p>
+         * Legacy: legacy surface kept for MCP 2025-11-25 (pre-SEP-2663) compatibility; no
          *     equivalent exists in the modern tasks extension. Not scheduled for removal.
+         * </p>
          */
-        @Deprecated
+        @LegacyApi
         public Builder awaitResult(TaskAwaitResultFn awaitResult) {
             this.awaitResult = Objects.requireNonNull(awaitResult, "awaitResult");
             return this;

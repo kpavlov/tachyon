@@ -2,13 +2,14 @@
 package dev.tachyonmcp.api.server.features.tasks;
 
 import dev.tachyonmcp.api.annotations.ExperimentalApi;
+import dev.tachyonmcp.api.annotations.LegacyApi;
 import dev.tachyonmcp.api.runtime.InteractionContext;
 import dev.tachyonmcp.api.server.features.PaginatedResult;
 
 /** Lists authoritative task projections for the legacy (pre-SEP-2663) {@code tasks/list}. */
 @FunctionalInterface
 @ExperimentalApi
-@Deprecated(forRemoval = false)
+@LegacyApi
 public interface TaskListFn {
 
     /**
