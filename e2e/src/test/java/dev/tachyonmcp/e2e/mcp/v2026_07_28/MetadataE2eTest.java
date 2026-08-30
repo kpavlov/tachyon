@@ -1,8 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp.v2026_07_28;
 
-import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
-import static org.assertj.core.api.Assertions.assertThat;
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 
 import dev.tachyonmcp.api.json.JsonDocument;
 import dev.tachyonmcp.api.json.JsonSchema;
@@ -22,6 +21,7 @@ import dev.tachyonmcp.testkit.McpTestClients;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -122,7 +122,7 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
     @Test
     void toolCallPreservesArbitraryRequestMetaAndStructuredJsonValue() throws Exception {
         try (var client = createModernTestClient()) {
-            var response = client.post("""
+            var response = client.sendRpc("""
                     {
                       "jsonrpc": "2.0",
                       "id": 10,
@@ -135,18 +135,12 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
                     }
                     """);
 
-            assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-            assertThatJson(response.body()).isEqualTo("""
-                    {
-                      "jsonrpc": "2.0",
-                      "id": 10,
-                      "result": {
-                        "content": [{"type": "text", "text": "[1,true]"}],
-                        "structuredContent": [1, true],
-                        "_meta": {"echo-trace": "trace-7"},
-                        "resultType": "complete"
-                      }
-                    }
+            Assertions.assertThat(response.statusCode()).isEqualTo(200);
+            assertThat(response).isSuccess().hasId(10).hasResult("""
+                {"content":[{"type":"text","text":"[1,true]"}],
+                 "structuredContent":[1,true],
+                 "_meta":{"echo-trace":"trace-7"},
+                 "resultType":"complete"}
                     """);
         }
     }
@@ -154,7 +148,7 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
     @Test
     void toolAndCompletionAcceptMissingMetadata() throws Exception {
         try (var client = createModernTestClient()) {
-            var tool = client.post("""
+            var tool = client.sendRpc("""
                     {
                       "jsonrpc": "2.0",
                       "id": 11,
@@ -162,7 +156,7 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
                       "params": {"name": "structured_array", "arguments": {}}
                     }
                     """);
-            var completion = client.post("""
+            var completion = client.sendRpc("""
                     {
                       "jsonrpc": "2.0",
                       "id": 12,
@@ -174,28 +168,14 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
                     }
                     """);
 
-            assertThat(tool.statusCode()).as(tool.body()).isEqualTo(200);
-            assertThat(completion.statusCode()).as(completion.body()).isEqualTo(200);
-            assertThatJson(tool.body()).isEqualTo("""
-                    {
-                      "jsonrpc": "2.0",
-                      "id": 11,
-                      "result": {
-                        "content": [{"type": "text", "text": "[1,true]"}],
-                        "structuredContent": [1, true],
-                        "resultType": "complete"
-                      }
-                    }
+            assertThat(tool).isSuccess().hasId(11).hasResult("""
+                {"content":[{"type":"text","text":"[1,true]"}],
+                 "structuredContent":[1,true],
+                 "resultType":"complete"}
                     """);
-            assertThatJson(completion.body()).isEqualTo("""
-                    {
-                      "jsonrpc": "2.0",
-                      "id": 12,
-                      "result": {
-                        "completion": {"values": ["B-complete"]},
-                        "resultType": "complete"
-                      }
-                    }
+            assertThat(completion).isSuccess().hasId(12).hasResult("""
+                {"completion":{"values":["B-complete"]},
+                 "resultType":"complete"}
                     """);
         }
     }
@@ -203,85 +183,56 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
     @Test
     void descriptorMetadataFlowsThroughAllListOperations() throws Exception {
         try (var client = createModernTestClient()) {
-            var tools = client.post("{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/list\",\"params\":{}}");
-            var resources = client.post("{\"jsonrpc\":\"2.0\",\"id\":12,\"method\":\"resources/list\",\"params\":{}}");
-            var templates = client.post(
-                    "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"resources/templates/list\",\"params\":{}}");
-            var prompts = client.post("{\"jsonrpc\":\"2.0\",\"id\":14,\"method\":\"prompts/list\",\"params\":{}}");
+            var tools = client.sendRpc("""
+                {"jsonrpc":"2.0","id":11,"method":"tools/list","params":{}}""");
+            var resources = client.sendRpc("""
+                    {"jsonrpc":"2.0","id":12,"method":"resources/list","params":{}}""");
+            var templates = client.sendRpc("""
+                    {"jsonrpc":"2.0","id":13,"method":"resources/templates/list","params":{}}""");
+            var prompts = client.sendRpc("""
+                {"jsonrpc":"2.0","id":14,"method":"prompts/list","params":{}}""");
 
-            assertThat(tools.statusCode()).as(tools.body()).isEqualTo(200);
-            assertThat(resources.statusCode()).as(resources.body()).isEqualTo(200);
-            assertThat(templates.statusCode()).as(templates.body()).isEqualTo(200);
-            assertThat(prompts.statusCode()).as(prompts.body()).isEqualTo(200);
-            assertThatJson(tools.body()).isEqualTo("""
-                    {
-                      "jsonrpc": "2.0",
-                      "id": 11,
-                      "result": {
-                        "tools": [
-                          {
-                            "description": "Returns an arbitrary structured JSON value",
-                            "inputSchema": {"type": "object", "properties": {}},
-                            "_meta": {"catalog": "tool"},
-                            "name": "structured_array"
-                          }
-                        ],
-                        "resultType": "complete",
-                        "ttlMs": 0,
-                        "cacheScope": "public"
-                      }
-                    }
+            assertThat(tools).isSuccess().hasId(11).hasResult("""
+                {"tools":[{
+                  "description":"Returns an arbitrary structured JSON value",
+                  "inputSchema":{"type":"object","properties":{}},
+                  "_meta":{"catalog":"tool"},
+                  "name":"structured_array"
+                }],
+                "resultType":"complete",
+                "ttlMs":0,
+                "cacheScope":"public"}
                     """);
-            assertThatJson(resources.body()).isEqualTo("""
-                    {
-                      "jsonrpc": "2.0",
-                      "id": 12,
-                      "result": {
-                        "resources": [{
-                          "uri": "memory://interactive",
-                          "_meta": {"catalog": "resource"},
-                          "name": "interactive-resource"
-                        }],
-                        "resultType": "complete",
-                        "ttlMs": 0,
-                        "cacheScope": "public"
-                      }
-                    }
+            assertThat(resources).isSuccess().hasId(12).hasResult("""
+                {"resources":[{
+                  "uri":"memory://interactive",
+                  "_meta":{"catalog":"resource"},
+                  "name":"interactive-resource"
+                }],
+                "resultType":"complete",
+                "ttlMs":0,
+                "cacheScope":"public"}
                     """);
-            assertThatJson(templates.body()).isEqualTo("""
-                    {
-                      "jsonrpc": "2.0",
-                      "id": 13,
-                      "result": {
-                        "resourceTemplates": [{
-                          "uriTemplate": "memory://interactive/{id}",
-                          "_meta": {"catalog": "template"},
-                          "name": "interactive-template"
-                        }],
-                        "resultType": "complete",
-                        "ttlMs": 0,
-                        "cacheScope": "public"
-                      }
-                    }
+            assertThat(templates).isSuccess().hasId(13).hasResult("""
+                {"resourceTemplates":[{
+                  "uriTemplate":"memory://interactive/{id}",
+                  "_meta":{"catalog":"template"},
+                  "name":"interactive-template"
+                }],
+                "resultType":"complete",
+                "ttlMs":0,
+                "cacheScope":"public"}
                     """);
-            assertThatJson(prompts.body()).isEqualTo("""
-                    {
-                      "jsonrpc": "2.0",
-                      "id": 14,
-                      "result": {
-                        "prompts": [
-                          {"name": "input-meta-prompt"},
-                          {
-                            "description": "Interactive prompt",
-                            "_meta": {"catalog": "prompt"},
-                            "name": "interactive-prompt"
-                          }
-                        ],
-                        "resultType": "complete",
-                        "ttlMs": 0,
-                        "cacheScope": "public"
-                      }
-                    }
+            assertThat(prompts).isSuccess().hasId(14).hasResult("""
+                {"prompts":[
+                  {"name":"input-meta-prompt"},
+                  {"description":"Interactive prompt",
+                   "_meta":{"catalog":"prompt"},
+                   "name":"interactive-prompt"}
+                ],
+                "resultType":"complete",
+                "ttlMs":0,
+                "cacheScope":"public"}
                     """);
         }
     }
@@ -303,26 +254,19 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
                 """;
 
         try (var client = createModernTestClient()) {
-            var response = client.post(body);
+            var response = client.sendRpc(body);
 
-            assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-            assertThatJson(response.body()).isEqualTo("""
-                            {
-                              "jsonrpc": "2.0",
-                              "id": 8,
-                              "result": {
-                                "contents": [{
-                                  "uri": "memory://interactive",
-                                  "mimeType": "text/plain",
-                                  "text": "Paris:resource-round-1",
-                                  "_meta": {"source": "interactive-resource"}
-                                }],
-                                "resultType": "complete",
-                                "ttlMs": 0,
-                                "cacheScope": "public"
-                              }
-                            }
-                            """);
+            assertThat(response).isSuccess().hasId(8).hasResult("""
+                {"contents":[{
+                  "uri":"memory://interactive",
+                  "mimeType":"text/plain",
+                  "text":"Paris:resource-round-1",
+                  "_meta":{"source":"interactive-resource"}
+                }],
+                "resultType":"complete",
+                "ttlMs":0,
+                "cacheScope":"public"}
+                """);
         }
     }
 
@@ -343,30 +287,22 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
                 """;
 
         try (var client = createModernTestClient()) {
-            var response = client.post(body);
+            var response = client.sendRpc(body);
 
-            assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-            assertThatJson(response.body()).isEqualTo("""
-                            {
-                              "jsonrpc": "2.0",
-                              "id": 9,
-                              "result": {
-                                "description": "Interactive prompt",
-                                "messages": [{
-                                  "role": "user",
-                                  "content": {"type": "text", "text": "Paris:prompt-round-1"}
-                                }],
-                                "resultType": "complete"
-                              }
-                            }
-                            """);
+            assertThat(response).isSuccess().hasId(9).hasResult("""
+                {"description":"Interactive prompt",
+                 "messages":[{"role":"user",
+                   "content":{"type":"text","text":"Paris:prompt-round-1"}
+                 }],
+                 "resultType":"complete"}
+                """);
         }
     }
 
     @Test
     void promptAndCompletionMetadataReachHandlersAndResults() throws Exception {
         try (var client = createModernTestClient()) {
-            var prompt = client.post("""
+            var prompt = client.sendRpc("""
                     {
                       "jsonrpc": "2.0",
                       "id": 15,
@@ -377,7 +313,7 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
                       }
                     }
                     """);
-            var completion = client.post("""
+            var completion = client.sendRpc("""
                     {
                       "jsonrpc": "2.0",
                       "id": 16,
@@ -389,7 +325,7 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
                       }
                     }
                     """);
-            var inputRequired = client.post("""
+            var inputRequired = client.sendRpc("""
                     {
                       "jsonrpc": "2.0",
                       "id": 17,
@@ -398,57 +334,30 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
                     }
                     """);
 
-            assertThat(prompt.statusCode()).as(prompt.body()).isEqualTo(200);
-            assertThat(completion.statusCode()).as(completion.body()).isEqualTo(200);
-            assertThat(inputRequired.statusCode()).as(inputRequired.body()).isEqualTo(200);
-            assertThatJson(prompt.body()).isEqualTo("""
-                    {
-                      "jsonrpc": "2.0",
-                      "id": 15,
-                      "result": {
-                        "description": "Interactive prompt",
-                        "messages": [{
-                          "role": "user",
-                          "content": {"type": "text", "text": "null:null"}
-                        }],
-                        "_meta": {"echo-trace": "prompt-trace"},
-                        "resultType": "complete"
-                      }
-                    }
+            assertThat(prompt).isSuccess().hasId(15).hasResult("""
+                {"description":"Interactive prompt",
+                 "messages":[{"role":"user",
+                   "content":{"type":"text","text":"null:null"}
+                 }],
+                 "_meta":{"echo-trace":"prompt-trace"},
+                 "resultType":"complete"}
                     """);
-            assertThatJson(completion.body()).isEqualTo("""
-                    {
-                      "jsonrpc": "2.0",
-                      "id": 16,
-                      "result": {
-                        "completion": {"values": ["A-complete"]},
-                        "_meta": {"echo-trace": "completion-trace"},
-                        "resultType": "complete"
-                      }
-                    }
+            assertThat(completion).isSuccess().hasId(16).hasResult("""
+                {"completion":{"values":["A-complete"]},
+                 "_meta":{"echo-trace":"completion-trace"},
+                 "resultType":"complete"}
                     """);
-            assertThatJson(inputRequired.body()).isEqualTo("""
-                    {
-                      "jsonrpc": "2.0",
-                      "id": 17,
-                      "result": {
-                        "resultType": "input_required",
-                        "inputRequests": {
-                          "answer": {
-                            "method": "elicitation/create",
-                            "params": {
-                              "message": "Answer?",
-                              "requestedSchema": {
-                                "type": "object",
-                                "properties": {"value": {"type": "string"}}
-                              }
-                            }
-                          }
-                        },
-                        "requestState": "prompt-input-round",
-                        "_meta": {"trace": "input-required"}
-                      }
-                    }
+            assertThat(inputRequired).isSuccess().hasId(17).hasResult("""
+                    {"resultType":"input_required",
+                     "inputRequests":{"answer":{
+                       "method":"elicitation/create",
+                       "params":{
+                         "message":"Answer?",
+                         "requestedSchema":{"type":"object","properties":{"value":{"type":"string"}}}
+                       }
+                     }},
+                     "requestState":"prompt-input-round",
+                     "_meta":{"trace":"input-required"}}
                     """);
         }
     }

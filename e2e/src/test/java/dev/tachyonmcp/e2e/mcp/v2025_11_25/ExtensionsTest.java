@@ -3,7 +3,6 @@ package dev.tachyonmcp.e2e.mcp.v2025_11_25;
 
 import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
-import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.extensions.AdvertiseMode;
 import dev.tachyonmcp.api.server.extensions.ExtensionContext;
@@ -95,14 +94,9 @@ class ExtensionsTest extends AbstractStatefulMcpE2eTest {
             var call = """
                 {"jsonrpc":"2.0","id":2,"method":"internal/hello","params":{"_meta":{"com.example/internal":{}}}}
                 """;
-            var callResp = client.post(sessionId, call);
-            // language=JSON
-            assertThatJson(callResp.body()).isEqualTo("""
-                {
-                  "jsonrpc": "2.0",
-                  "id": 2,
-                  "result": {"message": "Hi!"}
-                }
+            var callResp = client.sendRpc(sessionId, call);
+            assertThat(callResp).isSuccess().hasId(2).hasResult("""
+                    {"message":"Hi!"}
                 """);
         }
     }
@@ -175,14 +169,9 @@ class ExtensionsTest extends AbstractStatefulMcpE2eTest {
             var callWithMeta = """
                     {"jsonrpc":"2.0","id":3,"method":"test/ext-call","params":{"_meta":{"com.example/test":{}}}}
                     """;
-            var resp2 = client.post(sessionId, callWithMeta);
-            // language=JSON
-            assertThatJson(resp2.body()).isEqualTo("""
-                    {
-                      "jsonrpc": "2.0",
-                      "id": 3,
-                      "result": {"status": "ok"}
-                    }
+            var resp2 = client.sendRpc(sessionId, callWithMeta);
+            assertThat(resp2).isSuccess().hasId(3).hasResult("""
+                {"status":"ok"}
                     """);
         }
     }

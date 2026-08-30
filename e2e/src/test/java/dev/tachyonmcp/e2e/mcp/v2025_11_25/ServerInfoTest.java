@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp.v2025_11_25;
 
-import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 
 import dev.tachyonmcp.api.server.domain.Icon;
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
@@ -43,62 +43,56 @@ class ServerInfoTest extends AbstractStatelessMcpE2eTest<McpClient> {
 
         try (var client = createTestClient()) {
             // language=json
-            final var response = client.post("""
+            final var response = client.sendRpc("""
                 {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}
                 """);
 
             // language=json
-            final var expected = """
-                    {
-                      "jsonrpc": "2.0",
-                      "id": 1,
-                      "result": {
-                        "protocolVersion": "2025-11-25",
-                        "serverInfo": {
-                          "name": "test-server",
-                          "version": "2.0",
-                          "description": "Test server",
-                          "title": "Test Server",
-                          "websiteUrl": "https://example.com/mcp",
-                          "icons": [{
-                            "src": "https://example.com/icon.png",
-                            "mimeType": "image/png",
-                            "sizes": ["32x32"],
-                            "theme": "light"
-                          }]
-                        },
-                        "instructions": "Test instructions",
-                        "capabilities": {
-                          "logging": {},
-                          "completions": {},
-                          "tools": {
-                            "listChanged": true
-                          },
-                          "resources": {
-                            "subscribe": true,
-                            "listChanged": true
-                          },
-                          "prompts": {
-                            "listChanged": true
-                          },
-                          "tasks": {
-                            "list": {},
-                            "cancel": {},
-                            "requests": {
-                              "tools": {
-                                "call": {}
-                              }
-                            }
-                          },
-                          "extensions": {
-                            "io.modelcontextprotocol/tasks": {}
-                          }
+            assertThat(response).isSuccess().hasId(1).hasResult("""
+                {
+                  "protocolVersion": "2025-11-25",
+                  "serverInfo": {
+                    "name": "test-server",
+                    "version": "2.0",
+                    "description": "Test server",
+                    "title": "Test Server",
+                    "websiteUrl": "https://example.com/mcp",
+                    "icons": [{
+                      "src": "https://example.com/icon.png",
+                      "mimeType": "image/png",
+                      "sizes": ["32x32"],
+                      "theme": "light"
+                    }]
+                  },
+                  "instructions": "Test instructions",
+                  "capabilities": {
+                    "logging": {},
+                    "completions": {},
+                    "tools": {
+                      "listChanged": true
+                    },
+                    "resources": {
+                      "subscribe": true,
+                      "listChanged": true
+                    },
+                    "prompts": {
+                      "listChanged": true
+                    },
+                    "tasks": {
+                      "list": {},
+                      "cancel": {},
+                      "requests": {
+                        "tools": {
+                          "call": {}
                         }
                       }
+                    },
+                    "extensions": {
+                      "io.modelcontextprotocol/tasks": {}
                     }
-                    """;
-
-            assertThatJson(response.body()).isEqualTo(expected);
+                  }
+                }
+                """);
         }
     }
 
@@ -108,24 +102,18 @@ class ServerInfoTest extends AbstractStatelessMcpE2eTest<McpClient> {
 
         try (var client = createTestClient()) {
             // language=json
-            final var response = client.post("""
+            final var response = client.sendRpc(null, """
                 {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}
                 """);
 
             // language=json
-            final var expected = """
+            assertThat(response).isSuccess().hasId(1).hasResult("""
                 {
-                  "jsonrpc": "2.0",
-                  "id": 1,
-                  "result": {
-                    "protocolVersion":"2025-11-25",
-                    "serverInfo":{"version":"0.1","name":"tachyon-mcp"},
-                    "capabilities": {}
-                  }
+                  "protocolVersion":"2025-11-25",
+                  "serverInfo":{"version":"0.1","name":"tachyon-mcp"},
+                  "capabilities": {}
                 }
-                """;
-
-            assertThatJson(response.body()).isEqualTo(expected);
+                """);
         }
     }
 }

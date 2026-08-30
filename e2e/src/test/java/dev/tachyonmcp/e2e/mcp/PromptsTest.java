@@ -3,7 +3,6 @@ package dev.tachyonmcp.e2e.mcp;
 
 import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static dev.tachyonmcp.testkit.McpHttpResponseAssert.assertThatResponse;
-import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.domain.EmbeddedResource;
@@ -66,19 +65,15 @@ class PromptsTest extends AbstractStatelessMcpE2eTest<McpClient> {
 
         try (var client = createTestClient()) {
             client.initialize();
-            var response = client.post("""
+            var response = client.sendRpc("""
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"greeting"}}
                 """);
 
-            assertThatJson(response.body()).isEqualTo("""
-                    {
-                      "jsonrpc":"2.0",
-                      "id":2,
-                      "result":{"description":"A greeting prompt","messages":[{
-                        "role":"user",
-                        "content":{"type":"text","text":"Hello world!"}
-                      }]}
-                    }
+            assertThat(response).isSuccess().hasId(2).hasResult("""
+                {"description":"A greeting prompt","messages":[{
+                  "role":"user",
+                  "content":{"type":"text","text":"Hello world!"}
+                }]}
                     """);
         }
     }
@@ -166,12 +161,12 @@ class PromptsTest extends AbstractStatelessMcpE2eTest<McpClient> {
 
         try (var client = createTestClient()) {
             client.initialize();
-            var response = client.post("""
+            var response = client.sendRpc("""
                 {"jsonrpc":"2.0","id":2,"method":"prompts/list"}
                 """);
 
-            assertThatJson(response.body()).isEqualTo("""
-                    {"jsonrpc":"2.0","id":2,"result":{"prompts":[]}}
+            assertThat(response).isSuccess().hasId(2).hasResult("""
+                {"prompts":[]}
                     """);
         }
     }
@@ -187,23 +182,19 @@ class PromptsTest extends AbstractStatelessMcpE2eTest<McpClient> {
 
         try (var client = createTestClient()) {
             client.initialize();
-            var response = client.post("""
+            var response = client.sendRpc("""
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"embedded"}}
                 """);
 
-            assertThatJson(response.body()).isEqualTo("""
-                    {
-                      "jsonrpc":"2.0",
-                      "id":2,
-                      "result":{"description":"Prompt with embedded resource","messages":[{
-                        "role":"user",
-                        "content":{"type":"resource","resource":{
-                          "uri":"test://embedded",
-                          "mimeType":"text/plain",
-                          "text":"embedded content"
-                        }}
-                      }]}
-                    }
+            assertThat(response).isSuccess().hasId(2).hasResult("""
+                {"description":"Prompt with embedded resource","messages":[{
+                  "role":"user",
+                  "content":{"type":"resource","resource":{
+                    "uri":"test://embedded",
+                    "mimeType":"text/plain",
+                    "text":"embedded content"
+                  }}
+                }]}
                     """);
         }
     }
@@ -219,23 +210,19 @@ class PromptsTest extends AbstractStatelessMcpE2eTest<McpClient> {
 
         try (var client = createTestClient()) {
             client.initialize();
-            var response = client.post("""
+            var response = client.sendRpc("""
                 {"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"image-prompt"}}
                 """);
 
-            assertThatJson(response.body()).isEqualTo("""
-                    {
-                      "jsonrpc":"2.0",
-                      "id":2,
-                      "result":{"description":"Prompt with image","messages":[{
-                        "role":"user",
-                        "content":{
-                          "type":"image",
-                          "data":"iVBORw0KGgo=",
-                          "mimeType":"image/png"
-                        }
-                      }]}
-                    }
+            assertThat(response).isSuccess().hasId(2).hasResult("""
+                {"description":"Prompt with image","messages":[{
+                  "role":"user",
+                  "content":{
+                    "type":"image",
+                    "data":"iVBORw0KGgo=",
+                    "mimeType":"image/png"
+                  }
+                }]}
                     """);
         }
     }

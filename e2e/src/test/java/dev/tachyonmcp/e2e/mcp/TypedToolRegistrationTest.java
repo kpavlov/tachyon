@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp;
 
+import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
 import dev.tachyonmcp.api.json.JsonSchema;
@@ -60,15 +61,11 @@ class TypedToolRegistrationTest {
                     {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"greet","arguments":{"name":"Ada"}}}
                     """);
 
-            // language=JSON
-            var expected = """
-                    {"jsonrpc":"2.0","id":1,"result":{
-                        "content":[{"type":"text","text":"{\\"greeting\\":\\"Hello, Ada!\\"}"}],
-                        "structuredContent":{"greeting":"Hello, Ada!"},
-                        "resultType":"complete"
-                    }}
-                    """;
-            assertThatJson(response.body()).isEqualTo(expected);
+            assertThat(response).isSuccess().hasId(1).hasResult("""
+                            {"content":[{"type":"text","text":"{\\"greeting\\":\\"Hello, Ada!\\"}"}],
+                             "structuredContent":{"greeting":"Hello, Ada!"},
+                             "resultType":"complete"}
+                            """);
         }
     }
 
@@ -127,15 +124,11 @@ class TypedToolRegistrationTest {
                      "params":{"name":"greet-async","arguments":{"name":"Ada"}}}
                     """);
 
-            // language=JSON
-            var expected = """
-                    {"jsonrpc":"2.0","id":1,"result":{
-                        "content":[{"type":"text","text":"{\\"greeting\\":\\"Hi, Ada!\\"}"}],
-                        "structuredContent":{"greeting":"Hi, Ada!"},
-                        "resultType":"complete"
-                    }}
-                    """;
-            assertThatJson(response.body()).isEqualTo(expected);
+            assertThat(response).isSuccess().hasId(1).hasResult("""
+                            {"content":[{"type":"text","text":"{\\"greeting\\":\\"Hi, Ada!\\"}"}],
+                             "structuredContent":{"greeting":"Hi, Ada!"},
+                             "resultType":"complete"}
+                            """);
         }
     }
 
@@ -229,15 +222,11 @@ class TypedToolRegistrationTest {
                      "params":{"name":"farewell-async-generated","arguments":{"name":"Ada"}}}
                     """);
 
-            // language=JSON
-            var expected = """
-                    {"jsonrpc":"2.0","id":1,"result":{
-                        "content":[{"type":"text","text":"{\\"farewell\\":\\"Bye, Ada!\\"}"}],
-                        "structuredContent":{"farewell":"Bye, Ada!"},
-                        "resultType":"complete"
-                    }}
-                    """;
-            assertThatJson(response.body()).isEqualTo(expected);
+            assertThat(response).isSuccess().hasId(1).hasResult("""
+                            {"content":[{"type":"text","text":"{\\"farewell\\":\\"Bye, Ada!\\"}"}],
+                             "structuredContent":{"farewell":"Bye, Ada!"},
+                             "resultType":"complete"}
+                            """);
         }
     }
 }

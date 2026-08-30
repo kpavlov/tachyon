@@ -215,12 +215,11 @@ public abstract class AbstractToolCapabilitiesContractTest<C extends McpClient> 
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"structured","arguments":{"message":"hi"}}}
                 """);
 
-            assertThat(response.statusCode()).isEqualTo(200);
-            assertThatResponse(response).isSuccess().hasTextContent("Echo: hi");
-            assertThatJson(response.body())
-                    .inPath("$.result.structuredContent")
-                    .isObject()
-                    .containsKey("echo");
+            assertThatResponse(response)
+                    .hasStatus(200)
+                    .isSuccess()
+                    .hasTextContent("Echo: hi")
+                    .hasStructuredContent("{\"echo\":\"hi\"}");
         }
     }
 

@@ -11,11 +11,11 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /** Fluent, branch-safe assertions over a JSON-RPC response envelope. */
-public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseAssert, JsonNode> {
+public class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseAssert, JsonNode> {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private JsonRpcResponseAssert(JsonNode envelope) {
+    protected JsonRpcResponseAssert(JsonNode envelope) {
         super(envelope, JsonRpcResponseAssert.class);
     }
 
@@ -186,6 +186,17 @@ public final class JsonRpcResponseAssert extends AbstractAssert<JsonRpcResponseA
             if (!result.equals(expected)) {
                 failWithMessage("Expected result <%s> but was <%s> in: %s", expected, result, actual);
             }
+            return this;
+        }
+
+        /**
+         * Verifies the complete JSON-RPC result value.
+         *
+         * @param expectedJson the expected result JSON
+         * @return this assertion
+         */
+        public JsonRpcSuccessAssert hasResult(@Language("json") String expectedJson) {
+            assertThatJson(actual.path("result")).isEqualTo(expectedJson);
             return this;
         }
 

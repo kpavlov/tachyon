@@ -2,7 +2,6 @@
 package dev.tachyonmcp.e2e.mcp.v2026_07_28;
 
 import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
-import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.json.JsonSchema;
@@ -53,46 +52,37 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest<McpClient> {
         startTasksServer(taskEngine, "book", ToolResult.task(initial));
 
         try (var client = tasksClient()) {
-            var callResponse = client.post("""
+            var callResponse = client.sendRpc("""
                     {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"book","arguments":{}}}
                     """);
-            assertThat(callResponse).isSuccess().hasResultType("task");
-            assertThatJson(callResponse.body()).isEqualTo("""
+            assertThat(callResponse).isSuccess().hasResultType("task").hasId(1).hasResult("""
                     {
-                      "jsonrpc":"2.0",
-                      "id":1,
-                      "result":{
-                        "taskId":"workflow-1",
-                        "status":"working",
-                        "createdAt":"2026-08-27T07:00:00Z",
-                        "lastUpdatedAt":"2026-08-27T07:00:00Z",
-                        "ttlMs":null,
-                        "resultType":"task"
-                      }
+                  "taskId":"workflow-1",
+                  "status":"working",
+                  "createdAt":"2026-08-27T07:00:00Z",
+                  "lastUpdatedAt":"2026-08-27T07:00:00Z",
+                  "ttlMs":null,
+                  "resultType":"task"
                     }
                     """);
 
             taskEngine.publish(completed);
-            var getResponse = client.post("""
+            var getResponse = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":"workflow-1"}}
                     """);
-            assertThatJson(getResponse.body()).isEqualTo("""
+            assertThat(getResponse).isSuccess().hasId(2).hasResult("""
                     {
-                      "jsonrpc":"2.0",
-                      "id":2,
-                      "result":{
-                        "taskId":"workflow-1",
-                        "status":"completed",
-                        "statusMessage":"Done",
-                        "createdAt":"2026-08-27T07:00:00Z",
-                        "lastUpdatedAt":"2026-08-27T07:00:01Z",
-                        "ttlMs":null,
-                        "resultType":"complete",
-                        "result":{
-                          "content":[{"type":"text","text":"{\\"bookingId\\":\\"booking-1\\"}"}],
-                          "structuredContent":{"bookingId":"booking-1"},
-                          "resultType":"complete"
-                        }
+                  "taskId":"workflow-1",
+                  "status":"completed",
+                  "statusMessage":"Done",
+                  "createdAt":"2026-08-27T07:00:00Z",
+                  "lastUpdatedAt":"2026-08-27T07:00:01Z",
+                  "ttlMs":null,
+                  "resultType":"complete",
+                  "result":{
+                    "content":[{"type":"text","text":"{\\"bookingId\\":\\"booking-1\\"}"}],
+                    "structuredContent":{"bookingId":"booking-1"},
+                    "resultType":"complete"
                       }
                     }
                     """);
@@ -107,30 +97,26 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest<McpClient> {
         startTasksServer(taskEngine, "book", ToolResult.task(initial));
 
         try (var client = tasksClient()) {
-            var response = client.post("""
+            var response = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/cancel","params":{"taskId":"workflow-cancel"}}
                     """);
 
-            assertThatJson(response.body()).isEqualTo("""
-                    {"jsonrpc":"2.0","id":2,"result":{"resultType":"complete"}}
+            assertThat(response).isSuccess().hasId(2).hasResult("""
+                {"resultType":"complete"}
                     """);
             assertThat(taskEngine.cancelledTaskIds()).containsExactly("workflow-cancel");
 
-            var getResponse = client.post("""
+            var getResponse = client.sendRpc("""
                     {"jsonrpc":"2.0","id":3,"method":"tasks/get","params":{"taskId":"workflow-cancel"}}
                     """);
-            assertThatJson(getResponse.body()).isEqualTo("""
+            assertThat(getResponse).isSuccess().hasId(3).hasResult("""
                     {
-                      "jsonrpc":"2.0",
-                      "id":3,
-                      "result":{
-                        "taskId":"workflow-cancel",
-                        "status":"working",
-                        "createdAt":"2026-08-27T07:00:00Z",
-                        "lastUpdatedAt":"2026-08-27T07:00:00Z",
-                        "ttlMs":null,
-                        "resultType":"complete"
-                      }
+                  "taskId":"workflow-cancel",
+                  "status":"working",
+                  "createdAt":"2026-08-27T07:00:00Z",
+                  "lastUpdatedAt":"2026-08-27T07:00:00Z",
+                  "ttlMs":null,
+                  "resultType":"complete"
                     }
                     """);
             assertThat(taskEngine.refreshedTaskIds()).containsExactly("workflow-cancel");
@@ -204,11 +190,11 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest<McpClient> {
             client.post("""
                     {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"book","arguments":{}}}
                     """);
-            var response = client.post("""
+            var response = client.sendRpc("""
                     {"jsonrpc":"2.0","id":2,"method":"tasks/cancel","params":{"taskId":"workflow-done"}}
                     """);
-            assertThatJson(response.body()).isEqualTo("""
-                    {"jsonrpc":"2.0","id":2,"result":{"resultType":"complete"}}
+            assertThat(response).isSuccess().hasId(2).hasResult("""
+                {"resultType":"complete"}
                     """);
             assertThat(taskEngine.cancelledTaskIds()).containsExactly("workflow-done");
         }

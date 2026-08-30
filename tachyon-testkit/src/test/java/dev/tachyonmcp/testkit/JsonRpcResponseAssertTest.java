@@ -5,7 +5,12 @@ import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThatJsonRpcResp
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /** Verifies JSON-RPC envelope branch assertions. */
@@ -101,6 +106,69 @@ class JsonRpcResponseAssertTest {
         assertThatThrownBy(() -> assertThatJsonRpcResponse("""
                             {"jsonrpc":"2.0","id":1,"result":{"content":[]}}
                             """).isSuccess().hasContent())
+                .isInstanceOf(AssertionError.class);
+    }
+
+    static Stream<Arguments> hasResultMatches() {
+        return Stream.of(
+                Arguments.of("object", """
+                                {"jsonrpc":"2.0","id":1,"result":{"content":[]}}
+                                """, JSON.readTree("{\"content\":[]}")),
+                Arguments.of("array", """
+                                {"jsonrpc":"2.0","id":1,"result":[1,2,3]}
+                                """, JSON.readTree("[1,2,3]")),
+                Arguments.of("string", """
+                                {"jsonrpc":"2.0","id":1,"result":"hello"}
+                                """, JSON.readTree("\"hello\"")),
+                Arguments.of("number", """
+                                {"jsonrpc":"2.0","id":1,"result":42}
+                                """, JSON.readTree("42")),
+                Arguments.of("boolean", """
+                                {"jsonrpc":"2.0","id":1,"result":true}
+                                """, JSON.readTree("true")),
+                Arguments.of("null", """
+                                {"jsonrpc":"2.0","id":1,"result":null}
+                                """, JSON.readTree("null")));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("hasResultMatches")
+    void hasResultMatches(String name, String envelope, JsonNode expected) {
+        assertThatJsonRpcResponse(envelope).isSuccess().hasResult(expected);
+    }
+
+    static Stream<Arguments> hasResultRejects() {
+        return Stream.of(
+                Arguments.of("object mismatch", """
+                                {"jsonrpc":"2.0","id":1,"result":{"content":[]}}
+                                """, JSON.readTree("{\"foo\":\"bar\"}")),
+                Arguments.of("array mismatch", """
+                                {"jsonrpc":"2.0","id":1,"result":[1,2,3]}
+                                """, JSON.readTree("[1,2]")),
+                Arguments.of("string mismatch", """
+                                {"jsonrpc":"2.0","id":1,"result":"hello"}
+                                """, JSON.readTree("\"world\"")),
+                Arguments.of("number mismatch", """
+                                {"jsonrpc":"2.0","id":1,"result":42}
+                                """, JSON.readTree("99")),
+                Arguments.of("boolean mismatch", """
+                                {"jsonrpc":"2.0","id":1,"result":true}
+                                """, JSON.readTree("false")),
+                Arguments.of("null mismatch", """
+                                {"jsonrpc":"2.0","id":1,"result":null}
+                                """, JSON.readTree("0")),
+                Arguments.of("type mismatch object vs array", """
+                                {"jsonrpc":"2.0","id":1,"result":{}}
+                                """, JSON.readTree("[]")),
+                Arguments.of("type mismatch string vs number", """
+                                {"jsonrpc":"2.0","id":1,"result":"1"}
+                                """, JSON.readTree("1")));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("hasResultRejects")
+    void hasResultRejects(String name, String envelope, JsonNode wrongExpected) {
+        assertThatThrownBy(() -> assertThatJsonRpcResponse(envelope).isSuccess().hasResult(wrongExpected))
                 .isInstanceOf(AssertionError.class);
     }
 }
