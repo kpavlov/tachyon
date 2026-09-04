@@ -19,7 +19,7 @@
     <description>Maps dev.langchain4j.agent.tool annotations to Tachyon tool descriptors</description>
 
     <properties>
-        <langchain4j.version>1.19.0</langchain4j.version>
+        <langchain4j.version>1.20.0</langchain4j.version>
     </properties>
 
     <dependencies>
