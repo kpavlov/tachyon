@@ -32,7 +32,7 @@ public class EndpointValidatorHandler extends ChannelInboundHandlerAdapter {
             var uri = req.uri();
 
             if (!normalizedPath(uri).equals(mcpEndpoint)) {
-                LOGGER.warn("Unknown endpoint: {}", uri);
+                LOGGER.trace("Unknown endpoint: {}", uri);
                 rejectAndClose(ctx, msg, HttpResponseStatus.NOT_FOUND, "Not Found");
                 return;
             }
