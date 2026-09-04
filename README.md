@@ -33,6 +33,7 @@ application framework.
   TTL cleanup.
 - **Production transport** -- Netty backpressure, graceful shutdown, DNS-rebinding protection,
   CORS, and native transport auto-detection (`io_uring` → `epoll` → `kqueue` → NIO).
+- **Observability seam** -- an `McpInterceptor` wraps every request and notification; the optional `tachyon-otel` module ships the OpenTelemetry MCP semantic conventions.
 
 ## Quickstart
 
@@ -104,6 +105,7 @@ See the [quickstart](docs/quickstart.md) for Java and Kotlin examples plus a `cu
 - [Tools](docs/tools.md), [resources](docs/resources.md), and [tasks](docs/tasks.md) -- feature APIs and examples
 - [Annotations](docs/annotations.md) -- mcp-java, LangChain4j, and Spring AI providers
 - [Extensions](docs/extensions.md) and [MCP Skills](docs/extensions/mcp-skills.md) -- custom protocol methods and SEP support
+- [Observability](docs/observability.md) -- interceptors, OpenTelemetry, and auditing
 - [Kotlin DSL](docs/kotlin.md) -- builders, scopes, and suspending handlers
 - [Examples](examples/README.md) -- runnable Java and Kotlin servers
 - [FAQ](docs/faq.md) -- frameworks, concurrency, deployment, and compatibility

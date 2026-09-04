@@ -15,6 +15,10 @@
 - [Annotations](annotations.md)
 - [JSON and JSON Schema](json.md)
 
+## Operate
+
+- [Observability: interceptors, OpenTelemetry, auditing](observability.md)
+
 ## Testing
 
 - [Testkit](testkit.md)

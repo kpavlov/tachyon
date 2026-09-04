@@ -22,6 +22,7 @@ import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
 import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.api.server.features.tasks.Tasks;
 import dev.tachyonmcp.api.server.features.tools.Tools;
+import dev.tachyonmcp.api.server.interceptor.McpInterceptor;
 import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.protocol.Protocol;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
@@ -113,6 +114,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     private final ConcurrentHashMap<RequestId, PendingRequestEntry> pendingRequests = new ConcurrentHashMap<>();
     private final ExecutorService executor;
     private final List<ServerExtension> extensions;
+    private final List<McpInterceptor> interceptors;
     private final @Nullable Consumer<ChannelPipeline> pipelineCustomizer;
     private final Map<String, String> extensionMethodOwners = new ConcurrentHashMap<>();
     private final Map<String, ServerExtension> extensionsById = new ConcurrentHashMap<>();
@@ -284,12 +286,14 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
             @Nullable PayloadDeserializer payloadDeserializer,
             @Nullable JsonSchemaFactory<?> schemaFactory,
             @Nullable List<ServerExtension> extensions,
+            @Nullable List<McpInterceptor> interceptors,
             @Nullable Consumer<ChannelPipeline> pipelineCustomizer) {
         this.executor = executor;
         this.config = Objects.requireNonNull(config, "config cannot be null");
         this.sessionEventStore = Objects.requireNonNull(sessionEventStore, "sessionEventStore cannot be null");
         this.port = config.network().port();
         this.extensions = extensions != null ? extensions : List.of();
+        this.interceptors = interceptors != null ? List.copyOf(interceptors) : List.of();
         this.pipelineCustomizer = pipelineCustomizer;
         this.sessionManager = new SessionManager(sessionStore);
         final JsonSchemaValidator inputValidator1 =
@@ -601,6 +605,11 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     @Override
     public @Nullable String extensionForMethod(String method) {
         return extensionMethodOwners.get(method);
+    }
+
+    @Override
+    public List<McpInterceptor> interceptors() {
+        return interceptors;
     }
 
     @Override

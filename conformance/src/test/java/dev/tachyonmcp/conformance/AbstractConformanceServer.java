@@ -36,12 +36,12 @@ import org.jspecify.annotations.Nullable;
 abstract class AbstractConformanceServer {
 
     // language=json
-    protected static final JsonSchema INPUT_SCHEMA_NO_ARGS = parseJson("""
+    protected static final JsonSchema INPUT_SCHEMA_NO_ARGS = JsonSchema.unchecked("""
         {"type": "object", "properties": {}, "additionalProperties": false}
         """);
 
     // language=json
-    protected static final JsonSchema INPUT_SCHEMA_WITH_PROMPT = parseJson("""
+    protected static final JsonSchema INPUT_SCHEMA_WITH_PROMPT = JsonSchema.unchecked("""
         {
             "type": "object",
             "properties": {"prompt": {"type": "string"}},
@@ -51,7 +51,7 @@ abstract class AbstractConformanceServer {
         """);
 
     // language=json
-    protected static final JsonSchema INPUT_SCHEMA_WITH_MESSAGE = parseJson("""
+    protected static final JsonSchema INPUT_SCHEMA_WITH_MESSAGE = JsonSchema.unchecked("""
         {
             "type": "object",
             "properties": {"message": {"type": "string"}},
@@ -69,16 +69,21 @@ abstract class AbstractConformanceServer {
 
     private static final String HMAC_SECRET = "conformance-test-hmac-secret";
 
-    protected static JsonSchema parseJson(String json) {
-        return JsonSchema.from(json, String.class);
-    }
-
     protected static FormInputRequest buildFormElicitation(String message, String propName, String propType) {
-        var schema = new LinkedHashMap<String, Object>();
-        schema.put("type", "object");
-        schema.put("properties", Map.of(propName, Map.of("type", propType)));
-        schema.put("required", List.of(propName));
-        return FormInputRequest.of(message, schema);
+        // language=Json
+        final var jsonSchema = JsonSchema.unchecked("""
+            {
+                "type": "object",
+                "properties": {
+                    "%s": {"type": "%s"}
+                },
+                "required": ["%s"]
+            }
+            """.formatted(propName, propType, propName));
+        return FormInputRequest.builder()
+                .message(message)
+                .requestedSchema(jsonSchema)
+                .build();
     }
 
     protected static RpcMethodRequest buildSamplingRequest(String questionText) {
@@ -111,7 +116,7 @@ abstract class AbstractConformanceServer {
 
     private static JsonSchema buildJsonSchema() {
         // language=json
-        return parseJson("""
+        return JsonSchema.unchecked("""
             {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "type": "object",
@@ -170,7 +175,7 @@ abstract class AbstractConformanceServer {
      */
     private void registerTools(ServerEngine server) {
         // language=json
-        var echoSchema = parseJson("""
+        var echoSchema = JsonSchema.unchecked("""
             {
                 "type": "object",
                 "properties": {"message": {"type": "string", "description": "Message to echo"}}

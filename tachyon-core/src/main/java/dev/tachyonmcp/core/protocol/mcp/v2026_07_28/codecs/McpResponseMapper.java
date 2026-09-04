@@ -219,6 +219,12 @@ public final class McpResponseMapper extends dev.tachyonmcp.core.protocol.mcp.v2
         };
     }
 
+    /** Overrides the 2025-11-25 check: this version has its own generated {@code CallToolResult}. */
+    @Override
+    public boolean isPayloadError(@Nullable Object result) {
+        return result instanceof CallToolResult mapped && Boolean.TRUE.equals(mapped.isError());
+    }
+
     @Override
     public Object inputRequiredResult(
             Map<String, ? extends InputRequest> inputRequests,

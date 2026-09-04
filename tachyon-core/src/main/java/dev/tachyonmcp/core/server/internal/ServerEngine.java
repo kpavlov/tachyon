@@ -7,6 +7,7 @@ import dev.tachyonmcp.api.server.domain.ProgressToken;
 import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.api.server.domain.ServerCapabilities;
 import dev.tachyonmcp.api.server.features.tasks.TaskSnapshot;
+import dev.tachyonmcp.api.server.interceptor.McpInterceptor;
 import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.runtime.Session;
@@ -69,6 +70,12 @@ public interface ServerEngine extends TachyonServer {
     /** Returns the handler for a method, or {@code null} if not registered. */
     @Nullable
     RpcMethodHandler<?, ?> getHandler(String method);
+
+    /**
+     * Returns the registered interceptors in outermost-first order, empty when none. Fixed at
+     * build time and shared per request.
+     */
+    List<McpInterceptor> interceptors();
 
     /** Returns the extension ID that owns the given method, or {@code null} if none. */
     @Nullable

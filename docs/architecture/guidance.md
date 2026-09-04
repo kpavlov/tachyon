@@ -405,4 +405,60 @@ JSpecify `@Nullable` is the baseline (`@NullMarked` at package level). Reach for
 
 A stringly-typed attribute bag has two failure modes that compile clean and break at runtime — an unchecked cast on every read (`getAttribute(String)` lets the caller pick any `T`, wrong guess throws `ClassCastException` far from the write site), and silent collision (two unrelated features reusing the same string key overwrite each other). `AttributeKey<T>` fixes both: the key carries `T` so there's no cast at the call site, and keys are identity-based (`AttributeKey.of(name)` returns a distinct object per call, no name-interning registry) so two keys can never collide — retrieval requires holding the actual key instance, not guessing a string. Use this for any future context-carried extension/scratch state; don't reintroduce a generic `Map<String,Object>` surface on a handler-facing type.
 
+## 🔴 One cross-cutting seam: `McpInterceptor`
+
+Tracing, auditing, authorization, rate limiting and metrics are all `McpInterceptor`s
+(`tachyon-api`, `dev.tachyonmcp.api.server.interceptor`). **Do not add a second per-request hook
+type.** Spring's lasting wound is four competing seams — `Filter`, `HandlerInterceptor`, `@Around`,
+`WebFilter` — with no rule for choosing between them.
+
+- The seam is `McpDispatcher.decodeAndHandleAsync` plus `dispatchNotification`, so `initialize`,
+  every request, and every notification are covered by one chain.
+- **The seam is synchronous**: `intercept` returns an `McpOutcome`, blocking on the dispatch virtual
+  thread. Do not reintroduce `CompletionStage` here. Blocking is what makes chain and handler share
+  one stack, and that single stack is what keeps the outbound-stream binding
+  (`OutboundSseStreamMessageRouter`, thread-scoped) and any caller `ThreadLocal` — OpenTelemetry
+  `Context`, MDC — in scope for the handler. An async seam cannot promise that, and its
+  "call `proceed()` on the intercept thread or lose progress notifications" rule was a documented
+  footgun rather than a contract anything enforced.
+- **Failures are values, not a second channel.** `Chain.proceed()` never throws on the remainder's
+  behalf: `InterceptorChain` catches and routes through `McpOutcomes`, so an interceptor writes one
+  `switch` and no `catch`. `McpOutcome.Failure.cause()` exists so folding a throw into a value does
+  not lose the stack trace an audit log or tracer needs; only `Failure.error()` reaches the client.
+- Registration is explicit (`ServerBuilder.withInterceptors`), first registered = outermost.
+  **No `ServiceLoader` discovery** — auto-discovery is what makes interceptor ordering unfixable
+  once a third-party jar joins the chain.
+- `McpInterceptor` is *user-implemented*: adding a method breaks every implementor, so it is
+  frozen. `McpInterceptor.Chain` and `McpInvocation` are *library-implemented* and documented as
+  not-for-implementation, so they may grow methods freely — which is what leaves room for a future
+  `proceed(McpInvocation)` (request rewriting). Do not ship a `Chain` test double that would make
+  application code implement it again. Classify any new SPI type this way before adding it.
+- The zero-interceptor path must stay allocation-free — it is the default for every existing user.
+- Outbound (server→client) interception, when it lands, is a second `Chain` on the same
+  `McpInterceptor`, never a rival interface. ⚠️ It must then be synchronous too, which requires
+  outbound writes to originate on a virtual thread rather than the event loop — verify that before
+  designing it.
+- ⚠️ A handler whose stage stays pending for the life of an SSE subscription
+  (`subscriptions/listen`) parks the dispatch thread for that long once an interceptor is
+  registered. Bounded by the open connection it belongs to, which costs more than the parked
+  continuation; see the `ponytail:` note on `McpDispatcher.handled` for the split to make if it
+  ever matters.
+- `ThreadLocal` in `OutboundSseStreamMessageRouter` becomes `ScopedValue` when the baseline reaches
+  Java 25 (final in JEP 506; the module is `@InternalApi`, so the swap is not breaking). Never put
+  `ScopedValue` or `StructuredTaskScope` in a public signature, or that bump turns into one.
+
+## 🔴 Resolve protocol facts before they leave core
+
+An interceptor sits *before* response mapping, so anything it needs about the response must be
+resolved for it. `McpOutcome` is that resolution: the dispatcher classifies the handler result
+through the negotiated `ProtocolResponseMapper` (`McpOutcomes`) and hands interceptors
+`Success` / `PayloadFailure` / `Failure(error, jsonRpcCode)`.
+
+**No module outside `tachyon-core` may re-derive a protocol-version-specific mapping.** The
+temptation is a switch over `ServerError.Kind` → JSON-RPC code; it is wrong, because 2025-11-25 and
+2026-07-28 disagree on several kinds (`RESOURCE_NOT_FOUND` is `-32002` vs `-32602`,
+`HEADER_MISMATCH` `-32001` vs `-32020`). When an integration needs a protocol fact, add the query to
+`ProtocolResponseMapper` — as `isPayloadError` did for `CallToolResult.isError` — and let each codec
+answer for its own wire shape.
+
 Testing handler dispatch/error mapping: see [`tachyon-development` skill](../../.agents/skills/tachyon-development/SKILL.md).

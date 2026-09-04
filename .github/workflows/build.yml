@@ -43,6 +43,19 @@ jobs:
           distribution: temurin
           cache: maven
 
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Cache npx conformance package
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-conformance-${{ runner.os }}-${{ hashFiles('conformance/src/test/java/dev/tachyonmcp/conformance/*ConformanceTest.java') }}
+          restore-keys: |
+            npm-conformance-${{ runner.os }}-
+
       - name: Build and Verify
         run: make ci
 

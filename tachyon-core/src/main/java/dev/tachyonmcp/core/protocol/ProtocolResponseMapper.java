@@ -80,6 +80,23 @@ public interface ProtocolResponseMapper {
     /** Maps a tool call result into protocol-specific shape. */
     Object callToolResult(ToolResult result);
 
+    /**
+     * Whether a result already mapped by {@link #callToolResult(ToolResult)} reports a failure
+     * <em>inside its payload</em> rather than as a JSON-RPC error — today, a {@code CallToolResult}
+     * flagged {@code isError}.
+     *
+     * <p>Only the codec knows its own wire shape, which is why this lives here: by the time a
+     * result leaves the tool handler the protocol-neutral {@link ToolResult.Error} is gone. Feeds
+     * {@code McpOutcome.PayloadFailure}, so observers can tell "the tool ran and said no" from "the
+     * tool ran and said yes".
+     *
+     * @param result a mapped result, or {@code null}
+     * @return {@code true} if the payload reports a failure
+     */
+    default boolean isPayloadError(@Nullable Object result) {
+        return false;
+    }
+
     /** Maps a paginated list of resource descriptors into protocol-specific shape. */
     Object listResourcesResult(List<ResourceDescriptor> resources, @Nullable String nextCursor);
 

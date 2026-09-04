@@ -11,6 +11,7 @@ import dev.tachyonmcp.api.server.features.completions.Completions;
 import dev.tachyonmcp.api.server.features.prompts.Prompts;
 import dev.tachyonmcp.api.server.features.resources.Resources;
 import dev.tachyonmcp.api.server.features.tools.Tools;
+import dev.tachyonmcp.api.server.interceptor.McpInterceptor;
 import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.core.server.config.NetworkConfig;
 import dev.tachyonmcp.core.server.config.ServerConfig;
@@ -82,6 +83,22 @@ public interface ServerBuilder {
      * Registers one or more {@link ServerExtension}.
      */
     ServerBuilder withExtensions(ServerExtension... extensions);
+
+    /**
+     * Registers one or more {@link McpInterceptor}s — the server's single cross-cutting seam,
+     * wrapping every inbound MCP request and notification (tracing, auditing, authorization, rate
+     * limiting).
+     *
+     * <p>The first interceptor registered is the <b>outermost</b>. Repeated calls append, so order
+     * across calls is call order. There is deliberately no {@link java.util.ServiceLoader}
+     * discovery: the application owns the order, and no dependency can silently insert itself into
+     * the chain.
+     *
+     * @param interceptors the interceptors to append, outermost first
+     * @return this builder
+     */
+    @ExperimentalApi
+    ServerBuilder withInterceptors(McpInterceptor... interceptors);
 
     /** Sets the thread factory used by the server-owned virtual-thread-per-task executor. */
     ServerBuilder threadFactory(ThreadFactory threadFactory);

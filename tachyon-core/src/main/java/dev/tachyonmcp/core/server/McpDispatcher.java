@@ -5,6 +5,9 @@ import dev.tachyonmcp.api.annotations.InternalApi;
 import dev.tachyonmcp.api.runtime.AttributeKey;
 import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.api.server.domain.ServerError;
+import dev.tachyonmcp.api.server.features.HandlerFutures;
+import dev.tachyonmcp.api.server.interceptor.McpInterceptor;
+import dev.tachyonmcp.api.server.interceptor.McpOutcome;
 import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.protocol.Protocols;
@@ -27,13 +30,9 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import org.jspecify.annotations.Nullable;
@@ -243,9 +242,7 @@ public class McpDispatcher {
             DispatchContext context,
             @Nullable Session session,
             RpcMethodHandler<I, O> handler) {
-        var paramsStr = rawParams instanceof Map || rawParams instanceof List
-                ? JsonRpcCodec.writeValueAsString(rawParams)
-                : rawParams instanceof String s ? s : null;
+        var paramsStr = DispatchInvocation.encodeParams(rawParams);
 
         return CompletableFuture.supplyAsync(
                         () -> {
@@ -266,33 +263,78 @@ public class McpDispatcher {
                                             m.slowRequestThreshold().toMillis())
                                     : CompletableFuture.completedFuture(null);
                             try {
-                                CompletionStage<O> stage = OutboundSseStreamMessageRouter.withDispatchContext(
+                                CompletionStage<McpOutcome> stage = OutboundSseStreamMessageRouter.withDispatchContext(
                                         session != null ? session.id() : null,
                                         outboundSseStream,
-                                        () -> decodeAndHandleAsync(handler, context, rawParams));
+                                        () -> decodeAndHandleAsync(method, handler, context, rawParams));
                                 return stage.whenComplete((r, e) -> watchdog.cancel(false));
                             } catch (Exception e) {
                                 watchdog.cancel(false);
-                                return CompletableFuture.failedFuture(e);
+                                return CompletableFuture.<McpOutcome>failedFuture(e);
                             }
                         },
                         executor)
                 .thenCompose(stage -> stage)
                 // handle(), not handleAsync(executor): encoding is a cheap ByteBuf serialize and the
                 // completing thread is never the event loop — no need to burn a VT per request on it.
-                .handle((result, ex) -> {
-                    if (ex != null) {
-                        return handleHandlerError(id, method, ex, context);
-                    }
-                    return handleSuccessOrError(id, method, result, null, context);
-                });
+                .handle((outcome, ex) -> ex != null
+                        ? errorResult(id, McpOutcomes.classify(id, method, ex), context)
+                        : toDispatchResult(id, method, outcome, null, context));
     }
 
     /**
      * Fixed decode-then-handle skeleton every dispatch path shares -- the single call site each
-     * routes through, and the seam a future interceptor/chain wraps around.
+     * routes through, and the seam {@link McpInterceptor}s wrap around.
+     *
+     * <p>Classification happens here rather than after the chain unwinds, so an interceptor
+     * observes the outcome the wire will actually carry -- above all the JSON-RPC error code, which
+     * only the protocol codec can resolve.
+     *
+     * <p>With no interceptor registered the handler's stage is returned untouched, so the default
+     * path neither allocates a chain node nor blocks the dispatch thread on an async handler. The
+     * {@link McpInterceptor} seam is synchronous, so once one is registered the chain and the
+     * handler share this thread until the outcome exists.
      */
-    private <I, O> CompletionStage<O> decodeAndHandleAsync(
+    private <I, O> CompletionStage<McpOutcome> decodeAndHandleAsync(
+            String method, RpcMethodHandler<I, O> handler, DispatchContext context, @Nullable Object rawParams) {
+        var interceptors = server.interceptors();
+        if (interceptors.isEmpty()) {
+            return classified(method, handler, context, rawParams);
+        }
+        return CompletableFuture.completedStage(InterceptorChain.run(
+                interceptors,
+                new DispatchInvocation(method, context, rawParams),
+                context,
+                () -> handled(method, handler, context, rawParams)));
+    }
+
+    private <I, O> CompletionStage<McpOutcome> classified(
+            String method, RpcMethodHandler<I, O> handler, DispatchContext context, @Nullable Object rawParams) {
+        return decodeAndHandle(handler, context, rawParams)
+                .handle((result, ex) ->
+                        ex != null ? McpOutcomes.failure(method, ex, context) : McpOutcomes.of(result, context));
+    }
+
+    /**
+     * Terminal of the interceptor chain: decodes, handles, and blocks for the result on this
+     * virtual thread.
+     *
+     * <p>ponytail: a handler whose stage stays pending for the life of an SSE subscription
+     * ({@code subscriptions/listen}) parks this thread for that long. Bounded by the open
+     * connection it belongs to, which costs more than the parked continuation. Split the terminal
+     * so a streaming handler returns at stream-establish if that ever shows up in a heap dump.
+     */
+    private <I, O> McpOutcome handled(
+            String method, RpcMethodHandler<I, O> handler, DispatchContext context, @Nullable Object rawParams) {
+        try {
+            I decoded = handler.decode(context, rawParams);
+            return McpOutcomes.of(HandlerFutures.joinInterruptibly(handler.handleAsync(context, decoded)), context);
+        } catch (Exception e) {
+            return McpOutcomes.failure(method, e, context);
+        }
+    }
+
+    private <I, O> CompletionStage<O> decodeAndHandle(
             RpcMethodHandler<I, O> handler, DispatchContext context, @Nullable Object rawParams) {
         try {
             I decoded = handler.decode(context, rawParams);
@@ -302,26 +344,22 @@ public class McpDispatcher {
         }
     }
 
-    private DispatchResult handleHandlerError(RequestId id, String method, Throwable ex, DispatchContext context) {
-        var unwrapped = ex instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : ex;
-        if (unwrapped instanceof CancellationException) {
-            logger.debug("Handler cancelled: method={}, id={}", method, id);
-            return errorResult(id, ServerErrors.internalError("Internal error"), context);
-        }
-        if (unwrapped instanceof RequestMappingException rme) {
-            logger.debug("Request mapping failed: method={}, id={}: {}", method, id, rme.getMessage());
-            return errorResult(id, rme.error(), context);
-        }
-        logger.warn("Handler exception: method={}, id={}: {}", method, id, unwrapped.getMessage(), unwrapped);
-        return errorResult(id, ServerErrors.internalError("Internal error"), context);
+    private DispatchResult toDispatchResult(
+            RequestId id, String method, McpOutcome outcome, @Nullable String sessionId, DispatchContext context) {
+        return switch (outcome) {
+            case McpOutcome.Failure(var error, var ignoredCode, var ignoredCause) -> {
+                logger.debug("Handler error for {}: {}", method, error.message());
+                yield errorResult(id, error, context);
+            }
+            // A payload failure is a JSON-RPC success on the wire -- the distinction exists for
+            // observers, not for the client, so both arms encode identically.
+            case McpOutcome.PayloadFailure(var result) -> encodedResponse(id, result, sessionId, context);
+            case McpOutcome.Success(var result) -> encodedResponse(id, result, sessionId, context);
+        };
     }
 
-    private <O> DispatchResult handleSuccessOrError(
-            RequestId id, String method, O result, @Nullable String sessionId, DispatchContext context) {
-        if (result instanceof ServerError error) {
-            logger.debug("Handler error for {}: {}", method, error.message());
-            return errorResult(id, error, context);
-        }
+    private DispatchResult encodedResponse(
+            RequestId id, @Nullable Object result, @Nullable String sessionId, DispatchContext context) {
         return new DispatchResult.Response(encodeResponse(id, result, context.responseMapper()), sessionId, 200);
     }
 
@@ -330,6 +368,34 @@ public class McpDispatcher {
     }
 
     public DispatchResult dispatchNotification(
+            String method,
+            @Nullable Object params,
+            @Nullable String sessionId,
+            @Nullable ChannelContext channelContext) {
+        var interceptors = server.interceptors();
+        if (interceptors.isEmpty()) {
+            return handleNotification(method, params, sessionId, channelContext);
+        }
+        // A notification has no response, so its answer is always Accepted: an interceptor can only
+        // suppress the handler, never change what the client is told. The transport has already
+        // acked before dispatching here (see McpOperationHandler), so blocking the chain is free.
+        var context = dispatchContext(channelContext);
+        var outcome =
+                InterceptorChain.run(interceptors, new DispatchInvocation(method, context, params), context, () -> {
+                    handleNotification(method, params, sessionId, channelContext);
+                    return new McpOutcome.Success(null);
+                });
+        if (outcome instanceof McpOutcome.Failure(var error, var ignoredCode, var cause)) {
+            if (cause != null) {
+                logger.warn("Notification interceptor failed: method={}: {}", method, cause.getMessage(), cause);
+            } else {
+                logger.debug("Notification rejected by interceptor: method={}: {}", method, error.message());
+            }
+        }
+        return DispatchResult.Accepted.INSTANCE;
+    }
+
+    private DispatchResult handleNotification(
             String method,
             @Nullable Object params,
             @Nullable String sessionId,
@@ -415,20 +481,20 @@ public class McpDispatcher {
                                 if (!server.isStateless()) {
                                     ic.setSession(server.createSession(generateSessionId(channelContext)));
                                 }
-                                return (CompletionStage<Object>) decodeAndHandleAsync(handler, ic, rawParams);
+                                return decodeAndHandleAsync(METHOD_INITIALIZE, handler, ic, rawParams);
                             } catch (Exception e) {
-                                return CompletableFuture.failedFuture(e);
+                                return CompletableFuture.<McpOutcome>failedFuture(e);
                             }
                         },
                         executor)
                 .thenCompose(stage -> stage)
-                .handle((result, ex) -> {
+                .handle((outcome, ex) -> {
                     if (ex != null) {
-                        return handleHandlerError(id, "initialize", ex, ic);
+                        return errorResult(id, McpOutcomes.classify(id, METHOD_INITIALIZE, ex), ic);
                     }
                     final var session = ic.session();
                     var sessionId = session != null ? session.id() : null;
-                    return handleSuccessOrError(id, "initialize", result, sessionId, ic);
+                    return toDispatchResult(id, METHOD_INITIALIZE, outcome, sessionId, ic);
                 });
     }
 
@@ -438,7 +504,7 @@ public class McpDispatcher {
         return new DispatchResult.Response(body, null, wireError.httpStatus());
     }
 
-    private static byte[] encodeResponse(RequestId id, Object result, ProtocolResponseMapper mapper) {
+    private static byte[] encodeResponse(RequestId id, @Nullable Object result, ProtocolResponseMapper mapper) {
         if (result instanceof String s) {
             return JsonRpcCodec.serializeResponse(id, s);
         }
@@ -447,7 +513,10 @@ public class McpDispatcher {
             return JsonRpcCodec.serializeResponse(id, resultJson);
         } catch (Exception e) {
             logger.error(
-                    "JSON serialization failed for {}: {}", result.getClass().getSimpleName(), e.getMessage(), e);
+                    "JSON serialization failed for {}: {}",
+                    result == null ? "null" : result.getClass().getSimpleName(),
+                    e.getMessage(),
+                    e);
             return encodeError(id, ServerErrors.internalError("Failed to encode response"), mapper);
         }
     }

@@ -150,6 +150,11 @@ public class McpResponseMapper implements ProtocolResponseMapper {
         };
     }
 
+    @Override
+    public boolean isPayloadError(@Nullable Object result) {
+        return result instanceof CallToolResult mapped && Boolean.TRUE.equals(mapped.isError());
+    }
+
     protected static @Nullable Map<String, JsonNode> resolveMeta(ToolResult result) {
         var meta = result.meta();
         return meta == null || meta.isEmpty() ? null : JsonUtils.toJsonNodeMap(meta);

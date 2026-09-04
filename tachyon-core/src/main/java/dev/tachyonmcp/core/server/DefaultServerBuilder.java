@@ -13,6 +13,7 @@ import dev.tachyonmcp.api.server.features.completions.Completions;
 import dev.tachyonmcp.api.server.features.prompts.Prompts;
 import dev.tachyonmcp.api.server.features.resources.Resources;
 import dev.tachyonmcp.api.server.features.tools.Tools;
+import dev.tachyonmcp.api.server.interceptor.McpInterceptor;
 import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.core.server.config.NetworkConfig;
 import dev.tachyonmcp.core.server.config.ServerConfig;
@@ -26,6 +27,7 @@ import io.netty.channel.ChannelPipeline;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -45,6 +47,7 @@ final class DefaultServerBuilder implements ServerBuilder {
     private final RuntimeConfig.Builder runtimeBuilder = RuntimeConfig.builder();
     private final MonitoringConfig.Builder monitoringBuilder = MonitoringConfig.builder();
     private final List<ServerExtension> extensions = new ArrayList<>();
+    private final List<McpInterceptor> interceptors = new ArrayList<>();
     private final Set<String> extensionIds = new HashSet<>();
     private final List<Consumer<TachyonServer>> bootstrapRegistrations = new ArrayList<>();
 
@@ -246,6 +249,14 @@ final class DefaultServerBuilder implements ServerBuilder {
         extensions.add(extension);
     }
 
+    @Override
+    public ServerBuilder withInterceptors(McpInterceptor... interceptors) {
+        for (var interceptor : interceptors) {
+            this.interceptors.add(Objects.requireNonNull(interceptor, "interceptor cannot be null"));
+        }
+        return this;
+    }
+
     /**
      * Sets a thread factory for virtual-thread-per-task executor creation. The server owns this
      * executor and will shut it down on close.
@@ -333,6 +344,7 @@ final class DefaultServerBuilder implements ServerBuilder {
                 payloadDeserializer,
                 null,
                 allExtensions,
+                List.copyOf(interceptors),
                 pipelineCustomizer);
         try {
             bootstrapRegistrations.forEach(registrar -> registrar.accept(server));

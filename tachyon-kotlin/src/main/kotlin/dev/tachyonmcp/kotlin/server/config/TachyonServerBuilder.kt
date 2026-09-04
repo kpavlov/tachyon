@@ -17,6 +17,7 @@ import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.api.server.features.tasks.TaskSupport
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.api.server.features.tools.ToolResult
+import dev.tachyonmcp.api.server.interceptor.McpInterceptor
 import dev.tachyonmcp.core.server.ServerBuilder
 import dev.tachyonmcp.core.server.config.NetworkConfig
 import dev.tachyonmcp.core.server.features.resources.MimeTypes
@@ -496,6 +497,14 @@ public class TachyonServerBuilder
         /** Registers one or more [ServerExtension]s, e.g. from `tachyon-extensions`. */
         public fun extensions(vararg extensions: ServerExtension): TachyonServerBuilder =
             this.also { delegate.withExtensions(*extensions) }
+
+        /**
+         * Registers one or more [McpInterceptor]s wrapping every inbound MCP request and
+         * notification. The first registered is the outermost; repeated calls append.
+         */
+        @ExperimentalApi
+        public fun interceptors(vararg interceptors: McpInterceptor): TachyonServerBuilder =
+            this.also { delegate.withInterceptors(*interceptors) }
 
         /** Configures the JSON payload boundary: serde, schema factory, and validators. */
         @OptIn(ExperimentalContracts::class)
