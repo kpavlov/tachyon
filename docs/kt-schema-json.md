@@ -38,7 +38,7 @@ The weather example uses kt-schema `0.7.0` with kotlinx.serialization JSON:
 ```xml
 <properties>
     <kotlinx-serialization-json.version>1.11.0</kotlinx-serialization-json.version>
-    <kt-schema.version>0.7.0</kt-schema.version>
+    <kt-schema.version>0.8.3</kt-schema.version>
 </properties>
 
 <dependencies>

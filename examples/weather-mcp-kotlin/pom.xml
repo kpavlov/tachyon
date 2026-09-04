@@ -28,7 +28,7 @@
         <mcp-sdk.version>2.0.0</mcp-sdk.version>
         <awaitility.version>4.3.0</awaitility.version>
         <kotlinx-serialization-json.version>1.11.0</kotlinx-serialization-json.version>
-        <kt-schema.version>0.7.0</kt-schema.version>
+        <kt-schema.version>0.8.3</kt-schema.version>
     </properties>
 
     <dependencyManagement>
