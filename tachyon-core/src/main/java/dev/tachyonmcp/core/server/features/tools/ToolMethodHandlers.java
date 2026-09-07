@@ -210,7 +210,18 @@ public final class ToolMethodHandlers {
             if (prepared instanceof ToolResult.Error) {
                 context.observation().markPayloadFailure();
             }
-            return context.responseMapper().callToolResult(prepared);
+            var wireResult = context.responseMapper().callToolResult(prepared);
+            captureResponseContent(context, wireResult);
+            return wireResult;
+        }
+
+        private static void captureResponseContent(DispatchContext context, Object wireResult) {
+            var observation = context.observation();
+            if (!observation.active()) return;
+            var payloadCapture = context.engine().config().observability().payloadCapture();
+            if (!payloadCapture.responseContent()) return;
+            var json = context.responseMapper().encode(wireResult);
+            observation.info().responsePayload(CapturedPayload.capture(json, payloadCapture.maxBytes()));
         }
 
         private ToolResult prepareResult(@Nullable JsonSchema outputSchema, ToolResult result) {

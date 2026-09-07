@@ -87,7 +87,7 @@ public final class Observation {
     /** Tags the terminal outcome as a tool payload failure, overriding whatever {@link #complete} is later called with. */
     public void markPayloadFailure() {
         if (listeners.isEmpty()) return;
-        override = new OperationOutcome.PayloadFailure(null);
+        override = new OperationOutcome.PayloadFailure();
     }
 
     /**

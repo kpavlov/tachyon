@@ -201,6 +201,25 @@ class ObservationDispatchTest {
     }
 
     @Test
+    void notificationPropagatesTraceparentIntoOperationInfo() {
+        var listener = new RecordingListener();
+        try (ServerEngine server = (ServerEngine) TachyonServer.builder()
+                .session(s -> s.enabled(true))
+                .observability(o -> o.listener(listener))
+                .build()) {
+            server.createSession("sess-notif-trace");
+            var dispatcher = new McpDispatcher(server, server.executor());
+
+            var traceparent = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
+            var params = Map.of("_meta", Map.of("traceparent", traceparent));
+            dispatcher.dispatchNotification("notifications/initialized", params, "sess-notif-trace");
+
+            assertThat(listener.starts).hasSize(1);
+            assertThat(listener.starts.getFirst().info().traceparent()).isEqualTo(traceparent);
+        }
+    }
+
+    @Test
     void statelessNotificationStillReportsIgnoredBeforeAnyEarlyReturn() {
         var listener = new RecordingListener();
         try (ServerEngine server =
@@ -329,6 +348,66 @@ class ObservationDispatchTest {
                     .join();
             assertThat(noCaptureListener.completions.getFirst().info().requestPayload())
                     .isNull();
+        }
+    }
+
+    @Test
+    void responseContentCapturedOnlyWhenPolicyEnabledAndListenerRegistered() {
+        var listener = new RecordingListener();
+        var descriptor =
+                ToolDescriptor.builder().name("echo").description("echoes").build();
+        AsyncToolFn fn = (ctx, request) -> CompletableFuture.completedFuture(ToolResult.text("ok"));
+
+        var noCaptureListener = new RecordingListener();
+        try (ServerEngine captured = newEngine(
+                        b -> b.observability(o -> o.listener(listener).payloadCapture(p -> p.responseContent(true))),
+                        s -> s.tools().registerAsync(descriptor, fn));
+                ServerEngine notCaptured = newEngine(
+                        b -> b.observability(o -> o.listener(noCaptureListener)),
+                        s -> s.tools().registerAsync(descriptor, fn))) {
+            var params = Map.of("name", "echo", "arguments", Map.of());
+
+            captured.createSession("sess-response-capture").activate();
+            var capturingDispatcher = new McpDispatcher(captured, captured.executor());
+            capturingDispatcher
+                    .dispatchRequestAsync(RequestId.of(1), "tools/call", params, "sess-response-capture")
+                    .join();
+            var capturedInfo = listener.completions.getFirst().info();
+            assertThat(capturedInfo.responsePayload()).isInstanceOf(CapturedPayload.Value.class);
+            assertThat(((CapturedPayload.Value) capturedInfo.responsePayload()).json())
+                    .contains("ok");
+
+            notCaptured.createSession("sess-response-no-capture").activate();
+            var plainDispatcher = new McpDispatcher(notCaptured, notCaptured.executor());
+            plainDispatcher
+                    .dispatchRequestAsync(RequestId.of(1), "tools/call", params, "sess-response-no-capture")
+                    .join();
+            assertThat(noCaptureListener.completions.getFirst().info().responsePayload())
+                    .isNull();
+        }
+    }
+
+    @Test
+    void responseContentCapturedOnToolErrorTooWhenPolicyEnabled() {
+        var listener = new RecordingListener();
+        var descriptor =
+                ToolDescriptor.builder().name("failing").description("fails").build();
+        AsyncToolFn fn = (ctx, request) -> CompletableFuture.completedFuture(ToolResult.error("nope"));
+
+        try (ServerEngine server = newEngine(
+                b -> b.observability(o -> o.listener(listener).payloadCapture(p -> p.responseContent(true))),
+                s -> s.tools().registerAsync(descriptor, fn))) {
+            server.createSession("sess-response-error-capture").activate();
+            var dispatcher = new McpDispatcher(server, server.executor());
+            var params = Map.of("name", "failing", "arguments", Map.of());
+
+            dispatcher
+                    .dispatchRequestAsync(RequestId.of(1), "tools/call", params, "sess-response-error-capture")
+                    .join();
+
+            var info = listener.completions.getFirst().info();
+            assertThat(info.responsePayload()).isInstanceOf(CapturedPayload.Value.class);
+            assertThat(((CapturedPayload.Value) info.responsePayload()).json()).contains("nope");
         }
     }
 }

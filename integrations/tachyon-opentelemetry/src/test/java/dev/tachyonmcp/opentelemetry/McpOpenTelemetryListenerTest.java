@@ -4,6 +4,7 @@ package dev.tachyonmcp.opentelemetry;
 import static dev.tachyonmcp.opentelemetry.McpAttributes.EXECUTE_TOOL;
 import static dev.tachyonmcp.opentelemetry.McpAttributes.GEN_AI_OPERATION_NAME;
 import static dev.tachyonmcp.opentelemetry.McpAttributes.GEN_AI_TOOL_CALL_ARGUMENTS;
+import static dev.tachyonmcp.opentelemetry.McpAttributes.GEN_AI_TOOL_CALL_RESULT;
 import static dev.tachyonmcp.opentelemetry.McpAttributes.GEN_AI_TOOL_NAME;
 import static dev.tachyonmcp.opentelemetry.McpAttributes.MCP_METHOD_NAME;
 import static dev.tachyonmcp.opentelemetry.McpAttributes.MCP_SESSION_ID;
@@ -131,7 +132,42 @@ class McpOpenTelemetryListenerTest {
             assertThat(span.getStatus().getStatusCode()).isEqualTo(StatusCode.UNSET);
             assertThat(span.getAttributes().asMap())
                     .containsEntry(ERROR_TYPE, TOOL_ERROR)
-                    .doesNotContainKey(RPC_RESPONSE_STATUS_CODE);
+                    .doesNotContainKey(RPC_RESPONSE_STATUS_CODE)
+                    // gen_ai.tool.call.result is opt-in (PayloadCapturePolicy.responseContent) and
+                    // off here -- this size pins the full attribute set so it can't leak in silently.
+                    .hasSize(6);
+        }
+    }
+
+    @Test
+    @DisplayName("PayloadCapturePolicy.responseContent(true) records a successful tool result as JSON")
+    void responseContentWhenOptedInOnSuccess() throws Exception {
+        try (var server = startServer(o -> o.payloadCapture(p -> p.responseContent(true)));
+                var client = new Mcp20251125Client(server.port())) {
+            var sessionId = client.initialize();
+            client.post(sessionId, callForecast());
+
+            assertThat(spanFor("tools/call forecast").getAttributes().get(GEN_AI_TOOL_CALL_RESULT))
+                    .contains("sunny");
+        }
+    }
+
+    @Test
+    @DisplayName("PayloadCapturePolicy.responseContent(true) records a failing tool result as JSON too")
+    void responseContentWhenOptedInOnToolError() throws Exception {
+        try (var server = startServer(o -> o.payloadCapture(p -> p.responseContent(true)));
+                var client = new Mcp20251125Client(server.port())) {
+            var sessionId = client.initialize();
+            var response = client.post(
+                    sessionId,
+                    // language=json
+                    """
+                    {"jsonrpc":"2.0","id":16,"method":"tools/call","params":{"name":"failing","arguments":{}}}""");
+
+            assertThat(response).isSuccess().isToolError();
+
+            assertThat(spanFor("tools/call failing").getAttributes().get(GEN_AI_TOOL_CALL_RESULT))
+                    .contains("nope");
         }
     }
 
@@ -177,6 +213,34 @@ class McpOpenTelemetryListenerTest {
                     .containsEntry(RPC_RESPONSE_STATUS_CODE, "-32602")
                     .containsEntry(ERROR_TYPE, "INVALID_PARAMS")
                     .doesNotContainKey(GEN_AI_TOOL_NAME);
+        }
+    }
+
+    @Test
+    @DisplayName(
+            "an unrecognized method is rejected with the JSON-RPC wire code on both the span and the duration metric")
+    void unknownMethodRejectionRecordsWireCodeOnSpanAndMetric() throws Exception {
+        try (var server = startServer();
+                var client = new Mcp20251125Client(server.port())) {
+            var sessionId = client.initialize();
+            var response = client.post(sessionId, """
+                    {"jsonrpc":"2.0","id":15,"method":"definitely/unknown"}""");
+
+            assertThat(response).isJsonRpcError().hasErrorCode(-32601);
+
+            var span = spanFor("definitely/unknown");
+            assertThat(span.getStatus().getStatusCode()).isEqualTo(StatusCode.UNSET);
+            assertThat(span.getAttributes().asMap())
+                    .containsEntry(RPC_RESPONSE_STATUS_CODE, "-32601")
+                    .containsEntry(ERROR_TYPE, "METHOD_NOT_FOUND");
+
+            var histogram = metrics.collectAllMetrics().stream()
+                    .filter(metric -> "mcp.server.operation.duration".equals(metric.getName()))
+                    .findFirst()
+                    .orElseThrow();
+            assertThat(histogram.getHistogramData().getPoints())
+                    .anySatisfy(point -> assertThat(point.getAttributes().asMap())
+                            .containsEntry(RPC_RESPONSE_STATUS_CODE, "-32601"));
         }
     }
 

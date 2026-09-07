@@ -5,6 +5,7 @@ import static dev.tachyonmcp.opentelemetry.McpAttributes.EXECUTE_TOOL;
 import static dev.tachyonmcp.opentelemetry.McpAttributes.GEN_AI_OPERATION_NAME;
 import static dev.tachyonmcp.opentelemetry.McpAttributes.GEN_AI_PROMPT_NAME;
 import static dev.tachyonmcp.opentelemetry.McpAttributes.GEN_AI_TOOL_CALL_ARGUMENTS;
+import static dev.tachyonmcp.opentelemetry.McpAttributes.GEN_AI_TOOL_CALL_RESULT;
 import static dev.tachyonmcp.opentelemetry.McpAttributes.GEN_AI_TOOL_NAME;
 import static dev.tachyonmcp.opentelemetry.McpAttributes.MCP_METHOD_NAME;
 import static dev.tachyonmcp.opentelemetry.McpAttributes.MCP_SESSION_ID;
@@ -177,17 +178,7 @@ public class McpOpenTelemetryListener implements ObservationListener {
     private void recordOutcome(
             Span span, AttributesBuilder metricAttributes, OperationInfo info, OperationOutcome outcome) {
         switch (outcome) {
-            case OperationOutcome.Completed completed -> {
-                if (completed.responsePayload() != null) {
-                    recordPayload(span, completed.responsePayload());
-                }
-                if (isToolCall(info)) {
-                    var requestPayload = info.requestPayload();
-                    if (requestPayload != null) {
-                        recordArguments(span, requestPayload);
-                    }
-                }
-            }
+            case OperationOutcome.Completed ignored -> recordToolCall(span, info);
             case OperationOutcome.TaskHandoff ignored -> {
                 var requestPayload = info.requestPayload();
                 if (requestPayload != null) {
@@ -198,19 +189,16 @@ public class McpOpenTelemetryListener implements ObservationListener {
                 var error = rejected.error();
                 if (error != null) {
                     classify(span, metricAttributes, error.kind().name());
-                    span.setAttribute(RPC_RESPONSE_STATUS_CODE, String.valueOf(rejected.httpStatus()));
+                    var code = String.valueOf(rejected.wireCode());
+                    span.setAttribute(RPC_RESPONSE_STATUS_CODE, code);
+                    metricAttributes.put(RPC_RESPONSE_STATUS_CODE, code);
                 }
                 // Rejections are caller-fault by construction (unknown method, bad session state,
                 // missing header) -- span status stays UNSET.
             }
-            case OperationOutcome.PayloadFailure payloadFailure -> {
+            case OperationOutcome.PayloadFailure ignored -> {
                 classify(span, metricAttributes, TOOL_ERROR);
-                if (isToolCall(info)) {
-                    var requestPayload = info.requestPayload();
-                    if (requestPayload != null) {
-                        recordArguments(span, requestPayload);
-                    }
-                }
+                recordToolCall(span, info);
                 // Still a JSON-RPC success -- no status code, span status stays UNSET.
             }
             case OperationOutcome.HandlerFailed failed -> {
@@ -243,13 +231,31 @@ public class McpOpenTelemetryListener implements ObservationListener {
     }
 
     private static void recordPayload(Span span, CapturedPayload payload) {
-        // Response content has no dedicated GenAI attribute in the current MCP semconv draft;
-        // reserved for a future attribute once one is standardized.
+        if (payload instanceof CapturedPayload.Value(String json)) {
+            span.setAttribute(GEN_AI_TOOL_CALL_RESULT, json);
+        }
     }
 
     private static void recordArguments(Span span, CapturedPayload payload) {
         if (payload instanceof CapturedPayload.Value(String json)) {
             span.setAttribute(GEN_AI_TOOL_CALL_ARGUMENTS, json);
+        }
+    }
+
+    private static void recordToolCall(Span span, OperationInfo info) {
+        if (isToolCall(info)) {
+            var requestPayload = info.requestPayload();
+            if (requestPayload != null) {
+                if (requestPayload instanceof CapturedPayload.Value(String json)) {
+                    span.setAttribute(GEN_AI_TOOL_CALL_ARGUMENTS, json);
+                }
+            }
+            var responsePayload = info.responsePayload();
+            if (responsePayload != null) {
+                if (responsePayload instanceof CapturedPayload.Value(String json)) {
+                    span.setAttribute(GEN_AI_TOOL_CALL_RESULT, json);
+                }
+            }
         }
     }
 

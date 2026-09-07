@@ -13,19 +13,29 @@ import org.jspecify.annotations.Nullable;
 @InternalApi
 public sealed interface OperationOutcome {
 
-    /** Rejected before any handler ran (unknown method, bad session state, malformed params, ...). */
-    record Rejected(@Nullable ServerError error, int httpStatus) implements OperationOutcome {}
+    /**
+     * Rejected before any handler ran (unknown method, bad session state, malformed params, ...).
+     * {@code wireCode} is the JSON-RPC error code and is only meaningful when {@code error} is
+     * non-null; a transport-level rejection with no JSON-RPC envelope (e.g. a missing session
+     * header) reports {@code error == null} and leaves it {@code 0}.
+     */
+    record Rejected(@Nullable ServerError error, int httpStatus, int wireCode) implements OperationOutcome {}
 
-    /** The handler ran and its result was encoded onto the wire. */
-    record Completed(@Nullable CapturedPayload responsePayload) implements OperationOutcome {}
+    /**
+     * The handler ran and its result was encoded onto the wire. Any captured response content lives
+     * on {@link OperationInfo#responsePayload()}, mirroring {@link OperationInfo#requestPayload()} —
+     * not here, since it's known before the outcome is.
+     */
+    record Completed() implements OperationOutcome {}
 
     /**
      * A {@code tools/call} returned a domain-level payload failure ({@code ToolResult.error(...)})
      * rather than throwing — still a JSON-RPC success (the client sees {@code isError: true} in the
      * result, not an error envelope), but distinct from an ordinary {@link Completed} outcome so a
-     * listener can classify it without inspecting response content.
+     * listener can classify it without inspecting response content. Captured response content, if
+     * any, lives on {@link OperationInfo#responsePayload()}.
      */
-    record PayloadFailure(@Nullable CapturedPayload responsePayload) implements OperationOutcome {}
+    record PayloadFailure() implements OperationOutcome {}
 
     /** The handler produced a result but encoding it failed; the client received a fallback error. */
     record SerializationFailed(Throwable cause) implements OperationOutcome {}

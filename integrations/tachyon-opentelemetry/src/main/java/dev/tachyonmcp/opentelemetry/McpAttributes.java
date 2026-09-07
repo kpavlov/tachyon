@@ -41,6 +41,9 @@ final class McpAttributes {
      */
     static final AttributeKey<String> GEN_AI_TOOL_CALL_ARGUMENTS = AttributeKey.stringKey("gen_ai.tool.call.arguments");
 
+    /** Opt-in like {@link #GEN_AI_TOOL_CALL_ARGUMENTS} -- tool results routinely carry sensitive data too. */
+    static final AttributeKey<String> GEN_AI_TOOL_CALL_RESULT = AttributeKey.stringKey("gen_ai.tool.call.result");
+
     /** {@code mcp.method.name} values this instrumentation branches on. */
     static final String TOOLS_CALL = "tools/call";
 

@@ -17,6 +17,11 @@ public sealed interface CapturedPayload {
     /** Content that could not be captured, with a bounded, non-sensitive reason. */
     record Omitted(String reason) implements CapturedPayload {}
 
+    /** Appended to a truncated payload; its own byte length is reserved out of {@code maxBytes}. */
+    String TRUNCATION_MARKER = "…(truncated)";
+
+    int TRUNCATION_MARKER_BYTES = TRUNCATION_MARKER.getBytes(StandardCharsets.UTF_8).length;
+
     /**
      * Captures {@code json}, truncating to at most {@code maxBytes} UTF-8 bytes on a
      * character-boundary-safe cut. Never falls back to the unredacted original on truncation
@@ -27,13 +32,16 @@ public sealed interface CapturedPayload {
         if (bytes.length <= maxBytes) {
             return new Value(json);
         }
+        if (TRUNCATION_MARKER_BYTES > maxBytes) {
+            return new Omitted("truncation failed");
+        }
         var decoder = StandardCharsets.UTF_8
                 .newDecoder()
                 .onMalformedInput(CodingErrorAction.IGNORE)
                 .onUnmappableCharacter(CodingErrorAction.IGNORE);
         try {
-            var decoded = decoder.decode(ByteBuffer.wrap(bytes, 0, maxBytes));
-            return new Value(decoded + "…(truncated)");
+            var decoded = decoder.decode(ByteBuffer.wrap(bytes, 0, maxBytes - TRUNCATION_MARKER_BYTES));
+            return new Value(decoded + TRUNCATION_MARKER);
         } catch (CharacterCodingException e) {
             return new Omitted("truncation failed");
         }

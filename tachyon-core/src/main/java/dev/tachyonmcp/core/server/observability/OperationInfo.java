@@ -25,6 +25,7 @@ public final class OperationInfo {
     private @Nullable String sessionId;
     private @Nullable String traceParent;
     private @Nullable CapturedPayload requestPayload;
+    private @Nullable CapturedPayload responsePayload;
     private @Nullable String target;
 
     public OperationInfo(OperationKind kind, String method, @Nullable RequestId requestId) {
@@ -67,6 +68,14 @@ public final class OperationInfo {
 
     public void requestPayload(@Nullable CapturedPayload requestPayload) {
         this.requestPayload = requestPayload;
+    }
+
+    public @Nullable CapturedPayload responsePayload() {
+        return responsePayload;
+    }
+
+    public void responsePayload(@Nullable CapturedPayload responsePayload) {
+        this.responsePayload = responsePayload;
     }
 
     /**

@@ -222,14 +222,14 @@ public class McpDispatcher {
 
         if (sessionId == null) {
             observation.closeStart();
-            observation.complete(new OperationOutcome.Rejected(null, 400));
+            observation.complete(new OperationOutcome.Rejected(null, 400, 0));
             return CompletableFuture.completedFuture(new DispatchResult.Status(400, "Missing MCP-Session-Id header"));
         }
 
         var sessionOpt = server.getSession(sessionId);
         if (sessionOpt.isEmpty()) {
             observation.closeStart();
-            observation.complete(new OperationOutcome.Rejected(null, 404));
+            observation.complete(new OperationOutcome.Rejected(null, 404, 0));
             return CompletableFuture.completedFuture(new DispatchResult.Status(404, "Unknown session"));
         }
         var session = sessionOpt.get();
@@ -293,7 +293,7 @@ public class McpDispatcher {
                                         session.id(), id, method, paramsStr, System.currentTimeMillis()));
                             }
 
-                            var m = server.config().observability();
+                            final var m = server.config().observability();
                             var watchdog = m.slowRequestLogging()
                                     ? HandlerWatchdog.watch(
                                             method,
@@ -387,7 +387,7 @@ public class McpDispatcher {
             } else {
                 var body = encodeResponse(id, result, context.responseMapper(), observation);
                 dispatchResult = new DispatchResult.Response(body, sessionId, 200);
-                outcome = new OperationOutcome.Completed(null);
+                outcome = new OperationOutcome.Completed();
             }
         } finally {
             observation.closeReattached(reattached);
@@ -406,6 +406,7 @@ public class McpDispatcher {
             @Nullable String sessionId,
             @Nullable ChannelContext channelContext) {
         var info = new OperationInfo(OperationKind.NOTIFICATION, method, null);
+        info.traceparent(extractTraceparent(params));
         info.sessionId(sessionId);
         var observation = Observation.start(observationListeners(), info);
         observation.closeStart();
@@ -531,7 +532,7 @@ public class McpDispatcher {
         var observation = context.observation();
         observation.closeStart();
         var wireError = context.responseMapper().error(error);
-        observation.complete(new OperationOutcome.Rejected(error, wireError.code()));
+        observation.complete(new OperationOutcome.Rejected(error, wireError.httpStatus(), wireError.code()));
         var body = JsonRpcCodec.serializeError(id, wireError.code(), wireError.message(), wireError.data());
         return new DispatchResult.Response(body, null, wireError.httpStatus());
     }

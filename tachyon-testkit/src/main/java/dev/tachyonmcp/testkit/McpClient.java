@@ -78,8 +78,30 @@ public abstract class McpClient implements Closeable {
     @Override
     public void close() {
         closed = true;
-        openStreams.forEach(SseStream::close);
-        httpClient.close();
+        RuntimeException failure = null;
+        for (var stream : openStreams) {
+            try {
+                stream.close();
+            } catch (RuntimeException e) {
+                failure = addSuppressed(failure, e);
+            }
+        }
+        try {
+            httpClient.close();
+        } catch (RuntimeException e) {
+            failure = addSuppressed(failure, e);
+        }
+        if (failure != null) {
+            throw failure;
+        }
+    }
+
+    private static RuntimeException addSuppressed(@Nullable RuntimeException failure, RuntimeException next) {
+        if (failure == null) {
+            return next;
+        }
+        failure.addSuppressed(next);
+        return failure;
     }
 
     /**
