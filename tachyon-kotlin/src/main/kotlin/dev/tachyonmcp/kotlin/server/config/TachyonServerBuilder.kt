@@ -109,13 +109,34 @@ public class TachyonServerBuilder
         }
 
         @OptIn(ExperimentalContracts::class)
+        @Deprecated("Use observability { } instead")
         public inline fun monitoring(
-            crossinline configure: (@TachyonDsl MonitoringScope).() -> Unit,
+            crossinline configure: (
+            @TachyonDsl
+            @Suppress("DEPRECATION")
+            MonitoringScope
+            ).() -> Unit,
         ): TachyonServerBuilder {
             contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
+            @Suppress("DEPRECATION")
             val scope = MonitoringScope()
             scope.configure()
-            delegate.monitoring { scope.applyTo(it) }
+            delegate.observability { scope.applyTo(it) }
+            return this
+        }
+
+        /**
+         * Configures slow-request diagnostics and the passive MCP observation lifecycle.
+         */
+        @OptIn(ExperimentalContracts::class)
+        @ExperimentalApi
+        public inline fun observability(
+            crossinline configure: (@TachyonDsl ObservabilityScope).() -> Unit,
+        ): TachyonServerBuilder {
+            contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
+            val scope = ObservabilityScope()
+            scope.configure()
+            delegate.observability { scope.applyTo(it) }
             return this
         }
 

@@ -1,6 +1,6 @@
 # Configuration — Tachyon MCP Server
 
-All configuration flows through `TachyonServer.builder()` (Java) or the `TachyonServer { }` DSL (Kotlin). Scopes: `info`, `capabilities`, `network`, `session`, `runtime`, `monitoring`.
+All configuration flows through `TachyonServer.builder()` (Java) or the `TachyonServer { }` DSL (Kotlin). Scopes: `info`, `capabilities`, `network`, `session`, `runtime`, `observability`.
 
 ```java
 var server = TachyonServer.builder()
@@ -290,9 +290,10 @@ Configured via `runtime { }` / `RuntimeConfig.Builder`.
 | `requestTimeout` | `60s` | Timeout for pending requests sent to the client |
 | `clock` | `Clock.systemUTC()` | Clock for task timestamps and TTL/expiry checks; set a fixed or controllable clock in tests |
 
-## Monitoring
+## Observability
 
-Configured via `monitoring { }` / `MonitoringConfig.Builder`. Off by default.
+Configured via Java `ObservabilityConfig.Builder` / Kotlin `observability { }`. Slow-request
+diagnostics and payload capture are off by default. Observation listeners are empty by default.
 
 | Option | Default | Description |
 |---|---|---|
@@ -307,7 +308,7 @@ Both share the same threshold and are silenced at default (flag off, zero overhe
 
 ```java
 var server = TachyonServer.builder()
-    .monitoring(m -> m.slowRequestLogging().slowRequestThreshold(Duration.ofSeconds(5)))
+    .observability(o -> o.slowRequestLogging().slowRequestThreshold(Duration.ofSeconds(5)))
     .port(8080)
     .build();
 server.start();
@@ -315,12 +316,15 @@ server.start();
 
 ```kotlin
 TachyonServer(port = 8080) {
-    monitoring {
-        slowRequestLogging = true
-        slowRequestThreshold = 5.seconds
+    observability {
+        slowRequestLogging(threshold = 5.seconds)
     }
 }
 ```
+
+`ServerBuilder.monitoring(...)`, Kotlin `monitoring { }`, and `ServerConfig.monitoring()` are
+deprecated compatibility aliases. They read and write the same observability values and will be
+removed in the next release.
 
 ## Identity
 

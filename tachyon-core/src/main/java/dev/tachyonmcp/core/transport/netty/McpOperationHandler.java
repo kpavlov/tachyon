@@ -291,7 +291,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             @Nullable Throwable ex,
             ChannelContext ic) {
         var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
-        var m = server.config().monitoring();
+        var m = server.config().observability();
         if (ex != null) {
             logger.error("Dispatch failed: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs, ex);
             if (postStream.started()) {

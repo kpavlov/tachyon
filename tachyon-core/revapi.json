@@ -1082,6 +1082,36 @@
           "attachments": {
             "since": "1.0.0-beta.23"
           }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.visibilityReduced",
+          "old": "method void dev.tachyonmcp.core.server.config.ServerConfig::<init>(dev.tachyonmcp.api.server.config.ServerIdentity, dev.tachyonmcp.core.server.config.CapabilitiesConfig, dev.tachyonmcp.core.server.config.SessionConfig, dev.tachyonmcp.core.server.config.NetworkConfig, dev.tachyonmcp.api.server.config.RuntimeConfig, dev.tachyonmcp.api.server.config.MonitoringConfig)",
+          "new": "method void dev.tachyonmcp.core.server.config.ServerConfig::<init>(dev.tachyonmcp.core.server.config.ServerConfig.Builder)",
+          "justification": "ServerConfig construction now goes through builder() so adding aggregate configuration groups no longer changes a public positional constructor",
+          "attachments": {
+            "since": "1.0.0-beta.24"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.noLongerInheritsFromClass",
+          "old": "class dev.tachyonmcp.core.server.config.ServerConfig",
+          "new": "class dev.tachyonmcp.core.server.config.ServerConfig",
+          "justification": "ServerConfig changed from a record to an immutable final class so its constructor can be private and construction can be builder-only",
+          "attachments": {
+            "since": "1.0.0-beta.24"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.class.kindChanged",
+          "old": "class dev.tachyonmcp.core.server.config.ServerConfig",
+          "new": "class dev.tachyonmcp.core.server.config.ServerConfig",
+          "justification": "ServerConfig changed from a record to an immutable final class so its constructor can be private and construction can be builder-only",
+          "attachments": {
+            "since": "1.0.0-beta.24"
+          }
         }
       ]
     }

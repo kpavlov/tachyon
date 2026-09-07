@@ -162,9 +162,8 @@ internal class TachyonServerTest {
                     sessionEventStore = InMemorySessionEventStore()
                     sessionIdGenerator { _, req -> req?.headers()?.get("X-Tenant-Id") ?: "anon" }
                 }
-                monitoring {
-                    slowRequestLogging = true
-                    slowRequestThreshold = 15.seconds
+                observability {
+                    slowRequestLogging(threshold = 15.seconds)
                 }
                 pipelineCustomizer { }
                 tool("ping", "Health check") { ToolResult.text("pong") }
@@ -203,7 +202,7 @@ internal class TachyonServerTest {
             }
 
             // capabilities
-            with(config.capabilities()) {
+            with(config.capabilities) {
                 tools().mode() shouldBe Mode.ON
                 tools().listChanged() shouldBe true
                 tools().pageSize() shouldBe 20
@@ -238,9 +237,9 @@ internal class TachyonServerTest {
                 allowPrivateNetworks shouldBe true
             }
 
-            with(config.monitoring) {
-                slowRequestLogging() shouldBe true
-                slowRequestThreshold() shouldBe 15.seconds.toJavaDuration()
+            with(config.observability) {
+                slowRequestLogging shouldBe true
+                slowRequestThreshold shouldBe 15.seconds.toJavaDuration()
             }
 
             // registered features

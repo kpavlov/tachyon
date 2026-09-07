@@ -82,6 +82,7 @@ public final class PromptMethodHandlers {
             if (entry == null) {
                 return CompletableFuture.completedFuture(ServerErrors.invalidParams("Prompt not found"));
             }
+            context.observation().info().target(entry.descriptor().name());
             var extensionId = entry.descriptor().extensionId();
             if (extensionId != null && !context.isExtensionEnabled(extensionId)) {
                 return CompletableFuture.completedFuture(ServerErrors.invalidParams("Prompt not found"));

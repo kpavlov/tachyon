@@ -6,12 +6,18 @@ import java.io.UncheckedIOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.URI;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import javax.net.ssl.SSLSocketFactory;
 import me.kpavlov.finchly.queue.MessageAggregator;
 import me.kpavlov.finchly.queue.QueueSubscriber;
@@ -19,15 +25,13 @@ import org.awaitility.Awaitility;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Raw socket GET against a Tachyon MCP server's Streamable HTTP endpoint — for reconnect /
- * {@code Last-Event-ID} scenarios {@link java.net.http.HttpClient}'s higher-level, {@code Stream}-
- * based body handling doesn't give fine enough control over: bounded polling reads, and an
- * explicit mid-stream close to simulate a dropped connection.
+ * A background SSE frame stream used for both raw-socket GET subscriptions and streaming POST
+ * responses.
  *
- * <p>A {@link QueueSubscriber} for this transport: {@link #start()} opens the socket and a
- * background virtual thread parses arriving SSE frames, delivering each to the underlying {@link
- * MessageAggregator} so callers {@link #await} a specific frame the same way {@link
- * McpClient#awaitNotification} awaits a notification.
+ * <p>The raw-socket mode supports reconnect / {@code Last-Event-ID} scenarios where {@link
+ * java.net.http.HttpClient}'s higher-level body handling does not provide enough control. POST mode
+ * consumes the response returned by {@link McpClient#sendStreamingRequest(String, String)}. Both
+ * modes deliver parsed frames through the same {@link QueueSubscriber} API.
  */
 public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCloseable {
 
@@ -35,12 +39,14 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
     private static final Pattern EVENT_LINE = Pattern.compile("event:\\s?(.*)");
     private static final Pattern DATA_LINE = Pattern.compile("data:\\s?(.*)");
 
-    private final URI endpoint;
-    private final String sessionId;
+    private final @Nullable URI endpoint;
+    private final @Nullable String sessionId;
     private final @Nullable String lastEventId;
-    private final String protocolVersion;
+    private final @Nullable String protocolVersion;
+    private final @Nullable HttpResponse<Stream<String>> response;
 
     private @Nullable Socket socket;
+    private @Nullable CompletableFuture<Void> responseConsumer;
     private final StringBuilder rawResponse = new StringBuilder();
     private volatile boolean stopped;
 
@@ -62,14 +68,28 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
         this.sessionId = sessionId;
         this.lastEventId = lastEventId;
         this.protocolVersion = protocolVersion;
+        this.response = null;
     }
 
-    /**
-     * Opens the socket, sends the GET request, and starts the background frame-parsing thread.
-     */
+    SseStream(HttpResponse<Stream<String>> response) {
+        super(new MessageAggregator<>());
+        this.endpoint = null;
+        this.sessionId = null;
+        this.lastEventId = null;
+        this.protocolVersion = null;
+        this.response = Objects.requireNonNull(response, "response cannot be null");
+    }
+
+    /** Starts consuming and parsing frames from the configured GET or POST stream. */
     @Override
     public void start() {
+        if (response != null) {
+            responseConsumer = CompletableFuture.runAsync(
+                    this::readResponse, command -> Thread.ofVirtual().start(command));
+            return;
+        }
         try {
+            var endpoint = Objects.requireNonNull(this.endpoint);
             var host = endpoint.getHost();
             var port = endpoint.getPort() != -1 ? endpoint.getPort() : defaultPort(endpoint);
             socket = "https".equalsIgnoreCase(endpoint.getScheme())
@@ -85,10 +105,10 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
                     .append(port)
                     .append("\r\n")
                     .append("MCP-Session-Id: ")
-                    .append(sessionId)
+                    .append(Objects.requireNonNull(sessionId))
                     .append("\r\n")
                     .append("MCP-Protocol-Version: ")
-                    .append(protocolVersion)
+                    .append(Objects.requireNonNull(protocolVersion))
                     .append("\r\n")
                     .append("Accept: text/event-stream\r\n");
             if (lastEventId != null) {
@@ -108,12 +128,17 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
         return "https".equalsIgnoreCase(endpoint.getScheme()) ? 443 : 80;
     }
 
-    /**
-     * Closes the socket, simulating a dropped connection, and stops the background reader.
-     */
+    /** Closes the response or socket and stops the background reader. */
     @Override
     public void stop() {
+        if (stopped) {
+            return;
+        }
         stopped = true;
+        if (response != null) {
+            response.body().close();
+            awaitResponseConsumer();
+        }
         if (socket != null) {
             try {
                 socket.close();
@@ -123,9 +148,7 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
         }
     }
 
-    /**
-     * Stops the background reader and closes the socket, same as {@link #stop()}.
-     */
+    /** Stops the background reader and closes its source, same as {@link #stop()}. */
     @Override
     public void close() {
         stop();
@@ -184,7 +207,7 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
     }
 
     /**
-     * The raw response bytes accumulated so far (status line, headers, and any SSE body), as text.
+     * The raw response bytes accumulated so far in raw-socket GET mode, as text.
      *
      * @return the raw response text
      */
@@ -193,9 +216,8 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
     }
 
     /**
-     * Polls {@link #rawResponse()} until {@code predicate} holds, or fails after {@code timeout}.
-     * For plain, non-SSE-framed responses (a 4xx status and body) that never deliver a frame, so
-     * {@link #await} has nothing to wait on.
+     * Polls {@link #rawResponse()} in raw-socket GET mode until {@code predicate} holds, or fails
+     * after {@code timeout}. This supports plain responses that never deliver an SSE frame.
      *
      * @param predicate the predicate to match against the raw response
      * @param timeout   the maximum wait duration
@@ -213,9 +235,7 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
         var socket = Objects.requireNonNull(this.socket, "start() must run before the reader thread");
         var buf = new byte[1024];
         var lineBuf = new StringBuilder();
-        String pendingId = null;
-        String pendingEvent = null;
-        StringBuilder pendingData = null;
+        var parser = new FrameParser();
         while (!stopped) {
             try {
                 var n = socket.getInputStream().read(buf);
@@ -230,38 +250,83 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
                 while ((newline = lineBuf.indexOf("\n")) >= 0) {
                     var line = lineBuf.substring(0, newline).stripTrailing();
                     lineBuf.delete(0, newline + 1);
-                    if (line.isEmpty()) {
-                        // Blank line terminates the event per the SSE spec: dispatch once, joining
-                        // any accumulated data: lines with embedded newlines.
-                        if (pendingData != null) {
-                            deliver(new SseFrame(pendingId, pendingEvent, pendingData.toString()));
-                        }
-                        pendingId = null;
-                        pendingEvent = null;
-                        pendingData = null;
-                        continue;
-                    }
-                    var idMatcher = ID_LINE.matcher(line);
-                    var eventMatcher = EVENT_LINE.matcher(line);
-                    var dataMatcher = DATA_LINE.matcher(line);
-                    if (idMatcher.matches()) {
-                        pendingId = idMatcher.group(1);
-                    } else if (eventMatcher.matches()) {
-                        pendingEvent = eventMatcher.group(1);
-                    } else if (dataMatcher.matches()) {
-                        if (pendingData == null) {
-                            pendingData = new StringBuilder();
-                        } else {
-                            pendingData.append('\n');
-                        }
-                        pendingData.append(dataMatcher.group(1));
-                    }
+                    parser.accept(line);
                 }
             } catch (SocketTimeoutException e) {
                 // No data this poll; keep reading until stopped, or the socket closes/errors.
             } catch (IOException e) {
                 break;
             }
+        }
+    }
+
+    private void readResponse() {
+        var response = Objects.requireNonNull(this.response);
+        var parser = new FrameParser();
+        try (var lines = response.body()) {
+            lines.forEach(parser::accept);
+            parser.finish();
+        }
+    }
+
+    private void awaitResponseConsumer() {
+        var consumer = responseConsumer;
+        if (consumer == null) {
+            return;
+        }
+        try {
+            consumer.get(5, TimeUnit.SECONDS);
+        } catch (ExecutionException e) {
+            var cause = e.getCause();
+            if (!(cause instanceof IOException) && !(cause instanceof UncheckedIOException)) {
+                throw new IllegalStateException("SSE response consumer failed", cause);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while closing SSE response", e);
+        } catch (TimeoutException e) {
+            throw new IllegalStateException("Timed out while closing SSE response", e);
+        }
+    }
+
+    private final class FrameParser {
+        private @Nullable String pendingId;
+        private @Nullable String pendingEvent;
+        private @Nullable StringBuilder pendingData;
+
+        void accept(String line) {
+            if (line.isEmpty()) {
+                emit();
+                return;
+            }
+            var idMatcher = ID_LINE.matcher(line);
+            var eventMatcher = EVENT_LINE.matcher(line);
+            var dataMatcher = DATA_LINE.matcher(line);
+            if (idMatcher.matches()) {
+                pendingId = idMatcher.group(1);
+            } else if (eventMatcher.matches()) {
+                pendingEvent = eventMatcher.group(1);
+            } else if (dataMatcher.matches()) {
+                if (pendingData == null) {
+                    pendingData = new StringBuilder();
+                } else {
+                    pendingData.append('\n');
+                }
+                pendingData.append(dataMatcher.group(1));
+            }
+        }
+
+        void finish() {
+            emit();
+        }
+
+        private void emit() {
+            if (pendingData != null) {
+                deliver(new SseFrame(pendingId, pendingEvent, pendingData.toString()));
+            }
+            pendingId = null;
+            pendingEvent = null;
+            pendingData = null;
         }
     }
 }

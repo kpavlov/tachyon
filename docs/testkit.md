@@ -107,3 +107,18 @@ name, or take a snapshot of everything received so far:
 client.awaitNotification("notifications/progress")
     .satisfies(params -> assertThat(params.path("progressToken").asString()).isEqualTo("tok-1"));
 ```
+
+For long-lived streaming POSTs, including `subscriptions/listen`, use `openPostStream`. It verifies
+the SSE response and exposes parsed `SseFrame` values through the same `SseStream` API used by GET
+subscriptions:
+
+```java
+try (var stream = client.openPostStream(null, """
+    {"jsonrpc":"2.0","id":1,"method":"subscriptions/listen",
+     "params":{"notifications":{"toolsListChanged":true}}}
+    """)) {
+    stream.await(
+        frame -> frame.data().contains("notifications/subscriptions/acknowledged"),
+        Duration.ofSeconds(5));
+}
+```

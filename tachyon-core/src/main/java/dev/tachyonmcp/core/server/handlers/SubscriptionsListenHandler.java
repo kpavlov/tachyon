@@ -8,10 +8,13 @@ import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.features.subscriptions.SubscriptionRegistry;
 import dev.tachyonmcp.core.server.features.tasks.TasksExtension;
+import dev.tachyonmcp.core.server.observability.OperationOutcome;
 import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Handles MCP 2026-07-28's {@code subscriptions/listen} (replaces {@code resources/subscribe} and
@@ -23,6 +26,8 @@ import org.jspecify.annotations.Nullable;
 @InternalApi
 public final class SubscriptionsListenHandler
         implements RpcMethodHandler<ProtocolRequestMapper.SubscriptionListenRequest, Object> {
+
+    private static final Logger logger = LoggerFactory.getLogger(SubscriptionsListenHandler.class);
 
     private final SubscriptionRegistry registry;
 
@@ -71,10 +76,18 @@ public final class SubscriptionsListenHandler
         var pending = new CompletableFuture<>();
         var key = registry.activate(subscriptionId, stream, filter, context.responseMapper(), pending);
         stream.start();
+        // Registered before completing observation: an implementation without Netty's
+        // already-closed-future-fires-immediately semantics could otherwise miss a disconnect that
+        // races in between the two calls.
         stream.onClose(() -> {
             registry.remove(key);
             pending.cancel(false);
+            logger.debug("subscriptions/listen stream ended: subscriptionId={}", subscriptionId);
         });
+        // Establishment is this operation's terminal observation fact — the returned future spans
+        // the SSE stream's whole lifetime (resolves only on disconnect/shutdown), so the generic
+        // dispatch-completion path must not be made to wait for it.
+        context.observation().complete(new OperationOutcome.StreamEstablished());
         return pending;
     }
 }
