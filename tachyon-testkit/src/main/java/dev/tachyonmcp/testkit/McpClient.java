@@ -44,7 +44,7 @@ public abstract class McpClient implements Closeable {
     private final URI mcpEndpoint;
     private final HttpClient httpClient;
     private final MessageAggregator<JsonNode> notifications = new MessageAggregator<>();
-    private final List<SseStream> openGetStreams = new CopyOnWriteArrayList<>();
+    private final List<SseStream> openStreams = new CopyOnWriteArrayList<>();
     private volatile @Nullable String sessionId;
     private volatile boolean closed;
 
@@ -78,7 +78,7 @@ public abstract class McpClient implements Closeable {
     @Override
     public void close() {
         closed = true;
-        openGetStreams.forEach(SseStream::close);
+        openStreams.forEach(SseStream::close);
         httpClient.close();
     }
 
@@ -104,7 +104,7 @@ public abstract class McpClient implements Closeable {
      */
     public SseStream openGetStream(String sessionId, @Nullable String lastEventId) {
         var subscriber = new SseStream(mcpEndpoint, sessionId, lastEventId, protocolVersion());
-        openGetStreams.add(subscriber);
+        openStreams.add(subscriber);
         subscriber.start();
         return subscriber;
     }
@@ -379,6 +379,33 @@ public abstract class McpClient implements Closeable {
         if (sessionId != null) builder.header("MCP-Session-Id", sessionId);
         return httpClient.send(
                 builder.POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofLines());
+    }
+
+    /**
+     * POSTs an MCP request and consumes its SSE response in the background.
+     *
+     * <p>The returned response is also closed when this client closes.
+     *
+     * @param sessionId the session id, or {@code null}
+     * @param body the JSON-RPC request body
+     * @return the parsed SSE stream
+     * @throws Exception if the request fails
+     */
+    public SseStream openPostStream(@Nullable String sessionId, @Language("json") String body) throws Exception {
+        final var response = sendStreamingRequest(sessionId, body);
+        final var stream = new SseStream(response);
+        try {
+            assertThat(response.statusCode()).as("streaming response status").isEqualTo(200);
+            assertThat(response.headers().firstValue("content-type").orElse(""))
+                    .as("streaming response content type")
+                    .startsWith("text/event-stream");
+        } catch (AssertionError failure) {
+            stream.close();
+            throw failure;
+        }
+        openStreams.add(stream);
+        stream.start();
+        return stream;
     }
 
     /**
