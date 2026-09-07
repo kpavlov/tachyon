@@ -113,6 +113,7 @@ public final class ToolMethodHandlers {
             if (handler == null) {
                 return CompletableFuture.completedFuture(invalidParams("Unknown tool: " + request.name()));
             }
+            context.observation().info().target(handler.descriptor().name());
             var extensionId = handler.descriptor().extensionId();
             if (extensionId != null && !context.isExtensionEnabled(extensionId)) {
                 return CompletableFuture.completedFuture(invalidParams("Unknown tool: " + request.name()));

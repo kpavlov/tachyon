@@ -76,15 +76,18 @@ public final class SubscriptionsListenHandler
         var pending = new CompletableFuture<>();
         var key = registry.activate(subscriptionId, stream, filter, context.responseMapper(), pending);
         stream.start();
-        // Establishment is this operation's terminal observation fact — the returned future spans
-        // the SSE stream's whole lifetime (resolves only on disconnect/shutdown), so the generic
-        // dispatch-completion path must not be made to wait for it.
-        context.observation().complete(new OperationOutcome.StreamEstablished());
+        // Registered before completing observation: an implementation without Netty's
+        // already-closed-future-fires-immediately semantics could otherwise miss a disconnect that
+        // races in between the two calls.
         stream.onClose(() -> {
             registry.remove(key);
             pending.cancel(false);
             logger.debug("subscriptions/listen stream ended: subscriptionId={}", subscriptionId);
         });
+        // Establishment is this operation's terminal observation fact — the returned future spans
+        // the SSE stream's whole lifetime (resolves only on disconnect/shutdown), so the generic
+        // dispatch-completion path must not be made to wait for it.
+        context.observation().complete(new OperationOutcome.StreamEstablished());
         return pending;
     }
 }

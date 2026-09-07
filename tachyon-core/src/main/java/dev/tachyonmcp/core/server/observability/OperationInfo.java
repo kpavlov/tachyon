@@ -23,8 +23,9 @@ public final class OperationInfo {
     private final @Nullable RequestId requestId;
 
     private @Nullable String sessionId;
-    private @Nullable String traceparent;
+    private @Nullable String traceParent;
     private @Nullable CapturedPayload requestPayload;
+    private @Nullable String target;
 
     public OperationInfo(OperationKind kind, String method, @Nullable RequestId requestId) {
         this.kind = kind;
@@ -53,11 +54,11 @@ public final class OperationInfo {
     }
 
     public @Nullable String traceparent() {
-        return traceparent;
+        return traceParent;
     }
 
     public void traceparent(@Nullable String traceparent) {
-        this.traceparent = traceparent;
+        this.traceParent = traceparent;
     }
 
     public @Nullable CapturedPayload requestPayload() {
@@ -66,5 +67,20 @@ public final class OperationInfo {
 
     public void requestPayload(@Nullable CapturedPayload requestPayload) {
         this.requestPayload = requestPayload;
+    }
+
+    /**
+     * The resolved target name for {@code tools/call}/{@code prompts/get} (a {@link
+     * dev.tachyonmcp.api.server.features.tools.ToolDescriptor}/{@link
+     * dev.tachyonmcp.api.server.features.prompts.PromptDescriptor} name), or {@code null} when
+     * not applicable or not yet resolved. Always the resolved descriptor's own name — never the
+     * raw wire parameter — so a client cannot pump arbitrary, unbounded values into it.
+     */
+    public @Nullable String target() {
+        return target;
+    }
+
+    public void target(@Nullable String target) {
+        this.target = target;
     }
 }
