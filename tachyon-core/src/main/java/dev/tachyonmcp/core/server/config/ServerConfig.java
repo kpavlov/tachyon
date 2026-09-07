@@ -7,15 +7,16 @@ import dev.tachyonmcp.api.server.config.ServerIdentity;
 import java.util.Objects;
 
 /**
- * Aggregated server configuration grouping identity, capabilities, session, network, runtime, and
- * monitoring settings.
+ * Aggregated server configuration grouping identity, capabilities, session, network, runtime,
+ * monitoring, and observability settings.
  *
- * @param identity     server identity metadata (name, version, etc.)
- * @param capabilities which MCP features are enabled
- * @param session      session lifecycle and persistence settings
- * @param network      transport-level settings (host, port, CORS, etc.)
- * @param runtime      handler-execution runtime settings (shutdown drain, etc.)
- * @param monitoring   diagnostics and observability settings
+ * @param identity      server identity metadata (name, version, etc.)
+ * @param capabilities  which MCP features are enabled
+ * @param session       session lifecycle and persistence settings
+ * @param network       transport-level settings (host, port, CORS, etc.)
+ * @param runtime       handler-execution runtime settings (shutdown drain, etc.)
+ * @param monitoring    diagnostics and observability settings
+ * @param observability passive observation-lifecycle settings (listeners, payload capture)
  */
 public record ServerConfig(
         ServerIdentity identity,
@@ -23,7 +24,8 @@ public record ServerConfig(
         SessionConfig session,
         NetworkConfig network,
         RuntimeConfig runtime,
-        MonitoringConfig monitoring) {
+        MonitoringConfig monitoring,
+        ObservabilityConfig observability) {
 
     public ServerConfig {
         Objects.requireNonNull(identity, "identity cannot be null");
@@ -32,5 +34,6 @@ public record ServerConfig(
         Objects.requireNonNull(network, "network cannot be null");
         Objects.requireNonNull(runtime, "runtime cannot be null");
         Objects.requireNonNull(monitoring, "monitoring cannot be null");
+        Objects.requireNonNull(observability, "observability cannot be null");
     }
 }

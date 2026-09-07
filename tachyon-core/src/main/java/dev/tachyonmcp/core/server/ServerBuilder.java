@@ -13,6 +13,7 @@ import dev.tachyonmcp.api.server.features.resources.Resources;
 import dev.tachyonmcp.api.server.features.tools.Tools;
 import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.core.server.config.NetworkConfig;
+import dev.tachyonmcp.core.server.config.ObservabilityConfig;
 import dev.tachyonmcp.core.server.config.ServerConfig;
 import dev.tachyonmcp.core.server.config.SessionConfig;
 import io.netty.channel.ChannelPipeline;
@@ -40,6 +41,10 @@ public interface ServerBuilder {
 
     /** Configures monitoring. */
     ServerBuilder monitoring(Consumer<MonitoringConfig.Builder> configurer);
+
+    /** Configures the passive MCP observation lifecycle (listeners, payload capture). */
+    @ExperimentalApi
+    ServerBuilder observability(Consumer<ObservabilityConfig.Builder> configurer);
 
     /** Configures JSON serialization and validation. */
     ServerBuilder json(Consumer<JsonConfig.Builder> configurer);

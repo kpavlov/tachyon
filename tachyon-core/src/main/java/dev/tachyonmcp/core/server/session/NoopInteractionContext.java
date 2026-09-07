@@ -15,6 +15,7 @@ import dev.tachyonmcp.core.protocol.mcp.v2025_11_25.McpProtocol;
 import dev.tachyonmcp.core.runtime.Session;
 import dev.tachyonmcp.core.server.OutboundSseStream;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
+import dev.tachyonmcp.core.server.observability.Observation;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -128,5 +129,10 @@ public class NoopInteractionContext implements DispatchContext {
     @Override
     public void setOutboundStream(@Nullable OutboundSseStream stream) {
         throw new UnsupportedOperationException("No outbound stream available");
+    }
+
+    @Override
+    public Observation observation() {
+        return Observation.NONE;
     }
 }

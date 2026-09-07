@@ -14,6 +14,11 @@ import dev.tachyonmcp.core.runtime.Session;
 import dev.tachyonmcp.core.runtime.SessionState;
 import dev.tachyonmcp.core.server.domain.ServerErrors;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
+import dev.tachyonmcp.core.server.observability.Observation;
+import dev.tachyonmcp.core.server.observability.ObservationListener;
+import dev.tachyonmcp.core.server.observability.OperationInfo;
+import dev.tachyonmcp.core.server.observability.OperationKind;
+import dev.tachyonmcp.core.server.observability.OperationOutcome;
 import dev.tachyonmcp.core.server.session.DefaultDispatchContext;
 import dev.tachyonmcp.core.server.session.DispatchContext;
 import dev.tachyonmcp.core.server.session.SessionEvent;
@@ -87,15 +92,29 @@ public class McpDispatcher {
      * Decorates the per-channel context with the per-request MCP dispatch surface. Without a channel
      * context (direct invocation, tests), fresh channel state is created for the default protocol.
      */
-    private DispatchContext dispatchContext(@Nullable ChannelContext channelContext) {
+    private DefaultDispatchContext dispatchContext(@Nullable ChannelContext channelContext) {
         return dispatchContext(channelContext, null);
     }
 
-    private DispatchContext dispatchContext(@Nullable ChannelContext channelContext, @Nullable RequestId id) {
+    private DefaultDispatchContext dispatchContext(@Nullable ChannelContext channelContext, @Nullable RequestId id) {
         var channel = channelContext != null
                 ? channelContext
                 : Protocols.list().getFirst().createInteractionContext();
         return new DefaultDispatchContext(channel, server, id);
+    }
+
+    private List<ObservationListener> observationListeners() {
+        return server.config().observability().listeners();
+    }
+
+    /** Extracts {@code _meta.traceparent} from raw params, independent of payload-capture policy. */
+    private static @Nullable String extractTraceparent(@Nullable Object params) {
+        if (params instanceof Map<?, ?> map
+                && map.get("_meta") instanceof Map<?, ?> meta
+                && meta.get("traceparent") instanceof String traceparent) {
+            return traceparent;
+        }
+        return null;
     }
 
     public sealed interface DispatchResult
@@ -165,18 +184,28 @@ public class McpDispatcher {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(method, "method");
 
+        var kind = METHOD_INITIALIZE.equals(method) ? OperationKind.INITIALIZE : OperationKind.REQUEST;
+        var info = new OperationInfo(kind, method, id);
+        info.traceparent(extractTraceparent(params));
+        if (sessionId != null) {
+            info.sessionId(sessionId);
+        }
+        var observation = Observation.start(observationListeners(), info);
+        observation.closeStart();
+
         var requestCtx = dispatchContext(channelContext, id);
+        requestCtx.setObservation(observation);
         try {
             requestCtx.setPermittedLogLevel(requestCtx.requestMapper().permittedLogLevel(params));
         } catch (RequestMappingException e) {
-            return CompletableFuture.completedFuture(errorResult(id, e.error(), requestCtx));
+            return CompletableFuture.completedFuture(rejected(id, e.error(), requestCtx));
         }
         if (METHOD_INITIALIZE.equals(method)) {
             if (sessionId == null) {
                 return dispatchInitializeAsync(id, params, requestCtx, channelContext);
             }
             return CompletableFuture.completedFuture(
-                    errorResult(id, ServerErrors.invalidRequest("Session already initialized"), requestCtx));
+                    rejected(id, ServerErrors.invalidRequest("Session already initialized"), requestCtx));
         }
 
         if (server.isStateless()
@@ -187,17 +216,21 @@ public class McpDispatcher {
             var handler = lookupHandler(method, params, requestCtx);
             if (handler == null) {
                 return CompletableFuture.completedFuture(
-                        errorResult(id, ServerErrors.methodNotFound("Method not found"), requestCtx));
+                        rejected(id, ServerErrors.methodNotFound("Method not found"), requestCtx));
             }
             return invokeHandlerAsync(id, method, params, outboundSseStream, requestCtx, null, handler);
         }
 
         if (sessionId == null) {
+            observation.closeStart();
+            observation.complete(new OperationOutcome.Rejected(null, 400));
             return CompletableFuture.completedFuture(new DispatchResult.Status(400, "Missing MCP-Session-Id header"));
         }
 
         var sessionOpt = server.getSession(sessionId);
         if (sessionOpt.isEmpty()) {
+            observation.closeStart();
+            observation.complete(new OperationOutcome.Rejected(null, 404));
             return CompletableFuture.completedFuture(new DispatchResult.Status(404, "Unknown session"));
         }
         var session = sessionOpt.get();
@@ -209,17 +242,17 @@ public class McpDispatcher {
         var sessionState = session.state();
         if (sessionState == SessionState.CLOSED) {
             return CompletableFuture.completedFuture(
-                    errorResult(id, ServerErrors.invalidRequest("Session is closed"), requestCtx));
+                    rejected(id, ServerErrors.invalidRequest("Session is closed"), requestCtx));
         }
         if (sessionState == SessionState.INITIALIZING && !METHOD_PING.equals(method)) {
-            return CompletableFuture.completedFuture(errorResult(
+            return CompletableFuture.completedFuture(rejected(
                     id, ServerErrors.invalidRequest("Session is not yet active, only ping allowed"), requestCtx));
         }
 
         var handler = lookupHandler(method, params, requestCtx);
         if (handler == null) {
             return CompletableFuture.completedFuture(
-                    errorResult(id, ServerErrors.methodNotFound("Method not found"), requestCtx));
+                    rejected(id, ServerErrors.methodNotFound("Method not found"), requestCtx));
         }
 
         return invokeHandlerAsync(id, method, params, outboundSseStream, requestCtx, session, handler);
@@ -265,6 +298,7 @@ public class McpDispatcher {
                                             startNs,
                                             m.slowRequestThreshold().toMillis())
                                     : CompletableFuture.completedFuture(null);
+                            var reattached = context.observation().reattach();
                             try {
                                 CompletionStage<O> stage = OutboundSseStreamMessageRouter.withDispatchContext(
                                         session != null ? session.id() : null,
@@ -274,6 +308,8 @@ public class McpDispatcher {
                             } catch (Exception e) {
                                 watchdog.cancel(false);
                                 return CompletableFuture.failedFuture(e);
+                            } finally {
+                                context.observation().closeReattached(reattached);
                             }
                         },
                         executor)
@@ -303,26 +339,58 @@ public class McpDispatcher {
     }
 
     private DispatchResult handleHandlerError(RequestId id, String method, Throwable ex, DispatchContext context) {
-        var unwrapped = ex instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : ex;
-        if (unwrapped instanceof CancellationException) {
-            logger.debug("Handler cancelled: method={}, id={}", method, id);
-            return errorResult(id, ServerErrors.internalError("Internal error"), context);
+        var observation = context.observation();
+        var reattached = observation.reattach();
+        DispatchResult dispatchResult;
+        OperationOutcome outcome;
+        try {
+            var unwrapped = ex instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : ex;
+            if (unwrapped instanceof CancellationException) {
+                logger.debug("Handler cancelled: method={}, id={}", method, id);
+                dispatchResult = errorResult(id, ServerErrors.internalError("Internal error"), context);
+                outcome = new OperationOutcome.Cancelled();
+            } else if (unwrapped instanceof RequestMappingException rme) {
+                logger.debug("Request mapping failed: method={}, id={}: {}", method, id, rme.getMessage());
+                var error = rme.error();
+                dispatchResult = errorResult(id, error, context);
+                outcome = new OperationOutcome.HandlerFailed(
+                        error, context.responseMapper().error(error).code(), unwrapped);
+            } else {
+                logger.warn("Handler exception: method={}, id={}: {}", method, id, unwrapped.getMessage(), unwrapped);
+                var error = ServerErrors.internalError("Internal error");
+                dispatchResult = errorResult(id, error, context);
+                outcome = new OperationOutcome.HandlerFailed(
+                        error, context.responseMapper().error(error).code(), unwrapped);
+            }
+        } finally {
+            observation.closeReattached(reattached);
         }
-        if (unwrapped instanceof RequestMappingException rme) {
-            logger.debug("Request mapping failed: method={}, id={}: {}", method, id, rme.getMessage());
-            return errorResult(id, rme.error(), context);
-        }
-        logger.warn("Handler exception: method={}, id={}: {}", method, id, unwrapped.getMessage(), unwrapped);
-        return errorResult(id, ServerErrors.internalError("Internal error"), context);
+        observation.complete(outcome);
+        return dispatchResult;
     }
 
     private <O> DispatchResult handleSuccessOrError(
             RequestId id, String method, O result, @Nullable String sessionId, DispatchContext context) {
-        if (result instanceof ServerError error) {
-            logger.debug("Handler error for {}: {}", method, error.message());
-            return errorResult(id, error, context);
+        var observation = context.observation();
+        var reattached = observation.reattach();
+        DispatchResult dispatchResult;
+        OperationOutcome outcome;
+        try {
+            if (result instanceof ServerError error) {
+                logger.debug("Handler error for {}: {}", method, error.message());
+                dispatchResult = errorResult(id, error, context);
+                outcome = new OperationOutcome.HandlerFailed(
+                        error, context.responseMapper().error(error).code(), null);
+            } else {
+                var body = encodeResponse(id, result, context.responseMapper(), observation);
+                dispatchResult = new DispatchResult.Response(body, sessionId, 200);
+                outcome = new OperationOutcome.Completed(null);
+            }
+        } finally {
+            observation.closeReattached(reattached);
         }
-        return new DispatchResult.Response(encodeResponse(id, result, context.responseMapper()), sessionId, 200);
+        observation.complete(outcome);
+        return dispatchResult;
     }
 
     public DispatchResult dispatchNotification(String method, @Nullable Object params, @Nullable String sessionId) {
@@ -334,11 +402,18 @@ public class McpDispatcher {
             @Nullable Object params,
             @Nullable String sessionId,
             @Nullable ChannelContext channelContext) {
+        var info = new OperationInfo(OperationKind.NOTIFICATION, method, null);
+        info.sessionId(sessionId);
+        var observation = Observation.start(observationListeners(), info);
+        observation.closeStart();
+
         if (server.isStateless()) {
             logger.debug("Stateless notification ignored: {}", method);
+            observation.complete(new OperationOutcome.NotificationIgnored());
             return DispatchResult.Accepted.INSTANCE;
         }
         var context = dispatchContext(channelContext);
+        context.setObservation(observation);
 
         final Optional<Session> sessionOpt;
         if (sessionId != null) {
@@ -355,15 +430,18 @@ public class McpDispatcher {
                         logger.info("Session activated: {}", sessionId);
                     }
                 });
+                observation.complete(new OperationOutcome.NotificationAccepted());
                 return DispatchResult.Accepted.INSTANCE;
             }
             case NOTIFICATIONS_CANCELLED -> {
                 handleCancellation(context, params, sessionId);
+                observation.complete(new OperationOutcome.NotificationAccepted());
                 return DispatchResult.Accepted.INSTANCE;
             }
             default -> {}
         }
         logger.debug("Unhandled notification: {}", method);
+        observation.complete(new OperationOutcome.NotificationIgnored());
         return DispatchResult.Accepted.INSTANCE;
     }
 
@@ -404,13 +482,14 @@ public class McpDispatcher {
         var handler = server.getHandler("initialize");
         if (handler == null) {
             return CompletableFuture.completedFuture(
-                    errorResult(id, ServerErrors.methodNotFound("Method not found: initialize"), ic));
+                    rejected(id, ServerErrors.methodNotFound("Method not found: initialize"), ic));
         }
         // Stateful init creates the session before invoking the handler; stateless skips it. Both
         // then share one async pipeline — the response sessionId falls out of ic.session() (null
         // when stateless, since no session was set).
         return CompletableFuture.supplyAsync(
                         () -> {
+                            var reattached = ic.observation().reattach();
                             try {
                                 if (!server.isStateless()) {
                                     ic.setSession(server.createSession(generateSessionId(channelContext)));
@@ -418,6 +497,8 @@ public class McpDispatcher {
                                 return (CompletionStage<Object>) decodeAndHandleAsync(handler, ic, rawParams);
                             } catch (Exception e) {
                                 return CompletableFuture.failedFuture(e);
+                            } finally {
+                                ic.observation().closeReattached(reattached);
                             }
                         },
                         executor)
@@ -428,6 +509,7 @@ public class McpDispatcher {
                     }
                     final var session = ic.session();
                     var sessionId = session != null ? session.id() : null;
+                    ic.observation().info().sessionId(sessionId);
                     return handleSuccessOrError(id, "initialize", result, sessionId, ic);
                 });
     }
@@ -438,7 +520,17 @@ public class McpDispatcher {
         return new DispatchResult.Response(body, null, wireError.httpStatus());
     }
 
-    private static byte[] encodeResponse(RequestId id, Object result, ProtocolResponseMapper mapper) {
+    /** Like {@link #errorResult}, for a rejection decided before any handler ran — completes observation as {@code Rejected}. */
+    private DispatchResult rejected(RequestId id, ServerError error, DispatchContext context) {
+        var observation = context.observation();
+        observation.closeStart();
+        var wireError = context.responseMapper().error(error);
+        observation.complete(new OperationOutcome.Rejected(error, wireError.code()));
+        var body = JsonRpcCodec.serializeError(id, wireError.code(), wireError.message(), wireError.data());
+        return new DispatchResult.Response(body, null, wireError.httpStatus());
+    }
+
+    private static byte[] encodeResponse(RequestId id, Object result, ProtocolResponseMapper mapper, Observation observation) {
         if (result instanceof String s) {
             return JsonRpcCodec.serializeResponse(id, s);
         }
@@ -448,6 +540,7 @@ public class McpDispatcher {
         } catch (Exception e) {
             logger.error(
                     "JSON serialization failed for {}: {}", result.getClass().getSimpleName(), e.getMessage(), e);
+            observation.markSerializationFailed(e);
             return encodeError(id, ServerErrors.internalError("Failed to encode response"), mapper);
         }
     }

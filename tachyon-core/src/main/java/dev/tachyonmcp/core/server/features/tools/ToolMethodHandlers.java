@@ -181,6 +181,7 @@ public final class ToolMethodHandlers {
                 var snapshot = context.engine()
                         .tasksRegistry()
                         .publish(task.snapshot(), mapped.request().progressToken());
+                context.observation().markTaskHandoff(snapshot.taskId());
                 return context.responseMapper().createTaskResult(snapshot);
             }
             if (taskSupport == TaskSupport.REQUIRED || mapped.taskAugmented()) {

@@ -18,6 +18,7 @@ import dev.tachyonmcp.core.runtime.SseEvent;
 import dev.tachyonmcp.core.server.OutboundSseStream;
 import dev.tachyonmcp.core.server.internal.NotificationLogSupport;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
+import dev.tachyonmcp.core.server.observability.Observation;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcCodec;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -36,6 +37,7 @@ public class DefaultDispatchContext implements DispatchContext {
     private final ContextNotifications notifications = new NotificationsImpl();
     private volatile @Nullable OutboundSseStream outboundStream;
     private volatile @Nullable LoggingLevel permittedLogLevel;
+    private volatile Observation observation = Observation.NONE;
 
     public DefaultDispatchContext(ChannelContext channel, ServerEngine server) {
         this(channel, server, null);
@@ -192,6 +194,16 @@ public class DefaultDispatchContext implements DispatchContext {
     @Override
     public ProtocolRequestMapper requestMapper() {
         return protocol().requestMapper();
+    }
+
+    @Override
+    public Observation observation() {
+        return observation;
+    }
+
+    /** Sets the observation accumulator for this dispatch. Only {@code McpDispatcher} calls this. */
+    public void setObservation(Observation observation) {
+        this.observation = observation;
     }
 
     private class NotificationsImpl implements ContextNotifications {

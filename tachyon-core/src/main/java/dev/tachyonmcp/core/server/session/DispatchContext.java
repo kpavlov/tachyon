@@ -9,6 +9,7 @@ import dev.tachyonmcp.core.protocol.ProtocolResponseMapper;
 import dev.tachyonmcp.core.runtime.ChannelContext;
 import dev.tachyonmcp.core.server.OutboundSseStream;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
+import dev.tachyonmcp.core.server.observability.Observation;
 import org.jspecify.annotations.Nullable;
 
 @InternalApi
@@ -53,4 +54,7 @@ public interface DispatchContext extends ChannelContext {
 
     /** Sets the outbound SSE stream for this dispatch. */
     void setOutboundStream(@Nullable OutboundSseStream stream);
+
+    /** Returns the observation accumulator for the operation being dispatched ({@link Observation#NONE} when disabled). */
+    Observation observation();
 }

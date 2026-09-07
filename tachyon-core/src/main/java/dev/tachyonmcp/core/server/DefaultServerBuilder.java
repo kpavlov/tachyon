@@ -15,6 +15,7 @@ import dev.tachyonmcp.api.server.features.resources.Resources;
 import dev.tachyonmcp.api.server.features.tools.Tools;
 import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.core.server.config.NetworkConfig;
+import dev.tachyonmcp.core.server.config.ObservabilityConfig;
 import dev.tachyonmcp.core.server.config.ServerConfig;
 import dev.tachyonmcp.core.server.config.SessionConfig;
 import dev.tachyonmcp.core.server.features.tasks.TasksExtension;
@@ -44,6 +45,7 @@ final class DefaultServerBuilder implements ServerBuilder {
     private final NetworkConfig.Builder networkBuilder = NetworkConfig.builder();
     private final RuntimeConfig.Builder runtimeBuilder = RuntimeConfig.builder();
     private final MonitoringConfig.Builder monitoringBuilder = MonitoringConfig.builder();
+    private final ObservabilityConfig.Builder observabilityBuilder = ObservabilityConfig.builder();
     private final List<ServerExtension> extensions = new ArrayList<>();
     private final Set<String> extensionIds = new HashSet<>();
     private final List<Consumer<TachyonServer>> bootstrapRegistrations = new ArrayList<>();
@@ -113,6 +115,15 @@ final class DefaultServerBuilder implements ServerBuilder {
     @Override
     public ServerBuilder monitoring(Consumer<MonitoringConfig.Builder> configurer) {
         configurer.accept(monitoringBuilder);
+        return this;
+    }
+
+    /**
+     * Configures the passive MCP observation lifecycle (listeners, payload capture).
+     */
+    @Override
+    public ServerBuilder observability(Consumer<ObservabilityConfig.Builder> configurer) {
+        configurer.accept(observabilityBuilder);
         return this;
     }
 
@@ -356,6 +367,7 @@ final class DefaultServerBuilder implements ServerBuilder {
                 sessionBuilder.build(),
                 networkBuilder.build(),
                 runtimeBuilder.build(),
-                monitoringBuilder.build());
+                monitoringBuilder.build(),
+                observabilityBuilder.build());
     }
 }
