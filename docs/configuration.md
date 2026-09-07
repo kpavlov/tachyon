@@ -292,8 +292,8 @@ Configured via `runtime { }` / `RuntimeConfig.Builder`.
 
 ## Observability
 
-Configured via `observability { }` / `ObservabilityConfig.Builder`. Slow-request diagnostics and
-payload capture are off by default. Observation listeners are empty by default.
+Configured via Java `ObservabilityConfig.Builder` / Kotlin `observability { }`. Slow-request
+diagnostics and payload capture are off by default. Observation listeners are empty by default.
 
 | Option | Default | Description |
 |---|---|---|
@@ -317,8 +317,7 @@ server.start();
 ```kotlin
 TachyonServer(port = 8080) {
     observability {
-        slowRequestLogging()
-        slowRequestThreshold(5.seconds.toJavaDuration())
+        slowRequestLogging(threshold = 5.seconds)
     }
 }
 ```

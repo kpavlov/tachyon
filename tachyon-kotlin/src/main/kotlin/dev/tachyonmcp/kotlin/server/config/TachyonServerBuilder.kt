@@ -19,7 +19,6 @@ import dev.tachyonmcp.api.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.core.server.ServerBuilder
 import dev.tachyonmcp.core.server.config.NetworkConfig
-import dev.tachyonmcp.core.server.config.ObservabilityConfig
 import dev.tachyonmcp.core.server.features.resources.MimeTypes
 import dev.tachyonmcp.kotlin.server.DefaultKotlinTachyonServer
 import dev.tachyonmcp.kotlin.server.TachyonDsl
@@ -127,16 +126,17 @@ public class TachyonServerBuilder
         }
 
         /**
-         * Configures slow-request diagnostics and the passive MCP observation lifecycle. Thin
-         * pass-through to [ObservabilityConfig.Builder].
+         * Configures slow-request diagnostics and the passive MCP observation lifecycle.
          */
         @OptIn(ExperimentalContracts::class)
         @ExperimentalApi
-        public fun observability(
-            configure: ObservabilityConfig.Builder.() -> Unit,
+        public inline fun observability(
+            crossinline configure: (@TachyonDsl ObservabilityScope).() -> Unit,
         ): TachyonServerBuilder {
-            contract { callsInPlace(configure, InvocationKind.AT_MOST_ONCE) }
-            delegate.observability(configure)
+            contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
+            val scope = ObservabilityScope()
+            scope.configure()
+            delegate.observability { scope.applyTo(it) }
             return this
         }
 

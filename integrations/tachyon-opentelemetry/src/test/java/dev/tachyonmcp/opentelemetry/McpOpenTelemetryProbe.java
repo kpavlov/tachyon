@@ -17,11 +17,10 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.semconv.ServiceAttributes;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.time.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Manual probe (not run by the automated test suite): starts a real Tachyon server with {@link
@@ -42,8 +41,7 @@ import java.time.Duration;
  */
 public final class McpOpenTelemetryProbe {
 
-    private McpOpenTelemetryProbe() {
-    }
+    private McpOpenTelemetryProbe() {}
 
     private static final Logger LOGGER = LoggerFactory.getLogger(McpOpenTelemetryProbe.class);
 
@@ -55,19 +53,20 @@ public final class McpOpenTelemetryProbe {
         var metricExporter = OtlpGrpcMetricExporter.builder().build();
 
         try (var otel = OpenTelemetrySdk.builder()
-            .setTracerProvider(SdkTracerProvider.builder()
-                .setResource(resource)
-                .addSpanProcessor(
-                    BatchSpanProcessor.builder(spanExporter).build())
-                .build())
-            .setMeterProvider(SdkMeterProvider.builder()
-                .setResource(resource)
-                .registerMetricReader(PeriodicMetricReader.builder(metricExporter)
-                    .setInterval(Duration.ofSeconds(1))
-                    .build())
-                .build())
-            .build(); TachyonServer server = startServer(otel);
-             var client = new Mcp20251125Client(server.port())) {
+                        .setTracerProvider(SdkTracerProvider.builder()
+                                .setResource(resource)
+                                .addSpanProcessor(
+                                        BatchSpanProcessor.builder(spanExporter).build())
+                                .build())
+                        .setMeterProvider(SdkMeterProvider.builder()
+                                .setResource(resource)
+                                .registerMetricReader(PeriodicMetricReader.builder(metricExporter)
+                                        .setInterval(Duration.ofSeconds(1))
+                                        .build())
+                                .build())
+                        .build();
+                TachyonServer server = startServer(otel);
+                var client = new Mcp20251125Client(server.port())) {
             LOGGER.info("Exporting to OTLP endpoint (OTEL_EXPORTER_OTLP_ENDPOINT, default http://localhost:4317)");
             LOGGER.info("Service name: tachyon-opentelemetry-probe");
             var sessionId = client.initialize();
@@ -101,7 +100,7 @@ public final class McpOpenTelemetryProbe {
     private static TachyonServer startServer(OpenTelemetry otel) {
         return McpTestServers.start(
                 builder -> builder.session(session -> session.enabled(true))
-                    .observability(o -> o.listener(McpOpenTelemetryListener.create(otel))),
+                        .observability(o -> o.listener(McpOpenTelemetryListener.create(otel))),
                 server -> {
                     server.tools().register(tool -> tool.name("forecast"), (ctx, request) -> ToolResult.text("sunny"));
                     server.tools().register(tool -> tool.name("failing"), (ctx, request) -> ToolResult.error("nope"));

@@ -163,8 +163,7 @@ internal class TachyonServerTest {
                     sessionIdGenerator { _, req -> req?.headers()?.get("X-Tenant-Id") ?: "anon" }
                 }
                 observability {
-                    slowRequestLogging()
-                    slowRequestThreshold(15.seconds.toJavaDuration())
+                    slowRequestLogging(threshold = 15.seconds)
                 }
                 pipelineCustomizer { }
                 tool("ping", "Health check") { ToolResult.text("pong") }
@@ -191,7 +190,7 @@ internal class TachyonServerTest {
             val config = handle.config()
 
             // identity
-            with(config.identity()) {
+            with(config.identity) {
                 name() shouldBe appName
                 title() shouldBe "My Test MCP Server"
                 version() shouldBe "2.0.0"
@@ -203,7 +202,7 @@ internal class TachyonServerTest {
             }
 
             // capabilities
-            with(config.capabilities()) {
+            with(config.capabilities) {
                 tools().mode() shouldBe Mode.ON
                 tools().listChanged() shouldBe true
                 tools().pageSize() shouldBe 20
@@ -222,12 +221,12 @@ internal class TachyonServerTest {
             }
 
             // session
-            config.session().enabled shouldBe true
-            config.session().sessionTtl shouldBe 15.seconds.toJavaDuration()
-            config.session().sessionIdGenerator shouldNotBe SessionIdGenerator.DEFAULT
+            config.session.enabled shouldBe true
+            config.session.sessionTtl shouldBe 15.seconds.toJavaDuration()
+            config.session.sessionIdGenerator shouldNotBe SessionIdGenerator.DEFAULT
 
             // network
-            with(config.network()) {
+            with(config.network) {
                 host shouldBe "127.0.0.1"
                 endpointPath shouldBe "/mcp"
                 allowedHosts shouldBe listOf("host.docker.internal:8096")
@@ -238,9 +237,9 @@ internal class TachyonServerTest {
                 allowPrivateNetworks shouldBe true
             }
 
-            with(config.observability()) {
-                slowRequestLogging() shouldBe true
-                slowRequestThreshold() shouldBe 15.seconds.toJavaDuration()
+            with(config.observability) {
+                slowRequestLogging shouldBe true
+                slowRequestThreshold shouldBe 15.seconds.toJavaDuration()
             }
 
             // registered features
@@ -349,7 +348,7 @@ internal class TachyonServerTest {
                 clock = fixedClock
             }
         }.use { server ->
-            server.config().runtime().clock() shouldBe fixedClock
+            server.config().runtime.clock() shouldBe fixedClock
         }
     }
 
