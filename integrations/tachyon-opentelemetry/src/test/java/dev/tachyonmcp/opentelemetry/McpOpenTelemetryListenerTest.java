@@ -39,7 +39,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * E2E: a real Tachyon server with {@link McpTelemetryListener} registered via {@code
+ * E2E: a real Tachyon server with {@link McpOpenTelemetryListener} registered via {@code
  * .observability(...)}, driven over HTTP by the testkit client, asserting the spans and metrics an
  * OpenTelemetry backend would receive.
  *
@@ -47,7 +47,7 @@ import org.junit.jupiter.api.Test;
  * href="https://github.com/open-telemetry/semantic-conventions-genai/tree/main/model/mcp">
  * semantic-conventions-genai / model / mcp</a>.
  */
-class McpTelemetryListenerTest {
+class McpOpenTelemetryListenerTest {
 
     private InMemorySpanExporter spans;
     private InMemoryMetricReader metrics;
@@ -289,7 +289,7 @@ class McpTelemetryListenerTest {
     private TachyonServer startServer(Consumer<ObservabilityConfig.Builder> observabilityConfig) {
         return McpTestServers.start(
                 builder -> builder.session(session -> session.enabled(true)).observability(o -> {
-                    o.listener(McpTelemetryListener.create(otel));
+                    o.listener(McpOpenTelemetryListener.create(otel));
                     observabilityConfig.accept(o);
                 }),
                 server -> {

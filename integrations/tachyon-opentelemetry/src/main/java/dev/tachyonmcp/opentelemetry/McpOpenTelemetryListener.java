@@ -44,7 +44,7 @@ import org.jspecify.annotations.Nullable;
  *
  * <pre>{@code
  * var server = TachyonServer.builder()
- *         .observability(o -> o.listener(McpTelemetryListener.create(GlobalOpenTelemetry.get())))
+ *         .observability(o -> o.listener(McpOpenTelemetryListener.create(GlobalOpenTelemetry.get())))
  *         .build();
  * }</pre>
  *
@@ -67,7 +67,7 @@ import org.jspecify.annotations.Nullable;
  * @see <a href="https://github.com/open-telemetry/semantic-conventions-genai/tree/main/model/mcp">
  *     semantic-conventions-genai / model / mcp</a>
  */
-public final class McpTelemetryListener implements ObservationListener {
+public class McpOpenTelemetryListener implements ObservationListener {
 
     private static final String INSTRUMENTATION_NAME = "dev.tachyonmcp.opentelemetry";
     private static final String OPERATION_DURATION = "mcp.server.operation.duration";
@@ -85,7 +85,7 @@ public final class McpTelemetryListener implements ObservationListener {
     private final DoubleHistogram operationDuration;
     private final ConcurrentHashMap<OperationInfo, PendingOperation> pending = new ConcurrentHashMap<>();
 
-    private McpTelemetryListener(OpenTelemetry openTelemetry) {
+    private McpOpenTelemetryListener(OpenTelemetry openTelemetry) {
         this.tracer = openTelemetry.getTracer(INSTRUMENTATION_NAME);
         this.operationDuration = openTelemetry
                 .getMeter(INSTRUMENTATION_NAME)
@@ -101,8 +101,8 @@ public final class McpTelemetryListener implements ObservationListener {
      * @param openTelemetry the OpenTelemetry instance supplying the tracer and meter
      * @return a new listener
      */
-    public static McpTelemetryListener create(OpenTelemetry openTelemetry) {
-        return new McpTelemetryListener(Objects.requireNonNull(openTelemetry, "openTelemetry cannot be null"));
+    public static McpOpenTelemetryListener create(OpenTelemetry openTelemetry) {
+        return new McpOpenTelemetryListener(Objects.requireNonNull(openTelemetry, "openTelemetry cannot be null"));
     }
 
     @Override

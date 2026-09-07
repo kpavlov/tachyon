@@ -17,13 +17,16 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.semconv.ServiceAttributes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.time.Duration;
 
 /**
  * Manual probe (not run by the automated test suite): starts a real Tachyon server with {@link
- * McpTelemetryListener} wired to a real OTLP exporter, drives the same scenarios {@code
- * McpTelemetryListenerTest} asserts against in-memory, and exports them to whatever OTel
+ * McpOpenTelemetryListener} wired to a real OTLP exporter, drives the same scenarios {@code
+ * McpOpenTelemetryListenerTest} asserts against in-memory, and exports them to whatever OTel
  * collector/backend is listening — for visual inspection in an actual OTel tool (Jaeger, Grafana
  * Tempo, the collector's own debug exporter, etc.) rather than an assertion.
  *
@@ -37,9 +40,12 @@ import java.time.Duration;
  * endpoint follows the standard {@code OTEL_EXPORTER_OTLP_ENDPOINT} env var, defaulting to {@code
  * http://localhost:4317} if unset.
  */
-public final class McpTelemetryListenerProbe {
+public final class McpOpenTelemetryProbe {
 
-    private McpTelemetryListenerProbe() {}
+    private McpOpenTelemetryProbe() {
+    }
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(McpOpenTelemetryProbe.class);
 
     public static void main(String[] args) throws Exception {
         var resource = Resource.getDefault()
@@ -48,58 +54,54 @@ public final class McpTelemetryListenerProbe {
         var spanExporter = OtlpGrpcSpanExporter.builder().build();
         var metricExporter = OtlpGrpcMetricExporter.builder().build();
 
-        var otel = OpenTelemetrySdk.builder()
-                .setTracerProvider(SdkTracerProvider.builder()
-                        .setResource(resource)
-                        .addSpanProcessor(
-                                BatchSpanProcessor.builder(spanExporter).build())
-                        .build())
-                .setMeterProvider(SdkMeterProvider.builder()
-                        .setResource(resource)
-                        .registerMetricReader(PeriodicMetricReader.builder(metricExporter)
-                                .setInterval(Duration.ofSeconds(1))
-                                .build())
-                        .build())
-                .build();
-
-        System.out.println("Exporting to OTLP endpoint (OTEL_EXPORTER_OTLP_ENDPOINT, default http://localhost:4317)");
-        System.out.println("Service name: tachyon-opentelemetry-probe");
-
-        try (TachyonServer server = startServer(otel);
-                var client = new Mcp20251125Client(server.port())) {
+        try (var otel = OpenTelemetrySdk.builder()
+            .setTracerProvider(SdkTracerProvider.builder()
+                .setResource(resource)
+                .addSpanProcessor(
+                    BatchSpanProcessor.builder(spanExporter).build())
+                .build())
+            .setMeterProvider(SdkMeterProvider.builder()
+                .setResource(resource)
+                .registerMetricReader(PeriodicMetricReader.builder(metricExporter)
+                    .setInterval(Duration.ofSeconds(1))
+                    .build())
+                .build())
+            .build(); TachyonServer server = startServer(otel);
+             var client = new Mcp20251125Client(server.port())) {
+            LOGGER.info("Exporting to OTLP endpoint (OTEL_EXPORTER_OTLP_ENDPOINT, default http://localhost:4317)");
+            LOGGER.info("Service name: tachyon-opentelemetry-probe");
             var sessionId = client.initialize();
 
-            System.out.println("tools/call forecast (success)...");
+            LOGGER.info("tools/call forecast (success)...");
             client.post(sessionId, """
-                    {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"forecast","arguments":{"city":"Berlin"}}}""");
+                {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"forecast","arguments":{"city":"Berlin"}}}""");
 
-            System.out.println("tools/call failing (domain payload failure)...");
+            LOGGER.info("tools/call failing (domain payload failure)...");
             client.post(sessionId, """
-                    {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"failing","arguments":{}}}""");
+                {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"failing","arguments":{}}}""");
 
-            System.out.println("tools/call throwing (handler exception)...");
+            LOGGER.info("tools/call throwing (handler exception)...");
             client.post(sessionId, """
-                    {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"throwing","arguments":{}}}""");
+                {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"throwing","arguments":{}}}""");
 
-            System.out.println("tools/call absent (caller fault, unknown tool)...");
+            LOGGER.info("tools/call absent (caller fault, unknown tool)...");
             client.post(sessionId, """
-                    {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"absent","arguments":{}}}""");
+                {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"absent","arguments":{}}}""");
 
-            System.out.println("resources/read greeting...");
+            LOGGER.info("resources/read greeting...");
             client.post(sessionId, """
-                    {"jsonrpc":"2.0","id":5,"method":"resources/read","params":{"uri":"resource://greeting"}}""");
+                {"jsonrpc":"2.0","id":5,"method":"resources/read","params":{"uri":"resource://greeting"}}""");
         } finally {
-            System.out.println("Flushing and shutting down the OTel SDK...");
-            otel.close();
+            LOGGER.info("Flushing and shutting down the OTel SDK...");
         }
 
-        System.out.println("Done. Check your OTel tool for service 'tachyon-opentelemetry-probe'.");
+        LOGGER.info("Done. Check your OTel tool for service 'tachyon-opentelemetry-probe'.");
     }
 
     private static TachyonServer startServer(OpenTelemetry otel) {
         return McpTestServers.start(
                 builder -> builder.session(session -> session.enabled(true))
-                        .observability(o -> o.listener(McpTelemetryListener.create(otel))),
+                    .observability(o -> o.listener(McpOpenTelemetryListener.create(otel))),
                 server -> {
                     server.tools().register(tool -> tool.name("forecast"), (ctx, request) -> ToolResult.text("sunny"));
                     server.tools().register(tool -> tool.name("failing"), (ctx, request) -> ToolResult.error("nope"));
