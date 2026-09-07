@@ -39,7 +39,13 @@ public interface ServerBuilder {
     /** Configures handler execution. */
     ServerBuilder runtime(Consumer<RuntimeConfig.Builder> configurer);
 
-    /** Configures monitoring. */
+    /**
+     * Configures slow-request diagnostics through the observability configuration.
+     *
+     * @deprecated Use {@link #observability(Consumer)}. This compatibility alias will be removed in
+     *     the next release.
+     */
+    @Deprecated(since = "1.0.0-beta.24", forRemoval = true)
     ServerBuilder monitoring(Consumer<MonitoringConfig.Builder> configurer);
 
     /** Configures the passive MCP observation lifecycle (listeners, payload capture). */

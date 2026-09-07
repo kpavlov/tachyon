@@ -1,0 +1,297 @@
+/* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
+package dev.tachyonmcp.opentelemetry;
+
+import static dev.tachyonmcp.opentelemetry.McpAttributes.EXECUTE_TOOL;
+import static dev.tachyonmcp.opentelemetry.McpAttributes.GEN_AI_OPERATION_NAME;
+import static dev.tachyonmcp.opentelemetry.McpAttributes.GEN_AI_PROMPT_NAME;
+import static dev.tachyonmcp.opentelemetry.McpAttributes.GEN_AI_TOOL_CALL_ARGUMENTS;
+import static dev.tachyonmcp.opentelemetry.McpAttributes.GEN_AI_TOOL_NAME;
+import static dev.tachyonmcp.opentelemetry.McpAttributes.MCP_METHOD_NAME;
+import static dev.tachyonmcp.opentelemetry.McpAttributes.MCP_SESSION_ID;
+import static dev.tachyonmcp.opentelemetry.McpAttributes.PROMPTS_GET;
+import static dev.tachyonmcp.opentelemetry.McpAttributes.TOOLS_CALL;
+import static dev.tachyonmcp.opentelemetry.McpAttributes.TOOL_ERROR;
+import static io.opentelemetry.semconv.ErrorAttributes.ERROR_TYPE;
+import static io.opentelemetry.semconv.incubating.JsonrpcIncubatingAttributes.JSONRPC_REQUEST_ID;
+import static io.opentelemetry.semconv.incubating.RpcIncubatingAttributes.RPC_RESPONSE_STATUS_CODE;
+
+import dev.tachyonmcp.core.server.observability.CapturedPayload;
+import dev.tachyonmcp.core.server.observability.ObservationListener;
+import dev.tachyonmcp.core.server.observability.ObservationScope;
+import dev.tachyonmcp.core.server.observability.OperationInfo;
+import dev.tachyonmcp.core.server.observability.OperationOutcome;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.common.AttributesBuilder;
+import io.opentelemetry.api.metrics.DoubleHistogram;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * Records an OpenTelemetry {@code SERVER} span and an {@code mcp.server.operation.duration}
+ * measurement for every inbound MCP request and notification, following the OpenTelemetry MCP
+ * semantic conventions — as a passive {@link ObservationListener}, with no ability to short-circuit,
+ * reject, or substitute a handler's result.
+ *
+ * <pre>{@code
+ * var server = TachyonServer.builder()
+ *         .observability(o -> o.listener(McpTelemetryListener.create(GlobalOpenTelemetry.get())))
+ *         .build();
+ * }</pre>
+ *
+ * <h2>Trace context</h2>
+ *
+ * <p>Spans are parented by {@link Context#current()} on whichever thread {@link #start} runs on.
+ * Because the dispatcher only ever attaches this listener's {@link ObservationScope} around
+ * synchronous dispatch work — decode, the call that kicks off an async handler, and (after
+ * {@link ObservationScope#reattach()}) the handler's completion callback — a span an application
+ * handler starts while dispatch is attached joins this trace as a child, without this listener ever
+ * blocking an in-flight {@code CompletionStage} to keep the scope open.
+ *
+ * <h2>Payloads</h2>
+ *
+ * <p>Tool arguments are recorded as {@code gen_ai.tool.call.arguments} only when the server's {@code
+ * PayloadCapturePolicy.requestArgs()} is enabled — this listener never captures payloads on its
+ * own, it only reads what core already captured into {@link OperationInfo#requestPayload()}. Off by
+ * default: arguments routinely carry credentials and personal data.
+ *
+ * @see <a href="https://github.com/open-telemetry/semantic-conventions-genai/tree/main/model/mcp">
+ *     semantic-conventions-genai / model / mcp</a>
+ */
+public final class McpTelemetryListener implements ObservationListener {
+
+    private static final String INSTRUMENTATION_NAME = "dev.tachyonmcp.opentelemetry";
+    private static final String OPERATION_DURATION = "mcp.server.operation.duration";
+    private static final double NANOS_PER_SECOND = 1_000_000_000.0;
+
+    /**
+     * JSON-RPC codes a server returns because the <em>caller</em> sent something it could not
+     * serve. The conventions say these must not count as server errors, and state the rule in terms
+     * of codes — which is why the code is resolved by the dispatcher and handed to us rather than
+     * re-derived here from {@code ServerError.Kind}, whose mapping differs between MCP versions.
+     */
+    private static final Set<Integer> CALLER_FAULT_CODES = Set.of(-32700, -32600, -32601, -32602, -32002);
+
+    private final Tracer tracer;
+    private final DoubleHistogram operationDuration;
+    private final ConcurrentHashMap<OperationInfo, PendingOperation> pending = new ConcurrentHashMap<>();
+
+    private McpTelemetryListener(OpenTelemetry openTelemetry) {
+        this.tracer = openTelemetry.getTracer(INSTRUMENTATION_NAME);
+        this.operationDuration = openTelemetry
+                .getMeter(INSTRUMENTATION_NAME)
+                .histogramBuilder(OPERATION_DURATION)
+                .setUnit("s")
+                .setDescription("MCP request or notification duration as observed on the receiver")
+                .build();
+    }
+
+    /**
+     * Creates a listener bound to the given OpenTelemetry instance.
+     *
+     * @param openTelemetry the OpenTelemetry instance supplying the tracer and meter
+     * @return a new listener
+     */
+    public static McpTelemetryListener create(OpenTelemetry openTelemetry) {
+        return new McpTelemetryListener(Objects.requireNonNull(openTelemetry, "openTelemetry cannot be null"));
+    }
+
+    @Override
+    public ObservationScope start(OperationInfo info) {
+        var span =
+                tracer.spanBuilder(info.method()).setSpanKind(SpanKind.SERVER).startSpan();
+        pending.put(info, new PendingOperation(span, System.nanoTime()));
+        var context = Context.current().with(span);
+        return new SpanScope(context, context.makeCurrent());
+    }
+
+    @Override
+    public void complete(OperationInfo info, OperationOutcome outcome) {
+        var op = pending.remove(info);
+        if (op == null) {
+            // Defensive: should not happen since start() always precedes complete() for the same
+            // OperationInfo, but a listener must never throw into the dispatch path over its own
+            // bookkeeping gap.
+            return;
+        }
+        var span = op.span;
+        var target = target(info);
+        span.updateName(target == null ? info.method() : info.method() + " " + target);
+
+        var shared = sharedAttributes(info, target);
+        var metricAttributes = Attributes.builder().putAll(shared);
+        span.setAllAttributes(shared);
+        span.setAllAttributes(spanOnlyAttributes(info));
+        recordOutcome(span, metricAttributes, info, outcome);
+        span.end();
+        operationDuration.record((System.nanoTime() - op.startNanos) / NANOS_PER_SECOND, metricAttributes.build());
+    }
+
+    private static @Nullable String target(OperationInfo info) {
+        return switch (info.method()) {
+            case TOOLS_CALL, PROMPTS_GET -> info.target();
+            default -> null;
+        };
+    }
+
+    private static boolean isToolCall(OperationInfo info) {
+        return TOOLS_CALL.equals(info.method());
+    }
+
+    /** Attributes shared by the span and the duration histogram. All low-cardinality. */
+    private static Attributes sharedAttributes(OperationInfo info, @Nullable String target) {
+        var builder = Attributes.builder().put(MCP_METHOD_NAME, info.method());
+        if (target != null) {
+            if (isToolCall(info)) {
+                builder.put(GEN_AI_TOOL_NAME, target).put(GEN_AI_OPERATION_NAME, EXECUTE_TOOL);
+            } else {
+                builder.put(GEN_AI_PROMPT_NAME, target);
+            }
+        }
+        return builder.build();
+    }
+
+    /** Identifying attributes that belong on a span but would explode a metric's cardinality. */
+    private static Attributes spanOnlyAttributes(OperationInfo info) {
+        var builder = Attributes.builder();
+        var requestId = info.requestId();
+        if (requestId != null) {
+            builder.put(JSONRPC_REQUEST_ID, requestId.toString());
+        }
+        var sessionId = info.sessionId();
+        if (sessionId != null) {
+            builder.put(MCP_SESSION_ID, sessionId);
+        }
+        return builder.build();
+    }
+
+    private void recordOutcome(
+            Span span, AttributesBuilder metricAttributes, OperationInfo info, OperationOutcome outcome) {
+        switch (outcome) {
+            case OperationOutcome.Completed completed -> {
+                if (completed.responsePayload() != null) {
+                    recordPayload(span, completed.responsePayload());
+                }
+                if (isToolCall(info)) {
+                    var requestPayload = info.requestPayload();
+                    if (requestPayload != null) {
+                        recordArguments(span, requestPayload);
+                    }
+                }
+            }
+            case OperationOutcome.TaskHandoff ignored -> {
+                var requestPayload = info.requestPayload();
+                if (requestPayload != null) {
+                    recordArguments(span, requestPayload);
+                }
+            }
+            case OperationOutcome.Rejected rejected -> {
+                var error = rejected.error();
+                if (error != null) {
+                    classify(span, metricAttributes, error.kind().name());
+                    span.setAttribute(RPC_RESPONSE_STATUS_CODE, String.valueOf(rejected.httpStatus()));
+                }
+                // Rejections are caller-fault by construction (unknown method, bad session state,
+                // missing header) -- span status stays UNSET.
+            }
+            case OperationOutcome.PayloadFailure payloadFailure -> {
+                classify(span, metricAttributes, TOOL_ERROR);
+                if (isToolCall(info)) {
+                    var requestPayload = info.requestPayload();
+                    if (requestPayload != null) {
+                        recordArguments(span, requestPayload);
+                    }
+                }
+                // Still a JSON-RPC success -- no status code, span status stays UNSET.
+            }
+            case OperationOutcome.HandlerFailed failed -> {
+                var code = String.valueOf(failed.wireCode());
+                span.setAttribute(RPC_RESPONSE_STATUS_CODE, code);
+                metricAttributes.put(RPC_RESPONSE_STATUS_CODE, code);
+                classify(span, metricAttributes, failed.error().kind().name());
+                if (failed.cause() != null) {
+                    span.recordException(unwrap(failed.cause()));
+                }
+                if (!CALLER_FAULT_CODES.contains(failed.wireCode())) {
+                    span.setStatus(StatusCode.ERROR, failed.error().message());
+                }
+            }
+            case OperationOutcome.SerializationFailed serializationFailed -> {
+                span.recordException(serializationFailed.cause());
+                span.setStatus(
+                        StatusCode.ERROR,
+                        Objects.toString(serializationFailed.cause().getMessage(), ""));
+                classify(
+                        span,
+                        metricAttributes,
+                        serializationFailed.cause().getClass().getName());
+            }
+            case OperationOutcome.Cancelled ignored -> {}
+            case OperationOutcome.NotificationAccepted ignored -> {}
+            case OperationOutcome.NotificationIgnored ignored -> {}
+            case OperationOutcome.StreamEstablished ignored -> {}
+        }
+    }
+
+    private static void recordPayload(Span span, CapturedPayload payload) {
+        // Response content has no dedicated GenAI attribute in the current MCP semconv draft;
+        // reserved for a future attribute once one is standardized.
+    }
+
+    private static void recordArguments(Span span, CapturedPayload payload) {
+        if (payload instanceof CapturedPayload.Value(String json)) {
+            span.setAttribute(GEN_AI_TOOL_CALL_ARGUMENTS, json);
+        }
+    }
+
+    /** Strips the {@code CompletionException} an async handler's failure may still be wrapped in. */
+    private static Throwable unwrap(Throwable error) {
+        return error instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : error;
+    }
+
+    private static void classify(Span span, AttributesBuilder metricAttributes, String errorType) {
+        span.setAttribute(ERROR_TYPE, errorType);
+        metricAttributes.put(ERROR_TYPE, errorType);
+    }
+
+    private record PendingOperation(Span span, long startNanos) {}
+
+    /**
+     * Adapts an OTel {@link Scope} to {@link ObservationScope}. {@link #reattach()} may be called
+     * more than once across the operation's lifetime (once per phase that runs after an executor
+     * hop); each call re-activates the same captured {@link Context} on whichever thread is running
+     * that phase and replaces {@link #current} with the fresh scope, which {@link #close()} then
+     * closes. Never invoked concurrently for the same operation — the dispatch chain sequences
+     * phases — so the mutable field needs no synchronization.
+     */
+    private static final class SpanScope implements ObservationScope {
+
+        private final Context context;
+        private Scope current;
+
+        SpanScope(Context context, Scope initial) {
+            this.context = context;
+            this.current = initial;
+        }
+
+        @Override
+        public void close() {
+            current.close();
+        }
+
+        @Override
+        public ObservationScope reattach() {
+            current = context.makeCurrent();
+            return this;
+        }
+    }
+}

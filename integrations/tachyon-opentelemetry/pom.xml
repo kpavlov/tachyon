@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2026 Konstantin Pavlov and contributors.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>dev.tachyonmcp</groupId>
+        <artifactId>tachyon-integrations</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>tachyon-opentelemetry</artifactId>
+
+    <name>Tachyon MCP — OpenTelemetry</name>
+    <description>OpenTelemetry MCP semantic conventions for Tachyon servers</description>
+
+    <properties>
+        <opentelemetry.version>1.65.0</opentelemetry.version>
+        <opentelemetry-semconv.version>1.43.0-alpha</opentelemetry-semconv.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!--
+              Transitively imports opentelemetry-bom (the same version): one import covers both
+              the stable and alpha/incubator OTel Java modules. Does NOT cover
+              opentelemetry-semconv-incubating: that artifact ships from the separate
+              semantic-conventions-java repo with its own independent alpha version line.
+            -->
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-bom-alpha</artifactId>
+                <version>${opentelemetry.version}-alpha</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-api</artifactId>
+        </dependency>
+        <!--
+          The one deliberate narrow bridge: this module reads the @InternalApi
+          ObservationListener/OperationInfo/OperationOutcome types directly at compile scope rather
+          than through tachyon-api, per the observability design's explicit exception.
+        -->
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-core</artifactId>
+        </dependency>
+        <!-- Instrumentation depends on the OTel API only; the application supplies the SDK. -->
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+        </dependency>
+        <!--
+          Generated semantic-convention constants. The MCP registry lives in the incubating
+          artifact (alpha-versioned, as OTel marks these attributes unstable); it depends on the
+          stable opentelemetry-semconv, so this one entry covers Error/Network too.
+        -->
+        <dependency>
+            <groupId>io.opentelemetry.semconv</groupId>
+            <artifactId>opentelemetry-semconv-incubating</artifactId>
+            <version>${opentelemetry-semconv.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-testkit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk-testing</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- OTLP exporter for McpTelemetryListenerProbe, a manual main() sending real telemetry
+             to a local OTel collector/backend; not used by the automated test suite. -->
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-exporter-otlp</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

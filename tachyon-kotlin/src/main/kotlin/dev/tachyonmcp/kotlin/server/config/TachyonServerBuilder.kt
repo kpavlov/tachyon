@@ -110,25 +110,32 @@ public class TachyonServerBuilder
         }
 
         @OptIn(ExperimentalContracts::class)
+        @Deprecated("Use observability { } instead")
         public inline fun monitoring(
-            crossinline configure: (@TachyonDsl MonitoringScope).() -> Unit,
+            crossinline configure: (
+            @TachyonDsl
+            @Suppress("DEPRECATION")
+            MonitoringScope
+            ).() -> Unit,
         ): TachyonServerBuilder {
             contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
+            @Suppress("DEPRECATION")
             val scope = MonitoringScope()
             scope.configure()
-            delegate.monitoring { scope.applyTo(it) }
+            delegate.observability { scope.applyTo(it) }
             return this
         }
 
         /**
-         * Configures the passive MCP observation lifecycle (listeners, payload capture). Thin
-         * pass-through to [ObservabilityConfig.Builder] — its `listener(...)`/`payloadCapture(...)`
-         * methods already read idiomatically from Kotlin, so there is no dedicated scope class.
+         * Configures slow-request diagnostics and the passive MCP observation lifecycle. Thin
+         * pass-through to [ObservabilityConfig.Builder].
          */
+        @OptIn(ExperimentalContracts::class)
         @ExperimentalApi
         public fun observability(
             configure: ObservabilityConfig.Builder.() -> Unit,
         ): TachyonServerBuilder {
+            contract { callsInPlace(configure, InvocationKind.AT_MOST_ONCE) }
             delegate.observability(configure)
             return this
         }

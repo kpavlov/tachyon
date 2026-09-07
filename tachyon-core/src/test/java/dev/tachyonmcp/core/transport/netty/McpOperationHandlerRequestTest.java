@@ -420,7 +420,7 @@ class McpOperationHandlerRequestTest {
         System.setErr(new PrintStream(baos));
         try {
             var srv = newEngine(
-                    b -> b.monitoring(m -> m.slowRequestLogging().slowRequestThreshold(Duration.ofMillis(1))),
+                    b -> b.observability(m -> m.slowRequestLogging().slowRequestThreshold(Duration.ofMillis(1))),
                     s -> s.tools().registerAsync(SLOW_TOOL.descriptor(), SLOW_TOOL::handleAsync));
             var ch = new EmbeddedChannel(
                     new InteractionHandler(),

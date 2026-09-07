@@ -36,6 +36,7 @@ public final class Observation {
     private final List<ObservationScope> scopes;
     private final OperationInfo info;
     private final AtomicBoolean completed = new AtomicBoolean();
+    private final AtomicBoolean startClosed = new AtomicBoolean();
     private volatile @Nullable OperationOutcome override;
 
     private Observation(List<ObservationListener> listeners, List<ObservationScope> scopes, OperationInfo info) {
@@ -73,20 +74,41 @@ public final class Observation {
 
     /** Tags the terminal outcome as a task handoff, overriding whatever {@link #complete} is later called with. */
     public void markTaskHandoff(String taskId) {
+        if (listeners.isEmpty()) return;
         override = new OperationOutcome.TaskHandoff(taskId);
     }
 
     /** Tags the terminal outcome as a serialization failure, overriding whatever {@link #complete} is later called with. */
     public void markSerializationFailed(Throwable cause) {
+        if (listeners.isEmpty()) return;
         override = new OperationOutcome.SerializationFailed(cause);
     }
 
-    /** Closes the scopes {@link #start} opened. Called once, on the thread {@link #start} ran on. */
-    public void closeStart() {
-        closeAll(scopes);
+    /** Tags the terminal outcome as a tool payload failure, overriding whatever {@link #complete} is later called with. */
+    public void markPayloadFailure() {
+        if (listeners.isEmpty()) return;
+        override = new OperationOutcome.PayloadFailure(null);
     }
 
-    /** Re-attaches every scope onto the current thread; close the returned list with {@link #closeReattached}. */
+    /**
+     * Closes the scopes {@link #start} opened, on the thread {@link #start} ran on. Idempotent —
+     * dispatch has multiple exit paths (a handler hand-off, several early-rejection branches) and
+     * only one of them runs per operation, but guarding here means a future call site calling this
+     * defensively can never double-close the underlying scope.
+     */
+    public void closeStart() {
+        if (startClosed.compareAndSet(false, true)) {
+            closeAll(scopes);
+        }
+    }
+
+    /**
+     * Re-attaches every scope onto the current thread for one bounded phase of synchronous dispatch
+     * work; close the returned list with {@link #closeReattached} before the phase ends. May be
+     * called more than once per operation — once per phase that runs after an executor hop (e.g.
+     * once for a handler's async kickoff, again for its later completion callback) — never
+     * concurrently for the same operation, since the dispatch chain sequences those phases.
+     */
     public List<ObservationScope> reattach() {
         if (scopes.isEmpty()) {
             return List.of();

@@ -100,7 +100,9 @@ class SubscriptionsListenObservationTest {
             var outcome = established.get(5, TimeUnit.SECONDS);
             assertThat(starts).hasSize(1);
             assertThat(outcome).isInstanceOf(OperationOutcome.StreamEstablished.class);
-            assertThat(future).as("the handler's own future spans the stream lifetime").isNotDone();
+            assertThat(future)
+                    .as("the handler's own future spans the stream lifetime")
+                    .isNotDone();
 
             stream.disconnect();
             future.join();

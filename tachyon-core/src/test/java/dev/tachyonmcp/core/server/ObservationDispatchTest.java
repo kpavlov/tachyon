@@ -112,7 +112,9 @@ class ObservationDispatchTest {
             // The scope wrapping decode + handler kickoff must close promptly, proving the
             // dispatcher never joined the still-pending handler stage to get there.
             reattachClosed.get(5, TimeUnit.SECONDS);
-            assertThat(future).as("dispatch stays pending until the handler resolves").isNotDone();
+            assertThat(future)
+                    .as("dispatch stays pending until the handler resolves")
+                    .isNotDone();
 
             gate.complete(ToolResult.text("ok"));
             var result = asResponse(future.get(10, TimeUnit.SECONDS));
@@ -127,7 +129,9 @@ class ObservationDispatchTest {
             server.createSession("sess-obs").activate();
             var dispatcher = new McpDispatcher(server, server.executor());
 
-            dispatcher.dispatchRequestAsync(RequestId.of(1), "ping", null, "sess-obs").join();
+            dispatcher
+                    .dispatchRequestAsync(RequestId.of(1), "ping", null, "sess-obs")
+                    .join();
 
             assertThat(listener.starts).hasSize(1);
             assertThat(listener.starts.getFirst().info().method()).isEqualTo("ping");
@@ -170,7 +174,8 @@ class ObservationDispatchTest {
             assertThat(result.join()).isInstanceOf(McpDispatcher.DispatchResult.Status.class);
 
             assertThat(listener.completions).hasSize(1);
-            var outcome = (OperationOutcome.Rejected) listener.completions.getFirst().outcome();
+            var outcome =
+                    (OperationOutcome.Rejected) listener.completions.getFirst().outcome();
             assertThat(outcome.error()).isNull();
             assertThat(outcome.httpStatus()).isEqualTo(400);
         }
@@ -198,15 +203,16 @@ class ObservationDispatchTest {
     @Test
     void statelessNotificationStillReportsIgnoredBeforeAnyEarlyReturn() {
         var listener = new RecordingListener();
-        try (ServerEngine server = newEngine(b -> b.session(s -> s.enabled(false))
-                .observability(o -> o.listener(listener)))) {
+        try (ServerEngine server =
+                newEngine(b -> b.session(s -> s.enabled(false)).observability(o -> o.listener(listener)))) {
             var dispatcher = new McpDispatcher(server, server.executor());
 
             dispatcher.dispatchNotification("notifications/initialized", null, null);
 
             assertThat(listener.starts).hasSize(1);
             assertThat(listener.completions).hasSize(1);
-            assertThat(listener.completions.getFirst().outcome()).isInstanceOf(OperationOutcome.NotificationIgnored.class);
+            assertThat(listener.completions.getFirst().outcome())
+                    .isInstanceOf(OperationOutcome.NotificationIgnored.class);
         }
     }
 
@@ -218,8 +224,8 @@ class ObservationDispatchTest {
         faulty.throwOnComplete = new RuntimeException("boom on complete");
         var healthy = new RecordingListener();
 
-        try (ServerEngine server = newEngine(
-                b -> b.observability(o -> o.listener(faulty).listener(healthy)))) {
+        try (ServerEngine server =
+                newEngine(b -> b.observability(o -> o.listener(faulty).listener(healthy)))) {
             server.createSession("sess-fault").activate();
             var dispatcher = new McpDispatcher(server, server.executor());
 
@@ -243,12 +249,12 @@ class ObservationDispatchTest {
             var plainDispatcher = new McpDispatcher(plain, plain.executor());
             var observedDispatcher = new McpDispatcher(observed, observed.executor());
 
-            var plainResult =
-                    asResponse(plainDispatcher.dispatchRequestAsync(RequestId.of(1), "ping", null, "sess-parity")
-                            .join());
-            var observedResult =
-                    asResponse(observedDispatcher.dispatchRequestAsync(RequestId.of(1), "ping", null, "sess-parity")
-                            .join());
+            var plainResult = asResponse(plainDispatcher
+                    .dispatchRequestAsync(RequestId.of(1), "ping", null, "sess-parity")
+                    .join());
+            var observedResult = asResponse(observedDispatcher
+                    .dispatchRequestAsync(RequestId.of(1), "ping", null, "sess-parity")
+                    .join());
 
             assertThat(observedResult.responseBodyString()).isEqualTo(plainResult.responseBodyString());
             assertThat(observedResult.httpStatus()).isEqualTo(plainResult.httpStatus());
@@ -278,9 +284,9 @@ class ObservationDispatchTest {
             var dispatcher = new McpDispatcher(server, server.executor());
             var params = Map.of("name", "book", "arguments", Map.of(), "task", Map.of());
 
-            var result = asResponse(
-                    dispatcher.dispatchRequestAsync(RequestId.of(1), "tools/call", params, "sess-task")
-                            .join());
+            var result = asResponse(dispatcher
+                    .dispatchRequestAsync(RequestId.of(1), "tools/call", params, "sess-task")
+                    .join());
             assertThat(result.responseBodyString()).doesNotContain("error");
 
             assertThat(listener.completions).hasSize(1);
@@ -293,7 +299,8 @@ class ObservationDispatchTest {
     @Test
     void requestArgsCapturedOnlyWhenPolicyEnabledAndListenerRegistered() {
         var listener = new RecordingListener();
-        var descriptor = ToolDescriptor.builder().name("echo").description("echoes").build();
+        var descriptor =
+                ToolDescriptor.builder().name("echo").description("echoes").build();
         AsyncToolFn fn = (ctx, request) -> CompletableFuture.completedFuture(ToolResult.text("ok"));
 
         var noCaptureListener = new RecordingListener();
@@ -307,18 +314,21 @@ class ObservationDispatchTest {
 
             captured.createSession("sess-capture").activate();
             var capturingDispatcher = new McpDispatcher(captured, captured.executor());
-            capturingDispatcher.dispatchRequestAsync(RequestId.of(1), "tools/call", params, "sess-capture")
+            capturingDispatcher
+                    .dispatchRequestAsync(RequestId.of(1), "tools/call", params, "sess-capture")
                     .join();
             var capturedInfo = listener.completions.getFirst().info();
             assertThat(capturedInfo.requestPayload()).isInstanceOf(CapturedPayload.Value.class);
-            assertThat(((CapturedPayload.Value) capturedInfo.requestPayload()).json()).contains("Berlin");
+            assertThat(((CapturedPayload.Value) capturedInfo.requestPayload()).json())
+                    .contains("Berlin");
 
             notCaptured.createSession("sess-no-capture").activate();
             var plainDispatcher = new McpDispatcher(notCaptured, notCaptured.executor());
             plainDispatcher
                     .dispatchRequestAsync(RequestId.of(1), "tools/call", params, "sess-no-capture")
                     .join();
-            assertThat(noCaptureListener.completions.getFirst().info().requestPayload()).isNull();
+            assertThat(noCaptureListener.completions.getFirst().info().requestPayload())
+                    .isNull();
         }
     }
 }

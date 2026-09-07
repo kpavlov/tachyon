@@ -28,6 +28,11 @@ public interface ObservationScope {
     /** Detaches this scope's context from the current thread. */
     void close();
 
-    /** Re-attaches this scope's context onto the current thread, returning the handle to close it. */
+    /**
+     * Re-attaches this scope's context onto the current thread for one bounded phase of work,
+     * returning the handle to close it. May be called more than once over an operation's lifetime —
+     * once per phase that runs after an executor hop — but never concurrently for the same
+     * operation.
+     */
     ObservationScope reattach();
 }

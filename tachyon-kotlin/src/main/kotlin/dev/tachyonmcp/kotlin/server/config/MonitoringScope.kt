@@ -1,12 +1,13 @@
 // Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors.
 package dev.tachyonmcp.kotlin.server.config
 
-import dev.tachyonmcp.api.server.config.MonitoringConfig
+import dev.tachyonmcp.core.server.config.ObservabilityConfig
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
 
 @TachyonDsl
+@Deprecated("Use observability { } instead")
 public class MonitoringScope
     @PublishedApi
     internal constructor() {
@@ -15,7 +16,7 @@ public class MonitoringScope
         public var slowRequestThreshold: Duration? = null
 
         @PublishedApi
-        internal fun applyTo(builder: MonitoringConfig.Builder) {
+        internal fun applyTo(builder: ObservabilityConfig.Builder) {
             slowRequestLogging?.let { builder.slowRequestLogging(it) }
             slowRequestThreshold?.let { builder.slowRequestThreshold(it.toJavaDuration()) }
         }

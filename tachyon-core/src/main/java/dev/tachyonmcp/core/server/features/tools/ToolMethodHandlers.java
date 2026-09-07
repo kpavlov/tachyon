@@ -117,13 +117,20 @@ public final class ToolMethodHandlers {
             var observation = context.observation();
             observation.info().target(handler.descriptor().name());
             if (observation.active()
-                    && context.engine().config().observability().payloadCapture().requestArgs()) {
+                    && context.engine()
+                            .config()
+                            .observability()
+                            .payloadCapture()
+                            .requestArgs()) {
                 var maxBytes = context.engine()
                         .config()
                         .observability()
                         .payloadCapture()
                         .maxBytes();
-                observation.info().requestPayload(CapturedPayload.capture(request.arguments().json(), maxBytes));
+                observation
+                        .info()
+                        .requestPayload(
+                                CapturedPayload.capture(request.arguments().json(), maxBytes));
             }
             var extensionId = handler.descriptor().extensionId();
             if (extensionId != null && !context.isExtensionEnabled(extensionId)) {
@@ -199,7 +206,11 @@ public final class ToolMethodHandlers {
             if (taskSupport == TaskSupport.REQUIRED || mapped.taskAugmented()) {
                 return internalError("Task-producing tool returned a non-task result");
             }
-            return context.responseMapper().callToolResult(prepareResult(outputSchema, result));
+            var prepared = prepareResult(outputSchema, result);
+            if (prepared instanceof ToolResult.Error) {
+                context.observation().markPayloadFailure();
+            }
+            return context.responseMapper().callToolResult(prepared);
         }
 
         private ToolResult prepareResult(@Nullable JsonSchema outputSchema, ToolResult result) {

@@ -24,6 +24,7 @@ import dev.tachyonmcp.core.server.json.NetworkntJsonSchemaValidator;
 import dev.tachyonmcp.core.server.session.InMemorySessionEventStore;
 import dev.tachyonmcp.core.server.session.InMemorySessionStore;
 import io.netty.channel.ChannelPipeline;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -44,8 +45,8 @@ final class DefaultServerBuilder implements ServerBuilder {
     private final SessionConfig.Builder sessionBuilder = SessionConfig.builder();
     private final NetworkConfig.Builder networkBuilder = NetworkConfig.builder();
     private final RuntimeConfig.Builder runtimeBuilder = RuntimeConfig.builder();
-    private final MonitoringConfig.Builder monitoringBuilder = MonitoringConfig.builder();
     private final ObservabilityConfig.Builder observabilityBuilder = ObservabilityConfig.builder();
+    private final MonitoringConfig.Builder monitoringBuilder = new LegacyMonitoringBuilder(observabilityBuilder);
     private final List<ServerExtension> extensions = new ArrayList<>();
     private final Set<String> extensionIds = new HashSet<>();
     private final List<Consumer<TachyonServer>> bootstrapRegistrations = new ArrayList<>();
@@ -109,10 +110,9 @@ final class DefaultServerBuilder implements ServerBuilder {
         return this;
     }
 
-    /**
-     * Configures diagnostics and observability settings (slow-request logging, etc.).
-     */
+    /** Configures the deprecated monitoring alias. */
     @Override
+    @Deprecated(since = "1.0.0-beta.24", forRemoval = true)
     public ServerBuilder monitoring(Consumer<MonitoringConfig.Builder> configurer) {
         configurer.accept(monitoringBuilder);
         return this;
@@ -361,13 +361,45 @@ final class DefaultServerBuilder implements ServerBuilder {
      */
     @Override
     public ServerConfig buildConfig() {
-        return new ServerConfig(
-                identityBuilder.build(),
-                capabilitiesConfig.build(),
-                sessionBuilder.build(),
-                networkBuilder.build(),
-                runtimeBuilder.build(),
-                monitoringBuilder.build(),
-                observabilityBuilder.build());
+        return ServerConfig.builder()
+                .identity(identityBuilder.build())
+                .capabilities(capabilitiesConfig.build())
+                .session(sessionBuilder.build())
+                .network(networkBuilder.build())
+                .runtime(runtimeBuilder.build())
+                .observability(observabilityBuilder.build())
+                .build();
+    }
+
+    private static final class LegacyMonitoringBuilder implements MonitoringConfig.Builder {
+
+        private final ObservabilityConfig.Builder delegate;
+
+        private LegacyMonitoringBuilder(ObservabilityConfig.Builder delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public MonitoringConfig.Builder from(MonitoringConfig instance) {
+            return slowRequestLogging(instance.slowRequestLogging())
+                    .slowRequestThreshold(instance.slowRequestThreshold());
+        }
+
+        @Override
+        public MonitoringConfig.Builder slowRequestLogging(boolean slowRequestLogging) {
+            delegate.slowRequestLogging(slowRequestLogging);
+            return this;
+        }
+
+        @Override
+        public MonitoringConfig.Builder slowRequestThreshold(Duration slowRequestThreshold) {
+            delegate.slowRequestThreshold(slowRequestThreshold);
+            return this;
+        }
+
+        @Override
+        public MonitoringConfig build() {
+            return delegate.build();
+        }
     }
 }

@@ -22,7 +22,8 @@ public record PayloadCapturePolicy(
     /** Default byte limit applied to a captured value before truncation. */
     public static final int DEFAULT_MAX_BYTES = 4096;
 
-    public static final PayloadCapturePolicy DISABLED = new PayloadCapturePolicy(false, false, false, false, DEFAULT_MAX_BYTES);
+    public static final PayloadCapturePolicy DISABLED =
+            new PayloadCapturePolicy(false, false, false, false, DEFAULT_MAX_BYTES);
 
     public PayloadCapturePolicy {
         if (maxBytes <= 0) {

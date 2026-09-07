@@ -191,7 +191,6 @@ public class McpDispatcher {
             info.sessionId(sessionId);
         }
         var observation = Observation.start(observationListeners(), info);
-        observation.closeStart();
 
         var requestCtx = dispatchContext(channelContext, id);
         requestCtx.setObservation(observation);
@@ -280,6 +279,10 @@ public class McpDispatcher {
                 ? JsonRpcCodec.writeValueAsString(rawParams)
                 : rawParams instanceof String s ? s : null;
 
+        // Closed here, on the calling thread, because the work below runs on the executor --
+        // reattach() re-opens it there for the decode+kickoff phase.
+        context.observation().closeStart();
+
         return CompletableFuture.supplyAsync(
                         () -> {
                             var startNs = System.nanoTime();
@@ -290,7 +293,7 @@ public class McpDispatcher {
                                         session.id(), id, method, paramsStr, System.currentTimeMillis()));
                             }
 
-                            var m = server.config().monitoring();
+                            var m = server.config().observability();
                             var watchdog = m.slowRequestLogging()
                                     ? HandlerWatchdog.watch(
                                             method,
@@ -487,6 +490,9 @@ public class McpDispatcher {
         // Stateful init creates the session before invoking the handler; stateless skips it. Both
         // then share one async pipeline — the response sessionId falls out of ic.session() (null
         // when stateless, since no session was set).
+        // Closed here, on the calling thread, because the work below runs on the executor --
+        // reattach() re-opens it there for the decode+kickoff phase.
+        ic.observation().closeStart();
         return CompletableFuture.supplyAsync(
                         () -> {
                             var reattached = ic.observation().reattach();
@@ -530,7 +536,8 @@ public class McpDispatcher {
         return new DispatchResult.Response(body, null, wireError.httpStatus());
     }
 
-    private static byte[] encodeResponse(RequestId id, Object result, ProtocolResponseMapper mapper, Observation observation) {
+    private static byte[] encodeResponse(
+            RequestId id, Object result, ProtocolResponseMapper mapper, Observation observation) {
         if (result instanceof String s) {
             return JsonRpcCodec.serializeResponse(id, s);
         }

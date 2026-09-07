@@ -19,6 +19,14 @@ public sealed interface OperationOutcome {
     /** The handler ran and its result was encoded onto the wire. */
     record Completed(@Nullable CapturedPayload responsePayload) implements OperationOutcome {}
 
+    /**
+     * A {@code tools/call} returned a domain-level payload failure ({@code ToolResult.error(...)})
+     * rather than throwing — still a JSON-RPC success (the client sees {@code isError: true} in the
+     * result, not an error envelope), but distinct from an ordinary {@link Completed} outcome so a
+     * listener can classify it without inspecting response content.
+     */
+    record PayloadFailure(@Nullable CapturedPayload responsePayload) implements OperationOutcome {}
+
     /** The handler produced a result but encoding it failed; the client received a fallback error. */
     record SerializationFailed(Throwable cause) implements OperationOutcome {}
 
@@ -27,7 +35,8 @@ public sealed interface OperationOutcome {
      * that produced it, or {@code null} when the handler returned a {@link ServerError} value
      * directly rather than throwing/failing.
      */
-    record HandlerFailed(ServerError error, int wireCode, @Nullable Throwable cause) implements OperationOutcome {}
+    record HandlerFailed(
+            ServerError error, int wireCode, @Nullable Throwable cause) implements OperationOutcome {}
 
     /** The handler's work was cancelled (client-initiated {@code notifications/cancelled} or similar). */
     record Cancelled() implements OperationOutcome {}

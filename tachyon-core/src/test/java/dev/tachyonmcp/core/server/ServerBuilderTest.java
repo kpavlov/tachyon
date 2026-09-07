@@ -19,6 +19,7 @@ import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.session.SessionEvent;
 import dev.tachyonmcp.core.server.session.SessionEventStore;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
@@ -53,6 +54,21 @@ class ServerBuilderTest {
         try (var server = TachyonServer.builder().build()) {
             assertThat(server).isNotNull();
         }
+    }
+
+    @Test
+    @SuppressWarnings("removal")
+    void monitoringAliasWritesTheObservabilityConfiguration() {
+        var threshold = Duration.ofSeconds(3);
+
+        var config = TachyonServer.builder()
+                .observability(observability -> observability.slowRequestThreshold(threshold))
+                .monitoring(monitoring -> monitoring.slowRequestLogging())
+                .buildConfig();
+
+        assertThat(config.observability().slowRequestLogging()).isTrue();
+        assertThat(config.observability().slowRequestThreshold()).isEqualTo(threshold);
+        assertThat(config.monitoring()).isSameAs(config.observability());
     }
 
     @Test

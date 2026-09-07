@@ -5,35 +5,138 @@ import dev.tachyonmcp.api.server.config.MonitoringConfig;
 import dev.tachyonmcp.api.server.config.RuntimeConfig;
 import dev.tachyonmcp.api.server.config.ServerIdentity;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /**
- * Aggregated server configuration grouping identity, capabilities, session, network, runtime,
- * monitoring, and observability settings.
- *
- * @param identity      server identity metadata (name, version, etc.)
- * @param capabilities  which MCP features are enabled
- * @param session       session lifecycle and persistence settings
- * @param network       transport-level settings (host, port, CORS, etc.)
- * @param runtime       handler-execution runtime settings (shutdown drain, etc.)
- * @param monitoring    diagnostics and observability settings
- * @param observability passive observation-lifecycle settings (listeners, payload capture)
+ * Aggregated server configuration grouping identity, capabilities, session, network, runtime, and
+ * observability settings.
  */
-public record ServerConfig(
-        ServerIdentity identity,
-        CapabilitiesConfig capabilities,
-        SessionConfig session,
-        NetworkConfig network,
-        RuntimeConfig runtime,
-        MonitoringConfig monitoring,
-        ObservabilityConfig observability) {
+public final class ServerConfig {
 
-    public ServerConfig {
-        Objects.requireNonNull(identity, "identity cannot be null");
-        Objects.requireNonNull(capabilities, "capabilities cannot be null");
-        Objects.requireNonNull(session, "session cannot be null");
-        Objects.requireNonNull(network, "network cannot be null");
-        Objects.requireNonNull(runtime, "runtime cannot be null");
-        Objects.requireNonNull(monitoring, "monitoring cannot be null");
-        Objects.requireNonNull(observability, "observability cannot be null");
+    private final ServerIdentity identity;
+    private final CapabilitiesConfig capabilities;
+    private final SessionConfig session;
+    private final NetworkConfig network;
+    private final RuntimeConfig runtime;
+    private final ObservabilityConfig observability;
+
+    private ServerConfig(Builder builder) {
+        this.identity = Objects.requireNonNull(builder.identity, "identity cannot be null");
+        this.capabilities = Objects.requireNonNull(builder.capabilities, "capabilities cannot be null");
+        this.session = Objects.requireNonNull(builder.session, "session cannot be null");
+        this.network = Objects.requireNonNull(builder.network, "network cannot be null");
+        this.runtime = Objects.requireNonNull(builder.runtime, "runtime cannot be null");
+        this.observability = Objects.requireNonNull(builder.observability, "observability cannot be null");
+    }
+
+    /** Returns a builder for an immutable server configuration. */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /** Returns server identity metadata. */
+    public ServerIdentity identity() {
+        return identity;
+    }
+
+    /** Returns the enabled MCP capabilities. */
+    public CapabilitiesConfig capabilities() {
+        return capabilities;
+    }
+
+    /** Returns session lifecycle and persistence settings. */
+    public SessionConfig session() {
+        return session;
+    }
+
+    /** Returns transport-level settings. */
+    public NetworkConfig network() {
+        return network;
+    }
+
+    /** Returns handler-execution runtime settings. */
+    public RuntimeConfig runtime() {
+        return runtime;
+    }
+
+    /**
+     * Returns the legacy slow-request diagnostics view.
+     *
+     * @deprecated Use {@link #observability()}. This compatibility view will be removed in the next
+     *     release.
+     */
+    @Deprecated(since = "1.0.0-beta.24", forRemoval = true)
+    public MonitoringConfig monitoring() {
+        return observability;
+    }
+
+    /** Returns passive observation-lifecycle settings. */
+    public ObservabilityConfig observability() {
+        return observability;
+    }
+
+    /** Builder for {@link ServerConfig}. */
+    public static final class Builder {
+
+        @Nullable
+        private ServerIdentity identity;
+
+        @Nullable
+        private CapabilitiesConfig capabilities;
+
+        @Nullable
+        private SessionConfig session;
+
+        @Nullable
+        private NetworkConfig network;
+
+        @Nullable
+        private RuntimeConfig runtime;
+
+        @Nullable
+        private ObservabilityConfig observability;
+
+        private Builder() {}
+
+        /** Sets server identity metadata. */
+        public Builder identity(ServerIdentity identity) {
+            this.identity = identity;
+            return this;
+        }
+
+        /** Sets enabled MCP capabilities. */
+        public Builder capabilities(CapabilitiesConfig capabilities) {
+            this.capabilities = capabilities;
+            return this;
+        }
+
+        /** Sets session lifecycle and persistence settings. */
+        public Builder session(SessionConfig session) {
+            this.session = session;
+            return this;
+        }
+
+        /** Sets transport-level settings. */
+        public Builder network(NetworkConfig network) {
+            this.network = network;
+            return this;
+        }
+
+        /** Sets handler-execution runtime settings. */
+        public Builder runtime(RuntimeConfig runtime) {
+            this.runtime = runtime;
+            return this;
+        }
+
+        /** Sets passive observation-lifecycle settings. */
+        public Builder observability(ObservabilityConfig observability) {
+            this.observability = observability;
+            return this;
+        }
+
+        /** Builds the immutable server configuration. */
+        public ServerConfig build() {
+            return new ServerConfig(this);
+        }
     }
 }
