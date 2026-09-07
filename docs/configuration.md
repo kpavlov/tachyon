@@ -37,6 +37,9 @@ Configured via `network { }` / `NetworkConfig.Builder`.
 
 `.port(int)` is also available as a top-level `ServerBuilder` shortcut.
 
+For `host`, `port` and hostname settings when the server runs on a platform, see
+[deployment](deployment.md).
+
 ### Keep-alive for long-running tools
 
 ```mermaid
@@ -147,6 +150,9 @@ network { allowedHosts += "host.docker.internal:8096" }
 Entries are bare authorities, not URLs, matched case-insensitively; an entry without a port
 matches that host on any port. See `DnsRebindingProtectionHandler`'s class docs for exact
 matching rules (bracketed IPv6, multiple/missing `Host` headers, HTTP/1.0 exemption).
+
+A server behind a public hostname must add that hostname here or every request through it is
+rejected. See [deployment](deployment.md#3-public-hostname).
 
 ### `Mcp-Param-*` character restrictions
 
