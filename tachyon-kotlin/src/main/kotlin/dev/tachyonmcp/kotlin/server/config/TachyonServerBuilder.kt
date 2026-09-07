@@ -19,6 +19,7 @@ import dev.tachyonmcp.api.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.api.server.features.tools.ToolResult
 import dev.tachyonmcp.core.server.ServerBuilder
 import dev.tachyonmcp.core.server.config.NetworkConfig
+import dev.tachyonmcp.core.server.config.ObservabilityConfig
 import dev.tachyonmcp.core.server.features.resources.MimeTypes
 import dev.tachyonmcp.kotlin.server.DefaultKotlinTachyonServer
 import dev.tachyonmcp.kotlin.server.TachyonDsl
@@ -116,6 +117,17 @@ public class TachyonServerBuilder
             val scope = MonitoringScope()
             scope.configure()
             delegate.monitoring { scope.applyTo(it) }
+            return this
+        }
+
+        /**
+         * Configures the passive MCP observation lifecycle (listeners, payload capture). Thin
+         * pass-through to [ObservabilityConfig.Builder] — its `listener(...)`/`payloadCapture(...)`
+         * methods already read idiomatically from Kotlin, so there is no dedicated scope class.
+         */
+        @ExperimentalApi
+        public fun observability(configure: ObservabilityConfig.Builder.() -> Unit): TachyonServerBuilder {
+            delegate.observability(configure)
             return this
         }
 
