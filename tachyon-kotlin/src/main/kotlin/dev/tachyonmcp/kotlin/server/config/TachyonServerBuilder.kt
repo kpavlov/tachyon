@@ -126,7 +126,9 @@ public class TachyonServerBuilder
          * methods already read idiomatically from Kotlin, so there is no dedicated scope class.
          */
         @ExperimentalApi
-        public fun observability(configure: ObservabilityConfig.Builder.() -> Unit): TachyonServerBuilder {
+        public fun observability(
+            configure: ObservabilityConfig.Builder.() -> Unit,
+        ): TachyonServerBuilder {
             delegate.observability(configure)
             return this
         }
