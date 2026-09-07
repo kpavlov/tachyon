@@ -66,6 +66,11 @@ public final class Observation {
         return info;
     }
 
+    /** Whether any listener is registered for this operation — gates payload-capture work. */
+    public boolean active() {
+        return !listeners.isEmpty();
+    }
+
     /** Tags the terminal outcome as a task handoff, overriding whatever {@link #complete} is later called with. */
     public void markTaskHandoff(String taskId) {
         override = new OperationOutcome.TaskHandoff(taskId);

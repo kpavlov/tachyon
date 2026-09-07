@@ -12,6 +12,7 @@ import dev.tachyonmcp.api.server.features.tools.AsyncToolFn;
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
+import dev.tachyonmcp.core.server.observability.CapturedPayload;
 import dev.tachyonmcp.core.server.observability.ObservationListener;
 import dev.tachyonmcp.core.server.observability.ObservationScope;
 import dev.tachyonmcp.core.server.observability.OperationInfo;
@@ -286,6 +287,38 @@ class ObservationDispatchTest {
             var outcome = listener.completions.getFirst().outcome();
             assertThat(outcome).isInstanceOf(OperationOutcome.TaskHandoff.class);
             assertThat(((OperationOutcome.TaskHandoff) outcome).taskId()).isEqualTo("task-1");
+        }
+    }
+
+    @Test
+    void requestArgsCapturedOnlyWhenPolicyEnabledAndListenerRegistered() {
+        var listener = new RecordingListener();
+        var descriptor = ToolDescriptor.builder().name("echo").description("echoes").build();
+        AsyncToolFn fn = (ctx, request) -> CompletableFuture.completedFuture(ToolResult.text("ok"));
+
+        var noCaptureListener = new RecordingListener();
+        try (ServerEngine captured = newEngine(
+                        b -> b.observability(o -> o.listener(listener).payloadCapture(p -> p.requestArgs(true))),
+                        s -> s.tools().registerAsync(descriptor, fn));
+                ServerEngine notCaptured = newEngine(
+                        b -> b.observability(o -> o.listener(noCaptureListener)),
+                        s -> s.tools().registerAsync(descriptor, fn))) {
+            var params = Map.of("name", "echo", "arguments", Map.of("city", "Berlin"));
+
+            captured.createSession("sess-capture").activate();
+            var capturingDispatcher = new McpDispatcher(captured, captured.executor());
+            capturingDispatcher.dispatchRequestAsync(RequestId.of(1), "tools/call", params, "sess-capture")
+                    .join();
+            var capturedInfo = listener.completions.getFirst().info();
+            assertThat(capturedInfo.requestPayload()).isInstanceOf(CapturedPayload.Value.class);
+            assertThat(((CapturedPayload.Value) capturedInfo.requestPayload()).json()).contains("Berlin");
+
+            notCaptured.createSession("sess-no-capture").activate();
+            var plainDispatcher = new McpDispatcher(notCaptured, notCaptured.executor());
+            plainDispatcher
+                    .dispatchRequestAsync(RequestId.of(1), "tools/call", params, "sess-no-capture")
+                    .join();
+            assertThat(noCaptureListener.completions.getFirst().info().requestPayload()).isNull();
         }
     }
 }

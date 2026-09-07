@@ -22,6 +22,7 @@ import dev.tachyonmcp.core.protocol.ProtocolRequestMapper;
 import dev.tachyonmcp.core.server.RpcMethodHandler;
 import dev.tachyonmcp.core.server.features.tasks.TasksExtension;
 import dev.tachyonmcp.core.server.json.JsonUtils;
+import dev.tachyonmcp.core.server.observability.CapturedPayload;
 import dev.tachyonmcp.core.server.session.DispatchContext;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
@@ -113,7 +114,17 @@ public final class ToolMethodHandlers {
             if (handler == null) {
                 return CompletableFuture.completedFuture(invalidParams("Unknown tool: " + request.name()));
             }
-            context.observation().info().target(handler.descriptor().name());
+            var observation = context.observation();
+            observation.info().target(handler.descriptor().name());
+            if (observation.active()
+                    && context.engine().config().observability().payloadCapture().requestArgs()) {
+                var maxBytes = context.engine()
+                        .config()
+                        .observability()
+                        .payloadCapture()
+                        .maxBytes();
+                observation.info().requestPayload(CapturedPayload.capture(request.arguments().json(), maxBytes));
+            }
             var extensionId = handler.descriptor().extensionId();
             if (extensionId != null && !context.isExtensionEnabled(extensionId)) {
                 return CompletableFuture.completedFuture(invalidParams("Unknown tool: " + request.name()));
