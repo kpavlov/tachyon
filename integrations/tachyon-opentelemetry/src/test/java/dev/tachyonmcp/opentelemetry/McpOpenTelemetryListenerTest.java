@@ -12,6 +12,7 @@ import static dev.tachyonmcp.testkit.JsonRpcResponseAssert.assertThat;
 import static io.opentelemetry.semconv.ErrorAttributes.ERROR_TYPE;
 import static io.opentelemetry.semconv.incubating.JsonrpcIncubatingAttributes.JSONRPC_REQUEST_ID;
 import static io.opentelemetry.semconv.incubating.RpcIncubatingAttributes.RPC_RESPONSE_STATUS_CODE;
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -20,6 +21,7 @@ import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.core.server.config.ObservabilityConfig;
 import dev.tachyonmcp.testkit.Mcp20251125Client;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
 import dev.tachyonmcp.testkit.McpTestServers;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
@@ -214,6 +216,98 @@ class McpOpenTelemetryListenerTest {
     }
 
     @Test
+    @DisplayName("subscriptions/listen is traced while its stream delivers server notifications")
+    void subscriptionStreamDeliversNotificationAndProducesSpan() throws Exception {
+        try (var server = startServer();
+                var client = new Mcp20260728Client(server.port())) {
+            try (var stream = client.openPostStream(null, """
+                {"jsonrpc":"2.0","id":50,"method":"subscriptions/listen",
+                 "params":{"notifications":{"toolsListChanged":true}}}
+                """)) {
+                final var acknowledged = stream.await(
+                        frame -> frame.data().contains("notifications/subscriptions/acknowledged"),
+                        Duration.ofSeconds(5));
+
+                server.tools()
+                        .register(
+                                tool -> tool.name("subscription-trigger"),
+                                (ctx, request) -> ToolResult.text("triggered"));
+
+                final var changed = stream.await(
+                        frame -> frame.data().contains("notifications/tools/list_changed"), Duration.ofSeconds(5));
+
+                assertThatJson(acknowledged.data()).isEqualTo("""
+                    {
+                      "jsonrpc":"2.0",
+                      "method":"notifications/subscriptions/acknowledged",
+                      "params":{
+                        "notifications":{"toolsListChanged":true},
+                        "_meta":{"io.modelcontextprotocol/subscriptionId":50}
+                      }
+                    }
+                    """);
+                assertThatJson(changed.data()).isEqualTo("""
+                    {
+                      "jsonrpc":"2.0",
+                      "method":"notifications/tools/list_changed",
+                      "params":{"_meta":{"io.modelcontextprotocol/subscriptionId":50}}
+                    }
+                    """);
+
+                final var span = awaitSpanFor("subscriptions/listen");
+                assertThat(span.getKind()).isEqualTo(SpanKind.SERVER);
+                assertThat(span.getStatus().getStatusCode()).isEqualTo(StatusCode.UNSET);
+                assertThat(span.getAttributes().asMap())
+                        .containsEntry(MCP_METHOD_NAME, "subscriptions/listen")
+                        .containsEntry(JSONRPC_REQUEST_ID, "50")
+                        .doesNotContainKey(MCP_SESSION_ID);
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("a streaming tools/call delivers its MCP log notification and produces one tool span")
+    void streamingToolLogNotificationProducesSpan() throws Exception {
+        try (var server = startServer();
+                var client = new Mcp20260728Client(server.port())) {
+            try (var stream = client.openPostStream(null, """
+                {"jsonrpc":"2.0","id":51,"method":"tools/call",
+                 "params":{"name":"logging","arguments":{},
+                           "_meta":{"io.modelcontextprotocol/logLevel":"info"}}}
+                """)) {
+                final var notification =
+                        stream.await(frame -> frame.data().contains("notifications/message"), Duration.ofSeconds(5));
+                final var result = stream.await(frame -> frame.data().contains("\"result\""), Duration.ofSeconds(5));
+
+                assertThatJson(notification.data()).isEqualTo("""
+                    {
+                      "jsonrpc":"2.0",
+                      "method":"notifications/message",
+                      "params":{"level":"info","logger":"otel.probe","data":"streamed log"}
+                    }
+                    """);
+                assertThatJson(result.data()).isEqualTo("""
+                    {
+                      "jsonrpc":"2.0",
+                      "id":51,
+                      "result":{
+                        "content":[{"type":"text","text":"logged"}],
+                        "resultType":"complete"
+                      }
+                    }
+                    """);
+            }
+
+            final var span = awaitSpanFor("tools/call logging");
+            assertThat(span.getStatus().getStatusCode()).isEqualTo(StatusCode.UNSET);
+            assertThat(span.getAttributes().asMap())
+                    .containsEntry(MCP_METHOD_NAME, "tools/call")
+                    .containsEntry(GEN_AI_TOOL_NAME, "logging")
+                    .containsEntry(JSONRPC_REQUEST_ID, "51");
+        }
+    }
+
+    @Test
     @DisplayName("initialize is traced too; the duration histogram omits high-cardinality ids")
     void durationHistogramCoversEveryOperation() throws Exception {
         try (var server = startServer();
@@ -288,15 +382,21 @@ class McpOpenTelemetryListenerTest {
 
     private TachyonServer startServer(Consumer<ObservabilityConfig.Builder> observabilityConfig) {
         return McpTestServers.start(
-                builder -> builder.session(session -> session.enabled(true)).observability(o -> {
-                    o.listener(McpOpenTelemetryListener.create(otel));
-                    observabilityConfig.accept(o);
-                }),
+                builder -> builder.session(session -> session.enabled(true))
+                        .capabilities(capabilities -> capabilities.tools(true).logging())
+                        .observability(o -> {
+                            o.listener(McpOpenTelemetryListener.create(otel));
+                            observabilityConfig.accept(o);
+                        }),
                 server -> {
                     server.tools().register(tool -> tool.name("forecast"), (ctx, request) -> ToolResult.text("sunny"));
                     server.tools().register(tool -> tool.name("failing"), (ctx, request) -> ToolResult.error("nope"));
                     server.tools().register(tool -> tool.name("throwing"), (ctx, request) -> {
                         throw new IOException("🔥 boom");
+                    });
+                    server.tools().register(tool -> tool.name("logging"), (ctx, request) -> {
+                        ctx.notifications().info("otel.probe", "streamed log");
+                        return ToolResult.text("logged");
                     });
                     server.resources()
                             .register(

@@ -5,6 +5,7 @@ import dev.tachyonmcp.api.server.domain.TextResourceContents;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.testkit.Mcp20251125Client;
+import dev.tachyonmcp.testkit.Mcp20260728Client;
 import dev.tachyonmcp.testkit.McpTestServers;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
@@ -66,30 +67,35 @@ public final class McpOpenTelemetryProbe {
                                 .build())
                         .build();
                 TachyonServer server = startServer(otel);
-                var client = new Mcp20251125Client(server.port())) {
+                var legacyClient = new Mcp20251125Client(server.port());
+                var modernClient = new Mcp20260728Client(server.port())) {
             LOGGER.info("Exporting to OTLP endpoint (OTEL_EXPORTER_OTLP_ENDPOINT, default http://localhost:4317)");
             LOGGER.info("Service name: tachyon-opentelemetry-probe");
-            var sessionId = client.initialize();
+            LOGGER.info("initialize + notifications/initialized...");
+            var sessionId = legacyClient.initialize();
 
             LOGGER.info("tools/call forecast (success)...");
-            client.post(sessionId, """
+            legacyClient.post(sessionId, """
                 {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"forecast","arguments":{"city":"Berlin"}}}""");
 
             LOGGER.info("tools/call failing (domain payload failure)...");
-            client.post(sessionId, """
+            legacyClient.post(sessionId, """
                 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"failing","arguments":{}}}""");
 
             LOGGER.info("tools/call throwing (handler exception)...");
-            client.post(sessionId, """
+            legacyClient.post(sessionId, """
                 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"throwing","arguments":{}}}""");
 
             LOGGER.info("tools/call absent (caller fault, unknown tool)...");
-            client.post(sessionId, """
+            legacyClient.post(sessionId, """
                 {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"absent","arguments":{}}}""");
 
             LOGGER.info("resources/read greeting...");
-            client.post(sessionId, """
+            legacyClient.post(sessionId, """
                 {"jsonrpc":"2.0","id":5,"method":"resources/read","params":{"uri":"resource://greeting"}}""");
+
+            exerciseSubscription(server, modernClient);
+            exerciseStreamingLog(modernClient);
         } finally {
             LOGGER.info("Flushing and shutting down the OTel SDK...");
         }
@@ -100,6 +106,7 @@ public final class McpOpenTelemetryProbe {
     private static TachyonServer startServer(OpenTelemetry otel) {
         return McpTestServers.start(
                 builder -> builder.session(session -> session.enabled(true))
+                        .capabilities(capabilities -> capabilities.tools(true).logging())
                         .observability(o -> o.listener(McpOpenTelemetryListener.create(otel))),
                 server -> {
                     server.tools().register(tool -> tool.name("forecast"), (ctx, request) -> ToolResult.text("sunny"));
@@ -107,10 +114,41 @@ public final class McpOpenTelemetryProbe {
                     server.tools().register(tool -> tool.name("throwing"), (ctx, request) -> {
                         throw new IOException("🔥 boom");
                     });
+                    server.tools().register(tool -> tool.name("logging"), (ctx, request) -> {
+                        ctx.notifications().info("otel.probe", "streamed log");
+                        return ToolResult.text("logged");
+                    });
                     server.resources()
                             .register(
                                     resource -> resource.name("greeting").uri("resource://greeting"),
                                     (ctx, request) -> TextResourceContents.of(request.uri(), "hello", "text/plain"));
                 });
+    }
+
+    private static void exerciseSubscription(TachyonServer server, Mcp20260728Client client) throws Exception {
+        LOGGER.info("subscriptions/listen + notifications/tools/list_changed...");
+        try (var stream = client.openPostStream(null, """
+            {"jsonrpc":"2.0","id":50,"method":"subscriptions/listen",
+             "params":{"notifications":{"toolsListChanged":true}}}
+            """)) {
+            stream.await(
+                    frame -> frame.data().contains("notifications/subscriptions/acknowledged"), Duration.ofSeconds(5));
+            server.tools()
+                    .register(
+                            tool -> tool.name("subscription-trigger"), (ctx, request) -> ToolResult.text("triggered"));
+            stream.await(frame -> frame.data().contains("notifications/tools/list_changed"), Duration.ofSeconds(5));
+        }
+    }
+
+    private static void exerciseStreamingLog(Mcp20260728Client client) throws Exception {
+        LOGGER.info("tools/call logging + notifications/message...");
+        try (var stream = client.openPostStream(null, """
+            {"jsonrpc":"2.0","id":51,"method":"tools/call",
+             "params":{"name":"logging","arguments":{},
+                       "_meta":{"io.modelcontextprotocol/logLevel":"info"}}}
+            """)) {
+            stream.await(frame -> frame.data().contains("notifications/message"), Duration.ofSeconds(5));
+            stream.await(frame -> frame.data().contains("\"result\""), Duration.ofSeconds(5));
+        }
     }
 }
