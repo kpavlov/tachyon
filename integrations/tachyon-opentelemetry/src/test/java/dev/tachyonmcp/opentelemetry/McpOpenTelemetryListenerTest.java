@@ -146,7 +146,7 @@ class McpOpenTelemetryListenerTest {
                     .doesNotContainKey(RPC_RESPONSE_STATUS_CODE)
                     // gen_ai.tool.call.result is opt-in (PayloadCapturePolicy.responseContent) and
                     // off here -- this size pins the full attribute set so it can't leak in silently.
-                    .hasSize(10);
+                    .hasSize(11);
         }
     }
 
@@ -221,6 +221,72 @@ class McpOpenTelemetryListenerTest {
             assertThat(response).isJsonRpcError().hasErrorCode(-32603);
 
             var span = spanFor("tools/call throwing");
+            assertThat(span.getEvents())
+                    .anySatisfy(event -> assertThat(event.getAttributes().get(EXCEPTION_MESSAGE))
+                            .contains("boom"));
+        }
+    }
+
+    @Test
+    @DisplayName("PayloadCapturePolicy.exceptionDetail(true) records a resource handler exception on the span")
+    void exceptionDetailWhenOptedInForResource() throws Exception {
+        try (var server = startServer(o -> o.payloadCapture(p -> p.exceptionDetail(true)));
+                var client = new Mcp20251125Client(server.port())) {
+            var sessionId = client.initialize();
+            var response = client.post(
+                    sessionId,
+                    // language=json
+                    """
+                    {"jsonrpc":"2.0","id":18,"method":"resources/read","params":{"uri":"resource://throwing"}}""");
+
+            assertThat(response).isJsonRpcError().hasErrorCode(-32603);
+
+            var span = spanFor("resources/read");
+            assertThat(span.getEvents())
+                    .anySatisfy(event -> assertThat(event.getAttributes().get(EXCEPTION_MESSAGE))
+                            .contains("boom"));
+        }
+    }
+
+    @Test
+    @DisplayName("PayloadCapturePolicy.exceptionDetail(true) records a prompt handler exception on the span")
+    void exceptionDetailWhenOptedInForPrompt() throws Exception {
+        try (var server = startServer(o -> o.payloadCapture(p -> p.exceptionDetail(true)));
+                var client = new Mcp20251125Client(server.port())) {
+            var sessionId = client.initialize();
+            var response = client.post(
+                    sessionId,
+                    // language=json
+                    """
+                    {"jsonrpc":"2.0","id":19,"method":"prompts/get","params":{"name":"throwing"}}""");
+
+            assertThat(response).isJsonRpcError().hasErrorCode(-32603);
+
+            var span = spanFor("prompts/get throwing");
+            assertThat(span.getEvents())
+                    .anySatisfy(event -> assertThat(event.getAttributes().get(EXCEPTION_MESSAGE))
+                            .contains("boom"));
+        }
+    }
+
+    @Test
+    @DisplayName("PayloadCapturePolicy.exceptionDetail(true) records a completion handler exception on the span")
+    void exceptionDetailWhenOptedInForCompletion() throws Exception {
+        try (var server = startServer(o -> o.payloadCapture(p -> p.exceptionDetail(true)));
+                var client = new Mcp20251125Client(server.port())) {
+            var sessionId = client.initialize();
+            var response = client.post(
+                    sessionId,
+                    // language=json
+                    """
+                    {"jsonrpc":"2.0","id":20,"method":"completion/complete","params":{
+                      "ref":{"type":"ref/prompt","name":"throwing"},
+                      "argument":{"name":"language","value":"java"}
+                    }}""");
+
+            assertThat(response).isJsonRpcError().hasErrorCode(-32603);
+
+            var span = spanFor("completion/complete");
             assertThat(span.getEvents())
                     .anySatisfy(event -> assertThat(event.getAttributes().get(EXCEPTION_MESSAGE))
                             .contains("boom"));
@@ -481,7 +547,12 @@ class McpOpenTelemetryListenerTest {
     private TachyonServer startServer(Consumer<ObservabilityConfig.Builder> observabilityConfig) {
         return McpTestServers.start(
                 builder -> builder.session(session -> session.enabled(true))
-                        .capabilities(capabilities -> capabilities.tools(true).logging())
+                        .capabilities(capabilities -> capabilities
+                                .tools(true)
+                                .logging()
+                                .resources()
+                                .prompts()
+                                .completions())
                         .observability(o -> {
                             o.listener(McpOpenTelemetryListener.create(otel));
                             observabilityConfig.accept(o);
@@ -500,6 +571,18 @@ class McpOpenTelemetryListenerTest {
                             .register(
                                     resource -> resource.name("greeting").uri("resource://greeting"),
                                     (ctx, request) -> TextResourceContents.of(request.uri(), "hello", "text/plain"));
+                    server.resources()
+                            .register(
+                                    resource -> resource.name("throwing").uri("resource://throwing"),
+                                    (ctx, request) -> {
+                                        throw new IOException("🔥 boom");
+                                    });
+                    server.prompts().register(prompt -> prompt.name("throwing"), (ctx, request) -> {
+                        throw new IOException("🔥 boom");
+                    });
+                    server.completions().registerForPrompt("throwing", (ctx, request) -> {
+                        throw new IOException("🔥 boom");
+                    });
                 });
     }
 }

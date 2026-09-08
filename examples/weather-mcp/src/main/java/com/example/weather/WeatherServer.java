@@ -27,7 +27,6 @@ import dev.tachyonmcp.api.server.features.prompts.PromptResult;
 import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.opentelemetry.McpOpenTelemetryListener;
-import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.exporter.logging.LoggingMetricExporter;
 import io.opentelemetry.exporter.logging.LoggingSpanExporter;
 import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter;
@@ -76,7 +75,7 @@ public final class WeatherServer {
             .put(ServiceAttributes.SERVICE_NAME, "weather-mcp")
             .build();
 
-    private static final OpenTelemetry OTEL = OpenTelemetrySdk.builder()
+    private static final OpenTelemetrySdk OTEL = OpenTelemetrySdk.builder()
             .setTracerProvider(SdkTracerProvider.builder()
                     .setResource(OTEL_RESOURCE)
                     .addSpanProcessor(SimpleSpanProcessor.create(LoggingSpanExporter.create()))
@@ -112,6 +111,7 @@ public final class WeatherServer {
             weatherService
         );
         server.start();
+        Runtime.getRuntime().addShutdownHook(new Thread(OTEL::close));
         log.info("Connect your MCP client to http://{}:{}/mcp", server.host(), server.port());
     }
 

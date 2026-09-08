@@ -57,4 +57,18 @@ public interface DispatchContext extends ChannelContext {
 
     /** Returns the observation accumulator for the operation being dispatched ({@link Observation#NONE} when disabled). */
     Observation observation();
+
+    /**
+     * Captures {@code cause} onto the current operation, gated by the server's opt-in
+     * exception-detail capture policy -- for a feature handler (tool/resource/prompt/completion)
+     * converting a thrown exception into a {@code ServerError} value rather than letting it
+     * propagate, this is the only way that exception reaches a {@code HandlerFailed} outcome.
+     */
+    default void captureExceptionCause(Throwable cause) {
+        var observation = observation();
+        if (observation.active()
+                && engine().config().observability().payloadCapture().exceptionDetail()) {
+            observation.info().exceptionCause(cause);
+        }
+    }
 }

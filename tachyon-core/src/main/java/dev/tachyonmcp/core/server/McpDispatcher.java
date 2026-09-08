@@ -409,7 +409,9 @@ public class McpDispatcher {
                 logger.debug("Handler error for {}: {}", method, error.message());
                 dispatchResult = errorResult(id, error, context);
                 outcome = new OperationOutcome.HandlerFailed(
-                        error, context.responseMapper().error(error).code(), null);
+                        error,
+                        context.responseMapper().error(error).code(),
+                        context.observation().info().exceptionCause());
             } else {
                 var exceptionDetail = context.engine()
                         .config()

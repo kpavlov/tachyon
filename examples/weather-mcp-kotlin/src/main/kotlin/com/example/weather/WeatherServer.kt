@@ -120,6 +120,7 @@ fun main() {
             allowedHost = System.getenv("ALLOWED_HOST"),
         )
     server.start()
+    Runtime.getRuntime().addShutdownHook(Thread { openTelemetry.close() })
     log.info("Connect your MCP client to http://{}:{}/mcp", server.host(), server.port())
 }
 
@@ -174,11 +175,14 @@ fun assembleServer(
         observability {
             slowRequestLogging()
             listener(McpOpenTelemetryListener.create(openTelemetry))
+
             payloadCapture {
+                /*
                 requestArgs(true)
                 responseContent(true)
                 rawMessage(true)
                 exceptionDetail(true)
+                */
             }
         }
 

@@ -30,6 +30,7 @@ public final class OperationInfo {
     private @Nullable CapturedPayload requestPayload;
     private @Nullable CapturedPayload responsePayload;
     private @Nullable String target;
+    private @Nullable Throwable exceptionCause;
 
     public OperationInfo(OperationKind kind, String method, @Nullable RequestId requestId) {
         this.kind = kind;
@@ -126,6 +127,21 @@ public final class OperationInfo {
 
     public void target(@Nullable String target) {
         this.target = target;
+    }
+
+    /**
+     * The throwable a feature handler (tool/resource/prompt/completion) converted into a {@link
+     * dev.tachyonmcp.api.server.domain.ServerError} value rather than letting propagate, captured
+     * only when the server's opt-in exception-detail capture policy is enabled -- that conversion
+     * is otherwise the one place the original throwable is lost before an {@code HandlerFailed}
+     * outcome is built.
+     */
+    public @Nullable Throwable exceptionCause() {
+        return exceptionCause;
+    }
+
+    public void exceptionCause(@Nullable Throwable exceptionCause) {
+        this.exceptionCause = exceptionCause;
     }
 
     /**

@@ -152,7 +152,7 @@ public final class ToolMethodHandlers {
                     () -> handler.handleAsync(context, request),
                     context.engine().executor(),
                     (toolResult, cause) -> {
-                        if (cause != null) return handlerError(request.name(), cause);
+                        if (cause != null) return handlerError(context, request.name(), cause);
                         sendLogging(context, request.name(), "completed");
                         return mapResult(
                                 context,
@@ -249,7 +249,7 @@ public final class ToolMethodHandlers {
             return errors.isEmpty() ? null : SchemaValidationError.join(errors);
         }
 
-        private Object handlerError(String name, Throwable cause) {
+        private Object handlerError(DispatchContext context, String name, Throwable cause) {
             if (cause instanceof CancellationException) {
                 logger.debug("Tool call cancelled for '{}'", name);
                 return internalError("Tool call cancelled");
@@ -260,6 +260,7 @@ public final class ToolMethodHandlers {
             } else if (error.kind() == ServerError.Kind.INTERNAL_ERROR) {
                 logger.error("Tool handler error for '{}'", name, cause);
             }
+            context.captureExceptionCause(cause);
             return error;
         }
 
