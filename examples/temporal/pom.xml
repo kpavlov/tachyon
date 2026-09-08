@@ -22,16 +22,26 @@
         <testcontainers.version>2.0.5</testcontainers.version>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>dev.tachyonmcp</groupId>
+                <artifactId>tachyon-bom</artifactId>
+                <version>${tachyon.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
             <artifactId>tachyon-core</artifactId>
-            <version>${tachyon.version}</version>
         </dependency>
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
             <artifactId>tachyon-tasks-temporal</artifactId>
-            <version>${tachyon.version}</version>
         </dependency>
         <dependency>
             <groupId>io.temporal</groupId>

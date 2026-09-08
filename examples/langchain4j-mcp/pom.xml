@@ -33,6 +33,13 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>dev.tachyonmcp</groupId>
+                <artifactId>tachyon-bom</artifactId>
+                <version>${tachyon.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
                 <version>${junit.version}</version>
@@ -46,12 +53,10 @@
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
             <artifactId>tachyon-core</artifactId>
-            <version>${tachyon.version}</version>
         </dependency>
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
             <artifactId>tachyon-annotations-langchain4j</artifactId>
-            <version>${tachyon.version}</version>
         </dependency>
 
         <!-- tachyon-annotations-langchain4j declares langchain4j-core optional; consumers pick

@@ -31,6 +31,13 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>dev.tachyonmcp</groupId>
+                <artifactId>tachyon-bom</artifactId>
+                <version>${tachyon.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
                 <groupId>tools.jackson</groupId>
                 <artifactId>jackson-bom</artifactId>
                 <version>${jackson.version}</version>
@@ -51,7 +58,6 @@
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
             <artifactId>tachyon-kotlin</artifactId>
-            <version>${tachyon.version}</version>
         </dependency>
 
         <dependency>
@@ -64,7 +70,6 @@
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
             <artifactId>tachyon-testkit</artifactId>
-            <version>${tachyon.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
