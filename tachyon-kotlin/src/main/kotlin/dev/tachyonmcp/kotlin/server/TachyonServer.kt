@@ -3,13 +3,31 @@ package dev.tachyonmcp.kotlin.server
 
 import dev.tachyonmcp.api.annotations.ExperimentalApi
 import dev.tachyonmcp.api.json.JsonSchema
+import dev.tachyonmcp.api.server.domain.Annotations
 import dev.tachyonmcp.api.server.domain.Icon
+import dev.tachyonmcp.api.server.domain.PromptArgument
+import dev.tachyonmcp.api.server.domain.PromptMessage
+import dev.tachyonmcp.api.server.domain.ResourceContents
 import dev.tachyonmcp.api.server.domain.ToolAnnotations
+import dev.tachyonmcp.api.server.features.completions.CompletionResult
+import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor
+import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor
+import dev.tachyonmcp.api.server.features.resources.ResourceTemplateDescriptor
 import dev.tachyonmcp.api.server.features.tasks.TaskSupport
 import dev.tachyonmcp.api.server.features.tools.ToolDescriptor
 import dev.tachyonmcp.api.server.features.tools.ToolResult
+import dev.tachyonmcp.core.server.features.resources.MimeTypes
+import dev.tachyonmcp.kotlin.server.config.CompletionScope
+import dev.tachyonmcp.kotlin.server.config.PromptScope
+import dev.tachyonmcp.kotlin.server.config.ResourceScope
+import dev.tachyonmcp.kotlin.server.config.TemplateScope
 import dev.tachyonmcp.kotlin.server.config.ToolScope
 import dev.tachyonmcp.kotlin.server.features.CoroutineRuntime
+import dev.tachyonmcp.kotlin.server.features.completions.promptCompletionFn
+import dev.tachyonmcp.kotlin.server.features.completions.resourceCompletionFn
+import dev.tachyonmcp.kotlin.server.features.prompts.promptFn
+import dev.tachyonmcp.kotlin.server.features.resources.resourceFn
+import dev.tachyonmcp.kotlin.server.features.resources.templateFn
 import dev.tachyonmcp.kotlin.server.features.tools.toolDescriptorOf
 import dev.tachyonmcp.kotlin.server.features.tools.toolFn
 import dev.tachyonmcp.kotlin.server.json.toJsonSchema
@@ -23,6 +41,7 @@ import dev.tachyonmcp.core.server.TachyonServer as CoreTachyonServer
  * Extends the core [CoreTachyonServer] API with suspend post-build registration.
  * Instances are created by [TachyonServer] and [buildServer].
  */
+@Suppress("TooManyFunctions")
 public sealed interface TachyonServer : CoreTachyonServer {
     /**
      * Registers a suspend tool handler.
@@ -145,6 +164,234 @@ public sealed interface TachyonServer : CoreTachyonServer {
             meta = meta,
             block = block,
         )
+
+    /**
+     * Registers a static resource with a suspend handler, accepting every optional attribute of
+     * [ResourceDescriptor.Builder]; pass a prebuilt [ResourceDescriptor] instead when a descriptor
+     * is already at hand.
+     *
+     * @param name resource name; need not be unique — [uri] is the resource's identity
+     * @param uri resource URI
+     * @param description optional resource description
+     * @param mimeType resource MIME type, guessed from [uri]'s extension by default
+     * @param title optional human-readable title
+     * @param annotations optional resource annotations
+     * @param size optional raw content size in bytes
+     * @param icons associated icons, or an empty list
+     * @param meta optional protocol extension metadata
+     * @param block handles reads of the registered resource
+     * @return this server
+     * @throws IllegalArgumentException if [uri] is already registered under a different name
+     */
+    @JvmSynthetic
+    @Suppress("LongParameterList")
+    public fun registerResource(
+        name: String,
+        uri: String,
+        description: String? = null,
+        mimeType: String? = MimeTypes.guess(uri),
+        title: String? = null,
+        annotations: Annotations? = null,
+        size: Long? = null,
+        icons: List<Icon> = emptyList(),
+        meta: Map<String, Any>? = null,
+        block: suspend ResourceScope.() -> ResourceContents,
+    ): TachyonServer =
+        registerResource(
+            descriptor =
+                ResourceDescriptor
+                    .builder()
+                    .name(name)
+                    .uri(uri)
+                    .description(description)
+                    .mimeType(mimeType)
+                    .title(title)
+                    .annotations(annotations)
+                    .size(size)
+                    .icons(icons)
+                    .meta(meta)
+                    .build(),
+            block = block,
+        )
+
+    /**
+     * Registers a prebuilt static-resource descriptor with a suspend handler.
+     *
+     * Callable before or after [start]. Re-registering the same URI under the same name replaces
+     * the resource in place; registering it under a different name is rejected. Does nothing when
+     * the resources capability is off — the call still returns this server.
+     *
+     * @param descriptor static-resource descriptor
+     * @param block handler invoked for resource reads
+     * @return this server
+     * @throws IllegalArgumentException if the descriptor's URI is already registered under a
+     * different name
+     */
+    @JvmSynthetic
+    public fun registerResource(
+        descriptor: ResourceDescriptor,
+        block: suspend ResourceScope.() -> ResourceContents,
+    ): TachyonServer
+
+    /**
+     * Registers a resource template with a suspend handler, accepting every optional attribute of
+     * [ResourceTemplateDescriptor.Builder]; pass a prebuilt [ResourceTemplateDescriptor] instead
+     * when a descriptor is already at hand.
+     *
+     * @param name template name; must be unique among registered templates
+     * @param uriTemplate URI template used to match resource requests
+     * @param description optional template description
+     * @param mimeType optional MIME type of the matched resources
+     * @param title optional human-readable title
+     * @param annotations optional template annotations
+     * @param icons associated icons, or an empty list
+     * @param meta optional protocol extension metadata
+     * @param block handles requests for resources matching the template
+     * @return this server
+     * @throws IllegalArgumentException if a template is already registered under [name]
+     */
+    @JvmSynthetic
+    @Suppress("LongParameterList")
+    public fun registerResourceTemplate(
+        name: String,
+        uriTemplate: String,
+        description: String? = null,
+        mimeType: String? = null,
+        title: String? = null,
+        annotations: Annotations? = null,
+        icons: List<Icon> = emptyList(),
+        meta: Map<String, Any>? = null,
+        block: suspend TemplateScope.() -> ResourceContents,
+    ): TachyonServer =
+        registerResourceTemplate(
+            descriptor =
+                ResourceTemplateDescriptor
+                    .builder()
+                    .name(name)
+                    .uriTemplate(uriTemplate)
+                    .description(description)
+                    .mimeType(mimeType)
+                    .title(title)
+                    .annotations(annotations)
+                    .icons(icons)
+                    .meta(meta)
+                    .build(),
+            block = block,
+        )
+
+    /**
+     * Registers a prebuilt resource-template descriptor with a suspend handler.
+     *
+     * Callable before or after [start]. Unlike the other `register*` functions this one rejects
+     * duplicates outright rather than replacing — unregister the template first to swap its
+     * handler. Does nothing when the resources capability is off — the call still returns this
+     * server.
+     *
+     * @param descriptor resource-template descriptor
+     * @param block handler invoked for matching resource requests
+     * @return this server
+     * @throws IllegalArgumentException if a template is already registered under the descriptor's
+     * name
+     */
+    @JvmSynthetic
+    public fun registerResourceTemplate(
+        descriptor: ResourceTemplateDescriptor,
+        block: suspend TemplateScope.() -> ResourceContents,
+    ): TachyonServer
+
+    /**
+     * Registers a prompt with a suspend handler, accepting every optional attribute of
+     * [PromptDescriptor.Builder]; pass a prebuilt [PromptDescriptor] instead when a descriptor is
+     * already at hand.
+     *
+     * @param name prompt name; registering an existing name replaces that prompt
+     * @param description optional prompt description
+     * @param title optional human-readable title
+     * @param arguments arguments accepted by this prompt, or an empty list
+     * @param inputSchema optional JSON schema describing the prompt's arguments
+     * @param icons associated icons, or an empty list
+     * @param meta optional protocol extension metadata
+     * @param block handler that generates the prompt messages
+     * @return this server
+     */
+    @JvmSynthetic
+    @Suppress("LongParameterList")
+    public fun registerPrompt(
+        name: String,
+        description: String? = null,
+        title: String? = null,
+        arguments: List<PromptArgument> = emptyList(),
+        inputSchema: JsonSchema? = null,
+        icons: List<Icon> = emptyList(),
+        meta: Map<String, Any>? = null,
+        block: suspend PromptScope.() -> List<PromptMessage>,
+    ): TachyonServer =
+        registerPrompt(
+            descriptor =
+                PromptDescriptor
+                    .builder()
+                    .name(name)
+                    .description(description)
+                    .title(title)
+                    .arguments(arguments)
+                    .inputSchema(inputSchema)
+                    .icons(icons)
+                    .meta(meta)
+                    .build(),
+            block = block,
+        )
+
+    /**
+     * Registers a prebuilt prompt descriptor with a suspend handler.
+     *
+     * Callable before or after [start]. Registering a name that already exists silently replaces
+     * that prompt. Does nothing when the prompts capability is off — the call still returns this
+     * server.
+     *
+     * @param descriptor prompt descriptor
+     * @param block handler invoked for prompt requests
+     * @return this server
+     */
+    @JvmSynthetic
+    public fun registerPrompt(
+        descriptor: PromptDescriptor,
+        block: suspend PromptScope.() -> List<PromptMessage>,
+    ): TachyonServer
+
+    /**
+     * Registers a completion handler for a prompt's arguments.
+     *
+     * Callable before or after [start]. Registering a prompt name that already has a handler
+     * silently replaces it. Does nothing when the completions capability is off — the call still
+     * returns this server.
+     *
+     * @param promptName the prompt name
+     * @param block the suspend function that returns completion candidates
+     * @return this server
+     */
+    @JvmSynthetic
+    public fun registerPromptCompletion(
+        promptName: String,
+        block: suspend CompletionScope.() -> CompletionResult,
+    ): TachyonServer
+
+    /**
+     * Registers a completion handler for a resource template's variables.
+     *
+     * Callable before or after [start]. [uriOrTemplate] is matched verbatim against the URI the
+     * client sends, so it need not name a registered resource. Registering a URI or template that
+     * already has a handler silently replaces it. Does nothing when the completions capability is
+     * off — the call still returns this server.
+     *
+     * @param uriOrTemplate the resource URI or template
+     * @param block the suspend function that returns completion candidates
+     * @return this server
+     */
+    @JvmSynthetic
+    public fun registerResourceCompletion(
+        uriOrTemplate: String,
+        block: suspend CompletionScope.() -> CompletionResult,
+    ): TachyonServer
 }
 
 internal class DefaultKotlinTachyonServer(
@@ -157,6 +404,56 @@ internal class DefaultKotlinTachyonServer(
         block: suspend ToolScope.() -> ToolResult,
     ): TachyonServer {
         tools().registerAsync(descriptor, toolFn(descriptor.name(), coroutineRuntime, block))
+        return this
+    }
+
+    override fun registerResource(
+        descriptor: ResourceDescriptor,
+        block: suspend ResourceScope.() -> ResourceContents,
+    ): TachyonServer {
+        resources().registerAsync(descriptor, resourceFn(descriptor, coroutineRuntime, block))
+        return this
+    }
+
+    override fun registerResourceTemplate(
+        descriptor: ResourceTemplateDescriptor,
+        block: suspend TemplateScope.() -> ResourceContents,
+    ): TachyonServer {
+        resources().registerTemplateAsync(
+            descriptor,
+            templateFn(descriptor, coroutineRuntime, block),
+        )
+        return this
+    }
+
+    override fun registerPrompt(
+        descriptor: PromptDescriptor,
+        block: suspend PromptScope.() -> List<PromptMessage>,
+    ): TachyonServer {
+        prompts().registerAsync(descriptor, promptFn(descriptor, coroutineRuntime, block))
+        return this
+    }
+
+    override fun registerPromptCompletion(
+        promptName: String,
+        block: suspend CompletionScope.() -> CompletionResult,
+    ): TachyonServer {
+        completions().registerForPromptAsync(
+            promptName,
+            promptCompletionFn(promptName, coroutineRuntime, block),
+        )
+        return this
+    }
+
+    override fun registerResourceCompletion(
+        uriOrTemplate: String,
+        block: suspend CompletionScope.() -> CompletionResult,
+    ): TachyonServer {
+        completions()
+            .registerForResourceAsync(
+                uriOrTemplate,
+                resourceCompletionFn(uriOrTemplate, coroutineRuntime, block),
+            )
         return this
     }
 }

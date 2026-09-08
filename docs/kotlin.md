@@ -353,14 +353,47 @@ Available via `ToolScope.arguments` (or `PromptScope.arguments`):
 | `ToolScope` | tool lambda | `ctx`, `request`, `arguments`; `success(v)`, `text(t)`, `fail(msg)`, `content { }` |
 | `ResourceScope` | resource lambda | `ctx`, `uri`, `params`, `uriTemplate` |
 | `TemplateScope` | resource-template lambda | `ctx`, `uri`, `params`, `uriTemplate`; contextual `TextResourceContents { }` |
-| `PromptScope` | prompt lambda | `ctx`, `request`, `arguments` |
+| `PromptScope` | prompt lambda | `ctx`, `request`, `arguments`; `content { }` |
+| `CompletionScope` | completion lambda | `ctx`, `request`, `argumentName`, `argumentValue`, `resolvedArguments` |
+
+`argumentName`, `argumentValue`, and `resolvedArguments` are raw client input — escape or
+allow-list before using them in a query, command, or path.
+
+## Completions
+
+`promptCompletion` answers `ref/prompt` refs by prompt name; `resourceCompletion` answers
+`ref/resource` refs by URI or `uriTemplate`, matched verbatim against what the client sends. A ref
+with no handler yields an empty result rather than an error. `CompletionResult { }` builds the
+response (`values`, `total`, `hasMore`, `meta`); the protocol caps a response at 100 values and the
+dispatcher truncates and forces `hasMore = true` beyond that.
+
+```kotlin
+TachyonServer(port = 8080) {
+    promptCompletion("rewrite-forecast") {
+        CompletionResult {
+            values = listOf("plain", "concise", "pirate").filter { it.startsWith(argumentValue) }
+        }
+    }
+    resourceCompletion("myapp://users/{userId}/profile") {
+        CompletionResult {
+            values = listOf("alice", "bob").filter { it.startsWith(argumentValue) }
+            hasMore = false
+        }
+    }
+}
+```
 
 ## Post-build registration
 
-The Kotlin `TachyonServer` supports suspend tool registration after construction:
+Every builder-time registration function has a suspend `register*` twin on the built
+`TachyonServer`, callable before or after `start()` — the Kotlin equivalent of Java's
+`server.tools().register(...)`, `server.resources().register(...)`,
+`server.prompts().register(...)`, and `server.completions().registerForPrompt/Resource(...)`.
+Each takes either flat named parameters or a prebuilt descriptor.
 
 ```kotlin
 val server = buildServer { /* base config */ }
+
 server.registerTool(
     ToolDescriptor {
         name = "echo"
@@ -369,7 +402,38 @@ server.registerTool(
 ) {
     text(arguments.stringValue("msg"))
 }
+
+server.registerResource(name = "config", uri = "myapp://config") {
+    TextResourceContents { text = """{"mode":"demo"}""" }
+}
+
+server.registerResourceTemplate(name = "user-profile", uriTemplate = "myapp://users/{userId}/profile") {
+    TextResourceContents { text = """{"userId":"${param("userId")}"}""" }
+}
+
+server.registerPrompt(name = "rewrite-forecast") {
+    content { text("Rewrite this forecast.") }
+}
+
+server.registerPromptCompletion("rewrite-forecast") {
+    CompletionResult { values = listOf("plain", "concise", "pirate") }
+}
+
+server.registerResourceCompletion("myapp://users/{userId}/profile") {
+    CompletionResult { values = listOf("alice", "bob") }
+}
 ```
+
+Duplicate handling differs per feature, and matters more here than at build time:
+
+| Call | Registering an existing key |
+|---|---|
+| `registerTool`, `registerPrompt`, `registerPromptCompletion`, `registerResourceCompletion` | replaces silently |
+| `registerResource` | replaces the same URI in place; throws `IllegalArgumentException` if that URI is held under a different name |
+| `registerResourceTemplate` | throws `IllegalArgumentException` — unregister first to swap a handler |
+
+When the matching capability is off, `register*` is a no-op that still returns the server, so a
+misconfigured capability shows up as a missing feature rather than an exception.
 
 ## Netty pipeline customization
 

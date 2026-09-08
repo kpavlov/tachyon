@@ -55,8 +55,7 @@ internal class PromptResourceCompletionE2eTest : AbstractStatelessMcpE2eTest<Mcp
     fun `resourceCompletion reads argumentName and argumentValue from CompletionScope`() {
         TachyonServer(port = 0) {
             resourceCompletion("file:///{path}") {
-                val candidate = "$argumentName:$argumentValue.txt"
-                CompletionResult { values = listOf(candidate) }
+                CompletionResult { values = listOf("$argumentName:$argumentValue.txt") }
             }
         }.use { server ->
             val client = createTestClient(server.port())

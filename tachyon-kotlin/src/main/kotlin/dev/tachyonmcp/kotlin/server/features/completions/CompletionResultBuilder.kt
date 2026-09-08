@@ -4,13 +4,17 @@
 package dev.tachyonmcp.kotlin.server.features.completions
 
 import dev.tachyonmcp.api.server.features.completions.CompletionResult
-import dev.tachyonmcp.kotlin.server.TachyonDsl
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
-/** Builds a [dev.tachyonmcp.api.server.features.completions.CompletionResult]. */
-@TachyonDsl
+/**
+ * Builds a [dev.tachyonmcp.api.server.features.completions.CompletionResult].
+ *
+ * Deliberately not a `@TachyonDsl` receiver: nothing nests inside this leaf builder, so the marker
+ * would only hide the enclosing [dev.tachyonmcp.kotlin.server.config.CompletionScope] and block
+ * `CompletionResult { values = candidates.filter { it.startsWith(argumentValue) } }`.
+ */
 public class CompletionResultBuilder
     @PublishedApi
     internal constructor() {
