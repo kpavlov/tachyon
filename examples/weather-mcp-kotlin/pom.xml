@@ -35,6 +35,13 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>dev.tachyonmcp</groupId>
+                <artifactId>tachyon-bom</artifactId>
+                <version>${tachyon.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
                 <groupId>tools.jackson</groupId>
                 <artifactId>jackson-bom</artifactId>
                 <version>${jackson.version}</version>
@@ -62,7 +69,6 @@
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
             <artifactId>tachyon-kotlin</artifactId>
-            <version>${tachyon.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlinx</groupId>
@@ -74,7 +80,6 @@
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
             <artifactId>tachyon-opentelemetry</artifactId>
-            <version>${tachyon.version}</version>
         </dependency>
         <dependency>
             <groupId>io.opentelemetry</groupId>
