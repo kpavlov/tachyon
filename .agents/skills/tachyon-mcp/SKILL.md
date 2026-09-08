@@ -40,8 +40,8 @@ Import `tachyon-bom` once, then add modules with no `<version>`:
 - `TachyonServer.builder()` → `ServerBuilder`. Start here.
 - `.build()` (only terminal method) → `TachyonServer` (`AutoCloseable`), no transport bound yet.
 - `TachyonServer.start()` (blocking) → binds the Netty transport.
-- `TachyonServer`: `.tools()`, `.resources()`, `.prompts()`, `.tasks()` first; then `.start()`, `.port()` (throws before `.start()`), `.close()`, `.config()`.
-- Dynamic registration: `.tools().register(...)`, `.resources().register(...)`, `.prompts().register(...)`.
+- `TachyonServer`: `.tools()`, `.resources()`, `.prompts()`, `.tasks()`, `.completions()` first; then `.start()`, `.port()` (throws before `.start()`), `.close()`, `.config()`.
+- Dynamic registration: `.tools().register(...)`, `.resources().register(...)`, `.prompts().register(...)`, `.completions().registerForPrompt(...)`/`.registerForResource(...)` — all work before or after `.start()`.
 - Every function gets `dev.tachyonmcp.api.runtime.InteractionContext` → protocol + optional session + notifications.
 - ⚡ **Virtual threads**: All synchronous functions (`ToolFn`, `ResourceFn`, `PromptFn`, `CompletionFn`) run on a virtual thread per request. Blocking for I/O is fine — never use `synchronized` (pins carrier thread). Use `ReentrantLock` instead.
 
@@ -365,7 +365,12 @@ tool(name = "greet", description = "Typed greet", inputSchema = ..., outputSchem
 - `scope.success(value)` — mirrors `decode`, defers serialization to the configured serializer
 - `scope.success(value, text)` — structured + human-readable text fallback
 
-Post-build registration with `registerTool`:
+Post-build registration — `TachyonServer` (Kotlin) mirrors every builder-time DSL function
+(`tool`/`resource`/`resourceTemplate`/`prompt`/`promptCompletion`/`resourceCompletion`) as a
+suspend `register*` method, callable before or after `.start()`, each with a flat-parameter
+overload and a prebuilt-descriptor overload — the Kotlin equivalent of Java's
+`server.tools().register(...)`/`.resources().register(...)`/`.prompts().register(...)`/
+`.completions().registerForPrompt(...)`/`.registerForResource(...)`:
 
 ```kotlin
 server.registerTool(
@@ -377,7 +382,39 @@ server.registerTool(
 ) {
     ToolResult.text(request.arguments().stringValue("message").reversed())
 }
+
+server.registerResource(name = "config", uri = "myapp://config") {
+    TextResourceContents { text = """{"mode":"demo"}""" }
+}
+
+server.registerResourceTemplate(name = "user-profile", uriTemplate = "myapp://users/{userId}/profile") {
+    TextResourceContents { text = """{"userId":"${param("userId")}"}""" }
+}
+
+server.registerPrompt(name = "rewrite-forecast") {
+    content { text("Rewrite this forecast.") }
+}
+
+server.registerPromptCompletion("rewrite-forecast") {
+    CompletionResult {
+        values = listOf("plain", "concise", "pirate").filter { it.startsWith(argumentValue) }
+    }
+}
+
+server.registerResourceCompletion("myapp://users/{userId}/profile") {
+    CompletionResult { values = listOf("alice", "bob") }
+}
 ```
+
+⚠️ Handler scopes (`CompletionScope`, `ResourceScope`, …) and most builder receivers carry
+`@TachyonDsl` — a `@DslMarker` — so inside a nested `TextResourceContents { }` you cannot reach the
+outer scope's `ctx`/`request` implicitly; capture them in a local `val` first. The accessors you
+actually need are re-exposed on the builder (`param`/`sequence`) or reachable because the builder is
+unmarked (`CompletionResultBuilder`), so both of these compile as written:
+`TextResourceContents { text = param("id") }` and
+`CompletionResult { values = candidates.filter { it.startsWith(argumentValue) } }`.
+
+Full: `resources/kotlin/PostBuildRegistrationExample.kt`
 
 ## Resource files
 
@@ -392,3 +429,4 @@ Load on demand (next to this skill):
 - [resources/kotlin/ToolHandlerExample.kt](resources/kotlin/ToolHandlerExample.kt) — suspend handler, `extends AbstractToolHandler` (`handle`/`handleAsync`), `registerTool`
 - [resources/kotlin/ResourceFnExample.kt](resources/kotlin/ResourceFnExample.kt) — static resources, URI templates (Kotlin DSL)
 - [resources/kotlin/PromptFnExample.kt](resources/kotlin/PromptFnExample.kt) — prompt descriptors and handlers (Kotlin DSL)
+- [resources/kotlin/PostBuildRegistrationExample.kt](resources/kotlin/PostBuildRegistrationExample.kt) — `registerResource`/`registerResourceTemplate`/`registerPrompt`/`registerPromptCompletion`/`registerResourceCompletion` on an already-built `TachyonServer`
