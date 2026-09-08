@@ -299,6 +299,11 @@ diagnostics and payload capture are off by default. Observation listeners are em
 |---|---|---|
 | `slowRequestLogging` | `false` | Enable slow-request diagnostics (handler watchdog + slow-POST logging) |
 | `slowRequestThreshold` | `10s` | Requests exceeding this duration produce a `warn` log when logging is enabled |
+| `listener` | none | Registers a passive `ObservationListener` (spans, metrics, logs) |
+| `payloadCapture` | all off | Opt-in request/response/exception content capture |
+
+See [Observability](observability.md) for the `ObservationListener` contract, the payload
+capture policy's individual toggles, and the bundled OpenTelemetry integration.
 
 Turning `slowRequestLogging` on activates two diagnostics:
 - **Handler watchdog** — a scheduled timer logs `"Handler slow"` at `debug` level when a handler exceeds the threshold

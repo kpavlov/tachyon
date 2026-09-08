@@ -8,11 +8,16 @@ import static dev.tachyonmcp.opentelemetry.McpAttributes.GEN_AI_TOOL_CALL_ARGUME
 import static dev.tachyonmcp.opentelemetry.McpAttributes.GEN_AI_TOOL_CALL_RESULT;
 import static dev.tachyonmcp.opentelemetry.McpAttributes.GEN_AI_TOOL_NAME;
 import static dev.tachyonmcp.opentelemetry.McpAttributes.MCP_METHOD_NAME;
+import static dev.tachyonmcp.opentelemetry.McpAttributes.MCP_PROTOCOL_VERSION;
 import static dev.tachyonmcp.opentelemetry.McpAttributes.MCP_SESSION_ID;
 import static dev.tachyonmcp.opentelemetry.McpAttributes.PROMPTS_GET;
 import static dev.tachyonmcp.opentelemetry.McpAttributes.TOOLS_CALL;
 import static dev.tachyonmcp.opentelemetry.McpAttributes.TOOL_ERROR;
 import static io.opentelemetry.semconv.ErrorAttributes.ERROR_TYPE;
+import static io.opentelemetry.semconv.NetworkAttributes.NETWORK_PROTOCOL_NAME;
+import static io.opentelemetry.semconv.ServerAttributes.SERVER_ADDRESS;
+import static io.opentelemetry.semconv.ServerAttributes.SERVER_PORT;
+import static io.opentelemetry.semconv.incubating.JsonrpcIncubatingAttributes.JSONRPC_PROTOCOL_VERSION;
 import static io.opentelemetry.semconv.incubating.JsonrpcIncubatingAttributes.JSONRPC_REQUEST_ID;
 import static io.opentelemetry.semconv.incubating.RpcIncubatingAttributes.RPC_RESPONSE_STATUS_CODE;
 
@@ -63,7 +68,10 @@ import org.jspecify.annotations.Nullable;
  * <p>Tool arguments are recorded as {@code gen_ai.tool.call.arguments} only when the server's {@code
  * PayloadCapturePolicy.requestArgs()} is enabled — this listener never captures payloads on its
  * own, it only reads what core already captured into {@link OperationInfo#requestPayload()}. Off by
- * default: arguments routinely carry credentials and personal data.
+ * default: arguments routinely carry credentials and personal data. Likewise, a handler/serialization
+ * failure's exception is recorded as a span exception event (message and stack trace) only when
+ * {@code PayloadCapturePolicy.exceptionDetail()} is enabled; core hands this listener a {@code null}
+ * cause otherwise, and the span still gets an {@code ERROR} status with a generic message.
  *
  * @see <a href="https://github.com/open-telemetry/semantic-conventions-genai/tree/main/model/mcp">
  *     semantic-conventions-genai / model / mcp</a>
@@ -73,6 +81,12 @@ public class McpOpenTelemetryListener implements ObservationListener {
     private static final String INSTRUMENTATION_NAME = "dev.tachyonmcp.opentelemetry";
     private static final String OPERATION_DURATION = "mcp.server.operation.duration";
     private static final double NANOS_PER_SECOND = 1_000_000_000.0;
+
+    /** MCP's wire protocol is JSON-RPC 2.0, unconditionally. */
+    private static final String JSONRPC_VERSION_2_0 = "2.0";
+
+    /** This listener only instruments {@code tachyon-core}'s Streamable HTTP transport. */
+    private static final String NETWORK_PROTOCOL_HTTP = "http";
 
     /**
      * JSON-RPC codes a server returns because the <em>caller</em> sent something it could not
@@ -150,13 +164,28 @@ public class McpOpenTelemetryListener implements ObservationListener {
 
     /** Attributes shared by the span and the duration histogram. All low-cardinality. */
     private static Attributes sharedAttributes(OperationInfo info, @Nullable String target) {
-        var builder = Attributes.builder().put(MCP_METHOD_NAME, info.method());
+        var builder = Attributes.builder()
+                .put(MCP_METHOD_NAME, info.method())
+                .put(JSONRPC_PROTOCOL_VERSION, JSONRPC_VERSION_2_0)
+                .put(NETWORK_PROTOCOL_NAME, NETWORK_PROTOCOL_HTTP);
         if (target != null) {
             if (isToolCall(info)) {
                 builder.put(GEN_AI_TOOL_NAME, target).put(GEN_AI_OPERATION_NAME, EXECUTE_TOOL);
             } else {
                 builder.put(GEN_AI_PROMPT_NAME, target);
             }
+        }
+        var protocolVersion = info.protocolVersion();
+        if (protocolVersion != null) {
+            builder.put(MCP_PROTOCOL_VERSION, protocolVersion);
+        }
+        var serverAddress = info.serverAddress();
+        if (serverAddress != null) {
+            builder.put(SERVER_ADDRESS, serverAddress);
+        }
+        var serverPort = info.serverPort();
+        if (serverPort != null) {
+            builder.put(SERVER_PORT, serverPort.longValue());
         }
         return builder.build();
     }
@@ -214,14 +243,14 @@ public class McpOpenTelemetryListener implements ObservationListener {
                 }
             }
             case OperationOutcome.SerializationFailed serializationFailed -> {
-                span.recordException(serializationFailed.cause());
-                span.setStatus(
-                        StatusCode.ERROR,
-                        Objects.toString(serializationFailed.cause().getMessage(), ""));
-                classify(
-                        span,
-                        metricAttributes,
-                        serializationFailed.cause().getClass().getName());
+                var cause = serializationFailed.cause();
+                if (cause != null) {
+                    span.recordException(cause);
+                    span.setStatus(StatusCode.ERROR, Objects.toString(cause.getMessage(), ""));
+                } else {
+                    span.setStatus(StatusCode.ERROR, "Serialization failed");
+                }
+                classify(span, metricAttributes, serializationFailed.causeType());
             }
             case OperationOutcome.Cancelled ignored -> {}
             case OperationOutcome.NotificationAccepted ignored -> {}

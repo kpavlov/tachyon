@@ -111,6 +111,7 @@ public final class PromptMethodHandlers {
                             } else {
                                 logger.error("Prompt handler error for '{}'", mapped.name(), cause);
                             }
+                            context.captureExceptionCause(cause);
                             return error;
                         }
                         var meta = result.meta();

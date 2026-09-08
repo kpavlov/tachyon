@@ -69,6 +69,7 @@ public final class CompletionMethodHandlers {
                                     } else {
                                         logger.error("Completion handler error", cause);
                                     }
+                                    context.captureExceptionCause(cause);
                                     return error;
                                 }
                                 var values = result.values();

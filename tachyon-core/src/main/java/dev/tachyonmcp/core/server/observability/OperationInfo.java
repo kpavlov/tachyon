@@ -24,14 +24,23 @@ public final class OperationInfo {
 
     private @Nullable String sessionId;
     private @Nullable String traceParent;
+    private @Nullable String protocolVersion;
+    private @Nullable String serverAddress;
+    private @Nullable Integer serverPort;
     private @Nullable CapturedPayload requestPayload;
     private @Nullable CapturedPayload responsePayload;
     private @Nullable String target;
+    private @Nullable Throwable exceptionCause;
 
     public OperationInfo(OperationKind kind, String method, @Nullable RequestId requestId) {
         this.kind = kind;
         this.method = method;
         this.requestId = requestId;
+    }
+
+    /** A builder covering the fields known up front, at construction time. */
+    public static Builder builder(OperationKind kind, String method, @Nullable RequestId requestId) {
+        return new Builder(kind, method, requestId);
     }
 
     public OperationKind kind() {
@@ -60,6 +69,33 @@ public final class OperationInfo {
 
     public void traceparent(@Nullable String traceparent) {
         this.traceParent = traceparent;
+    }
+
+    /** The MCP protocol version negotiated for the channel this operation arrived on, if known. */
+    public @Nullable String protocolVersion() {
+        return protocolVersion;
+    }
+
+    public void protocolVersion(@Nullable String protocolVersion) {
+        this.protocolVersion = protocolVersion;
+    }
+
+    /** The server's bound host, or {@code null} when the server hadn't started yet at dispatch time. */
+    public @Nullable String serverAddress() {
+        return serverAddress;
+    }
+
+    public void serverAddress(@Nullable String serverAddress) {
+        this.serverAddress = serverAddress;
+    }
+
+    /** The server's bound port, or {@code null} when the server hadn't started yet at dispatch time. */
+    public @Nullable Integer serverPort() {
+        return serverPort;
+    }
+
+    public void serverPort(@Nullable Integer serverPort) {
+        this.serverPort = serverPort;
     }
 
     public @Nullable CapturedPayload requestPayload() {
@@ -91,5 +127,79 @@ public final class OperationInfo {
 
     public void target(@Nullable String target) {
         this.target = target;
+    }
+
+    /**
+     * The throwable a feature handler (tool/resource/prompt/completion) converted into a {@link
+     * dev.tachyonmcp.api.server.domain.ServerError} value rather than letting propagate, captured
+     * only when the server's opt-in exception-detail capture policy is enabled -- that conversion
+     * is otherwise the one place the original throwable is lost before an {@code HandlerFailed}
+     * outcome is built.
+     */
+    public @Nullable Throwable exceptionCause() {
+        return exceptionCause;
+    }
+
+    public void exceptionCause(@Nullable Throwable exceptionCause) {
+        this.exceptionCause = exceptionCause;
+    }
+
+    /**
+     * Builder for the fields known up front, at construction time -- {@link #target}, the captured
+     * payloads, and (usually) {@link #sessionId} are only resolved later in the dispatch lifecycle
+     * and stay direct setters on the built {@link OperationInfo}.
+     */
+    public static final class Builder {
+
+        private final OperationKind kind;
+        private final String method;
+        private final @Nullable RequestId requestId;
+
+        private @Nullable String sessionId;
+        private @Nullable String traceParent;
+        private @Nullable String protocolVersion;
+        private @Nullable String serverAddress;
+        private @Nullable Integer serverPort;
+
+        private Builder(OperationKind kind, String method, @Nullable RequestId requestId) {
+            this.kind = kind;
+            this.method = method;
+            this.requestId = requestId;
+        }
+
+        public Builder sessionId(@Nullable String sessionId) {
+            this.sessionId = sessionId;
+            return this;
+        }
+
+        public Builder traceparent(@Nullable String traceparent) {
+            this.traceParent = traceparent;
+            return this;
+        }
+
+        public Builder protocolVersion(@Nullable String protocolVersion) {
+            this.protocolVersion = protocolVersion;
+            return this;
+        }
+
+        public Builder serverAddress(@Nullable String serverAddress) {
+            this.serverAddress = serverAddress;
+            return this;
+        }
+
+        public Builder serverPort(@Nullable Integer serverPort) {
+            this.serverPort = serverPort;
+            return this;
+        }
+
+        public OperationInfo build() {
+            var info = new OperationInfo(kind, method, requestId);
+            info.sessionId = sessionId;
+            info.traceParent = traceParent;
+            info.protocolVersion = protocolVersion;
+            info.serverAddress = serverAddress;
+            info.serverPort = serverPort;
+            return info;
+        }
     }
 }

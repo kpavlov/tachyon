@@ -146,6 +146,7 @@ public final class ResourceMethodHandlers {
                             } else {
                                 logger.error("Resource handler error for '{}'", uri, cause);
                             }
+                            context.captureExceptionCause(cause);
                             return error;
                         }
                         return context.responseMapper().readResourceResult(List.of(contents));

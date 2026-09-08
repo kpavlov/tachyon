@@ -33,6 +33,8 @@ application framework.
   TTL cleanup.
 - **Production transport** -- Netty backpressure, graceful shutdown, DNS-rebinding protection,
   CORS, and native transport auto-detection (`io_uring` → `epoll` → `kqueue` → NIO).
+- **Built-in OpenTelemetry** -- register `tachyon-opentelemetry`'s listener for MCP
+  semantic-convention spans and metrics, with an opt-in policy for payload capture.
 
 ## Quickstart
 
@@ -95,12 +97,14 @@ See the [quickstart](docs/quickstart.md) for Java and Kotlin examples plus a `cu
 | **Agent Skills** | `SkillsExtension` implements the [SEP-2640](docs/extensions/mcp-skills.md) draft: filesystem/classpath registries, `skill://` resources, `skills/list`, `skills/get`, and directory reads |
 | **Extensions** | [SEP-2133](docs/extensions.md) negotiation, custom JSON-RPC methods, capability advertisement, and extension-gated features |
 | **Runtime** | Stateless or resumable sessions, `Last-Event-ID` replay, pluggable stores, virtual-thread handlers, request timeouts, and graceful draining |
+| **Observability** | OpenTelemetry spans and metrics via `tachyon-opentelemetry`, following the [MCP semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai/tree/main/model/mcp), plus an opt-in payload capture policy -- see [docs](docs/observability.md) |
 | **Java and Kotlin** | Independent sync/async Java contracts and a coroutine-first [Kotlin DSL](docs/kotlin.md) |
 | **Testing** | Official conformance suites plus a [testkit](docs/testkit.md) for dynamic servers and fluent JSON-RPC assertions |
 
 ## Documentation and examples
 
 - [Configuration](docs/configuration.md) -- network, native I/O, sessions, CORS, and runtime limits
+- [Observability](docs/observability.md) -- observation listeners, payload capture policy, and the bundled OpenTelemetry integration
 - [Tools](docs/tools.md), [resources](docs/resources.md), and [tasks](docs/tasks.md) -- feature APIs and examples
 - [Annotations](docs/annotations.md) -- mcp-java, LangChain4j, and Spring AI providers
 - [Extensions](docs/extensions.md) and [MCP Skills](docs/extensions/mcp-skills.md) -- custom protocol methods and SEP support
