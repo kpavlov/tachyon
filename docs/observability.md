@@ -35,7 +35,7 @@ TachyonServer(port = 8080) {
 
 Content capture is **opt-in and off by default**. Every listener sees identity facts (method, session id, protocol version) regardless of policy. Request/response content and exception detail only reach listeners when explicitly enabled.
 
-Configured via `payloadCapture { }` / `PayloadCapturePolicy.Builder`:
+Configured via `payloadCapture { }` -- `PayloadCapturePolicy.Builder` in Java, `PayloadCaptureScope` in Kotlin:
 
 | Option | Default | Description |
 |---|---|---|
@@ -56,8 +56,8 @@ var server = TachyonServer.builder()
 TachyonServer(port = 8080) {
     observability {
         payloadCapture {
-            requestArgs(true)
-            responseContent(true)
+            requestArgs = true
+            responseContent = true
         }
     }
 }
@@ -107,8 +107,8 @@ TachyonServer(port = 8080) {
     observability {
         listener(McpOpenTelemetryListener.create(openTelemetry))
         payloadCapture {
-            requestArgs(true)
-            responseContent(true)
+            requestArgs = true
+            responseContent = true
         }
     }
 }

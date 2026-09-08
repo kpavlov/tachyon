@@ -3,7 +3,6 @@ package dev.tachyonmcp.kotlin.server.config
 
 import dev.tachyonmcp.api.annotations.ExperimentalApi
 import dev.tachyonmcp.core.server.config.ObservabilityConfig
-import dev.tachyonmcp.core.server.config.PayloadCapturePolicy
 import dev.tachyonmcp.core.server.observability.ObservationListener
 import dev.tachyonmcp.kotlin.server.TachyonDsl
 import java.time.Duration
@@ -21,7 +20,7 @@ public class ObservabilityScope
         private var slowRequestLogging: Boolean? = null
         private var slowRequestThreshold: Duration? = null
         private val listeners = mutableListOf<ObservationListener>()
-        private var payloadCapture: PayloadCapturePolicy? = null
+        private var payloadCapture: PayloadCaptureScope? = null
 
         /** Enables or disables slow-request diagnostics. */
         public fun slowRequestLogging(enabled: Boolean = true) {
@@ -45,11 +44,11 @@ public class ObservabilityScope
             listeners += listener
         }
 
-        /** Configures opt-in request and response payload capture. */
+        /** Configures opt-in request/response payload and exception-detail capture. */
         @OptIn(ExperimentalContracts::class)
-        public fun payloadCapture(configure: PayloadCapturePolicy.Builder.() -> Unit) {
+        public fun payloadCapture(configure: PayloadCaptureScope.() -> Unit) {
             contract { callsInPlace(configure, InvocationKind.EXACTLY_ONCE) }
-            payloadCapture = PayloadCapturePolicy.builder().apply(configure).build()
+            payloadCapture = PayloadCaptureScope().apply(configure)
         }
 
         @PublishedApi
@@ -57,14 +56,6 @@ public class ObservabilityScope
             slowRequestLogging?.let(builder::slowRequestLogging)
             slowRequestThreshold?.let(builder::slowRequestThreshold)
             listeners.forEach(builder::listener)
-            payloadCapture?.let { policy ->
-                builder.payloadCapture { payloadCapture ->
-                    payloadCapture.requestArgs(policy.requestArgs())
-                    payloadCapture.responseContent(policy.responseContent())
-                    payloadCapture.rawMessage(policy.rawMessage())
-                    payloadCapture.exceptionDetail(policy.exceptionDetail())
-                    payloadCapture.maxBytes(policy.maxBytes())
-                }
-            }
+            payloadCapture?.let { scope -> builder.payloadCapture(scope::applyTo) }
         }
     }
