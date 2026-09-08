@@ -5,6 +5,7 @@
 - [Quickstart](quickstart.md)
 - [Frequently asked questions](faq.md)
 - [Configuration](configuration.md)
+- [Observability](observability.md)
 - [Deployment](deployment.md)
 
 ## Build MCP features

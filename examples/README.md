@@ -5,8 +5,9 @@ the Maven wrapper build in, so you can run it without installing anything else �
 
 - [**echo-kotlin**](echo-kotlin) — Minimal server with `echo` and `reverse-echo` tools in Kotlin.
 - [**weather-mcp**](weather-mcp) — Java. Full MCP surface: tools, resources, resource templates,
-  prompts, completions and elicitation.
-- [**weather-mcp-kotlin**](weather-mcp-kotlin) — Kotlin port of `weather-mcp`
+  prompts, completions and elicitation. Wired up with `tachyon-opentelemetry` and a verbose
+  payload capture policy — see its README's Observability section.
+- [**weather-mcp-kotlin**](weather-mcp-kotlin) — Kotlin port of `weather-mcp`, same observability setup.
 - [**langchain4j-mcp**](langchain4j-mcp) — Java. A plain LangChain4j `@Tool` method, with no
   Tachyon imports, scanned by `LangChain4jAnnotationProvider` into a running server. Depends on
   `tachyon-annotations-langchain4j`, unreleased — build the Tachyon SNAPSHOT locally first (see

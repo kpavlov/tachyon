@@ -24,6 +24,19 @@ import dev.tachyonmcp.kotlin.server.domain.Icon
 import dev.tachyonmcp.kotlin.server.features.prompts.PromptDescriptor
 import dev.tachyonmcp.kotlin.server.features.resources.ResourceDescriptor
 import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
+import dev.tachyonmcp.opentelemetry.McpOpenTelemetryListener
+import io.opentelemetry.exporter.logging.LoggingMetricExporter
+import io.opentelemetry.exporter.logging.LoggingSpanExporter
+import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter
+import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter
+import io.opentelemetry.sdk.OpenTelemetrySdk
+import io.opentelemetry.sdk.metrics.SdkMeterProvider
+import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader
+import io.opentelemetry.sdk.resources.Resource
+import io.opentelemetry.sdk.trace.SdkTracerProvider
+import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
+import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor
+import io.opentelemetry.semconv.ServiceAttributes
 import me.kpavlov.kt.schema.generator.json.JsonSchemaConfig
 import me.kpavlov.kt.schema.generator.json.ReflectionClassJsonSchemaGenerator
 import org.slf4j.LoggerFactory
@@ -44,6 +57,55 @@ private val schemaGenerator =
         json = kotlinx.serialization.json.Json { encodeDefaults = false },
         config = JsonSchemaConfig.Default,
     )
+
+/**
+ * Prints spans/metrics to the log with zero external infra, and also ships them via the
+ * standard OTLP/HTTP exporter (default endpoint `http://localhost:4318`) -- point a local
+ * collector (Jaeger, Grafana Tempo, Honeycomb, ...) there to see them land. With no collector
+ * running, the OTLP exporter logs periodic export failures; that's expected and harmless, and
+ * only the logging exporter's output matters for this demo.
+ */
+private val openTelemetryResource =
+    Resource
+        .getDefault()
+        .toBuilder()
+        .put(ServiceAttributes.SERVICE_NAME, "weather-mcp-kotlin")
+        .build()
+
+private val openTelemetry =
+    OpenTelemetrySdk
+        .builder()
+        .setTracerProvider(
+            SdkTracerProvider
+                .builder()
+                .setResource(openTelemetryResource)
+                .addSpanProcessor(SimpleSpanProcessor.create(LoggingSpanExporter.create()))
+                .addSpanProcessor(
+                    BatchSpanProcessor
+                        .builder(OtlpHttpSpanExporter.builder().build())
+                        .build(),
+                )
+                .build(),
+        )
+        .setMeterProvider(
+            SdkMeterProvider
+                .builder()
+                .setResource(openTelemetryResource)
+                .registerMetricReader(
+                    PeriodicMetricReader
+                        .builder(LoggingMetricExporter.create())
+                        .setInterval(Duration.ofSeconds(10))
+                        .build(),
+                )
+                .registerMetricReader(
+                    PeriodicMetricReader
+                        .builder(OtlpHttpMetricExporter.builder().build())
+                        .setInterval(Duration.ofSeconds(10))
+                        .build(),
+                )
+                .build(),
+        )
+        .build()
 
 private data class NarrationStyleInput(
     val forecast: String,
@@ -109,6 +171,16 @@ fun assembleServer(
             version = "1.0"
         }
         session { enabled = true }
+        observability {
+            slowRequestLogging()
+            listener(McpOpenTelemetryListener.create(openTelemetry))
+            payloadCapture {
+                requestArgs(true)
+                responseContent(true)
+                rawMessage(true)
+                exceptionDetail(true)
+            }
+        }
 
         tool(getWeatherToolDescriptor) { getWeather(weatherService) }
 

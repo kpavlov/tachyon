@@ -78,10 +78,15 @@ public final class Observation {
         override = new OperationOutcome.TaskHandoff(taskId);
     }
 
-    /** Tags the terminal outcome as a serialization failure, overriding whatever {@link #complete} is later called with. */
-    public void markSerializationFailed(Throwable cause) {
+    /**
+     * Tags the terminal outcome as a serialization failure, overriding whatever {@link #complete} is
+     * later called with. {@code exceptionDetail} gates whether the raw throwable is carried onto the
+     * outcome (per the server's opt-in exception-detail capture policy) -- its class name is reported
+     * either way.
+     */
+    public void markSerializationFailed(Throwable cause, boolean exceptionDetail) {
         if (listeners.isEmpty()) return;
-        override = new OperationOutcome.SerializationFailed(cause);
+        override = new OperationOutcome.SerializationFailed(cause.getClass().getName(), exceptionDetail ? cause : null);
     }
 
     /** Tags the terminal outcome as a tool payload failure, overriding whatever {@link #complete} is later called with. */

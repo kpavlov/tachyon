@@ -34,3 +34,20 @@ java -jar target/weather-example.jar
 ⚠️ `HOST=0.0.0.0` publishes the port on every interface, not just loopback — anything that can
 reach your machine can reach the server. Use a specific reachable address instead of `0.0.0.0`
 when you can, and keep `ALLOWED_HOST` set so the `Host` check still filters requests.
+
+## Observability
+
+This server wires [`tachyon-opentelemetry`](../../integrations/tachyon-opentelemetry) into a
+minimal `OpenTelemetrySdk` (`WeatherServer.OTEL`) with two exporters and a fully verbose payload
+capture policy (`requestArgs`, `responseContent`, `rawMessage`, `exceptionDetail` all on):
+
+- A **logging exporter** — no collector to run, spans and metrics just print to the console.
+- The standard **OTLP/HTTP exporter**, at its default endpoint `http://localhost:4318`. Run a
+  local collector (Jaeger, Grafana Tempo, Honeycomb, ...) to see traces land there too. With no
+  collector running, it logs periodic export failures — expected and harmless; only the logging
+  exporter's output matters for this demo.
+
+Call a tool and watch the log for a `tools/call get-weather` span and its
+`mcp.server.operation.duration` metric.
+
+See [docs/observability.md](../../docs/observability.md) for the full attribute reference.

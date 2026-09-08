@@ -37,13 +37,19 @@ public sealed interface OperationOutcome {
      */
     record PayloadFailure() implements OperationOutcome {}
 
-    /** The handler produced a result but encoding it failed; the client received a fallback error. */
-    record SerializationFailed(Throwable cause) implements OperationOutcome {}
+    /**
+     * The handler produced a result but encoding it failed; the client received a fallback error.
+     * {@code causeType} (the throwable's class name) is always available for classification;
+     * {@code cause} is the throwable itself, present only when the server's opt-in exception-detail
+     * capture policy is enabled.
+     */
+    record SerializationFailed(String causeType, @Nullable Throwable cause) implements OperationOutcome {}
 
     /**
      * The operation ended in a JSON-RPC error after a handler ran. {@code cause} is the throwable
      * that produced it, or {@code null} when the handler returned a {@link ServerError} value
-     * directly rather than throwing/failing.
+     * directly rather than throwing/failing, or when a real throwable exists but the server's
+     * opt-in exception-detail capture policy is disabled.
      */
     record HandlerFailed(
             ServerError error, int wireCode, @Nullable Throwable cause) implements OperationOutcome {}

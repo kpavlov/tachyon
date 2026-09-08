@@ -107,8 +107,36 @@ public class McpDispatcher {
         return server.config().observability().listeners();
     }
 
-    /** Extracts {@code _meta.traceparent} from raw params, independent of payload-capture policy. */
-    private static @Nullable String extractTraceparent(@Nullable Object params) {
+    /**
+     * Builds the {@link OperationInfo} for one operation, filling in the server's bound
+     * address/port when already started (omitted for direct/programmatic dispatch, e.g. tests).
+     */
+    private OperationInfo newOperationInfo(
+            OperationKind kind,
+            String method,
+            @Nullable RequestId id,
+            @Nullable String sessionId,
+            @Nullable Object params,
+            @Nullable ChannelContext channelContext) {
+        var builder = OperationInfo.builder(kind, method, id)
+                .sessionId(sessionId)
+                .traceparent(extractTraceParent(params))
+                .protocolVersion(channelContext != null ? channelContext.protocolVersion() : null);
+        try {
+            builder.serverAddress(server.host()).serverPort(server.port());
+        } catch (IllegalStateException e) {
+            // Server not started (e.g. tests dispatching directly without start()).
+        }
+        return builder.build();
+    }
+
+    /**
+     * Extracts {@code _meta.traceparent} from raw params, independent of payload-capture policy.
+     *
+     * @see <a href="https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/mcp.md">
+     * Semantic conventions for Model Context Protocol (MCP)</a>
+     */
+    private static @Nullable String extractTraceParent(@Nullable Object params) {
         if (params instanceof Map<?, ?> map
                 && map.get("_meta") instanceof Map<?, ?> meta
                 && meta.get("traceparent") instanceof String traceparent) {
@@ -185,11 +213,7 @@ public class McpDispatcher {
         Objects.requireNonNull(method, "method");
 
         var kind = METHOD_INITIALIZE.equals(method) ? OperationKind.INITIALIZE : OperationKind.REQUEST;
-        var info = new OperationInfo(kind, method, id);
-        info.traceparent(extractTraceparent(params));
-        if (sessionId != null) {
-            info.sessionId(sessionId);
-        }
+        var info = newOperationInfo(kind, method, id, sessionId, params, channelContext);
         var observation = Observation.start(observationListeners(), info);
 
         var requestCtx = dispatchContext(channelContext, id);
@@ -346,6 +370,8 @@ public class McpDispatcher {
         var reattached = observation.reattach();
         DispatchResult dispatchResult;
         OperationOutcome outcome;
+        var exceptionDetail =
+                context.engine().config().observability().payloadCapture().exceptionDetail();
         try {
             var unwrapped = ex instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : ex;
             if (unwrapped instanceof CancellationException) {
@@ -357,13 +383,13 @@ public class McpDispatcher {
                 var error = rme.error();
                 dispatchResult = errorResult(id, error, context);
                 outcome = new OperationOutcome.HandlerFailed(
-                        error, context.responseMapper().error(error).code(), unwrapped);
+                        error, context.responseMapper().error(error).code(), exceptionDetail ? unwrapped : null);
             } else {
                 logger.warn("Handler exception: method={}, id={}: {}", method, id, unwrapped.getMessage(), unwrapped);
                 var error = ServerErrors.internalError("Internal error");
                 dispatchResult = errorResult(id, error, context);
                 outcome = new OperationOutcome.HandlerFailed(
-                        error, context.responseMapper().error(error).code(), unwrapped);
+                        error, context.responseMapper().error(error).code(), exceptionDetail ? unwrapped : null);
             }
         } finally {
             observation.closeReattached(reattached);
@@ -385,7 +411,12 @@ public class McpDispatcher {
                 outcome = new OperationOutcome.HandlerFailed(
                         error, context.responseMapper().error(error).code(), null);
             } else {
-                var body = encodeResponse(id, result, context.responseMapper(), observation);
+                var exceptionDetail = context.engine()
+                        .config()
+                        .observability()
+                        .payloadCapture()
+                        .exceptionDetail();
+                var body = encodeResponse(id, result, context.responseMapper(), observation, exceptionDetail);
                 dispatchResult = new DispatchResult.Response(body, sessionId, 200);
                 outcome = new OperationOutcome.Completed();
             }
@@ -405,9 +436,7 @@ public class McpDispatcher {
             @Nullable Object params,
             @Nullable String sessionId,
             @Nullable ChannelContext channelContext) {
-        var info = new OperationInfo(OperationKind.NOTIFICATION, method, null);
-        info.traceparent(extractTraceparent(params));
-        info.sessionId(sessionId);
+        var info = newOperationInfo(OperationKind.NOTIFICATION, method, null, sessionId, params, channelContext);
         var observation = Observation.start(observationListeners(), info);
         observation.closeStart();
 
@@ -538,7 +567,11 @@ public class McpDispatcher {
     }
 
     private static byte[] encodeResponse(
-            RequestId id, Object result, ProtocolResponseMapper mapper, Observation observation) {
+            RequestId id,
+            Object result,
+            ProtocolResponseMapper mapper,
+            Observation observation,
+            boolean exceptionDetail) {
         if (result instanceof String s) {
             return JsonRpcCodec.serializeResponse(id, s);
         }
@@ -548,7 +581,7 @@ public class McpDispatcher {
         } catch (Exception e) {
             logger.error(
                     "JSON serialization failed for {}: {}", result.getClass().getSimpleName(), e.getMessage(), e);
-            observation.markSerializationFailed(e);
+            observation.markSerializationFailed(e, exceptionDetail);
             return encodeError(id, ServerErrors.internalError("Failed to encode response"), mapper);
         }
     }

@@ -26,6 +26,20 @@ import dev.tachyonmcp.api.server.features.prompts.PromptRequest;
 import dev.tachyonmcp.api.server.features.prompts.PromptResult;
 import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
+import dev.tachyonmcp.opentelemetry.McpOpenTelemetryListener;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.exporter.logging.LoggingMetricExporter;
+import io.opentelemetry.exporter.logging.LoggingSpanExporter;
+import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter;
+import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.metrics.SdkMeterProvider;
+import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader;
+import io.opentelemetry.sdk.resources.Resource;
+import io.opentelemetry.sdk.trace.SdkTracerProvider;
+import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
+import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
+import io.opentelemetry.semconv.ServiceAttributes;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +48,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
@@ -49,6 +64,37 @@ public final class WeatherServer {
     static final String SUN_AND_CLOUD = classpathDataUri("/images/sun-and-cloud.png", "image/png");
 
     private static final WeatherService weatherService;
+
+    /**
+     * Prints spans/metrics to the log with zero external infra, and also ships them via the
+     * standard OTLP/HTTP exporter (default endpoint {@code http://localhost:4318}) -- point a
+     * local collector (Jaeger, Grafana Tempo, Honeycomb, ...) there to see them land. With no
+     * collector running, the OTLP exporter logs periodic export failures; that's expected and
+     * harmless, and only the logging exporter's output matters for this demo.
+     */
+    private static final Resource OTEL_RESOURCE = Resource.getDefault().toBuilder()
+            .put(ServiceAttributes.SERVICE_NAME, "weather-mcp")
+            .build();
+
+    private static final OpenTelemetry OTEL = OpenTelemetrySdk.builder()
+            .setTracerProvider(SdkTracerProvider.builder()
+                    .setResource(OTEL_RESOURCE)
+                    .addSpanProcessor(SimpleSpanProcessor.create(LoggingSpanExporter.create()))
+                    .addSpanProcessor(BatchSpanProcessor.builder(
+                                    OtlpHttpSpanExporter.builder().build())
+                            .build())
+                    .build())
+            .setMeterProvider(SdkMeterProvider.builder()
+                    .setResource(OTEL_RESOURCE)
+                    .registerMetricReader(PeriodicMetricReader.builder(LoggingMetricExporter.create())
+                            .setInterval(Duration.ofSeconds(10))
+                            .build())
+                    .registerMetricReader(PeriodicMetricReader.builder(
+                                    OtlpHttpMetricExporter.builder().build())
+                            .setInterval(Duration.ofSeconds(10))
+                            .build())
+                    .build())
+            .build();
 
     static {
         HttpClient httpClient = HttpClient.newBuilder()
@@ -93,6 +139,13 @@ public final class WeatherServer {
                         .icons(Icon.of(LOGO, "image/png", List.of("256x256"), null))
                         .version("1.0"))
                 .capabilities(CapabilitiesConfig.Builder::logging)
+                .observability(o -> o
+                        .slowRequestLogging()
+                        .listener(McpOpenTelemetryListener.create(OTEL))
+                        .payloadCapture(p -> p.requestArgs(true)
+                                .responseContent(true)
+                                .rawMessage(true)
+                                .exceptionDetail(true)))
 
                 .withTools(tools -> tools.register(GetWeatherTool.DESCRIPTOR, GetWeatherTool.fn(weatherService)))
 

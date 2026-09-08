@@ -2,6 +2,7 @@
 package dev.tachyonmcp.core.server.observability;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
+import jdk.jfr.Experimental;
 
 /**
  * A passive, read-only observer of the MCP dispatch lifecycle: {@code start} then exactly one
@@ -17,6 +18,7 @@ import dev.tachyonmcp.api.annotations.InternalApi;
  * other registered listener — every call into a listener is fault-isolated by the dispatcher.
  */
 @InternalApi
+@Experimental
 public interface ObservationListener {
 
     /** Fires once, as early as {@code method} (and {@code id}, if any) is known, before any handler or rejection. */

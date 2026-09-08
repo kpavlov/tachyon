@@ -1,0 +1,166 @@
+# Observability
+
+Tachyon separates **observation** (spans, metrics, logs) from **payload capture** (what observers may see). Both live under `observability { }` / `ObservabilityConfig.Builder`.
+
+The [`tachyon-opentelemetry`](../integrations/tachyon-opentelemetry) module is the recommended path — it wires Tachyon into OpenTelemetry following the [MCP semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai/tree/main/model/mcp).
+
+## Observation Listeners
+
+`ObservationListener` is a passive, read-only hook into the dispatch lifecycle:
+
+- `start(OperationInfo)` — fires once, before any handler runs
+- `complete(OperationInfo, OperationOutcome)` — fires once, at the terminal boundary
+
+Listeners cannot short-circuit, reject, or substitute results. Exceptions in listeners are fault-isolated and never affect handler execution, responses, or other listeners.
+
+```java
+var server = TachyonServer.builder()
+    .observability(o -> o.listener(myListener))
+    .port(8080)
+    .build();
+```
+
+```kotlin
+TachyonServer(port = 8080) {
+    observability {
+        listener(myListener)
+    }
+}
+```
+
+> [!NOTE]
+> `ObservationListener` is `@InternalApi`. `McpOpenTelemetryListener` is the supported implementation — custom listeners work today but the interface isn't stabilized.
+
+## Payload Capture Policy
+
+Content capture is **opt-in and off by default**. Every listener sees identity facts (method, session id, protocol version) regardless of policy. Request/response content and exception detail only reach listeners when explicitly enabled.
+
+Configured via `payloadCapture { }` / `PayloadCapturePolicy.Builder`:
+
+| Option | Default | Description |
+|---|---|---|
+| `requestArgs` | `false` | Capture request params/arguments |
+| `responseContent` | `false` | Capture encoded response content |
+| `exceptionDetail` | `false` | Capture exception message + stack trace |
+| `rawMessage` | `false` | Reserved for future raw JSON-RPC envelope capture |
+| `maxBytes` | `4096` | Truncation limit (UTF-8 bytes) per captured value |
+
+```java
+var server = TachyonServer.builder()
+    .observability(o -> o.payloadCapture(p -> p.requestArgs(true).responseContent(true)))
+    .port(8080)
+    .build();
+```
+
+```kotlin
+TachyonServer(port = 8080) {
+    observability {
+        payloadCapture {
+            requestArgs(true)
+            responseContent(true)
+        }
+    }
+}
+```
+
+Enable deliberately: tool arguments and results routinely carry credentials and PII. Each toggle gates its own content independently — enabling `exceptionDetail` does not enable `requestArgs`.
+
+## OpenTelemetry Integration
+
+`McpOpenTelemetryListener` (module `dev.tachyonmcp:tachyon-opentelemetry`) records a `SERVER` span and `mcp.server.operation.duration` histogram for every inbound MCP request/notification. It's a passive `ObservationListener` — it only reads what core captured; it never captures payloads on its own.
+
+Depends on `opentelemetry-api` only — you supply the SDK (tracer/meter provider) and exporter:
+
+```java
+var openTelemetry = OpenTelemetrySdk.builder()
+    .setTracerProvider(SdkTracerProvider.builder()
+        .addSpanProcessor(SimpleSpanProcessor.create(LoggingSpanExporter.create()))
+        .build())
+    .setMeterProvider(SdkMeterProvider.builder()
+        .registerMetricReader(PeriodicMetricReader.create(LoggingMetricExporter.create()))
+        .build())
+    .build();
+
+var server = TachyonServer.builder()
+    .observability(o -> o
+        .listener(McpOpenTelemetryListener.create(openTelemetry))
+        .payloadCapture(p -> p.requestArgs(true).responseContent(true)))
+    .port(8080)
+    .build();
+```
+
+```kotlin
+val openTelemetry = OpenTelemetrySdk.builder()
+    .setTracerProvider(
+        SdkTracerProvider.builder()
+            .addSpanProcessor(SimpleSpanProcessor.create(LoggingSpanExporter.create()))
+            .build()
+    )
+    .setMeterProvider(
+        SdkMeterProvider.builder()
+            .registerMetricReader(PeriodicMetricReader.create(LoggingMetricExporter.create()))
+            .build()
+    )
+    .build()
+
+TachyonServer(port = 8080) {
+    observability {
+        listener(McpOpenTelemetryListener.create(openTelemetry))
+        payloadCapture {
+            requestArgs(true)
+            responseContent(true)
+        }
+    }
+}
+```
+
+`LoggingSpanExporter`/`LoggingMetricExporter` (`io.opentelemetry:opentelemetry-exporter-logging`) print telemetry to logs with zero infrastructure — good for quick validation. Add OTLP exporters (`io.opentelemetry:opentelemetry-exporter-otlp`) as additional span processors/metric readers to ship to a collector (Jaeger, Grafana Tempo, Honeycomb, etc.) at `http://localhost:4318`.
+
+### Trace Context
+
+Spans parent from `Context.current()` on the dispatch thread. The listener only attaches scope around synchronous dispatch work (decode, kicking off async handler, and — after reattach — completion callback), so handler-started spans join as children without blocking `CompletionStage`s.
+
+### Attributes
+
+**Always present:**
+
+| Attribute | Example |
+|---|---|
+| `mcp.method.name` | `tools/call` |
+| `jsonrpc.protocol.version` | `2.0` |
+| `network.protocol.name` | `http` |
+| `mcp.protocol.version` | `2025-11-25` |
+| `server.address` / `server.port` | `127.0.0.1` / `8080` |
+
+**When applicable (span + metric):**
+
+| Attribute | When |
+|---|---|
+| `gen_ai.tool.name`, `gen_ai.operation.name` | `tools/call` |
+| `gen_ai.prompt.name` | `prompts/get` |
+| `error.type` | Rejection, tool error, handler/serialization failure |
+| `rpc.response.status_code` | Any JSON-RPC error response |
+
+**Span-only (high cardinality):**
+
+| Attribute | Notes |
+|---|---|
+| `jsonrpc.request.id` | Absent for notifications |
+| `mcp.session.id` | Absent until session exists |
+
+**Opt-in (gated by payload capture):**
+
+| Attribute | Toggle |
+|---|---|
+| `gen_ai.tool.call.arguments` | `requestArgs` |
+| `gen_ai.tool.call.result` | `responseContent` |
+| Exception span event (message + stack) | `exceptionDetail` |
+
+`error.type` distinguishes caller faults (unknown method, bad params, malformed session) — span status `UNSET` — from server faults, which set `StatusCode.ERROR`.
+
+## Examples
+
+- [`examples/weather-mcp`](../examples/weather-mcp) (Java)
+- [`examples/weather-mcp-kotlin`](../examples/weather-mcp-kotlin) (Kotlin)
+
+Both wire `tachyon-opentelemetry` with logging + OTLP exporters and verbose payload capture. Run either and watch spans/metrics print to console, or point a collector at `http://localhost:4318`.
