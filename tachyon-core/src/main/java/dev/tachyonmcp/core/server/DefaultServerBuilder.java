@@ -110,14 +110,6 @@ final class DefaultServerBuilder implements ServerBuilder {
         return this;
     }
 
-    /** Configures the deprecated monitoring alias. */
-    @Override
-    @Deprecated(since = "1.0.0-beta.24", forRemoval = true)
-    public ServerBuilder monitoring(Consumer<MonitoringConfig.Builder> configurer) {
-        configurer.accept(monitoringBuilder);
-        return this;
-    }
-
     /**
      * Configures the passive MCP observation lifecycle (listeners, payload capture).
      */

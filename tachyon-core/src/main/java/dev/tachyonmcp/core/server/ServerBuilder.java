@@ -3,7 +3,6 @@ package dev.tachyonmcp.core.server;
 
 import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import dev.tachyonmcp.api.server.config.JsonConfig;
-import dev.tachyonmcp.api.server.config.MonitoringConfig;
 import dev.tachyonmcp.api.server.config.RuntimeConfig;
 import dev.tachyonmcp.api.server.config.ServerIdentity;
 import dev.tachyonmcp.api.server.extensions.ServerExtension;
@@ -38,15 +37,6 @@ public interface ServerBuilder {
 
     /** Configures handler execution. */
     ServerBuilder runtime(Consumer<RuntimeConfig.Builder> configurer);
-
-    /**
-     * Configures slow-request diagnostics through the observability configuration.
-     *
-     * @deprecated Use {@link #observability(Consumer)}. This compatibility alias will be removed in
-     *     the next release.
-     */
-    @Deprecated(since = "1.0.0-beta.24", forRemoval = true)
-    ServerBuilder monitoring(Consumer<MonitoringConfig.Builder> configurer);
 
     /** Configures the passive MCP observation lifecycle (listeners, payload capture). */
     @ExperimentalApi

@@ -18,7 +18,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>21</java.version>
         <kotlin.version>2.2.21</kotlin.version>
-        <tachyon.version>1.0.0-beta.24</tachyon.version>
+        <tachyon.version>1.0.0-beta.25</tachyon.version>
 <!--        <tachyon.version>1.0.0-SNAPSHOT</tachyon.version>-->
         <junit.version>6.1.1</junit.version>
         <kotest.version>6.2.1</kotest.version>
@@ -30,6 +30,13 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>dev.tachyonmcp</groupId>
+                <artifactId>tachyon-bom</artifactId>
+                <version>${tachyon.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>tools.jackson</groupId>
                 <artifactId>jackson-bom</artifactId>
@@ -51,7 +58,6 @@
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
             <artifactId>tachyon-kotlin</artifactId>
-            <version>${tachyon.version}</version>
         </dependency>
 
         <dependency>
@@ -64,7 +70,6 @@
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
             <artifactId>tachyon-testkit</artifactId>
-            <version>${tachyon.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>

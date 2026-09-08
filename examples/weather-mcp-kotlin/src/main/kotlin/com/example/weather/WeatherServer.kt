@@ -177,12 +177,10 @@ fun assembleServer(
             listener(McpOpenTelemetryListener.create(openTelemetry))
 
             payloadCapture {
-                /*
-                requestArgs(true)
-                responseContent(true)
-                rawMessage(true)
-                exceptionDetail(true)
-                */
+                requestArgs = true
+                responseContent = true
+                rawMessage = true
+                exceptionDetail = true
             }
         }
 
