@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.config;
 
+import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import dev.tachyonmcp.api.server.session.SessionIdGenerator;
 import dev.tachyonmcp.core.server.session.InMemorySessionEventStore;
 import dev.tachyonmcp.core.server.session.InMemorySessionStore;
@@ -25,8 +26,8 @@ import org.jspecify.annotations.Nullable;
 public record SessionConfig(
         boolean enabled,
         @Nullable Duration sessionTtl,
-        @Nullable SessionEventStore sessionEventStore,
-        @Nullable SessionStore sessionStore,
+        @ExperimentalApi(since = "1.0.0-beta.26") @Nullable SessionEventStore sessionEventStore,
+        @ExperimentalApi(since = "1.0.0-beta.26") @Nullable SessionStore sessionStore,
         @Nullable SessionIdGenerator<? super HttpRequest> sessionIdGenerator,
         @Nullable Duration janitorInterval) {
 
@@ -96,14 +97,16 @@ public record SessionConfig(
         /**
          * Sets a custom session event store.
          */
+        @ExperimentalApi(since = "1.0.0-beta.26")
         public Builder sessionEventStore(@Nullable SessionEventStore store) {
             this.sessionEventStore = store;
             return this;
         }
 
         /**
-         * Sets a custom session store implementation.
+         * Sets a custom immutable session snapshot store.
          */
+        @ExperimentalApi(since = "1.0.0-beta.26")
         public Builder sessionStore(@Nullable SessionStore store) {
             this.sessionStore = store;
             return this;

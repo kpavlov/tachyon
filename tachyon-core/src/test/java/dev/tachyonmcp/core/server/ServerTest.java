@@ -53,7 +53,7 @@ class ServerTest {
     }
 
     @Test
-    void appendResponsePersistsToChronicle() {
+    void appendResponsePersistsToDurableStore() {
         try (DefaultTachyonServer server =
                 (DefaultTachyonServer) TachyonServer.builder().build()) {
             var session = server.createSession("sess_1");

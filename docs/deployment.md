@@ -94,9 +94,11 @@ most MCP clients.
 ## More than one instance
 
 Sessions are off by default, and a stateless server scales horizontally with no
-sticky routing. A server that sets `session.enabled(true)` keeps sessions and
-events in memory, so more than one instance needs sticky routing or shared
-`SessionStore` and `SessionEventStore` implementations. See
+sticky routing. A server that sets `session.enabled(true)` keeps live sessions
+in-process, so more than one instance needs sticky routing while a session is
+active. Experimental `SessionStore` and `SessionEventStore` implementations can
+persist session snapshots and replay events across restarts. They do not
+coordinate live session or transport ownership between nodes. See
 [session configuration](configuration.md#session).
 
 ## Containers

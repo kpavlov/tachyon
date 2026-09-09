@@ -276,9 +276,19 @@ them on a stateless server fails at construction.
 | `enabled` | `false` | Server-side sessions are off by default (stateless). Set `true` to create sessions with TTL tracking |
 | `sessionTtl` | `30s` | Idle sessions are evicted after this duration |
 | `janitorInterval` | `5s` | Janitor sweep interval; controls how often expired sessions are checked |
-| `sessionEventStore` | in-memory | Custom session event store |
-| `sessionStore` | in-memory | Custom session store |
+| `sessionEventStore` | in-memory | Experimental custom session event store |
+| `sessionStore` | in-memory | Experimental immutable session snapshot store |
 | `sessionIdGenerator` | `sess_<uuid>` | Custom hook for deriving session ids from the initialize `HttpRequest` (headers/URI) |
+
+Live `Session` objects remain internal and process-local. `SessionStore` persists immutable,
+transport-free `SessionSnapshot` values. `SessionEventStore` persists replay events. These
+experimental stores enable restart recovery, but do not distribute live sessions or transport
+connections between nodes.
+
+A persistent implementation can use the session ID as its key and encode the complete snapshot
+as its value. `create` is an atomic put, `find` decodes the value, `compareAndSet` is a conditional
+replace, `touch` conditionally extends the matching generation's expiry, and `terminate` removes
+only the matching generation. Store implementations must make these operations thread-safe.
 
 ## Runtime
 

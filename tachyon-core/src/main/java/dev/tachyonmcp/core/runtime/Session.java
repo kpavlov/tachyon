@@ -1,12 +1,19 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.runtime;
 
+import dev.tachyonmcp.api.annotations.InternalApi;
+import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.core.protocol.Protocol;
+import dev.tachyonmcp.core.protocol.Protocols;
+import dev.tachyonmcp.core.server.session.SessionKey;
+import dev.tachyonmcp.core.server.session.SessionSnapshot;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -14,9 +21,13 @@ import org.jspecify.annotations.Nullable;
  * the SSE channel (connection, backpressure, replay cursor) for a single client identified by
  * a unique string ID1
  */
+@InternalApi(since = "1.0.0-beta.26")
 public class Session {
 
     private final String id;
+    private final SessionKey key;
+    private final Consumer<Session> onChange;
+    private final Consumer<Session> onTouch;
     protected final AtomicReference<SessionState> state;
     protected volatile long lastActivityNanos;
 
@@ -25,20 +36,58 @@ public class Session {
     private final AtomicLong cursor;
     private final Set<String> enabledExtensions = ConcurrentHashMap.newKeySet();
     private final AtomicReference<@Nullable Protocol> protocol = new AtomicReference<>();
+    private final AtomicReference<@Nullable LoggingLevel> loggingLevel = new AtomicReference<>();
+    private final AtomicReference<Instant> snapshotExpiresAt;
     private volatile @Nullable String resumingStreamKey;
 
     public Session(String id, SseConnection connection) {
-        this.id = Objects.requireNonNull(id, "id");
-        this.state = new AtomicReference<>(SessionState.INITIALIZING);
+        this(
+                new SessionSnapshot(
+                        new SessionKey(id, "local"), SessionState.INITIALIZING, null, Set.of(), null, Instant.MAX, 0),
+                connection,
+                ignored -> {},
+                ignored -> {});
+    }
+
+    private Session(
+            SessionSnapshot snapshot, SseConnection connection, Consumer<Session> onChange, Consumer<Session> onTouch) {
+        this.id = snapshot.key().sessionId();
+        this.key = snapshot.key();
+        this.onChange = Objects.requireNonNull(onChange, "onChange");
+        this.onTouch = Objects.requireNonNull(onTouch, "onTouch");
+        this.state = new AtomicReference<>(snapshot.state());
         this.lastActivityNanos = System.nanoTime();
         this.connection = new AtomicReference<>(Objects.requireNonNull(connection, "connection"));
         this.backpressure = new AtomicReference<>(Backpressure.HOT);
         this.cursor = new AtomicLong(-1);
+        this.enabledExtensions.addAll(snapshot.enabledExtensionIds());
+        this.loggingLevel.set(snapshot.loggingLevel());
+        this.snapshotExpiresAt = new AtomicReference<>(snapshot.expiresAt());
+        final var protocolVersion = snapshot.protocolVersion();
+        if (protocolVersion != null) {
+            final var restoredProtocol = Protocols.list().stream()
+                    .filter(candidate -> candidate.versionString().equals(snapshot.protocolVersion()))
+                    .findFirst()
+                    .orElseThrow(() ->
+                            new IllegalArgumentException("Unsupported session protocol version: " + protocolVersion));
+            protocol.set(restoredProtocol);
+        }
+    }
+
+    /** Reconstructs process-local runtime state from a transport-free snapshot. */
+    public static Session fromSnapshot(
+            SessionSnapshot snapshot, SseConnection connection, Consumer<Session> onChange, Consumer<Session> onTouch) {
+        return new Session(snapshot, connection, onChange, onTouch);
     }
 
     /** Returns the unique session identifier. */
     public String id() {
         return id;
+    }
+
+    /** Returns the persisted generation key. */
+    public SessionKey key() {
+        return key;
     }
 
     /** Returns the current session state. */
@@ -54,12 +103,14 @@ public class Session {
     /** Updates the last-activity timestamp to now. */
     public void touch() {
         this.lastActivityNanos = System.nanoTime();
+        onTouch.accept(this);
     }
 
     /** Transitions from {@link SessionState#INITIALIZING} to {@link SessionState#ACTIVE}. */
     public boolean activate() {
         if (state.compareAndSet(SessionState.INITIALIZING, SessionState.ACTIVE)) {
             this.lastActivityNanos = System.nanoTime();
+            onChange.accept(this);
             return true;
         }
         return false;
@@ -140,17 +191,62 @@ public class Session {
 
     /** Records the protocol negotiated when this session was initialized. */
     public void protocol(Protocol protocol) {
-        this.protocol.compareAndSet(null, Objects.requireNonNull(protocol, "protocol"));
+        if (this.protocol.compareAndSet(null, Objects.requireNonNull(protocol, "protocol"))) {
+            onChange.accept(this);
+        }
     }
 
     /** Enables an extension for this session. */
     public void enableExtension(String extensionId) {
-        enabledExtensions.add(extensionId);
+        if (enabledExtensions.add(extensionId)) {
+            onChange.accept(this);
+        }
+    }
+
+    /** Returns the enabled extension identifiers. */
+    public Set<String> enabledExtensionIds() {
+        return Set.copyOf(enabledExtensions);
     }
 
     /** Returns whether the given extension is enabled for this session. */
     public boolean isExtensionEnabled(String extensionId) {
         return enabledExtensions.contains(extensionId);
+    }
+
+    /** Returns the client-selected logging threshold, if configured. */
+    public @Nullable LoggingLevel loggingLevel() {
+        return loggingLevel.get();
+    }
+
+    /** Records the client-selected logging threshold. */
+    public void loggingLevel(LoggingLevel level) {
+        var next = Objects.requireNonNull(level, "level");
+        if (loggingLevel.getAndSet(next) != next) {
+            onChange.accept(this);
+        }
+    }
+
+    /** Captures transport-free state for durable storage. */
+    public SessionSnapshot snapshot(Instant expiresAt, long revision) {
+        var negotiatedProtocol = protocol.get();
+        return new SessionSnapshot(
+                key,
+                state(),
+                negotiatedProtocol != null ? negotiatedProtocol.versionString() : null,
+                enabledExtensionIds(),
+                loggingLevel(),
+                expiresAt,
+                revision);
+    }
+
+    /** Returns the expiry represented by the last snapshot persisted by this runtime. */
+    public Instant snapshotExpiresAt() {
+        return snapshotExpiresAt.get();
+    }
+
+    /** Records the expiry represented by the last snapshot persisted by this runtime. */
+    public void snapshotExpiresAt(Instant expiresAt) {
+        snapshotExpiresAt.set(Objects.requireNonNull(expiresAt, "expiresAt"));
     }
 
     /** Recomputes and returns the backpressure state based on stream writability. */
@@ -194,6 +290,7 @@ public class Session {
         if (closed) {
             var conn = connection.getAndSet(SseConnection.noop());
             conn.close();
+            onChange.accept(this);
         }
         return closed;
     }
