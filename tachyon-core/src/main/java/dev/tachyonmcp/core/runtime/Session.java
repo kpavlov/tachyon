@@ -37,7 +37,7 @@ public class Session {
     private final Set<String> enabledExtensions = ConcurrentHashMap.newKeySet();
     private final AtomicReference<@Nullable Protocol> protocol = new AtomicReference<>();
     private final AtomicReference<@Nullable LoggingLevel> loggingLevel = new AtomicReference<>();
-    private final AtomicReference<Instant> snapshotExpiresAt;
+    private final AtomicReference<SessionSnapshot> persistedSnapshot;
     private volatile @Nullable String resumingStreamKey;
 
     public Session(String id, SseConnection connection) {
@@ -62,7 +62,7 @@ public class Session {
         this.cursor = new AtomicLong(-1);
         this.enabledExtensions.addAll(snapshot.enabledExtensionIds());
         this.loggingLevel.set(snapshot.loggingLevel());
-        this.snapshotExpiresAt = new AtomicReference<>(snapshot.expiresAt());
+        this.persistedSnapshot = new AtomicReference<>(snapshot);
         final var protocolVersion = snapshot.protocolVersion();
         if (protocolVersion != null) {
             final var restoredProtocol = Protocols.list().stream()
@@ -239,14 +239,14 @@ public class Session {
                 revision);
     }
 
-    /** Returns the expiry represented by the last snapshot persisted by this runtime. */
-    public Instant snapshotExpiresAt() {
-        return snapshotExpiresAt.get();
+    /** Returns the last snapshot persisted by this runtime. */
+    public SessionSnapshot persistedSnapshot() {
+        return persistedSnapshot.get();
     }
 
-    /** Records the expiry represented by the last snapshot persisted by this runtime. */
-    public void snapshotExpiresAt(Instant expiresAt) {
-        snapshotExpiresAt.set(Objects.requireNonNull(expiresAt, "expiresAt"));
+    /** Records the last snapshot persisted by this runtime. */
+    public void persistedSnapshot(SessionSnapshot snapshot) {
+        persistedSnapshot.set(Objects.requireNonNull(snapshot, "snapshot"));
     }
 
     /** Recomputes and returns the backpressure state based on stream writability. */

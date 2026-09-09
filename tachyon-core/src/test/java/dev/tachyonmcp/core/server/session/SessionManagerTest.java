@@ -6,16 +6,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.core.protocol.Protocols;
 import dev.tachyonmcp.core.runtime.SessionState;
+import dev.tachyonmcp.core.runtime.SseConnection;
+import dev.tachyonmcp.core.runtime.SseEvent;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
@@ -107,12 +112,14 @@ class SessionManagerTest {
         final var clock = new MutableClock(NOW);
         final var manager = new SessionManager(store, clock, Duration.ofSeconds(30));
         final var session = manager.createSession("s1");
+        clock.resetInstantCount();
 
         session.touch();
         clock.advance(Duration.ofSeconds(14));
         session.touch();
 
         assertThat(store.touchCount()).isZero();
+        assertThat(clock.instantCount()).isZero();
 
         clock.advance(Duration.ofSeconds(1));
         session.touch();
@@ -121,6 +128,26 @@ class SessionManagerTest {
         assertThat(store.touchCount()).isOne();
         assertThat(store.find("s1"))
                 .hasValueSatisfying(snapshot -> assertThat(snapshot.expiresAt()).isEqualTo(NOW.plusSeconds(45)));
+    }
+
+    @Test
+    void touchDelegatesDueSnapshotRefreshToExecutor() {
+        final var store = new TrackingSessionStore();
+        final var clock = new MutableClock(NOW);
+        final Queue<Runnable> tasks = new ConcurrentLinkedQueue<>();
+        final var manager = new SessionManager(store, clock, Duration.ofSeconds(30), tasks::add);
+        final var session = manager.createSession("s1");
+        clock.advance(Duration.ofSeconds(15));
+
+        session.touch();
+        session.touch();
+
+        assertThat(store.touchCount()).isZero();
+        assertThat(tasks).hasSize(1);
+
+        tasks.remove().run();
+
+        assertThat(store.touchCount()).isOne();
     }
 
     @Test
@@ -142,13 +169,60 @@ class SessionManagerTest {
     }
 
     @Test
+    void stateChangeUsesCachedSnapshotWithoutReadingStore() {
+        final var store = new TrackingSessionStore();
+        final var manager = manager(store);
+        final var session = manager.createSession("s1");
+        store.resetOperationCounts();
+
+        session.activate();
+
+        assertThat(store.findCount()).isZero();
+        assertThat(store.compareAndSetCount()).isOne();
+    }
+
+    @Test
+    void stateChangeUsesRevisionAdvancedByTouch() {
+        final var store = new TrackingSessionStore();
+        final var clock = new MutableClock(NOW);
+        final var manager = new SessionManager(store, clock, Duration.ofSeconds(30));
+        final var session = manager.createSession("s1");
+        clock.advance(Duration.ofSeconds(15));
+        session.touch();
+        store.resetOperationCounts();
+
+        session.loggingLevel(LoggingLevel.ERROR);
+
+        assertThat(store.findCount()).isZero();
+        assertThat(store.compareAndSetCount()).isOne();
+        assertThat(store.find("s1"))
+                .hasValueSatisfying(
+                        snapshot -> assertThat(snapshot.loggingLevel()).isEqualTo(LoggingLevel.ERROR));
+    }
+
+    @Test
+    void stateChangeEvictsLocalRuntimeAfterGenerationReplacement() {
+        final var store = new TrackingSessionStore();
+        final var manager = manager(store);
+        final var session = manager.createSession("s1");
+        final var replacement = store.create(new SessionKey("s1", "replacement"), NOW.plusSeconds(60));
+
+        session.activate();
+
+        assertThat(session.state()).isEqualTo(SessionState.CLOSED);
+        assertThat(manager.allSessions()).isEmpty();
+        assertThat(store.find("s1")).contains(replacement);
+        assertThat(store.terminateCount()).isZero();
+    }
+
+    @Test
     void sameIdCreationsDoNotOverlapStoreAndKeepOneGeneration() throws Exception {
         final var store = new TrackingSessionStore();
         final var manager = manager(store);
         manager.createSession("s1");
         store.armCreateTracking();
 
-        try (final var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+        try (final var executor = Executors.newFixedThreadPool(2)) {
             final var first = executor.submit(() -> manager.createSession("s1"));
             assertThat(store.awaitFirstCreate()).isTrue();
             final var second = executor.submit(() -> {
@@ -156,8 +230,8 @@ class SessionManagerTest {
                 return manager.createSession("s1");
             });
 
-            first.get(2, TimeUnit.SECONDS);
-            second.get(2, TimeUnit.SECONDS);
+            first.get(10, TimeUnit.SECONDS);
+            second.get(10, TimeUnit.SECONDS);
         }
 
         final var local = manager.getSession("s1").orElseThrow();
@@ -195,6 +269,48 @@ class SessionManagerTest {
     }
 
     @Test
+    void concurrentHydrationReadsStoreOnce() throws Exception {
+        final var store = new TrackingSessionStore();
+        store.create(new SessionKey("s1", "generation"), NOW.plusSeconds(30));
+        store.armFindTracking();
+        final var manager = manager(store);
+
+        try (final var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            final var first = executor.submit(() -> manager.getSession("s1"));
+            assertThat(store.awaitFirstFind()).isTrue();
+            final var second = executor.submit(() -> {
+                store.secondFindAttempted();
+                return manager.getSession("s1");
+            });
+
+            assertThat(first.get(2, TimeUnit.SECONDS)).isPresent();
+            assertThat(second.get(2, TimeUnit.SECONDS)).isPresent();
+        }
+
+        assertThat(store.findCount()).isOne();
+        assertThat(store.maxConcurrentFinds()).isOne();
+    }
+
+    @Test
+    void closeContinuesAfterConnectionFailureAndClosesStore() {
+        final var store = new TrackingSessionStore();
+        final var manager = manager(store);
+        final var failedCloseAttempted = new AtomicBoolean();
+        final var healthyCloseAttempted = new AtomicBoolean();
+        manager.createSession("broken", new TestConnection(() -> {
+            failedCloseAttempted.set(true);
+            throw new IllegalStateException("boom");
+        }));
+        manager.createSession("healthy", new TestConnection(() -> healthyCloseAttempted.set(true)));
+
+        manager.close();
+
+        assertThat(failedCloseAttempted).isTrue();
+        assertThat(healthyCloseAttempted).isTrue();
+        assertThat(store.closeCount()).isOne();
+    }
+
+    @Test
     void sweepEvictsExpiredLocalSessionAndSnapshot() {
         var store = new InMemorySessionStore();
         var manager = manager(store);
@@ -228,12 +344,21 @@ class SessionManagerTest {
         private final InMemorySessionStore delegate = new InMemorySessionStore();
         private final AtomicInteger touchCount = new AtomicInteger();
         private final AtomicInteger terminateCount = new AtomicInteger();
+        private final AtomicInteger findCount = new AtomicInteger();
+        private final AtomicInteger compareAndSetCount = new AtomicInteger();
+        private final AtomicInteger closeCount = new AtomicInteger();
         private final AtomicInteger concurrentCreates = new AtomicInteger();
         private final AtomicInteger maxConcurrentCreates = new AtomicInteger();
+        private final AtomicInteger concurrentFinds = new AtomicInteger();
+        private final AtomicInteger maxConcurrentFinds = new AtomicInteger();
         private final CountDownLatch firstCreateEntered = new CountDownLatch(1);
         private final CountDownLatch secondCreateAttempted = new CountDownLatch(1);
         private final CountDownLatch overlappingCreateEntered = new CountDownLatch(1);
+        private final CountDownLatch firstFindEntered = new CountDownLatch(1);
+        private final CountDownLatch secondFindAttempted = new CountDownLatch(1);
+        private final CountDownLatch overlappingFindEntered = new CountDownLatch(1);
         private volatile boolean trackCreates;
+        private volatile boolean trackFinds;
 
         @Override
         public SessionSnapshot create(SessionKey key, Instant expiresAt) {
@@ -258,11 +383,29 @@ class SessionManagerTest {
 
         @Override
         public Optional<SessionSnapshot> find(String sessionId) {
-            return delegate.find(sessionId);
+            findCount.incrementAndGet();
+            if (!trackFinds) {
+                return delegate.find(sessionId);
+            }
+            final var concurrent = concurrentFinds.incrementAndGet();
+            maxConcurrentFinds.accumulateAndGet(concurrent, Math::max);
+            try {
+                if (concurrent == 1) {
+                    firstFindEntered.countDown();
+                    await(secondFindAttempted);
+                    await(overlappingFindEntered, 250, TimeUnit.MILLISECONDS);
+                } else {
+                    overlappingFindEntered.countDown();
+                }
+                return delegate.find(sessionId);
+            } finally {
+                concurrentFinds.decrementAndGet();
+            }
         }
 
         @Override
         public boolean compareAndSet(SessionSnapshot expected, SessionSnapshot updated) {
+            compareAndSetCount.incrementAndGet();
             return delegate.compareAndSet(expected, updated);
         }
 
@@ -280,6 +423,7 @@ class SessionManagerTest {
 
         @Override
         public void close() {
+            closeCount.incrementAndGet();
             delegate.close();
         }
 
@@ -287,12 +431,30 @@ class SessionManagerTest {
             trackCreates = true;
         }
 
+        void armFindTracking() {
+            resetOperationCounts();
+            trackFinds = true;
+        }
+
         boolean awaitFirstCreate() throws InterruptedException {
             return firstCreateEntered.await(2, TimeUnit.SECONDS);
         }
 
+        boolean awaitFirstFind() throws InterruptedException {
+            return firstFindEntered.await(2, TimeUnit.SECONDS);
+        }
+
         void secondCreateAttempted() {
             secondCreateAttempted.countDown();
+        }
+
+        void secondFindAttempted() {
+            secondFindAttempted.countDown();
+        }
+
+        void resetOperationCounts() {
+            findCount.set(0);
+            compareAndSetCount.set(0);
         }
 
         int touchCount() {
@@ -303,8 +465,24 @@ class SessionManagerTest {
             return terminateCount.get();
         }
 
+        int findCount() {
+            return findCount.get();
+        }
+
+        int compareAndSetCount() {
+            return compareAndSetCount.get();
+        }
+
+        int closeCount() {
+            return closeCount.get();
+        }
+
         int maxConcurrentCreates() {
             return maxConcurrentCreates.get();
+        }
+
+        int maxConcurrentFinds() {
+            return maxConcurrentFinds.get();
         }
 
         private static void await(CountDownLatch latch) {
@@ -326,8 +504,25 @@ class SessionManagerTest {
         }
     }
 
+    private record TestConnection(Runnable onClose) implements SseConnection {
+
+        @Override
+        public boolean isWritable() {
+            return true;
+        }
+
+        @Override
+        public void send(SseEvent event) {}
+
+        @Override
+        public void close() {
+            onClose.run();
+        }
+    }
+
     private static final class MutableClock extends Clock {
         private final AtomicReference<Instant> now;
+        private final AtomicInteger instantCount = new AtomicInteger();
 
         private MutableClock(Instant now) {
             this.now = new AtomicReference<>(now);
@@ -335,6 +530,14 @@ class SessionManagerTest {
 
         void advance(Duration duration) {
             now.updateAndGet(current -> current.plus(duration));
+        }
+
+        void resetInstantCount() {
+            instantCount.set(0);
+        }
+
+        int instantCount() {
+            return instantCount.get();
         }
 
         @Override
@@ -348,7 +551,13 @@ class SessionManagerTest {
         }
 
         @Override
+        public long millis() {
+            return now.get().toEpochMilli();
+        }
+
+        @Override
         public Instant instant() {
+            instantCount.incrementAndGet();
             return now.get();
         }
     }

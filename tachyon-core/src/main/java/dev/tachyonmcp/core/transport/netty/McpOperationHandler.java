@@ -1,11 +1,11 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.transport.netty;
 
+import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.bindSession;
 import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.captureInitRequest;
 import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.sendAccepted;
 import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.sendPlainTextAndClose;
 import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.sendResponseAndClose;
-import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.setSession;
 import static dev.tachyonmcp.core.transport.netty.McpResponseWriter.sendInternalError;
 import static dev.tachyonmcp.core.transport.netty.McpResponseWriter.sendJsonResponse;
 import static dev.tachyonmcp.core.transport.netty.McpResponseWriter.sendOptions;
@@ -13,7 +13,7 @@ import static dev.tachyonmcp.core.transport.netty.McpResponseWriter.sendOptions;
 import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.core.protocol.mcp.McpHeaderNames;
 import dev.tachyonmcp.core.runtime.ChannelContext;
-import dev.tachyonmcp.core.runtime.InteractionEvent;
+import dev.tachyonmcp.core.runtime.Session;
 import dev.tachyonmcp.core.runtime.SseEvent;
 import dev.tachyonmcp.core.server.McpDispatcher;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
@@ -31,10 +31,12 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.timeout.IdleStateEvent;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +64,11 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         this.dispatcher = dispatcher;
         this.executor = executor;
         this.sseManager = new SseManager(server);
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) {
+        SessionTouchHandler.install(ctx);
     }
 
     @Override
@@ -104,14 +111,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
 
     private void handlePost(ChannelHandlerContext ctx, FullHttpRequest req, @Nullable String origin) {
         var sessionId = req.headers().get(McpHeaderNames.MCP_SESSION_ID);
-        if (sessionId != null) {
-            var session = server.getSession(sessionId);
-            if (session.isEmpty()) {
-                sendPlainTextAndClose(ctx, HttpResponseStatus.NOT_FOUND, "Unknown session", origin);
-                return;
-            }
-            setSession(ctx, session.get());
-        } else {
+        if (sessionId == null) {
             // A session-less POST may be an initialize (e.g. on a keep-alive channel already in
             // the operation phase); preserve the request for a custom SessionIdGenerator.
             captureInitRequest(ctx, req, server);
@@ -129,6 +129,19 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                             () -> {
                                 final JsonRpcMessage message;
                                 try {
+                                    if (sessionId != null) {
+                                        final var session = server.getSession(sessionId);
+                                        if (session.isEmpty()) {
+                                            ctx.executor()
+                                                    .execute(() -> sendPlainTextAndClose(
+                                                            ctx,
+                                                            HttpResponseStatus.NOT_FOUND,
+                                                            "Unknown session",
+                                                            origin));
+                                            return;
+                                        }
+                                        bindSession(ctx.channel(), session.orElseThrow());
+                                    }
                                     message = dispatcher.parseMessage(body);
                                 } finally {
                                     body.release();
@@ -393,7 +406,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             return null;
         }
         var wireId = ServerEngine.wireEventId(sseEventId, streamKey);
-        return () -> server.getSession(sessionId).ifPresent(session -> {
+        return () -> server.getLocalSession(sessionId).ifPresent(session -> {
             // ponytail: the resumed reconnect may also replay this event from the log, so a rare
             // race can deliver it twice with the same SSE id — harmless (the client dedupes the
             // JSON-RPC response by request id). Per-connection id de-dup if that ever bites.
@@ -413,12 +426,24 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             sendPlainTextAndClose(ctx, HttpResponseStatus.BAD_REQUEST, "Missing MCP-Session-Id header", origin);
             return;
         }
-        var sessionOpt = server.getSession(sessionId);
-        if (sessionOpt.isEmpty()) {
-            sendPlainTextAndClose(ctx, HttpResponseStatus.NOT_FOUND, "Unknown session", origin);
+        final var lastEventId = req.headers().get(McpHeaderNames.LAST_EVENT_ID);
+        final var local = server.getLocalSession(sessionId);
+        if (local.isPresent()) {
+            sseManager.openStream(ctx, local.orElseThrow(), lastEventId, origin);
             return;
         }
-        sseManager.openStream(ctx, sessionOpt.get(), req.headers().get(McpHeaderNames.LAST_EVENT_ID), origin);
+        try {
+            CompletableFuture.supplyAsync(() -> server.getSession(sessionId), executor)
+                    .whenComplete((session, failure) -> marshalSessionLookup(
+                            ctx,
+                            sessionId,
+                            origin,
+                            session,
+                            failure,
+                            found -> sseManager.openStream(ctx, found, lastEventId, origin)));
+        } catch (RejectedExecutionException e) {
+            sendPlainTextAndClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE, "Server shutting down", origin);
+        }
     }
 
     private void handleDelete(ChannelHandlerContext ctx, FullHttpRequest req, @Nullable String origin) {
@@ -427,15 +452,58 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             sendPlainTextAndClose(ctx, HttpResponseStatus.BAD_REQUEST, "Missing MCP-Session-Id header", origin);
             return;
         }
-        if (server.getSession(sessionId).isEmpty()) {
-            sendPlainTextAndClose(ctx, HttpResponseStatus.NOT_FOUND, "Unknown session", origin);
-            return;
+        try {
+            CompletableFuture.supplyAsync(
+                            () -> {
+                                if (server.getSession(sessionId).isEmpty()) {
+                                    return false;
+                                }
+                                server.removeSession(sessionId);
+                                return true;
+                            },
+                            executor)
+                    .whenComplete((removed, failure) -> ctx.executor().execute(() -> {
+                        if (failure != null) {
+                            logger.error("Failed to terminate session: {}", sessionId, failure);
+                            sendPlainTextAndClose(
+                                    ctx,
+                                    HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                                    "Session termination failed",
+                                    origin);
+                        } else if (!removed) {
+                            sendPlainTextAndClose(ctx, HttpResponseStatus.NOT_FOUND, "Unknown session", origin);
+                        } else {
+                            sendPlainTextAndClose(ctx, HttpResponseStatus.OK, "", origin);
+                            logger.info("Session terminated via DELETE: {}", sessionId);
+                        }
+                    }));
+        } catch (RejectedExecutionException e) {
+            sendPlainTextAndClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE, "Server shutting down", origin);
         }
-        // Fire ShutdownStarted before sending the response so the session is removed
-        // before the client receives the OK (eliminates race on server.session()).
-        ctx.pipeline().fireUserEventTriggered(new InteractionEvent.ShutdownStarted(sessionId));
-        sendPlainTextAndClose(ctx, HttpResponseStatus.OK, "", origin);
-        logger.info("Session terminated via DELETE: {}", sessionId);
+    }
+
+    private static void marshalSessionLookup(
+            ChannelHandlerContext ctx,
+            String sessionId,
+            @Nullable String origin,
+            @Nullable Optional<Session> session,
+            @Nullable Throwable failure,
+            Consumer<Session> onFound) {
+        try {
+            ctx.executor().execute(() -> {
+                if (failure != null) {
+                    logger.error("Failed to resolve session: {}", sessionId, failure);
+                    sendPlainTextAndClose(
+                            ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, "Session lookup failed", origin);
+                } else if (session == null || session.isEmpty()) {
+                    sendPlainTextAndClose(ctx, HttpResponseStatus.NOT_FOUND, "Unknown session", origin);
+                } else {
+                    onFound.accept(session.orElseThrow());
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            logger.debug("Event loop rejected session lookup result during shutdown: {}", sessionId);
+        }
     }
 
     @Override

@@ -14,7 +14,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.locks.ReentrantLock;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,24 +27,32 @@ public final class SessionManager implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(SessionManager.class);
     private final ConcurrentHashMap<String, Session> sessions = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, CreationLock> creationLocks = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, LifecycleLock> lifecycleLocks = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<SessionKey, Boolean> pendingExpiryRefreshes = new ConcurrentHashMap<>();
     private final SessionStore store;
     private final Clock clock;
+    private final Executor persistenceExecutor;
     private volatile Duration ttl;
     private volatile Duration expiryRefreshMargin;
     private @Nullable AbstractJanitor janitor;
 
     /** Creates a manager using the system clock and a five-minute snapshot TTL. */
     public SessionManager(SessionStore store) {
-        this(store, Clock.systemUTC(), Duration.ofMinutes(5));
+        this(store, Clock.systemUTC(), Duration.ofMinutes(5), Runnable::run);
     }
 
     /** Creates a manager with explicit time sources for deterministic lifecycle handling. */
     public SessionManager(SessionStore store, Clock clock, Duration ttl) {
+        this(store, clock, ttl, Runnable::run);
+    }
+
+    /** Creates a manager that delegates expiry refreshes to the supplied executor. */
+    public SessionManager(SessionStore store, Clock clock, Duration ttl, Executor persistenceExecutor) {
         this.store = store;
         this.clock = clock;
         this.ttl = ttl;
         this.expiryRefreshMargin = ttl.dividedBy(2);
+        this.persistenceExecutor = persistenceExecutor;
     }
 
     /** Creates a session with no initial connection. */
@@ -67,15 +77,39 @@ public final class SessionManager implements AutoCloseable {
         if (sessionId == null) {
             return Optional.empty();
         }
-        var local = sessions.get(sessionId);
+        final var local = sessions.get(sessionId);
         if (local != null) {
             return Optional.of(local);
         }
-        var persisted = store.find(sessionId);
+        return hydrate(sessionId);
+    }
+
+    /** Returns the process-local runtime without consulting the snapshot store. */
+    public Optional<Session> getLocalSession(@Nullable String sessionId) {
+        return Optional.ofNullable(sessionId == null ? null : sessions.get(sessionId));
+    }
+
+    private Optional<Session> hydrate(String sessionId) {
+        final var lifecycleLock = acquireLifecycleLock(sessionId);
+        lifecycleLock.lock();
+        try {
+            final var local = sessions.get(sessionId);
+            if (local != null) {
+                return Optional.of(local);
+            }
+            return hydrateAbsent(sessionId);
+        } finally {
+            lifecycleLock.unlock();
+            releaseLifecycleLock(sessionId, lifecycleLock);
+        }
+    }
+
+    private Optional<Session> hydrateAbsent(String sessionId) {
+        final var persisted = store.find(sessionId);
         if (persisted.isEmpty()) {
             return Optional.empty();
         }
-        var snapshot = persisted.orElseThrow();
+        final var snapshot = persisted.orElseThrow();
         if (snapshot.state() == SessionState.CLOSED || !snapshot.expiresAt().isAfter(clock.instant())) {
             store.terminate(snapshot.key());
             return Optional.empty();
@@ -90,11 +124,7 @@ public final class SessionManager implements AutoCloseable {
                     snapshot.protocolVersion());
             return Optional.empty();
         }
-        var winner = sessions.putIfAbsent(sessionId, hydrated);
-        if (winner != null) {
-            hydrated.close();
-            return Optional.of(winner);
-        }
+        sessions.put(sessionId, hydrated);
         return Optional.of(hydrated);
     }
 
@@ -105,12 +135,7 @@ public final class SessionManager implements AutoCloseable {
 
     /** Removes and closes the current generation for the session ID. */
     public void removeSession(String sessionId) {
-        var removed = new AtomicReference<Session>();
-        sessions.computeIfPresent(sessionId, (id, current) -> {
-            removed.set(current);
-            return null;
-        });
-        var local = removed.get();
+        final var local = sessions.remove(sessionId);
         if (local != null) {
             store.terminate(local.key());
             local.close();
@@ -151,15 +176,7 @@ public final class SessionManager implements AutoCloseable {
     }
 
     private void removeIfCurrent(Session expected) {
-        var removed = new boolean[1];
-        sessions.computeIfPresent(expected.id(), (id, current) -> {
-            if (current == expected) {
-                removed[0] = true;
-                return null;
-            }
-            return current;
-        });
-        if (removed[0]) {
+        if (sessions.remove(expected.id(), expected)) {
             store.terminate(expected.key());
             expected.close();
         }
@@ -170,33 +187,33 @@ public final class SessionManager implements AutoCloseable {
     }
 
     private Creation createAndInstall(String sessionId, SseConnection connection) {
-        final var creationLock = acquireCreationLock(sessionId);
+        final var lifecycleLock = acquireLifecycleLock(sessionId);
+        lifecycleLock.lock();
         try {
-            synchronized (creationLock) {
-                final var key = new SessionKey(sessionId, UUID.randomUUID().toString());
-                final var snapshot = store.create(key, expiresAt());
-                final var created = runtime(snapshot, connection);
-                return new Creation(created, sessions.put(sessionId, created));
-            }
+            final var key = new SessionKey(sessionId, UUID.randomUUID().toString());
+            final var snapshot = store.create(key, expiresAt());
+            final var created = runtime(snapshot, connection);
+            return new Creation(created, sessions.put(sessionId, created));
         } finally {
-            releaseCreationLock(sessionId, creationLock);
+            lifecycleLock.unlock();
+            releaseLifecycleLock(sessionId, lifecycleLock);
         }
     }
 
-    private CreationLock acquireCreationLock(String sessionId) {
-        return creationLocks.compute(sessionId, (id, current) -> {
-            final var lock = current == null ? new CreationLock() : current;
+    private LifecycleLock acquireLifecycleLock(String sessionId) {
+        return lifecycleLocks.compute(sessionId, (id, current) -> {
+            final var lock = current == null ? new LifecycleLock() : current;
             lock.retain();
             return lock;
         });
     }
 
-    private void releaseCreationLock(String sessionId, CreationLock creationLock) {
-        creationLocks.computeIfPresent(sessionId, (id, current) -> {
-            if (current != creationLock) {
+    private void releaseLifecycleLock(String sessionId, LifecycleLock lifecycleLock) {
+        lifecycleLocks.computeIfPresent(sessionId, (id, current) -> {
+            if (current != lifecycleLock) {
                 return current;
             }
-            return creationLock.release() ? null : creationLock;
+            return lifecycleLock.release() ? null : lifecycleLock;
         });
     }
 
@@ -209,17 +226,14 @@ public final class SessionManager implements AutoCloseable {
                 return;
             }
             try {
-                final var current = store.find(session.id());
-                if (current.isEmpty() || !current.orElseThrow().key().equals(session.key())) {
-                    return;
-                }
-                final var expected = current.orElseThrow();
+                final var expected = session.persistedSnapshot();
                 final var updated = session.snapshot(expiresAt(), expected.revision() + 1);
                 if (store.compareAndSet(expected, updated)) {
-                    session.snapshotExpiresAt(updated.expiresAt());
+                    session.persistedSnapshot(updated);
                     return;
                 }
                 logger.warn("Session snapshot update lost ownership: {}", session.id());
+                evictLocal(session);
             } catch (RuntimeException e) {
                 logger.warn("Failed to persist session snapshot: {}", session.id(), e);
             }
@@ -227,31 +241,73 @@ public final class SessionManager implements AutoCloseable {
     }
 
     private void touch(Session session) {
-        if (sessions.get(session.id()) != session) {
+        if (sessions.get(session.id()) != session || !refreshDue(session, clock.millis())) {
             return;
         }
+        if (pendingExpiryRefreshes.putIfAbsent(session.key(), Boolean.TRUE) != null) {
+            return;
+        }
+        try {
+            persistenceExecutor.execute(() -> refreshExpiry(session));
+        } catch (RejectedExecutionException e) {
+            pendingExpiryRefreshes.remove(session.key());
+            logger.debug("Session expiry refresh rejected during shutdown: {}", session.id());
+        }
+    }
+
+    private void refreshExpiry(Session session) {
+        try {
+            refreshExpiryIfDue(session);
+        } finally {
+            pendingExpiryRefreshes.remove(session.key());
+        }
+    }
+
+    private void refreshExpiryIfDue(Session session) {
         synchronized (session) {
             if (sessions.get(session.id()) != session) {
                 return;
             }
             final var now = clock.instant();
-            final var refreshAt = session.snapshotExpiresAt().minus(expiryRefreshMargin);
+            final var expected = session.persistedSnapshot();
+            final var refreshAt = expected.expiresAt().minus(expiryRefreshMargin);
             if (now.isBefore(refreshAt)) {
                 return;
             }
             final var updatedExpiry = now.plus(ttl);
             try {
                 if (store.touch(session.key(), updatedExpiry)) {
-                    session.snapshotExpiresAt(updatedExpiry);
+                    session.persistedSnapshot(refreshed(expected, updatedExpiry));
                 } else {
                     logger.warn("Session expiry refresh lost ownership: {}", session.id());
-                    if (sessions.remove(session.id(), session)) {
-                        session.close();
-                    }
+                    evictLocal(session);
                 }
             } catch (RuntimeException e) {
                 logger.warn("Failed to refresh session snapshot expiry: {}", session.id(), e);
             }
+        }
+    }
+
+    private boolean refreshDue(Session session, long nowMillis) {
+        final var refreshAtMillis =
+                session.persistedSnapshot().expiresAt().toEpochMilli() - expiryRefreshMargin.toMillis();
+        return nowMillis >= refreshAtMillis;
+    }
+
+    private static SessionSnapshot refreshed(SessionSnapshot expected, Instant expiresAt) {
+        return new SessionSnapshot(
+                expected.key(),
+                expected.state(),
+                expected.protocolVersion(),
+                expected.enabledExtensionIds(),
+                expected.loggingLevel(),
+                expiresAt,
+                expected.revision() + 1);
+    }
+
+    private void evictLocal(Session session) {
+        if (sessions.remove(session.id(), session)) {
+            session.close();
         }
     }
 
@@ -261,24 +317,41 @@ public final class SessionManager implements AutoCloseable {
 
     @Override
     public void close() {
+        if (janitor != null) {
+            janitor.close();
+        }
+        final var local = List.copyOf(sessions.values());
+        sessions.clear();
+        local.forEach(this::closeLocal);
         try {
-            if (janitor != null) {
-                janitor.close();
-            }
-            var local = List.copyOf(sessions.values());
-            sessions.clear();
-            local.forEach(Session::close);
             store.close();
             logger.debug("SessionManager closed");
         } catch (Exception e) {
-            logger.warn("Error while closing SessionManager", e);
+            logger.warn("Failed to close session store", e);
+        }
+    }
+
+    private void closeLocal(Session session) {
+        try {
+            session.close();
+        } catch (RuntimeException e) {
+            logger.warn("Failed to close session: {}", session.id(), e);
         }
     }
 
     private record Creation(Session created, @Nullable Session replaced) {}
 
-    private static final class CreationLock {
+    private static final class LifecycleLock {
+        private final ReentrantLock delegate = new ReentrantLock();
         private int users;
+
+        void lock() {
+            delegate.lock();
+        }
+
+        void unlock() {
+            delegate.unlock();
+        }
 
         void retain() {
             users++;

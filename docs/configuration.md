@@ -289,6 +289,8 @@ A persistent implementation can use the session ID as its key and encode the com
 as its value. `create` is an atomic put, `find` decodes the value, `compareAndSet` is a conditional
 replace, `touch` conditionally extends the matching generation's expiry, and `terminate` removes
 only the matching generation. Store implementations must make these operations thread-safe.
+Operations execute synchronously and may perform I/O. Tachyon invokes them outside transport
+event-loop threads. Implementations must be thread-safe.
 
 ## Runtime
 

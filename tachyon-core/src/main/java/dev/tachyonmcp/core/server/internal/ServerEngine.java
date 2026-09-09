@@ -83,6 +83,9 @@ public interface ServerEngine extends TachyonServer {
     /** Returns the session with the given ID, if present. */
     Optional<Session> getSession(String sessionId);
 
+    /** Returns only a process-local session, without consulting persistent storage. */
+    Optional<Session> getLocalSession(String sessionId);
+
     /** Removes and closes the session with the given ID. */
     void removeSession(String sessionId);
 

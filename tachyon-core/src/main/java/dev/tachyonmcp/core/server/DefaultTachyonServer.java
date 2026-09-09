@@ -295,7 +295,8 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         this.sessionManager = new SessionManager(
                 sessionStore,
                 config.runtime().clock(),
-                configuredSessionTtl != null ? configuredSessionTtl : SessionConfig.DEFAULT_SESSION_TTL);
+                configuredSessionTtl != null ? configuredSessionTtl : SessionConfig.DEFAULT_SESSION_TTL,
+                executor);
         final JsonSchemaValidator inputValidator1 =
                 inputValidator != null ? inputValidator : new NetworkntJsonSchemaValidator();
         final JsonSchemaValidator outputValidator1 = outputValidator != null ? outputValidator : inputValidator1;
@@ -683,6 +684,11 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     @Override
     public Optional<Session> getSession(String sessionId) {
         return sessionManager.getSession(sessionId);
+    }
+
+    @Override
+    public Optional<Session> getLocalSession(String sessionId) {
+        return sessionManager.getLocalSession(sessionId);
     }
 
     @Override

@@ -7,7 +7,11 @@ import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.core.server.McpDispatcher;
 import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
+import dev.tachyonmcp.core.server.session.InMemorySessionStore;
 import dev.tachyonmcp.core.server.session.SessionEvent;
+import dev.tachyonmcp.core.server.session.SessionKey;
+import dev.tachyonmcp.core.server.session.SessionSnapshot;
+import dev.tachyonmcp.core.server.session.SessionStore;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -21,7 +25,13 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.ReferenceCountUtil;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -165,6 +175,85 @@ class McpOperationHandlerTest {
         var response = (HttpResponse) msg;
         assertThat(response.status()).isEqualTo(HttpResponseStatus.OK);
         assertThat(response.headers().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo("text/event-stream");
+    }
+
+    @Test
+    void sessionLookupRunsOutsideEventLoop() throws Exception {
+        final var lookupThread = new AtomicReference<Thread>();
+        final var lookupFinished = new CountDownLatch(1);
+        final var store = new ThreadRecordingSessionStore(lookupThread, lookupFinished);
+        final var testServer = (ServerEngine) TachyonServer.builder()
+                .session(config -> config.enabled(true).sessionStore(store))
+                .build();
+
+        try {
+            try (final var lookupExecutor = Executors.newSingleThreadExecutor()) {
+                final var testChannel = new EmbeddedChannel(new McpOperationHandler(
+                        testServer, new McpDispatcher(testServer, Runnable::run), lookupExecutor));
+                try {
+                    final var eventLoopThread = Thread.currentThread();
+                    final var request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/mcp");
+                    request.headers().set("MCP-Session-Id", "missing");
+
+                    testChannel.writeInbound(request);
+
+                    assertThat(lookupFinished.await(2, TimeUnit.SECONDS)).isTrue();
+                    assertThat(lookupThread)
+                            .hasValueSatisfying(thread -> assertThat(thread).isNotSameAs(eventLoopThread));
+                    testChannel.runPendingTasks();
+                    final var response = (FullHttpResponse) testChannel.readOutbound();
+                    assertThat(response.status()).isEqualTo(HttpResponseStatus.NOT_FOUND);
+                    response.release();
+                } finally {
+                    testChannel.finishAndReleaseAll();
+                }
+            }
+        } finally {
+            testServer.close();
+        }
+    }
+
+    private static final class ThreadRecordingSessionStore implements SessionStore {
+        private final InMemorySessionStore delegate = new InMemorySessionStore();
+        private final AtomicReference<Thread> lookupThread;
+        private final CountDownLatch lookupFinished;
+
+        private ThreadRecordingSessionStore(AtomicReference<Thread> lookupThread, CountDownLatch lookupFinished) {
+            this.lookupThread = lookupThread;
+            this.lookupFinished = lookupFinished;
+        }
+
+        @Override
+        public SessionSnapshot create(SessionKey key, Instant expiresAt) {
+            return delegate.create(key, expiresAt);
+        }
+
+        @Override
+        public Optional<SessionSnapshot> find(String sessionId) {
+            lookupThread.set(Thread.currentThread());
+            lookupFinished.countDown();
+            return delegate.find(sessionId);
+        }
+
+        @Override
+        public boolean compareAndSet(SessionSnapshot expected, SessionSnapshot updated) {
+            return delegate.compareAndSet(expected, updated);
+        }
+
+        @Override
+        public boolean touch(SessionKey key, Instant expiresAt) {
+            return delegate.touch(key, expiresAt);
+        }
+
+        @Override
+        public boolean terminate(SessionKey key) {
+            return delegate.terminate(key);
+        }
+
+        @Override
+        public void close() {
+            delegate.close();
+        }
     }
 
     @Test

@@ -5,7 +5,12 @@ import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import java.time.Instant;
 import java.util.Optional;
 
-/** Persistence boundary for immutable, transport-free MCP session snapshots. */
+/**
+ * Persistence boundary for immutable, transport-free MCP session snapshots.
+ *
+ * <p>Methods execute synchronously and may perform I/O. Tachyon invokes them outside transport
+ * event-loop threads. Implementations must be thread-safe.
+ */
 @ExperimentalApi(since = "1.0.0-beta.26")
 public interface SessionStore extends AutoCloseable {
 
@@ -19,7 +24,7 @@ public interface SessionStore extends AutoCloseable {
     boolean compareAndSet(SessionSnapshot expected, SessionSnapshot updated);
 
     /**
-     * Extends expiry and advances the revision when the current snapshot still belongs to
+     * Extends expiry and increments the revision once when the current snapshot still belongs to
      * {@code key}.
      */
     boolean touch(SessionKey key, Instant expiresAt);
