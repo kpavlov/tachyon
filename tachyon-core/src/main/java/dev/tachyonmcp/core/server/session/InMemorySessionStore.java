@@ -2,51 +2,63 @@
 package dev.tachyonmcp.core.server.session;
 
 import dev.tachyonmcp.api.annotations.InternalApi;
-import dev.tachyonmcp.core.runtime.Session;
-import java.util.Collection;
+import dev.tachyonmcp.core.runtime.SessionState;
+import java.time.Instant;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
-import org.jspecify.annotations.Nullable;
 
+/** Default process-local session snapshot store. */
 @InternalApi
-public class InMemorySessionStore implements SessionStore {
+public final class InMemorySessionStore implements SessionStore {
 
-    private final ConcurrentHashMap<String, Session> sessions = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, SessionSnapshot> snapshots = new ConcurrentHashMap<>();
 
     @Override
-    public @Nullable Session put(String sessionId, Session session) {
-        return sessions.put(sessionId, session);
+    public SessionSnapshot create(SessionKey key, Instant expiresAt) {
+        final var snapshot = new SessionSnapshot(key, SessionState.INITIALIZING, null, Set.of(), null, expiresAt, 0);
+        snapshots.put(key.sessionId(), snapshot);
+        return snapshot;
     }
 
     @Override
-    public Optional<Session> get(String sessionId) {
-        return Optional.ofNullable(sessions.get(sessionId));
+    public Optional<SessionSnapshot> find(String sessionId) {
+        return Optional.ofNullable(snapshots.get(sessionId));
     }
 
     @Override
-    public Session computeIfAbsent(String sessionId, Function<String, Session> factory) {
-        return sessions.computeIfAbsent(sessionId, factory);
+    public boolean compareAndSet(SessionSnapshot expected, SessionSnapshot updated) {
+        if (!expected.key().equals(updated.key()) || updated.revision() <= expected.revision()) {
+            return false;
+        }
+        return snapshots.replace(expected.key().sessionId(), expected, updated);
     }
 
     @Override
-    public Collection<Session> values() {
-        return sessions.values();
+    public boolean touch(SessionKey key, Instant expiresAt) {
+        final var touched = new boolean[1];
+        snapshots.computeIfPresent(key.sessionId(), (sessionId, current) -> {
+            if (!current.key().equals(key)) {
+                return current;
+            }
+            touched[0] = true;
+            return new SessionSnapshot(
+                    current.key(),
+                    current.state(),
+                    current.protocolVersion(),
+                    current.enabledExtensionIds(),
+                    current.loggingLevel(),
+                    expiresAt,
+                    current.revision() + 1);
+        });
+        return touched[0];
     }
 
     @Override
-    public @Nullable Session remove(String sessionId) {
-        return sessions.remove(sessionId);
-    }
-
-    @Override
-    public boolean remove(String sessionId, Session expected) {
-        // Not sessions.remove(key, value): that compares by equals, and Session.equals is
-        // id-based — it would match (and evict) a replacement instance under the same id.
-        // computeIfPresent gives an atomic identity-conditional remove.
-        var removed = new boolean[1];
-        sessions.computeIfPresent(sessionId, (id, current) -> {
-            if (current == expected) {
+    public boolean terminate(SessionKey key) {
+        final var removed = new boolean[1];
+        snapshots.computeIfPresent(key.sessionId(), (sessionId, current) -> {
+            if (current.key().equals(key)) {
                 removed[0] = true;
                 return null;
             }
@@ -57,6 +69,6 @@ public class InMemorySessionStore implements SessionStore {
 
     @Override
     public void close() {
-        sessions.clear();
+        snapshots.clear();
     }
 }

@@ -3,7 +3,7 @@
  */
 
 /**
- * Session management — dispatch contexts, session lifecycle events, and session storage.
+ * Internal live-session coordination and experimental immutable persistence contracts.
  */
 @NullMarked
 package dev.tachyonmcp.core.server.session;

@@ -5,10 +5,14 @@ import dev.tachyonmcp.core.server.McpDispatcher;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import io.netty.channel.ChannelHandler;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class McpHandlerManager implements ProtocolHandlerManager {
 
+    private static final Logger logger = LoggerFactory.getLogger(McpHandlerManager.class);
     static final String HANDLER_INIT = "mcp-phase-init";
     static final String HANDLER_OPS = "mcp-phase-operations";
 
@@ -44,7 +48,11 @@ public class McpHandlerManager implements ProtocolHandlerManager {
     @Override
     public void onShutdownStarted(@Nullable String sessionId) {
         if (sessionId != null) {
-            server.removeSession(sessionId);
+            try {
+                executor.execute(() -> server.removeSession(sessionId));
+            } catch (RejectedExecutionException e) {
+                logger.debug("Session cleanup rejected during server shutdown: {}", sessionId);
+            }
         }
     }
 }

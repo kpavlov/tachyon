@@ -1,12 +1,14 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.session;
 
+import dev.tachyonmcp.api.annotations.ExperimentalApi;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 
 /** Persists and replays session events (request/responses, notifications). */
+@ExperimentalApi(since = "1.0.0-beta.26")
 public interface SessionEventStore extends Closeable {
     /** Appends an event to the log. */
     void append(SessionEvent event);

@@ -251,7 +251,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                         // InteractionContext, and LifecyclePipelineCoordinator replaces this handler
                         // with McpOperationHandler.
                         var mcpSession = resultSessionId != null
-                                ? server.getSession(resultSessionId).orElse(null)
+                                ? server.getLocalSession(resultSessionId).orElse(null)
                                 : null;
                         ctx.pipeline().fireUserEventTriggered(new InteractionEvent.OperationStarted(mcpSession));
                         logger.debug("Pipeline transitioned to OPERATION phase for session: {}", resultSessionId);

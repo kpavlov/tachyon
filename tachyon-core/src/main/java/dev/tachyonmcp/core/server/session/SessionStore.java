@@ -1,44 +1,34 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.session;
 
-import dev.tachyonmcp.core.runtime.Session;
-import java.util.Collection;
+import dev.tachyonmcp.api.annotations.ExperimentalApi;
+import java.time.Instant;
 import java.util.Optional;
-import java.util.function.Function;
-import org.jspecify.annotations.Nullable;
 
-/** Storage abstraction for MCP sessions. */
+/**
+ * Persistence boundary for immutable, transport-free MCP session snapshots.
+ *
+ * <p>Methods execute synchronously and may perform I/O. Tachyon invokes them outside transport
+ * event-loop threads. Implementations must be thread-safe.
+ */
+@ExperimentalApi(since = "1.0.0-beta.26")
 public interface SessionStore extends AutoCloseable {
 
-    /** Stores a session, returning any previous session with the same ID. */
-    @Nullable
-    Session put(String sessionId, Session session);
+    /** Creates a new generation, atomically replacing the current generation for its session ID. */
+    SessionSnapshot create(SessionKey key, Instant expiresAt);
 
-    /** Returns the session for the given ID, if present. */
-    Optional<Session> get(String sessionId);
+    /** Finds the current snapshot for a session ID. */
+    Optional<SessionSnapshot> find(String sessionId);
 
-    /** Returns the existing session or creates and stores a new one via the factory. */
-    Session computeIfAbsent(String sessionId, Function<String, Session> factory);
-
-    /** Returns all stored sessions. */
-    Collection<Session> values();
-
-    /** Removes and returns the session for the given ID. */
-    @Nullable
-    Session remove(String sessionId);
+    /** Replaces the current snapshot when it exactly equals {@code expected}. */
+    boolean compareAndSet(SessionSnapshot expected, SessionSnapshot updated);
 
     /**
-     * Removes the session for the given ID only if the stored instance is {@code expected},
-     * returning whether it was removed. Used by expiry sweeps so a replacement session created
-     * under the same ID between the expiry check and the removal is never evicted. This default
-     * is check-then-act; implementations backed by an atomic store should override it (see
-     * {@code InMemorySessionStore}).
+     * Extends expiry and increments the revision once when the current snapshot still belongs to
+     * {@code key}.
      */
-    default boolean remove(String sessionId, Session expected) {
-        if (get(sessionId).orElse(null) == expected) {
-            remove(sessionId);
-            return true;
-        }
-        return false;
-    }
+    boolean touch(SessionKey key, Instant expiresAt);
+
+    /** Removes the current snapshot when its generation still equals {@code key}. */
+    boolean terminate(SessionKey key);
 }

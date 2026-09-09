@@ -3,32 +3,44 @@ package dev.tachyonmcp.core.server.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.tachyonmcp.core.runtime.Session;
-import dev.tachyonmcp.core.runtime.SseConnection;
+import dev.tachyonmcp.core.runtime.SessionState;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 class InMemorySessionStoreTest {
 
-    private static Session session(String id) {
-        return new Session(id, SseConnection.noop());
-    }
-
     @Test
-    void conditionalRemoveEvictsOnlyTheExpectedInstance() {
+    void replacementGenerationRejectsStaleWritesAndTermination() {
         try (var store = new InMemorySessionStore()) {
-            var expired = session("s1");
-            store.put("s1", expired);
+            var firstKey = new SessionKey("s1", "g1");
+            var first = store.create(firstKey, Instant.parse("2026-09-09T12:00:00Z"));
+            var active = new SessionSnapshot(
+                    first.key(),
+                    SessionState.ACTIVE,
+                    "2025-11-25",
+                    first.enabledExtensionIds(),
+                    null,
+                    first.expiresAt(),
+                    first.revision() + 1);
 
-            // A replacement session appears under the same id (custom SessionIdGenerator scenario)
-            // between the janitor's expiry check and its removal.
-            var replacement = session("s1");
-            store.put("s1", replacement);
+            assertThat(store.compareAndSet(first, active)).isTrue();
+            assertThat(store.find("s1")).contains(active);
 
-            assertThat(store.remove("s1", expired)).isFalse();
-            assertThat(store.get("s1")).contains(replacement);
+            var replacement = store.create(new SessionKey("s1", "g2"), Instant.parse("2026-09-09T13:00:00Z"));
 
-            assertThat(store.remove("s1", replacement)).isTrue();
-            assertThat(store.get("s1")).isEmpty();
+            assertThat(store.compareAndSet(active, active)).isFalse();
+            assertThat(store.touch(firstKey, Instant.parse("2026-09-09T14:00:00Z")))
+                    .isFalse();
+            assertThat(store.terminate(firstKey)).isFalse();
+            assertThat(store.find("s1")).contains(replacement);
+            assertThat(store.touch(replacement.key(), Instant.parse("2026-09-09T14:00:00Z")))
+                    .isTrue();
+            assertThat(store.find("s1")).hasValueSatisfying(touched -> {
+                assertThat(touched.expiresAt()).isEqualTo(Instant.parse("2026-09-09T14:00:00Z"));
+                assertThat(touched.revision()).isEqualTo(replacement.revision() + 1);
+            });
+            assertThat(store.terminate(replacement.key())).isTrue();
+            assertThat(store.find("s1")).isEmpty();
         }
     }
 }

@@ -26,7 +26,7 @@ public final class SessionTouchHandler extends ChannelOutboundHandlerAdapter {
      * Installs the shared {@link SessionTouchHandler} into the channel pipeline, if not already
      * present. Safe to call multiple times per channel. In production the pipeline always has an
      * {@code "http"} (HttpServerCodec) handler, so the handler is added after it. In test pipelines
-     * without one, the handler is appended at the end.
+     * without one, the handler is added immediately before the binding handler.
      */
     public static void install(ChannelHandlerContext ctx) {
         var pipeline = ctx.pipeline();
@@ -34,7 +34,7 @@ public final class SessionTouchHandler extends ChannelOutboundHandlerAdapter {
             if (pipeline.get("http") != null) {
                 pipeline.addAfter("http", HANDLER_NAME, INSTANCE);
             } else {
-                pipeline.addLast(HANDLER_NAME, INSTANCE);
+                pipeline.addBefore(ctx.name(), HANDLER_NAME, INSTANCE);
             }
         }
     }

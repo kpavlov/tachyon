@@ -32,6 +32,7 @@ import dev.tachyonmcp.core.runtime.Session;
 import dev.tachyonmcp.core.runtime.SessionState;
 import dev.tachyonmcp.core.runtime.SseEvent;
 import dev.tachyonmcp.core.server.config.ServerConfig;
+import dev.tachyonmcp.core.server.config.SessionConfig;
 import dev.tachyonmcp.core.server.features.completions.CompletionMethodHandlers;
 import dev.tachyonmcp.core.server.features.completions.DefaultCompletionRegistry;
 import dev.tachyonmcp.core.server.features.prompts.DefaultPromptRegistry;
@@ -109,7 +110,6 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     private final PayloadSerializer payloadSerializer;
     private final PayloadDeserializer payloadDeserializer;
     private final Map<String, RpcMethodHandler<?, ?>> methodHandlers = new ConcurrentHashMap<>();
-    final Map<String, LoggingLevel> loggingLevels = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<RequestId, PendingRequestEntry> pendingRequests = new ConcurrentHashMap<>();
     private final ExecutorService executor;
     private final List<ServerExtension> extensions;
@@ -171,13 +171,13 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
 
     @Override
     public void setLoggingLevel(String sessionId, LoggingLevel level) {
-        loggingLevels.put(sessionId, level);
+        sessionManager.getSession(sessionId).ifPresent(session -> session.loggingLevel(level));
     }
 
     @Override
     @Nullable
     public LoggingLevel getLoggingLevel(String sessionId) {
-        return loggingLevels.get(sessionId);
+        return sessionManager.getSession(sessionId).map(Session::loggingLevel).orElse(null);
     }
 
     /**
@@ -291,7 +291,12 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         this.port = config.network().port();
         this.extensions = extensions != null ? extensions : List.of();
         this.pipelineCustomizer = pipelineCustomizer;
-        this.sessionManager = new SessionManager(sessionStore);
+        var configuredSessionTtl = config.session().sessionTtl();
+        this.sessionManager = new SessionManager(
+                sessionStore,
+                config.runtime().clock(),
+                configuredSessionTtl != null ? configuredSessionTtl : SessionConfig.DEFAULT_SESSION_TTL,
+                executor);
         final JsonSchemaValidator inputValidator1 =
                 inputValidator != null ? inputValidator : new NetworkntJsonSchemaValidator();
         final JsonSchemaValidator outputValidator1 = outputValidator != null ? outputValidator : inputValidator1;
@@ -662,7 +667,8 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
             if (session.state() != SessionState.ACTIVE) {
                 continue;
             }
-            var threshold = loggingLevels.getOrDefault(session.id(), LoggingLevel.INFO);
+            var configuredLevel = session.loggingLevel();
+            var threshold = configuredLevel != null ? configuredLevel : LoggingLevel.INFO;
             if (level.ordinal() < threshold.ordinal()) {
                 continue;
             }
@@ -678,6 +684,11 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     @Override
     public Optional<Session> getSession(String sessionId) {
         return sessionManager.getSession(sessionId);
+    }
+
+    @Override
+    public Optional<Session> getLocalSession(String sessionId) {
+        return sessionManager.getLocalSession(sessionId);
     }
 
     @Override

@@ -96,7 +96,12 @@ public final class ChannelHandlerUtils {
      */
     public static void setSession(ChannelHandlerContext ctx, Session session) {
         SessionTouchHandler.install(ctx);
-        ctx.channel().attr(SESSION_KEY).set(session);
+        bindSession(ctx.channel(), session);
+    }
+
+    /** Binds a session after the pipeline's session touch handler has been installed. */
+    public static void bindSession(Channel channel, Session session) {
+        channel.attr(SESSION_KEY).set(session);
     }
 
     /**
