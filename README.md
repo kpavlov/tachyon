@@ -5,7 +5,7 @@
 [![codecov](https://codecov.io/gh/kpavlov/tachyon/graph/badge.svg?token=WUMD9A8T2T)](https://codecov.io/gh/kpavlov/tachyon)
 [![Docs](https://img.shields.io/badge/Docs-blue?logo=github)](https://github.com/kpavlov/tachyon/blob/main/docs/README.md)
 [![Api](https://img.shields.io/badge/API-blue?logo=github)](https://kpavlov.github.io/tachyon/apidocs/)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/kpavlov/tachyon)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/tachyon-mcp/tachyon)
 
 <div style="align-content: center">
   <img
