@@ -4,7 +4,7 @@
 [![MCPConformance: 2025-11-25+2026-07-28](https://img.shields.io/badge/MCP%20Conformance-2025.11.25%20+%202026.07.28-grass?logo=modelcontextprotocol)](https://github.com/modelcontextprotocol/conformance)
 [![codecov](https://codecov.io/gh/kpavlov/tachyon/graph/badge.svg?token=WUMD9A8T2T)](https://codecov.io/gh/kpavlov/tachyon)
 [![Docs](https://img.shields.io/badge/Docs-blue)](https://tachyonmcp.dev/docs/)
-[![Api](https://img.shields.io/badge/API-blue?logo=github)](https://tachyonmcp.github.io/tachyon/apidocs/)
+[![Api](https://img.shields.io/badge/API-blue?logo=github)](https://apidocs.tachyonmcp.dev/)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/tachyonmcp/tachyon)
 
 <div style="align-content: center">
