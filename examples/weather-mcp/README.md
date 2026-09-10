@@ -50,4 +50,4 @@ capture policy (`requestArgs`, `responseContent`, `rawMessage`, `exceptionDetail
 Call a tool and watch the log for a `tools/call get-weather` span and its
 `mcp.server.operation.duration` metric.
 
-See [docs/observability.md](../../docs/observability.md) for the full attribute reference.
+See [observability documentation](../../docs/running/observability.md) for the full attribute reference.

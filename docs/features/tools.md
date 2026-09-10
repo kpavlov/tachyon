@@ -92,6 +92,37 @@ hold a `CompletionStage` (a non-blocking client, another async service), return 
                 .thenApply(w -> ToolResult.text(w.summary()))))
 ```
 
+### Typed tool (experimental)
+
+Instead of reading arguments key by key, register a tool against an input and an output type.
+Tachyon decodes the call arguments into `I` with the configured `PayloadDeserializer` and wraps
+your return value as `structuredContent`:
+
+```java
+record ForecastRequest(String city, int days) {}
+record Forecast(String summary, double highC) {}
+
+.withTools(tools -> tools.register(
+        ForecastRequest.class,
+        Forecast.class,
+        tool -> tool.name("get_forecast").description("Multi-day forecast"),
+        (ctx, input) -> new Forecast(lookup(input.city()), highFor(input.city(), input.days()))))
+```
+
+`registerAsync(Class, Class, ..., AsyncTypedToolFn)` is the `CompletionStage` twin.
+
+Any schema the descriptor leaves unset is filled in from the matching type via
+`JsonSchema.generate(Class)`, which resolves through the registered `JsonSchemaFactory` chain:
+
+| Source | Provided by |
+|---|---|
+| Build-time schema resource from the kt-schema annotation processor | `tachyon-core` |
+| Runtime reflection over the class | `tachyon-kotlin-kt-schema` |
+
+With neither available for a type, `JsonSchema.generate` throws `IllegalStateException`. Declare
+`inputSchema`/`outputSchema` on the descriptor yourself and the typed overloads work with no extra
+dependency — you still get typed decode and structured output, just not generated schemas.
+
 ### Progress token / full request
 
 `register(...)` and `registerAsync(...)` functions receive `ToolRequest`; call
@@ -100,18 +131,22 @@ hold a `CompletionStage` (a non-blocking client, another async service), return 
 
 ## Read arguments
 
-`Args` wraps the raw `Map<String, JsonNode>` with typed accessors:
+`Args` is the `JsonObject` view of the call arguments, so it carries the same typed accessors:
 
-| Method                    | Returns    |
-|---------------------------|------------|
-| `args.stringValue("key")` | `String`   |
-| `args.intValue("key")`    | `int`      |
-| `args.boolValue("key")`   | `boolean`  |
-| `args.doubleValue("key")` | `double`   |
-| `args.node("key")`        | `JsonNode` |
-| `args.has("key")`         | `boolean`  |
+| Method                    | Returns   |
+|---------------------------|-----------|
+| `args.stringValue("key")` | `String`  |
+| `args.intValue("key")`    | `int`     |
+| `args.boolValue("key")`   | `boolean` |
+| `args.doubleValue("key")` | `double`  |
+| `args.has("key")`         | `boolean` |
 
-`*Or(key, fallback)` and `stringOpt(key)` variants avoid throwing on missing keys.
+`*Or(key, fallback)` and `*Opt(key)` variants avoid throwing on missing keys — `stringOpt`,
+`boolOpt`, `intOpt`, `longOpt`, `doubleOpt`, `decimalOpt`, `objectOpt`, `arrayOpt`.
+
+To take the whole argument object at once, use `args.decode(MyArgs.class)` — it runs through the
+server's configured `PayloadDeserializer`. To reach the underlying provider value, use
+`args.unwrap(JsonNode.class)`.
 
 ## Return results
 
@@ -124,7 +159,9 @@ hold a `CompletionStage` (a non-blocking client, another async service), return 
 | `ToolResult.content(blocks...)`         | Multiple content blocks                |
 | `ToolResult.structured(payload)`        | POJO → `structuredContent`; serialized JSON auto-added as the text block |
 | `ToolResult.structured(payload, text)`  | Structured + explicit human-readable text |
+| `ToolResult.raw(json, text)`            | Pre-serialized JSON — bypasses the payload serde |
 | `ToolResult.empty()`                    | No content                             |
+| `ToolResult.task(snapshot)`             | Hand off to a long-running [task](tasks.md) |
 | `ToolResult.inputRequired(reqs, state)` | Elicitation request                    |
 
 Under MCP 2026-07-28, `structuredContent`/`outputSchema` may be any JSON value — object, array, or
@@ -132,6 +169,9 @@ scalar. Under 2025-11-25, `structuredContent` stays object-only on the wire: a n
 still validates against `outputSchema`, but is delivered as the serialized-JSON text block instead
 of `structuredContent`. A structured value that fails its declared `outputSchema` is rejected as an
 `isError: true` tool result on every protocol version.
+
+See [Client interactions](client-interactions.md) for form elicitation, input-required results,
+and the sampling compatibility boundary.
 
 ## Add metadata
 
@@ -171,7 +211,7 @@ header an intermediary trusts but nothing ever checks against the body:
 | Primitive types only | `string`, `integer`, `boolean`. `number` is excluded — its string form is not canonical |
 | Top-level properties only | An annotation on a nested property, inside `items`, or behind a `$ref` is rejected rather than silently ignored |
 
-Values must be ASCII; see [Configuration](configuration.md) for the character rules and the
+Values must be ASCII; see [Configuration](../running/configuration.md) for the character rules and the
 `=?base64?…?=` wrapper for anything else.
 
 > Do not annotate secrets. Mirrored values are visible to every intermediary on the path, and Base64
@@ -193,20 +233,22 @@ tool(name = "reverse", description = "Reverse a string") {
 ### Typed decode/result
 
 ```kotlin
-@Serializable data class Args(val message: String)
-@Serializable data class Reply(val echo: String)
+@Serializable data class EchoArgs(val message: String)
+@Serializable data class EchoReply(val echo: String)
 
-tool("echo", inputSchema = ..., outputSchema = ...) {
-    val input = arguments.decode<Args>() // via configured serde
-    success(Reply(input.message))       // symmetric typed result
+tool(
+    "echo",
+    inputSchema = """{"type":"object","properties":{"message":{"type":"string"}}}""",
+    outputSchema = """{"type":"object","properties":{"echo":{"type":"string"}}}""",
+) {
+    val input = arguments.decode<EchoArgs>() // via configured serde
+    success(EchoReply(input.message))        // symmetric typed result
 }
 ```
 
 - `arguments.decode<T>()` — honors the configured serde (Jackson by default)
 - `scope.success(value)` / `scope.success(value, text)` — symmetric typed result via configured serializer
 
-See [kotlin.md](kotlin.md) for the full Kotlin DSL reference.
-
----
-
-**See also:** [Resources](resources.md) · [Tasks](tasks.md) · [Extensions](extensions.md) · [Quickstart](quickstart.md)
+`typedTool<In, Out>` derives both schemas from the types, so the literals above disappear
+entirely. See [typed tools](../kotlin/#typed-tools) and the
+[Kotlin DSL](../kotlin/) for the full Kotlin API.

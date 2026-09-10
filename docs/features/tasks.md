@@ -154,4 +154,4 @@ Tool handlers return the same `ToolResult.task(TaskSnapshot)` branch.
 
 Use `tachyon-tasks-temporal` when [Temporal](https://temporal.io) owns execution. The adapter exposes a concrete `start`
 helper because Temporal has a known start contract; that helper is deliberately not part of the
-generic `TaskConnector` SPI. See [the Temporal example](../examples/temporal/README.md).
+generic `TaskConnector` SPI. See [the Temporal example](https://github.com/tachyonmcp/tachyon/tree/main/examples/temporal).

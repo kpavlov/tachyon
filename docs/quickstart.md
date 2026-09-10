@@ -4,10 +4,11 @@ weight: 5
 sidebar_order: 5
 toc: true
 description: |-
-  Build and run a working MCP server with Tachyon in under five minutes, using Java or Kotlin.
+  Add Tachyon, start an MCP server, and verify it with curl using Java or Kotlin.
 ---
 
-Build and run an MCP server in under 5 minutes.
+This guide starts one tool over Streamable HTTP and calls it with `curl`. Use Java or Kotlin; both
+examples expose the same `greet` tool at `http://127.0.0.1:8080/mcp`.
 
 ## Prerequisites
 
@@ -27,7 +28,7 @@ Maven:
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
             <artifactId>tachyon-bom</artifactId>
-            <version>${tachyon.version}</version> <!-- get latest version from Maven Central -->
+            <version>${tachyon.version}</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -46,18 +47,20 @@ Gradle (Kotlin DSL):
 
 ```kotlin
 dependencies {
-    implementation(platform("dev.tachyonmcp:tachyon-bom:$tachyonVersion")) // get latest version from Maven Central
+    implementation(platform("dev.tachyonmcp:tachyon-bom:$tachyonVersion"))
     implementation("dev.tachyonmcp:tachyon-core")
 }
 ```
 
-For the Kotlin DSL, add `tachyon-kotlin` instead (it includes `tachyon-core` transitively).
+Set `tachyon.version` or `tachyonVersion` to the latest release listed on
+[Maven Central](https://central.sonatype.com/artifact/dev.tachyonmcp/tachyon-bom). For the Kotlin
+DSL, add `tachyon-kotlin` instead; it includes `tachyon-core` transitively.
 
 ## 2. Create a server
 
 ```java
-import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.server.TachyonServer;
 
 public final class MyMcpServer {
     public static void main(String[] args) {
@@ -74,21 +77,41 @@ public final class MyMcpServer {
 }
 ```
 
-The server binds to `http://127.0.0.1:8080/mcp`.
+Run `MyMcpServer.main()`. The process listens at `http://127.0.0.1:8080/mcp` until you stop it.
 
 ## 3. Test with curl
 
 ```bash
-curl -X POST http://localhost:8080/mcp \
+curl --include --request POST http://127.0.0.1:8080/mcp \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}'
+```
+
+The response contains the negotiated protocol version and server capabilities. This server is
+stateless by default, so it doesn't return an `Mcp-Session-Id` header.
+
+List and call the tool:
+
+```bash
+curl --request POST http://127.0.0.1:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "MCP-Protocol-Version: 2025-11-25" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
+
+curl --request POST http://127.0.0.1:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "MCP-Protocol-Version: 2025-11-25" \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"greet","arguments":{}}}'
 ```
 
 ## Kotlin
 
 ```kotlin
-import dev.tachyonmcp.kotlin.server.TachyonServer
 import dev.tachyonmcp.api.server.features.tools.ToolResult
+import dev.tachyonmcp.kotlin.server.TachyonServer
 
 TachyonServer(port = 8080) {
     info { name = "my-server"; version = "1.0" }
@@ -100,7 +123,7 @@ TachyonServer(port = 8080) {
 
 ## Next steps
 
-- [Tools](tools.md) — implement tool handlers with input schemas and structured output
-- [Resources](resources.md) — expose static and dynamic resources
-- [Kotlin DSL](kotlin.md) — full Kotlin DSL reference
-- [Extensions](extensions.md) — add protocol extensions
+- [Tools](features/tools.md) — implement tool handlers with input schemas and structured output
+- [Resources](features/resources.md) — expose static and dynamic resources
+- [Kotlin DSL](kotlin/) — full Kotlin DSL reference
+- [Extensions](extensions/) — add protocol extensions

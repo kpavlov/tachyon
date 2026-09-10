@@ -12,14 +12,7 @@ annotations, with no Tachyon imports in the service itself.
 
 ## Quickstart
 
-The annotation integration is not published in a release yet. Install the Tachyon SNAPSHOT
-locally first from the repository root:
-
-```shell
-./mvnw install -pl tachyon-api,tachyon-core,integrations/tachyon-annotations-mcp-java -am -DskipTests
-```
-
-Then build and run the example:
+Build and run the example:
 
 ```shell
 mvn package

@@ -12,7 +12,7 @@ runs anywhere that runs a JVM or a container. Three settings usually change when
 it moves off a developer machine.
 
 Full option reference: [configuration](configuration.md). Stateless mode,
-long-running tools and shutdown behaviour: [FAQ](faq.md#deployment-and-operations).
+long-running tools and shutdown behaviour: [FAQ](../faq.md#deployment-and-operations).
 
 ## 1. Bind address
 
@@ -120,27 +120,18 @@ coordinate live session or transport ownership between nodes. See
 
 ## Worked example
 
-[`examples/weather-mcp`](../examples/weather-mcp) reads `HOST`, `PORT` and
-`ALLOWED_HOST` from the environment, so it needs no code change to run remotely.
-
-One deployment of it, on [Dockhold](https://dockhold.eu):
-[tachyon-weather-dockhold](https://github.com/Maziar110/tachyon-weather-dockhold).
-That repo is a Dockerfile which fetches a tagged Tachyon release, builds this one
-example, and runs it on a trimmed `jlink` runtime. It sets `HOST=0.0.0.0`, and
-its entrypoint defaults `ALLOWED_HOST` to `DOCKHOLD_APP_HOSTNAME`, the assigned
-hostname, so the deployment is one pass:
+[`examples/weather-mcp`](https://github.com/tachyonmcp/tachyon/tree/main/examples/weather-mcp)
+reads `HOST`, `PORT` and `ALLOWED_HOST` from the environment, so it needs no code
+change to run remotely. A container entrypoint supplies the last one from
+whatever variable the platform assigns:
 
 ```sh
-[ -z "$ALLOWED_HOST" ] && [ -n "$DOCKHOLD_APP_HOSTNAME" ] \
-    && export ALLOWED_HOST="$DOCKHOLD_APP_HOSTNAME"
+[ -z "$ALLOWED_HOST" ] && [ -n "$PLATFORM_APP_HOSTNAME" ] \
+    && export ALLOWED_HOST="$PLATFORM_APP_HOSTNAME"
 ```
 
-`DOCKHOLD_APP_HOSTNAME` is the bare authority. There is a `DOCKHOLD_APP_URL`
-too, which carries the scheme and is the wrong one for `allowedHosts`.
+Pick the variable holding the **bare authority**. Platforms that also expose a
+full URL (`https://…`) offer the wrong one for `allowedHosts` — an entry carrying
+a scheme or a path is rejected when the server is built.
 
-```text
-https://app.dockhold.eu/new?repo=https://github.com/Maziar110/tachyon-weather-dockhold
-```
-
-Deploy it, then run the two `probe` calls above against the assigned hostname.
-Platform limits and pricing are documented at [dockhold.eu](https://dockhold.eu).
+Deploy, then run the two `probe` calls above against the assigned hostname.

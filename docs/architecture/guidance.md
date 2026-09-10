@@ -3,6 +3,9 @@ title: "Handler Design Guidance"
 weight: 10
 sidebar_order: 10
 sidebar_hide: true
+build:
+  list: never
+  render: never
 description: |-
   Rules for adding or changing a Tachyon server-feature handler type: protocol boundary mapping, task ownership, SAM design, and API naming conventions.
 ---

@@ -1,7 +1,8 @@
 ---
 title: "Extensions"
-weight: 25
-sidebar_order: 25
+overview_title: "Introduction"
+weight: 75
+sidebar_order: 75
 toc: true
 description: |-
   Add negotiable protocol extensions to your Tachyon server (SEP-2133), including extension-gated tool visibility.
@@ -83,7 +84,7 @@ server.start();
 ```
 
 `withExtensions` is a vararg — pass several in one call: `.withExtensions(new AuditExtension(), TasksExtension.instance())`.
-The older `.extension(ServerExtension)` still works but is deprecated.
+Register one or more extensions with `withExtensions(...)`.
 
 ## How negotiation works
 
@@ -100,7 +101,7 @@ The older `.extension(ServerExtension)` still works but is deprecated.
 
 ## Built-in: TasksExtension
 
-`TasksExtension.instance()` is the reference implementation. See [tasks.md](../tasks.md) for details.
+`TasksExtension.instance()` is the reference implementation. See [Tasks](../features/tasks.md) for details.
 
 ## Built-in: SkillsExtension
 
@@ -120,4 +121,4 @@ public void shutdown() {
 
 ---
 
-**See also:** [Tasks](../tasks.md) · [Tools](../tools.md) · [Quickstart](../quickstart.md)
+**See also:** [Tasks](../features/tasks.md) · [Tools](../features/tools.md) · [Quickstart](../quickstart.md)

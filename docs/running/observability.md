@@ -9,7 +9,8 @@ description: |-
 
 Tachyon separates **observation** (spans, metrics, logs) from **payload capture** (what observers may see). Both live under `observability { }` / `ObservabilityConfig.Builder`.
 
-The [`tachyon-opentelemetry`](../integrations/tachyon-opentelemetry) module is the recommended path — it wires Tachyon into OpenTelemetry following the [MCP semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai/tree/main/model/mcp).
+The [`tachyon-opentelemetry`](https://github.com/tachyonmcp/tachyon/tree/main/integrations/tachyon-opentelemetry) module connects Tachyon to
+OpenTelemetry using the [MCP semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai/tree/main/model/mcp).
 
 ## Observation Listeners
 
@@ -35,8 +36,8 @@ TachyonServer(port = 8080) {
 }
 ```
 
-> [!NOTE]
-> `ObservationListener` is `@InternalApi`. `McpOpenTelemetryListener` is the supported implementation — custom listeners work today but the interface isn't stabilized.
+> **API status:** `ObservationListener` is `@InternalApi`. Use the supported
+> `McpOpenTelemetryListener` implementation unless you accept source-breaking changes.
 
 ## Payload Capture Policy
 
@@ -121,7 +122,11 @@ TachyonServer(port = 8080) {
 }
 ```
 
-`LoggingSpanExporter`/`LoggingMetricExporter` (`io.opentelemetry:opentelemetry-exporter-logging`) print telemetry to logs with zero infrastructure — good for quick validation. Add OTLP exporters (`io.opentelemetry:opentelemetry-exporter-otlp`) as additional span processors/metric readers to ship to a collector (Jaeger, Grafana Tempo, Honeycomb, etc.) at `http://localhost:4318`.
+`LoggingSpanExporter` and `LoggingMetricExporter`
+(`io.opentelemetry:opentelemetry-exporter-logging`) print telemetry to application logs. Use them
+to verify local configuration. Add OTLP exporters (`io.opentelemetry:opentelemetry-exporter-otlp`)
+as span processors or metric readers to send data to a collector such as Jaeger, Grafana Tempo, or
+Honeycomb at `http://localhost:4318`.
 
 ### Trace Context
 
@@ -167,7 +172,7 @@ Spans parent from `Context.current()` on the dispatch thread. The listener only 
 
 ## Examples
 
-- [`examples/weather-mcp`](../examples/weather-mcp) (Java)
-- [`examples/weather-mcp-kotlin`](../examples/weather-mcp-kotlin) (Kotlin)
+- [`examples/weather-mcp`](https://github.com/tachyonmcp/tachyon/tree/main/examples/weather-mcp) (Java)
+- [`examples/weather-mcp-kotlin`](https://github.com/tachyonmcp/tachyon/tree/main/examples/weather-mcp-kotlin) (Kotlin)
 
 Both wire `tachyon-opentelemetry` with logging + OTLP exporters and verbose payload capture. Run either and watch spans/metrics print to console, or point a collector at `http://localhost:4318`.

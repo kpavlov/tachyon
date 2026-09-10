@@ -1,7 +1,7 @@
 ---
 title: "JSON and JSON Schema"
-weight: 40
-sidebar_order: 40
+weight: 32
+sidebar_order: 32
 toc: true
 description: |-
   How Tachyon handles JSON payloads and JSON Schema validation: JsonDocument types, schema dialects, and pluggable validators.
@@ -49,8 +49,8 @@ JsonDocument trusted = JsonDocument.of(jsonLiteral);
 JsonDocument checked = JsonDocument.parse(externalJson);
 ```
 
-**Kotlin developers** — if you're tired of hand-writing schema strings, kt-schema can generate
-them from your data classes. See [kt-schema integration](kt-schema-json.md) for the full guide.
+Kotlin applications can generate schemas from data classes instead of maintaining JSON strings.
+See the [kt-schema integration](kotlin/kt-schema-json.md) for a complete example.
 
 ## Read objects and arrays
 
@@ -161,6 +161,6 @@ var server = TachyonServer.builder()
 
 `JsonSchemaValidator.NOOP` disables validation for that direction.
 
-Next, see [Tools](tools.md) to attach schemas to tool descriptors or
-[Configuration](configuration.md) for all JSON settings. Kotlin developers can use the equivalent
-DSL described in [Kotlin API](kotlin.md).
+Next, see [Tools](features/tools.md) to attach schemas to tool descriptors or
+[Configuration](running/configuration.md) for all JSON settings. Kotlin developers can use the equivalent
+DSL described in the [Kotlin API](kotlin/).
