@@ -1,5 +1,5 @@
 ---
-title: "Kotlin DSL"
+title: Kotlin
 weight: 35
 sidebar_order: 35
 toc: true
