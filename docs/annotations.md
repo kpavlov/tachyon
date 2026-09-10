@@ -1,7 +1,7 @@
 ---
 title: "Annotations"
-weight: 17
-sidebar_order: 17
+weight: 22
+sidebar_order: 22
 toc: true
 description: |-
   Bridge third-party annotation frameworks (mcp-java, LangChain4j, Spring AI) onto Tachyon's tool, resource, and prompt registries via the AnnotationProvider SPI.

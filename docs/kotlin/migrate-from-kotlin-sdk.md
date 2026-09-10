@@ -1,5 +1,5 @@
 ---
-title: "Migrating from the Kotlin MCP SDK to Tachyon"
+title: "Migrating from Kotlin SDK"
 weight: 90
 sidebar_order: 90
 toc: true
