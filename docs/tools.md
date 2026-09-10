@@ -1,4 +1,11 @@
-# Tools — Tachyon MCP Server
+---
+title: "Tools"
+weight: 10
+sidebar_order: 10
+toc: true
+description: |-
+  Implement MCP tool handlers in Tachyon: sync and async functions, input schemas, structured output, ToolResult, and annotations.
+---
 
 Tools are the primary way clients invoke server-side logic. Tachyon validates inputs against JSON Schema 2020-12 and routes calls to your handler.
 

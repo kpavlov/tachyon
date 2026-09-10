@@ -1,4 +1,11 @@
-# Resources — Tachyon MCP Server
+---
+title: "Resources"
+weight: 15
+sidebar_order: 15
+toc: true
+description: |-
+  Resources expose data that AI clients can read. Tachyon supports static URIs, dynamic handlers, and URI templates with parameters.
+---
 
 Resources expose data that AI clients can read. Tachyon supports static URIs, dynamic handlers, and URI templates with parameters.
 

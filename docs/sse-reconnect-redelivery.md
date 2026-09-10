@@ -1,4 +1,11 @@
-# POST-SSE reconnect re-delivery
+---
+title: "SSE Reconnect & Re-delivery"
+weight: 55
+sidebar_order: 55
+toc: true
+description: |-
+  How Tachyon survives SSE disconnects: event-log replay on reconnect, Last-Event-ID handling, and POST-SSE re-delivery semantics.
+---
 
 How Tachyon guarantees a tool's final response reaches a client that reconnects after the tool
 closes its SSE stream mid-call — and the race that used to make it flaky.

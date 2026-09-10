@@ -1,4 +1,11 @@
-# Tasks
+---
+title: "Tasks"
+weight: 20
+sidebar_order: 20
+toc: true
+description: |-
+  Long-running operations in Tachyon: the tasks/* lifecycle, enforced state machine, status notifications, and TasksExtension (SEP-1686).
+---
 
 Tachyon exposes external work as MCP tasks. The application, workflow engine, or job system owns
 execution. Tachyon owns protocol mapping, a small snapshot cache, and notifications.

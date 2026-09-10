@@ -1,4 +1,11 @@
-# Quickstart — Tachyon MCP Server
+---
+title: "Quickstart"
+weight: 5
+sidebar_order: 5
+toc: true
+description: |-
+  Build and run a working MCP server with Tachyon in under five minutes, using Java or Kotlin.
+---
 
 Build and run an MCP server in under 5 minutes.
 

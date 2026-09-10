@@ -1,4 +1,11 @@
-# Frequently asked questions
+---
+title: "FAQ"
+weight: 95
+sidebar_order: 95
+toc: true
+description: |-
+  Answers to common questions about Tachyon: Java versions, frameworks, concurrency, deployment, and compatibility.
+---
 
 Answers to the questions Java teams usually ask before adopting Tachyon. For a runnable server, start with the [Quickstart](quickstart.md).
 
