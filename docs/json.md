@@ -1,4 +1,11 @@
-# JSON and JSON Schema
+---
+title: "JSON and JSON Schema"
+weight: 40
+sidebar_order: 40
+toc: true
+description: |-
+  How Tachyon handles JSON payloads and JSON Schema validation: JsonDocument types, schema dialects, and pluggable validators.
+---
 
 Tachyon lets you define schemas, inspect arguments, and return structured content without binding
 your application to a specific JSON library. Most applications need four types from

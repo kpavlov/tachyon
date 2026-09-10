@@ -1,4 +1,11 @@
-# Migrating from the Kotlin MCP SDK to Tachyon
+---
+title: "Migrating from the Kotlin MCP SDK to Tachyon"
+weight: 90
+sidebar_order: 90
+toc: true
+description: |-
+  Port a Kotlin MCP SDK server to Tachyon: type-for-type API translation, dependency swap, and the behavior changes that don't fail to compile.
+---
 
 You have an MCP server on `io.modelcontextprotocol:kotlin-sdk` and its hand-rolled Ktor
 transport. Tachyon owns the transport, sessions, and validation for you — but the port

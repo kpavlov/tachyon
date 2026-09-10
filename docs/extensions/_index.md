@@ -1,4 +1,11 @@
-# Extensions — Tachyon MCP Server
+---
+title: "Extensions"
+weight: 25
+sidebar_order: 25
+toc: true
+description: |-
+  Add negotiable protocol extensions to your Tachyon server (SEP-2133), including extension-gated tool visibility.
+---
 
 Extensions add custom MCP methods. MCP 2025-11-25 clients negotiate them via the `initialize` handshake. They implement [SEP-2133](https://modelcontextprotocol.io/seps/2133-extensions).
 
@@ -93,12 +100,12 @@ The older `.extension(ServerExtension)` still works but is deprecated.
 
 ## Built-in: TasksExtension
 
-`TasksExtension.instance()` is the reference implementation. See [tasks.md](tasks.md) for details.
+`TasksExtension.instance()` is the reference implementation. See [tasks.md](../tasks.md) for details.
 
 ## Built-in: SkillsExtension
 
 `SkillsExtension` serves Agent Skills as `skill://` resources per SEP-2640. See
-[extensions/mcp-skills.md](extensions/mcp-skills.md) for details.
+[extensions/mcp-skills.md](mcp-skills.md) for details.
 
 ## Extension shutdown
 
@@ -113,4 +120,4 @@ public void shutdown() {
 
 ---
 
-**See also:** [Tasks](tasks.md) · [Tools](tools.md) · [Quickstart](quickstart.md)
+**See also:** [Tasks](../tasks.md) · [Tools](../tools.md) · [Quickstart](../quickstart.md)

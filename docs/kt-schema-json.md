@@ -1,4 +1,11 @@
-# Generate JSON Schema from Kotlin classes
+---
+title: "Kotlin Serialization Schemas"
+weight: 45
+sidebar_order: 45
+toc: true
+description: |-
+  Generate JSON Schemas from kotlinx.serialization classes with kt-schema and wire them into Tachyon tool contracts.
+---
 
 [kt-schema](https://github.com/kpavlov/kt-schema) generates
 [JSON Schema 2020-12](https://json-schema.org/draft/2020-12) from Kotlin classes at runtime.

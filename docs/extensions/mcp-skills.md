@@ -1,4 +1,11 @@
-# Skills — Tachyon MCP Server
+---
+title: "MCP Skills Extension"
+weight: 10
+sidebar_order: 10
+toc: true
+description: |-
+  Ship an MCP Skills extension from your Tachyon server so agents can discover and install skills.
+---
 
 Agent Skills package a capability — instructions, scripts, reference material — as a directory with a `SKILL.md` manifest. Claude Code, Claude apps, and other MCP clients already load skills from the local filesystem; [SEP-2640](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2640) standardizes how a server serves the same packages over MCP, so a client can discover and fetch them without a shared filesystem.
 
@@ -201,4 +208,4 @@ base resource visibility.
 
 ---
 
-**See also:** [Extensions](../extensions.md) · [Resources](../resources.md) · [Tools](../tools.md)
+**See also:** [Extensions](_index.md) · [Resources](../resources.md) · [Tools](../tools.md)

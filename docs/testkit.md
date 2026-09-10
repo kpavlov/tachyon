@@ -1,4 +1,11 @@
-# MCP TestKit
+---
+title: "Testkit"
+weight: 50
+sidebar_order: 50
+toc: true
+description: |-
+  Test Tachyon servers end to end: shaping clients, dynamic-port servers, and fluent JSON-RPC assertions.
+---
 
 `tachyon-testkit` drives a running Tachyon server from tests: protocol-shaping HTTP clients,
 in-process port-0 server helpers, and fluent JSON-RPC assertions.

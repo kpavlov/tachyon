@@ -1,4 +1,11 @@
-# Annotations
+---
+title: "Annotations"
+weight: 17
+sidebar_order: 17
+toc: true
+description: |-
+  Bridge third-party annotation frameworks (mcp-java, LangChain4j, Spring AI) onto Tachyon's tool, resource, and prompt registries via the AnnotationProvider SPI.
+---
 
 Tachyon's native feature registration is programmatic: `server.tools().register(...)`,
 `server.resources().register(...)`, and so on. The `AnnotationProvider` SPI bridges third-party

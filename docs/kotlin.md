@@ -1,4 +1,11 @@
-# Kotlin DSL — Tachyon MCP Server
+---
+title: "Kotlin DSL"
+weight: 35
+sidebar_order: 35
+toc: true
+description: |-
+  Coroutine-first Kotlin DSL for Tachyon: TachyonServer { }, tool, resource, and prompt builders, and the full scope reference.
+---
 
 The `tachyon-kotlin` module wraps `ServerBuilder` with a coroutine-first DSL, suspend tool handlers, and type-safe scope classes.
 

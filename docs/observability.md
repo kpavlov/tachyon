@@ -1,4 +1,11 @@
-# Observability
+---
+title: "Observability"
+weight: 65
+sidebar_order: 65
+toc: true
+description: |-
+  Observe Tachyon servers with OpenTelemetry: observation listeners, opt-in payload capture policy, trace context, and span/metric attributes.
+---
 
 Tachyon separates **observation** (spans, metrics, logs) from **payload capture** (what observers may see). Both live under `observability { }` / `ObservabilityConfig.Builder`.
 

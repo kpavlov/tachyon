@@ -1,4 +1,11 @@
-# Deployment — Tachyon MCP Server
+---
+title: "Deployment"
+weight: 60
+sidebar_order: 60
+toc: true
+description: |-
+  Deploy a Tachyon server to a platform: bind address, port, public hostname and DNS-rebinding protection, browser clients, and container signal handling.
+---
 
 A Tachyon server is a plain Java process with an embedded Netty listener, so it
 runs anywhere that runs a JVM or a container. Three settings usually change when

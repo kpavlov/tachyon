@@ -1,4 +1,11 @@
-# Tachyon MCP documentation
+---
+title: "Documentation Overview"
+weight: 2
+sidebar_order: 2
+sidebar_hide: true
+description: |-
+  Start-here index of Tachyon MCP documentation: quickstart, feature guides, testing, Kotlin, and internals.
+---
 
 ## Start here
 
