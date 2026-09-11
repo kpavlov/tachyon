@@ -224,12 +224,22 @@ tool(name = "reverse", description = "Reverse a string") {
 
 ### Typed decode/result
 
+Enable the Kotlin serialization compiler plugin and add the
+[kotlinx.serialization dependency](../kotlin/#kotlinxserialization-integration).
+Configure `json` in the same server builder scope as `tool`:
+
 ```kotlin
 import dev.tachyonmcp.api.json.JsonSchema
 import dev.tachyonmcp.kotlin.server.domain.decode
+import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class EchoArgs(val message: String)
+@Serializable
 data class EchoReply(val echo: String)
+
+json { serde = KxSerializationSerde.Default }
 
 tool(
     "echo",
