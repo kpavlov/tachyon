@@ -57,7 +57,7 @@
     <dependencies>
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
-            <artifactId>tachyon-kotlin</artifactId>
+            <artifactId>tachyon-kotlin-kt-schema</artifactId>
         </dependency>
 
         <dependency>
@@ -104,8 +104,7 @@
 
     <build>
         <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
-        <testSourceDirectory
-        >${project.basedir}/src/test/kotlin</testSourceDirectory>
+        <testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
         <extensions>
             <extension>
                 <groupId>kr.motd.maven</groupId>
@@ -122,12 +121,15 @@
                 <configuration>
                     <jvmTarget>${java.version}</jvmTarget>
                     <javaParameters>true</javaParameters>
+                    <args>
+                        <arg>-Xannotation-default-target=param-property</arg>
+                    </args>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.15.0</version>
+                <version>3.16.0</version>
                 <configuration>
                     <release>${java.version}</release>
                     <parameters>true</parameters>
@@ -138,7 +140,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>3.5.1</version>
                 <configuration>
                     <archive>
                         <manifestEntries>

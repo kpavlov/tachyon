@@ -1,15 +1,32 @@
 ---
-title: "Tachyon MCP"
+title: "Documentation"
 sidebar_title: "Documentation"
 weight: 1
 sidebar_order: 1
+toc: true
 description: |-
-  Build and operate Model Context Protocol servers on Java 21 or Kotlin with Tachyon MCP.
+  Run your first Tachyon MCP server, build tools, and prepare for deployment.
 ---
 
-Tachyon is a Java 21+ runtime for building Model Context Protocol servers. You define tools,
-resources, and prompts with Java APIs or the Kotlin DSL; Tachyon serves them over Streamable HTTP.
+Start with a running server, add the features your application needs, then prepare it for production.
 
-Start with the [quickstart](quickstart/) to run a server and call its first tool. You can then add
-the MCP features your application needs and return here when you're ready to configure, test, or
-deploy it.
+## Start
+
+- [Run your first server](quickstart.md) — choose Java or Kotlin and Maven or Gradle; call a greeting tool with curl.
+- [Explore the Kotlin DSL](kotlin/) — configure servers and write suspend handlers.
+- [Test a tool](testkit.md) — exercise a running server through an MCP client.
+
+## Build
+
+- [Tools](features/tools.md) — define inputs, return results, and handle errors.
+- [Resources](features/resources.md) and [prompts](features/prompts.md) — expose application data and reusable messages.
+- [JSON schemas](json.md) and [annotations](annotations.md) — describe inputs and adapt annotated methods.
+- [Tasks](features/tasks.md) and [client interactions](features/client-interactions.md) — support longer work and request user input.
+
+## Operate
+
+- [Configuration](running/configuration.md) — set network, runtime, and server options.
+- [Deployment](running/deployment.md) — bind your server and configure its public hostname.
+- [HTTP protection](running/configuration.md#dns-rebinding-protection) — configure accepted hosts and request guards.
+- [Observability](running/observability.md) — observe calls and integrate tracing.
+- [Shutdown](faq.md#does-shutdown-wait-for-active-handlers) — allow in-flight handlers to finish when stopping the server.

@@ -111,17 +111,57 @@ val server = TachyonServer(port = 8080) {
 
 ## Tool handlers
 
-Tool lambdas are `suspend` functions with access to `ToolScope`:
+Tool lambdas are `suspend` functions with access to `ToolScope`, including `ctx`, `request`,
+and `arguments`. Start with a simple string tool. Save this as `src/main/kotlin/MyMcpServer.kt`
+in a Kotlin JVM project with the dependency above and JDK 21:
 
 ```kotlin
-tool(name = "reverse", description = "Reverse a string") {
-    // this: ToolScope
-    // ctx: InteractionContext, request: ToolRequest
-    // arguments: Args — convenience access to request.arguments()
-    val msg = arguments.stringValue("message")
-    text(msg.reversed())
+import dev.tachyonmcp.api.json.JsonSchema
+import dev.tachyonmcp.api.server.config.Mode
+import dev.tachyonmcp.kotlin.server.buildServer
+
+fun main() {
+    val server = buildServer {
+        capabilities { tools { mode = Mode.ON } }
+        info {
+            name = "echo-server"
+            version = "1.0"
+        }
+        network {
+            host = "127.0.0.1"
+            port = 8080
+        }
+    }
+    server.registerTool(
+        name = "reverse-echo",
+        description = "Echo reverse message",
+        inputSchema = JsonSchema.unchecked(
+            """
+            {
+              "type": "object",
+              "properties": {
+                "message": {"type": "string", "description": "Message to echo"}
+              },
+              "required": ["message"]
+            }
+            """,
+        ),
+    ) {
+        text(arguments.stringValue("message").reversed())
+    }
+    Runtime.getRuntime().addShutdownHook(Thread { server.close() })
+    server.start()
 }
 ```
+
+Call `reverse-echo` with `{"message":"stressed"}` to receive the text `desserts`.
+The input schema requires a string `message`; this tool needs no payload data classes or
+serialization compiler plugin.
+
+The [echo-kotlin project](https://github.com/tachyonmcp/tachyon/tree/main/examples/echo-kotlin)
+pairs this pattern with a typed echo tool. It also shows registering the simple tool after
+`buildServer`, using `server.registerTool`. The next [typed example](#typed-tools) uses
+kotlinx.serialization for the payloads.
 
 For the experimental class-based escape hatch, extend `AbstractToolHandler` and override `handle(ctx, request)` (sync) or `handleAsync(ctx, request)` (async).
 
@@ -284,19 +324,43 @@ warning — clients may truncate them.
 `typedTool<In, Out>` derives both schemas from your Kotlin types, decodes the call arguments into
 `In`, and encodes the returned `Out` as `structuredContent` — no schema literals:
 
-```kotlin
-@Serializable data class ForecastRequest(val city: String, val days: Int)
-@Serializable data class Forecast(val summary: String, val highC: Double)
+Add `tachyon-kotlin-kt-schema` for runtime schema generation and configure the
+[serialization dependency and compiler plugin](kt-schema-json.md#typed-echo-and-simple-reverse-tools).
+This complete server uses the echo project's `message` input and `reply` output:
 
-TachyonServer(port = 8080) {
-    typedTool<ForecastRequest, Forecast>(
-        name = "get_forecast",
-        description = "Multi-day forecast",
-    ) { input ->
-        Forecast(lookup(input.city), highFor(input.city, input.days))
+```kotlin
+import dev.tachyonmcp.kotlin.server.TachyonServer
+import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class EchoRequest(val message: String)
+
+@Serializable
+data class EchoResponse(val reply: String)
+
+fun main() {
+    val server = TachyonServer(port = 8080) {
+        info {
+            name = "echo-server"
+            version = "1.0"
+        }
+        network { host = "127.0.0.1" }
+        json { serde = KxSerializationSerde.Default }
+        typedTool<EchoRequest, EchoResponse>(
+            name = "echo",
+            description = "Echo message",
+        ) { input ->
+            EchoResponse(input.message)
+        }
     }
+    Runtime.getRuntime().addShutdownHook(Thread { server.close() })
 }
 ```
+
+Call `echo` with `{"message":"Hello, MCP!"}`. The result contains
+`structuredContent: {"reply":"Hello, MCP!"}` and a text block with that JSON.
+The handler receives the decoded `EchoRequest` directly.
 
 Both type arguments must be given explicitly — neither is inferable from the block. The same
 registration exists post-build as `server.registerTool<In, Out>(...)`.
@@ -335,15 +399,15 @@ one call, pass `schemaGenerator`:
 import dev.tachyonmcp.kotlin.server.json.ktschema.ktSchemaGenerator
 import me.kpavlov.kt.schema.generator.json.JsonSchemaConfig
 
-typedTool<ForecastRequest, Forecast>(
-    name = "get_forecast",
+typedTool<EchoRequest, EchoResponse>(
+    name = "echo",
     schemaGenerator = ktSchemaGenerator(JsonSchemaConfig.Default),
-) { input -> forecast(input) }
+) { input -> EchoResponse(input.message) }
 ```
 
 > **A Kotlin default does not make a property optional.** Out of the box the generated schema
 > marks a defaulted property `required`, so adding `val units: String = "metric"` to
-> `ForecastRequest` would still force every caller to send it. Pass
+> `EchoRequest` would still force every caller to send it. Pass
 > `schemaGenerator = ktSchemaGenerator(JsonSchemaConfig.Default)` to let nullable and defaulted
 > properties be omitted instead.
 

@@ -11,7 +11,8 @@ Tools are the primary way clients invoke server-side logic. Tachyon validates in
 
 ## Define a tool
 
-### Lambda (simple)
+Add the `.withTools(...)` registration snippets to `TachyonServer.builder()`. For a complete project, start
+with the [Quickstart](../quickstart.md).
 
 ```java
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
@@ -35,101 +36,9 @@ Need an input schema? Configure the descriptor with the builder overload. `.inpu
             "Hello, " + request.arguments().stringOr("name", "world") + "!")))
 ```
 
-### Class (experimental escape hatch)
-
-Prefer descriptor/function registration above. Reach for the experimental class-based escape hatch
-only when a lambda cannot express the handler. Then extend
-`AbstractToolHandler`: pass the descriptor to the constructor and override `handle(ctx, request)`.
-(`ToolHandler` itself declares only `descriptor()` and `handleAsync(ctx, ToolRequest)`;
-`AbstractToolHandler` supplies the synchronous request override.)
-
-```java
-import dev.tachyonmcp.api.server.features.tools.AbstractToolHandler;
-import dev.tachyonmcp.api.server.features.tools.ToolDescriptor;
-import dev.tachyonmcp.api.server.features.tools.ToolRequest;
-import dev.tachyonmcp.api.server.features.tools.ToolResult;
-import dev.tachyonmcp.api.runtime.InteractionContext;
-
-class WeatherTool extends AbstractToolHandler {
-    private static final String SCHEMA = """
-            {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
-            """;
-
-    WeatherTool() {
-        super(ToolDescriptor.builder()
-                .name("get_weather")
-                .description("Get current weather for a city")
-                .inputSchema(SCHEMA)
-                .build());
-    }
-
-    @Override
-    public ToolResult handle(InteractionContext ctx, ToolRequest request) {
-        String city = request.arguments().stringValue("city");
-        return ToolResult.text("☀️ 22°C in " + city);
-    }
-}
-```
-
-Register its descriptor and function explicitly:
-
-```java
-var weather = new WeatherTool();
-server.tools().register(weather.descriptor(), weather::handle);
-```
-
-### Async tool
-
-Blocking handlers run on a virtual thread, so most tools need no async plumbing. When you already
-hold a `CompletionStage` (a non-blocking client, another async service), return it directly with
-`registerAsync`, or override `handleAsync(ctx, request)` on
-`AbstractToolHandler`. Async handlers stay async — they are not funneled through the blocking path.
-
-```java
-.withTools(tools -> tools.registerAsync(
-        tool -> tool.name("get_weather_async"),
-        (ctx, request) -> fetchWeather(request.arguments().stringValue("city"))
-                .thenApply(w -> ToolResult.text(w.summary()))))
-```
-
-### Typed tool (experimental)
-
-Instead of reading arguments key by key, register a tool against an input and an output type.
-Tachyon decodes the call arguments into `I` with the configured `PayloadDeserializer` and wraps
-your return value as `structuredContent`:
-
-```java
-record ForecastRequest(String city, int days) {}
-record Forecast(String summary, double highC) {}
-
-.withTools(tools -> tools.register(
-        ForecastRequest.class,
-        Forecast.class,
-        tool -> tool.name("get_forecast").description("Multi-day forecast"),
-        (ctx, input) -> new Forecast(lookup(input.city()), highFor(input.city(), input.days()))))
-```
-
-`registerAsync(Class, Class, ..., AsyncTypedToolFn)` is the `CompletionStage` twin.
-
-Any schema the descriptor leaves unset is filled in from the matching type via
-`JsonSchema.generate(Class)`, which resolves through the registered `JsonSchemaFactory` chain:
-
-| Source | Provided by |
-|---|---|
-| Build-time schema resource from the kt-schema annotation processor | `tachyon-core` |
-| Runtime reflection over the class | `tachyon-kotlin-kt-schema` |
-
-With neither available for a type, `JsonSchema.generate` throws `IllegalStateException`. Declare
-`inputSchema`/`outputSchema` on the descriptor yourself and the typed overloads work with no extra
-dependency — you still get typed decode and structured output, just not generated schemas.
-
-### Progress token / full request
-
-`register(...)` and `registerAsync(...)` functions receive `ToolRequest`; call
-`request.arguments()` for parsed arguments. Class-based handlers receive the same request in
-`handle(ctx, ToolRequest)` or `handleAsync(ctx, ToolRequest)`.
-
 ## Read arguments
+
+Handlers receive a `ToolRequest`. Use `request.arguments()` to read its input.
 
 `Args` is the `JsonObject` view of the call arguments, so it carries the same typed accessors:
 
@@ -173,10 +82,92 @@ of `structuredContent`. A structured value that fails its declared `outputSchema
 See [Client interactions](client-interactions.md) for form elicitation, input-required results,
 and the sampling compatibility boundary.
 
+## Handle errors
+
+Return `ToolResult.error(...)` for an expected failure that the caller can act on:
+
+```java
+.withTools(tools -> tools.register(
+        tool -> tool.name("greet").inputSchema("""
+                {"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}
+                """),
+        (ctx, request) -> {
+            final var name = request.arguments().stringValue("name");
+            if (name.isBlank()) {
+                return ToolResult.error("Provide a non-blank name.");
+            }
+            return ToolResult.text("Hello, " + name + "!");
+        }))
+```
+
+This returns a tool result with `isError: true`. A request that fails input-schema validation
+instead receives a JSON-RPC error with code `-32602`, before the handler runs. Unexpected handler
+exceptions produce `-32603` with the message `Tool handler failed`; an `IllegalArgumentException`
+produces `-32602` with `Invalid params`. Internal exception messages are not returned to the client.
+
+## Test the tool
+
+Start with the [Quickstart curl call](../quickstart.md#3-test-with-curl). Change the `name` argument
+and check that the greeting changes. For the handler above, also try an empty string, a missing
+`name`, and a number: these exercise the tool-error and input-validation paths.
+
+For automated coverage, use [Testkit](../testkit.md) to start a server on port `0`, call it through
+an MCP client, and assert the full result. Cover valid input and failures through the same transport
+that your clients use.
+
+## Advanced registration
+
+### Async tool
+
+Blocking handlers run on a virtual thread, so most tools need no async plumbing. When you already
+hold a `CompletionStage` (a non-blocking client, another async service), return it directly with
+`registerAsync`. Async handlers stay async — they are not funneled through the blocking path.
+
+```java
+.withTools(tools -> tools.registerAsync(
+        tool -> tool.name("get_weather_async"),
+        (ctx, request) -> fetchWeather(request.arguments().stringValue("city"))
+                .thenApply(w -> ToolResult.text(w.summary()))))
+```
+
+### Typed tool (experimental)
+
+> [!NOTE]
+> Typed registration is experimental. Its API may change between releases.
+
+Instead of reading arguments key by key, register a tool against an input and an output type.
+Tachyon decodes the call arguments into `I` with the configured `PayloadDeserializer` and wraps
+your return value as `structuredContent`:
+
+```java
+record ForecastRequest(String city, int days) {}
+record Forecast(String summary, double highC) {}
+
+.withTools(tools -> tools.register(
+        ForecastRequest.class,
+        Forecast.class,
+        tool -> tool.name("get_forecast").description("Multi-day forecast"),
+        (ctx, input) -> new Forecast(lookup(input.city()), highFor(input.city(), input.days()))))
+```
+
+`registerAsync(Class, Class, ..., AsyncTypedToolFn)` is the `CompletionStage` twin.
+
+Any schema the descriptor leaves unset is filled in from the matching type via
+`JsonSchema.generate(Class)`, which resolves through the registered `JsonSchemaFactory` chain:
+
+| Source | Provided by |
+|---|---|
+| Build-time schema resource from the kt-schema annotation processor | `tachyon-core` |
+| Runtime reflection over the class | `tachyon-kotlin-kt-schema` |
+
+With neither available for a type, `JsonSchema.generate` throws `IllegalStateException`. Declare
+`inputSchema`/`outputSchema` on the descriptor yourself and the typed overloads work with no extra
+dependency — you still get typed decode and structured output, just not generated schemas.
+
 ## Add metadata
 
 ```java
-return ToolResult.text("done").withMeta("taskId", JSON.stringNode("t-123"));
+return ToolResult.text("done").withMeta("taskId", "t-123");
 ```
 
 Metadata appears in the `_meta` field of the response.
@@ -214,6 +205,7 @@ header an intermediary trusts but nothing ever checks against the body:
 Values must be ASCII; see [Configuration](../running/configuration.md) for the character rules and the
 `=?base64?…?=` wrapper for anything else.
 
+> [!CAUTION]
 > Do not annotate secrets. Mirrored values are visible to every intermediary on the path, and Base64
 > is an encoding, not encryption.
 
@@ -232,17 +224,34 @@ tool(name = "reverse", description = "Reverse a string") {
 
 ### Typed decode/result
 
+Enable the Kotlin serialization compiler plugin and add the
+[kotlinx.serialization dependency](../kotlin/#kotlinxserialization-integration).
+Configure `json` in the same server builder scope as `tool`:
+
 ```kotlin
-@Serializable data class EchoArgs(val message: String)
-@Serializable data class EchoReply(val echo: String)
+import dev.tachyonmcp.api.json.JsonSchema
+import dev.tachyonmcp.kotlin.server.domain.decode
+import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class EchoArgs(val message: String)
+@Serializable
+data class EchoReply(val echo: String)
+
+json { serde = KxSerializationSerde.Default }
 
 tool(
     "echo",
-    inputSchema = """{"type":"object","properties":{"message":{"type":"string"}}}""",
-    outputSchema = """{"type":"object","properties":{"echo":{"type":"string"}}}""",
+    inputSchema = JsonSchema.parse(
+        """{"type":"object","properties":{"message":{"type":"string"}},"required":["message"]}""",
+    ),
+    outputSchema = JsonSchema.parse(
+        """{"type":"object","properties":{"echo":{"type":"string"}},"required":["echo"]}""",
+    ),
 ) {
-    val input = arguments.decode<EchoArgs>() // via configured serde
-    success(EchoReply(input.message))        // symmetric typed result
+    val input = arguments.decode<EchoArgs>()
+    success(EchoReply(input.message))
 }
 ```
 
