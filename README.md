@@ -98,7 +98,7 @@ See the [quickstart](docs/quickstart.md) for Java and Kotlin examples plus a `cu
 | **Extensions** | [SEP-2133](docs/extensions/) negotiation, custom JSON-RPC methods, capability advertisement, and extension-gated features |
 | **Runtime** | Stateless or resumable sessions, `Last-Event-ID` replay, pluggable stores, virtual-thread handlers, request timeouts, and graceful draining |
 | **Observability** | OpenTelemetry spans and metrics via `tachyon-opentelemetry`, following the [MCP semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai/tree/main/model/mcp), plus an opt-in payload capture policy -- see [docs](docs/running/observability.md) |
-| **Java and Kotlin** | Independent sync/async Java contracts and a coroutine-first [Kotlin DSL](docs/kotlin.md) |
+| **Java and Kotlin** | Independent sync/async Java contracts and a coroutine-first [Kotlin DSL](docs/kotlin/) |
 | **Testing** | Official conformance suites plus a [testkit](docs/testkit.md) for dynamic servers and fluent JSON-RPC assertions |
 
 ## Documentation and examples
@@ -108,7 +108,7 @@ See the [quickstart](docs/quickstart.md) for Java and Kotlin examples plus a `cu
 - [Tools](docs/features/tools.md), [resources](docs/features/resources.md), and [tasks](docs/features/tasks.md) -- feature APIs and examples
 - [Annotations](docs/annotations.md) -- mcp-java, LangChain4j, and Spring AI providers
 - [Extensions](docs/extensions/) and [MCP Skills](docs/extensions/mcp-skills.md) -- custom protocol methods and SEP support
-- [Kotlin DSL](docs/kotlin.md) -- builders, scopes, and suspending handlers
+- [Kotlin DSL](docs/kotlin/) -- builders, scopes, and suspending handlers
 - [Examples](examples/README.md) -- runnable Java and Kotlin servers
 - [FAQ](docs/faq.md) -- frameworks, concurrency, deployment, and compatibility
 
