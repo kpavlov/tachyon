@@ -122,11 +122,7 @@ TachyonServer(port = 8080) {
 }
 ```
 
-`LoggingSpanExporter` and `LoggingMetricExporter`
-(`io.opentelemetry:opentelemetry-exporter-logging`) print telemetry to application logs. Use them
-to verify local configuration. Add OTLP exporters (`io.opentelemetry:opentelemetry-exporter-otlp`)
-as span processors or metric readers to send data to a collector such as Jaeger, Grafana Tempo, or
-Honeycomb at `http://localhost:4318`.
+`LoggingSpanExporter` and `LoggingMetricExporter` (`io.opentelemetry:opentelemetry-exporter-logging`) print telemetry to application logs. Use them to verify local configuration. Add OTLP exporters (`io.opentelemetry:opentelemetry-exporter-otlp`) as span processors or metric readers to send data to a collector such as Jaeger, Grafana Tempo, or Honeycomb.
 
 ### Trace Context
 
@@ -175,4 +171,4 @@ Spans parent from `Context.current()` on the dispatch thread. The listener only 
 - [`examples/weather-mcp`](https://github.com/tachyonmcp/tachyon/tree/main/examples/weather-mcp) (Java)
 - [`examples/weather-mcp-kotlin`](https://github.com/tachyonmcp/tachyon/tree/main/examples/weather-mcp-kotlin) (Kotlin)
 
-Both wire `tachyon-opentelemetry` with logging + OTLP exporters and verbose payload capture. Run either and watch spans/metrics print to console, or point a collector at `http://localhost:4318`.
+Both wire `tachyon-opentelemetry` with logging + OTLP exporters and verbose payload capture. Run either and watch spans/metrics print to console, or point remote collector.
