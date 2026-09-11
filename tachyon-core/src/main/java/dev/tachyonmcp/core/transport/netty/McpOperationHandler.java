@@ -130,7 +130,19 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                                 final JsonRpcMessage message;
                                 try {
                                     if (sessionId != null) {
-                                        final var session = server.getSession(sessionId);
+                                        final Optional<Session> session;
+                                        try {
+                                            session = server.getSession(sessionId);
+                                        } catch (RuntimeException e) {
+                                            logger.warn("Failed to resolve session: {}", sessionId, e);
+                                            ctx.executor()
+                                                    .execute(() -> sendPlainTextAndClose(
+                                                            ctx,
+                                                            HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                                                            "Session lookup failed",
+                                                            origin));
+                                            return;
+                                        }
                                         if (session.isEmpty()) {
                                             ctx.executor()
                                                     .execute(() -> sendPlainTextAndClose(
@@ -150,7 +162,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                             },
                             executor)
                     .exceptionally(ex -> {
-                        logger.error("Failed to parse POST body", ex);
+                        logger.debug("Failed to parse POST body", ex);
                         ctx.executor()
                                 .execute(() -> sendResponseAndClose(
                                         ctx,

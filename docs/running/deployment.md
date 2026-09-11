@@ -103,10 +103,11 @@ most MCP clients.
 Sessions are off by default, and a stateless server scales horizontally with no
 sticky routing. A server that sets `session.enabled(true)` keeps live sessions
 in-process, so more than one instance needs sticky routing while a session is
-active. Experimental `SessionStore` and `SessionEventStore` implementations can
-persist session snapshots and replay events across restarts. They do not
-coordinate live session or transport ownership between nodes. See
-[session configuration](configuration.md#session).
+active.
+
+Experimental `SessionStore` and `SessionEventStore` implementations can persist session snapshots and replay events across restarts. They do not
+coordinate live session or transport ownership between nodes. See [session configuration](configuration.md#session).
+If session-store lookup fails during a POST, the server returns HTTP 500 with `Session lookup failed`. An unknown session returns HTTP 404.
 
 ## Containers
 

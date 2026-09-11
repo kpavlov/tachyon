@@ -2,6 +2,10 @@
 package dev.tachyonmcp.core.transport.netty;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.core.server.McpDispatcher;
@@ -16,7 +20,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
@@ -179,14 +182,13 @@ class McpOperationHandlerTest {
 
     @Test
     void sessionLookupRunsOutsideEventLoop() throws Exception {
-        final var lookupThread = new AtomicReference<Thread>();
+        final var lookupThread = new AtomicReference<@Nullable Thread>();
         final var lookupFinished = new CountDownLatch(1);
-        final var store = new ThreadRecordingSessionStore(lookupThread, lookupFinished);
-        final var testServer = (ServerEngine) TachyonServer.builder()
-                .session(config -> config.enabled(true).sessionStore(store))
-                .build();
 
-        try {
+        try (final var store = new ThreadRecordingSessionStore(lookupThread, lookupFinished);
+                final var testServer = (ServerEngine) TachyonServer.builder()
+                        .session(config -> config.enabled(true).sessionStore(store))
+                        .build()) {
             try (final var lookupExecutor = Executors.newSingleThreadExecutor()) {
                 final var testChannel = new EmbeddedChannel(new McpOperationHandler(
                         testServer, new McpDispatcher(testServer, Runnable::run), lookupExecutor));
@@ -200,7 +202,10 @@ class McpOperationHandlerTest {
                     assertThat(lookupFinished.await(2, TimeUnit.SECONDS)).isTrue();
                     assertThat(lookupThread)
                             .hasValueSatisfying(thread -> assertThat(thread).isNotSameAs(eventLoopThread));
-                    testChannel.runPendingTasks();
+                    await().pollInSameThread().atMost(2, TimeUnit.SECONDS).untilAsserted(() -> {
+                        testChannel.runPendingTasks();
+                        assertThat(testChannel.outboundMessages()).isNotEmpty();
+                    });
                     final var response = (FullHttpResponse) testChannel.readOutbound();
                     assertThat(response.status()).isEqualTo(HttpResponseStatus.NOT_FOUND);
                     response.release();
@@ -208,7 +213,41 @@ class McpOperationHandlerTest {
                     testChannel.finishAndReleaseAll();
                 }
             }
+        }
+    }
+
+    @Test
+    void postSessionLookupFailureReturns500() {
+        final var store = mock(SessionStore.class);
+        when(store.find("unavailable")).thenThrow(new IllegalStateException("Store unavailable"));
+        final var testServer = (ServerEngine) TachyonServer.builder()
+                .session(config -> config.enabled(true).sessionStore(store))
+                .build();
+        final var testChannel = new EmbeddedChannel(
+                new InteractionHandler(),
+                new McpOperationHandler(testServer, new McpDispatcher(testServer, Runnable::run), Runnable::run));
+        try {
+            final var request = new DefaultFullHttpRequest(
+                    HttpVersion.HTTP_1_1, HttpMethod.POST, "/mcp", Unpooled.copiedBuffer("""
+                {"jsonrpc":"2.0","id":1,"method":"ping"}
+                """, StandardCharsets.UTF_8));
+            request.headers().set("MCP-Session-Id", "unavailable");
+            testChannel.writeInbound(request);
+            testChannel.runPendingTasks();
+            final var response = (FullHttpResponse) testChannel.readOutbound();
+            assertThat(response).isNotNull();
+            try {
+                assertThat(response.status()).isEqualTo(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+                assertThat(response.content().toString(StandardCharsets.UTF_8)).isEqualTo("Session lookup failed");
+                assertThat(response.headers().get(HttpHeaderNames.CONTENT_TYPE)).startsWith("text/plain");
+                assertThat(response.headers().get(HttpHeaderNames.CONNECTION)).isEqualTo("close");
+                assertThat(request.refCnt()).isZero();
+                verify(store).find("unavailable");
+            } finally {
+                response.release();
+            }
         } finally {
+            testChannel.finishAndReleaseAll();
             testServer.close();
         }
     }
@@ -403,17 +442,6 @@ class McpOperationHandlerTest {
         Object msg;
         while ((msg = channel.readOutbound()) != null) {
             ReferenceCountUtil.release(msg);
-        }
-    }
-
-    private String readComment() {
-        var msg = channel.readOutbound();
-        assertThat(msg).isInstanceOf(HttpContent.class);
-        var content = (HttpContent) msg;
-        try {
-            return content.content().toString(StandardCharsets.UTF_8);
-        } finally {
-            content.release();
         }
     }
 }
