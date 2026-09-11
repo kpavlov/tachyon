@@ -2,6 +2,10 @@
 title: "SSE Reconnect & Re-delivery"
 weight: 55
 sidebar_order: 55
+sidebar_hide: true
+build:
+    list: never
+    render: never
 toc: true
 description: |-
   How Tachyon survives SSE disconnects: event-log replay on reconnect, Last-Event-ID handling, and POST-SSE re-delivery semantics.
@@ -15,7 +19,7 @@ closes its SSE stream mid-call — and the race that used to make it flaky.
 Tachyon speaks MCP **Streamable HTTP**. A `POST /mcp` for a `tools/call` can *upgrade* from a
 buffered JSON reply to a live SSE stream (`text/event-stream`) the moment the handler emits a
 server→client message (a progress notification, a `comment`, or by explicitly starting the stream).
-See [configuration.md → keep-alive for long-running tools](configuration.md).
+See [Configuration → keep-alive for long-running tools](../running/configuration.md#keep-alive-for-long-running-tools).
 
 Every SSE event carries an id. For a POST-upgraded stream the wire id is `<n>#<key>`:
 
@@ -147,12 +151,12 @@ Now both orderings succeed:
 
 ## Testing
 
-[SsePostReconnectRedeliveryTest](../e2e/src/test/java/dev/tachyonmcp/e2e/SsePostReconnectRedeliveryTest.java) makes the race **deterministic**: the tool closes its stream and
+[SsePostReconnectRedeliveryTest](../../e2e/src/test/java/dev/tachyonmcp/e2e/mcp/v2025_11_25/SsePostReconnectRedeliveryTest.java) makes the race **deterministic**: the tool closes its stream and
 then `Thread.sleep(300)` before returning, so the response is appended only *after* the client has
 reconnected and run its one-shot replay. Without the fallback the reconnecting client never receives
 the response; with it, the response is delivered live on the resumed stream.
 
-[SseReplayPerStreamTest](../e2e/src/test/java/dev/tachyonmcp/e2e/SseReplayPerStreamTest.java) guards the companion invariant: a resumed stream must not receive another
+[SseReplayPerStreamTest](../../e2e/src/test/java/dev/tachyonmcp/e2e/mcp/v2025_11_25/SseReplayPerStreamTest.java) guards the companion invariant: a resumed stream must not receive another
 stream's messages.
 
 ## Touch points

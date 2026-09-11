@@ -1,5 +1,5 @@
 ---
-title: "Kotlin Serialization Schemas"
+title: "Kotlin Serialization + JSON Schemas"
 weight: 45
 sidebar_order: 45
 toc: true
@@ -13,7 +13,7 @@ Use it when Kotlin models should define your tool contract. This removes hand-wr
 strings that can drift from the handler.
 
 The runnable
-[Weather MCP Kotlin example](https://github.com/kpavlov/tachyon/tree/main/examples/weather-mcp-kotlin)
+[Weather MCP Kotlin example](https://github.com/tachyonmcp/tachyon/tree/main/examples/weather-mcp-kotlin)
 uses the reflection generator for tool input, structured output, and elicitation schemas.
 
 ## Understand the request and response path
@@ -40,7 +40,8 @@ Schema generation doesn't deserialize arguments. The weather handler reads its a
 
 ## Add the dependencies
 
-The weather example uses kt-schema `0.7.0` with kotlinx.serialization JSON:
+The weather example pairs kt-schema with kotlinx.serialization JSON. Its `pom.xml` pins the
+versions used here:
 
 ```xml
 <properties>
@@ -62,7 +63,7 @@ The weather example uses kt-schema `0.7.0` with kotlinx.serialization JSON:
 </dependencies>
 ```
 
-Add these dependencies to an existing [`tachyon-kotlin`](kotlin.md#dependency) application.
+Add these dependencies to an existing [`tachyon-kotlin`](./#dependency) application.
 
 ## Complete weather tool integration
 
@@ -355,9 +356,9 @@ to the serialized-JSON text block. A data class as the top-level result stays th
 targeting both protocol versions.
 
 See the exact
-[`GetWeatherTool.kt`](https://github.com/kpavlov/tachyon/blob/main/examples/weather-mcp-kotlin/src/main/kotlin/com/example/weather/GetWeatherTool.kt)
+[`GetWeatherTool.kt`](https://github.com/tachyonmcp/tachyon/blob/main/examples/weather-mcp-kotlin/src/main/kotlin/com/example/weather/GetWeatherTool.kt)
 and
-[`WeatherServer.kt`](https://github.com/kpavlov/tachyon/blob/main/examples/weather-mcp-kotlin/src/main/kotlin/com/example/weather/WeatherServer.kt)
+[`WeatherServer.kt`](https://github.com/tachyonmcp/tachyon/blob/main/examples/weather-mcp-kotlin/src/main/kotlin/com/example/weather/WeatherServer.kt)
 sources for progress notifications, elicitation, resources, prompts, and error handling.
 
 ## Generate other schema types
@@ -402,7 +403,7 @@ java -jar target/weather-mcp-kotlin.jar
 Connect an MCP client to `http://localhost:8080/mcp`, then inspect `get-weather` through
 `tools/list` or call it through `tools/call`.
 
-Next, see [JSON and JSON Schema](json.md) for validation and provider behavior,
-[Tools](tools.md) for tool contracts, the [Kotlin DSL](kotlin.md) for handler APIs, or the
+Next, see [JSON and JSON Schema](../json.md) for validation and provider behavior,
+[Tools](../features/tools.md) for tool contracts, the [Kotlin DSL](./) for handler APIs, or the
 [MCP 2026-07-28 schema reference](https://modelcontextprotocol.io/specification/2026-07-28/schema)
 for wire types.

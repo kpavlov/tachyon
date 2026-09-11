@@ -7,9 +7,9 @@ description: |-
   Ship an MCP Skills extension from your Tachyon server so agents can discover and install skills.
 ---
 
-Agent Skills package a capability — instructions, scripts, reference material — as a directory with a `SKILL.md` manifest. Claude Code, Claude apps, and other MCP clients already load skills from the local filesystem; [SEP-2640](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2640) standardizes how a server serves the same packages over MCP, so a client can discover and fetch them without a shared filesystem.
+Agent Skills package a capability — instructions, scripts, reference material — as a directory with a `SKILL.md` manifest. Claude Code, Claude apps, and other MCP clients already load skills from the local filesystem; [SEP-2640][SEP-2640] standardizes how a server serves the same packages over MCP, so a client can discover and fetch them without a shared filesystem.
 
-Tachyon's `SkillsExtension` (`tachyon-extensions`) implements SEP-2640: it scans skill directories, publishes each file as a `skill://` resource, and answers `skills/list`, `skills/get`, and `resources/directory/read`.
+Tachyon's `SkillsExtension` (`tachyon-extensions`) implements [SEP-2640][SEP-2640]: it scans skill directories, publishes each file as a `skill://` resource, and answers `skills/list`, `skills/get`, and `resources/directory/read`.
 
 ## Enable the extension
 
@@ -29,13 +29,13 @@ var server = TachyonServer.builder()
 server.start();
 ```
 
-`SkillsExtension.ID` is `io.modelcontextprotocol/skills`. Its extension methods require negotiation;
-skill files remain available through the standard Resources API. See
-[Extension negotiation](#extension-negotiation).
+Skills extension ID is `io.modelcontextprotocol/skills`. Its extension methods require [negotiation](#extension-negotiation);
+skill files remain available through the standard Resources API.
 
 ## Skill directory layout
 
-A skill is a directory containing a `SKILL.md` with YAML frontmatter, plus any supporting files:
+A skill is a directory following [Agent Skills specification](https://agentskills.io/specification).
+It contains a `SKILL.md` file with YAML frontmatter, plus any supporting files, e.g.:
 
 ```
 git-workflow/
@@ -44,13 +44,15 @@ git-workflow/
     └── BRANCHING.md
 ```
 
-```yaml
+SKILL.md content might look like:
+```markdown
 ---
 name: git-workflow
 description: Follow this team's Git conventions for branching and commits
 ---
 
 # Git Workflow
+
 ...
 ```
 
@@ -63,7 +65,7 @@ Any other frontmatter field (`metadata`, `license`, ...) passes through verbatim
 
 ### Ignoring files
 
-Both built-in registries filter scanned files against `META-INF/dev/tachyonmcp/extensions/skills/.mcpignore`, a gitignore-style pattern file bundled with `tachyon-extensions`. It ships pre-loaded with OS junk (`.DS_Store`, `Thumbs.db`, `.Trash-*`, ...) so these never turn into skill resources.
+Both built-in skill registries filter scanned files against `META-INF/dev/tachyonmcp/extensions/skills/.mcpignore`, a gitignore-style pattern file bundled with `tachyon-extensions`. It ships pre-loaded with OS junk (`.DS_Store`, `Thumbs.db`, `.Trash-*`, ...) so these never turn into skill resources.
 
 - Blank lines and `#` comments are skipped.
 - A pattern with no `/` (e.g. `*.tmp`) matches any path segment at any depth, excluding whole subdirectories.
@@ -193,7 +195,7 @@ through the per-request `_meta` key:
 A client that does not declare the extension gets `-32601 Method not found` from the three
 extension methods. It can still discover skill files through `resources/list` and fetch a known
 `skill://` URI through `resources/read`. This is SEP-2133 graceful degradation to core protocol
-behavior and SEP-2640's baseline resource transport.
+behavior and [SEP-2640][SEP-2640]'s baseline resource transport.
 
 `SkillsExtension` uses `AdvertiseMode.ALWAYS`, so the server advertises
 `io.modelcontextprotocol/skills` even when the client has not declared it. `serverSettings()` reports
@@ -204,8 +206,6 @@ base resource visibility.
 ## Caveats
 
 - **No `skills/list` pagination.** A `cursor` param returns `-32602 Invalid params`. Skill catalogs are expected to be small and bounded; add a server-side cursor if that stops holding.
-- **`@ExperimentalApi`.** The package (`dev.tachyonmcp.extensions.skills`) is marked experimental — the shape may still change before [SEP-2640](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2640) itself stabilizes.
-
----
-
-**See also:** [Extensions](_index.md) · [Resources](../resources.md) · [Tools](../tools.md)
+- **`@ExperimentalApi`.** The package (`dev.tachyonmcp.extensions.skills`) is marked experimental — the shape may still change before [SEP-2640][SEP-2640] itself stabilizes.
+           
+[SEP-2640]: https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2640 "SEP-2640: Skills Extension"

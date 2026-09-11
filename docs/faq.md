@@ -36,7 +36,7 @@ Yes. Synchronous handlers run on virtual threads, away from the Netty event loop
 ### When should I use an asynchronous handler?
 
 Use `registerAsync` when your dependency already returns a
-`CompletionStage`. For ordinary blocking Java code, use the synchronous API and let Tachyon run it on a virtual thread. See [Tools](tools.md#async-tool).
+`CompletionStage`. For ordinary blocking Java code, use the synchronous API and let Tachyon run it on a virtual thread. See [Tools](features/tools.md#async-tool).
 
 ### Does my application have to use Jackson?
 
@@ -49,13 +49,13 @@ Attach JSON Schema to a tool descriptor. Tachyon validates input and structured 
 ### How do I keep Kotlin tool schemas in sync with data classes?
 
 Generate input and output schemas from Kotlin model classes instead of maintaining JSON strings.
-The [kt-schema integration guide](kt-schema-json.md) shows the complete request and structured
+The [kt-schema integration guide](kotlin/kt-schema-json.md) shows the complete request and structured
 response path from the runnable Weather MCP Kotlin example.
 
 ### How do I report a tool failure?
 
 Return `ToolResult.error(message)` for an expected tool-level failure. Reserve thrown exceptions for unexpected failures that the server should map to a JSON-RPC error. See
-[returning tool results](tools.md#return-results).
+[returning tool results](features/tools.md#return-results).
 
 ## Deployment and operations
 
@@ -66,11 +66,11 @@ Yes, by default. Stateless mode avoids server-side session affinity and is the s
 ### When should I enable sessions?
 
 Enable sessions when you need resumable SSE streams, `Last-Event-ID` replay, or session-scoped state. Live sessions stay in-process, so clustered deployments need sticky routing while a session is active. Durable `SessionStore` and `SessionEventStore` implementations enable restart recovery, not distributed live-session ownership. See
-[session configuration](configuration.md#session).
+[session configuration](running/configuration.md#session).
 
 ### How should I deploy long-running tools?
 
-Send progress notifications or SSE comments so the response becomes a live SSE stream, then set the heartbeat interval below any proxy or load-balancer idle timeout. See [keep-alive for long-running tools](configuration.md#keep-alive-for-long-running-tools).
+Send progress notifications or SSE comments so the response becomes a live SSE stream, then set the heartbeat interval below any proxy or load-balancer idle timeout. See [keep-alive for long-running tools](running/configuration.md#keep-alive-for-long-running-tools).
 
 ### Does shutdown wait for active handlers?
 
@@ -89,9 +89,9 @@ version normally changes the mapper rather than your tool, resource, prompt, or 
 
 ### Is Kotlin supported?
 
-Yes. The `tachyon-kotlin` module adds a coroutine-first DSL and kotlinx.serialization integration over the Java API. See the [Kotlin DSL guide](kotlin.md).
+Yes. The `tachyon-kotlin` module adds a coroutine-first DSL and kotlinx.serialization integration over the Java API. See the [Kotlin DSL guide](kotlin/).
 
 ### Where do I start?
 
-Build the [Quickstart](quickstart.md), then choose the guide for [tools](tools.md), [resources](resources.md), [tasks](tasks.md), or
-[extensions](extensions.md).
+Build the [Quickstart](quickstart.md), then choose the guide for [tools](features/tools.md), [resources](features/resources.md), [tasks](features/tasks.md), or
+[extensions](extensions/).

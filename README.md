@@ -93,22 +93,22 @@ See the [quickstart](docs/quickstart.md) for Java and Kotlin examples plus a `cu
 |---|---|
 | **MCP surface** | Tools, resources and templates, prompts, completions, logging, sampling, form/URL elicitation, cancellation, subscriptions, pagination, and progress notifications |
 | **Annotations** | Optional adapters for [mcp-java, LangChain4j, and Spring AI](docs/annotations.md), mapped onto Tachyon's standard registries |
-| **Tasks** | Full `tasks/*` lifecycle, state validation, status notifications, retention, and `TasksExtension` for [SEP-1686](docs/tasks.md) |
+| **Tasks** | Full `tasks/*` lifecycle, state validation, status notifications, retention, and `TasksExtension` for [SEP-1686](docs/features/tasks.md) |
 | **Agent Skills** | `SkillsExtension` implements the [SEP-2640](docs/extensions/mcp-skills.md) draft: filesystem/classpath registries, `skill://` resources, `skills/list`, `skills/get`, and directory reads |
 | **Extensions** | [SEP-2133](docs/extensions/) negotiation, custom JSON-RPC methods, capability advertisement, and extension-gated features |
 | **Runtime** | Stateless or resumable sessions, `Last-Event-ID` replay, pluggable stores, virtual-thread handlers, request timeouts, and graceful draining |
-| **Observability** | OpenTelemetry spans and metrics via `tachyon-opentelemetry`, following the [MCP semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai/tree/main/model/mcp), plus an opt-in payload capture policy -- see [docs](docs/observability.md) |
-| **Java and Kotlin** | Independent sync/async Java contracts and a coroutine-first [Kotlin DSL](docs/kotlin.md) |
+| **Observability** | OpenTelemetry spans and metrics via `tachyon-opentelemetry`, following the [MCP semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai/tree/main/model/mcp), plus an opt-in payload capture policy -- see [docs](docs/running/observability.md) |
+| **Java and Kotlin** | Independent sync/async Java contracts and a coroutine-first [Kotlin DSL](docs/kotlin/) |
 | **Testing** | Official conformance suites plus a [testkit](docs/testkit.md) for dynamic servers and fluent JSON-RPC assertions |
 
 ## Documentation and examples
 
-- [Configuration](docs/configuration.md) -- network, native I/O, sessions, CORS, and runtime limits
-- [Observability](docs/observability.md) -- observation listeners, payload capture policy, and the bundled OpenTelemetry integration
-- [Tools](docs/tools.md), [resources](docs/resources.md), and [tasks](docs/tasks.md) -- feature APIs and examples
+- [Configuration](docs/running/configuration.md) -- network, native I/O, sessions, CORS, and runtime limits
+- [Observability](docs/running/observability.md) -- observation listeners, payload capture policy, and the bundled OpenTelemetry integration
+- [Tools](docs/features/tools.md), [resources](docs/features/resources.md), and [tasks](docs/features/tasks.md) -- feature APIs and examples
 - [Annotations](docs/annotations.md) -- mcp-java, LangChain4j, and Spring AI providers
 - [Extensions](docs/extensions/) and [MCP Skills](docs/extensions/mcp-skills.md) -- custom protocol methods and SEP support
-- [Kotlin DSL](docs/kotlin.md) -- builders, scopes, and suspending handlers
+- [Kotlin DSL](docs/kotlin/) -- builders, scopes, and suspending handlers
 - [Examples](examples/README.md) -- runnable Java and Kotlin servers
 - [FAQ](docs/faq.md) -- frameworks, concurrency, deployment, and compatibility
 

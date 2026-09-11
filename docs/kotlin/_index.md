@@ -1,17 +1,18 @@
 ---
 title: Kotlin
+overview_title: "Introduction"
 weight: 35
 sidebar_order: 35
 toc: true
 description: |-
-  Coroutine-first Kotlin DSL for Tachyon: TachyonServer { }, tool, resource, and prompt builders, and the full scope reference.
+  Coroutine-first Kotlin DSL for Tachyon
 ---
 
 The `tachyon-kotlin` module wraps `ServerBuilder` with a coroutine-first DSL, suspend tool handlers, and type-safe scope classes.
 
 ## Dependency
 
-Version is pinned by the `tachyon-bom` — see [Quickstart](quickstart.md#1-add-the-dependency).
+Version is pinned by the `tachyon-bom` — see [Quickstart](../quickstart.md#1-add-the-dependency).
 
 ```xml
 <dependency>
@@ -30,9 +31,9 @@ val server = TachyonServer(port = 8080) { /* configure */ }
 val server: TachyonServer = buildServer { /* configure */ }
 ```
 
-Use `TachyonServerBuilder` through these entry points for Kotlin construction. The Java
-`ServerBuilder` remains the implementation source of truth, while the Kotlin DSL adds suspend
-handlers and Kotlin-specific types without duplicating registration or validation logic.
+Both entry points configure a `TachyonServerBuilder`. `TachyonServer(port)` also binds the
+transport and starts serving; `buildServer` returns a configured server you start yourself, which
+is what you want in tests.
 
 ## Structured value factories
 
@@ -103,7 +104,7 @@ val server = TachyonServer(port = 8080) {
         }
     }
     prompt(name = "greet", description = "Greeting prompt") {
-        listOf(PromptMessage.user("Say hello, ${arguments ?: "world"}"))
+        listOf(PromptMessage.user("Say hello, ${arguments.stringOr("name", "world")}"))
     }
 }
 ```
@@ -147,7 +148,7 @@ resource(
 
 prompt(name = "greet", description = "Greeting prompt") {
     // this: PromptScope — ctx, request, arguments
-    listOf(PromptMessage.user("Hello, ${arguments ?: "world"}"))
+    listOf(PromptMessage.user("Hello, ${arguments.stringOr("name", "world")}"))
 }
 ```
 
@@ -176,7 +177,7 @@ prompt(
 
 `extensionId` is deliberately not one of these named params — it marks a
 resource/resourceTemplate/tool/prompt as owned by a specific extension (gating its visibility to
-sessions that negotiated that extension; see [Extensions](extensions.md)) and is meant for
+sessions that negotiated that extension; see [Extensions](../extensions/)) and is meant for
 extension implementations, not ordinary server code. Set it through the descriptor scope instead,
 e.g. `resourceDescriptor(name, uri) { extensionId = MY_EXTENSION_ID }` or
 `ResourceTemplateDescriptor { extensionId = MY_EXTENSION_ID }`, then pass the built descriptor to
@@ -274,9 +275,79 @@ tool("c", inputSchema = buildJsonObject { put("type", "object") }) { /* ... */ }
 Schema roots are validated at registration time: `inputSchema` must declare `"type": "object"`
 (tool-call arguments are always an object) or registration fails fast with
 `IllegalArgumentException` instead of surfacing later in the MCP client. `outputSchema` accepts
-any JSON Schema root — object, array, or scalar (see [ToolResult factories](#toolresult-factories)
+any JSON Schema root — object, array, or scalar (see [Return results](../features/tools.md#return-results)
 for the per-protocol-version wire behavior). Tool descriptions longer than 2048 characters log a
 warning — clients may truncate them.
+
+## Typed tools
+
+`typedTool<In, Out>` derives both schemas from your Kotlin types, decodes the call arguments into
+`In`, and encodes the returned `Out` as `structuredContent` — no schema literals:
+
+```kotlin
+@Serializable data class ForecastRequest(val city: String, val days: Int)
+@Serializable data class Forecast(val summary: String, val highC: Double)
+
+TachyonServer(port = 8080) {
+    typedTool<ForecastRequest, Forecast>(
+        name = "get_forecast",
+        description = "Multi-day forecast",
+    ) { input ->
+        Forecast(lookup(input.city), highFor(input.city, input.days))
+    }
+}
+```
+
+Both type arguments must be given explicitly — neither is inferable from the block. The same
+registration exists post-build as `server.registerTool<In, Out>(...)`.
+
+The block may return either shape:
+
+- an `Out` — wrapped as a success result carrying it as `structuredContent`;
+- a `ToolResult` — passed through untouched, for results that also need `_meta`, a custom text
+  block, extra content blocks, `fail(...)` or `inputRequired(...)`.
+
+The two never collide: `ToolResult` is a sealed interface, so no `Out` can also be one.
+
+### Where the schemas come from
+
+`typedTool` resolves schemas through `JsonSchema.generate`, which walks the registered
+`JsonSchemaFactory` chain in priority order:
+
+| Source | Provided by |
+|---|---|
+| Build-time schema resource from the kt-schema annotation processor | `tachyon-core` |
+| Runtime reflection over the class | `tachyon-kotlin-kt-schema` |
+
+Add the reflection back-stop to use `typedTool` without generating resources at build time:
+
+```xml
+<dependency>
+    <groupId>dev.tachyonmcp</groupId>
+    <artifactId>tachyon-kotlin-kt-schema</artifactId>
+</dependency>
+```
+
+It registers itself through `META-INF/services`, so no wiring is needed. To control generation for
+one call, pass `schemaGenerator`:
+
+```kotlin
+import dev.tachyonmcp.kotlin.server.json.ktschema.ktSchemaGenerator
+import me.kpavlov.kt.schema.generator.json.JsonSchemaConfig
+
+typedTool<ForecastRequest, Forecast>(
+    name = "get_forecast",
+    schemaGenerator = ktSchemaGenerator(JsonSchemaConfig.Default),
+) { input -> forecast(input) }
+```
+
+> **A Kotlin default does not make a property optional.** Out of the box the generated schema
+> marks a defaulted property `required`, so adding `val units: String = "metric"` to
+> `ForecastRequest` would still force every caller to send it. Pass
+> `schemaGenerator = ktSchemaGenerator(JsonSchemaConfig.Default)` to let nullable and defaulted
+> properties be omitted instead.
+
+`typedTool` and `tachyon-kotlin-kt-schema` are `@ExperimentalApi` — the shape may still change.
 
 ## kotlinx.serialization integration
 
@@ -310,7 +381,7 @@ The Kotlin DSL retains Tachyon's Jackson serde by default. Select kotlinx serial
 `json { serde = KxSerializationSerde(Json { ignoreUnknownKeys = false }) }`.
 `success(value)` encodes via the configured serde and pairs with the declared `outputSchema` —
 the resulting JSON must match whatever shape that schema declares (object, array, or scalar; see
-[ToolResult factories](#toolresult-factories) below for the per-protocol-version wire behavior).
+[Return results](../features/tools.md#return-results) for the per-protocol-version wire behavior).
 For a pre-serialized JSON payload that bypasses the serde, use `ToolResult.raw(json, text)`.
 
 ### Typed decode/result via configured serde
@@ -331,11 +402,17 @@ through the deserializer set in `json { serde = ... }`.
 @Serializable data class GreetArgs(val name: String, val greeting: String = "Hello")
 @Serializable data class GreetReply(val message: String)
 
-tool(name = "greet", inputSchema = ..., outputSchema = ...) {
+tool(
+    name = "greet",
+    inputSchema = """{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}""",
+    outputSchema = """{"type":"object","properties":{"message":{"type":"string"}}}""",
+) {
     val input = arguments.decode<GreetArgs>() // honors configured serde
     success(GreetReply("${input.greeting}, ${input.name}!"), "greeting response")  // symmetric typed result
 }
 ```
+
+[`typedTool`](#typed-tools) does the same thing without the schema literals.
 
 ## Args accessors
 
@@ -452,28 +529,30 @@ TachyonServer(port = 8080) {
 }
 ```
 
-## ToolResult factories
+## Returning results
 
-| Call | Behaviour |
+The `ToolResult` factories and the per-protocol-version wire behaviour of `structuredContent` are
+documented once, in [Tools → Return results](../features/tools.md#return-results). They apply
+unchanged in Kotlin.
+
+Inside a tool lambda, prefer the `ToolScope` shortcuts instead:
+
+| Shortcut | Equivalent |
 |---|---|
-| `ToolResult.text(t)` | Text content block |
-| `ToolResult.error(msg)` | `isError = true` |
-| `ToolResult.content(vararg b)` | Multiple content blocks |
-| `ToolResult.structured(payload)` | POJO → `structuredContent` via Jackson |
-| `ToolResult.structured(payload, text)` | Structured + human-readable text |
-| `ToolResult.empty()` | No content |
+| `text(t)` | `ToolResult.text(t)` |
+| `success(v)` / `success(v, text)` | `ToolResult.structured(...)` via the configured serde |
+| `fail(msg)` | `ToolResult.error(msg)` |
+| `content { }` | `ToolResult.content(...)` |
+| `raw(json, text)` | `ToolResult.raw(json, text)` |
+| `empty()` | `ToolResult.empty()` |
+| `inputRequired(...)` | `ToolResult.inputRequired(...)` |
 
-Inside a tool lambda, prefer the `ToolScope` shortcuts: `text(t)`, `success(v)`, `fail(msg)`.
-`fail`, not `error` — a member `error(String)` would shadow Kotlin's stdlib `error()`, silently
-turning a thrown `IllegalStateException` into a returned value.
+The shortcut is `fail`, not `error`: a member `error(String)` would shadow Kotlin's stdlib
+`error()`, turning a thrown `IllegalStateException` into a returned value.
 
-Under MCP 2026-07-28, `structuredContent` may be any JSON shape (object, array, or scalar). Under
-2025-11-25, non-object values fall back to the serialized-JSON text block instead of
-`structuredContent`, since that protocol version's wire shape is object-only.
-
-With kotlinx-serialization on the classpath, prefer `success(value)` inside a tool lambda —
-the configured serde encodes the value into `structuredContent`. Without an explicit `text`
-argument, Tachyon emits the serialized JSON as the backwards-compatible text block.
+With kotlinx-serialization on the classpath, prefer `success(value)` — the configured serde
+encodes it into `structuredContent`. Without an explicit `text` argument, Tachyon emits the
+serialized JSON as the backwards-compatible text block.
 
 ## Testing
 
@@ -484,12 +563,5 @@ val server = TachyonServer(port = 0) { tool("ping") { ToolResult.text("pong") } 
 // server.host() → bound host, server.port() → ephemeral port
 ```
 
-Run Kotlin tests only:
+For a client to drive it with, see [Testkit](../testkit.md).
 
-```bash
-mvn test -am -f tachyon-kotlin/pom.xml
-```
-
----
-
-**See also:** [Tools](tools.md) · [Resources](resources.md) · [Tasks](tasks.md) · [Extensions](extensions.md) · [Quickstart](quickstart.md)

@@ -13,14 +13,7 @@ and returning composite (record) types.
 
 ## Quickstart
 
-`tachyon-annotations-langchain4j` hasn't shipped in a Tachyon release yet, so building this
-example against a published Tachyon version isn't possible until it does. Until then, install the
-Tachyon reactor's SNAPSHOT locally first:
-
-```shell
-# from the repo root
-./mvnw install -pl tachyon-api,tachyon-core,integrations/tachyon-annotations-langchain4j -am -DskipTests
-```
+Build and run this example:
 
 ```shell
 ./mvnw package && \

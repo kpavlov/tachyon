@@ -18,6 +18,6 @@ Uses `tachyon-core` and `org.jetbrains.kotlinx:kotlinx-serialization-json`, and 
 
 ## Documentation
 
-Full reference: [docs/kotlin.md](../docs/kotlin.md)
+Full reference: [docs/kotlin](../docs/kotlin/)
 
 Examples: [`examples/echo-kotlin`](../examples/echo-kotlin/) · [`.agents/skills/tachyon-mcp/resources/kotlin/`](../.agents/skills/tachyon-mcp/resources/kotlin/)

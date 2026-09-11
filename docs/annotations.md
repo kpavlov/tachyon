@@ -49,9 +49,9 @@ var server = TachyonServer.builder()
   supported in one chain.
 - Calling `.annotations(...)` more than once composes — every configurer runs against the same
   registration context, in call order.
-- Registrations execute after the server is constructed but after `withTools`/`withResources`/
-  `withPrompts`/`withCompletions` bootstrap registrations, so an annotated method registered under
-  the same name as a bootstrap registration wins.
+- Annotation registrations run last: after the server is constructed, and after the
+  `withTools`/`withResources`/`withPrompts`/`withCompletions` bootstrap registrations. An
+  annotated method sharing a name with a bootstrap registration therefore replaces it.
 - `register(...)` throws `IllegalStateException` if called before any `withProvider(...)`.
 
 ## Built-in providers
@@ -104,7 +104,7 @@ returning anything other than a `ToolResult`, `String`, `ContentBlock`, `List<..
 `McpJavaAnnotationProvider` and `LangChain4jAnnotationProvider`), or scalar (a `Number`, `Boolean`,
 or `Character`) is wrapped with `ToolResult.structured(result)`, so a composite return type (a
 record or POJO) comes back as real `structuredContent`, not a stringified `toString()` dump. See
-the [`langchain4j-mcp`](../examples/langchain4j-mcp) example for a full round trip.
+the [`langchain4j-mcp`](https://github.com/tachyonmcp/tachyon/tree/main/examples/langchain4j-mcp) example for a full round trip.
 
 ### Spring AI prompt arguments
 
@@ -145,4 +145,8 @@ themselves — registering two features under the same name silently replaces th
 
 ---
 
-**See also:** [Extensions](extensions.md) · [Tools](tools.md) · [Quickstart](quickstart.md)
+## Next steps
+
+- [Tools](features/tools.md) — register Tachyon-native handlers
+- [Extensions](extensions/) — add negotiated protocol behavior
+- [Quickstart](quickstart.md) — run a minimal server

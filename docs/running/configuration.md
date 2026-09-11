@@ -69,8 +69,7 @@ After a client finishes sending a request it stays silent while waiting for the 
 timer also runs while your handler is computing — a tool that takes longer than
 `readerIdleTimeout` (default `60s`) to respond has its connection reaped before it can answer.
 
-> [!NOTE]
-> 💡 Set `readerIdleTimeout` to `Duration.ZERO` to disable closing connections on idle inbound stream.
+> **Note:** Set `readerIdleTimeout` to `Duration.ZERO` to disable the inbound idle timeout.
 
 The fix is not a bigger timeout — it is to keep the stream alive with **SSE + heartbeats**. Any
 server→client message on the POST upgrades the response from buffered JSON to `text/event-stream`;
@@ -124,6 +123,22 @@ Guidance:
   keep-alive pattern above.
 - `heartbeatInterval <= 0` disables heartbeats; silent SSE streams then close on idle. Lower it
   below any proxy/load-balancer idle timeout sitting in front of the server.
+
+### Reconnecting to an SSE stream
+
+If the connection drops mid-call, a client with sessions enabled reconnects with
+`Last-Event-ID` and Tachyon replays the events it missed. Two guarantees matter when you write
+a tool:
+
+- **Replay is per stream.** A resumed stream receives only the events of the stream it is
+  resuming, never another stream's — the MCP resumability rule.
+- **The final response survives the drop.** A tool's result reaches a client that reconnects
+  after the stream closed, including when your handler closes its own stream before producing
+  a result.
+
+Neither needs configuration beyond `session.enabled(true)`, which
+[Session](#session) covers. Replay reads from the session event store, so a custom
+`SessionEventStore` participates in it.
 
 ### CORS
 
@@ -260,7 +275,8 @@ Native transports are optional runtime dependencies — `tachyon-core` itself de
 </profiles>
 ```
 
-See [examples/weather-mcp/pom.xml](../examples/weather-mcp/pom.xml) for a complete working setup.
+See [`examples/weather-mcp/pom.xml`](https://github.com/tachyonmcp/tachyon/blob/main/examples/weather-mcp/pom.xml)
+for a complete working setup.
 
 Requesting an explicit engine whose transport is not on the classpath (or not supported by the OS) throws `UnsupportedOperationException` at startup, with Netty's unavailability cause in the message:
 
@@ -346,13 +362,12 @@ TachyonServer(port = 8080) {
 }
 ```
 
-`ServerBuilder.monitoring(...)`, Kotlin `monitoring { }`, and `ServerConfig.monitoring()` are
-deprecated compatibility aliases. They read and write the same observability values and will be
-removed in the next release.
+Use `observability(...)` in Java and `observability { }` in Kotlin. The older `monitoring`
+aliases are deprecated for removal — migrate any code still calling them.
 
 ## Identity
 
-`info { }` sets the `serverInfo` returned by `initialize` (name, version, title, etc.); `.name(String)` is a top-level shortcut. See [quickstart](quickstart.md) for a full example.
+`info { }` sets the `serverInfo` returned by `initialize` (name, version, title, etc.); `.name(String)` is a top-level shortcut. See [quickstart](../quickstart.md) for a full example.
 
 ## Capabilities
 
@@ -418,16 +433,23 @@ equivalents) — they mutate the same nested sub-config, so chaining still works
 
 ## Examples
 
-Full, runnable servers and configuration references live in the Tachyon skill resources:
+Runnable servers, each built in CI:
 
-- Java: `.agents/skills/tachyon-mcp/resources/java/`
-  - [`ServerBasic.java`](../.agents/skills/tachyon-mcp/resources/java/ServerBasic.java) — complete server with tool, resource, template, and prompt
-  - [`ToolHandlerExample.java`](../.agents/skills/tachyon-mcp/resources/java/ToolHandlerExample.java) — descriptor/function registration, experimental `AbstractToolHandler`, long-running keep-alive
-  - [`ResourceFnExample.java`](../.agents/skills/tachyon-mcp/resources/java/ResourceFnExample.java) — static resources and URI templates
-  - [`PromptFnExample.java`](../.agents/skills/tachyon-mcp/resources/java/PromptFnExample.java) — simple and handler-based prompts
-  - [`ConfigReference.java`](../.agents/skills/tachyon-mcp/resources/java/ConfigReference.java) — all config builder patterns in one file
-- Kotlin: `.agents/skills/tachyon-mcp/resources/kotlin/`
-  - [`ServerBasic.kt`](../.agents/skills/tachyon-mcp/resources/kotlin/ServerBasic.kt) — full server via Kotlin DSL
-  - [`ToolHandlerExample.kt`](../.agents/skills/tachyon-mcp/resources/kotlin/ToolHandlerExample.kt) — suspend handler, `registerTool`
-  - [`ResourceFnExample.kt`](../.agents/skills/tachyon-mcp/resources/kotlin/ResourceFnExample.kt) — resources and templates in DSL
-  - [`PromptFnExample.kt`](../.agents/skills/tachyon-mcp/resources/kotlin/PromptFnExample.kt) — prompts in DSL
+| Example | Language | Shows |
+|---|---|---|
+| [`echo-kotlin`](https://github.com/tachyonmcp/tachyon/tree/main/examples/echo-kotlin) | Kotlin | Smallest viable server: `buildServer { }`, in-DSL and post-build tool registration |
+| [`weather-mcp`](https://github.com/tachyonmcp/tachyon/tree/main/examples/weather-mcp) | Java | Tool with progress and elicitation, static and async resources, template, prompt, completions, sessions, OpenTelemetry |
+| [`weather-mcp-kotlin`](https://github.com/tachyonmcp/tachyon/tree/main/examples/weather-mcp-kotlin) | Kotlin | The same surface through the Kotlin DSL, with kotlinx.serialization |
+| [`mcp-java`](https://github.com/tachyonmcp/tachyon/tree/main/examples/mcp-java) | Java | `@Tool`/`@Resource`/`@Prompt` annotations via `McpJavaAnnotationProvider` |
+| [`langchain4j-mcp`](https://github.com/tachyonmcp/tachyon/tree/main/examples/langchain4j-mcp) | Java | LangChain4j `@Tool` methods returning records as `structuredContent` |
+| [`mcp-skills`](https://github.com/tachyonmcp/tachyon/tree/main/examples/mcp-skills) | Java | `SkillsExtension` with classpath and filesystem registries |
+| [`temporal`](https://github.com/tachyonmcp/tachyon/tree/main/examples/temporal) | Java | MCP tasks backed by Temporal workflows |
+
+Each is a standalone Maven project with its own wrapper; every one reads `HOST`, `PORT` and
+`ALLOWED_HOST` from the environment. See
+[`examples/README.md`](https://github.com/tachyonmcp/tachyon/blob/main/examples/README.md) for
+the per-example commands.
+
+For a single file that exercises every builder option in one place, see
+[`ConfigReference.java`](https://github.com/tachyonmcp/tachyon/blob/main/.agents/skills/tachyon-mcp/resources/java/ConfigReference.java).
+It is compiled as part of the build, so it cannot drift from the API.

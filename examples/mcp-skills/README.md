@@ -15,16 +15,9 @@ Clients negotiate `io.modelcontextprotocol/skills` to use `skills/list`, `skills
 
 ## Quickstart
 
-The skills extension is currently built from this repository's SNAPSHOT:
+Build and run the example:
 
 ```shell
-# From the repository root
-./mvnw install -pl tachyon-extensions,tachyon-testkit -am -DskipTests -Djacoco.skip=true
-```
-
-Running example
-```shell
-cd examples/mcp-skills
 mvn package
 java -jar target/mcp-skills-example.jar
 ```

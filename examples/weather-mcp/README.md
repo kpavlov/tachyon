@@ -42,12 +42,10 @@ minimal `OpenTelemetrySdk` (`WeatherServer.OTEL`) with two exporters and a fully
 capture policy (`requestArgs`, `responseContent`, `rawMessage`, `exceptionDetail` all on):
 
 - A **logging exporter** — no collector to run, spans and metrics just print to the console.
-- The standard **OTLP/HTTP exporter**, at its default endpoint `http://localhost:4318`. Run a
-  local collector (Jaeger, Grafana Tempo, Honeycomb, ...) to see traces land there too. With no
-  collector running, it logs periodic export failures — expected and harmless; only the logging
+- The standard **OTLP/HTTP exporter**. Run a local collector (Jaeger, Grafana Tempo, Honeycomb, ...) to see traces land there too. With no collector running, it logs periodic export failures — expected and harmless; only the logging
   exporter's output matters for this demo.
 
 Call a tool and watch the log for a `tools/call get-weather` span and its
 `mcp.server.operation.duration` metric.
 
-See [docs/observability.md](../../docs/observability.md) for the full attribute reference.
+See [observability documentation](../../docs/running/observability.md) for the full attribute reference.

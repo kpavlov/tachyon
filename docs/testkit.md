@@ -1,7 +1,7 @@
 ---
 title: "Testkit"
-weight: 50
-sidebar_order: 50
+weight: 45
+sidebar_order: 45
 toc: true
 description: |-
   Test Tachyon servers end to end: shaping clients, dynamic-port servers, and fluent JSON-RPC assertions.
@@ -104,6 +104,52 @@ assertThatResponse(response).isRejectedWith(400, "Duplicate MCP header");
 
 Prefer `isRejectedWith` over a bare status check for transport rejections: a JSON-RPC error
 carries the same `400`, so the status alone does not prove which layer rejected the request.
+
+## Fixtures
+
+Three fixtures cover the parts of a server that are awkward to drive over the wire.
+
+`TestTaskConnector` stands in for the external system behind a [task](features/tasks.md)
+connector. Seed it with snapshots, hand `connector()` to the builder, then assert on what
+Tachyon asked it for:
+
+```java
+var tasks = new TestTaskConnector().start(TaskSnapshot.working("t-1", Instant.now(), 1));
+
+var server = McpTestServers.start(
+    b -> b.capabilities(c -> c.tasks(tasks.connector())),
+    s -> {});
+
+// later
+assertThat(tasks.refreshedTaskIds()).containsExactly("t-1");
+```
+
+`publish(snapshot)` stores the snapshot a later `tasks/get` returns, and `deferCancellation()`
+makes `tasks/cancel` leave the task non-terminal so you can assert the pending state. `reset()`
+clears both the snapshots and the recorded calls.
+
+`TestObservationListener` records the dispatch lifecycle. `started()` and `completed()` return
+the recorded calls in order; `failOnStart(...)` / `failOnComplete(...)` make it throw, which is
+how you verify that a listener failure never reaches the handler:
+
+```java
+var listener = new TestObservationListener();
+var server = McpTestServers.start(b -> b.observability(o -> o.listener(listener)), s -> {});
+// ...
+assertThat(listener.completed()).singleElement()
+    .satisfies(c -> assertThat(c.info().method()).isEqualTo("tools/call"));
+```
+
+`DiscoverResponseAssert` covers the 2026-07-28 `server/discover` response. `Mcp20260728Client.discover()`
+returns it directly:
+
+```java
+try (var client = McpTestClients.latest(port)) {
+    client.discover().isSuccess().hasCapabilities("""
+        {"tools":{}}
+        """);
+}
+```
 
 ## Notifications
 

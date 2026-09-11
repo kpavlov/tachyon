@@ -9,13 +9,13 @@ the Maven wrapper build in, so you can run it without installing anything else �
   payload capture policy — see its README's Observability section.
 - [**weather-mcp-kotlin**](weather-mcp-kotlin) — Kotlin port of `weather-mcp`, same observability setup.
 - [**langchain4j-mcp**](langchain4j-mcp) — Java. A plain LangChain4j `@Tool` method, with no
-  Tachyon imports, scanned by `LangChain4jAnnotationProvider` into a running server. Depends on
-  `tachyon-annotations-langchain4j`, unreleased — build the Tachyon SNAPSHOT locally first (see
-  its own README).
+  Tachyon imports, scanned by `LangChain4jAnnotationProvider` into a running server.
 - [**mcp-java**](mcp-java) — Java. A plain service using mcp-java `@Tool`, `@Resource`,
   `@ResourceTemplate`, and `@Prompt` annotations, scanned by `McpJavaAnnotationProvider`.
 - [**mcp-skills**](mcp-skills) — Java. Serves a bundled Elvish-magic Agent Skill through the MCP
   skills extension.
+- [**temporal**](temporal) — Java. MCP tasks backed by Temporal workflows through
+  `tachyon-tasks-temporal`. Library plus tests; Docker is needed for the Testcontainers test.
 
 Start with **echo-kotlin** to see the smallest viable server, then move to **weather-mcp** (or its
 Kotlin twin) for a realistic feature-rich example backed by the Open-Meteo API.

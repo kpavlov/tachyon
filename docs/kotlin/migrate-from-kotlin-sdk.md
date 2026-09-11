@@ -64,11 +64,10 @@ val server = TachyonServer(port = mcpPort) {
         resources(subscribe = false, listChanged = true)
         logging = true
     }
-    json { serde = KxSerializationSerde(json = yourJson) }   // reuse your kotlinx Json
+    json { serde = KxSerializationSerde(json = yourJson) }   // reuse your kotlinx Json config
     network {
         host = "127.0.0.1"
-        allowNullOrigin = true
-        allowedOrigins.add("*")
+        allowedOrigins.add("https://your-client.example.com")
     }
     session { enabled = true; sessionTtl = 10.minutes }
 }
@@ -78,10 +77,8 @@ server.port()
 server.close()    // wire to your app's stop hook
 ```
 
-Use `TachyonServer { }` or `buildServer { }` as the Kotlin construction surface. The DSL delegates
-to Java `ServerBuilder`, then adds suspend handlers and Kotlin-specific types. Don't build a second
-Kotlin extension surface on `ServerBuilder`; it can skip Kotlin defaults and split construction
-logic across two APIs.
+Use `TachyonServer { }` or `buildServer { }` as the Kotlin construction surface. Both delegate to
+the Java `ServerBuilder` and add suspend handlers and Kotlin-specific types on top.
 
 The identity block is easy to under-fill. `info { }` supports `title`, `websiteUrl`, and
 `icons` — port all of them, not just `name`/`version`:
@@ -135,7 +132,8 @@ warns when a description exceeds 2048 chars (clients truncate there) pays off ac
 | same, optional | `request.arguments().stringOrNull("k")` |
 | with a default | `request.arguments().stringOr("k", "d")` |
 | `…?.int` etc. | `request.arguments().intValue/boolValue/doubleValue` (+ `…OrNull`, `…(k, default)`) |
-| raw element | `request.arguments().raw("k"): JsonNode?` → `.asString()` |
+| nested object / array | `request.arguments().objectOrNull("k")` / `arrayOrNull("k")` |
+| underlying provider node | `request.arguments().unwrap(JsonNode::class.java)` |
 | membership | `request.arguments().has("k")` |
 | decode whole object | `request.arguments().decode<MyArgs>()` (via configured serde) |
 
@@ -152,9 +150,8 @@ ToolResult.structured(pojo)                                     // Jackson: POJO
 ## 6. Schemas — three shapes, one gotcha
 
 `inputSchema`/`outputSchema` accept a raw **String**, a Jackson **`JsonNode`**, or a kotlinx
-**`JsonObject`** on every overload. The `outputSchema` string overload arrived in
-**1.0.0-beta.25** — if you wrote a project-side shim for it against an earlier beta, delete the
-shim now.
+**`JsonObject`** on every overload. To skip hand-written schemas entirely, see
+[typed tools](_index.md#typed-tools) — they derive both schemas from your Kotlin types.
 
 - **Jackson 3**: `tools.jackson.databind.JsonNode`, *not* `com.fasterxml.jackson…`. Convert a
   kotlinx `JsonObject` once with `ObjectMapper().readTree(obj.toString())`.
@@ -258,6 +255,6 @@ val response = ctx.sendRequest("elicitation/create", params).join()
 - [ ] Client requests, including elicitation, → `ctx.sendRequest(method, params)`.
 - [ ] Re-audit every input-validation check the SDK path enforced — confirm it still runs against a trusted value.
 
-Full API reference: [`docs/tools.md`](tools.md), [`docs/resources.md`](resources.md), and
-[`docs/kotlin.md`](kotlin.md). 
-Hit a rough edge? [Open an issue](https://github.com/kpavlov/tachyon/issues/new) on the Tachyon repo.
+Continue with [Tools](../features/tools.md), [Resources](../features/resources.md), and the
+[Kotlin DSL](./).
+Hit a rough edge? [Open an issue](https://github.com/tachyonmcp/tachyon/issues/new) on the Tachyon repo.

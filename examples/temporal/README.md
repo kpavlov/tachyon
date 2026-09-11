@@ -29,10 +29,9 @@ Temporal Run ID, so Continue-As-New preserves the logical MCP task identity.
 
 ## Test locally
 
-Install the Tachyon snapshots, then run the JUnit 5 in-memory and Testcontainers tests:
+Run the JUnit 5 in-memory and Testcontainers tests:
 
 ```shell
-./mvnw install -pl tachyon-core,integrations/tachyon-tasks-temporal -am -DskipTests
 ./mvnw test -f examples/temporal/pom.xml
 ```
 
