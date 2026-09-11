@@ -65,6 +65,151 @@ versions used here:
 
 Add these dependencies to an existing [`tachyon-kotlin`](./#dependency) application.
 
+## Typed echo and simple reverse tools
+
+The [echo-kotlin project](https://github.com/tachyonmcp/tachyon/tree/main/examples/echo-kotlin)
+shows typed `echo` returning a response model and simple `reverse-echo` reading a string
+and returning text. The typed tool generates schemas from models; the simple tool uses a
+hand-written input schema. This version explicitly uses
+kotlinx.serialization for typed payloads.
+
+### Configure the build
+
+For a Gradle application, create `settings.gradle.kts` with
+`rootProject.name = "echo-server"` and use this `build.gradle.kts`:
+
+```kotlin
+plugins {
+    kotlin("jvm") version "2.2.21"
+    kotlin("plugin.serialization") version "2.2.21"
+    application
+}
+
+repositories { mavenCentral() }
+
+dependencies {
+    implementation(platform("dev.tachyonmcp:tachyon-bom:1.0.0-beta.25"))
+    implementation("dev.tachyonmcp:tachyon-kotlin-kt-schema")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+}
+
+kotlin { jvmToolchain(21) }
+
+application { mainClass = "EchoServerKt" }
+```
+
+For Maven, import the [Tachyon BOM](../quickstart.md#java--maven), add
+`tachyon-kotlin-kt-schema` and `kotlinx-serialization-json` (version `1.11.0`),
+and enable serialization in your existing Kotlin Maven plugin:
+
+```xml
+<configuration>
+    <jvmTarget>21</jvmTarget>
+    <compilerPlugins>
+        <plugin>kotlinx-serialization</plugin>
+    </compilerPlugins>
+</configuration>
+<dependencies>
+    <dependency>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-maven-serialization</artifactId>
+        <version>${kotlin.version}</version>
+    </dependency>
+</dependencies>
+```
+
+Use the same `kotlin.version` as the Kotlin Maven plugin (`2.2.21` here).
+`tachyon-kotlin-kt-schema` supplies the Kotlin DSL and the runtime schema factory.
+The serialization compiler plugin generates payload serializers; schema generation and payload
+serialization are separate steps.
+
+### Define the models and register both tools
+
+Save this as `src/main/kotlin/EchoServer.kt`:
+
+```kotlin
+import dev.tachyonmcp.api.json.JsonSchema
+import dev.tachyonmcp.api.server.config.Mode
+import dev.tachyonmcp.kotlin.server.buildServer
+import dev.tachyonmcp.kotlin.server.json.KxSerializationSerde
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import me.kpavlov.kt.schema.Description
+
+@Serializable
+@SerialName("EchoRequest")
+data class EchoRequest(
+    @Description("Message to echo")
+    val message: String,
+)
+
+@Serializable
+@SerialName("EchoResponse")
+data class EchoResponse(
+    @Description("Response message")
+    val reply: String,
+)
+
+fun main() {
+    val server = buildServer {
+        capabilities { tools { mode = Mode.ON } }
+        network {
+            host = "127.0.0.1"
+            port = 8080
+        }
+        info {
+            name = "echo-server"
+            version = "1.0"
+        }
+        json { serde = KxSerializationSerde.Default }
+        typedTool<EchoRequest, EchoResponse>(
+            name = "echo",
+            description = "Echo message",
+        ) { input ->
+            EchoResponse(input.message)
+        }
+    }
+
+    server.registerTool(
+        name = "reverse-echo",
+        description = "Echo reverse message",
+        inputSchema = JsonSchema.unchecked(
+            """
+            {
+              "type": "object",
+              "properties": {
+                "message": {"type": "string", "description": "Message to echo"}
+              },
+              "required": ["message"]
+            }
+            """,
+        ),
+    ) {
+        text(arguments.stringValue("message").reversed())
+    }
+
+    Runtime.getRuntime().addShutdownHook(Thread { server.close() })
+    server.start()
+}
+```
+
+Run `gradle --console=plain run`. Connect an MCP client to `http://127.0.0.1:8080/mcp`.
+For a curl request, use the [quickstart request](../quickstart.md#3-test-with-curl), setting both
+the `Mcp-Name` header and `params.name` to the tool name below and replacing `params.arguments`.
+
+| Tool | Arguments | Result |
+|---|---|---|
+| `echo` | `{"message":"Hello, MCP!"}` | `structuredContent: {"reply":"Hello, MCP!"}`, plus a JSON text block |
+| `reverse-echo` | `{"message":"stressed"}` | Text `desserts` |
+
+The `echo` tool publishes generated `EchoRequest` and `EchoResponse` schemas.
+The `reverse-echo` tool publishes its literal input schema and has no output schema. `typedTool` decodes its input before invoking the lambda;
+the simple tool reads `arguments.stringValue("message")` directly. Missing or non-string
+`message` values fail input validation before either handler runs.
+
+For a standalone simple server with no model dependency, see
+[Tool handlers](./#tool-handlers).
+
 ## Complete weather tool integration
 
 The following code comes from `examples/weather-mcp-kotlin`. The production example keeps each

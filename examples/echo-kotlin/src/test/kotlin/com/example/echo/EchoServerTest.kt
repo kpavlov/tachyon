@@ -7,9 +7,7 @@ import dev.tachyonmcp.testkit.McpClient
 import dev.tachyonmcp.testkit.McpTestClients
 import io.kotest.assertions.json.shouldEqualJson
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 
@@ -23,31 +21,20 @@ class EchoServerTest {
     fun beforeAll() {
         server = assembleServer(0)
         server.start()
-    }
-
-    @BeforeEach
-    fun beforeEach() {
         client = McpTestClients.forVersion(server.port(), "2025-11-25")
-    }
-
-    @AfterEach
-    fun afterEach() {
-        client.close()
+        client.initialize()
     }
 
     @AfterAll
     fun afterAll() {
+        client.close()
         server.close()
     }
 
     @Test
     fun `should list tools`() {
-        val sessionId = client.initialize()
-
-        // language=json
         val response =
             client.post(
-                sessionId,
                 """
                 {"jsonrpc":"2.0","id":1,"method":"tools/list"}
                 """.trimIndent(),
@@ -55,16 +42,37 @@ class EchoServerTest {
 
         val json = response.body()
         json shouldEqualJson
-            """
+            $$"""
             {"jsonrpc":"2.0","id":1,"result":{"tools":[
                 {
                   "name":"echo",
                   "description":"Echo message",
                   "inputSchema":{
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "EchoRequest",
                     "type":"object",
                     "properties": {
-                      "message":{"type":"string","description":"Message to echo"}},
-                      "required":["message"]}},
+                      "message":{"type":"string","description":"Message to echo"}
+                    },
+                    "required":["message"],
+                    "additionalProperties": false
+                  } ,
+                   "outputSchema": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "$id": "EchoResponse",
+                      "type": "object",
+                      "properties": {
+                        "reply": {
+                          "type": "string",
+                          "description": "Response message"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "reply"
+                      ]
+                    }
+                  },
                 {
                   "name": "reverse-echo",
                   "description": "Echo reverse message",
@@ -87,12 +95,8 @@ class EchoServerTest {
 
     @Test
     fun `echo tool`() {
-        val sessionId = client.initialize()
-
-        // language=json
         val response =
             client.post(
-                sessionId,
                 """
                 {"jsonrpc":"2.0","id":1,"method":"tools/call",
                      "params":{"name":"echo","arguments":{"message":"Hello, MCP!"}}}
@@ -109,30 +113,30 @@ class EchoServerTest {
                     "content": [
                       {
                         "type": "text",
-                        "text": "Hello, MCP!"
+                        "text": "{\"reply\":\"Hello, MCP!\"}"
                       }
-                    ]
+                    ],
+                    "structuredContent": {
+                      "reply": "Hello, MCP!"
+                    }
                   }
                 }
-                """.trimIndent()
+            """.trimIndent()
     }
 
     @Test
     fun `reverse echo tool`() {
-        val sessionId = client.initialize()
-
-        // language=json
-        val response = client.post(
-            sessionId,
-            """
-            {
-                "jsonrpc":"2.0",
-                "id":1,
-                "method":"tools/call",
-                "params":{"name":"reverse-echo","arguments":{"message":"stressed"}}
-            }
-            """.trimIndent(),
-        )
+        val response =
+            client.post(
+                """
+                {
+                    "jsonrpc":"2.0",
+                    "id":1,
+                    "method":"tools/call",
+                    "params":{"name":"reverse-echo","arguments":{"message":"stressed"}}
+                }
+                """.trimIndent(),
+            )
 
         val json = response.body()
         json shouldEqualJson
@@ -149,21 +153,21 @@ class EchoServerTest {
                     ]
                   }
                 }
-                """.trimIndent()
+            """.trimIndent()
     }
 
     @Test
     fun `should return error when message missing`() {
-        val sessionId = client.initialize()
-
-        // language=json
-        val response = client.post(
-            sessionId,
-            """
-                    {"jsonrpc":"2.0","id":1,"method":"tools/call",
-                     "params":{"name":"echo","arguments":{}}}
-                    """.trimIndent(),
-        )
+        val response =
+            client.post(
+                """
+                {
+                  "jsonrpc":"2.0",
+                  "id":1,
+                  "method":"tools/call",
+                  "params":{"name":"echo","arguments":{}}}
+                """.trimIndent(),
+            )
 
         response.body() shouldEqualJson
             """
@@ -180,7 +184,6 @@ class EchoServerTest {
 
     @Test
     fun `should respond to initialize`() {
-        // language=json
         val response =
             client.post(
                 null,
