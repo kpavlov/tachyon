@@ -21,15 +21,13 @@ class AbstractJanitorTest {
             }
         };
 
-        janitor.start(Duration.ofMillis(5));
-        try {
+        try (janitor) {
+            janitor.start(Duration.ofMillis(5));
             var deadline = System.currentTimeMillis() + 2000;
             while (count.get() < 2 && System.currentTimeMillis() < deadline) {
                 Thread.sleep(5);
             }
             assertThat(count.get()).isGreaterThanOrEqualTo(2);
-        } finally {
-            janitor.close();
         }
     }
 
@@ -46,15 +44,13 @@ class AbstractJanitorTest {
             }
         };
 
-        janitor.start(Duration.ofMillis(5));
-        try {
+        try (janitor) {
+            janitor.start(Duration.ofMillis(5));
             var deadline = System.currentTimeMillis() + 2000;
             while (count.get() < 2 && System.currentTimeMillis() < deadline) {
                 Thread.sleep(5);
             }
             assertThat(count.get()).isGreaterThanOrEqualTo(2);
-        } finally {
-            janitor.close();
         }
     }
 
@@ -68,13 +64,11 @@ class AbstractJanitorTest {
             }
         };
 
-        janitor.start(Duration.ofMillis(500));
-        janitor.start(Duration.ofMillis(500));
-        try {
+        try (janitor) {
+            janitor.start(Duration.ofMillis(500));
+            janitor.start(Duration.ofMillis(500));
             Thread.sleep(50);
             assertThat(count.get()).isZero();
-        } finally {
-            janitor.close();
         }
     }
 

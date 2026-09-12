@@ -316,7 +316,7 @@ Schema roots are validated at registration time: `inputSchema` must declare `"ty
 (tool-call arguments are always an object) or registration fails fast with
 `IllegalArgumentException` instead of surfacing later in the MCP client. `outputSchema` accepts
 any JSON Schema root — object, array, or scalar (see [Return results](../features/tools.md#return-results)
-for the per-protocol-version wire behavior). Tool descriptions longer than 2048 characters log a
+for the per-protocol-version wire behaviour). Tool descriptions longer than 2048 characters log a
 warning — clients may truncate them.
 
 ## Typed tools
@@ -445,7 +445,7 @@ The Kotlin DSL retains Tachyon's Jackson serde by default. Select kotlinx serial
 `json { serde = KxSerializationSerde(Json { ignoreUnknownKeys = false }) }`.
 `success(value)` encodes via the configured serde and pairs with the declared `outputSchema` —
 the resulting JSON must match whatever shape that schema declares (object, array, or scalar; see
-[Return results](../features/tools.md#return-results) for the per-protocol-version wire behavior).
+[Return results](../features/tools.md#return-results) for the per-protocol-version wire behaviour).
 For a pre-serialized JSON payload that bypasses the serde, use `ToolResult.raw(json, text)`.
 
 ### Typed decode/result via configured serde

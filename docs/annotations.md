@@ -148,5 +148,5 @@ themselves — registering two features under the same name silently replaces th
 ## Next steps
 
 - [Tools](features/tools.md) — register Tachyon-native handlers
-- [Extensions](extensions/) — add negotiated protocol behavior
+- [Extensions](extensions/) — add negotiated protocol behaviour
 - [Quickstart](quickstart.md) — run a minimal server

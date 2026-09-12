@@ -1170,7 +1170,7 @@ export interface ToolListChangedNotification extends JSONRPCNotification {
  *
  * NOTE: all properties in ToolAnnotations are **hints**.
  * They are not guaranteed to provide a faithful description of
- * tool behavior (including descriptive properties like `title`).
+ * tool behaviour (including descriptive properties like `title`).
  *
  * Clients should never make tool use decisions based on ToolAnnotations
  * received from untrusted servers.
@@ -1622,7 +1622,7 @@ export interface CreateMessageRequestParams extends TaskAugmentedRequestParams {
 }
 
 /**
- * Controls tool selection behavior for sampling requests.
+ * Controls tool selection behaviour for sampling requests.
  *
  * @category `sampling/createMessage`
  */

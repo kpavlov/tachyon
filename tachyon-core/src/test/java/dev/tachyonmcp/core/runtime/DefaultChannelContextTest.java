@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 class DefaultChannelContextTest {
@@ -56,12 +57,12 @@ class DefaultChannelContextTest {
     @Test
     void shouldStoreAndRetrieveAttributesByTypedKey() throws Exception {
         var key = AttributeKey.<String>of("greeting");
-        var before = new AtomicReference<Optional<String>>();
-        var after = new AtomicReference<Optional<String>>();
+        var before = new AtomicReference<@Nullable Optional<String>>();
+        var after = new AtomicReference<@Nullable Optional<String>>();
 
         try (TachyonServer server = TachyonServer.builder().build()) {
             var engine = (ServerEngine) server;
-            engine.registerHandler("test/attributes", new RpcMethodHandler() {
+            engine.registerHandler("test/attributes", new RpcMethodHandler<>() {
                 @Override
                 public String method() {
                     return "test/attributes";
@@ -94,11 +95,11 @@ class DefaultChannelContextTest {
     void shouldNotCollideBetweenDistinctKeysWithTheSameDebugName() throws Exception {
         var keyA = AttributeKey.<String>of("shared-name");
         var keyB = AttributeKey.<String>of("shared-name");
-        var values = new AtomicReference<Map<AttributeKey<String>, Optional<String>>>();
+        var values = new AtomicReference<@Nullable Map<AttributeKey<String>, Optional<String>>>();
 
         try (TachyonServer server = TachyonServer.builder().build()) {
             var engine = (ServerEngine) server;
-            engine.registerHandler("test/attributes", new RpcMethodHandler() {
+            engine.registerHandler("test/attributes", new RpcMethodHandler<>() {
                 @Override
                 public String method() {
                     return "test/attributes";

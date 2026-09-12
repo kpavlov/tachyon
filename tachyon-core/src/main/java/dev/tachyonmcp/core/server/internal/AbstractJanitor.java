@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Shared periodic-sweep scheduling for background cleanup tasks (session eviction, task
+ * Shared periodic-sweep scheduling for background clean-up tasks (session eviction, task
  * expiry/retention). A single daemon thread runs {@link #sweep()} at a fixed delay; exceptions
  * from a sweep are caught and logged so one failed pass doesn't cancel future runs.
  */

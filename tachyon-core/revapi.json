@@ -650,7 +650,7 @@
           "old": "class dev.tachyonmcp.core.server.handlers.DiscoverHandler",
           "new": "class dev.tachyonmcp.core.server.handlers.DiscoverHandler",
           "interface": "dev.tachyonmcp.core.server.RpcMethodHandler",
-          "justification": "Raw RpcMethodHandler parameterized to RpcMethodHandler<Object, Object>; erasure-identical, no behavior change",
+          "justification": "Raw RpcMethodHandler parameterized to RpcMethodHandler<Object, Object>; erasure-identical, no behaviour change",
           "attachments": {
             "since": "1.0.0-beta.21"
           }
@@ -661,7 +661,7 @@
           "old": "class dev.tachyonmcp.core.server.handlers.EmptyResultHandler",
           "new": "class dev.tachyonmcp.core.server.handlers.EmptyResultHandler",
           "interface": "dev.tachyonmcp.core.server.RpcMethodHandler",
-          "justification": "Raw RpcMethodHandler parameterized to RpcMethodHandler<Object, Object>; erasure-identical, no behavior change",
+          "justification": "Raw RpcMethodHandler parameterized to RpcMethodHandler<Object, Object>; erasure-identical, no behaviour change",
           "attachments": {
             "since": "1.0.0-beta.21"
           }
@@ -672,7 +672,7 @@
           "old": "class dev.tachyonmcp.core.server.handlers.PingHandler",
           "new": "class dev.tachyonmcp.core.server.handlers.PingHandler",
           "interface": "dev.tachyonmcp.core.server.RpcMethodHandler",
-          "justification": "Inherits EmptyResultHandler's raw-to-parameterized RpcMethodHandler<Object, Object> change; erasure-identical, no behavior change",
+          "justification": "Inherits EmptyResultHandler's raw-to-parameterized RpcMethodHandler<Object, Object> change; erasure-identical, no behaviour change",
           "attachments": {
             "since": "1.0.0-beta.21"
           }
@@ -1172,6 +1172,25 @@
           "code": "java.method.removed",
           "old": "method dev.tachyonmcp.core.server.ServerBuilder dev.tachyonmcp.core.server.ServerBuilder::monitoring(java.util.function.Consumer<dev.tachyonmcp.api.server.config.MonitoringConfig.Builder>)",
           "justification": "ADD YOUR EXPLANATION FOR THE NECESSITY OF THIS CHANGE",
+          "attachments": {
+            "since": "1.0.0-beta.26"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method dev.tachyonmcp.core.server.ServerBuilder dev.tachyonmcp.core.server.ServerBuilder::extension(dev.tachyonmcp.api.server.extensions.ServerExtension)",
+          "justification": "Remove deprecated method",
+          "attachments": {
+            "since": "1.0.0-beta.26"
+          }
+        },
+        {
+          "ignore": true,
+          "code": "java.method.removed",
+          "old": "method dev.tachyonmcp.api.server.config.MonitoringConfig dev.tachyonmcp.core.server.config.ServerConfig::monitoring()",
+          "justification": "ADD YOUR EXPLANATION FOR THE NECESSITY OF THIS CHANGE",
+          "justification": "Remove deprecated method",
           "attachments": {
             "since": "1.0.0-beta.26"
           }

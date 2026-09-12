@@ -39,7 +39,35 @@
         </dependency>
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-kotlin-kt-schema</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
             <artifactId>tachyon-extensions</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-testkit</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-annotations-langchain4j</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-annotations-mcp-java</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-annotations-spring-ai</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-opentelemetry</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.tachyonmcp</groupId>
+            <artifactId>tachyon-tasks-temporal</artifactId>
         </dependency>
         <dependency>
             <groupId>dev.tachyonmcp</groupId>
@@ -106,8 +134,14 @@
                             <classDirs>
                                 <dir>${project.basedir}/../tachyon-api/target/classes</dir>
                                 <dir>${project.basedir}/../tachyon-core/target/classes</dir>
-                                <dir>${project.basedir}/../tachyon-kotlin/target/classes</dir>
                                 <dir>${project.basedir}/../tachyon-extensions/target/classes</dir>
+                                <dir>${project.basedir}/../tachyon-kotlin-kt-schema/target/classes</dir>
+                                <dir>${project.basedir}/../tachyon-kotlin/target/classes</dir>
+                                <dir>${project.basedir}/../integrations/tachyon-annotations-langchain4j/target/classes</dir>
+                                <dir>${project.basedir}/../integrations/tachyon-annotations-mcp-java/target/classes</dir>
+                                <dir>${project.basedir}/../integrations/tachyon-annotations-spring-ai/target/classes</dir>
+                                <dir>${project.basedir}/../integrations/tachyon-opentelemetry/target/classes</dir>
+                                <dir>${project.basedir}/../integrations/tachyon-tasks-temporal/target/classes</dir>
                             </classDirs>
                             <rules>
                                 <rule>

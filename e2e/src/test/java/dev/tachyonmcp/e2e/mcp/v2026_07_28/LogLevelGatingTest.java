@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.tachyonmcp.api.server.domain.LoggingLevel;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.e2e.mcp.AbstractStatelessMcpE2eTest;
 import dev.tachyonmcp.testkit.Mcp20260728Client;
 import dev.tachyonmcp.testkit.McpClient;
@@ -36,7 +37,7 @@ class LogLevelGatingTest extends AbstractStatelessMcpE2eTest<McpClient> {
     @BeforeEach
     void registerFixtures() {
         startServer(
-                b -> b.capabilities(c -> c.logging()),
+                b -> b.capabilities(CapabilitiesConfig.Builder::logging),
                 s -> s.tools()
                         .register(
                                 tool -> tool.name("test_logging_tool")

@@ -9,7 +9,7 @@ description: |-
 ---
 
 MCP features define what clients can discover and call on your server. Start with the feature that
-matches your application behavior; you don't need to enable features you don't use.
+matches your application behaviour; you don't need to enable features you don't use.
 
 ## Expose server capabilities
 

@@ -172,7 +172,7 @@ class ExtensionsTest extends AbstractStatefulMcpE2eTest {
             var resp2 = client.sendRpc(sessionId, callWithMeta);
             assertThat(resp2).isSuccess().hasId(3).hasResult("""
                 {"status":"ok"}
-                    """);
+                """);
         }
     }
 

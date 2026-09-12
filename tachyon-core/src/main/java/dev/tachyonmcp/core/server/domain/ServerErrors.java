@@ -41,16 +41,14 @@ public final class ServerErrors {
      */
     @InternalApi
     public static ServerError fromUnhandledException(Throwable cause, String internalErrorDetail) {
-        if (cause instanceof InvalidArgumentException invalid) {
-            return invalidParams("invalid argument '" + invalid.argName() + "': " + invalid.getMessage());
-        }
-        if (cause instanceof MissingRequiredClientCapabilityException missing) {
-            return missingRequiredClientCapability(missing.getMessage(), missing.requiredCapabilities());
-        }
-        if (cause instanceof IllegalArgumentException) {
-            return invalidParams("Invalid params");
-        }
-        return internalError(internalErrorDetail);
+        return switch (cause) {
+            case InvalidArgumentException invalid ->
+                invalidParams("invalid argument '" + invalid.argName() + "': " + invalid.getMessage());
+            case MissingRequiredClientCapabilityException missing ->
+                missingRequiredClientCapability(missing.getMessage(), missing.requiredCapabilities());
+            case IllegalArgumentException illegalArgumentException -> invalidParams("Invalid params");
+            default -> internalError(internalErrorDetail);
+        };
     }
 
     public static ServerError resourceNotFound(String detail) {

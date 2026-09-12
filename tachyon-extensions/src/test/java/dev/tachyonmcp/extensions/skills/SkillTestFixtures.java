@@ -14,7 +14,7 @@ class SkillTestFixtures {
     static final Path classpathSkillsDir = Path.of("./src/test/resources/skills/");
 
     static TachyonServer startServer(SkillsExtension extension) {
-        return McpTestServers.start(builder -> builder.extension(extension), it -> {});
+        return McpTestServers.start(builder -> builder.withExtensions(extension), it -> {});
     }
 
     static Mcp20260728Client createClient(int port) {

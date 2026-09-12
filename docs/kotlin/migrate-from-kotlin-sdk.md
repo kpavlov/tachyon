@@ -4,12 +4,12 @@ weight: 90
 sidebar_order: 90
 toc: true
 description: |-
-  Port a Kotlin MCP SDK server to Tachyon: type-for-type API translation, dependency swap, and the behavior changes that don't fail to compile.
+  Port a Kotlin MCP SDK server to Tachyon: type-for-type API translation, dependency swap, and the behaviour changes that don't fail to compile.
 ---
 
 You have an MCP server on `io.modelcontextprotocol:kotlin-sdk` and its hand-rolled Ktor
 transport. Tachyon owns the transport, sessions, and validation for you — but the port
-touches every layer, and a few swaps are silent behavior changes if you copy mechanically.
+touches every layer, and a few swaps are silent behaviour changes if you copy mechanically.
 
 This guide is the map: the type-for-type translation, plus the three regressions that don't
 fail to compile and won't show up until a client hits them.

@@ -1,6 +1,6 @@
 ---
 name: tachyon-development
-description: Apply Tachyon MCP project rules when designing, implementing, reviewing, or testing Java and Kotlin server code, MCP protocol behavior, E2E fixtures, concurrency, JSON, and schemas.
+description: Apply Tachyon MCP project rules when designing, implementing, reviewing, or testing Java and Kotlin server code, MCP protocol behaviour, E2E fixtures, concurrency, JSON, and schemas.
 ---
 
 # Prime directives
@@ -23,10 +23,10 @@ description: Apply Tachyon MCP project rules when designing, implementing, revie
 - Java `ServerBuilder` is the implementation source of truth. Kotlin adds only thin adaptation for
   suspend lambdas and Kotlin-specific types; never duplicate validation or registration logic.
 - Treat `../../../examples/weather-mcp` and `examples/weather-mcp-kotlin` as Rosetta Stone examples. Keep their
-  MCP features, metadata, behavior, and coverage functionally identical when changing either one.
+  MCP features, metadata, behaviour, and coverage functionally identical when changing either one.
 - Keep Kotlin source files focused. At more than 300 lines, consider splitting by owned
   responsibility before adding code.
-- A public API change (new/changed method, param, wire field, or behavior contract like TTL/null
+- A public API change (new/changed method, param, wire field, or behaviour contract like TTL/null
   semantics) is not done until its docs are done: update the relevant file under `docs/`, this
   skill, and/or `docs/architecture/guidance.md` in the same change. Don't defer it to a follow-up.
 
@@ -57,7 +57,7 @@ description: Apply Tachyon MCP project rules when designing, implementing, revie
 - JUnit parallel execution is background pressure, not concurrency proof. Add dedicated E2E scenarios coordinating simultaneous clients with barriers/latches, virtual threads, bounded timeouts; never fixed sleeps.
 - For stateful concurrency, verify: unique active sessions, parallel requests across sessions, parallel requests within one session, response isolation even with repeated JSON-RPC IDs across sessions, and terminating one session without affecting others.
 - For stateless concurrency, verify: parallel initialization returns no session ID, concurrent requests never cross responses or client data.
-- Test observable server behavior through real clients. Don't add tests for test helpers.
+- Test observable server behaviour through real clients. Don't add tests for test helpers.
 
 # JSON/JSON Schemas
 

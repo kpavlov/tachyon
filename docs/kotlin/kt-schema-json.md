@@ -548,7 +548,7 @@ java -jar target/weather-mcp-kotlin.jar
 Connect an MCP client to `http://localhost:8080/mcp`, then inspect `get-weather` through
 `tools/list` or call it through `tools/call`.
 
-Next, see [JSON and JSON Schema](../json.md) for validation and provider behavior,
+Next, see [JSON and JSON Schema](../json.md) for validation and provider behaviour,
 [Tools](../features/tools.md) for tool contracts, the [Kotlin DSL](./) for handler APIs, or the
 [MCP 2026-07-28 schema reference](https://modelcontextprotocol.io/specification/2026-07-28/schema)
 for wire types.

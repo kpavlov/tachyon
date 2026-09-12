@@ -205,7 +205,7 @@ class CustomHeaderValidationTest extends AbstractStatelessMcpE2eTest<Mcp20260728
     /** Netty passes {@code 0x80}-{@code 0xFF} through as ISO-8859-1, so nothing else catches it. */
     @Test
     void rejectsParamHeaderWithNonAsciiCharacters() throws Exception {
-        var response = post(toolCallBody(11, "us-west1"), "us-west\u00e9");
+        var response = post(toolCallBody(11, "us-west1"), "us-westé");
 
         assertThatResponse(response).hasStatus(400).isJsonRpcError().hasId(11).hasErrorCode(-32020);
     }

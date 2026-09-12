@@ -47,7 +47,7 @@ public interface ToolDescriptor extends ServerFeature.Descriptor, HasMeta {
     @ExperimentalApi
     TaskSupport taskSupport();
 
-    /** Optional behavioral annotations (e.g. read-only, destructive) for this tool. */
+    /** Optional behavioural annotations (e.g. read-only, destructive) for this tool. */
     @Nullable
     ToolAnnotations annotations();
 
@@ -123,7 +123,7 @@ public interface ToolDescriptor extends ServerFeature.Descriptor, HasMeta {
         @ExperimentalApi
         Builder taskSupport(@Nullable TaskSupport taskSupport);
 
-        /** Sets the optional behavioral annotations (e.g. read-only, destructive) for this tool. */
+        /** Sets the optional behavioural annotations (e.g. read-only, destructive) for this tool. */
         Builder annotations(@Nullable ToolAnnotations annotations);
 
         /** Sets the icons for this tool. */

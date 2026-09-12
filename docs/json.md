@@ -71,7 +71,7 @@ List<String> roles = user.arrayValue("roles").valuesAs(String.class);
 
 Choose an accessor based on how your application handles missing or JSON `null` values:
 
-| Pattern | Behavior | Example |
+| Pattern | behaviour | Example |
 |---|---|---|
 | `*Value(name)` | Returns a required value; throws if missing or `null` | `stringValue("name")` |
 | `*Opt(name)` | Returns an `Optional` or primitive optional | `objectOpt("address")` |
@@ -133,7 +133,7 @@ META-INF/services/dev.tachyonmcp.api.json.spi.JsonSchemaFactory
 ## Configure payload serialization
 
 Tachyon uses Jackson by default. Supply a `PayloadSerde` when your application needs different
-serialization behavior:
+serialization behaviour:
 
 ```java
 var server = TachyonServer.builder()
@@ -148,7 +148,7 @@ You can also configure `PayloadSerializer` and `PayloadDeserializer` separately.
 ## Configure schema validation
 
 Tachyon validates tool input and output against their declared schemas. Replace either validator
-when you need custom validation behavior:
+when you need custom validation behaviour:
 
 ```java
 var server = TachyonServer.builder()

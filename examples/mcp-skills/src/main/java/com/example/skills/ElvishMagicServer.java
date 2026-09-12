@@ -5,10 +5,11 @@ import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.extensions.skills.ClasspathSkillsRegistry;
 import dev.tachyonmcp.extensions.skills.FilesystemSkillsRegistry;
 import dev.tachyonmcp.extensions.skills.SkillsExtension;
-import java.nio.file.Path;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.nio.file.Path;
 
 /**
  * Serves bundled fictional Elvish Agent Skills over MCP.

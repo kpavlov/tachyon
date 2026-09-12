@@ -64,7 +64,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest<McpClient> {
                   "ttlMs":null,
                   "resultType":"task"
                     }
-                    """);
+                  """);
 
             taskEngine.publish(completed);
             var getResponse = client.sendRpc("""
@@ -85,7 +85,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest<McpClient> {
                     "resultType":"complete"
                       }
                     }
-                    """);
+                  """);
             assertThat(taskEngine.refreshedTaskIds()).containsExactly("workflow-1");
         }
     }
@@ -103,7 +103,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest<McpClient> {
 
             assertThat(response).isSuccess().hasId(2).hasResult("""
                 {"resultType":"complete"}
-                    """);
+                """);
             assertThat(taskEngine.cancelledTaskIds()).containsExactly("workflow-cancel");
 
             var getResponse = client.sendRpc("""
@@ -118,7 +118,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest<McpClient> {
                   "ttlMs":null,
                   "resultType":"complete"
                     }
-                    """);
+                  """);
             assertThat(taskEngine.refreshedTaskIds()).containsExactly("workflow-cancel");
         }
     }
@@ -195,7 +195,7 @@ class TasksExtensionTest extends AbstractStatelessMcpE2eTest<McpClient> {
                     """);
             assertThat(response).isSuccess().hasId(2).hasResult("""
                 {"resultType":"complete"}
-                    """);
+                """);
             assertThat(taskEngine.cancelledTaskIds()).containsExactly("workflow-done");
         }
     }

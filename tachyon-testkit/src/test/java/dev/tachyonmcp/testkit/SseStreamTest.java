@@ -22,12 +22,20 @@ class SseStreamTest {
                 try (var accepted = server.accept()) {
                     consumeRequestHeaders(accepted);
                     var out = accepted.getOutputStream();
-                    out.write(("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\n\r\n" + "id: 1\n" + "event: mess")
-                            .getBytes(StandardCharsets.UTF_8));
+                    out.write(("""
+                        HTTP/1.1 200 OK\r
+                        Content-Type: text/event-stream\r
+                        \r
+                        id: 1
+                        event: mess""").getBytes(StandardCharsets.UTF_8));
                     out.flush();
                     Thread.sleep(20); // force the "event:" line to arrive split across two socket reads
-                    out.write(("age\n" + "data: line one\n" + "data: line two\n" + "\n")
-                            .getBytes(StandardCharsets.UTF_8));
+                    out.write(("""
+                        age
+                        data: line one
+                        data: line two
+
+                        """).getBytes(StandardCharsets.UTF_8));
                     out.flush();
 
                     var frame = stream.await(f -> true, Duration.ofSeconds(2));

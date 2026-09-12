@@ -74,7 +74,7 @@ class PromptsTest extends AbstractStatelessMcpE2eTest<McpClient> {
                   "role":"user",
                   "content":{"type":"text","text":"Hello world!"}
                 }]}
-                    """);
+                """);
         }
     }
 
@@ -167,7 +167,7 @@ class PromptsTest extends AbstractStatelessMcpE2eTest<McpClient> {
 
             assertThat(response).isSuccess().hasId(2).hasResult("""
                 {"prompts":[]}
-                    """);
+                """);
         }
     }
 
@@ -195,7 +195,7 @@ class PromptsTest extends AbstractStatelessMcpE2eTest<McpClient> {
                     "text":"embedded content"
                   }}
                 }]}
-                    """);
+                """);
         }
     }
 
@@ -223,7 +223,7 @@ class PromptsTest extends AbstractStatelessMcpE2eTest<McpClient> {
                     "mimeType":"image/png"
                   }
                 }]}
-                    """);
+                """);
         }
     }
 }

@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
 /**
  * Indicates that an annotated element is experimental and may be subject to
  * change or removal in future versions. This annotation serves as a warning
- * to developers that the API is not stable and its behavior may not be finalized.
+ * to developers that the API is not stable and its behaviour may not be finalized.
  * <p>
  * Use this annotation to mark classes, methods, constructors, fields, or packages
  * that are in an experimental state and should be used with caution.

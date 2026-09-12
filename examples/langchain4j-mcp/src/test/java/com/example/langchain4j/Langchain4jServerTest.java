@@ -23,7 +23,6 @@ class Langchain4jServerTest {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private static TachyonServer server;
-    private static HttpClientStreamableHttpTransport clientTransport;
     private static McpSyncClient client;
 
     @BeforeAll
@@ -31,7 +30,7 @@ class Langchain4jServerTest {
         server = Langchain4jServer.buildServer("localhost", 0, null, new OrderService());
         server.start();
 
-        clientTransport = HttpClientStreamableHttpTransport.builder("http://localhost:" + server.port())
+        final var clientTransport = HttpClientStreamableHttpTransport.builder("http://localhost:" + server.port())
             .build();
         client = McpClient.sync(clientTransport).build();
         client.initialize();

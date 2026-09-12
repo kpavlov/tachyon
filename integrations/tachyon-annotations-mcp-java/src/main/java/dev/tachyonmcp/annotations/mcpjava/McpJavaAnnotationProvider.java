@@ -190,20 +190,31 @@ public class McpJavaAnnotationProvider implements AnnotationProvider {
         return literal;
     }
 
-    private ToolResult convertToolResult(Object result, PayloadSerializer serializer) {
-        if (result == null) return ToolResult.empty();
-        if (result instanceof ToolResult tr) return tr;
-        if (result instanceof org.mcpjava.server.tools.ToolResponse tr) return convertMcpJavaToolResponse(tr);
-        if (result instanceof String s) return ToolResult.text(s);
-        if (result instanceof ContentBlock cb) {
-            return ToolResult.content(cb);
+    private ToolResult convertToolResult(@Nullable Object result, PayloadSerializer serializer) {
+        if (result == null) {
+            return ToolResult.empty();
         }
-        if (result instanceof List<?> list) {
-            List<ContentBlock> blocks = new ArrayList<>();
-            for (Object item : list) {
-                blocks.add(toContentBlock(item, serializer));
+        switch (result) {
+            case ToolResult tr -> {
+                return tr;
             }
-            return ToolResult.content(blocks.toArray(new ContentBlock[0]));
+            case org.mcpjava.server.tools.ToolResponse tr -> {
+                return convertMcpJavaToolResponse(tr);
+            }
+            case String s -> {
+                return ToolResult.text(s);
+            }
+            case ContentBlock cb -> {
+                return ToolResult.content(cb);
+            }
+            case List<?> list -> {
+                List<ContentBlock> blocks = new ArrayList<>();
+                for (Object item : list) {
+                    blocks.add(toContentBlock(item, serializer));
+                }
+                return ToolResult.content(blocks.toArray(new ContentBlock[0]));
+            }
+            default -> {}
         }
         if (result instanceof Number || result instanceof Boolean || result instanceof Character) {
             return ToolResult.text(result.toString());
@@ -481,25 +492,30 @@ public class McpJavaAnnotationProvider implements AnnotationProvider {
     }
 
     private PromptResult convertPromptResult(Object result, PayloadSerializer serializer) {
-        if (result instanceof PromptResult pr) return pr;
-        if (result instanceof String s) {
-            return PromptResult.messages(List.of(PromptMessage.user(s)));
-        }
-        if (result instanceof PromptMessage pm) {
-            return PromptResult.messages(List.of(pm));
-        }
-        if (result instanceof List<?> list) {
-            List<PromptMessage> messages = new ArrayList<>();
-            for (Object item : list) {
-                if (item instanceof PromptMessage pm) {
-                    messages.add(pm);
-                } else if (item instanceof String s) {
-                    messages.add(PromptMessage.user(s));
-                } else {
-                    messages.add(PromptMessage.user(serializer.serialize(item)));
-                }
+        switch (result) {
+            case PromptResult pr -> {
+                return pr;
             }
-            return PromptResult.messages(messages);
+            case String s -> {
+                return PromptResult.messages(List.of(PromptMessage.user(s)));
+            }
+            case PromptMessage pm -> {
+                return PromptResult.messages(List.of(pm));
+            }
+            case List<?> list -> {
+                List<PromptMessage> messages = new ArrayList<>();
+                for (Object item : list) {
+                    if (item instanceof PromptMessage pm) {
+                        messages.add(pm);
+                    } else if (item instanceof String s) {
+                        messages.add(PromptMessage.user(s));
+                    } else {
+                        messages.add(PromptMessage.user(serializer.serialize(item)));
+                    }
+                }
+                return PromptResult.messages(messages);
+            }
+            default -> {}
         }
         return PromptResult.messages(List.of(PromptMessage.user(serializer.serialize(result))));
     }
