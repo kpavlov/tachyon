@@ -13,57 +13,11 @@ import dev.tachyonmcp.api.server.features.tools.Tools;
  * Bridges the generic {@link AnnotationRegistrationContext} to the concrete feature registries
  * and configured payload serde of a constructed {@link TachyonServer}.
  */
-final class DefaultAnnotationRegistrationContext implements AnnotationRegistrationContext {
-
-    private final Tools tools;
-    private final Resources resources;
-    private final Prompts prompts;
-    private final Completions completions;
-    private final PayloadSerializer payloadSerializer;
-    private final PayloadDeserializer payloadDeserializer;
-
-    DefaultAnnotationRegistrationContext(
-            Tools tools,
-            Resources resources,
-            Prompts prompts,
-            Completions completions,
-            PayloadSerializer payloadSerializer,
-            PayloadDeserializer payloadDeserializer) {
-        this.tools = tools;
-        this.resources = resources;
-        this.prompts = prompts;
-        this.completions = completions;
-        this.payloadSerializer = payloadSerializer;
-        this.payloadDeserializer = payloadDeserializer;
-    }
-
-    @Override
-    public Tools tools() {
-        return tools;
-    }
-
-    @Override
-    public Resources resources() {
-        return resources;
-    }
-
-    @Override
-    public Prompts prompts() {
-        return prompts;
-    }
-
-    @Override
-    public Completions completions() {
-        return completions;
-    }
-
-    @Override
-    public PayloadSerializer payloadSerializer() {
-        return payloadSerializer;
-    }
-
-    @Override
-    public PayloadDeserializer payloadDeserializer() {
-        return payloadDeserializer;
-    }
-}
+record DefaultAnnotationRegistrationContext(
+        Tools tools,
+        Resources resources,
+        Prompts prompts,
+        Completions completions,
+        PayloadSerializer payloadSerializer,
+        PayloadDeserializer payloadDeserializer)
+        implements AnnotationRegistrationContext {}

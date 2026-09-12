@@ -40,7 +40,9 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.FutureTask;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,6 +84,11 @@ public class McpDispatcher {
     private final Executor executor;
 
     private final ServerEngine server;
+
+    private record InboundRequestKey(String sessionId, RequestId requestId) {}
+
+    private final ConcurrentHashMap<InboundRequestKey, CompletableFuture<?>> inboundRequests =
+            new ConcurrentHashMap<>();
 
     public McpDispatcher(ServerEngine server, Executor executor) {
         this.server = server;
@@ -307,42 +314,66 @@ public class McpDispatcher {
         // reattach() re-opens it there for the decode+kickoff phase.
         context.observation().closeStart();
 
-        return CompletableFuture.supplyAsync(
-                        () -> {
-                            var startNs = System.nanoTime();
-                            logger.debug("Handler start: method={}, id={}", method, id);
-
-                            if (session != null) {
-                                server.appendEvent(new SessionEvent.RequestEvent(
-                                        session.id(), id, method, paramsStr, System.currentTimeMillis()));
-                            }
-
-                            final var m = server.config().observability();
-                            var watchdog = m.slowRequestLogging()
-                                    ? HandlerWatchdog.watch(
-                                            method,
-                                            id,
-                                            startNs,
-                                            m.slowRequestThreshold().toMillis())
-                                    : CompletableFuture.completedFuture(null);
-                            var reattached = context.observation().reattach();
-                            try {
-                                CompletionStage<O> stage = OutboundSseStreamMessageRouter.withDispatchContext(
-                                        session != null ? session.id() : null,
-                                        outboundSseStream,
-                                        () -> decodeAndHandleAsync(handler, context, rawParams));
-                                return stage.whenComplete((r, e) -> watchdog.cancel(false));
-                            } catch (Exception e) {
-                                watchdog.cancel(false);
-                                return CompletableFuture.failedFuture(e);
-                            } finally {
-                                context.observation().closeReattached(reattached);
-                            }
-                        },
-                        executor)
-                .thenCompose(stage -> stage)
-                // handle(), not handleAsync(executor): encoding is a cheap ByteBuf serialize and the
-                // completing thread is never the event loop — no need to burn a VT per request on it.
+        final var completion = new CompletableFuture<O>();
+        final var key = session != null ? new InboundRequestKey(session.id(), id) : null;
+        if (key != null) {
+            if (inboundRequests.putIfAbsent(key, completion) != null) {
+                return CompletableFuture.completedFuture(
+                        rejected(id, ServerErrors.invalidRequest("Request ID already in flight"), context));
+            }
+        }
+        final var task = new FutureTask<Void>(() -> {
+            try {
+                final var startNs = System.nanoTime();
+                logger.debug("Handler start: method={}, id={}", method, id);
+                if (session != null) {
+                    server.appendEvent(new SessionEvent.RequestEvent(
+                            session.id(), id, method, paramsStr, System.currentTimeMillis()));
+                }
+                final var m = server.config().observability();
+                final var watchdog = m.slowRequestLogging()
+                        ? HandlerWatchdog.watch(
+                                method, id, startNs, m.slowRequestThreshold().toMillis())
+                        : CompletableFuture.completedFuture(null);
+                completion.whenComplete((result, error) -> watchdog.cancel(false));
+                final var reattached = context.observation().reattach();
+                CompletionStage<O> stage;
+                try {
+                    stage = OutboundSseStreamMessageRouter.withDispatchContext(
+                            session != null ? session.id() : null,
+                            outboundSseStream,
+                            () -> decodeAndHandleAsync(handler, context, rawParams));
+                } catch (Throwable e) {
+                    stage = CompletableFuture.failedFuture(e);
+                } finally {
+                    context.observation().closeReattached(reattached);
+                }
+                final var handlerStage = stage;
+                completion.whenComplete((result, error) -> {
+                    if (completion.isCancelled())
+                        handlerStage.toCompletableFuture().cancel(true);
+                });
+                handlerStage.whenComplete((result, error) -> {
+                    if (error != null) completion.completeExceptionally(error);
+                    else completion.complete(result);
+                });
+            } catch (Throwable e) {
+                completion.completeExceptionally(e);
+            }
+            return null;
+        });
+        completion.whenComplete((result, error) -> {
+            if (completion.isCancelled()) task.cancel(true);
+        });
+        try {
+            executor.execute(task);
+        } catch (RuntimeException e) {
+            completion.completeExceptionally(e);
+        }
+        return completion
+                .whenComplete((result, error) -> {
+                    if (key != null) inboundRequests.remove(key, completion);
+                })
                 .handle((result, ex) -> {
                     if (ex != null) {
                         return handleHandlerError(id, method, ex, context);
@@ -493,9 +524,9 @@ public class McpDispatcher {
         server.getSession(sessionId)
                 .ifPresentOrElse(
                         session -> {
-                            var reasonMsg = cancellation.reason() != null ? ": " + cancellation.reason() : "";
-                            var cancelled = server.failPendingRequest(
-                                    cancellation.requestId(), sessionId, null, "Cancelled" + reasonMsg);
+                            final var inbound =
+                                    inboundRequests.get(new InboundRequestKey(sessionId, cancellation.requestId()));
+                            final var cancelled = inbound != null && inbound.cancel(true);
                             logger.debug(
                                     "Cancellation received: requestId={}, sessionId={}, reason={}, pending={}",
                                     cancellation.requestId(),
