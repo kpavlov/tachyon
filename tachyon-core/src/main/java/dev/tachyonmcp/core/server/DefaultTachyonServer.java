@@ -51,6 +51,7 @@ import dev.tachyonmcp.core.server.handlers.LoggingHandlers;
 import dev.tachyonmcp.core.server.handlers.PingHandler;
 import dev.tachyonmcp.core.server.handlers.SubscriptionsListenHandler;
 import dev.tachyonmcp.core.server.internal.NotificationLogSupport;
+import dev.tachyonmcp.core.server.internal.OperationTracker;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.server.json.JacksonPayloadSerde;
 import dev.tachyonmcp.core.server.json.JsonUtils;
@@ -112,6 +113,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     private final Map<String, RpcMethodHandler<?, ?>> methodHandlers = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<RequestId, PendingRequestEntry> pendingRequests = new ConcurrentHashMap<>();
     private final ExecutorService executor;
+    private final OperationTracker operations = new OperationTracker();
     private final List<ServerExtension> extensions;
     private final @Nullable Consumer<ChannelPipeline> pipelineCustomizer;
     private final Map<String, String> extensionMethodOwners = new ConcurrentHashMap<>();
@@ -162,6 +164,11 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     @Override
     public ExecutorService executor() {
         return executor;
+    }
+
+    @Override
+    public OperationTracker operations() {
+        return operations;
     }
 
     @Override
@@ -588,12 +595,39 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         }
     }
 
-    private void shutdownExtensions() {
+    /**
+     * Runs each extension's {@link ServerExtension#shutdown()} bounded by the shared shutdown
+     * deadline, so a slow extension cannot make {@link #close()} run past the configured grace
+     * period on top of whatever {@link OperationTracker#drain} already spent waiting on in-flight
+     * requests. A slow extension is logged and left running in the background rather than blocked
+     * on indefinitely.
+     */
+    private void shutdownExtensions(long deadlineNanos) {
         for (var ext : extensions) {
+            final var worker = Thread.ofVirtual()
+                    .name("ext-shutdown-" + ext.extensionId())
+                    .start(() -> {
+                        try {
+                            ext.shutdown();
+                        } catch (Exception e) {
+                            logger.warn("Extension shutdown error: {}", ext.extensionId(), e);
+                        }
+                    });
+            var remainingMs = (deadlineNanos - System.nanoTime()) / 1_000_000;
+            if (remainingMs <= 0) {
+                logger.warn("Shutdown grace period already elapsed, not waiting on extension: {}", ext.extensionId());
+                continue;
+            }
             try {
-                ext.shutdown();
-            } catch (Exception e) {
-                logger.warn("Extension shutdown error: {}", ext.extensionId(), e);
+                worker.join(remainingMs);
+                if (worker.isAlive()) {
+                    logger.warn(
+                            "Extension shutdown exceeded remaining grace period, continuing without waiting further: {}",
+                            ext.extensionId());
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
             }
         }
     }
@@ -915,22 +949,29 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     @Override
     public void close() {
         if (transport instanceof NettyServer netty) {
+            if (netty.inEventLoop()) {
+                throw new IllegalStateException("close() must not be called from a Netty event loop thread — "
+                        + "draining in-flight requests needs that thread to flush their responses. "
+                        + "Call close() from another thread.");
+            }
             netty.stopAccepting();
         }
         try {
             logger.info("Shutting down TachyonMCP Server");
-            subscriptionRegistry.closeAll();
-            shutdownExtensions();
-            executor.shutdown();
+            final var deadline =
+                    System.nanoTime() + config.runtime().shutdownGracePeriod().toNanos();
             try {
-                var grace = config.runtime().shutdownGracePeriod();
-                if (!executor.awaitTermination(grace.toMillis(), TimeUnit.MILLISECONDS)) {
+                operations.drain(deadline);
+                executor.shutdown();
+                if (!executor.awaitTermination(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS)) {
                     executor.shutdownNow();
                 }
             } catch (InterruptedException e) {
                 executor.shutdownNow();
                 Thread.currentThread().interrupt();
             }
+            subscriptionRegistry.closeAll();
+            shutdownExtensions(deadline);
             taskRegistry.stopTtlJanitor();
             sessionManager.close();
             sessionEventStore.close();

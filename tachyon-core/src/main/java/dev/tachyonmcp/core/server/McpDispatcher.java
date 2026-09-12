@@ -216,6 +216,39 @@ public class McpDispatcher {
             @Nullable String sessionId,
             @Nullable OutboundSseStream outboundSseStream,
             @Nullable ChannelContext channelContext) {
+        return dispatchRequestAsync(
+                id,
+                method,
+                params,
+                sessionId,
+                outboundSseStream,
+                channelContext,
+                CompletableFuture.completedFuture(null));
+    }
+
+    /** Dispatches a request and retains its shutdown admission until the transport finishes writing. */
+    public CompletableFuture<DispatchResult> dispatchRequestAsync(
+            RequestId id,
+            String method,
+            Object params,
+            @Nullable String sessionId,
+            @Nullable OutboundSseStream outboundSseStream,
+            @Nullable ChannelContext channelContext,
+            CompletableFuture<Void> transportCompletion) {
+        return server.operations()
+                .execute(
+                        () -> dispatchTrackedRequestAsync(
+                                id, method, params, sessionId, outboundSseStream, channelContext),
+                        transportCompletion);
+    }
+
+    private CompletableFuture<DispatchResult> dispatchTrackedRequestAsync(
+            RequestId id,
+            String method,
+            Object params,
+            @Nullable String sessionId,
+            @Nullable OutboundSseStream outboundSseStream,
+            @Nullable ChannelContext channelContext) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(method, "method");
 

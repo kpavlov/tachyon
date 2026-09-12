@@ -2,7 +2,10 @@
 package dev.tachyonmcp.core.transport.netty;
 
 import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.captureInitRequest;
+import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.completeOn;
+import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.isRefused;
 import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.sendAccepted;
+import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.sendAcceptedAsync;
 import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.sendPlainTextAndClose;
 import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.sendResponseAndClose;
 import static dev.tachyonmcp.core.transport.netty.McpResponseWriter.sendJsonResponse;
@@ -16,6 +19,7 @@ import dev.tachyonmcp.core.server.McpDispatcher;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.transport.jsonrpc.JsonRpcMessage;
 import dev.tachyonmcp.core.transport.netty.sse.PostSseStream;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -156,22 +160,42 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
         }
         var heartbeatInterval = server.config().network().heartbeatInterval();
         var postStream = new PostSseStream(ctx.channel(), origin, server::nextEventId, heartbeatInterval);
+        final var transportCompletion = new CompletableFuture<Void>();
         dispatcher
                 .dispatchRequestAsync(
-                        id, method, params, null, postStream, ChannelHandlerUtils.requireInteractionContext(ctx))
-                .whenComplete((result, ex) -> ctx.executor().execute(() -> {
+                        id,
+                        method,
+                        params,
+                        null,
+                        postStream,
+                        ChannelHandlerUtils.requireInteractionContext(ctx),
+                        transportCompletion)
+                .whenComplete((result, ex) -> marshalResponse(ctx, transportCompletion, () -> {
                     if (ex != null) {
                         postStream.terminate();
+                        if (isRefused(ex)) {
+                            logger.debug("Pre-session request refused: method={}", method);
+                            completeOn(
+                                    sendPlainTextAndClose(
+                                            ctx,
+                                            HttpResponseStatus.SERVICE_UNAVAILABLE,
+                                            "Server shutting down",
+                                            origin),
+                                    transportCompletion);
+                            return;
+                        }
                         logger.error("Dispatch failed for pre-session request: method={}", method, ex);
-                        sendResponseAndClose(
-                                ctx,
-                                HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                                "application/json",
-                                dispatcher.parseError(ChannelHandlerUtils.requireInteractionContext(ctx)),
-                                origin);
+                        completeOn(
+                                sendResponseAndClose(
+                                        ctx,
+                                        HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                                        "application/json",
+                                        dispatcher.parseError(ChannelHandlerUtils.requireInteractionContext(ctx)),
+                                        origin),
+                                transportCompletion);
                         return;
                     }
-                    completeDispatch(ctx, postStream, result, origin, null);
+                    completeOn(completeDispatch(ctx, postStream, result, origin, null), transportCompletion);
                 }));
     }
 
@@ -183,7 +207,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
      * transition once the {@link McpDispatcher.DispatchResult.Response} is known, before the response
      * is written; {@code onResponseReady} carries that (a no-op for every other pre-session request).
      */
-    private void completeDispatch(
+    private ChannelFuture completeDispatch(
             ChannelHandlerContext ctx,
             PostSseStream postStream,
             McpDispatcher.DispatchResult result,
@@ -191,13 +215,11 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
             @Nullable Consumer<McpDispatcher.DispatchResult.Response> onResponseReady) {
         if (result instanceof McpDispatcher.DispatchResult.Accepted) {
             postStream.terminate();
-            sendAccepted(ctx, origin);
-            return;
+            return sendAcceptedAsync(ctx, origin);
         }
         if (result instanceof McpDispatcher.DispatchResult.Status(int code, String statusMessage)) {
             postStream.terminate();
-            sendPlainTextAndClose(ctx, HttpResponseStatus.valueOf(code), statusMessage, origin);
-            return;
+            return sendPlainTextAndClose(ctx, HttpResponseStatus.valueOf(code), statusMessage, origin);
         }
         var response = (McpDispatcher.DispatchResult.Response) result;
         if (onResponseReady != null) {
@@ -205,16 +227,26 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
         }
         if (postStream.started()) {
             postStream.writeEvent(server.nextEventId(), response.responseBody(), null);
-            postStream.terminate();
-            return;
+            return postStream.terminateAsync();
         }
         postStream.terminate();
-        sendJsonResponse(
+        return sendJsonResponse(
                 ctx,
                 response.responseBody(),
                 HttpResponseStatus.valueOf(response.httpStatus()),
                 response.sessionId(),
                 origin);
+    }
+
+    private static void marshalResponse(
+            ChannelHandlerContext ctx, CompletableFuture<Void> completion, Runnable response) {
+        try {
+            CompletableFuture.runAsync(response, ctx.executor()).whenComplete((unused, failure) -> {
+                if (failure != null) completion.completeExceptionally(failure);
+            });
+        } catch (RuntimeException e) {
+            completion.completeExceptionally(e);
+        }
     }
 
     private void handleInitialize(ChannelHandlerContext ctx, RequestId id, Object params, @Nullable String origin) {
@@ -223,6 +255,7 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
         final var startNs = System.nanoTime();
         logger.debug("Initialize request: id={}", id);
 
+        final var transportCompletion = new CompletableFuture<Void>();
         dispatcher
                 .dispatchRequestAsync(
                         id,
@@ -230,32 +263,51 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                         params,
                         null,
                         postStream,
-                        ChannelHandlerUtils.requireInteractionContext(ctx))
-                .whenComplete((result, ex) -> ctx.executor().execute(() -> {
+                        ChannelHandlerUtils.requireInteractionContext(ctx),
+                        transportCompletion)
+                .whenComplete((result, ex) -> marshalResponse(ctx, transportCompletion, () -> {
                     var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
                     if (ex != null) {
                         postStream.terminate();
+                        if (isRefused(ex)) {
+                            logger.debug("Initialize refused: id={}, elapsed={}ms", id, elapsedMs);
+                            completeOn(
+                                    sendPlainTextAndClose(
+                                            ctx,
+                                            HttpResponseStatus.SERVICE_UNAVAILABLE,
+                                            "Server shutting down",
+                                            origin),
+                                    transportCompletion);
+                            return;
+                        }
                         logger.error("Initialize dispatch failed: id={}, elapsed={}ms", id, elapsedMs, ex);
-                        sendResponseAndClose(
-                                ctx,
-                                HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                                "application/json",
-                                dispatcher.parseError(ChannelHandlerUtils.requireInteractionContext(ctx)),
-                                origin);
+                        completeOn(
+                                sendResponseAndClose(
+                                        ctx,
+                                        HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                                        "application/json",
+                                        dispatcher.parseError(ChannelHandlerUtils.requireInteractionContext(ctx)),
+                                        origin),
+                                transportCompletion);
                         return;
                     }
                     logger.debug("Initialize response: id={}, elapsed={}ms", id, elapsedMs);
-                    completeDispatch(ctx, postStream, result, origin, response -> {
-                        var resultSessionId = response.sessionId();
-                        // Fire event with the live Session — InteractionHandler binds it into
-                        // InteractionContext, and LifecyclePipelineCoordinator replaces this handler
-                        // with McpOperationHandler.
-                        var mcpSession = resultSessionId != null
-                                ? server.getLocalSession(resultSessionId).orElse(null)
-                                : null;
-                        ctx.pipeline().fireUserEventTriggered(new InteractionEvent.OperationStarted(mcpSession));
-                        logger.debug("Pipeline transitioned to OPERATION phase for session: {}", resultSessionId);
-                    });
+                    completeOn(
+                            completeDispatch(ctx, postStream, result, origin, response -> {
+                                var resultSessionId = response.sessionId();
+                                // Fire event with the live Session — InteractionHandler binds it into
+                                // InteractionContext, and LifecyclePipelineCoordinator replaces this handler
+                                // with McpOperationHandler.
+                                var mcpSession = resultSessionId != null
+                                        ? server.getLocalSession(resultSessionId)
+                                                .orElse(null)
+                                        : null;
+                                ctx.pipeline()
+                                        .fireUserEventTriggered(new InteractionEvent.OperationStarted(mcpSession));
+                                logger.debug(
+                                        "Pipeline transitioned to OPERATION phase for session: {}", resultSessionId);
+                            }),
+                            transportCompletion);
                 }));
     }
 

@@ -3,7 +3,10 @@ package dev.tachyonmcp.core.transport.netty;
 
 import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.bindSession;
 import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.captureInitRequest;
+import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.completeOn;
+import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.isRefused;
 import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.sendAccepted;
+import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.sendAcceptedAsync;
 import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.sendPlainTextAndClose;
 import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.sendResponseAndClose;
 import static dev.tachyonmcp.core.transport.netty.McpResponseWriter.sendInternalError;
@@ -279,8 +282,9 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         final var requestId = req.id();
         final var method = req.method();
         final var startNs = System.nanoTime();
+        final var transportCompletion = new CompletableFuture<Void>();
         dispatcher
-                .dispatchRequestAsync(requestId, method, req.params(), sessionId, postStream, ic)
+                .dispatchRequestAsync(requestId, method, req.params(), sessionId, postStream, ic, transportCompletion)
                 .whenComplete((result, ex) -> {
                     try {
                         ctx.executor()
@@ -294,8 +298,10 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
                                         startNs,
                                         result,
                                         ex,
-                                        ic));
+                                        ic,
+                                        transportCompletion));
                     } catch (RejectedExecutionException e) {
+                        transportCompletion.completeExceptionally(e);
                         logger.debug(
                                 "Event loop rejected response marshal during shutdown: id={}, method={}",
                                 requestId,
@@ -314,73 +320,100 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
             long startNs,
             McpDispatcher.@Nullable DispatchResult result,
             @Nullable Throwable ex,
-            ChannelContext ic) {
-        var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
-        var m = server.config().observability();
-        if (ex != null) {
-            logger.error("Dispatch failed: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs, ex);
+            ChannelContext ic,
+            CompletableFuture<Void> transportCompletion) {
+        try {
+            var elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
+            var m = server.config().observability();
+            if (ex != null) {
+                final var refused = isRefused(ex);
+                if (refused) {
+                    logger.debug("Dispatch refused: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);
+                } else {
+                    logger.error("Dispatch failed: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs, ex);
+                }
+                if (postStream.started()) {
+                    completeOn(postStream.terminateAsync(), transportCompletion);
+                } else {
+                    // Neutralize the stream so a late server→client message cannot start a
+                    // second HTTP response on this channel, then send the error.
+                    postStream.terminate();
+                    completeOn(
+                            refused
+                                    ? sendPlainTextAndClose(
+                                            ctx, HttpResponseStatus.SERVICE_UNAVAILABLE, "Server shutting down", origin)
+                                    : sendInternalError(
+                                            ctx,
+                                            requestId,
+                                            origin,
+                                            ic.protocol().responseMapper()),
+                            transportCompletion);
+                }
+                return;
+            }
+            if (result instanceof McpDispatcher.DispatchResult.Status(int code, String message)) {
+                // Transport-level signal from the dispatcher — spec ties this condition to a raw HTTP
+                // status, not a JSON-RPC error envelope.
+                postStream.terminate();
+                completeOn(
+                        sendPlainTextAndClose(ctx, HttpResponseStatus.valueOf(code), message, origin),
+                        transportCompletion);
+                return;
+            }
             if (postStream.started()) {
-                postStream.terminate();
-            } else {
-                // Neutralize the stream so a late server→client message cannot start a
-                // second HTTP response on this channel, then send the JSON error.
-                postStream.terminate();
-                sendInternalError(ctx, requestId, origin, ic.protocol().responseMapper());
+                if (m.slowRequestLogging()
+                        && elapsedMs > m.slowRequestThreshold().toMillis()) {
+                    logger.warn("Slow POST-SSE response: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);
+                } else {
+                    logger.debug("POST-SSE response: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);
+                }
+                // Finalization decodes the response body and appends to the event log —
+                // too heavy for the event loop. PostSseStream writes marshal themselves.
+                try {
+                    executor.execute(() ->
+                            finalizePostSseResponse(requestId, sessionId, postStream, result, transportCompletion));
+                } catch (RejectedExecutionException e) {
+                    completeOn(postStream.terminateAsync(), transportCompletion);
+                }
+                return;
             }
-            return;
-        }
-        if (result instanceof McpDispatcher.DispatchResult.Status(int code, String message)) {
-            // Transport-level signal from the dispatcher — spec ties this condition to a raw HTTP
-            // status, not a JSON-RPC error envelope.
+            // A keep-alive JSON/202 response is about to be written; neutralize the unused
+            // stream so a server→client message that arrives after this check (e.g. an async
+            // tool's status notification) cannot open a second response on the pooled socket
+            // and corrupt the next request's reuse of it.
             postStream.terminate();
-            sendPlainTextAndClose(ctx, HttpResponseStatus.valueOf(code), message, origin);
-            return;
-        }
-        if (postStream.started()) {
+            if (result instanceof McpDispatcher.DispatchResult.Accepted) {
+                completeOn(sendAcceptedAsync(ctx, origin), transportCompletion);
+                return;
+            }
             if (m.slowRequestLogging() && elapsedMs > m.slowRequestThreshold().toMillis()) {
-                logger.warn("Slow POST-SSE response: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);
+                logger.warn("Slow POST response: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);
             } else {
-                logger.debug("POST-SSE response: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);
+                logger.debug("POST response: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);
             }
-            // Finalization decodes the response body and appends to the event log —
-            // too heavy for the event loop. PostSseStream writes marshal themselves.
-            try {
-                executor.execute(() -> finalizePostSseResponse(requestId, sessionId, postStream, result));
-            } catch (RejectedExecutionException e) {
-                postStream.terminate();
-            }
-            return;
+            var response = (McpDispatcher.DispatchResult.Response) result;
+            completeOn(
+                    sendJsonResponse(
+                            ctx,
+                            response.responseBody(),
+                            HttpResponseStatus.valueOf(response.httpStatus()),
+                            response.sessionId(),
+                            origin),
+                    transportCompletion);
+        } catch (RuntimeException e) {
+            transportCompletion.completeExceptionally(e);
+            throw e;
         }
-        // A keep-alive JSON/202 response is about to be written; neutralize the unused
-        // stream so a server→client message that arrives after this check (e.g. an async
-        // tool's status notification) cannot open a second response on the pooled socket
-        // and corrupt the next request's reuse of it.
-        postStream.terminate();
-        if (result instanceof McpDispatcher.DispatchResult.Accepted) {
-            sendAccepted(ctx, origin);
-            return;
-        }
-        if (m.slowRequestLogging() && elapsedMs > m.slowRequestThreshold().toMillis()) {
-            logger.warn("Slow POST response: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);
-        } else {
-            logger.debug("POST response: id={}, method={}, elapsed={}ms", requestId, method, elapsedMs);
-        }
-        var response = (McpDispatcher.DispatchResult.Response) result;
-        sendJsonResponse(
-                ctx,
-                response.responseBody(),
-                HttpResponseStatus.valueOf(response.httpStatus()),
-                response.sessionId(),
-                origin);
     }
 
     private void finalizePostSseResponse(
             RequestId requestId,
             @Nullable String sessionId,
             PostSseStream postStream,
-            McpDispatcher.@Nullable DispatchResult result) {
+            McpDispatcher.@Nullable DispatchResult result,
+            CompletableFuture<Void> transportCompletion) {
         if (!(result instanceof McpDispatcher.DispatchResult.Response response)) {
-            postStream.terminate();
+            completeOn(postStream.terminateAsync(), transportCompletion);
             return;
         }
         var responseBody = response.responseBody();
@@ -402,7 +435,7 @@ public class McpOperationHandler extends ChannelInboundHandlerAdapter {
         } catch (RuntimeException e) {
             logger.error("Failed to write final response on POST-SSE stream", e);
         } finally {
-            postStream.terminate();
+            completeOn(postStream.terminateAsync(), transportCompletion);
         }
     }
 

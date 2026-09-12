@@ -25,6 +25,9 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.RejectedExecutionException;
 import org.jspecify.annotations.Nullable;
 
 public final class ChannelHandlerUtils {
@@ -155,12 +158,44 @@ public final class ChannelHandlerUtils {
     }
 
     public static void sendAccepted(ChannelHandlerContext ctx, @Nullable String origin) {
+        sendAcceptedAsync(ctx, origin);
+    }
+
+    /**
+     * Returns whether a failed dispatch was refused because the server has no capacity for it —
+     * shutdown has started, or the handler executor rejected the task. Callers answer these with
+     * {@code 503 Service Unavailable} and a DEBUG log, not a {@code 500} and an ERROR: nothing is
+     * broken and no operator action is needed.
+     */
+    public static boolean isRefused(Throwable ex) {
+        return ex instanceof CompletionException ce && ce.getCause() != null
+                ? ce.getCause() instanceof RejectedExecutionException
+                : ex instanceof RejectedExecutionException;
+    }
+
+    /** Writes an accepted response and returns its write completion. */
+    public static ChannelFuture sendAcceptedAsync(ChannelHandlerContext ctx, @Nullable String origin) {
         var response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.ACCEPTED);
         response.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0);
         if (origin != null) {
             response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
         }
-        ctx.writeAndFlush(response);
+        return ctx.writeAndFlush(response);
+    }
+
+    /**
+     * Completes {@code transportCompletion} once {@code future} finishes, mirroring its outcome —
+     * used to let {@link dev.tachyonmcp.core.server.internal.OperationTracker#drain} know a
+     * response write has finished, whether it succeeded or failed.
+     */
+    public static void completeOn(ChannelFuture future, CompletableFuture<Void> transportCompletion) {
+        future.addListener(f -> {
+            if (f.isSuccess()) {
+                transportCompletion.complete(null);
+            } else {
+                transportCompletion.completeExceptionally(f.cause());
+            }
+        });
     }
 
     /**
