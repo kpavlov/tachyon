@@ -3,13 +3,17 @@ package dev.tachyonmcp.core.server;
 
 import static dev.tachyonmcp.core.test.TestUtils.newEngine;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import dev.tachyonmcp.api.server.config.RuntimeConfig;
 import dev.tachyonmcp.api.server.domain.RequestId;
+import dev.tachyonmcp.api.server.extensions.AdvertiseMode;
+import dev.tachyonmcp.api.server.extensions.ServerExtension;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
@@ -41,6 +45,85 @@ class ServerShutdownGraceTest {
         assertThat(elapsedMs)
                 .as("idle close must not wait for the grace period")
                 .isLessThan(1_000L);
+    }
+
+    @Test
+    void closeDrainsAsyncHandlerAndItsExecutorContinuation() throws Exception {
+        final var started = new CountDownLatch(1);
+        final var result = new CompletableFuture<ToolResult>();
+        final var extensionClosed = new CountDownLatch(1);
+        final var extension = new ServerExtension() {
+            @Override
+            public String extensionId() {
+                return "test/shutdown";
+            }
+
+            @Override
+            public AdvertiseMode advertiseMode() {
+                return AdvertiseMode.ALWAYS;
+            }
+
+            @Override
+            public void shutdown() {
+                extensionClosed.countDown();
+            }
+        };
+        final var server = newEngine(
+                b -> b.withExtensions(extension).runtime(r -> r.shutdownGracePeriod(Duration.ofSeconds(2))),
+                s -> s.tools().registerAsync(builder -> builder.name("async_probe"), (context, request) -> {
+                    started.countDown();
+                    return result;
+                }));
+        server.createSession("sess-async").activate();
+        final var dispatcher = new McpDispatcher(server, server.executor());
+        final var response = dispatcher.dispatchRequestAsync(
+                RequestId.of(1), "tools/call", Map.of("name", "async_probe", "arguments", Map.of()), "sess-async");
+        assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
+        final var closing = CompletableFuture.runAsync(server::close, Thread::startVirtualThread);
+        try {
+            await().atMost(Duration.ofSeconds(1))
+                    .until(() -> dispatcher
+                            .dispatchRequestAsync(RequestId.of(2), "ping", Map.of(), "sess-async")
+                            .isCompletedExceptionally());
+            assertThat(closing).isNotDone();
+            assertThat(extensionClosed.getCount()).isEqualTo(1);
+            result.complete(ToolResult.empty());
+            assertThat(response.get(5, TimeUnit.SECONDS))
+                    .isInstanceOfSatisfying(
+                            McpDispatcher.DispatchResult.Response.class,
+                            value -> assertThat(value.responseBodyString()).doesNotContain("error"));
+            closing.get(5, TimeUnit.SECONDS);
+            assertThat(extensionClosed.getCount()).isZero();
+        } finally {
+            result.complete(ToolResult.empty());
+            closing.get(5, TimeUnit.SECONDS);
+        }
+    }
+
+    @Test
+    void closeBoundsUnfinishedAsyncHandlerAndRejectsNewRequests() throws Exception {
+        final var started = new CountDownLatch(1);
+        final var result = new CompletableFuture<ToolResult>();
+        final var server = newEngine(
+                b -> b.runtime(r -> r.shutdownGracePeriod(Duration.ofMillis(200))),
+                s -> s.tools().registerAsync(builder -> builder.name("async_probe"), (context, request) -> {
+                    started.countDown();
+                    return result;
+                }));
+        server.createSession("sess-async").activate();
+        final var dispatcher = new McpDispatcher(server, server.executor());
+        dispatcher.dispatchRequestAsync(
+                RequestId.of(1), "tools/call", Map.of("name", "async_probe", "arguments", Map.of()), "sess-async");
+        assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
+        final var start = System.nanoTime();
+        try {
+            server.close();
+            assertThat(Duration.ofNanos(System.nanoTime() - start).toMillis()).isBetween(200L, 2000L);
+            assertThat(dispatcher.dispatchRequestAsync(RequestId.of(2), "ping", Map.of(), "sess-async"))
+                    .isCompletedExceptionally();
+        } finally {
+            result.complete(ToolResult.empty());
+        }
     }
 
     @Test

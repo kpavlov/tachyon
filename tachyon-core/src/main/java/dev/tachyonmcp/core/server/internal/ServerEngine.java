@@ -98,6 +98,9 @@ public interface ServerEngine extends TachyonServer {
     /** Returns the executor used for handler dispatch. */
     ExecutorService executor();
 
+    /** Returns the server-wide request lifecycle tracker. */
+    OperationTracker operations();
+
     TaskRegistry tasksRegistry();
 
     /** Maps and sends a task status notification. */

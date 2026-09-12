@@ -321,9 +321,13 @@ Configured via `runtime { }` / `RuntimeConfig.Builder`.
 
 | Option | Default | Description |
 |---|---|---|
-| `shutdownGracePeriod` | `5s` | Time in-flight handlers get to drain on `close()`; `ZERO` interrupts immediately |
+| `shutdownGracePeriod` | `5s` | Shared time budget to drain admitted requests through handler completion and transport finalization, then terminate the executor on `close()`; `ZERO` interrupts immediately |
 | `requestTimeout` | `60s` | Timeout for pending requests sent to the client |
 | `clock` | `Clock.systemUTC()` | Clock for task timestamps and TTL/expiry checks; set a fixed or controllable clock in tests |
+
+Shutdown rejects new dispatches while draining, answering them with `503 Service Unavailable`. The executor remains available for asynchronous continuations during the grace period. Subscriptions, extensions, sessions, and event storage are torn down after draining completes or the grace period expires. Unfinished asynchronous stages can outlive that deadline.
+
+`close()` blocks its calling thread until draining finishes, and draining needs the I/O event loops to flush in-flight responses — so calling it from an event loop throws `IllegalStateException` rather than stalling for the whole grace period.
 
 ## Observability
 

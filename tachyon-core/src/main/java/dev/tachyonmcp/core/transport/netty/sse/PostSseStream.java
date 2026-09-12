@@ -9,6 +9,7 @@ import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.transport.netty.http.HttpHelpers;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -58,6 +59,7 @@ public final class PostSseStream implements OutboundSseStream {
     private final Duration heartbeatInterval;
     private final List<SseEvent> queued = new ArrayList<>();
     private volatile State state = State.NEW;
+    private @Nullable ChannelFuture closeWrite;
 
     public PostSseStream(
             Channel channel, @Nullable String origin, LongSupplier eventIdSupplier, Duration heartbeatInterval) {
@@ -132,6 +134,29 @@ public final class PostSseStream implements OutboundSseStream {
 
     public void terminate() {
         runOnEventLoop(() -> doClose(false));
+    }
+
+    /** Terminates the stream and completes after its final write succeeds or fails. */
+    public ChannelFuture terminateAsync() {
+        final var completion = channel.newPromise();
+        // Fallback: a shutting-down event loop can accept the task below and never run it, which
+        // would leave this promise — and the shutdown drain waiting on it — pending forever.
+        channel.closeFuture().addListener(f -> completion.trySuccess());
+        try {
+            runOnEventLoop(() -> {
+                try {
+                    doClose(false).addListener(f -> {
+                        if (f.isSuccess()) completion.trySuccess();
+                        else completion.tryFailure(f.cause());
+                    });
+                } catch (RuntimeException e) {
+                    completion.tryFailure(e);
+                }
+            });
+        } catch (RuntimeException e) {
+            completion.tryFailure(e);
+        }
+        return completion;
     }
 
     @Override
@@ -234,16 +259,17 @@ public final class PostSseStream implements OutboundSseStream {
         });
     }
 
-    private void doClose(boolean reconnect) {
-        if (state.closed) return;
+    private ChannelFuture doClose(boolean reconnect) {
+        if (state.closed) return closeWrite != null ? closeWrite : channel.newSucceededFuture();
         var wasOpen = state.opened;
         state = wasOpen ? State.CLOSED_OPENED : State.CLOSED_UNOPENED;
-        if (!channel.isActive() || !wasOpen) return;
+        if (!channel.isActive() || !wasOpen) return channel.newSucceededFuture();
         if (reconnect) {
             channel.write(new DefaultHttpContent(
                     ByteBufUtil.writeUtf8(channel.alloc(), "retry: " + SSE_RETRY_DELAY_MS + "\n")));
         }
-        channel.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
+        closeWrite = channel.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
+        return closeWrite;
     }
 
     private static String abbreviate(String s) {

@@ -99,6 +99,18 @@ public final class NettyServer implements Closeable {
     }
 
     /**
+     * Returns whether the calling thread is one of this server's I/O event loops. Shutdown drains
+     * in-flight requests by waiting for their responses to flush, which only these threads can do —
+     * so a shutdown started from one of them could never make progress.
+     */
+    public boolean inEventLoop() {
+        for (var eventLoop : eventLoopGroup) {
+            if (eventLoop.inEventLoop()) return true;
+        }
+        return false;
+    }
+
+    /**
      * Stops accepting new connections by closing the server channel. Existing child channels and
      * event loops stay alive so in-flight requests can complete and flush. Idempotent;
      * {@link #close()} finishes the teardown.

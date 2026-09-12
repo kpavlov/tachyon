@@ -51,6 +51,7 @@ import dev.tachyonmcp.core.server.handlers.LoggingHandlers;
 import dev.tachyonmcp.core.server.handlers.PingHandler;
 import dev.tachyonmcp.core.server.handlers.SubscriptionsListenHandler;
 import dev.tachyonmcp.core.server.internal.NotificationLogSupport;
+import dev.tachyonmcp.core.server.internal.OperationTracker;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import dev.tachyonmcp.core.server.json.JacksonPayloadSerde;
 import dev.tachyonmcp.core.server.json.JsonUtils;
@@ -112,6 +113,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     private final Map<String, RpcMethodHandler<?, ?>> methodHandlers = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<RequestId, PendingRequestEntry> pendingRequests = new ConcurrentHashMap<>();
     private final ExecutorService executor;
+    private final OperationTracker operations = new OperationTracker();
     private final List<ServerExtension> extensions;
     private final @Nullable Consumer<ChannelPipeline> pipelineCustomizer;
     private final Map<String, String> extensionMethodOwners = new ConcurrentHashMap<>();
@@ -162,6 +164,11 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     @Override
     public ExecutorService executor() {
         return executor;
+    }
+
+    @Override
+    public OperationTracker operations() {
+        return operations;
     }
 
     @Override
@@ -915,22 +922,29 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
     @Override
     public void close() {
         if (transport instanceof NettyServer netty) {
+            if (netty.inEventLoop()) {
+                throw new IllegalStateException("close() must not be called from a Netty event loop thread — "
+                        + "draining in-flight requests needs that thread to flush their responses. "
+                        + "Call close() from another thread.");
+            }
             netty.stopAccepting();
         }
         try {
             logger.info("Shutting down TachyonMCP Server");
-            subscriptionRegistry.closeAll();
-            shutdownExtensions();
-            executor.shutdown();
+            final var deadline =
+                    System.nanoTime() + config.runtime().shutdownGracePeriod().toNanos();
             try {
-                var grace = config.runtime().shutdownGracePeriod();
-                if (!executor.awaitTermination(grace.toMillis(), TimeUnit.MILLISECONDS)) {
+                operations.drain(deadline);
+                executor.shutdown();
+                if (!executor.awaitTermination(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS)) {
                     executor.shutdownNow();
                 }
             } catch (InterruptedException e) {
                 executor.shutdownNow();
                 Thread.currentThread().interrupt();
             }
+            subscriptionRegistry.closeAll();
+            shutdownExtensions();
             taskRegistry.stopTtlJanitor();
             sessionManager.close();
             sessionEventStore.close();
