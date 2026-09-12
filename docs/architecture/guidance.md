@@ -416,3 +416,12 @@ JSpecify `@Nullable` is the baseline (`@NullMarked` at package level). Reach for
 A stringly-typed attribute bag has two failure modes that compile clean and break at runtime — an unchecked cast on every read (`getAttribute(String)` lets the caller pick any `T`, wrong guess throws `ClassCastException` far from the write site), and silent collision (two unrelated features reusing the same string key overwrite each other). `AttributeKey<T>` fixes both: the key carries `T` so there's no cast at the call site, and keys are identity-based (`AttributeKey.of(name)` returns a distinct object per call, no name-interning registry) so two keys can never collide — retrieval requires holding the actual key instance, not guessing a string. Use this for any future context-carried extension/scratch state; don't reintroduce a generic `Map<String,Object>` surface on a handler-facing type.
 
 Testing handler dispatch/error mapping: see [`tachyon-development` skill](../../.agents/skills/tachyon-development/SKILL.md).
+
+## Request cancellation
+
+For session-based requests, `notifications/cancelled` targets only inbound work with the same
+session and request ID. Server-to-client requests have separate tracking, so overlapping IDs do
+not cross request directions. Initialize requests are not cancellation targets.
+Cancellation interrupts synchronous handler invocation and cancels asynchronous handler futures.
+Handlers must cooperate with interruption or future cancellation; external work is application-owned.
+Every terminal completion removes the matching tracking entry, including direct future cancellation.

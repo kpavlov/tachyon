@@ -844,8 +844,8 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         var timeout = config.runtime().requestTimeout();
         future.orTimeout(timeout.toMillis(), TimeUnit.MILLISECONDS);
         future.whenComplete((res, ex) -> {
-            if (ex instanceof TimeoutException) {
-                if (pendingRequests.remove(requestId, entry)) {
+            if (pendingRequests.remove(requestId, entry)) {
+                if (ex instanceof TimeoutException) {
                     logger.debug(
                             "Pending request timed out after {}s: id={}, pendingCount={}",
                             timeout.toSeconds(),

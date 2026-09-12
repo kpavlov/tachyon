@@ -66,7 +66,7 @@ public final class HandlerFutures {
      * the stage is already complete (the common case: sync handlers, already-resolved async
      * ones) to avoid an unconditional executor hop; otherwise schedules {@code fn} on
      * {@code executor} so a handler completing from a foreign thread doesn't leak that thread
-     * into response mapping.
+     * into response mapping. Cancelling the mapped future also cancels the source future.
      *
      * @param <T>      the input result type
      * @param <R>      the output result type
@@ -80,7 +80,11 @@ public final class HandlerFutures {
             Executor executor,
             BiFunction<@Nullable ? super T, @Nullable Throwable, ? extends R> fn) {
         var future = stage.toCompletableFuture();
-        return future.isDone() ? future.handle(fn) : future.handleAsync(fn, executor);
+        final var mapped = future.isDone() ? future.<R>handle(fn) : future.<R>handleAsync(fn, executor);
+        mapped.whenComplete((result, error) -> {
+            if (mapped.isCancelled()) future.cancel(true);
+        });
+        return mapped;
     }
 
     /**

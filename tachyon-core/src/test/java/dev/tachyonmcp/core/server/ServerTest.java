@@ -2,6 +2,7 @@
 package dev.tachyonmcp.core.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.InstanceOfAssertFactories.MAP;
 
 import dev.tachyonmcp.api.server.domain.RequestId;
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
@@ -28,6 +29,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -192,6 +194,41 @@ class ServerTest {
             assertThat(server.completePendingRequest(requestId, null, null, "{}"))
                     .isFalse();
             assertThat(pending).isNotDone();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"success", "failure", "cancel", "timeout"})
+    void terminalCompletionRemovesPendingRequest(String completion) {
+        try (final var server = (DefaultTachyonServer) TachyonServer.builder().build()) {
+            final var future = new CompletableFuture<String>();
+            server.registerPendingRequest(RequestId.of("terminal"), "owner", null, future);
+            switch (completion) {
+                case "success" -> future.complete("{}");
+                case "failure" -> future.completeExceptionally(new IllegalStateException("failed"));
+                case "cancel" -> future.cancel(false);
+                case "timeout" -> future.completeExceptionally(new TimeoutException());
+                default -> throw new AssertionError(completion);
+            }
+            assertThat(future).isDone();
+            assertThat(server).extracting("pendingRequests").asInstanceOf(MAP).isEmpty();
+        }
+    }
+
+    @Test
+    void completionDoesNotRemoveReplacementPendingRequest() {
+        try (final var server = (DefaultTachyonServer)
+                TachyonServer.builder().session(s -> s.enabled(true)).build()) {
+            final var id = RequestId.of("reused");
+            final var old = new CompletableFuture<String>();
+            final var replacement = new CompletableFuture<String>();
+            server.registerPendingRequest(id, "owner", null, old);
+            server.registerPendingRequest(id, "owner", null, replacement);
+            old.cancel(false);
+            assertThat(replacement).isNotDone();
+            assertThat(server.completePendingRequest(id, "owner", null, "{}")).isTrue();
+            assertThat(replacement).isCompletedWithValue("{}");
+            assertThat(server).extracting("pendingRequests").asInstanceOf(MAP).isEmpty();
         }
     }
 
