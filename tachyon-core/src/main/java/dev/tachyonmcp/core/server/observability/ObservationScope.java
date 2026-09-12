@@ -10,6 +10,11 @@ import dev.tachyonmcp.api.annotations.InternalApi;
  * <p>The dispatcher closes a scope on the same thread it opened or reattached it on, and never
  * keeps one open across an incomplete {@code CompletionStage} — only across the synchronous
  * dispatch work that runs while attached.
+ *
+ * <p>Scopes from multiple registered listeners nest: a listener registered later is opened inside
+ * one registered earlier, and the dispatcher closes them innermost-first. An implementation may
+ * therefore assume {@link #close()} runs while its own context is the current one, and restore
+ * whatever context it displaced.
  */
 @InternalApi
 public interface ObservationScope {

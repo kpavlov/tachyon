@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
@@ -57,6 +58,51 @@ class ObservationDispatchTest {
         public void complete(OperationInfo info, OperationOutcome outcome) {
             completions.add(new CompleteCall(info, outcome));
             if (throwOnComplete != null) throw throwOnComplete;
+        }
+    }
+
+    /**
+     * Stands in for a real context-setting listener such as {@code McpOpenTelemetryListener}: {@code
+     * start} and {@code reattach} displace the thread's current context id with this listener's own,
+     * and the returned scope restores whatever it displaced. Every close appends one {@code
+     * id:seen->restored} row, so a test sees both the order scopes unwound in and what each close left
+     * attached to the thread.
+     */
+    private static final class StackingListener implements ObservationListener {
+
+        private final String id;
+        private final ThreadLocal<String> current;
+        private final List<String> trace;
+
+        StackingListener(String id, ThreadLocal<String> current, List<String> trace) {
+            this.id = id;
+            this.current = current;
+            this.trace = trace;
+        }
+
+        @Override
+        public ObservationScope start(OperationInfo info) {
+            return attach();
+        }
+
+        @Override
+        public void complete(OperationInfo info, OperationOutcome outcome) {}
+
+        private ObservationScope attach() {
+            final var previous = current.get();
+            current.set(id);
+            return new ObservationScope() {
+                @Override
+                public void close() {
+                    trace.add(id + ":" + current.get() + "->" + previous);
+                    current.set(previous);
+                }
+
+                @Override
+                public ObservationScope reattach() {
+                    return attach();
+                }
+            };
         }
     }
 
@@ -256,6 +302,56 @@ class ObservationDispatchTest {
             assertThat(healthy.starts).hasSize(1);
             assertThat(healthy.completions).hasSize(1);
             assertThat(healthy.completions.getFirst().outcome()).isInstanceOf(OperationOutcome.Completed.class);
+        }
+    }
+
+    @Test
+    void nestedListenerScopesCloseInnermostFirstAcrossHops() throws Exception {
+        // ObservationScope contract: scopes from multiple listeners nest in registration order and
+        // the dispatcher closes them innermost-first, so each close runs under its own context.
+        final var current = new ThreadLocal<String>();
+        final var trace = new CopyOnWriteArrayList<String>();
+        final var handlerSaw = new CopyOnWriteArrayList<String>();
+        final var outer = new StackingListener("A", current, trace);
+        final var inner = new StackingListener("B", current, trace);
+
+        // Completes the handler's future off the dispatch thread, so the encode phase is a genuine
+        // post-hop reattach rather than an inline continuation.
+        final var completer = Executors.newSingleThreadExecutor(r -> new Thread(r, "obs-completer"));
+        final AsyncToolFn fn = (ctx, request) -> {
+            handlerSaw.add(String.valueOf(current.get()));
+            return CompletableFuture.supplyAsync(() -> ToolResult.text("ok"), completer);
+        };
+        final var descriptor =
+                ToolDescriptor.builder().name("nested").description("nested").build();
+
+        try (ServerEngine server = newEngine(
+                b -> b.observability(o -> o.listener(outer).listener(inner)),
+                s -> s.tools().registerAsync(descriptor, fn))) {
+            server.createSession("sess-nested").activate();
+            final var dispatcher = new McpDispatcher(server, server.executor());
+            final var params = Map.of("name", "nested", "arguments", Map.of());
+
+            final var result = asResponse(dispatcher
+                    .dispatchRequestAsync(RequestId.of(1), "tools/call", params, "sess-nested")
+                    .join());
+            assertThat(result.responseBodyString()).contains("ok");
+
+            // Nesting still follows registration order: the later-registered listener is innermost.
+            assertThat(handlerSaw).containsExactly("B");
+
+            // More than one phase ran -- the start phase plus at least one post-hop reattach.
+            assertThat(trace.size()).isGreaterThanOrEqualTo(4).isEven();
+
+            // Each phase unwinds innermost-first and hands the thread back clean. Under forward
+            // closure a phase instead reads ["A:B->null", "B:null->A"], leaving "A" attached.
+            for (var i = 0; i < trace.size(); i += 2) {
+                assertThat(trace.subList(i, i + 2))
+                        .as("phase starting at %d", i)
+                        .containsExactly("B:B->A", "A:A->null");
+            }
+        } finally {
+            completer.shutdownNow();
         }
     }
 

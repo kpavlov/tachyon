@@ -21,6 +21,8 @@ OpenTelemetry using the [MCP semantic conventions](https://github.com/open-telem
 
 Listeners cannot short-circuit, reject, or substitute results. Exceptions in listeners are fault-isolated and never affect handler execution, responses, or other listeners.
 
+Listeners nest in registration order: the scope a listener returns from `start` is opened inside the scope of every listener registered before it, so a later-registered listener's context is the active one while dispatch work runs. Scopes close innermost-first, which means each `close()` runs while its own context is current and restores whatever it displaced.
+
 ```java
 var server = TachyonServer.builder()
     .observability(o -> o.listener(myListener))
@@ -127,6 +129,8 @@ TachyonServer(port = 8080) {
 ### Trace Context
 
 Spans parent from `Context.current()` on the dispatch thread. The listener only attaches scope around synchronous dispatch work (decode, kicking off async handler, and — after reattach — completion callback), so handler-started spans join as children without blocking `CompletionStage`s.
+
+Registering two listeners produces two spans per operation, the second nested under the first, and a handler-started span parents from the innermost one.
 
 ### Attributes
 

@@ -21,7 +21,11 @@ import jdk.jfr.Experimental;
 @Experimental
 public interface ObservationListener {
 
-    /** Fires once, as early as {@code method} (and {@code id}, if any) is known, before any handler or rejection. */
+    /**
+     * Fires once, as early as {@code method} (and {@code id}, if any) is known, before any handler or
+     * rejection. Listeners are called in registration order, so the {@link ObservationScope} a
+     * listener returns here nests inside the scope of every listener registered before it.
+     */
     ObservationScope start(OperationInfo info);
 
     /** Fires exactly once, at the operation's terminal boundary — see the observability design notes for what that boundary is per operation kind. */

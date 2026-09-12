@@ -209,9 +209,8 @@ Values must be ASCII; see [Configuration](../running/configuration.md) for the c
 > Do not annotate secrets. Mirrored values are visible to every intermediary on the path, and Base64
 > is an encoding, not encryption.
 
-## Jackson note
-
-Tachyon uses **Jackson 3** (`tools.jackson.*`), not Jackson 2. Import `tools.jackson.databind.JsonNode`, not `com.fasterxml.jackson.databind.JsonNode`.
+> [!NOTE] 
+> Tachyon uses **Jackson 3** (`tools.jackson.*`), not Jackson 2. Import `tools.jackson.databind.JsonNode`, not `com.fasterxml.jackson.databind.JsonNode`.
 
 ## Kotlin DSL
 
@@ -259,5 +258,5 @@ tool(
 - `scope.success(value)` / `scope.success(value, text)` — symmetric typed result via configured serializer
 
 `typedTool<In, Out>` derives both schemas from the types, so the literals above disappear
-entirely. See [typed tools](../kotlin/#typed-tools) and the
-[Kotlin DSL](../kotlin/) for the full Kotlin API.
+entirely. See [typed tools](/docs/kotlin/#typed-tools) and the
+[Kotlin DSL](/docs/kotlin/) for the full Kotlin API.
