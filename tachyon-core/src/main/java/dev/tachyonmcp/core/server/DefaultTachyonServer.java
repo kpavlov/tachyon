@@ -595,12 +595,39 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
         }
     }
 
-    private void shutdownExtensions() {
+    /**
+     * Runs each extension's {@link ServerExtension#shutdown()} bounded by the shared shutdown
+     * deadline, so a slow extension cannot make {@link #close()} run past the configured grace
+     * period on top of whatever {@link OperationTracker#drain} already spent waiting on in-flight
+     * requests. A slow extension is logged and left running in the background rather than blocked
+     * on indefinitely.
+     */
+    private void shutdownExtensions(long deadlineNanos) {
         for (var ext : extensions) {
+            final var worker = Thread.ofVirtual()
+                    .name("ext-shutdown-" + ext.extensionId())
+                    .start(() -> {
+                        try {
+                            ext.shutdown();
+                        } catch (Exception e) {
+                            logger.warn("Extension shutdown error: {}", ext.extensionId(), e);
+                        }
+                    });
+            var remainingMs = (deadlineNanos - System.nanoTime()) / 1_000_000;
+            if (remainingMs <= 0) {
+                logger.warn("Shutdown grace period already elapsed, not waiting on extension: {}", ext.extensionId());
+                continue;
+            }
             try {
-                ext.shutdown();
-            } catch (Exception e) {
-                logger.warn("Extension shutdown error: {}", ext.extensionId(), e);
+                worker.join(remainingMs);
+                if (worker.isAlive()) {
+                    logger.warn(
+                            "Extension shutdown exceeded remaining grace period, continuing without waiting further: {}",
+                            ext.extensionId());
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
             }
         }
     }
@@ -944,7 +971,7 @@ final class DefaultTachyonServer implements ServerEngine, ExtensionContext {
                 Thread.currentThread().interrupt();
             }
             subscriptionRegistry.closeAll();
-            shutdownExtensions();
+            shutdownExtensions(deadline);
             taskRegistry.stopTtlJanitor();
             sessionManager.close();
             sessionEventStore.close();

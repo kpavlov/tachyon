@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.RejectedExecutionException;
 import org.jspecify.annotations.Nullable;
@@ -167,8 +168,9 @@ public final class ChannelHandlerUtils {
      * broken and no operator action is needed.
      */
     public static boolean isRefused(Throwable ex) {
-        var cause = ex instanceof CompletionException && ex.getCause() != null ? ex.getCause() : ex;
-        return cause instanceof RejectedExecutionException;
+        return ex instanceof CompletionException ce && ce.getCause() != null
+                ? ce.getCause() instanceof RejectedExecutionException
+                : ex instanceof RejectedExecutionException;
     }
 
     /** Writes an accepted response and returns its write completion. */
@@ -179,6 +181,21 @@ public final class ChannelHandlerUtils {
             response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
         }
         return ctx.writeAndFlush(response);
+    }
+
+    /**
+     * Completes {@code transportCompletion} once {@code future} finishes, mirroring its outcome —
+     * used to let {@link dev.tachyonmcp.core.server.internal.OperationTracker#drain} know a
+     * response write has finished, whether it succeeded or failed.
+     */
+    public static void completeOn(ChannelFuture future, CompletableFuture<Void> transportCompletion) {
+        future.addListener(f -> {
+            if (f.isSuccess()) {
+                transportCompletion.complete(null);
+            } else {
+                transportCompletion.completeExceptionally(f.cause());
+            }
+        });
     }
 
     /**

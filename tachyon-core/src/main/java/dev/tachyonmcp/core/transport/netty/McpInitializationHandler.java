@@ -2,6 +2,7 @@
 package dev.tachyonmcp.core.transport.netty;
 
 import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.captureInitRequest;
+import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.completeOn;
 import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.isRefused;
 import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.sendAccepted;
 import static dev.tachyonmcp.core.transport.netty.ChannelHandlerUtils.sendAcceptedAsync;
@@ -174,23 +175,27 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                         postStream.terminate();
                         if (isRefused(ex)) {
                             logger.debug("Pre-session request refused: method={}", method);
-                            sendPlainTextAndClose(
-                                            ctx, HttpResponseStatus.SERVICE_UNAVAILABLE, "Server shutting down", origin)
-                                    .addListener(f -> transportCompletion.complete(null));
+                            completeOn(
+                                    sendPlainTextAndClose(
+                                            ctx,
+                                            HttpResponseStatus.SERVICE_UNAVAILABLE,
+                                            "Server shutting down",
+                                            origin),
+                                    transportCompletion);
                             return;
                         }
                         logger.error("Dispatch failed for pre-session request: method={}", method, ex);
-                        sendResponseAndClose(
+                        completeOn(
+                                sendResponseAndClose(
                                         ctx,
                                         HttpResponseStatus.INTERNAL_SERVER_ERROR,
                                         "application/json",
                                         dispatcher.parseError(ChannelHandlerUtils.requireInteractionContext(ctx)),
-                                        origin)
-                                .addListener(f -> transportCompletion.complete(null));
+                                        origin),
+                                transportCompletion);
                         return;
                     }
-                    completeDispatch(ctx, postStream, result, origin, null)
-                            .addListener(f -> transportCompletion.complete(null));
+                    completeOn(completeDispatch(ctx, postStream, result, origin, null), transportCompletion);
                 }));
     }
 
@@ -266,23 +271,29 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                         postStream.terminate();
                         if (isRefused(ex)) {
                             logger.debug("Initialize refused: id={}, elapsed={}ms", id, elapsedMs);
-                            sendPlainTextAndClose(
-                                            ctx, HttpResponseStatus.SERVICE_UNAVAILABLE, "Server shutting down", origin)
-                                    .addListener(f -> transportCompletion.complete(null));
+                            completeOn(
+                                    sendPlainTextAndClose(
+                                            ctx,
+                                            HttpResponseStatus.SERVICE_UNAVAILABLE,
+                                            "Server shutting down",
+                                            origin),
+                                    transportCompletion);
                             return;
                         }
                         logger.error("Initialize dispatch failed: id={}, elapsed={}ms", id, elapsedMs, ex);
-                        sendResponseAndClose(
+                        completeOn(
+                                sendResponseAndClose(
                                         ctx,
                                         HttpResponseStatus.INTERNAL_SERVER_ERROR,
                                         "application/json",
                                         dispatcher.parseError(ChannelHandlerUtils.requireInteractionContext(ctx)),
-                                        origin)
-                                .addListener(f -> transportCompletion.complete(null));
+                                        origin),
+                                transportCompletion);
                         return;
                     }
                     logger.debug("Initialize response: id={}, elapsed={}ms", id, elapsedMs);
-                    completeDispatch(ctx, postStream, result, origin, response -> {
+                    completeOn(
+                            completeDispatch(ctx, postStream, result, origin, response -> {
                                 var resultSessionId = response.sessionId();
                                 // Fire event with the live Session — InteractionHandler binds it into
                                 // InteractionContext, and LifecyclePipelineCoordinator replaces this handler
@@ -295,8 +306,8 @@ public class McpInitializationHandler extends ChannelInboundHandlerAdapter {
                                         .fireUserEventTriggered(new InteractionEvent.OperationStarted(mcpSession));
                                 logger.debug(
                                         "Pipeline transitioned to OPERATION phase for session: {}", resultSessionId);
-                            })
-                            .addListener(f -> transportCompletion.complete(null));
+                            }),
+                            transportCompletion);
                 }));
     }
 
