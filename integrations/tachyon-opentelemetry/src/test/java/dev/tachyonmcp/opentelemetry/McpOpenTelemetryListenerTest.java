@@ -30,6 +30,7 @@ import dev.tachyonmcp.core.server.config.ObservabilityConfig;
 import dev.tachyonmcp.testkit.Mcp20251125Client;
 import dev.tachyonmcp.testkit.Mcp20260728Client;
 import dev.tachyonmcp.testkit.McpTestServers;
+import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
@@ -41,6 +42,8 @@ import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,6 +64,9 @@ class McpOpenTelemetryListenerTest {
     private InMemorySpanExporter spans;
     private InMemoryMetricReader metrics;
     private OpenTelemetrySdk otel;
+
+    /** Span id {@code Span.current()} reported inside the {@code nesting} tool handler. */
+    private final AtomicReference<String> handlerSpanId = new AtomicReference<>();
 
     @BeforeEach
     void setUp() {
@@ -365,6 +371,43 @@ class McpOpenTelemetryListenerTest {
     }
 
     @Test
+    @DisplayName(
+            "two listeners nest: the second's span is a child of the first's, and the handler runs inside the innermost")
+    void nestedListenersProduceNestedSpansWithHandlerInsideInnermost() throws Exception {
+        // ObservationScope contract: a listener registered later opens its scope inside one
+        // registered earlier, so dispatch work runs under the innermost listener's context.
+        try (var server = startServer(o -> o.listener(McpOpenTelemetryListener.create(otel)));
+                var client = new Mcp20251125Client(server.port())) {
+            final var sessionId = client.initialize();
+            final var response = client.post(sessionId, callNesting());
+            assertThat(response).isSuccess().hasTextContent("nested");
+
+            final var serverSpans = spansFor("tools/call nesting");
+            assertThat(serverSpans).as("one span per registered listener").hasSize(2);
+
+            final var roots = serverSpans.stream()
+                    .filter(span -> !span.getParentSpanContext().isValid())
+                    .toList();
+            assertThat(roots)
+                    .as("only the first-registered listener's span is parentless")
+                    .hasSize(1);
+            final var outerSpanId = roots.getFirst().getSpanId();
+
+            final var nested = serverSpans.stream()
+                    .filter(span ->
+                            outerSpanId.equals(span.getParentSpanContext().getSpanId()))
+                    .toList();
+            assertThat(nested)
+                    .as("the second-registered listener's span is a child of the first's")
+                    .hasSize(1);
+
+            assertThat(handlerSpanId.get())
+                    .as("the handler runs under the innermost listener's span")
+                    .isEqualTo(nested.getFirst().getSpanId());
+        }
+    }
+
+    @Test
     @DisplayName("notifications are traced, without a jsonrpc.request.id")
     void notificationSpan() throws Exception {
         try (var server = startServer();
@@ -532,6 +575,20 @@ class McpOpenTelemetryListenerTest {
         return spanFor(name);
     }
 
+    private static String callNesting() {
+        // language=json
+        return """
+                {"jsonrpc":"2.0","id":11,"method":"tools/call",\
+                "params":{"name":"nesting","arguments":{}}}""";
+    }
+
+    /** Every finished span with this name -- two listeners each record one per operation. */
+    private List<SpanData> spansFor(String name) {
+        return spans.getFinishedSpanItems().stream()
+                .filter(span -> name.equals(span.getName()))
+                .toList();
+    }
+
     private SpanData spanFor(String name) {
         var matching = spans.getFinishedSpanItems().stream()
                 .filter(span -> name.equals(span.getName()))
@@ -562,6 +619,10 @@ class McpOpenTelemetryListenerTest {
                     server.tools().register(tool -> tool.name("failing"), (ctx, request) -> ToolResult.error("nope"));
                     server.tools().register(tool -> tool.name("throwing"), (ctx, request) -> {
                         throw new IOException("🔥 boom");
+                    });
+                    server.tools().register(tool -> tool.name("nesting"), (ctx, request) -> {
+                        handlerSpanId.set(Span.current().getSpanContext().getSpanId());
+                        return ToolResult.text("nested");
                     });
                     server.tools().register(tool -> tool.name("logging"), (ctx, request) -> {
                         ctx.notifications().info("otel.probe", "streamed log");

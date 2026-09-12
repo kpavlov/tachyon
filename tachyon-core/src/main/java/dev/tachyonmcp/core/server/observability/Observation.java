@@ -96,7 +96,8 @@ public final class Observation {
     }
 
     /**
-     * Closes the scopes {@link #start} opened, on the thread {@link #start} ran on. Idempotent —
+     * Closes the scopes {@link #start} opened, on the thread {@link #start} ran on, in reverse
+     * registration order so each scope closes while its own context is current. Idempotent —
      * dispatch has multiple exit paths (a handler hand-off, several early-rejection branches) and
      * only one of them runs per operation, but guarding here means a future call site calling this
      * defensively can never double-close the underlying scope.
@@ -109,7 +110,8 @@ public final class Observation {
 
     /**
      * Re-attaches every scope onto the current thread for one bounded phase of synchronous dispatch
-     * work; close the returned list with {@link #closeReattached} before the phase ends. May be
+     * work, in registration order so the phase rebuilds the same nesting {@link #start} built; close
+     * the returned list with {@link #closeReattached} before the phase ends. May be
      * called more than once per operation — once per phase that runs after an executor hop (e.g.
      * once for a handler's async kickoff, again for its later completion callback) — never
      * concurrently for the same operation, since the dispatch chain sequences those phases.
@@ -131,7 +133,7 @@ public final class Observation {
         return reattached;
     }
 
-    /** Closes scopes previously returned by {@link #reattach}. */
+    /** Closes scopes previously returned by {@link #reattach}, in reverse registration order. */
     public void closeReattached(List<ObservationScope> reattached) {
         closeAll(reattached);
     }
@@ -158,10 +160,14 @@ public final class Observation {
         }
     }
 
+    /**
+     * Closes scopes innermost-first. Attaching a context nests it inside whatever was attached
+     * before, so unwinding forward would restore a finished listener's context onto the thread.
+     */
     private void closeAll(List<ObservationScope> toClose) {
-        for (var scope : toClose) {
+        for (var i = toClose.size() - 1; i >= 0; i--) {
             try {
-                scope.close();
+                toClose.get(i).close();
             } catch (Exception e) {
                 fault("scope.close", info.method(), e);
             }
