@@ -740,7 +740,7 @@ class DefaultToolRegistryTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"", "My Region", "Region:Primary", "R\u00e9gion"})
+    @ValueSource(strings = {"", "My Region", "Region:Primary", "Région"})
     void shouldRejectMalformedHeaderAnnotationName(String headerName) {
         // SEP-2243: the value must be a non-empty RFC 9110 token (1*tchar).
         var schema = parseJson("""

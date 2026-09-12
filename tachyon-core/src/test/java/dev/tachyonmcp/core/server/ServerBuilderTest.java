@@ -19,6 +19,7 @@ import dev.tachyonmcp.api.server.features.tasks.TaskSupport;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
 import dev.tachyonmcp.core.server.session.SessionEvent;
 import dev.tachyonmcp.core.server.session.SessionEventStore;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
@@ -172,7 +173,7 @@ class ServerBuilderTest {
     @Test
     void builderHasNoFeatureRegistrationMethods() {
         assertThat(ServerBuilder.class.getDeclaredMethods())
-                .extracting(method -> method.getName())
+                .extracting(Method::getName)
                 .doesNotContain(
                         "tool",
                         "asyncTool",
@@ -191,7 +192,7 @@ class ServerBuilderTest {
     @Test
     void builderHasNoStartMethod() {
         assertThat(ServerBuilder.class.getDeclaredMethods())
-                .extracting(method -> method.getName())
+                .extracting(Method::getName)
                 .doesNotContain("start");
     }
 

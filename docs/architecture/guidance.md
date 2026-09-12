@@ -296,7 +296,7 @@ Tool registration uses a descriptor/function pair. `ToolFn` and `AsyncToolFn` bo
 ## 🪶 Descriptor bundling
 
 Registries take `(descriptor, function)` pairs. Keep descriptor metadata separate from executable
-behavior. Do not add a single-argument `register(Handler)` overload.
+behaviour. Do not add a single-argument `register(Handler)` overload.
 
 ## ⚠️ Naming: split sync/async by name, not overload
 
@@ -328,12 +328,12 @@ those same façade APIs; do not add feature-specific registration overloads to `
 - Type-named receiver factories are `inline`, declare an `EXACTLY_ONCE` contract, and suppress `FunctionName`. Their public builder has an `@PublishedApi internal` constructor and `build()`.
 - Keep DSL operations as receiver-class members when the receiver is owned by this module. Use a top-level extension only for types that cannot own the operation. Type-named factories remain top-level when the Java model has no Kotlin companion.
 - Java `ServerBuilder` is the implementation source of truth for server construction and validation. Server feature façades own registration; Kotlin delegates through the builder's `with*` bootstrap conveniences and adds only thin adaptation for suspend lambdas and Kotlin-specific types.
-- Do not reimplement Java builder validation, defaulting, or registration collections in Kotlin. Add missing reusable behavior to Java first, then expose it through the Kotlin DSL.
+- Do not reimplement Java builder validation, defaulting, or registration collections in Kotlin. Add missing reusable behaviour to Java first, then expose it through the Kotlin DSL.
 - Expose one Kotlin server-construction surface: `TachyonServerBuilder`. Do not publish Kotlin extensions on the Java `ServerBuilder`; they bypass Kotlin defaults and duplicate autocomplete. Use an internal owned collaborator when thin adaptation would make the public builder too large.
 - Keep Kotlin files focused. Once a file exceeds 300 lines, consider splitting it by owned responsibility. Do not split member DSLs into global extensions merely to reduce line count; prefer composition with an internal class.
 - Keep required values first and flexible metadata as defaulted named parameters on the common call. Named arguments remove ambiguity; do not hide useful descriptor fields in a registration sub-DSL. Exception: `extensionId` — see the note below the reference shape.
 - Keep a value overload accepting the prebuilt descriptor for reuse, testing, and advanced construction.
-- Name a trailing behavioral lambda `block`. Do not add a ceremonial `handler {}` or `read {}` wrapper inside another configuration lambda.
+- Name a trailing behavioural lambda `block`. Do not add a ceremonial `handler {}` or `read {}` wrapper inside another configuration lambda.
 - Use a result DSL when it removes repeated request data. Seed contextual defaults such as the requested resource URI and registered MIME type, while allowing explicit overrides.
 - A nested result builder must forward handler context used in expressions inside its block, such as URI-template `param` and `sequence` accessors.
 

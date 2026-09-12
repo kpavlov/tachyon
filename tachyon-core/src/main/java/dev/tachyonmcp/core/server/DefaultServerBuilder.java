@@ -5,7 +5,6 @@ import dev.tachyonmcp.api.json.JsonSchemaValidator;
 import dev.tachyonmcp.api.json.PayloadDeserializer;
 import dev.tachyonmcp.api.json.PayloadSerializer;
 import dev.tachyonmcp.api.server.config.JsonConfig;
-import dev.tachyonmcp.api.server.config.MonitoringConfig;
 import dev.tachyonmcp.api.server.config.RuntimeConfig;
 import dev.tachyonmcp.api.server.config.ServerIdentity;
 import dev.tachyonmcp.api.server.extensions.ServerExtension;
@@ -24,7 +23,6 @@ import dev.tachyonmcp.core.server.json.NetworkntJsonSchemaValidator;
 import dev.tachyonmcp.core.server.session.InMemorySessionEventStore;
 import dev.tachyonmcp.core.server.session.InMemorySessionStore;
 import io.netty.channel.ChannelPipeline;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -46,7 +44,6 @@ final class DefaultServerBuilder implements ServerBuilder {
     private final NetworkConfig.Builder networkBuilder = NetworkConfig.builder();
     private final RuntimeConfig.Builder runtimeBuilder = RuntimeConfig.builder();
     private final ObservabilityConfig.Builder observabilityBuilder = ObservabilityConfig.builder();
-    private final MonitoringConfig.Builder monitoringBuilder = new LegacyMonitoringBuilder(observabilityBuilder);
     private final List<ServerExtension> extensions = new ArrayList<>();
     private final Set<String> extensionIds = new HashSet<>();
     private final List<Consumer<TachyonServer>> bootstrapRegistrations = new ArrayList<>();
@@ -227,13 +224,6 @@ final class DefaultServerBuilder implements ServerBuilder {
     }
 
     @Override
-    @Deprecated
-    public ServerBuilder extension(ServerExtension extension) {
-        addExtension(extension);
-        return this;
-    }
-
-    @Override
     public ServerBuilder withExtensions(ServerExtension... extensions) {
         for (var extension : extensions) {
             addExtension(extension);
@@ -361,37 +351,5 @@ final class DefaultServerBuilder implements ServerBuilder {
                 .runtime(runtimeBuilder.build())
                 .observability(observabilityBuilder.build())
                 .build();
-    }
-
-    private static final class LegacyMonitoringBuilder implements MonitoringConfig.Builder {
-
-        private final ObservabilityConfig.Builder delegate;
-
-        private LegacyMonitoringBuilder(ObservabilityConfig.Builder delegate) {
-            this.delegate = delegate;
-        }
-
-        @Override
-        public MonitoringConfig.Builder from(MonitoringConfig instance) {
-            return slowRequestLogging(instance.slowRequestLogging())
-                    .slowRequestThreshold(instance.slowRequestThreshold());
-        }
-
-        @Override
-        public MonitoringConfig.Builder slowRequestLogging(boolean slowRequestLogging) {
-            delegate.slowRequestLogging(slowRequestLogging);
-            return this;
-        }
-
-        @Override
-        public MonitoringConfig.Builder slowRequestThreshold(Duration slowRequestThreshold) {
-            delegate.slowRequestThreshold(slowRequestThreshold);
-            return this;
-        }
-
-        @Override
-        public MonitoringConfig build() {
-            return delegate.build();
-        }
     }
 }

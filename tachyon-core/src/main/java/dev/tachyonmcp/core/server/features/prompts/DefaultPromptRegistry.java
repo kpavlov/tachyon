@@ -26,7 +26,7 @@ public class DefaultPromptRegistry extends AbstractRegistry<PromptDescriptor, Pr
     /**
      * Creates a prompt registry with the given feature configuration.
      *
-     * `@param` config the feature configuration governing registry behavior and page size
+     * `@param` config the feature configuration governing registry behaviour and page size
      */
     public DefaultPromptRegistry(FeatureConfig config) {
         super(config.pageSize());

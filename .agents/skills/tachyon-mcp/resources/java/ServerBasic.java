@@ -2,12 +2,12 @@
  * Copyright (c) 2026 Konstantin Pavlov and contributors.
  */
 
-import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.api.server.domain.PromptMessage;
 import dev.tachyonmcp.api.server.domain.TextResourceContents;
 import dev.tachyonmcp.api.server.features.prompts.PromptDescriptor;
 import dev.tachyonmcp.api.server.features.resources.ResourceDescriptor;
 import dev.tachyonmcp.api.server.features.tools.ToolResult;
+import dev.tachyonmcp.core.server.TachyonServer;
 import dev.tachyonmcp.core.server.json.JacksonPayloadSerde;
 import dev.tachyonmcp.core.server.json.NetworkntJsonSchemaValidator;
 

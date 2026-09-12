@@ -3,9 +3,10 @@ package dev.tachyonmcp.example.temporal;
 
 import dev.tachyonmcp.api.server.features.tasks.TaskState;
 import io.temporal.workflow.Workflow;
+import org.slf4j.Logger;
+
 import java.time.Instant;
 import java.util.Map;
-import org.slf4j.Logger;
 
 /** Example workflow implementation. */
 public final class BookingWorkflowImpl implements BookingWorkflow {

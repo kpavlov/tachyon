@@ -217,7 +217,7 @@ class PayloadSerdeTest extends AbstractStatelessMcpE2eTest<McpClient> {
     @Test
     void shouldRoundTripNonAsciiPayload() {
         var serde = new JacksonPayloadSerde();
-        var input = Map.of("emoji", "\uD83D\uDE00", "cyrillic", "\u043F\u0440\u0438\u0432\u0435\u0442");
+        var input = Map.of("emoji", "\uD83D\uDE00", "cyrillic", "привет");
 
         var json = serde.serialize(input);
         final Map<String, String> decoded = serde.deserialize(json, Map.class);

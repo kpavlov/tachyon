@@ -228,7 +228,7 @@ public final class SseStream extends QueueSubscriber<SseFrame> implements AutoCl
                 .atMost(timeout)
                 .pollDelay(Duration.ofMillis(20))
                 .pollInterval(Duration.ofMillis(50))
-                .until(this::rawResponse, predicate::test);
+                .until(this::rawResponse, predicate);
     }
 
     private void readLoop() {

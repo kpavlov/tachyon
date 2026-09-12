@@ -2,7 +2,6 @@
 package dev.tachyonmcp.kotlin.server
 
 import dev.tachyonmcp.api.annotations.ExperimentalApi
-import dev.tachyonmcp.api.server.config.MonitoringConfig
 import dev.tachyonmcp.api.server.config.RuntimeConfig
 import dev.tachyonmcp.api.server.config.ServerIdentity
 import dev.tachyonmcp.core.server.config.CapabilitiesConfig
@@ -30,16 +29,6 @@ public val ServerConfig.network: NetworkConfig
 /** Kotlin property view of the server runtime configuration. */
 public val ServerConfig.runtime: RuntimeConfig
     get() = runtime()
-
-/**
- * Kotlin property view of the legacy slow-request configuration.
- *
- * @deprecated Use [observability]. This compatibility view will be removed in the next release.
- */
-@Deprecated("Use observability instead", ReplaceWith("observability"))
-public val ServerConfig.monitoring: MonitoringConfig
-    @Suppress("DEPRECATION")
-    get() = monitoring()
 
 /** Kotlin property view of the server observability configuration. */
 public val ServerConfig.observability: ObservabilityConfig

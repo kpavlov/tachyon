@@ -198,7 +198,7 @@ class SpringAiAnnotationServerIntegrationTest {
     @SuppressWarnings("unused")
     static class McpArgFixture {
         @McpPrompt(name = "storyWithArg")
-        String storyWithArg(@McpArg(name = "topicName", description = "the topic", required = false) String topic) {
+        String storyWithArg(@McpArg(name = "topicName", description = "the topic") String topic) {
             return "Story: " + topic;
         }
     }

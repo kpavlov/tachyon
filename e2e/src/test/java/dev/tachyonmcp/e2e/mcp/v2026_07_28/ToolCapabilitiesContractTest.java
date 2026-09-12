@@ -1,11 +1,6 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.e2e.mcp.v2026_07_28;
 
-import static dev.tachyonmcp.e2e.mcp.AbstractToolCapabilitiesContractTest.INPUT_SCHEMA;
-import static dev.tachyonmcp.e2e.mcp.AbstractToolCapabilitiesContractTest.OK;
-import static dev.tachyonmcp.e2e.mcp.AbstractToolCapabilitiesContractTest.OUTPUT_SCHEMA;
-import static dev.tachyonmcp.e2e.mcp.AbstractToolCapabilitiesContractTest.simpleToolDescriptor;
-import static dev.tachyonmcp.e2e.mcp.AbstractToolCapabilitiesContractTest.taskAwareToolDescriptor;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
 import dev.tachyonmcp.api.server.domain.ToolAnnotations;

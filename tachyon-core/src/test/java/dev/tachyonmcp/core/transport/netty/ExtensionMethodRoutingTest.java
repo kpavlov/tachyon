@@ -34,7 +34,7 @@ class ExtensionMethodRoutingTest {
     @BeforeEach
     void setUp() {
         server = (ServerEngine)
-                TachyonServer.builder().extension(new TestExtension()).build();
+                TachyonServer.builder().withExtensions(new TestExtension()).build();
         session = server.createSession("sess_routing");
         dispatcher = new McpDispatcher(server, server.executor());
     }

@@ -14,6 +14,7 @@ import dev.tachyonmcp.core.runtime.Session;
 import dev.tachyonmcp.core.runtime.SseConnection;
 import dev.tachyonmcp.core.runtime.SseEvent;
 import dev.tachyonmcp.core.server.McpDispatcher;
+import dev.tachyonmcp.core.server.config.CapabilitiesConfig;
 import dev.tachyonmcp.core.server.internal.ServerEngine;
 import java.util.ArrayList;
 import java.util.Map;
@@ -57,7 +58,7 @@ class NotificationDeliveryTest {
     @BeforeEach
     void setUp() {
         server = newEngine(
-                b -> b.capabilities(c -> c.logging()).session(s -> s.enabled(true)),
+                b -> b.capabilities(CapabilitiesConfig.Builder::logging).session(s -> s.enabled(true)),
                 s -> s.tools()
                         .register(TOOL_DESCRIPTOR, PROGRESS_AND_LOG_TOOL)
                         .register(builder -> builder.name("filtered_log"), FILTERED_LOG_TOOL));

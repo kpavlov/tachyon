@@ -336,7 +336,7 @@ public class SpringAiAnnotationProvider implements AnnotationProvider {
             Type schemaType = optional ? AnnotationInvocationSupport.unwrapOptional(type) : type;
 
             String rawSchema = McpJsonSchemaGenerator.generateFromType(schemaType);
-            Map<String, Object> prop = new LinkedHashMap<>(deserializer.deserialize(rawSchema, Map.class));
+            final var prop = new LinkedHashMap<String, Object>(deserializer.deserialize(rawSchema, Map.class));
             prop.remove("$schema");
 
             McpToolParam ann = param.getAnnotation(McpToolParam.class);

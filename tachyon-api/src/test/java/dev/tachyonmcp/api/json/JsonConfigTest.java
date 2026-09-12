@@ -11,7 +11,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * Verifies {@link JsonConfig} builder behavior: defaults, custom values, and convenience methods.
+ * Verifies {@link JsonConfig} builder behaviour: defaults, custom values, and convenience methods.
  *
  * @author Konstantin Pavlov
  */

@@ -153,24 +153,27 @@ public class LangChain4jAnnotationProvider implements AnnotationProvider {
     }
 
     private ToolResult convertResult(@Nullable Object result, PayloadSerializer serializer) {
-        if (result == null) {
-            return ToolResult.text("Success");
-        }
-        if (result instanceof ToolResult tr) {
-            return tr;
-        }
-        if (result instanceof String s) {
-            return ToolResult.text(s);
-        }
-        if (result instanceof ContentBlock cb) {
-            return ToolResult.content(cb);
-        }
-        if (result instanceof List<?> list) {
-            List<ContentBlock> blocks = new ArrayList<>();
-            for (Object item : list) {
-                blocks.add(toContentBlock(item, serializer));
+        switch (result) {
+            case null -> {
+                return ToolResult.text("Success");
             }
-            return ToolResult.content(blocks.toArray(new ContentBlock[0]));
+            case ToolResult tr -> {
+                return tr;
+            }
+            case String s -> {
+                return ToolResult.text(s);
+            }
+            case ContentBlock cb -> {
+                return ToolResult.content(cb);
+            }
+            case List<?> list -> {
+                List<ContentBlock> blocks = new ArrayList<>();
+                for (Object item : list) {
+                    blocks.add(toContentBlock(item, serializer));
+                }
+                return ToolResult.content(blocks.toArray(new ContentBlock[0]));
+            }
+            default -> {}
         }
         if (result instanceof Number || result instanceof Boolean || result instanceof Character) {
             return ToolResult.text(result.toString());

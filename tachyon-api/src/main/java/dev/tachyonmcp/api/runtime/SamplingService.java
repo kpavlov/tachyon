@@ -17,7 +17,7 @@ import java.util.concurrent.CompletableFuture;
  */
 @ExperimentalApi
 @FunctionalInterface
-@Deprecated(forRemoval = false)
+@Deprecated()
 public interface SamplingService {
 
     /**

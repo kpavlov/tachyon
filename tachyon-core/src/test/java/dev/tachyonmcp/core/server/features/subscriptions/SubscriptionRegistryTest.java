@@ -74,7 +74,7 @@ class SubscriptionRegistryTest {
         };
         var stream = new RecordingStream(events, onAckWrite);
 
-        var pending = new CompletableFuture<Object>();
+        var pending = new CompletableFuture<>();
         registry.activate(
                 RequestId.of(1L),
                 stream,

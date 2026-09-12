@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Keeps long-lived SSE streams alive across idle periods. A channel carrying an open SSE response is
@@ -27,8 +28,9 @@ import java.util.concurrent.TimeUnit;
  */
 public final class SseHeartbeat {
 
-    private static final AttributeKey<Boolean> ACTIVE = AttributeKey.valueOf("sseHeartbeatActive");
-    private static final AttributeKey<ScheduledFuture<?>> HEARTBEAT_FUTURE = AttributeKey.valueOf("sseHeartbeatFuture");
+    private static final AttributeKey<@Nullable Boolean> ACTIVE = AttributeKey.valueOf("sseHeartbeatActive");
+    private static final AttributeKey<@Nullable ScheduledFuture<?>> HEARTBEAT_FUTURE =
+            AttributeKey.valueOf("sseHeartbeatFuture");
 
     // The payload is constant across every channel and every tick.
     private static final byte[] HEARTBEAT_BYTES = ":\r\n".getBytes(StandardCharsets.UTF_8);

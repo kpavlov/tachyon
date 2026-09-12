@@ -84,7 +84,7 @@ export interface RequestMetaObject extends MetaObject {
    *
    * The value is self-reported by the client and is not verified by the
    * protocol. It is intended for display, logging, and debugging. Servers
-   * SHOULD NOT use it to change their behavior, and SHOULD NOT rely on it for
+   * SHOULD NOT use it to change their behaviour, and SHOULD NOT rely on it for
    * security decisions.
    */
   "io.modelcontextprotocol/clientInfo"?: Implementation;
@@ -151,7 +151,7 @@ export interface ResultMetaObject extends MetaObject {
    *
    * The value is self-reported by the server and is not verified by the
    * protocol. It is intended for display, logging, and debugging. Clients
-   * SHOULD NOT use it to change their behavior, and SHOULD NOT rely on it for
+   * SHOULD NOT use it to change their behaviour, and SHOULD NOT rely on it for
    * security decisions.
    */
   "io.modelcontextprotocol/serverInfo"?: Implementation;
@@ -1304,7 +1304,7 @@ export interface SubscriptionsListenRequestParams extends RequestParams {
 /**
  * Sent from the client to open a long-lived channel for receiving notifications
  * outside the context of a specific request. Replaces the previous HTTP GET
- * endpoint and ensures consistent behavior between HTTP and STDIO.
+ * endpoint and ensures consistent behaviour between HTTP and STDIO.
  *
  * @example Listen for tools and resource list changes
  * {@includeCode ./examples/SubscriptionsListenRequest/listen-for-list-changes.json}
@@ -1902,7 +1902,7 @@ export interface ToolListChangedNotification extends JSONRPCNotification {
  *
  * NOTE: all properties in `ToolAnnotations` are **hints**.
  * They are not guaranteed to provide a faithful description of
- * tool behavior (including descriptive properties like `title`).
+ * tool behaviour (including descriptive properties like `title`).
  *
  * Clients should never make tool use decisions based on `ToolAnnotations`
  * received from untrusted servers.
@@ -2152,7 +2152,7 @@ export interface CreateMessageRequestParams {
 }
 
 /**
- * Controls tool selection behavior for sampling requests.
+ * Controls tool selection behaviour for sampling requests.
  *
  * @deprecated Deprecated as of protocol version 2026-07-28 (SEP-2577).
  * Remains in the specification for at least twelve months; see the

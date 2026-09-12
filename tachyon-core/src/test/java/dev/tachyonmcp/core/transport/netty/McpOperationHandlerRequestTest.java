@@ -195,8 +195,7 @@ class McpOperationHandlerRequestTest {
         var srv = newEngine(b -> {}, s -> s.tools().registerAsync(stalledTool.descriptor(), stalledTool::handleAsync));
         ExecutorService pool = Executors.newSingleThreadExecutor();
         var ch = new EmbeddedChannel(
-                new InteractionHandler(),
-                new McpOperationHandler(srv, new McpDispatcher(srv, pool::execute), Runnable::run));
+                new InteractionHandler(), new McpOperationHandler(srv, new McpDispatcher(srv, pool), Runnable::run));
         srv.createSession("sess-stall").activate();
         try {
             var request = new DefaultFullHttpRequest(

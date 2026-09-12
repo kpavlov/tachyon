@@ -23,6 +23,6 @@ public interface ClientContext {
      *
      * @return the sampling service
      */
-    @Deprecated(forRemoval = false)
+    @Deprecated()
     SamplingService sampling();
 }

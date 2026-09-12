@@ -32,7 +32,7 @@ class ExtensionNegotiationTest {
     @BeforeEach
     void setUp() {
         testExtension = new TestExtension();
-        server = newEngine(b -> b.extension(testExtension));
+        server = newEngine(b -> b.withExtensions(testExtension));
         session = server.createSession("sess_ext_neg");
     }
 

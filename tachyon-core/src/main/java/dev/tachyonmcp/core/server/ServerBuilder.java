@@ -72,14 +72,6 @@ public interface ServerBuilder {
     ServerBuilder withCompletions(Consumer<Completions> registrar);
 
     /**
-     * Registers a server extension.
-     *
-     * @deprecated Use {@link #withExtensions(ServerExtension...)}
-     */
-    @Deprecated
-    ServerBuilder extension(ServerExtension extension);
-
-    /**
      * Registers one or more {@link ServerExtension}.
      */
     ServerBuilder withExtensions(ServerExtension... extensions);

@@ -195,7 +195,7 @@ through the per-request `_meta` key:
 A client that does not declare the extension gets `-32601 Method not found` from the three
 extension methods. It can still discover skill files through `resources/list` and fetch a known
 `skill://` URI through `resources/read`. This is SEP-2133 graceful degradation to core protocol
-behavior and [SEP-2640][SEP-2640]'s baseline resource transport.
+behaviour and [SEP-2640][SEP-2640]'s baseline resource transport.
 
 `SkillsExtension` uses `AdvertiseMode.ALWAYS`, so the server advertises
 `io.modelcontextprotocol/skills` even when the client has not declared it. `serverSettings()` reports

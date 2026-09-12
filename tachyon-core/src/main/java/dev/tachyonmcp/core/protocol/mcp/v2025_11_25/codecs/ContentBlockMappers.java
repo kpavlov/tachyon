@@ -1,7 +1,18 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.protocol.mcp.v2025_11_25.codecs;
 
-import dev.tachyonmcp.api.server.domain.*;
+import dev.tachyonmcp.api.server.domain.Annotations;
+import dev.tachyonmcp.api.server.domain.AudioContent;
+import dev.tachyonmcp.api.server.domain.BlobResourceContents;
+import dev.tachyonmcp.api.server.domain.ContentBlock;
+import dev.tachyonmcp.api.server.domain.EmbeddedResource;
+import dev.tachyonmcp.api.server.domain.Icon;
+import dev.tachyonmcp.api.server.domain.ImageContent;
+import dev.tachyonmcp.api.server.domain.ResourceContents;
+import dev.tachyonmcp.api.server.domain.ResourceLink;
+import dev.tachyonmcp.api.server.domain.Role;
+import dev.tachyonmcp.api.server.domain.TextContent;
+import dev.tachyonmcp.api.server.domain.TextResourceContents;
 import dev.tachyonmcp.core.server.json.JsonUtils;
 import java.util.List;
 import org.jspecify.annotations.Nullable;

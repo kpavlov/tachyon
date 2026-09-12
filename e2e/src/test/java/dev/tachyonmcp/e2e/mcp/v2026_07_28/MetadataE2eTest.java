@@ -141,7 +141,7 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
                  "structuredContent":[1,true],
                  "_meta":{"echo-trace":"trace-7"},
                  "resultType":"complete"}
-                    """);
+                """);
         }
     }
 
@@ -172,11 +172,11 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
                 {"content":[{"type":"text","text":"[1,true]"}],
                  "structuredContent":[1,true],
                  "resultType":"complete"}
-                    """);
+                """);
             assertThat(completion).isSuccess().hasId(12).hasResult("""
                 {"completion":{"values":["B-complete"]},
                  "resultType":"complete"}
-                    """);
+                """);
         }
     }
 
@@ -202,7 +202,7 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
                 "resultType":"complete",
                 "ttlMs":0,
                 "cacheScope":"public"}
-                    """);
+                """);
             assertThat(resources).isSuccess().hasId(12).hasResult("""
                 {"resources":[{
                   "uri":"memory://interactive",
@@ -212,7 +212,7 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
                 "resultType":"complete",
                 "ttlMs":0,
                 "cacheScope":"public"}
-                    """);
+                """);
             assertThat(templates).isSuccess().hasId(13).hasResult("""
                 {"resourceTemplates":[{
                   "uriTemplate":"memory://interactive/{id}",
@@ -222,7 +222,7 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
                 "resultType":"complete",
                 "ttlMs":0,
                 "cacheScope":"public"}
-                    """);
+                """);
             assertThat(prompts).isSuccess().hasId(14).hasResult("""
                 {"prompts":[
                   {"name":"input-meta-prompt"},
@@ -233,7 +233,7 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
                 "resultType":"complete",
                 "ttlMs":0,
                 "cacheScope":"public"}
-                    """);
+                """);
         }
     }
 
@@ -341,12 +341,12 @@ class MetadataE2eTest extends AbstractStatelessMcpE2eTest<McpClient> {
                  }],
                  "_meta":{"echo-trace":"prompt-trace"},
                  "resultType":"complete"}
-                    """);
+                """);
             assertThat(completion).isSuccess().hasId(16).hasResult("""
                 {"completion":{"values":["A-complete"]},
                  "_meta":{"echo-trace":"completion-trace"},
                  "resultType":"complete"}
-                    """);
+                """);
             assertThat(inputRequired).isSuccess().hasId(17).hasResult("""
                     {"resultType":"input_required",
                      "inputRequests":{"answer":{

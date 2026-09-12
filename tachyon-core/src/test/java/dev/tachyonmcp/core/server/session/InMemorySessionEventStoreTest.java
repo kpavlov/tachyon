@@ -70,7 +70,7 @@ class InMemorySessionEventStoreTest {
 
         long lockFreeOpsPerSec = measure(threads, eventsPerThread);
 
-        System.out.printf("[InMemorySessionEventStore]: %,d ops/sec%n", lockFreeOpsPerSec, (double) lockFreeOpsPerSec);
+        System.out.printf("[InMemorySessionEventStore]: %d ops/sec %n", lockFreeOpsPerSec, (double) lockFreeOpsPerSec);
 
         assertThat(lockFreeOpsPerSec).as("Performance baseline").isGreaterThan(1_000_000);
     }
@@ -111,7 +111,7 @@ class InMemorySessionEventStoreTest {
     void concurrentAppendCorrectness() throws Exception {
         // maxEventsPerSession == maxEvents: isolates this test to the global cap alone, since a
         // per-session cap smaller than the global one would starve sessions before the global
-        // window fills, which is a different behavior covered by the per-session cap tests below.
+        // window fills, which is a different behaviour covered by the per-session cap tests below.
         try (var store = new InMemorySessionEventStore(
                 0, InMemorySessionEventStore.DEFAULT_MAX_EVENTS, InMemorySessionEventStore.DEFAULT_MAX_EVENTS)) {
             int threads = 8;
@@ -170,7 +170,7 @@ class InMemorySessionEventStoreTest {
     @Test
     void trimDropsOldestAndKeepsCursorSemantics() {
         // maxEventsPerSession == maxEvents: this test floods a single session and checks the
-        // global cap's trim/cursor behavior, not the per-session cap (covered separately below).
+        // global cap's trim/cursor behaviour, not the per-session cap (covered separately below).
         try (var store = new InMemorySessionEventStore(
                 0, InMemorySessionEventStore.DEFAULT_MAX_EVENTS, InMemorySessionEventStore.DEFAULT_MAX_EVENTS)) {
             int overflow = 100;

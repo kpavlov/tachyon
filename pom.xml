@@ -184,6 +184,26 @@
                 <artifactId>tachyon-tasks-temporal</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>dev.tachyonmcp</groupId>
+                <artifactId>tachyon-annotations-mcp-java</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>dev.tachyonmcp</groupId>
+                <artifactId>tachyon-annotations-langchain4j</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>dev.tachyonmcp</groupId>
+                <artifactId>tachyon-annotations-spring-ai</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>dev.tachyonmcp</groupId>
+                <artifactId>tachyon-opentelemetry</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.jspecify</groupId>

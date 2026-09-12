@@ -74,11 +74,14 @@ abstract class AbstractConformanceServer {
     }
 
     protected static FormInputRequest buildFormElicitation(String message, String propName, String propType) {
-        var schema = new LinkedHashMap<String, Object>();
-        schema.put("type", "object");
-        schema.put("properties", Map.of(propName, Map.of("type", propType)));
-        schema.put("required", List.of(propName));
-        return FormInputRequest.of(message, schema);
+        var schema = JsonSchema.from(Map.of(
+                "type", "object",
+                "properties", Map.of(propName, Map.of("type", propType)),
+                "required", List.of(propName)));
+        return FormInputRequest.builder()
+                .message(message)
+                .requestedSchema(schema)
+                .build();
     }
 
     protected static RpcMethodRequest buildSamplingRequest(String questionText) {
@@ -111,7 +114,7 @@ abstract class AbstractConformanceServer {
 
     private static JsonSchema buildJsonSchema() {
         // language=json
-        return parseJson("""
+        return JsonSchema.parse("""
             {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "type": "object",
@@ -269,7 +272,7 @@ abstract class AbstractConformanceServer {
                 .register(
                         b -> b.name("test_reconnection")
                                 .description(
-                                        "A tool that triggers SSE stream closure to test client reconnection behavior")
+                                        "A tool that triggers SSE stream closure to test client reconnection behaviour")
                                 .inputSchema(INPUT_SCHEMA_NO_ARGS),
                         (ctx, request) -> {
                             var stream = OutboundSseStreamMessageRouter.currentOutboundSseStream();

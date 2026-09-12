@@ -82,7 +82,7 @@ class McpDispatcherProtocolContextTest {
             session.activate();
 
             var handlerContext = new AtomicReference<@Nullable DispatchContext>();
-            server.registerHandler(new RpcMethodHandler() {
+            server.registerHandler(new RpcMethodHandler<>() {
                 @Override
                 public String method() {
                     return "test/capture";
@@ -140,8 +140,8 @@ class McpDispatcherProtocolContextTest {
     @Test
     void statelessDispatchHasNoSession() throws Exception {
         try (ServerEngine server = newEngine(b -> {})) {
-            var handlerContext = new AtomicReference<DispatchContext>();
-            server.registerHandler("test/capture", new RpcMethodHandler() {
+            var handlerContext = new AtomicReference<@Nullable DispatchContext>();
+            server.registerHandler("test/capture", new RpcMethodHandler<>() {
                 @Override
                 public String method() {
                     return "test/capture";

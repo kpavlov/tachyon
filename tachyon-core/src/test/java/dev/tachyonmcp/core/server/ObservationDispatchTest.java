@@ -29,7 +29,7 @@ import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 
 /**
- * Behavior of the observation lifecycle wired into {@link McpDispatcher}: the two-call
+ * behaviour of the observation lifecycle wired into {@link McpDispatcher}: the two-call
  * start/complete model, per-operation outcomes, fault isolation, and — most importantly — that a
  * registered listener never forces an async handler onto a blocking join (the defect this design
  * replaces from the interceptor-based PR #288 approach).
@@ -319,7 +319,7 @@ class ObservationDispatchTest {
         // post-hop reattach rather than an inline continuation.
         final var completer = Executors.newSingleThreadExecutor(r -> new Thread(r, "obs-completer"));
         final AsyncToolFn fn = (ctx, request) -> {
-            handlerSaw.add(String.valueOf(current.get()));
+            handlerSaw.add(current.get());
             return CompletableFuture.supplyAsync(() -> ToolResult.text("ok"), completer);
         };
         final var descriptor =

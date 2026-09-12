@@ -1,7 +1,6 @@
 /* Copyright (c) 2026 Konstantin Pavlov/IT Staff and contributors. */
 package dev.tachyonmcp.core.server.config;
 
-import dev.tachyonmcp.api.server.config.MonitoringConfig;
 import dev.tachyonmcp.api.server.config.RuntimeConfig;
 import dev.tachyonmcp.api.server.config.ServerIdentity;
 import java.util.Objects;
@@ -57,17 +56,6 @@ public final class ServerConfig {
     /** Returns handler-execution runtime settings. */
     public RuntimeConfig runtime() {
         return runtime;
-    }
-
-    /**
-     * Returns the legacy slow-request diagnostics view.
-     *
-     * @deprecated Use {@link #observability()}. This compatibility view will be removed in the next
-     *     release.
-     */
-    @Deprecated(since = "1.0.0-beta.24", forRemoval = true)
-    public MonitoringConfig monitoring() {
-        return observability;
     }
 
     /** Returns passive observation-lifecycle settings. */

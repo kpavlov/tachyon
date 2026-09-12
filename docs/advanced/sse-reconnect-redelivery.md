@@ -143,7 +143,7 @@ Now both orderings succeed:
   POST stream's key, so a response is never pushed onto a *different* stream (e.g. a general GET
   listening stream). This preserves the MCP resumability rule that `SseReplayPerStreamTest` asserts.
 - **Happy path untouched.** The fallback runs *only* when the POST write is dropped. For every normal
-  tool call the write succeeds, `onDropped` never fires, and behavior is exactly as before.
+  tool call the write succeeds, `onDropped` never fires, and behaviour is exactly as before.
 - **Rare double-delivery is tolerated.** In a narrow window both the replay and the fallback can
   deliver the same event (same SSE id). This is harmless: a client dedupes the JSON-RPC response by
   request id. Marked with a `ponytail:` comment in `redeliverOnReconnect` noting per-connection id

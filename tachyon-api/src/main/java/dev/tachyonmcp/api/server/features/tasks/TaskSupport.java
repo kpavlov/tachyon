@@ -32,5 +32,5 @@ public enum TaskSupport {
      * The tool always runs as a task. Under MCP 2025-11-25 a non task-augmented call is rejected;
      * under MCP 2026-07-28 every call is dispatched as a task automatically.
      */
-    REQUIRED;
+    REQUIRED
 }
